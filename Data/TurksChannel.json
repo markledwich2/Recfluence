@@ -1,0 +1,65 @@
+{
+    "kind": "youtube#channelListResponse",
+    "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/QmpFh0eqMmoXBonxuuyDZKLlXgw\"",
+    "pageInfo": {
+     "totalResults": 1,
+     "resultsPerPage": 1
+    },
+    "items": [
+     {
+   
+   
+      "kind": "youtube#channel",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/9UPEPUEDz8AmsiiY6SvZuHsDWCE\"",
+      "id": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+      "snippet": {
+       "title": "The Young Turks",
+       "description": "The Largest Online News Show in the World. Hosted by Cenk Uygur & Ana Kasparian. LIVE weekdays 6-8pm ET. \n\nYoung Turk (n), 1. Young progressive or insurgent member of an institution, movement, or political party. 2. Young person who rebels against authority or societal expectations. (American Heritage Dictionary)\n\nThe Young Turks were the first original talk show on Sirius satellite radio and the first live, daily webcast on the internet. But that is not the revolution.\n\nWe are a rare show that combines all of the news that people care about in one place. We are not afraid to talk about politics and entertainment and sports and pop culture. But that is not the revolution either. \n\nSubscribe to The Young Turks on YouTube: https://www.youtube.com/subscription_center?add_user=theyoungturks\n\nLike The Young Turks on Facebook: https://facebook.com/theyoungturks\nFollow The Young Turks on Twitter: https://twitter.com/theyoungturks\n\nBuy TYT Merch: https://www.shoptyt.com",
+       "customUrl": "TheYoungTurks",
+       "publishedAt": "2005-12-21T20:46:51.000Z",
+       "thumbnails": {
+        "default": {
+         "url": "https://yt3.ggpht.com/a-/AN66SAwKHqAlLSwjNjKd_gKkS7-zbOQAbFfFmSyn2g=s88-mo-c-c0xffffffff-rj-k-no",
+         "width": 88,
+         "height": 88
+        },
+        "medium": {
+         "url": "https://yt3.ggpht.com/a-/AN66SAwKHqAlLSwjNjKd_gKkS7-zbOQAbFfFmSyn2g=s240-mo-c-c0xffffffff-rj-k-no",
+         "width": 240,
+         "height": 240
+        },
+        "high": {
+         "url": "https://yt3.ggpht.com/a-/AN66SAwKHqAlLSwjNjKd_gKkS7-zbOQAbFfFmSyn2g=s800-mo-c-c0xffffffff-rj-k-no",
+         "width": 800,
+         "height": 800
+        }
+       },
+       "localized": {
+        "title": "The Young Turks",
+        "description": "The Largest Online News Show in the World. Hosted by Cenk Uygur & Ana Kasparian. LIVE weekdays 6-8pm ET. \n\nYoung Turk (n), 1. Young progressive or insurgent member of an institution, movement, or political party. 2. Young person who rebels against authority or societal expectations. (American Heritage Dictionary)\n\nThe Young Turks were the first original talk show on Sirius satellite radio and the first live, daily webcast on the internet. But that is not the revolution.\n\nWe are a rare show that combines all of the news that people care about in one place. We are not afraid to talk about politics and entertainment and sports and pop culture. But that is not the revolution either. \n\nSubscribe to The Young Turks on YouTube: https://www.youtube.com/subscription_center?add_user=theyoungturks\n\nLike The Young Turks on Facebook: https://facebook.com/theyoungturks\nFollow The Young Turks on Twitter: https://twitter.com/theyoungturks\n\nBuy TYT Merch: https://www.shoptyt.com"
+       },
+       "country": "US"
+      },
+      "contentDetails": {
+       "relatedPlaylists": {
+        "likes": "LL1yBKRuGpC1tSM73A0ZjYjQ",
+        "uploads": "UU1yBKRuGpC1tSM73A0ZjYjQ",
+        "watchHistory": "HL",
+        "watchLater": "WL"
+       }
+      },
+      "statistics": {
+       "viewCount": "4431961410",
+       "commentCount": "0",
+       "subscriberCount": "4196184",
+       "hiddenSubscriberCount": false,
+       "videoCount": "34234"
+      },
+      "status": {
+       "privacyStatus": "public",
+       "isLinked": true,
+       "longUploadsStatus": "longUploadsUnspecified"
+      }
+     }
+    ]
+   }

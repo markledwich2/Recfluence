@@ -1,0 +1,3325 @@
+{
+    "kind": "youtube#searchListResponse",
+    "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/S26AkPXd1Kc6Dd9EsXTMVXekbdw\"",
+    "nextPageToken": "CDIQAA",
+    "regionCode": "US",
+    "pageInfo": {
+     "totalResults": 1000000,
+     "resultsPerPage": 50
+    },
+    "items": [
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/YjLIbhNAp5wNBdfpLfCTTZ0gI1Y\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "hAx2gdc7_RQ"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-04T14:35:02.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Fireworks erupt at beginning of Brett Kavanaugh hearing",
+       "description": "Democrats call on Senate Judiciary Committee Chairman Chuck Grassley to adjourn a hearing for Supreme Court nominee Brett Kavanaugh over unreleased ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/hAx2gdc7_RQ/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/hAx2gdc7_RQ/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/hAx2gdc7_RQ/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/hEb5EGhmbYdHijdbvkN35m3LqIM\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "eClMJ9Tq07E"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-25T07:35:00.000Z",
+       "channelId": "UCMtFAi84ehTSYSE9XoHefig",
+       "title": "Trump Predicts Russians Will Meddle In The Midterms For Democrats!",
+       "description": "Donald Trump admitted that there's a real threat the Russians will interfere in the midterm elections. And that he's the victim. Subscribe To \"The Late Show\" ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/eClMJ9Tq07E/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/eClMJ9Tq07E/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/eClMJ9Tq07E/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Late Show with Stephen Colbert",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/R-Slous4PAznb2BskJ6qz8IEULM\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "eFRHX6glTSM"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-27T00:41:22.000Z",
+       "channelId": "UC3o7kbpTUQ5-0WTMIp8sVwA",
+       "title": "The Left in 2018: Unhinged",
+       "description": "Subscribe Now! http://www.GOP.com.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/eFRHX6glTSM/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/eFRHX6glTSM/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/eFRHX6glTSM/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "GOP",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/MMzxcTEcV8F7oCVwcgvD7Xe3jdY\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "xpTOkPDdeao"
+      },
+      "snippet": {
+       "publishedAt": "2018-03-02T04:30:01.000Z",
+       "channelId": "UCwWhs_6x42TyRM4Wstoq8HA",
+       "title": "Trump Attacks the GOP and Sides with Democrats on Gun Control: The Daily Show",
+       "description": "During meetings to discuss gun reform, President Trump unexpectedly sides with Democrats on issues like universal background checks and age restrictions.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/xpTOkPDdeao/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/xpTOkPDdeao/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/xpTOkPDdeao/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Daily Show with Trevor Noah",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/W6-gk9-tNhP3Qh6AKGKsIP6WRD0\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "RTBxPPx62s4"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-27T21:16:42.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Lindsey Graham erupts: Kavanaugh hearing an unethical sham",
+       "description": "While questioning Supreme Court nominee Brett Kavanaugh, Sen. Lindsey Graham (R-SC) slammed the hearing as an \"unethical sham\" and accused ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/RTBxPPx62s4/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/RTBxPPx62s4/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/RTBxPPx62s4/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/A6CYATq3crzsQzIjsFex8URgOMg\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "hSCAHKy61-M"
+      },
+      "snippet": {
+       "publishedAt": "2018-02-07T04:30:03.000Z",
+       "channelId": "UCwWhs_6x42TyRM4Wstoq8HA",
+       "title": "Trump the Jokester Accuses Democrats of Treason: The Daily Show",
+       "description": "After President Trump accuses Democrats of treason for not applauding him, the White House calls his comment a joke. Watch full episodes of The Daily Show ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/hSCAHKy61-M/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/hSCAHKy61-M/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/hSCAHKy61-M/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Daily Show with Trevor Noah",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/pmeWZb3CuImKgB7YX-3l43GWzGs\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "u_9KznQ3vNw"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-18T21:53:15.000Z",
+       "channelId": "UCXIJgqnII2ZOINSWNOGFThA",
+       "title": "Gutfeld on 2020 Democratic contenders",
+       "description": "A new poll shows that three out of four Democrats believe it's time for a fresh face to lead the party. FOX News Channel (FNC) is a 24-hour all-encompassing ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/u_9KznQ3vNw/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/u_9KznQ3vNw/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/u_9KznQ3vNw/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox News",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/JffzW6jCLFD0OeNZFRvl3_VZhi0\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "ySYOdvVLMKU"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-28T16:03:14.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Democrats walk out of Senate Judiciary Committee meeting",
+       "description": "Sen. Kamala Harris, Sen. Richard Blumenthal, Sen. Sheldon Whitehouse and Sen. Mazie Hirono walked out of the Senate Judiciary Committee meeting and ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/ySYOdvVLMKU/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/ySYOdvVLMKU/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/ySYOdvVLMKU/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/dbUrvLklZjRl4zeokxwUGUoKA_0\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "AmUaZijueDc"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-26T01:02:34.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Trump voter gets emotional promising vote to Democrat",
+       "description": "CNN's Kyung Lah visits Kentucky's 6th congressional district where there is a tight race between GOP incumbent Rep. Andy Barr, and retired Marine pilot Amy ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/AmUaZijueDc/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/AmUaZijueDc/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/AmUaZijueDc/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/ro4jK_ijlMMQ56n-WyoaMkWbrDo\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "6yNmyekIxH0"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-04T17:11:49.000Z",
+       "channelId": "UCJg9wBPyKMNA5sRDnvzmkdg",
+       "title": "MUST WATCH: Ted Cruz Grills Democrats On \"Hypocritical\" Views On Brett Kavanaugh",
+       "description": "Judge Brett Kavanaugh goes before the Senate Judiciary Committee on Tuesday for confirmation hearings with what supporters call the longest paper trail ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/6yNmyekIxH0/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/6yNmyekIxH0/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/6yNmyekIxH0/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "FOX 10 Phoenix",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/BJCGBSkPiThEnXzFxdpXyG4HC5s\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "lJ7M8zzpi_c"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-05T17:48:48.000Z",
+       "channelId": "UCqlYzSgsh5jdtWYfVIBoTDw",
+       "title": "Candace Owens: There Will Be a 'Major Black Exit' From the Democratic Party",
+       "description": "As seen on Fox & Friends Candace Owens said Thursday she believes the Democratic Party will see a \"major exit\" by black voters leading up to the 2020 ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/lJ7M8zzpi_c/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/lJ7M8zzpi_c/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/lJ7M8zzpi_c/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox News Insider",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/xwzXNlIihABR-b1ndOnWnZD4BZc\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "WUg5ud8eM-k"
+      },
+      "snippet": {
+       "publishedAt": "2018-01-18T18:33:05.000Z",
+       "channelId": "UCeihdbTZicHilGUUqowe1wg",
+       "title": "CNN stunned lifelong Democrats love President Trump",
+       "description": "CNN did an interview with lifelong democrats who supported Donald Trump this past election cycle and was stunned by the positive endorsement he still ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/WUg5ud8eM-k/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/WUg5ud8eM-k/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/WUg5ud8eM-k/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "DailyWorldwideNews",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/ICrLCZ9q5gVpyd1vGjsK5tJLyc8\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "ieS5KFrgjBs"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-29T19:52:34.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Obama gives Democrats tough love: 'Enough moping'",
+       "description": "President Barack Obama rebuked some Democrats he says are complaining about the current state of affairs without doing the most they can to change the ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/ieS5KFrgjBs/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/ieS5KFrgjBs/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/ieS5KFrgjBs/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/bdmmc_jnRi_h_hUUaF-iAXY2quE\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "aH7ed6o0UTA"
+      },
+      "snippet": {
+       "publishedAt": "2018-02-16T11:41:51.000Z",
+       "channelId": "UCZWlSUNDvCCS1hBiXV0zKcA",
+       "title": "Ami Presents: Communist Manifesto or Democratic Party Platform?",
+       "description": "It's no secret The Democratic Party has a tendency to cozy up to socialists, but how far left have they really become? To find out, Ami Horowitz took to the streets ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/aH7ed6o0UTA/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/aH7ed6o0UTA/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/aH7ed6o0UTA/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "PragerU",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/WwFOx9K1JXpLKRWMVsw7vcgXhac\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "4Pjs7uoOkag"
+      },
+      "snippet": {
+       "publishedAt": "2018-05-26T17:10:02.000Z",
+       "channelId": "UCeyQ0fdrXTBxK-iOq1cBrbg",
+       "title": "#WalkAway Campaign- WHY I LEFT LIBERALISM & THE DEMOCRATIC PARTY",
+       "description": "Today I'm kicking off the #WalkAway campaign by releasing my video about why I am walking away from liberalism and the Democratic Party. It is my sincere ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/4Pjs7uoOkag/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/4Pjs7uoOkag/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/4Pjs7uoOkag/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Brandon Straka, The Unsilent Minority",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/PX4ubDky0Ml2g4Pc4u28KkuxKlQ\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "STwSMAeuze8"
+      },
+      "snippet": {
+       "publishedAt": "2018-03-17T04:53:50.000Z",
+       "channelId": "UCy6kyFxaMqGtpE3pQTflK8A",
+       "title": "New Rule: The Problem with Democrats | Real Time with Bill Maher (HBO)",
+       "description": "Subscribe to the Real Time YouTube: http://itsh.bo/10r5A1B In his editorial New Rule, Bill calls on Democrats to step up and fight like Republicans. Connect with ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/STwSMAeuze8/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/STwSMAeuze8/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/STwSMAeuze8/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Real Time with Bill Maher",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/iRIfJQ-iJxJJ8N2hcysx6FvNHsY\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "dwZoCoqzwRI"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-26T01:00:01.000Z",
+       "channelId": "UCVTyTA7-g9nopHeHbeuvpRA",
+       "title": "Really!?! with Seth and Amy: James Comey's Warning for Democrats",
+       "description": "Really, James Comey? You wanna weigh in on things when there's an election coming up? You feel like that's gone really well for you in the past? » Subscribe ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/dwZoCoqzwRI/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/dwZoCoqzwRI/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/dwZoCoqzwRI/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Late Night with Seth Meyers",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/WJK-0VIoX8N1DOj7_XzZZ6AwNsM\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "vW32S19vp0k"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-24T18:05:01.000Z",
+       "channelId": "UCeH6qE4V7n5tVwP7NkdrtJg",
+       "title": "Will Socialists Divide Democratic Party? | The View",
+       "description": "",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/vW32S19vp0k/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/vW32S19vp0k/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/vW32S19vp0k/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The View",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/xwLF-7IomRxOHF44jiYo81q8IKs\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "UEf4Xtg-1kY"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-03T16:51:05.000Z",
+       "channelId": "UC5LyOpuz7dBImOBUarvyYRw",
+       "title": "The Democratic Party    #WalkAway",
+       "description": "The Democratic Party has a history of Violence, Racism and Hate. Some things never change, they just get rebranded... A Montage of leftist celebrities and ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/UEf4Xtg-1kY/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/UEf4Xtg-1kY/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/UEf4Xtg-1kY/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Where We Go 1 We Go All",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/AaMPy2PvC3e0ZCVuzS9iuVK0sNo\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "RGJPmxXLO5g"
+      },
+      "snippet": {
+       "publishedAt": "2018-08-24T19:25:10.000Z",
+       "channelId": "UCglVbeKF9JGMCt-RTUAW_TQ",
+       "title": "Why Democrats Are Switching To Republican",
+       "description": "Infowars reporter Millie Weaver interviews a young anti-Trump protester about what he thinks 'Make America Great Again' means. The anti-Trump protester ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/RGJPmxXLO5g/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/RGJPmxXLO5g/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/RGJPmxXLO5g/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Millennial Millie",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/4c0PFoe8DgS7g8ZrsuX9ar0V_oM\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "NR-awvwIMls"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-29T13:14:13.000Z",
+       "channelId": "UCXIJgqnII2ZOINSWNOGFThA",
+       "title": "ICE director has message for Democrats on his last day",
+       "description": "Retiring ICE acting director Thomas Homan blasts critics of the agency on 'Fox & Friends.' FOX News Channel (FNC) is a 24-hour all-encompassing news ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/NR-awvwIMls/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/NR-awvwIMls/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/NR-awvwIMls/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox News",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/WuVigJQq5PZ0yfty_IVN4lFbO6E\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "ZbP33yl_kT4"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-02T21:41:17.000Z",
+       "channelId": "UCaYw_yJ_YLPEv6zR2c7hgHA",
+       "title": "Democrats Hate Black People #walkaway",
+       "description": "It is time to walk away from the Democratic party's ideology. The democratic philosophy is filled with hate and fear mongering. They have no message. Actually ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/ZbP33yl_kT4/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/ZbP33yl_kT4/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/ZbP33yl_kT4/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Brandon Tatum",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/7I6FCSELZYYd_K8uZ80isqBdNDE\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "SBuYW6ZM36Y"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-26T00:35:49.000Z",
+       "channelId": "UCXIJgqnII2ZOINSWNOGFThA",
+       "title": "Democrats call out Maxine Waters for encouraging incivility",
+       "description": "Congresswoman encourages supporters to confront Trump officials in public; reaction and analysis from the 'Special Report' All-Stars. FOX News Channel ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/SBuYW6ZM36Y/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/SBuYW6ZM36Y/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/SBuYW6ZM36Y/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox News",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/1FoHfZz6cEU-MuLl1u6C8Ninq9E\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "iesJqCF2syg"
+      },
+      "snippet": {
+       "publishedAt": "2018-08-11T01:33:38.000Z",
+       "channelId": "UC3o7kbpTUQ5-0WTMIp8sVwA",
+       "title": "Alexandria Ocasio-Cortez: The Future of the Democratic Party",
+       "description": "http://www.GOP.com.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/iesJqCF2syg/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/iesJqCF2syg/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/iesJqCF2syg/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "GOP",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/Xk_V3drV8zgtkxnKxN_GX0EKqec\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "WunFJhgKwig"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-04T21:33:45.000Z",
+       "channelId": "UCVaXclURQZlakiTMzuwHvRw",
+       "title": "Sen. Lindsey Graham Rips Democrats for 'Hypocrisy' During Brett Kavanaugh Hearing",
+       "description": "Sen. Lindsey Graham defended attacked Democrats for being what he called 'hypocrites' about Supreme Court Nominee Brett Kavanaugh during the first day of ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/WunFJhgKwig/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/WunFJhgKwig/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/WunFJhgKwig/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "News 19 WLTX",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/q5OgrNJmYOeun59esL5nUHNnVIw\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "hABRM1xyC88"
+      },
+      "snippet": {
+       "publishedAt": "2018-02-12T23:37:28.000Z",
+       "channelId": "UCzsPNCeN8lRNN_QtAs2wcng",
+       "title": "\"Democrats Are More Moral\" Liberal Student CONFRONT D'Souza, Gets OWNED BRILLIANTLY",
+       "description": "\"Democrats Are More Moral\" Liberal Student CONFRONT D'Souza, Gets OWNED BRILLIANTLY. Do SUBSCRIBE To This Channel, Like And Share The Videos.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/hABRM1xyC88/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/hABRM1xyC88/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/hABRM1xyC88/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Be Wired",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/RLdjPNis2FtQzQg_CyUqjl2h2Yg\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "9GONHkIGagY"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-27T21:12:13.000Z",
+       "channelId": "UCXIJgqnII2ZOINSWNOGFThA",
+       "title": "Graham slams Democrats, vigorously defends Kavanaugh",
+       "description": "Senator Lindsey Graham accuses Democrats of an 'unethical sham,' says Supreme Court nominee Brett Kavanaugh has nothing to apologize for, urges fellow ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/9GONHkIGagY/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/9GONHkIGagY/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/9GONHkIGagY/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox News",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/I26c5OEqLBFbIy3v2yGEF59BQZQ\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "ovtQ7B1qaoE"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-06T02:07:33.000Z",
+       "channelId": "UCCXoCcu9Rp7NPbTzIvogpZg",
+       "title": "Rust belt guys are getting sick of being called stupid by Democrats: Dennis Miller",
+       "description": "Comedian Dennis Miller gives an impassioned explanation for why Democrats lost in 2016, and why they may well lose again in 2020.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/ovtQ7B1qaoE/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/ovtQ7B1qaoE/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/ovtQ7B1qaoE/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox Business",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/lpWRgihBHuD_LseMabjc8d_UCC4\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "2qm9D92TT4c"
+      },
+      "snippet": {
+       "publishedAt": "2018-04-30T15:16:23.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Trump: I'll be impeached if Democrats win midterms",
+       "description": "During a rally in Michigan, President Trump told supporters that if Republicans lose the majority in Congress, Democrats will impeach him.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/2qm9D92TT4c/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/2qm9D92TT4c/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/2qm9D92TT4c/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/Z6Yg0gbrJDf9ibBuiU1yMLlPBvI\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "TirjTjf8RSs"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-14T16:00:03.000Z",
+       "channelId": "UCwWhs_6x42TyRM4Wstoq8HA",
+       "title": "Democalypse 2018 - Democrats Aim for a Midterm Victory in Orange County | The Daily Show",
+       "description": "The midterms are merely the length of a dog pregnancy away, and the stakes could not be higher. Subscribe to The Daily Show: ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/TirjTjf8RSs/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/TirjTjf8RSs/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/TirjTjf8RSs/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Daily Show with Trevor Noah",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/d1uBlr4SagOH0HXK7_Vrdj7Vyy4\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "51UGcghHZsk"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-29T20:58:36.000Z",
+       "channelId": "UCDb4InP9mRZR9oogD1b2dOQ",
+       "title": "#WalkAway - Brandon Straka, \"Why I left the Democratic Party\"",
+       "description": "Brandon Straka - \"I am kicking off the #WalkAway campaign by releasing my video about why I am walking away from liberalism and the Democratic Party.\" \"It is ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/51UGcghHZsk/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/51UGcghHZsk/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/51UGcghHZsk/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "#WalkAway Campaign Official YouTube",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/QDsv6eZEqGxZdpjl631xvj74q8Y\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "bSuX69F2rJg"
+      },
+      "snippet": {
+       "publishedAt": "2018-01-29T22:21:32.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Gaetz on Nunes FISA memo: Democrats won't like it",
+       "description": "Rep. Matt Gaetz (R-FL) says he wants a memo compiled by Rep. Devin Nunes (R-CA) to be released to the public and says that once the contents are revealed ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/bSuX69F2rJg/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/bSuX69F2rJg/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/bSuX69F2rJg/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/HZVnPmTG3iJH98TgJgmEHH3zDLo\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "oymI140Xa3o"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-13T14:17:17.000Z",
+       "channelId": "UCaXkIU1QidjPwiAYu6GcHjg",
+       "title": "Democrats Now Have Double-Digit Leads In New Polls | Morning Joe | MSNBC",
+       "description": "In the run-up to the midterms, three new national polls give Democrats a double-digit advantage in the vote for Congress. » Subscribe to MSNBC: ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/oymI140Xa3o/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/oymI140Xa3o/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/oymI140Xa3o/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "MSNBC",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/KIlJrBq_yJtvGK0-J2XqEsvR4Y0\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "EjLXFUTTUv8"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-29T18:00:06.000Z",
+       "channelId": "UCeH6qE4V7n5tVwP7NkdrtJg",
+       "title": "New GOP Ad Attacks 'Unhinged' Democrats | The View",
+       "description": "",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/EjLXFUTTUv8/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/EjLXFUTTUv8/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/EjLXFUTTUv8/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The View",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/LIszGgPD6AaGwf9CYG4q7vOVhSQ\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "PAjtoB7AE00"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-18T15:14:17.000Z",
+       "channelId": "UCeH6qE4V7n5tVwP7NkdrtJg",
+       "title": "Trump Blames Democrats For Border Policy Separating Children From Parents | The View",
+       "description": "\"The View\" co-hosts discuss the comment from the president and clarify who has the power to make change.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/PAjtoB7AE00/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/PAjtoB7AE00/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/PAjtoB7AE00/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The View",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/5zx0db9c9QJtcQDRIoGJmvwuf-0\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "9iPBY5038PI"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-29T13:05:51.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Why Democrats are optimistic about midterms",
+       "description": "CNN's John King looks at new data around the midterm house races that are giving Democrats hope that they can wrest control of the House of Representatives ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/9iPBY5038PI/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/9iPBY5038PI/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/9iPBY5038PI/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/UPLNFPJI3NLkriB3UHRDRFDQKxw\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "NrDsCBLXZjY"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-28T16:04:06.000Z",
+       "channelId": "UCKzI8uTXAXjVgohgACHPz7Q",
+       "title": "\"All Of Her Witnesses Denied Her Story\" Ted Cruz RIPS Democrats For Mud Slinging Kavanaugh's Name",
+       "description": "\"All Of Her Witnesses Denied Her Story\" Ted Cruz RIPS Democrats For Mud Slinging Kavanaugh's Name Today Brett Kavanaugh Hearing took place And ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/NrDsCBLXZjY/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/NrDsCBLXZjY/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/NrDsCBLXZjY/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Amicus Humani Generis",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/qqwJo5ht6z5fKFFE0wI4kZ1ImPY\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "8MOo6SoR5iE"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-11T00:48:46.000Z",
+       "channelId": "UC8p1vwvWtl6T73JiExfWs1g",
+       "title": "What will it take for Democrats to win the Senate?",
+       "description": "In order for Democrats to take the U.S. Senate in November, they will have to win Republican-held seats and defend Democratic-held seats in states President ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/8MOo6SoR5iE/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/8MOo6SoR5iE/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/8MOo6SoR5iE/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CBS News",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/q69IigphOMAwr475VgYPtRo5yek\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "g7B0Z-rI7iY"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-05T12:17:12.000Z",
+       "channelId": "UCXIJgqnII2ZOINSWNOGFThA",
+       "title": "Sanders: Kavanaugh hearing an embarrassment for Democrats",
+       "description": "White House press secretary reacts to Democrats' 'grandstanding' on Capitol Hill and Bob Woodward's new book on the Trump presidency. FOX News Channel ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/g7B0Z-rI7iY/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/g7B0Z-rI7iY/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/g7B0Z-rI7iY/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox News",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/_ptcoxaAfxI_ndS3HUAXRiyas3Q\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "-Cf8agqSCao"
+      },
+      "snippet": {
+       "publishedAt": "2018-01-31T03:45:33.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Democrats boo Trump's chain migration remarks",
+       "description": "Democrats booed President Donald Trump remarks about chain migration as he presented the four pillars of his immigration plan during the State of the Union ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/-Cf8agqSCao/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/-Cf8agqSCao/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/-Cf8agqSCao/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/qMFEATRqohQWtVk6UdCz1ck9zuY\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "uqaCRzKQmbg"
+      },
+      "snippet": {
+       "publishedAt": "2018-02-16T13:00:03.000Z",
+       "channelId": "UCzUV5283-l5c0oKRtyenj6Q",
+       "title": "Democrats All Agree with Trump’s Immigration Plan!  😆",
+       "description": "It's just too funny. They all agreed with it before they knew it was his plan. ⚠   Order your shirts from my online store here: https://teespring.com/stores/markdice ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/uqaCRzKQmbg/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/uqaCRzKQmbg/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/uqaCRzKQmbg/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Mark Dice",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/258q77VZTBEWaNAY1ll1c2viBdY\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "V9vE-NgFhuc"
+      },
+      "snippet": {
+       "publishedAt": "2018-05-29T14:13:54.000Z",
+       "channelId": "UCXIJgqnII2ZOINSWNOGFThA",
+       "title": "Ben Shapiro: Democrats do not have an agenda for 2018",
+       "description": "Columnist says the momentum is not on Democrats' side heading into the midterms. Also, Shapiro reacts to liberal media tweeting a 2014 story and blaming ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/V9vE-NgFhuc/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/V9vE-NgFhuc/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/V9vE-NgFhuc/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox News",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/Bv3rKg5CME72xbldikIQ2_ZyKFI\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "brjrdBhZ214"
+      },
+      "snippet": {
+       "publishedAt": "2018-08-30T01:58:36.000Z",
+       "channelId": "UCXIJgqnII2ZOINSWNOGFThA",
+       "title": "Tucker: The Democratic Party is blowing up",
+       "description": "Tucker takes on the increasingly extreme views of the Democratic party as more and more progressive candidates win their respective primaries. FOX News ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/brjrdBhZ214/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/brjrdBhZ214/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/brjrdBhZ214/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox News",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/mE3vP00QPuLX8dZTd5ThyITQp7c\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "FUmQC5FxDkk"
+      },
+      "snippet": {
+       "publishedAt": "2018-10-05T20:40:10.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Protesters shout down Democrat voting for Kavanaugh",
+       "description": "As Sen. Joe Manchin (D-WV) spoke to reporters after announcing his support for Kavanaugh's confirmation, protesters began chanting, \"Shame! Shame!\"",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/FUmQC5FxDkk/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/FUmQC5FxDkk/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/FUmQC5FxDkk/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/uY2-QewKudA3Djm4wmlBFecZPBI\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "0e8aDA2Pog4"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-30T02:00:02.000Z",
+       "channelId": "UCNbIDJNNgaRrXOD7VllIMRQ",
+       "title": "This could be the END of the Democratic Party. WATCH",
+       "description": "Visit us at: Website: http://www.oann.com Facebook: https://www.facebook.com/OneAmericaNewsNetwork Twitter: https://twitter.com/OANN.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/0e8aDA2Pog4/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/0e8aDA2Pog4/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/0e8aDA2Pog4/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "One America News Network",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/FONMfQMWn1cROR15enYUCx4KZS0\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "59UG77ujIf4"
+      },
+      "snippet": {
+       "publishedAt": "2018-02-06T16:14:03.000Z",
+       "channelId": "UCeH6qE4V7n5tVwP7NkdrtJg",
+       "title": "Trump: Democrats \"Treasonous\" For Not Clapping | The View",
+       "description": "",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/59UG77ujIf4/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/59UG77ujIf4/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/59UG77ujIf4/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The View",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/pzjKnvwfH6XS4EZljjirAIFXd90\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "ZzXS8r4SpnQ"
+      },
+      "snippet": {
+       "publishedAt": "2018-10-09T23:09:16.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Hillary Clinton says Democrats can't be civil right now",
+       "description": "Hillary Clinton discusses President Trump, Supreme Court Justice Brett Kavanaugh and civility in politics with CNN's Christiane Amanpour.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/ZzXS8r4SpnQ/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/ZzXS8r4SpnQ/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/ZzXS8r4SpnQ/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/KQAxvx7R4IGCfX8BXqxRd94VjqM\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "MUUC-SjwQp0"
+      },
+      "snippet": {
+       "publishedAt": "2018-04-06T05:32:43.000Z",
+       "channelId": "UCNdW82WWvjQEF5tUWVXvdKg",
+       "title": "Jordan Peterson, What's Trumps IQ, Why people voted for trump, Why Democrats lost",
+       "description": "This is a compilation of clips that highlight some of the times that Jordan Peterson has mentioned trump, including Trumps IQ, Why people voted for Trump Why ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/MUUC-SjwQp0/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/MUUC-SjwQp0/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/MUUC-SjwQp0/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Dose of Truth",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/8jA8m9DZmdtolnczokTYl9nkRZw\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "pett6Bfy85I"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-01T22:00:02.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Republicans Terrified Of Democratic Takeover",
+       "description": "Republicans are really worried the Democrats will takeover the House. Ana Kasparian and John Iadarola, the hosts of The Young Turks, break it down.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/pett6Bfy85I/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/pett6Bfy85I/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/pett6Bfy85I/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/nK8nEpd0yuVjkzOFmeT-Iih_U4Q\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "ieygGPaUXO4"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-04T21:50:48.000Z",
+       "channelId": "UCXIJgqnII2ZOINSWNOGFThA",
+       "title": "Senate Democrats, protesters hijack Kavanaugh hearing",
+       "description": "Democrats urge delay of Brett Kavanaugh's confirmation hearing over a dispute about the release of the Supreme Court nominee's records; reaction and ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/ieygGPaUXO4/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/ieygGPaUXO4/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/ieygGPaUXO4/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox News",
+       "liveBroadcastContent": "none"
+      }
+     }
+    ]
+   }
+
+   {
+    "kind": "youtube#searchListResponse",
+    "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/3E9uHTKKv1p9v68yx7RMW-RiG0Y\"",
+    "nextPageToken": "CDIQAA",
+    "regionCode": "US",
+    "pageInfo": {
+     "totalResults": 1000000,
+     "resultsPerPage": 50
+    },
+    "items": [
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/tkoPRaA_STlHdrV9pdXtC8bzpOk\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "lgO3pBfrgxs"
+      },
+      "snippet": {
+       "publishedAt": "2018-10-07T05:01:56.000Z",
+       "channelId": "UCqFzWxSCi39LnW1JKFR3efg",
+       "title": "Brett Kavanaugh Post-Game Cold Open - SNL",
+       "description": "CNN interviews Republican Senators Mitch McConnell (Beck Bennett), Lindsey Graham (Kate McKinnon), Susan Collins (Cecily Strong), Jeff Flake (Pete ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/lgO3pBfrgxs/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/lgO3pBfrgxs/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/lgO3pBfrgxs/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Saturday Night Live",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/dHIRnPYmyCBxhRQ-U74clGF5-4E\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "OURy5WFp0zk"
+      },
+      "snippet": {
+       "publishedAt": "2018-01-15T08:47:31.000Z",
+       "channelId": "UCZWlSUNDvCCS1hBiXV0zKcA",
+       "title": "The Inconvenient Truth About the Republican Party",
+       "description": "When you think of the Republican Party, what comes to mind? If you're like many Americans, you may associate the GOP with racism, sexism, and general ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/OURy5WFp0zk/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/OURy5WFp0zk/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/OURy5WFp0zk/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "PragerU",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/BEvTM8r56v3HSOTdHuuIaLAOv5I\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "C5u7rVt3-Xg"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-19T01:00:01.000Z",
+       "channelId": "UCVTyTA7-g9nopHeHbeuvpRA",
+       "title": "Republicans Fall in Line After Trump-Putin Summit: A Closer Look",
+       "description": "Seth takes a closer look at Republicans falling in line after President Trump's absurd explanation for his comments on Russian election meddling. » Subscribe to ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/C5u7rVt3-Xg/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/C5u7rVt3-Xg/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/C5u7rVt3-Xg/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Late Night with Seth Meyers",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/0qIDZwRRfXAZZNEjDtoVRThNdJA\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "d169_pZ-8C4"
+      },
+      "snippet": {
+       "publishedAt": "2018-01-26T04:30:00.000Z",
+       "channelId": "UCwWhs_6x42TyRM4Wstoq8HA",
+       "title": "Trump vs. The FBI: Republicans Investigate the Investigation: The Daily Show",
+       "description": "Conservatives push a conspiracy theory that FBI agents have a \"secret society\" trying to bring down President Trump under the guise of investigating his ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/d169_pZ-8C4/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/d169_pZ-8C4/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/d169_pZ-8C4/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Daily Show with Trevor Noah",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/M37-10onpvhqEUeIBx8fA8pzBdE\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "5UW1FQH5IkM"
+      },
+      "snippet": {
+       "publishedAt": "2018-03-21T08:32:28.000Z",
+       "channelId": "UCaXkIU1QidjPwiAYu6GcHjg",
+       "title": "Republicans Start Talking Impeachment | The 11th Hour | MSNBC",
+       "description": "A GOP warning to President Trump about impeachment, should he bring an end to the Mueller investigation. Plus, the top Republican attorney who turned down ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/5UW1FQH5IkM/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/5UW1FQH5IkM/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/5UW1FQH5IkM/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "MSNBC",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/R-Slous4PAznb2BskJ6qz8IEULM\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "eFRHX6glTSM"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-27T00:41:22.000Z",
+       "channelId": "UC3o7kbpTUQ5-0WTMIp8sVwA",
+       "title": "The Left in 2018: Unhinged",
+       "description": "Subscribe Now! http://www.GOP.com.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/eFRHX6glTSM/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/eFRHX6glTSM/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/eFRHX6glTSM/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "GOP",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/Pp4LDY_-437DwkwI9eBlGrumeuQ\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "UmtB9Jo7IG8"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-22T21:02:46.000Z",
+       "channelId": "UCPOe1Gujiyt-LeznMyE6tEg",
+       "title": "Dumb Republicans 2",
+       "description": "Think of how stupid the average person is, and realize half of them are stupider than that.” - George Carlin. “The best argument against democracy is a ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/UmtB9Jo7IG8/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/UmtB9Jo7IG8/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/UmtB9Jo7IG8/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Chodmunch",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/fpwqpEvMwMu8I2t49joG2sOPpE0\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "isxrREkP44I"
+      },
+      "snippet": {
+       "publishedAt": "2018-02-06T04:32:46.000Z",
+       "channelId": "UCwWhs_6x42TyRM4Wstoq8HA",
+       "title": "Memo Combat: Republicans React to Devin Nunes's Dud Memo: The Daily Show",
+       "description": "While some Republicans are distancing themselves from Devin Nunes's controversial memo questioning the FBI's credibility, Sean Hannity uses it to defend ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/isxrREkP44I/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/isxrREkP44I/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/isxrREkP44I/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Daily Show with Trevor Noah",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/AFNNqOvTcoEAPNVLD2Fwam7WpKg\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "TImO_RquoW8"
+      },
+      "snippet": {
+       "publishedAt": "2018-05-04T13:11:22.000Z",
+       "channelId": "UCLXo7UDZvByw2ixzpQCufnA",
+       "title": "George H.W. Bush’s broken promise that changed the Republican Party",
+       "description": "Bush's pledge to not raise taxes led to repercussions still felt in conservative politics today. Subscribe to our channel! http://goo.gl/0bsAjO Presidents give ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/TImO_RquoW8/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/TImO_RquoW8/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/TImO_RquoW8/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Vox",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/ECQ4NFKyBOf8otBiww4ChxO9UdU\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "S5bogm15OUk"
+      },
+      "snippet": {
+       "publishedAt": "2018-10-04T19:10:03.000Z",
+       "channelId": "UCgAvalds_Q4FLwt2K_L57Ug",
+       "title": "🔴 Senate Republican Leaders EXPLOSIVE Press Conference on Kavanaugh Confirmation after FBI Report",
+       "description": "We Must CONFIRM Judge Kavanaugh NOW, Senate Republican Leaders. GOP Senators hold Press Conference on Judge Brett Kavanaugh Confirmation to ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/S5bogm15OUk/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/S5bogm15OUk/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/S5bogm15OUk/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Space Force News",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/xrLifY8DAofwLhCzlED8SEb6hS8\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "wa-rCn08lEQ"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-13T02:00:01.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Republicans Picked The Wrong FBI Agent To Mess With (VIDEO)",
+       "description": "This hearing didn't go like Republicans planned. Cenk Uygur and Ana Kasparian, hosts of The Young Turks, discuss. TYT now has a full audio network!",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/wa-rCn08lEQ/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/wa-rCn08lEQ/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/wa-rCn08lEQ/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/i1XLqu8Uivk6-M62wTWyNkIQqck\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "VKYfarmt-N4"
+      },
+      "snippet": {
+       "publishedAt": "2018-04-18T18:33:38.000Z",
+       "channelId": "UCZWlSUNDvCCS1hBiXV0zKcA",
+       "title": "Do You Have Any Republican Friends?",
+       "description": "PragerU and Will Witt recently asked New Yorkers if they had any Republican friends. The responses we got were neither surprising nor tolerant. Be sure to ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/VKYfarmt-N4/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/VKYfarmt-N4/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/VKYfarmt-N4/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "PragerU",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/Ge3c3FVm6j4_D6dtC975AyAoNmY\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "xv7EVdDx86I"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-28T13:00:11.000Z",
+       "channelId": "UCwWhs_6x42TyRM4Wstoq8HA",
+       "title": "Republicans Need Jesus | The Daily Show",
+       "description": "Neal Brennan reminds Republicans that before they were making excuses for Brett Kavanaugh and Donald Trump, they were the party of godliness and morality ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/xv7EVdDx86I/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/xv7EVdDx86I/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/xv7EVdDx86I/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Daily Show with Trevor Noah",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/hzdfWV6pLFhVBp6zt5Jl3b5T7aQ\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "QUAtHdTTH2w"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-09T04:29:56.000Z",
+       "channelId": "UCy6kyFxaMqGtpE3pQTflK8A",
+       "title": "Post-American World, Never-Trumpers, Minority Republicans | Overtime with Bill Maher (HBO)",
+       "description": "Subscribe to the Real Time YouTube: http://itsh.bo/10r5A1B Bill and his Real Time panelists – Michael Eric Dyson, John Heilemann, Shermichael Singleton, ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/QUAtHdTTH2w/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/QUAtHdTTH2w/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/QUAtHdTTH2w/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Real Time with Bill Maher",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/AaMPy2PvC3e0ZCVuzS9iuVK0sNo\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "RGJPmxXLO5g"
+      },
+      "snippet": {
+       "publishedAt": "2018-08-24T19:25:10.000Z",
+       "channelId": "UCglVbeKF9JGMCt-RTUAW_TQ",
+       "title": "Why Democrats Are Switching To Republican",
+       "description": "Infowars reporter Millie Weaver interviews a young anti-Trump protester about what he thinks 'Make America Great Again' means. The anti-Trump protester ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/RGJPmxXLO5g/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/RGJPmxXLO5g/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/RGJPmxXLO5g/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Millennial Millie",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/iOKL-m1IkfS0-zeedNRpqkUasoI\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "PHb4YMxnrZY"
+      },
+      "snippet": {
+       "publishedAt": "2018-02-03T05:42:10.000Z",
+       "channelId": "UCy6kyFxaMqGtpE3pQTflK8A",
+       "title": "Monologue: Banana Republicans | Real Time with Bill Maher (HBO)",
+       "description": "Subscribe to the Real Time YouTube: http://itsh.bo/10r5A1B Bill recaps the top stories of the week, including the House GOP's controversial decision to release ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/PHb4YMxnrZY/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/PHb4YMxnrZY/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/PHb4YMxnrZY/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Real Time with Bill Maher",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/AkpZFY9QS1y6KvasVRT0oWUEW_Q\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "-efRb8fjngQ"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-07T17:38:57.000Z",
+       "channelId": "UCHd62-u_v4DvJ8TCFtpi4GA",
+       "title": "Obama delivers diatribe against GOP: 'What happened to the Republican party?'",
+       "description": "Former president Barack Obama heavily criticized the Republican party during a speech at the University of Illinois, Urbana-Champaign campus on Sept. 7.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/-efRb8fjngQ/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/-efRb8fjngQ/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/-efRb8fjngQ/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Washington Post",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/6oLIZhJzUQilBJRIf-koLlS2Urk\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "XR97EgcihlU"
+      },
+      "snippet": {
+       "publishedAt": "2018-05-22T23:16:02.000Z",
+       "channelId": "UCpwjYJfgn_Q86MPV2OU264w",
+       "title": "Republicans Announce They're Going After Hillary, Comey, Lynch, And Others in DOJ and FBI For Crimes",
+       "description": "Republicans Announce They're Going After Hillary, Comey, Lynch, And Others in DOJ and FBI For Crimes 5/22/18.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/XR97EgcihlU/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/XR97EgcihlU/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/XR97EgcihlU/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Media Buzz",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/1weddrILQzS7XZzIAwp6KM81wh8\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "RjG2zUORSvo"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-26T01:54:50.000Z",
+       "channelId": "UCUsN5ZwHx2kILm84-jPDeXw",
+       "title": "Why Republicans Continue to Back Brett Kavanaugh - The Jim Jefferies Show",
+       "description": "Jim offers a few explanations why Republicans continue to support Brett Kavanaugh's nomination for the Supreme Court, despite numerous sexual assault ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/RjG2zUORSvo/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/RjG2zUORSvo/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/RjG2zUORSvo/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Comedy Central",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/2YKFmrAq0tbnWWQ2AEdcgBEj4Fs\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "eVxSfJPmQzA"
+      },
+      "snippet": {
+       "publishedAt": "2018-04-12T02:00:00.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Anonymous Republican On Trump: 'Impeach The Motherf*cker'",
+       "description": "The unnamed Republican congressman also said Trump was, “like an evil, really f*cking stupid Forrest Gump.\" Cenk Uygur and John Iadarola, hosts of The ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/eVxSfJPmQzA/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/eVxSfJPmQzA/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/eVxSfJPmQzA/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/D4ORR6u1So8HVQM6NHwn4BtpmqY\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "yzQsiVq4iNs"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-29T13:00:17.000Z",
+       "channelId": "UCwWhs_6x42TyRM4Wstoq8HA",
+       "title": "Why Don’t Republicans Just Dump Brett Kavanaugh? | The Daily Show",
+       "description": "Michael Kosta provides some insight into why Republicans don't just ditch Brett Kavanaugh. Subscribe to The Daily Show: ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/yzQsiVq4iNs/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/yzQsiVq4iNs/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/yzQsiVq4iNs/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Daily Show with Trevor Noah",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/nlsAwES54DNG4HvlqsDdC90t2J4\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "gXDSSUDfXKU"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-20T07:35:00.000Z",
+       "channelId": "UCMtFAi84ehTSYSE9XoHefig",
+       "title": "Rep. Joe Kennedy III: House Republicans Are Doing Nothing",
+       "description": "Rep. Joe Kennedy III says Republican-controlled Congress hasn't been getting it done lately, particularly when it comes to election security. Subscribe To \"The ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/gXDSSUDfXKU/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/gXDSSUDfXKU/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/gXDSSUDfXKU/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Late Show with Stephen Colbert",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/q6s2btT8ZbhnPNY3RjVNlKYu3UA\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "q9Yqq1r1DYI"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-27T02:21:08.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Republicans Immediately Regret Impeaching Rosenstein",
+       "description": "This clip is brought to you in partnership with http://FireYourCongressman.com. Donate Directly Against any Member of Congress. It turns out trying to impeach ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/q9Yqq1r1DYI/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/q9Yqq1r1DYI/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/q9Yqq1r1DYI/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/vW5oGqIIDTNnDI-0n4_jj6wlsfA\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "dZDrOycStWo"
+      },
+      "snippet": {
+       "publishedAt": "2018-03-28T13:00:03.000Z",
+       "channelId": "UCZNk7Jjb2t8EuBdgn4Zj1cw",
+       "title": "South Park Creators Come Out as Republicans",
+       "description": "South Park Explained Playlist: https://www.youtube.com/playlist?list=PLljyz_HCQYVJjbWPOSpL0V_6av9MgMGNw Follow My New Twitter: ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/dZDrOycStWo/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/dZDrOycStWo/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/dZDrOycStWo/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "No Bullshit",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/58yu2FNJ_8DTvNUC66peDE2JL34\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "rk9KAydwQ7w"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-05T10:00:20.000Z",
+       "channelId": "UCVTyTA7-g9nopHeHbeuvpRA",
+       "title": "Chris Cuomo Explains Why Republicans Embrace President Trump",
+       "description": "Chris Cuomo explains why he continues to interview Trump administration officials despite protests from the left and what really drives the Republican support ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/rk9KAydwQ7w/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/rk9KAydwQ7w/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/rk9KAydwQ7w/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Late Night with Seth Meyers",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/bvKH9c3J9-AYTM7XmjcimgZNo_Y\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "4-bEQdSW-hk"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-10T21:25:55.000Z",
+       "channelId": "UCZWlSUNDvCCS1hBiXV0zKcA",
+       "title": "Does Santa Monica Love Republicans? With Will Witt",
+       "description": "Does Santa Monica Love Republicans? PragerU's Will Witt went to find out.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/4-bEQdSW-hk/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/4-bEQdSW-hk/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/4-bEQdSW-hk/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "PragerU",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/fvnVeM2zz4xdazkKdOpk4BgH6Hc\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "En3QUWGXAKA"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-13T05:32:12.000Z",
+       "channelId": "UCaXkIU1QidjPwiAYu6GcHjg",
+       "title": "Peter Strzok Holds His Own As Republicans Try To Put On Show At Hearing | Rachel Maddow | MSNBC",
+       "description": "Rachel Maddow reviews some highlights as well as some newly learned details from FBI Agent Peter Strzok's testimony in Congress as Strzok stood up to ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/En3QUWGXAKA/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/En3QUWGXAKA/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/En3QUWGXAKA/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "MSNBC",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/wkRBzLI5GLYZKez5HdcJvltiL44\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "nFBFOBuoB3k"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-26T03:36:42.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Republicans Running Away From Their Billionaire Tax Cuts",
+       "description": "It seems people don't like being reminded about all the money you handed to the rich. Cenk Uygur and Ana Kasparian, hosts of The Young Turks, discuss.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/nFBFOBuoB3k/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/nFBFOBuoB3k/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/nFBFOBuoB3k/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/HY5lzMMoyr9XbR11fLpURgvqgJs\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "dYPe8Y8o9yM"
+      },
+      "snippet": {
+       "publishedAt": "2018-10-04T19:16:27.000Z",
+       "channelId": "UCv7bObYhwkJQM9dSelNbRNQ",
+       "title": "\"IS KAVANAUGH LYING??!!\" Bernie Sanders HUMILIATES Trump & Republicans with Brett Kavanaugh Facts",
+       "description": "Bernie Sanders destroys Trump & his Republican lackeys on Brett Kavanaugh & the Supreme Court! Pitch in @ https://www.patreon.com/DoseofDissonance ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/dYPe8Y8o9yM/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/dYPe8Y8o9yM/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/dYPe8Y8o9yM/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Dose of Dissonance",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/D3vjJ-02W_AyRDPVSq74J8cu3Pg\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "flIM3AUyQ3A"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-21T01:51:47.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "GOP voter on Kavanaugh: What boy hasn't done this in high school?",
+       "description": "CNN's Randi Kaye speaks to Republican women in Florida about Christine Blasey Ford's sexual assault allegations against Supreme Court nominee Brett ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/flIM3AUyQ3A/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/flIM3AUyQ3A/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/flIM3AUyQ3A/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/ZBg_NrhME1dxwrGnaXkkF0QwQ28\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "Zk1V3iecJyU"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-24T03:30:01.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Alexandria Ocasio-Cortez Makes Republicans Go INSANE",
+       "description": "https://www.brentwelder.com https://www.tytkansas.com The right is not a fan of Alexandria Ocasio-Cortez. Cenk Uygur, and John Iadarola, hosts of The Young ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/Zk1V3iecJyU/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/Zk1V3iecJyU/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/Zk1V3iecJyU/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/POr9Jx4-DpM0D1vliZQ-J_Qnkqs\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "wna42lGkw1k"
+      },
+      "snippet": {
+       "publishedAt": "2018-05-24T03:00:07.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Republican Voters Get SLAPPED With Reality",
+       "description": "It turns out GOP voters aren't immune to the terrible policies of their party. Cenk Uygur and Ana Kasparian, host of The Young Turks, break it down. To get even ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/wna42lGkw1k/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/wna42lGkw1k/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/wna42lGkw1k/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/I5VUZzfJoaI_6HlJmMpRPrsTXRY\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "q3Zv9V6yMdw"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-30T19:00:51.000Z",
+       "channelId": "UCYWIEbibRcZav6xMLo9qWWw",
+       "title": "OOPS! Fox News Poll Shows Voters Don’t Think Republicans Care About America",
+       "description": "Fox News likely wasn't expecting the results of their latest poll which found that a majority of people in this country believe that the Republican Party cares more ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/q3Zv9V6yMdw/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/q3Zv9V6yMdw/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/q3Zv9V6yMdw/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Ring of Fire",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/lK-Q6eh9RqRLdr8z8Cns6SAt4EU\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "qNmwAFHdVNU"
+      },
+      "snippet": {
+       "publishedAt": "2018-03-21T05:54:31.000Z",
+       "channelId": "UCaXkIU1QidjPwiAYu6GcHjg",
+       "title": "Some Republicans Talk Impeachment If President Trump Fires Robert Mueller | The Last Word | MSNBC",
+       "description": "GOP Sens. Lindsey Graham and Jeff Flake say it would be a constitutional crisis and impeachment could follow if Trump fires Special Counsel Robert Mueller.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/qNmwAFHdVNU/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/qNmwAFHdVNU/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/qNmwAFHdVNU/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "MSNBC",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/gbaGRkuhXHxXzpbnBqMZ3M6lYN4\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "ONel2SGZoU8"
+      },
+      "snippet": {
+       "publishedAt": "2018-03-21T03:30:00.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Republican Talks Impeaching Trump",
+       "description": "High profile Republicans are warning Trump not to fire Mueller. Cenk Uygur, the host of The Young Turks, breaks it down. Tell us what you think in the comment ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/ONel2SGZoU8/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/ONel2SGZoU8/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/ONel2SGZoU8/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/KhNdTYqDUepLUDQSTvIbNiXl79E\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "eogutu95B1I"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-11T00:00:46.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "Republicans warn that Ted Cruz could lose",
+       "description": "Warning flags are going up in Texas where Sen. Ted Cruz (R-TX) is facing a competitive race from Democratic challenger Rep. Beto O'Rourke (D-TX).",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/eogutu95B1I/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/eogutu95B1I/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/eogutu95B1I/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/NAVU1tu0Lkm5h0oH2Tp0HPdvBPQ\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "8EsAzzs6CTM"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-15T23:17:38.000Z",
+       "channelId": "UCupvZG-5ko_eiXAupbDfxWw",
+       "title": "SE Cupp: Why is it so hard for Republicans to say Trump is wrong?",
+       "description": "CNN's SE Cupp responds to President Trump's tweet doubting the accuracy of the amount of deaths that resulted from Hurricane Maria in Puerto Rico.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/8EsAzzs6CTM/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/8EsAzzs6CTM/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/8EsAzzs6CTM/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "CNN",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/EwfT8tDY9VC5qO_-owYBvYQeL2g\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "9OlycFV0Ewo"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-23T22:52:11.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "BREAKING: New Poll Numbers for Republicans “Beyond Weak”",
+       "description": "http://tyt.com/JOIN The Republicans are in DEEP trouble! Cenk Uygur, host of The Young Turks, breaks it down. Download audio and video of the full two hour ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/9OlycFV0Ewo/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/9OlycFV0Ewo/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/9OlycFV0Ewo/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/qHvdjgSy5Z37gUXBEYWFzx95AsU\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "5mXA6Bm9tj4"
+      },
+      "snippet": {
+       "publishedAt": "2018-04-14T07:35:01.000Z",
+       "channelId": "UCMtFAi84ehTSYSE9XoHefig",
+       "title": "A Retirement Home For Retiring Republicans Only",
+       "description": "The higher-than-usual number of retiring GOP elected officials are all headed to one place in 2019: Old White Acres. Subscribe To \"The Late Show\" Channel ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/5mXA6Bm9tj4/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/5mXA6Bm9tj4/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/5mXA6Bm9tj4/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Late Show with Stephen Colbert",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/8jA8m9DZmdtolnczokTYl9nkRZw\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "pett6Bfy85I"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-01T22:00:02.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Republicans Terrified Of Democratic Takeover",
+       "description": "Republicans are really worried the Democrats will takeover the House. Ana Kasparian and John Iadarola, the hosts of The Young Turks, break it down.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/pett6Bfy85I/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/pett6Bfy85I/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/pett6Bfy85I/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/hc5iKjkOk06OLu72zvKx7fjG-hI\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "g64cgk3LSJU"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-17T16:10:04.000Z",
+       "channelId": "UCaXkIU1QidjPwiAYu6GcHjg",
+       "title": "Big Money Republican Donors Fleeing The Party Weeks Before Midterms | Velshi & Ruhle | MSNBC",
+       "description": "We are 50 days away from midterms and some of the GOP's biggest donors are fleeing the party. Stephanie Ruhle breaks down whether or not it is too late to ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/g64cgk3LSJU/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/g64cgk3LSJU/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/g64cgk3LSJU/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "MSNBC",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/4U9Sp5wmhFUJdNBGXsF1TXQ5u_Q\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "rbwbCi-nqMw"
+      },
+      "snippet": {
+       "publishedAt": "2018-05-11T07:12:58.000Z",
+       "channelId": "UCaXkIU1QidjPwiAYu6GcHjg",
+       "title": "Republicans Line Up Against Justice, Invite The Rod Rosenstein Showdown | Rachel Maddow | MSNBC",
+       "description": "Rep. Eric Swalwell talks about congressional Republicans insisting on being given access to elements of the investigation into Donald Trump against the wishes ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/rbwbCi-nqMw/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/rbwbCi-nqMw/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/rbwbCi-nqMw/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "MSNBC",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/Afhx0dbdnz5OHYBRfFv3sSiQbJU\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "2BEiWpZMuy4"
+      },
+      "snippet": {
+       "publishedAt": "2018-07-13T00:59:57.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Strzok Hearing Backfires On Republicans",
+       "description": "Peter Strzok walked through Darrell Issa like he wasn't even there. Cenk Uygur and Ana Kasparian, hosts of The Young Turks, discuss. TYT now has a full audio ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/2BEiWpZMuy4/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/2BEiWpZMuy4/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/2BEiWpZMuy4/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/9P1ygMwdsyhx9AL1yUNY7Qekg50\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "vfx2KaWZUrU"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-22T03:52:40.000Z",
+       "channelId": "UCXIJgqnII2ZOINSWNOGFThA",
+       "title": "Republican wins Texas district held by Dems for 139 years",
+       "description": "Should Texas Democrats be worried about Republican Pete Flores' state senate victory? Lt. Gov. Dan Patrick weighs in on 'Fox News @ Night with Shannon ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/vfx2KaWZUrU/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/vfx2KaWZUrU/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/vfx2KaWZUrU/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "Fox News",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/xoHluuC6BsbfW342g2XxLzVAPHM\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "uvbIytR9BwU"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-21T01:32:35.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Trump Insults Republican, It Backfires",
+       "description": "Congress has a sort of honor among thieves. Cenk Uygur, host of The Young Turks, breaks it down. TYT now has a full audio network! Available where you ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/uvbIytR9BwU/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/uvbIytR9BwU/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/uvbIytR9BwU/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/FZkKB6UYzbDKzyUqyRpLtyKvWn0\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "xjt2qghA-a8"
+      },
+      "snippet": {
+       "publishedAt": "2018-01-27T21:00:05.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "FLASHBACK: Republicans Throw A Fit Over Michelle Obama's Dress",
+       "description": "Remember when Republicans would regularly have insane meltdowns over ridiculous… wait… Cenk Uygur and Ana Kasparian, hosts of The Young Turks, ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/xjt2qghA-a8/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/xjt2qghA-a8/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/xjt2qghA-a8/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/h_UEhtm_ARCiFRkrNXwOMR3GMwQ\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "Gx3FByUrulM"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-26T04:13:40.000Z",
+       "channelId": "UCaXkIU1QidjPwiAYu6GcHjg",
+       "title": "Lawrence: Republicans Are Running Scared On Brett Kavanaugh | The Last Word | MSNBC",
+       "description": "More Republicans senators seem to be indicating that they are not entirely sold on voting for Kavanaugh. The newest? Jon Kyl, who helped guide Kavanaugh ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/Gx3FByUrulM/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/Gx3FByUrulM/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/Gx3FByUrulM/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "MSNBC",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/YBDi8WrqCs5vapILD_Y14nzQ6TI\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "eEeG7I7S30Y"
+      },
+      "snippet": {
+       "publishedAt": "2018-06-11T02:00:02.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "UN Blames Republicans For America's Growing Poverty",
+       "description": "The UN has done a study on poverty in the United States and the results are damning. Cenk Uygur and Ana Kasparian, hosts of The Young Turks, break it down.",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/eEeG7I7S30Y/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/eEeG7I7S30Y/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/eEeG7I7S30Y/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/oRj_7KJtFaae8puGMK746q_rmog\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "raT2mVXUwNM"
+      },
+      "snippet": {
+       "publishedAt": "2018-09-20T03:15:00.000Z",
+       "channelId": "UC1yBKRuGpC1tSM73A0ZjYjQ",
+       "title": "Trump's Stupidity Is Driving Republicans CRAZY",
+       "description": "This clip is brought to you in partnership with Squarespace. Head to https://Squarespace.com/TYT to save 10% off your first website. Trump is creating more and ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/raT2mVXUwNM/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/raT2mVXUwNM/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/raT2mVXUwNM/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "The Young Turks",
+       "liveBroadcastContent": "none"
+      }
+     },
+     {
+      "kind": "youtube#searchResult",
+      "etag": "\"XI7nbFXulYBIpL0ayR_gDh3eu1k/WiXQ8due3J7R8K5AG3oBl7VIXNQ\"",
+      "id": {
+       "kind": "youtube#video",
+       "videoId": "9qY9JjdhqYw"
+      },
+      "snippet": {
+       "publishedAt": "2018-04-30T15:21:30.000Z",
+       "channelId": "UCaXkIU1QidjPwiAYu6GcHjg",
+       "title": "Maxine Waters: Republicans ‘Scared President Is Going To Take Them Down’ | AM Joy | MSNBC",
+       "description": "Rep. Maxine Waters talks the push for the impeachment of Donald Trump, calls the House Intelligence Committee report on Russia 'nothing,' and relays the ...",
+       "thumbnails": {
+        "default": {
+         "url": "https://i.ytimg.com/vi/9qY9JjdhqYw/default.jpg",
+         "width": 120,
+         "height": 90
+        },
+        "medium": {
+         "url": "https://i.ytimg.com/vi/9qY9JjdhqYw/mqdefault.jpg",
+         "width": 320,
+         "height": 180
+        },
+        "high": {
+         "url": "https://i.ytimg.com/vi/9qY9JjdhqYw/hqdefault.jpg",
+         "width": 480,
+         "height": 360
+        }
+       },
+       "channelTitle": "MSNBC",
+       "liveBroadcastContent": "none"
+      }
+     }
+    ]
+   }
