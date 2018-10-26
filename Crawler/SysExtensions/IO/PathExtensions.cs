@@ -67,6 +67,9 @@ namespace SysExtensions.IO
         public static FPath FileOfParent(this FPath path, string searchPattern) =>
             path.EnumerateParents().Select(p => p.Files(searchPattern, false)).FirstOrDefault(f => !f.IsEmtpy());
 
+        public static FPath DirOfParent(this FPath path, string searchPattern) =>
+            path.EnumerateParents().Select(p => p.Directories(searchPattern, false)).FirstOrDefault(d => !d.IsEmtpy());
+
         public static FPath ParentWithFile(this FPath path, string filePattern) =>
             path.EnumerateParents().FirstOrDefault(p => p.Files(filePattern, false).HasValue());
 

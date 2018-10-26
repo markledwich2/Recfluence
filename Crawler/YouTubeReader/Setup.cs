@@ -13,7 +13,7 @@ namespace YouTubeReader {
     public static class Setup {
         public static string AppName = "YouTubeNetworks";
         public static FPath SolutionDir => typeof(Setup).LocalAssemblyPath().ParentWithFile("YouTubeNetworks.sln");
-        public static FPath DataDir => SolutionDir.Combine("Data");
+        public static FPath DataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
 
         public static Logger CreateLogger() {
             return new LoggerConfiguration()
@@ -39,7 +39,7 @@ namespace YouTubeReader {
             }
 
             if (cfg.SeedPath.IsEmtpy())
-                cfg.SeedPath = DataDir.Combine("SeedChannels.csv");
+                cfg.SeedPath = DataDir.Combine("1.Crawl","SeedChannels.csv");
 
             return cfg;
         }

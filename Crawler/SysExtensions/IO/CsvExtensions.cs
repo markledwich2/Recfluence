@@ -9,10 +9,11 @@ namespace SysExtensions.IO
 {
     public static class CsvExtensions
     {
-        public static void WriteToCsv<T>(this IEnumerable<T> values, FPath path) {
+        public static void WriteToCsv<T>(this IEnumerable<T> values, FPath path, Configuration cfg = null) {
             using (var fs = path.Open(FileMode.Create))
             using (var tw = new StreamWriter(fs)) {
-                var csv = new CsvWriter(tw);
+                cfg = cfg ?? new Configuration();
+                var csv = new CsvWriter(tw, cfg);
                 csv.WriteRecords(values);
             }
         }
