@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -16,62 +17,88 @@ using SysExtensions.Threading;
 
 namespace YouTubeReader {
     public class YTCrawler {
-        public YTCrawler(MongoClient mongoClient, YTReader yt, Cfg cfg, Logger log) {
-            MongoClient = mongoClient;
+        public YTCrawler(IMongoDatabase db, YTReader yt, Cfg cfg, Logger log) {
+            Db = db;
             Yt = yt;
             Cfg = cfg;
             Log = log;
+
+            Channels = new AsyncLazy<IMongoCollection<ChannelData>>(async () => await Db.Channels());
+            Videos = new AsyncLazy<IMongoCollection<VideoAndRecommended>>(async () => await Db.Videos());
         }
 
-        MongoClient MongoClient { get; }
+        IMongoDatabase Db { get; }
         YTReader Yt { get; }
         Cfg Cfg { get; }
         Logger Log { get; }
 
-        FPath DataDir => "Data".AsPath().InAppData(Setup.AppName);
-        FPath CacheDir => "Cache".AsPath().InAppData(Setup.AppName);
-        KeyedCollection<string, ChannelData> ChannelCache { get; } = new KeyedCollection<string, ChannelData>(c => c.Id, theadSafe:true);
-        KeyedCollection<string, VideoAndRelatedData> VidCache { get; } = new KeyedCollection<string, VideoAndRelatedData>(v => v.Video.Id, theadSafe:true);
-        FPath ChannelCacheFile => CacheDir.Combine("Channels.json");
-        FPath VidCacheFile => CacheDir.Combine("Videos.json");
+        AsyncLazy<IMongoCollection<ChannelData>> Channels { get; }
+        AsyncLazy<IMongoCollection<VideoAndRecommended>> Videos { get; }
 
-        async Task<VideoAndRelatedData> GetVideo(string id) {
-            async Task<VideoAndRelatedData> Create() {
-                return new VideoAndRelatedData {
-                    Video = await Yt.GetVideoData(id),
-                    Related = await Yt.GetRelatedVideos(id)
-                };
+        IKeyedCollection<string, ChannelData> ChannelCache { get; } = new KeyedCollection<string, ChannelData>(
+            c => c.Id, theadSafe: true);
+
+        IKeyedCollection<string, VideoAndRecommended> VideoCache { get; } = new KeyedCollection<string, VideoAndRecommended>(
+            v => v.Video.Id, theadSafe: true);
+
+        async Task<VideoAndRecommended> GetVideo(string id) {
+            if (VideoCache.ContainsKey(id)) return VideoCache[id];
+            var videos = await Videos.GetOrCreate();
+            var v = await videos.FirstOrDefaultAsync(_ => _.Video.Id == id);
+            if (v == null) {
+                v = new VideoAndRecommended();
+                async Task VideoData() => v.Video = await Yt.GetVideoData(id);
+                async Task RelatedVideoData() => v.Recommended = await Yt.GetRelatedVideos(id);
+                await Task.WhenAll(VideoData(), RelatedVideoData());
+                if (!VideoCache.ContainsKey(id)) {
+                    try {
+                        await videos.InsertOneAsync(v);
+                    }
+                    catch (MongoDuplicateKeyException e) {
+                        Log.Verbose("duplicate video. expected with high parrralelism: {Exception}", e.Message);
+                    }
+                }
             }
-                 
-            return await VidCache.GetOrAdd(id, () => Create());
+
+            VideoCache.Add(v);
+
+            return v;
         }
 
-        async Task<ChannelData> GetChannel(string id) => await ChannelCache.GetOrAdd(id, () => Yt.ChannelData(id));
+        async Task<ChannelData> GetChannel(string id) {
+            if (ChannelCache.ContainsKey(id)) return ChannelCache[id];
+            var channels = await Channels.GetOrCreate();
+            var c = await channels.FirstOrDefaultAsync(_ => _.Id == id);
+            if (c == null) {
+                c = await Yt.ChannelData(id);
+                await channels.InsertOneAsync(c);
+            }
+
+            ChannelCache.Add(c);
+            return c;
+        }
 
         public async Task<CrawlResult> Crawl() {
             var res = new CrawlResult();
 
             Log.Information("Started crawl with {@Config}", Cfg);
 
-            LoadCache();
-
             var seedData = Cfg.SeedPath.ReadFromCsv<SeedChannel>();
             if (Cfg.LimitSeedChannels.HasValue)
                 seedData = seedData.Take(Cfg.LimitSeedChannels.Value).ToList();
 
             var channels = await seedData.BlockTransform(c => GetChannel(c.Id), Cfg.Parallel);
-            var crawlResults = await channels.BlockTransform(c => CrawlFromChannel(c), Cfg.Parallel);
+            var crawlResults = await channels.BlockTransform(CrawlFromChannel, 1); // sufficiently parallel inside
 
             res.Channels.AddRange(crawlResults.SelectMany(r => r.Channels));
             res.Recommends.AddRange(crawlResults.SelectMany(r => r.Recommends));
 
-            SaveCache();
             return res;
         }
 
         async Task<CrawlResult> CrawlFromChannel(ChannelData channel) {
             var log = Log.ForContext("SeedChannel", channel.Title);
-            var r = new CrawlResult {Channels = {channel}};
+            var res = new CrawlResult {Channels = {channel}};
             var top = await Yt.TopInChannel(channel.Id, Cfg.TopInChannel, Cfg.SeedFromDate);
             var toCrawl = (await top.BlockTransform(v => GetVideo(v.Id), Cfg.Parallel)).NotNull().ToList();
 
@@ -87,59 +114,64 @@ namespace YouTubeReader {
             var lastElapsed = TimeSpan.Zero;
 
             for (var i = 1; i <= Cfg.StepsFromSeed; i++) {
-                var crawling = toCrawl.ToList();
-                toCrawl.Clear();
 
-                foreach (var fromV in crawling)
-                foreach (var related in fromV.Related.Take(Cfg.Related)) {
-
-                    var v = await GetVideo(related.Id);
+                async Task<(VideoAndRecommended v, Visit visit)> Visit(VideoAndRecommended f, RecommendedVideoData rec) {
+                    var v = await GetVideo(rec.Id);
                     if (v == null) {
-                        log.Error("Video unavailable '{Channel}': '{Video}' {VideoId}", related.ChannelTitle, related.Title, related.Id);
-                        continue;
+                        log.Error("Video unavailable '{Channel}': '{Video}' {VideoId}", rec.ChannelTitle, rec.Title, rec.Id);
+                        return (null,null);
                     }
 
-                    var c = await GetChannel(v.Video.ChannelId);
-                    if (!r.Channels.ContainsKey(c.Id))
-                        log.Information("New channel '{Channel}'", c.ToString());
-                    r.Channels.Add(c);
-                    toCrawl.Add(v);
-                    var rec = new Recommended {
+                    var vis = new Visit {
                         VideoId = v.Video.Id,
                         Title = v.Video.Title,
                         ChannelId = v.Video.ChannelId,
                         ChannelTitle = v.Video.ChannelTitle,
-                        FromVideoId = fromV.Video.Id,
-                        FromTitle = fromV.Video.Title,
-                        FromChannelId = fromV.Video.ChannelId,
-                        FromChannelTitle = fromV.Video.ChannelTitle,
-                        Rank = related.Rank,
+                        FromVideoId = f.Video.Id,
+                        FromTitle = f.Video.Title,
+                        FromChannelId = f.Video.ChannelId,
+                        FromChannelTitle = f.Video.ChannelTitle,
+                        Rank = rec.Rank,
                         DistanceFromSeed = i
                     };
 
-                    if (!r.Recommends.Contains(rec)) {
-                        r.Recommends.Add(rec);
-                        log.Verbose("Recommended '{Channel}: {Title}' from '{FromChannel}: {FromTitle}'",
-                            rec.ChannelTitle, rec.Title, rec.FromChannelTitle, rec.FromTitle);
-                    }
+                    log.Information("Visited '{Channel}: {Title}' from '{FromChannel}: {FromTitle}'",
+                        vis.ChannelTitle, vis.Title, vis.FromChannelTitle, vis.FromTitle);
 
-                    visitCount++;
-
-                    if (totalTimer.Elapsed - lastElapsed > 10.Seconds()) {
-                        var elapsed = totalTimer.Elapsed;
-                        var periodElapsed = elapsed - lastElapsed;
-                        var periodVisits = visitCount - lastVisitCount;
-
-                        log.Information("'{SeedChannel}' {Visited}/{Estimated} visited/total (estimate). {VisitSpeed}", 
-                            channel.Title, visitCount, estimatedVisit, periodVisits.Speed("visits", periodElapsed).Humanize());
-                        lastElapsed = elapsed;
-                        lastVisitCount = visitCount;
-                    }
+                    return (v,vis);
                 }
+                
+                var crawlTask = toCrawl
+                    .SelectMany(from => from.Recommended.Take(Cfg.Related).Select(rec => (from, rec)))
+                    .BlockTransform(_ => Visit(_.Item1, _.Item2), Cfg.Parallel, progressUpdate: _ => visitCount = _.Count);
+
+
+                while (!crawlTask.IsCompleted) {
+                    Task.WaitAny(crawlTask, Task.Delay(30.Seconds()));
+                    if (crawlTask.IsCompleted) continue;
+
+                    var elapsed = totalTimer.Elapsed;
+                    var periodElapsed = elapsed - lastElapsed;
+                    var periodVisits = visitCount - lastVisitCount;
+
+                    log.Information("'{SeedChannel}' {Visited}/{Estimated} visited/total (estimate). {VisitSpeed}",
+                        channel.Title, visitCount, estimatedVisit, periodVisits.Speed("visits", periodElapsed).Humanize());
+                    lastElapsed = elapsed;
+                    lastVisitCount = visitCount;
+                }
+
+                var newVisits = (await crawlTask).Where(r => r.v != null && !res.Recommends.Contains(r.visit)).ToList();
+                res.Recommends.AddRange(newVisits.Select(_ => _.visit));
+                res.Channels.AddRange(await newVisits.Select(_ => _.visit.ChannelId).Distinct()
+                    .BlockTransform(GetChannel, Cfg.Parallel));
+
+                toCrawl = newVisits.Select(_ => _.v).ToList();
             }
 
-            return r;
+            return res;
         }
+
+        FPath DataDir => "Data".AsPath().InAppData(Setup.AppName);
 
         public void SaveResult(CrawlResult result) {
             var tsDir = DataDir.Combine(DateTime.UtcNow.FileSafeTimestamp());
@@ -147,59 +179,36 @@ namespace YouTubeReader {
             Cfg.ToJsonFile(tsDir.Combine("cfg.json"));
             result.Recommends.WriteToCsv(tsDir.Combine("recommends.csv"));
             result.Channels.ToJsonFile(tsDir.Combine("channels.json"));
-            Log.Information("Saved results. {Reccomends} recomends, {Channels} channels", 
+            Log.Information("Saved results. {Reccomends} recomends, {Channels} channels",
                 result.Recommends.Count(), result.Channels.Count());
         }
 
-        int vidCacheLoaded, channelCacheLoaded = 0;
-        void LoadCache() {
-            if (VidCacheFile.Exists) {
-                VidCache.Init(VidCacheFile.ToObject<List<VideoAndRelatedData>>());
-                Log.Verbose("Loaded {Videos} vids from Cache", VidCache.Count);
-                vidCacheLoaded = VidCache.Count();
-            }
-
-            if (ChannelCacheFile.Exists) {
-                ChannelCache.Init(ChannelCacheFile.ToObject<List<ChannelData>>());
-                Log.Verbose("Loaded {Channels} channels from Cache", VidCache.Count);
-            }
-        }
-
-        void SaveCache() {
-            VidCacheFile.EnsureDirectoryExists();
-            VidCache.ToJsonFile(VidCacheFile);
-            ChannelCache.ToJsonFile(ChannelCacheFile);
-            Log.Verbose("Saved {Videos} vids, {Channels} channels to cache. {NewVideos} new videos, {NewChannels} loaded this crawl",
-                VidCache.Count, ChannelCache.Count, vidCacheLoaded, channelCacheLoaded);
-        }
-
-        class CrawlCache {
-
-        }
-
         public class CrawlResult {
-            public IKeyedCollection<string, ChannelData> Channels { get; } = new KeyedCollection<string, ChannelData>(c => c.Id);
-            public IKeyedCollection<string, Recommended> Recommends { get; } = new KeyedCollection<string, Recommended>(r => $"{r.FromVideoId}.{r.VideoId}");
+            public IKeyedCollection<string, ChannelData> Channels { get; } = new KeyedCollection<string, ChannelData>(c => c.Id, theadSafe:true);
+            public IKeyedCollection<string, Visit> Recommends { get; } = new KeyedCollection<string, Visit>(r => $"{r.FromVideoId}.{r.VideoId}", theadSafe:true);
         }
     }
 
-    
 
     /// <summary>
-    ///     Need to record visits separately to record the different way to get to the same video and re-use a video cache
+    /// A visit is a unique video recommendation from a crawl starting at a single seed channel
+    /// Need to record visits separately to record the different way to get to the same video and re-use a video cache
     /// </summary>
-    public class Recommended {
-        public string VideoId { get; set; }
-        public string Title { get; set; }
-        public string ChannelId { get; set; }
-        public string ChannelTitle { get; set; }
+    public class Visit {
         public string FromVideoId { get; set; }
-        public string FromTitle { get; set; }
-        public string FromChannelId { get; set; }
+        public string VideoId { get; set; }
+
         public string FromChannelTitle { get; set; }
+        public string FromTitle { get; set; }
+
+        public string ChannelTitle { get; set; }
+        public string Title { get; set; }
+
+        public string FromChannelId { get; set; }
+        public string ChannelId { get; set; }
+
         public int Rank { get; set; }
         public int DistanceFromSeed { get; set; }
-
 
         public override string ToString() {
             return $"{FromChannelTitle}: {FromTitle} > {Rank}. {ChannelTitle}: {Title}";
@@ -210,10 +219,5 @@ namespace YouTubeReader {
         public string Title { get; set; }
         public string Id { get; set; }
         public string Tags { get; set; }
-    }
-
-    public class VideoAndRelatedData {
-        public VideoData Video { get; set; }
-        public ICollection<RelatedVideoData> Related { get; set; }
     }
 }

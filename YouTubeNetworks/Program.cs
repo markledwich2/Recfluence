@@ -1,4 +1,5 @@
 ﻿using System;
+using MongoDB.Driver;
 using Serilog;
 using YouTubeReader;
 
@@ -8,10 +9,13 @@ namespace YouTubeNetworks
     {
         static void Main(string[] args)
         {
+
             using (var log = Setup.CreateLogger()) {
-                var cfg = Setup.Cfg();
+                var cfg = Setup.LoadCfg(log);
                 var reader = new YTReader(cfg);
-                var crawler =new YTCrawler(Setup.MongoClient(cfg), reader, cfg, log);
+                var mongo = Setup.MongoClient(cfg);
+                var db = mongo.GetDatabase("YTNetworks");
+                var crawler =new YTCrawler(db, reader, cfg, log);
                 
                 var task = crawler.Crawl();
                 var r = task.GetAwaiter().GetResult();

@@ -35,9 +35,9 @@ namespace SysExtensions.Collections
         {
             _getKeyExpression = getKeyExpression;
             if(theadSafe)
-                _dic = comparer == null ? new Dictionary<K, V>() : new Dictionary<K, V>(comparer);
-            else
                 _dic = comparer == null ? new ConcurrentDictionary<K, V>() : new ConcurrentDictionary<K, V>(comparer);
+            else
+                _dic = comparer == null ? new Dictionary<K, V>() : new Dictionary<K, V>(comparer);
             //_dic = comparer == null ? new Dictionary<K, V>() : new Dictionary<K, V>(comparer);
         }
 

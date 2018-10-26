@@ -22,10 +22,11 @@ namespace YouTubeReaderTests
             var path2 = new FPath() {StringValue = @".\teting\one\two"};
 
 
-            var cfg = Setup.Cfg();
+            var cfg = Setup.LoadCfg();
             var json = cfg.ToJson();
             var cfg2 = json.ToObject<Cfg>();
 
         }
+      
     }
 }
