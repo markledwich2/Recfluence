@@ -1,8 +1,13 @@
-<svg id='viz'></svg>
 
-<script src="https://d3js.org/d3.v5.min.js"></script>
+
+<script src="https://d3js.org/d3.v5.js"></script>
 
 <style>
+    #viz {
+        width: 100vw;
+        height: 90vh;
+    }
+
     .link {
         stroke: #aaa;
         opacity: 0.2;
@@ -15,31 +20,47 @@
 
     .node circle {
         stroke: #fff;
+        fill: #333;
         stroke-width: 3px;
     }
 </style>
 
+
+<svg id='viz'></svg>
+
+    
+
 <script>
-    var width = 800;
-    var height = 600;
-    var color = d3.scaleOrdinal(d3.schemeCategory10);
     var linkOpacity = 0.3;
 
+    const vizEl = document.getElementById('viz');
+    const rect = vizEl.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
 
-    d3.json("assets/miserables.json").then(function (graph) {
+    loadChart();
 
-        var force = d3.forceSimulation(graph.nodes)
-            .force("charge", d3.forceManyBody().strength(-3000))
-            .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("x", d3.forceX(width / 2).strength(2))
-            .force("y", d3.forceY(height / 2).strength(2))
-            .force("link", d3.forceLink(graph.links).id(function (d) { return d.id; }).distance(50).strength(1));
+    async function loadChart() {
+        const channels = await d3.csv("https://raw.githubusercontent.com/markledwich2/YouTubeNetworks/master/Data/3.Vis/Channels.csv");
+        const recommends = await d3.csv("https://raw.githubusercontent.com/markledwich2/YouTubeNetworks/master/Data/3.Vis/ChannelRelations.csv");
+        const links = recommends.map(d => new Link(d.FromChannelTitle, d.ChannelTitle, d.Size));
+        const nodes = channels.map(d => new Node(d.title, d.subCount))
 
-        for (i = 0; i < 200; i++)
-            force.tick();
+        const force = d3.forceSimulation(nodes)
+        .force("charge", d3.forceManyBody().strength(-3000))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("x", d3.forceX(width / 2).strength(1))
+        .force("y", d3.forceY(height / 2).strength(1))
+        .force("link", d3.forceLink(links).id(function(d) {return d.id; }).distance(50).strength(1))
+        .on("tick", () => {
+            node.call(updateNode);
+            link.call(updateLink);
+        });
+        /*for (i = 0; i < 200; i++)
+            force.tick();*/
 
-        var adjlist = [];
-        graph.links.forEach(function (d) {
+        var adjlist = ~[];
+        channels.forEach(d => {
             adjlist[d.source.index + "-" + d.target.index] = true;
             adjlist[d.target.index + "-" + d.source.index] = true;
         });
@@ -47,44 +68,41 @@
         function neigh(a, b) {
             return a == b || adjlist[a + "-" + b];
         }
-        var svg = d3.select("#viz").attr("width", width).attr("height", height);
+
+        const svg = d3.select("#viz")
+            .attr("viewBox", [-width / 2, -height / 2, width, height]);
+
         var container = svg.append("g");
 
         svg.call(
             d3.zoom()
                 .scaleExtent([.1, 4])
-                .on("zoom", function () { container.attr("transform", d3.event.transform); })
+                .on("zoom", () => container.attr("transform", d3.event.transform))
         );
 
         var link = container.append("g").attr("class", "links")
             .selectAll("line")
-            .data(graph.links)
+            .data(links)
             .enter()
             .append("line")
             .attr("class", "link");
 
         var node = container.append("g").attr("class", "nodes")
             .selectAll("g")
-            .data(graph.nodes)
+            .data(nodes)
             .enter().append("g")
             .attr("class", "node");
-        
+
         node.append("circle")
             .attr("r", 5)
-            .attr("fill", function (d) { return color(d.group); })
+        //.attr("fill", function (d) { return color(d.group); })
 
         node.append("text")
             .attr("dx", 12)
             .attr("dy", ".35em")
-            .text(function (d) { return d.id });
+            .text(d => d.id);
 
         node.on("mouseover", focus).on("mouseout", unfocus);
-
-        force.on("tick", function() {
-            node.call(updateNode);
-            link.call(updateLink);
-        });
-
 
         function focus(d) {
             var index = d3.select(d3.event.target).datum().index;
@@ -118,6 +136,22 @@
                 return "translate(" + fixna(d.x) + "," + fixna(d.y) + ")";
             });
         }
+    }
 
-    }); // d3.json
+    class Link {
+        constructor(source, target, size) {
+            this.source = source;
+            this.target = target;
+            this.size = size;
+        }
+    }
+
+    class Node {
+        constructor(id, title, subs) {
+            this.id = id;
+            this.title = title;
+            this.subs = subs;
+        }
+    }
+
 </script>
