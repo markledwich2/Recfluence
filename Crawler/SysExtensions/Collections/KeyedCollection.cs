@@ -10,7 +10,7 @@ using SysExtensions.Serialization;
 
 namespace SysExtensions.Collections
 {
-    public interface IKeyedCollection<K, V> : ICollection<V>, ICollection
+    public interface IKeyedCollection<K, V> : ICollection<V>
     {
         V this[K key] { get; }
         bool ContainsKey(K key);

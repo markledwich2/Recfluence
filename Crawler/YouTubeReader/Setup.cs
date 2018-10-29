@@ -1,19 +1,20 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Security.Authentication;
-using MongoDB.Driver;
+using LiteDB;
 using Serilog;
-using Serilog.Core;
 using Serilog.Events;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Serialization;
+using Logger = Serilog.Core.Logger;
 
 namespace YouTubeReader {
     public static class Setup {
         public static string AppName = "YouTubeNetworks";
         public static FPath SolutionDir => typeof(Setup).LocalAssemblyPath().ParentWithFile("YouTubeNetworks.sln");
-        public static FPath DataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
+        public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
+        public static FPath LocalDataDir => "Data".AsPath().InAppData(AppName);
 
         public static Logger CreateLogger() {
             return new LoggerConfiguration()
@@ -39,22 +40,21 @@ namespace YouTubeReader {
             }
 
             if (cfg.SeedPath.IsEmtpy())
-                cfg.SeedPath = DataDir.Combine("1.Crawl","SeedChannels.csv");
+                cfg.SeedPath = SolutionDataDir.Combine("1.Crawl","SeedChannels.csv");
 
             return cfg;
         }
 
-        public static MongoClient MongoClient(Cfg cfg) {
-            var settings = MongoClientSettings.FromUrl(new MongoUrl(cfg.MongoCS));
-            settings.SslSettings = new SslSettings {EnabledSslProtocols = SslProtocols.Tls12};
-            return new MongoClient(settings);
+        public static LiteDatabase Db(Cfg cfg) {
+            var db = new LiteDatabase(LocalDataDir.Combine("YouTubeCache.db").FullPath);
+            return db;
         }
     }
 
     public class Cfg {
         public int CacheRelated = 40;
         public int TopInChannel { get; set; } = 10;
-        public int StepsFromSeed { get; set; } = 2;
+        public int StepsFromSeed { get; set; } = 1;
         public int Related { get; set; } = 10;
         public DateTime SeedFromDate { get; set; } = DateTime.UtcNow.AddYears(-1);
 
@@ -63,8 +63,9 @@ namespace YouTubeReader {
 
         public string YTApiKey { get; set; } = "YoutubeAPI key here";
         public int Parallel { get; set; } = 8;
-        public int? LimitSeedChannels { get; set; } = 2;
-
-        public string MongoCS { get; set; } = "mongo connection string here";
+        public int? LimitSeedChannels { get; set; }
+        public int InfuenceMinimumUniqueIncoming { get; set; } = 2;
+        public int InfluenceMinimumIncoming { get; set; } = 5;
+        public ulong InfluenceMinimumSubs { get; set; }
     }
 }

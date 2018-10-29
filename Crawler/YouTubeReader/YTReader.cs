@@ -214,6 +214,7 @@ namespace YouTubeReader {
             s.PublishedAfter = publishedAfter;
             s.MaxResults = topNumber;
             s.Order = SearchResource.ListRequest.OrderEnum.ViewCount;
+            s.Type = "video";
             var res = await s.ExecuteAsync();
             var topVideos = res.Items.Select(ToVideoData).ToList();
             return topVideos;
@@ -244,11 +245,11 @@ namespace YouTubeReader {
     public class ChannelData {
         public string Id { get; set; }
         public string Title { get; set; }
-        public string Description { get; set; }
         public string Country { get; set; }
         public ulong? ViewCount { get; set; }
         public ulong? SubCount { get; set; }
         public DateTime Updated { get; set; }
+        public string Description { get; set; }
 
         public override string ToString() => Title;
     }

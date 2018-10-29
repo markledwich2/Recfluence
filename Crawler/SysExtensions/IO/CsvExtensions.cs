@@ -18,7 +18,7 @@ namespace SysExtensions.IO
             }
         }
 
-        static Configuration DefaultConfig = new Configuration {AllowComments = true, IgnoreBlankLines = true, TrimOptions = TrimOptions.Trim};
+        static Configuration DefaultConfig = new Configuration {AllowComments = true, IgnoreBlankLines = true, TrimOptions = TrimOptions.Trim, MissingFieldFound = null};
 
         public static ICollection<T> ReadFromCsv<T>(this FPath path, Configuration cfg = null) {
             cfg = cfg ?? DefaultConfig;
