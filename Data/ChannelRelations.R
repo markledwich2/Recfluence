@@ -3,7 +3,10 @@ library("dplyr", lib.loc="~/R/win-library/3.5")
 
 
 channels <- read.csv("2.Analysis\\Channels.csv", header = TRUE)
-outChannels <- select(filter(channels, Status!="Ignored"), Id, Title, Status, SubCount)
+outChannels <- channels %>%
+  filter(Status!="Ignored") %>% 
+  select(Id, Title, Status, SubCount) %>%
+  arrange(desc(SubCount))
 write.csv(outChannels,".\\3.Vis\\Channels.csv")
 
 recommends <- read.csv("2.Analysis\\Visits.csv", header = TRUE)

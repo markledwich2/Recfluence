@@ -15,6 +15,12 @@ namespace YouTubeReaderTests
             //var yt = new YTReader();
             //await yt.SaveTrendingCsv();
         }
+
+        [TestMethod]
+        public void DropChannels() {
+            var db = Setup.Db();
+            db.DropCollection("Channels");
+        }
       
     }
 }

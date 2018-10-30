@@ -23,9 +23,7 @@ namespace YouTubeReader {
                 .CreateLogger();
         }
 
-
         static FPath CfgPath => "cfg.json".AsPath().InAppData(AppName);
-
 
         public static Cfg LoadCfg(ILogger log) {
             var path = CfgPath;
@@ -45,18 +43,21 @@ namespace YouTubeReader {
             return cfg;
         }
 
-        public static LiteDatabase Db(Cfg cfg) {
+        public static LiteDatabase Db() {
             var db = new LiteDatabase(LocalDataDir.Combine("YouTubeCache.db").FullPath);
             return db;
         }
+
+        public static YtCacheDb CacheDb(LiteDatabase db = null, YtReader yt = null) => 
+            new YtCacheDb(db ?? Db(), yt ?? new YtReader(LoadCfg(null)));
     }
 
     public class Cfg {
         public int CacheRelated = 40;
-        public int TopInChannel { get; set; } = 10;
         public int StepsFromSeed { get; set; } = 1;
         public int Related { get; set; } = 10;
-        public DateTime SeedFromDate { get; set; } = DateTime.UtcNow.AddYears(-1);
+        public DateTime From { get; set; }
+        public DateTime To { get; set; }
 
         [TypeConverter(typeof(StringConverter<FPath>))]
         public FPath SeedPath { get; set; }
@@ -64,8 +65,26 @@ namespace YouTubeReader {
         public string YTApiKey { get; set; } = "YoutubeAPI key here";
         public int Parallel { get; set; } = 8;
         public int? LimitSeedChannels { get; set; }
-        public int InfuenceMinimumUniqueIncoming { get; set; } = 2;
-        public int InfluenceMinimumIncoming { get; set; } = 5;
-        public ulong InfluenceMinimumSubs { get; set; }
+
+
+        /// <summary>
+        /// The minimum number of channels with videos that recommend a channel
+        /// </summary>
+        public double InfluenceMinRecommendingChannelsPercentile { get; set; } = 0.5;
+
+        /// <summary>
+        /// Minimum subscribers to be considered an influencer
+        /// </summary>
+        //public ulong InfluenceMinSubs { get; set; } = 10000;
+
+        /// <summary>
+        /// Minimum viewed recommends percentile to be considered and influencer
+        /// </summary>
+        public double InfluenceMinViewedRecommendsPercentile { get; set; } = 0.5;
+
+        /// <summary>
+        /// The minimum percentile of the channel's video vies for the given period
+        /// </summary>
+        public double InfluenceMinViewsPercentile { get; set; } = 0.3;
     }
 }

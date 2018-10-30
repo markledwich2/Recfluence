@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace SysExtensions.Collections
@@ -25,6 +26,24 @@ namespace SysExtensions.Collections
         public static IEnumerable<T> Concat<T>(this IEnumerable<T> items, params T[] additionalItems) => Enumerable.Concat(items, additionalItems);
 
         public static IEnumerable<T> NotNull<T>(this IEnumerable<T> items) => items.Where(i => i != null);
+
+        public static ulong Sum<T>(this IEnumerable<T> items, Func<T, ulong> f) => items.Aggregate(0UL, (a, i) => a + f(i));
+
+        /// <summary>
+        /// Given a list of items, returns the value of the given percentile
+        /// </summary>
+        public static double Percentile<T>(this IEnumerable<T> items, Func<T, double> f,  double percentile) {
+            var s = items.Select(f).OrderBy(i => i).ToArray();
+            var len = s.Length;
+            var n = (len - 1) * percentile + 1;
+
+            if (n <= 1d) return s[0];
+            if (n >= len) return s[len - 1];
+
+            var k = (int)n;
+            var d = n - k;
+            return s[k - 1] + d * (s[k] - s[k - 1]);
+        }
 
         public static IEnumerable<int> For(this int count) => Enumerable.Range(0, count);
 

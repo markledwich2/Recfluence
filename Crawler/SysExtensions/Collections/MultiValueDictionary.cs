@@ -1179,7 +1179,8 @@ namespace SysExtensions.Collections
                 InnerCollectionView collection;
                 if (dictionary.TryGetValue(key, out collection))
                     return collection;
-                throw new KeyNotFoundException();
+
+                return null;
             }
         }
 

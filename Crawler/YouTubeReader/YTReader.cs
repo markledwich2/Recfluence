@@ -2,20 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Web;
 using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
-using HtmlAgilityPack;
-using ScrapySharp.Extensions;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 
 namespace YouTubeReader {
-    public class YTReader {
-        public YTReader(Cfg cfg) {
+    public class YtReader {
+        public YtReader(Cfg cfg) {
             Cfg = cfg;
             YTService = new YouTubeService(new BaseClientService.Initializer {
                 ApiKey = Cfg.YTApiKey,
@@ -71,8 +68,7 @@ namespace YouTubeReader {
 
         FPath TrendingDir => "Trending".AsPath().InAppData("YoutubeNetworks");
 
-        enum UsCategoryEnum
-        {
+        enum UsCategoryEnum {
             FilmAnimation = 1,
             AutoVehicles = 2,
             Music = 10,
@@ -114,12 +110,10 @@ namespace YouTubeReader {
             UsCategoryEnum.Classics, UsCategoryEnum.Comedy2, UsCategoryEnum.Drama, UsCategoryEnum.Family,
             UsCategoryEnum.Foreign, UsCategoryEnum.Horror, UsCategoryEnum.SciFi, UsCategoryEnum.Thriller,
             UsCategoryEnum.Shorts, UsCategoryEnum.Trailers
-        }.Select(i => ((int)i).ToString()).ToHashSet();
+        }.Select(i => ((int) i).ToString()).ToHashSet();
 
-        public static bool IsExcluded(string catId)
-        {
-            return ExcludeCategories.Contains(catId);
-        }
+        public static bool IsExcluded(string catId) => ExcludeCategories.Contains(catId);
+
         #endregion
 
         #region Videos
@@ -140,21 +134,9 @@ namespace YouTubeReader {
             };
             if (v.Snippet.Tags != null)
                 r.Tags.AddRange(v.Snippet.Tags);
-            if (v.TopicDetails != null)
+            if (v.TopicDetails?.RelevantTopicIds != null)
                 r.Topics.AddRange(v.TopicDetails.RelevantTopicIds);
-        
-            return r;
-        }
 
-        VideoData ToVideoData(SearchResult v) {
-            var r = new VideoData {
-                Id = v.Id.VideoId,
-                Title = v.Snippet.Title,
-                Description = v.Snippet.Description,
-                ChannelTitle = v.Snippet.ChannelTitle,
-                ChannelId = v.Snippet.ChannelId,
-                PublishedAt = v.Snippet.PublishedAtRaw
-            };
             return r;
         }
 
@@ -165,29 +147,29 @@ namespace YouTubeReader {
             var response = await s.ExecuteAsync();
             var v = response.Items.FirstOrDefault();
             if (v == null) return null;
-            
+
             var data = ToVideoData(v);
             data.Updated = DateTime.UtcNow;
 
             return data;
         }
 
-        public async Task<ICollection<RecommendedVideoData>> GetRelatedVideos(string id) {
+        public async Task<ICollection<RecommendedVideoListItem>> GetRelatedVideos(string id) {
             var s = YTService.Search.List("snippet");
             s.RelatedToVideoId = id;
             s.Type = "video";
             s.MaxResults = Cfg.CacheRelated;
 
             var response = await s.ExecuteAsync();
-            var vids = new List<RecommendedVideoData>();
+            var vids = new List<RecommendedVideoListItem>();
 
-            int rank = 1;
+            var rank = 1;
             foreach (var item in response.Items) {
-                vids.Add(new RecommendedVideoData {
+                vids.Add(new RecommendedVideoListItem {
                     Id = item.Id.VideoId,
                     Title = item.Snippet.Title,
                     ChannelId = item.Snippet.ChannelId,
-                    ChannelTitle =  item.Snippet.ChannelTitle,
+                    ChannelTitle = item.Snippet.ChannelTitle,
                     Rank = rank
                 });
 
@@ -204,19 +186,28 @@ namespace YouTubeReader {
         /// <summary>
         ///     The most popular in that channel. Video's do not include related data.
         /// </summary>
-        /// <param name="channelId"></param>
-        /// <param name="topNumber"></param>
-        /// <param name="publishedAfter"></param>
-        /// <returns></returns>
-        public async Task<ICollection<VideoData>> TopInChannel(string channelId, int topNumber, DateTime publishedAfter) {
+        public async Task<ICollection<ChannelVideoListItem>> VideosInChannel(string channelId, DateTime publishedAfter, DateTime? publishBefore) {
             var s = YTService.Search.List("snippet");
             s.ChannelId = channelId;
             s.PublishedAfter = publishedAfter;
-            s.MaxResults = topNumber;
+            s.PublishedBefore = publishBefore;
+            s.MaxResults = 50;
             s.Order = SearchResource.ListRequest.OrderEnum.ViewCount;
             s.Type = "video";
-            var res = await s.ExecuteAsync();
-            var topVideos = res.Items.Select(ToVideoData).ToList();
+
+            var topVideos = new List<ChannelVideoListItem>();
+            while (true) {
+                var res = await s.ExecuteAsync();
+                topVideos.AddRange(res.Items.Select(v => new ChannelVideoListItem {
+                    Id = v.Id.VideoId,
+                    Title = v.Snippet.Title,
+                    PublishedAt = v.Snippet.PublishedAt
+                }));
+                if (res.NextPageToken == null)
+                    break;
+                s.PageToken = res.NextPageToken;
+            }
+
             return topVideos;
         }
 
@@ -236,6 +227,7 @@ namespace YouTubeReader {
                 SubCount = c.Statistics.SubscriberCount,
                 Updated = DateTime.UtcNow
             };
+
             return data;
         }
 
@@ -272,20 +264,23 @@ namespace YouTubeReader {
 
         public ICollection<string> Tags { get; } = new List<string>();
 
-        public override string ToString() {
-            return $"{ChannelTitle} {Title}";
-        }
+        public override string ToString() => $"{ChannelTitle} {Title}";
     }
 
-    public class RecommendedVideoData {
+    public class RecommendedVideoListItem {
         public string Id { get; set; }
         public string Title { get; set; }
         public string ChannelId { get; set; }
         public string ChannelTitle { get; set; }
         public int Rank { get; set; }
 
-        public override string ToString() {
-            return $"{Rank}. {ChannelTitle}: {Title}";
-        }
+        public override string ToString() => $"{Rank}. {ChannelTitle}: {Title}";
+    }
+
+    public class ChannelVideoListItem {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public DateTime? PublishedAt { get; set; }
+        public override string ToString() => Title;
     }
 }

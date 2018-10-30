@@ -1,16 +1,22 @@
-﻿using YouTubeReader;
+﻿using System;
+using YouTubeReader;
 
 namespace YouTubeNetworks {
     class Program {
         static void Main(string[] args) {
             using (var log = Setup.CreateLogger()) {
                 var cfg = Setup.LoadCfg(log);
-                var reader = new YTReader(cfg);
-                var db = Setup.Db(cfg);
-                var crawler = new YTCrawler(db, reader, cfg, log);
+                var reader = new YtReader(cfg);
+                var db = Setup.Db();
+                var crawler = new YtCrawler(db, reader, cfg, log);
 
                 var task = crawler.Crawl();
-                var r = task.GetAwaiter().GetResult();
+                try {
+                    task.GetAwaiter().GetResult();
+                }
+                catch (Exception e) {
+                    log.Error("Crawl failed: {e}", e);
+                }
             }
         }
 

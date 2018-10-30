@@ -8,13 +8,16 @@ namespace SysExtensions.Collections
     public static class DictionaryExtensions
     {
         public static MultiValueDictionary<TKey, TValue> ToMultiValueDictionary<TKey, TValue, T>(this IEnumerable<T> items, Func<T, TKey> keySelector,
-            Func<T, TValue> valueSelector)
+            Func<T, TValue> valueSelector = null)
         {
             var dic = new MultiValueDictionary<TKey, TValue>();
             foreach (var item in items)
                 dic.Add(keySelector(item), valueSelector(item));
             return dic;
         }
+
+        public static MultiValueDictionary<TKey, T> ToMultiValueDictionary<TKey, T>(this IEnumerable<T> items, Func<T, TKey> keySelector) =>
+            items.ToMultiValueDictionary(keySelector, v => v);
 
         public static TValue TryGet<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue defaultValue = default(TValue))
         {

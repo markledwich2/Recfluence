@@ -1,4 +1,4 @@
-var linkOpacity = 0.3;
+var linkOpacity = 0.0;
 
 const vizEl = document.getElementById('viz');
 const rect = vizEl.getBoundingClientRect();
@@ -10,13 +10,16 @@ loadChart();
 async function loadChart() {
     const channels = await d3.csv("https://raw.githubusercontent.com/markledwich2/YouTubeNetworks/master/Data/3.Vis/Channels.csv");
     const recommends = await d3.csv("https://raw.githubusercontent.com/markledwich2/YouTubeNetworks/master/Data/3.Vis/ChannelRelations.csv");
-    const links = recommends.map(d => new Link(d.FromChannelId, d.ChannelId, d.Size));
-    const nodes = channels.map(d => new Node(d.id, d.title, d.subCount))
+    const links = recommends.map(d => Object.create({ source:d.FromChannelId, target:d.ChannelId, strength:d.Value }));
+    const nodes = channels.map(d =>  Object.create({ id:d.Id, title:d.Title, subs:d.SubCount }));
 
     const force = d3.forceSimulation(nodes)
-        .force("charge", d3.forceManyBody())
+        .force("charge", d3.forceManyBody().strength(-200))
         .force("center", d3.forceCenter())
-        .force("link", d3.forceLink(links).id(d => d.id));
+        //.force("x", d3.forceX().strength(.01))
+        //.force("y", d3.forceY().strength(.1))
+        .force("link", d3.forceLink(links).distance(1).id(d => d.id).strength(d => d.strength/20))
+        .force("collide", d3.forceCollide(d => radius(d)));
 
     for (i = 0; i < 100; i++)
         force.tick();
@@ -48,7 +51,7 @@ async function loadChart() {
         .enter()
         .append("line")
         .attr("class", "link")
-        .attr("stroke-width", d => d.value);
+        .attr("stroke-width", d => d.strength * 2);
 
     var node = container.append("g").attr("class", "nodes")
         .selectAll("g")
@@ -57,7 +60,9 @@ async function loadChart() {
         .attr("class", "node");
 
     node.append("circle")
-        .attr("r", d => Math.sqrt(d.subs) / 300);
+        .attr("r", d => radius(d));
+
+    function radius(d) { return Math.sqrt(d.subs)/200; }
     //.attr("fill", function (d) { return color(d.group); })
 
     node.append("text")
@@ -67,10 +72,14 @@ async function loadChart() {
 
     node.on("mouseover", focus).on("mouseout", unfocus);
 
-    force.on("tick", () => {
+    tick();
+    function tick() {
         node.call(updateNode);
         link.call(updateLink);
-    });
+    }
+
+
+    /*force.on("tick", () => tick());*/
 
 
     function focus(d) {
@@ -79,7 +88,7 @@ async function loadChart() {
             return neigh(id, o.id) ? 1 : 0.1;
         });
         link.style("opacity", function (o) {
-            return o.source.id == id || o.target.id == id ? linkOpacity : 0.1;
+            return o.source.id == id || o.target.id == id ? 0.8 : linkOpacity;
         });
     }
 
@@ -104,21 +113,5 @@ async function loadChart() {
         node.attr("transform", function (d) {
             return "translate(" + fixna(d.x) + "," + fixna(d.y) + ")";
         });
-    }
-}
-
-class Link {
-    constructor(source, target, value) {
-        this.source = source;
-        this.target = target;
-        this.value = value;
-    }
-}
-
-class Node {
-    constructor(id, title, subs) {
-        this.id = id;
-        this.title = title;
-        this.subs = subs;
     }
 }
