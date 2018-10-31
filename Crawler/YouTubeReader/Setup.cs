@@ -37,8 +37,8 @@ namespace YouTubeReader {
                 cfg = CfgPath.ToObject<Cfg>();
             }
 
-            if (cfg.SeedPath.IsEmtpy())
-                cfg.SeedPath = SolutionDataDir.Combine("1.Crawl","SeedChannels.csv");
+            if (cfg.CrawlConfigDir.IsEmtpy())
+                cfg.CrawlConfigDir = SolutionDataDir.Combine("1.Crawl");
 
             return cfg;
         }
@@ -60,31 +60,17 @@ namespace YouTubeReader {
         public DateTime To { get; set; }
 
         [TypeConverter(typeof(StringConverter<FPath>))]
-        public FPath SeedPath { get; set; }
+        public FPath CrawlConfigDir { get; set; }
 
         public string YTApiKey { get; set; } = "YoutubeAPI key here";
         public int Parallel { get; set; } = 8;
         public int? LimitSeedChannels { get; set; }
 
-
-        /// <summary>
-        /// The minimum number of channels with videos that recommend a channel
-        /// </summary>
-        public double InfluenceMinRecommendingChannelsPercentile { get; set; } = 0.5;
-
-        /// <summary>
-        /// Minimum subscribers to be considered an influencer
-        /// </summary>
-        //public ulong InfluenceMinSubs { get; set; } = 10000;
-
-        /// <summary>
-        /// Minimum viewed recommends percentile to be considered and influencer
-        /// </summary>
-        public double InfluenceMinViewedRecommendsPercentile { get; set; } = 0.5;
+        public int InfluencersToDetect { get; set; } = 100;
 
         /// <summary>
         /// The minimum percentile of the channel's video vies for the given period
         /// </summary>
-        public double InfluenceMinViewsPercentile { get; set; } = 0.3;
+        //public double InfluenceMinViewsPercentile { get; set; } = 0.3;
     }
 }

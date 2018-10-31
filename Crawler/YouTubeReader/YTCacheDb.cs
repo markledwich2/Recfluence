@@ -49,6 +49,8 @@ namespace YouTubeReader {
                 var v = VideosCollection.FindById(id);
                 if (v == null) {
                     v = await Yt.GetVideoData(id);
+                    if (v == null)
+                        return null;
                     VideosCollection.Upsert(v);
                 }
                 VideoCache.Add(v);
@@ -96,13 +98,15 @@ namespace YouTubeReader {
 
         readonly SemaphoreSlim _channelVideosLock = new SemaphoreSlim(1, 1);
 
-        public async Task<ChannelVideos> ChannelVideos(ChannelData c, DateTime from, DateTime to) {
-            ChannelVideos Query() => ChannelVideosCollection.Find(v => v.ChannelId == c.Id && v.From == from && v.To == to)
+        public ChannelVideos ChannelVideosCached(ChannelData c, DateTime from, DateTime to) =>
+            ChannelVideosCollection.Find(v => v.ChannelId == c.Id && v.From == from && v.To == to)
                 .OrderByDescending(r => r.Updated).FirstOrDefault();
+
+        public async Task<ChannelVideos> ChannelVideos(ChannelData c, DateTime from, DateTime to) {
 
             using (await _channelVideosLock.LockAsync()) {
                 // only allow one thread at a time to prevent double records
-                var res = Query();
+                var res = ChannelVideosCached(c, from, to);
                 if (res != null) return res;
 
                 res = new ChannelVideos {

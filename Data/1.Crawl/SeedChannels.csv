@@ -1,50 +1,94 @@
-Title,Id,Tags
+Id,Title,Tags
 #
 # 200k+ subs, significant focus on US political/cultural commentary/contexualizing, not mainsteam news networks
 #
 # from channel crawler 200k+ subs in News/Politics/Activism categories
-The Young Turks,UC1yBKRuGpC1tSM73A0ZjYjQ, LW|SJA
-NowThis,UCgRvm1yLFoaQKhmaTqXk9SA, LW|CM
-Mark Dice,UCzUV5283-l5c0oKRtyenj6Q, RW
-Ben Shapiro,UCnQC_G5Xsjhp9fEJKuIcrSw, RW
-BuzzFeed News,UCf4FYTsGFFcdc68AUPIU3RA, LW
-The Rubin Report,UCJdKr0Bgd_5saZYqLCa9mng, LT|ASJA
-AJ+,UCV3Nm3T-XAgVhKH9jT0ViRg, LW|CM
-TheAdviseShowTV,UCKZGcrxRAhdUi58Mdr565mw, RW
-Hunter Avallone,UCDgchsbJnrX604K-xWsd-fQ, ASJA
-WeAreChange,UChwwoeOZ3EJPobW83dgQfAg, LI|CT
-Alternative Media TV,UChD-zWutIego-bcHKOatFWA,
-David Pakman Shown,UCvixJtaXuNdMPUGdOPcY8Ag, LW
-Blair White,UCDmCBKaKOtOrEqgsL4-3C8Q, RW|ASJA
-ReasonTV,UC0uVZd8N7FfIZnPu0y7o95A, LT|CM
-Lisa Haven,UCBDrbqudUtPUQxAK_K2JaNQ, RW
-The Liberty Hound,UCsGg9JQ4X7u2A6gCEmtVRmw, RW
-The Black World,UCQcPBLsq9rRc5TxDqSz_Dog, SJA
-Laura Chen,UCLUrVTVTA3PnUFpYvpfMcpg, ASJA
-The Real News,UCrmm_7RDZJeQzq2-wvmjueg, LW
-Tim Pool,UCG749Dj4V2fKa143f8sE60Q, ASJA
-The Ring of Fire,UCYWIEbibRcZav6xMLo9qWWw, LW
-AdamKokesh,UC0RJJ_Wm7jyOU9eY10LgcwA, LT
-FeministFrequency,UC7Edgk9RxP7Fm7vjQ1d-cDA, SJA
+UC1yBKRuGpC1tSM73A0ZjYjQ,The Young Turks, LW|SJA
+UCgRvm1yLFoaQKhmaTqXk9SA,NowThis, LW|CM
+UCzUV5283-l5c0oKRtyenj6Q,Mark Dice, RW
+UCnQC_G5Xsjhp9fEJKuIcrSw,Ben Shapiro, RW
+UCf4FYTsGFFcdc68AUPIU3RA,BuzzFeed News, LW
+UCJdKr0Bgd_5saZYqLCa9mng,The Rubin Report, LT|ASJA
+UCV3Nm3T-XAgVhKH9jT0ViRg,AJ+, LW|CM
+UCKZGcrxRAhdUi58Mdr565mw,TheAdviseShowTV, RW
+UCDgchsbJnrX604K-xWsd-fQ,Hunter Avallone, ASJA
+UChwwoeOZ3EJPobW83dgQfAg,WeAreChange, LI|CT
+UChD-zWutIego-bcHKOatFWA,Alternative Media TV,
+UCvixJtaXuNdMPUGdOPcY8Ag,David Pakman Shown, LW
+UCDmCBKaKOtOrEqgsL4-3C8Q,Blair White, RW|ASJA
+UC0uVZd8N7FfIZnPu0y7o95A,ReasonTV, LT|CM
+UCBDrbqudUtPUQxAK_K2JaNQ,Lisa Haven, RW
+UCsGg9JQ4X7u2A6gCEmtVRmw,The Liberty Hound, RW
+UCQcPBLsq9rRc5TxDqSz_Dog,The Black World, SJA
+UCLUrVTVTA3PnUFpYvpfMcpg,Laura Chen, ASJA
+UCrmm_7RDZJeQzq2-wvmjueg,The Real News, LW
+UCG749Dj4V2fKa143f8sE60Q,Tim Pool, ASJA
+UCYWIEbibRcZav6xMLo9qWWw,The Ring of Fire, LW
+UC0RJJ_Wm7jyOU9eY10LgcwA,AdamKokesh, LT
+UC7Edgk9RxP7Fm7vjQ1d-cDA,FeministFrequency, SJA
 #
 # from https://blog.feedspot.com/political_youtube_channels/
 #
-The Majority Report w/ Sam Seder,UC-3jIAlnQmbbVMV6gR7K8aQ, SJA|LW+
-Steven Crowder,UCIveFvW-ARp_B_RckhweNJw, RW|ASJA
-Julie Borowski,UCzIjg5vIfBGcdyLWu6lhXxw, LT|ASJA
-Chris Ray Gun,UCctjGdm2NlMNzIlxz02IsXA, ASJA
+UC-3jIAlnQmbbVMV6gR7K8aQ,The Majority Report w/ Sam Seder, SJA|LW+
+UCIveFvW-ARp_B_RckhweNJw,Steven Crowder, RW|ASJA
+UCzIjg5vIfBGcdyLWu6lhXxw,Julie Borowski, LT|ASJA
+UCctjGdm2NlMNzIlxz02IsXA,Chris Ray Gun, ASJA
 #
 # 2018 viewcount search for Democrats|Republicans.
 #
-The Late Show with Stephen Colbert,UCMtFAi84ehTSYSE9XoHefig, LW|SJA
-The Daily Show with Trevor Noah,UCwWhs_6x42TyRM4Wstoq8HA, LW|SJA
-PragerU,UCZWlSUNDvCCS1hBiXV0zKcA, RW
-Real Time with Bill Maher,UCy6kyFxaMqGtpE3pQTflK8A, LW
-Late Night with Seth Meyers,UCVTyTA7-g9nopHeHbeuvpRA, LW
-The View,UCeH6qE4V7n5tVwP7NkdrtJg,
-Saturday Night Live,UCqFzWxSCi39LnW1JKFR3efg, LW
-Vox,UCLXo7UDZvByw2ixzpQCufnA, LW|SJA
-No Bullshit,UCZNk7Jjb2t8EuBdgn4Zj1cw, RW|ASJA
+UCMtFAi84ehTSYSE9XoHefig,The Late Show with Stephen Colbert, LW|SJA
+UCwWhs_6x42TyRM4Wstoq8HA,The Daily Show with Trevor Noah, LW|SJA
+UCZWlSUNDvCCS1hBiXV0zKcA,PragerU, RW
+UCy6kyFxaMqGtpE3pQTflK8A,Real Time with Bill Maher, LW
+UCVTyTA7-g9nopHeHbeuvpRA,Late Night with Seth Meyers, LW
+UCeH6qE4V7n5tVwP7NkdrtJg,The View,
+UCqFzWxSCi39LnW1JKFR3efg,Saturday Night Live, LW
+UCLXo7UDZvByw2ixzpQCufnA,Vox, LW|SJA
+UCZNk7Jjb2t8EuBdgn4Zj1cw,No Bullshit, RW|ASJA
 #
 # from crawl
 #
+UC3XTzVzaHQEd30rQbuvCtTQ,LastWeekTonight,
+UCJ0uqCI0Vqr2Rrt1HseGirg,The Late Late Show with James Corden,
+UCa6vGFO9ty8v5KZJXQxdhaw,Jimmy Kimmel Live,
+UC3XTzVzaHQEd30rQbuvCtTQ,LastWeekTonight,
+UClFSU9_bUb4Rc6OYfTt5SPw,Philip DeFranco,
+UCupvZG-5ko_eiXAupbDfxWw,CNN,
+UCLXo7UDZvByw2ixzpQCufnA,Vox,
+UCzQUP1qoWDoEbmsQxvdjxgQ,PowerfulJRE,
+UCZaT_X_mc0BI-djXOlfhqWQ,VICE News,
+UC16niRr50-MSBwiO3YDb3RA,BBC News,
+
+UCaXkIU1QidjPwiAYu6GcHjg,MSNBC
+UCXIJgqnII2ZOINSWNOGFThA,Fox News
+UCczrL-2b-gYK3l4yDld4XlQ,RT America
+UC6ZFN9Tx6xh-skXCuRHCDpQ,PBS NewsHour
+UCCXoCcu9Rp7NPbTzIvogpZg,Fox Business
+UCuFFtHWoLl5fauMMD5Ww2jA,CBC News
+UCjXB7nX8bL2U2sje8d212Yw,Roland S. Martin
+UCKjU3KzdbJE1EFcHVqXC3_g,CBC News: The National
+UCHd62-u_v4DvJ8TCFtpi4GA,Washington Post
+UCsv4YOF2RBYh0NQ1vuHQ-hg,Comedy Central UK
+UCzuqE7-t13O4NIDYJfakrhw,Democracy Now!
+UCNye-wNBqNL5ZzHSJj3l8Bg,Al Jazeera English
+UChDKyKQ59fYz3JO2fl0Z6sg,TODAY
+UCeY0bbntWzzVIaj2z3QigXg,NBC News
+UCaeO5vkdj5xOQHp4UmIN6dw,The Daily Wire
+UCoMdktPbSTixAyNGwb-UYkQ,Sky News
+UCmhT57vCaS4kPIalY_rrysg,Political News Networks
+UCnxGkOGNMqQEUMvroOWps6Q,JRE Clips
+UCrm7RGOsstgF4qAG5mFGK-w,Joe Rogan University - Fan Channel
+UCK7tptUDHh-RYDsdxO1-5QQ,Wall Street Journal
+UCvJJ_dzjViJCoLf5uKUTwoA,CNBC
+UCqnbDFdCpuN8CMEg0VuEBqA,The New York Times
+UChi08h4577eFsNXGd3sxYhw,Breakfast Club Power 105.1 FM
+UCVSNOxehfALut52NbkfRBaA,VOA News
+UCP6HGa63sBC7-KHtkme-p-g,USA TODAY
+UCK0z0_5uL7mb9IjntOKi5XQ,The Atlantic
+UCUMZ7gohGI9HcU9VNsr2FJQ,Bloomberg
+UC0p5jTq6Xx_DosDFxVXnWaQ,The Economist
+UCdHkLMxTYwV66Sky1xXVrxQ,BBC America
+UCJg9wBPyKMNA5sRDnvzmkdg,FOX 10 Phoenix
+UCsD-Qms-AkXDrsU962OicLw,The New Yorker
+UCldfgbzNILYZA4dmDt4Cd6A,Secular Talk
+

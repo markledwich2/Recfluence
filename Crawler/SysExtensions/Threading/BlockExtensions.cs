@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using Humanizer;
+using SysExtensions.Text;
 
 namespace SysExtensions.Threading {
     public static class BlockExtensions {
@@ -23,6 +25,7 @@ namespace SysExtensions.Threading {
             Func<T, Task<R>> transform, int parallelism = 1, int? capacity = null, 
             Action<BulkProgressInfo<R>> progressUpdate = null, TimeSpan progressPeriod = default(TimeSpan)) {
 
+            progressPeriod = progressPeriod == default(TimeSpan) ? 10.Seconds() : progressPeriod;
             var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism};
             if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
             var block = new TransformBlock<T, R>(transform, options);
@@ -34,20 +37,30 @@ namespace SysExtensions.Threading {
             var produce = Produce(source, block);
             var result = new List<R>();
             var newResults = new List<R>();
-            while (await block.OutputAvailableAsync()) {
-                var item = await block.ReceiveAsync();
-                newResults.Add(item);
-                result.Add(item);
-                if (swProgress.Elapsed > progressPeriod) {
-                    progressUpdate?.Invoke(new BulkProgressInfo<R>(result, newResults, swProgress.Elapsed));
+            while (true) {
+                var outputAvailableTask = block.OutputAvailableAsync();
+
+                var completedTask = await Task.WhenAny(outputAvailableTask, Task.Delay(progressPeriod));
+                if (completedTask == outputAvailableTask) {
+                    var available = await outputAvailableTask;
+                    if (!available)
+                        break;
+                    var item = await block.ReceiveAsync();
+                    newResults.Add(item);
+                    result.Add(item);
+                }
+
+                var elapsed = swProgress.Elapsed;
+                if (elapsed  > progressPeriod) {
+                    progressUpdate?.Invoke(new BulkProgressInfo<R>(result, newResults, elapsed));
                     swProgress.Restart();
                     newResults.Clear();
                 }
             }
 
-            await Task.WhenAll(produce, block.Completion);
+            progressUpdate?.Invoke(new BulkProgressInfo<R>(result, result, totalProgress.Elapsed));
 
-            progressUpdate?.Invoke(new BulkProgressInfo<R>(result, newResults, swProgress.Elapsed));
+            await Task.WhenAll(produce, block.Completion);
 
             return result;
         }
@@ -69,5 +82,7 @@ namespace SysExtensions.Threading {
             NewItems = newItems;
             Elapsed = elapsed;
         }
+
+        public Speed Speed(string units) => NewItems.Count.Speed(units, Elapsed);
     }
 }
