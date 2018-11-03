@@ -1,5 +1,8 @@
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Serialization;
 using YouTubeReader;
@@ -22,5 +25,11 @@ namespace YouTubeReaderTests
             db.DropCollection("Channels");
         }
       
+
+        [TestMethod]
+        public void NotNullTest() {
+            IEnumerable<int> list = null;
+            var res = list.NotNull();
+        }
     }
 }

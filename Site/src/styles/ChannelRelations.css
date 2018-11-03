@@ -1,0 +1,24 @@
+
+.link {
+    stroke: #aaa;
+    opacity: 0;
+}
+
+.labels text {
+    stroke: rgb(97, 95, 95);
+    font: 14px sans-serif;
+    font-weight: bold;
+}
+
+.labels rect {
+    display: none;
+}
+
+g.labels circle {
+    display: none;
+}
+
+.node circle {
+    stroke: #fff;
+    stroke-width: 1px;
+}

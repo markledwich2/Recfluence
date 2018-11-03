@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Humanizer;
 using LiteDB;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
@@ -11,8 +12,10 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using Logger = Serilog.Core.Logger;
+using static YouTubeReader.YtCrawler.CrawlChannelStatus;
 
-namespace YouTubeReader {
+namespace YouTubeReader
+{
     public class YtCrawler {
         public YtCrawler(LiteDatabase db, YtReader yt, Cfg cfg, Logger log) {
             Yt = new YtCacheDb(db, yt);
@@ -32,28 +35,33 @@ namespace YouTubeReader {
             var channelCfg = new ChannelConfig();
             var seedData = Cfg.CrawlConfigDir.Combine("SeedChannels.csv").ReadFromCsv<SeedChannel>();
             channelCfg.Seeds.AddRange(Cfg.LimitSeedChannels.HasValue ? seedData.Take(Cfg.LimitSeedChannels.Value) : seedData);
-            channelCfg.Included.AddRange(Cfg.CrawlConfigDir.Combine("InfluencerInclude.csv").ReadFromCsv<InfluencerOverride>());
-            channelCfg.Excluded.AddRange(Cfg.CrawlConfigDir.Combine("InfluencerExclude.csv").ReadFromCsv<InfluencerOverride>());
+            channelCfg.Excluded.AddRange(Cfg.CrawlConfigDir.Combine("ChannelExclude.csv").ReadFromCsv<InfluencerOverride>());
 
-            var seedChannels = await channelCfg.Seeds.BlockTransform(c => Yt.Channel(c.Id), Cfg.Parallel);
-            var seedChannelCrawl = seedChannels.Select(c => ToCrawlChannelData(c, channelCfg)).ToKeyedCollection(c => c.Id);
+
+            async Task<CrawlChannelData> ChannelFromSeed(SeedChannel seed) {
+                var c = await Yt.Channel(seed.Id);
+                return ToCrawlChannelData(c, channelCfg);
+            }
+            var seedChannels = (await channelCfg.Seeds.BlockTransform(ChannelFromSeed, Cfg.Parallel)).ToKeyedCollection(c => c.Id);
             
-            var firstResult = await Crawl(seedChannelCrawl, channelCfg);
-            SaveResult(firstResult, localCrawlDir.Combine("FirstPass"));
+            var firstResult = await Crawl(seedChannels, channelCfg);
+            Log.Information("Completed first pass crawl. {Channels} channels, {Visits} visits.", firstResult.Channels.Count, firstResult.Visits.Count);
+            SaveResult(firstResult, localCrawlDir);
 
+            // with a comprehensive seed list, the discovered channels are only good for reviewing for new seeds, but aren't included in the analysis
+            /*
             var influencers = firstResult.Channels
-                .Where(c => c.Status == CrawlChannelStatus.Detected || c.Status == CrawlChannelStatus.Included)
+                .Where(c => c.Status.In(Detected, Included))
                 .ToKeyedCollection(c => c.Id);
             Log.Information("Crawling {Influencers} influencers", influencers.Count);
             var secondResult = await Crawl(influencers, channelCfg, firstResult);
-
-            Log.Information("Completed crawl. {Channels} channels, {Visits} visits.", secondResult.Channels.Count, secondResult.Visits.Count);
-            SaveResult(secondResult, localCrawlDir);
+            
+             SaveResult(secondResult, localCrawlDir);
+             */
         }
 
         class ChannelConfig {
             public IKeyedCollection<string, SeedChannel> Seeds { get; } = new KeyedCollection<string, SeedChannel>(c => c.Id);
-            public IKeyedCollection<string, InfluencerOverride> Included { get; } = new KeyedCollection<string, InfluencerOverride>(c => c.Id);
             public IKeyedCollection<string, InfluencerOverride> Excluded { get; } = new KeyedCollection<string, InfluencerOverride>(c => c.Id);
         }
 
@@ -76,13 +84,17 @@ namespace YouTubeReader {
                 c.Channel.Id,
                 c.Channel.Title,
                 c.Status,
+                c.Type,
+                c.LR,
                 c.Channel.ViewCount,
                 c.Channel.SubCount,
                 c.Recommends,
+                c.RecommendsRatio,
                 c.ChannelVideoViews,
+                c.ViewedRecommends,
                 RecommendingChannels = c.RecommendingChannels.Join("|", r => r.Channel.Title),
                 VideoTitles = c.ChannelVideoData?.Join("|", v => v.Title) ?? "",
-                c.ViewedRecommends
+                
             }).WriteToCsv(dir.Combine("Channels.csv"));
 
             Log.Information("Saved results. {Recommends} recommends, {Channels} channels",
@@ -91,16 +103,6 @@ namespace YouTubeReader {
 
         async Task<ChannelCrawlResult> Crawl(IKeyedCollection<string, CrawlChannelData> seedChannels, ChannelConfig channelCfg,
             ChannelCrawlResult priorResult = null) {
-            void PostCrawUpdateStats(ICollection<Visit> visits, IKeyedCollection<string, CrawlChannelData> channels) {
-                var visitsByTo = visits.ToMultiValueDictionary(v => v.To.ChannelId);
-                foreach (var c in channels) {
-                    var recommendations = visitsByTo[c.Channel.Id] ?? new List<Visit>();
-                    c.Recommends = recommendations.Count;
-                    c.ViewedRecommends = recommendations.Sum(r => r.From.Views ?? 0);
-                    c.RecommendingChannels.Init(recommendations.GroupBy(i => i.From.ChannelId).Select(g => channels[g.Keyv]));
-                }
-            }
-
             void ProgressUpdate(BulkProgressInfo<ChannelCrawlResult> p)
                 => Log.Information("Crawling channels {Channels}/{Total} {Speed}",
                     p.Results.Count, seedChannels.Count, p.Speed("channels").Humanize());
@@ -108,16 +110,15 @@ namespace YouTubeReader {
             var perChannelResults = await seedChannels.BlockTransform(c => Crawl(c, channelCfg), 2, null, ProgressUpdate); // sufficiently parallel inside
 
             var allChannels = perChannelResults.SelectMany(r => r.Channels)
-                .Concat(priorResult?.Channels.Select(c => c) ?? new CrawlChannelData[] { })
-                .ToKeyedCollection(c => c.Channel.Id);
-            var allVisits = (priorResult?.Visits.Select(v => v) ?? new Visit[] { })
-                .Concat(perChannelResults.SelectMany(r => r.Visits)).ToList();
+                .Concat((priorResult?.Channels).NotNull()).ToKeyedCollection(c => c.Id);
+
+            var allVisits = (priorResult?.Visits).NotNull().Concat(perChannelResults.SelectMany(r => r.Visits)).ToList();
 
             if (priorResult == null) {
                 PostCrawUpdateStats(allVisits, allChannels);
 
                 var detectedInfluencers = allChannels.Where(c => c.Status == CrawlChannelStatus.Default)
-                    .OrderByDescending(c => c.Recommends).Take(Cfg.InfluencersToDetect).ToList();
+                    .OrderByDescending(c => c.RecommendsRatio).Take(Cfg.InfluencersToDetect).ToList();
                 foreach (var i in detectedInfluencers)
                     i.Status = CrawlChannelStatus.Detected;
 
@@ -142,6 +143,19 @@ namespace YouTubeReader {
 
             var res = new ChannelCrawlResult(allChannels, allVisits);
             return res;
+        }
+
+        void PostCrawUpdateStats(ICollection<Visit> visits, IKeyedCollection<string, CrawlChannelData> channels) {
+            var visitsByTo = visits.ToMultiValueDictionary(v => v.To.ChannelId);
+            var visitsByFrom = visits.ToMultiValueDictionary(v => v.From.ChannelId);
+            foreach (var c in channels) {
+                var recommendations = visitsByTo[c.Channel.Id] ?? new List<Visit>();
+                c.Recommends = recommendations.Count;
+                c.ViewedRecommends = recommendations.Sum(r => r.From.Views ?? 0);
+                c.RecommendingChannels.Init(recommendations.GroupBy(i => i.From.ChannelId).Select(g => channels[g.Key]));
+                c.RecommendsRatio = recommendations.GroupBy(r => r.From.ChannelId)
+                    .Sum(g => (double)g.Count() / visitsByFrom[g.Key].Count);
+            }
         }
 
         async Task<ChannelCrawlResult> Crawl(CrawlChannelData channel, ChannelConfig channelCfg) {
@@ -207,16 +221,16 @@ namespace YouTubeReader {
 
 
         CrawlChannelData ToCrawlChannelData(ChannelData channel, ChannelConfig channelCfg) {
-            var cc = new CrawlChannelData {
-                Channel = channel
-            };
+            var cc = new CrawlChannelData { Channel = channel };
 
-            if (channelCfg.Seeds.ContainsKey(cc.Id))
-                cc.Status = CrawlChannelStatus.Seed;
-            else if (channelCfg.Included.ContainsKey(cc.Id))
-                cc.Status = CrawlChannelStatus.Included;
+            var seed = channelCfg.Seeds[channel.Id];
+            if (channelCfg.Seeds.ContainsKey(cc.Id)) {
+                cc.Status = Seed;
+                cc.Type = seed.Type;
+                cc.LR = seed.LR;
+            }
             else if (channelCfg.Excluded.ContainsKey(cc.Id))
-                cc.Status = CrawlChannelStatus.Excluded;
+                cc.Status = Excluded;
 
             return cc;
         }
@@ -252,8 +266,7 @@ namespace YouTubeReader {
             Default,
             Seed,
             Detected,
-            Excluded,
-            Included
+            Excluded
         }
 
         public class ChannelCrawlResult {
@@ -285,7 +298,10 @@ namespace YouTubeReader {
             public ulong? ChannelVideoViews => ChannelVideoData?.Sum(v => v?.Views ?? 0);
             public ulong ViewedRecommends { get; set; }
 
-            public bool InfluencerStatus => Status == CrawlChannelStatus.Detected || Status == CrawlChannelStatus.Seed || Status == CrawlChannelStatus.Included;
+            public bool InfluencerStatus => Status.In(Detected, Seed);
+            public double RecommendsRatio { get; set; }
+            public string Type { get; set; }
+            public string LR { get; set; }
 
             public override string ToString() => $"{Channel.Title} ({Status})";
         }
@@ -293,7 +309,8 @@ namespace YouTubeReader {
         public class SeedChannel {
             public string Id { get; set; }
             public string Title { get; set; }
-            public string Tags { get; set; }
+            public string Type { get; set; }
+            public string LR { get; set; }
         }
 
         public class InfluencerOverride {

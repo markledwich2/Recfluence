@@ -2,20 +2,29 @@ library("dplyr", lib.loc="~/R/win-library/3.5")
 
 
 
-channels <- read.csv("2.Analysis\\Channels.csv", header = TRUE)
-outChannels <- channels %>%
-  filter(Status!="Ignored") %>% 
-  select(Id, Title, Status, SubCount) %>%
-  arrange(desc(SubCount))
-write.csv(outChannels,".\\3.Vis\\Channels.csv")
+#channels <- read.csv("2.Analysis\\Channels.csv", header = TRUE)
+outChannels <- Channels %>%
+  filter(Status!="Default") %>% 
+  select(Id, Title, Status, SubCount, ChannelVideoViews, Type, LR) %>%
+  arrange(desc(ChannelVideoViews))
 
-recommends <- read.csv("2.Analysis\\Visits.csv", header = TRUE)
-outRelations <- recommends %>%
+
+
+channelVideos <- Visits %>%
+  group_by(FromChannelId) %>%
+  summarise(ChannelRecommends = n())
+
+#recommends <- read.csv("2.Analysis\\Visits.csv", header = TRUE)
+outRelations <- Visits %>%
   group_by(FromChannelTitle, ChannelTitle, FromChannelId, ChannelId) %>%
   subset(ChannelId %in% outChannels$Id) %>% 
   subset(FromChannelId %in% outChannels$Id) %>%
-  summarise(Value = n()) %>%
-  arrange(desc(Value))
+  inner_join(channelVideos, by = "FromChannelId") %>%
+  summarise(Recommends = n(), RecommendedViews = sum(FromVideoViews), RecommendsPerVideo=n()/mean(ChannelRecommends)) %>%
+  filter(RecommendsPerVideo >= 0.02) %>%
+  arrange(desc(Recommends))
+
+write.csv(outChannels,"Channels.csv")
+write.csv(outRelations,"ChannelRelations.csv")
 
 
-write.csv(outRelations,".\\3.Vis\\ChannelRelations2.csv")

@@ -9,4 +9,4 @@ var videos = db.Videos();
 //videos.Find(q => q.Video.ChannelTitle.StartsWith("The Young Turks")).Select(q => new { q.Id, q.Video.Title, q.Video.PublishedAt }).Dump();
 //videos.Count().Dump();
 
-videos.Find(v => v.Id == "-J9mhLRzWo0").Dump();
+videos.FindById("-J9mhLRzWo0").Dump();

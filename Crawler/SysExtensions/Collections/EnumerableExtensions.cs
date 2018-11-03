@@ -25,7 +25,10 @@ namespace SysExtensions.Collections
         /// <returns></returns>
         public static IEnumerable<T> Concat<T>(this IEnumerable<T> items, params T[] additionalItems) => Enumerable.Concat(items, additionalItems);
 
-        public static IEnumerable<T> NotNull<T>(this IEnumerable<T> items) => items.Where(i => i != null);
+        /// <summary>
+        /// If items is null return an empty set, if an item is null remove it from the list
+        /// </summary>
+        public static IEnumerable<T> NotNull<T>(this IEnumerable<T> items) => items?.Where(i => i != null) ?? new T[] { };
 
         public static ulong Sum<T>(this IEnumerable<T> items, Func<T, ulong> f) => items.Aggregate(0UL, (a, i) => a + f(i));
 
