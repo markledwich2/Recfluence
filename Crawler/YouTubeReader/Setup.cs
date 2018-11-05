@@ -66,7 +66,7 @@ namespace YouTubeReader {
         public int Parallel { get; set; } = 8;
         public int? LimitSeedChannels { get; set; }
 
-        public int InfluencersToDetect { get; set; } = 100;
+        public int InfluencersToDetect { get; set; } = 0;
 
         /// <summary>
         /// The minimum percentile of the channel's video vies for the given period

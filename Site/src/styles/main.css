@@ -1,13 +1,11 @@
-
 .link {
     stroke: #aaa;
     opacity: 0;
 }
 
 .labels text {
-    stroke: rgb(97, 95, 95);
-    font: 14px sans-serif;
-    font-weight: bold;
+    stroke: rgb(0, 0, 0);
+    text-shadow: -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;
 }
 
 .labels rect {
