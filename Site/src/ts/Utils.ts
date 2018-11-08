@@ -1,3 +1,5 @@
+import { json } from "d3";
+
 export function toMap<K, V>(array: Array<V>, getKey: ((item: V) => K)): Map<K, V> {
     let m = new Map<K, V>();
     array.forEach(e => {
@@ -6,6 +8,6 @@ export function toMap<K, V>(array: Array<V>, getKey: ((item: V) => K)): Map<K, V
     return m;
 }
 
-export function max<T>(items: Array<T>, getValue: (item: T) => number): number {
-    return items.reduce((max, n) => Math.max(getValue(n), max), 0);
+export function jsonEquals(a:any, b:any) {
+    return JSON.stringify(a) == JSON.stringify(b)
 }

@@ -3,4 +3,6 @@ module.exports = {
       title: `Pandas Eating Lots`,
     },
     plugins: [ `gatsby-plugin-typescript` ],
+    
   }
+  

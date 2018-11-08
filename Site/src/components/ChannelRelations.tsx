@@ -2,115 +2,111 @@ import * as React from 'react'
 import * as d3 from 'd3'
 import '../styles/Main.css'
 import { layoutTextLabel, layoutGreedy, layoutLabel, layoutRemoveOverlaps } from 'd3fc-label-layout'
-import { ChartProps, ChannelSimDatum, RecommendedSimDatum, YtNetworks } from '../ts/YouTubeNetworks'
-import { max } from '../ts/Utils'
+import { ChannelSimNode, RelationSimLink, YtNetworks, Graph, YtData, SkGraph, SimGraph } from '../ts/YtData'
+import { ChartProps, DataSelections, DataSelection, Chart, ChartState, SelectionType } from '../ts/Charts'
 
-export class ChannelRelations extends React.Component<ChartProps, {}> {
+interface State extends ChartState {}
+interface Props extends ChartProps<YtData> {}
+
+export class ChannelRelations extends React.Component<Props, State> {
   ref: SVGSVGElement
-  onResize: () => void
+
+  chart:Chart = new Chart(this)
+
+  state: Readonly<State> = {
+    selections: new DataSelections()
+  }
 
   componentDidMount() {
     this.loadChart()
   }
 
-  componentDidUpdate() {
-    this.onResize()
+  componentDidUpdate(prevProps:Props, prevState:State) {
+    this.stateRender()
   }
 
   render() {
-    return (
-      <svg
-        width={this.props.width}
-        height={this.props.height}
-        className="container"
-        ref={(ref: SVGSVGElement) => (this.ref = ref)}
-      />
-    )
+    return <svg width={this.props.width} height={this.props.height} className="container" ref={ref => (this.ref = ref)} />
   }
 
-  async loadChart() {
-    let pallet = ['#283044', '#78A1BB', '#8AA399', '#BFA89E', '#E6C79C']
-    let lrPallet = YtNetworks.lrPallet();
-    let colorScale = d3.scaleOrdinal(pallet)
-    let linkOpacity = 0,
-      nodeOpacity = 1
+  async getData() {
+    let data = await YtNetworks.simData(this.props.dataSet)
 
-    function radius(d: ChannelSimDatum) {
-      return Math.sqrt(d.size > 0 ? (d.size / maxSize) * 1800 : 1)
-    }
+    let adjlist = new Map()
+    data.links.forEach(d => {
+      adjlist.set(d.source + '-' + d.target, true)
+      adjlist.set(d.target + '-' + d.source, true)
+    })
 
-    function neigh(a: string, b: string): boolean {
-      return a == b || adjlist.get(a + '-' + b)
-    }
+    let isConnected = (a: string, b: string) => a == b || adjlist.get(a + '-' + b)
 
-    function focus(d: ChannelSimDatum) {
-      var id = d.channelId
-      node.style('opacity', d => (neigh(id, d.channelId) ? nodeOpacity : 0.3))
-      link.style('opacity', d => {
-        let s = d.source as ChannelSimDatum
-        var t = d.target as ChannelSimDatum
-        return s.channelId == id || t.channelId == id ? 0.8 : linkOpacity
-      })
-      label.style('visibility', d => (neigh(id, d.channelId) ? 'visible' : 'hidden'))
-      updateLabels()
-    }
+    return { nodes: data.nodes, links: data.links, isConnected }
+  }
 
-    function updateNodeAndLinks(
-      node: d3.Selection<d3.BaseType, ChannelSimDatum, d3.BaseType, {}>,
-      width: number,
-      height: number
-    ) {
-      var dx = (d: ChannelSimDatum) => Math.max(radius(d), Math.min(width - radius(d), d.x))
-      var dy = (d: ChannelSimDatum) => Math.max(radius(d), Math.min(height - radius(d), d.y))
-
-      //node.attr("transform", d => `translate(${d.x}, ${d.y})`);
-
-      node.attr('transform', d => {
-        d.x = dx(d)
-        d.y = dy(d)
-        return `translate(${d.x}, ${d.y})`
-      })
-
-      let fixna = (x?: number) => (x != null && isFinite(x) ? x : 0)
-      link
-        .attr('x1', d => fixna((d.source as ChannelSimDatum).x))
-        .attr('y1', d => fixna((d.source as ChannelSimDatum).y))
-        .attr('x2', d => fixna((d.target as ChannelSimDatum).x))
-        .attr('y2', d => fixna((d.target as ChannelSimDatum).y))
-    }
-
-    let data = await YtNetworks.simData(this.props.dataPath)
-    let maxStrength = max(data.links, l => l.strength)
-    let maxSize = max([...data.nodes], n => n.size)
-
-    let centerForce = d3.forceCenter(this.props.width / 2, this.props.height / 2)
+  getLayout(nodes: ChannelSimNode[], links: RelationSimLink[]) {
+    let maxStrength = d3.max(links, l => l.strength)
+    let maxSize = d3.max(nodes, n => n.size)
+    let widthIndex = this.props.width / 1024
+    let getNodeRadius = (d: ChannelSimNode) => Math.sqrt(d.size > 0 ? (d.size / maxSize) : 1) * widthIndex * 10
+    let getLineWidth = (d: RelationSimLink) => (d.strength / maxStrength) * 40
+    let centerForce = d3.forceCenter()
     let force = d3
-      .forceSimulation<ChannelSimDatum, RecommendedSimDatum>(data.nodes)
-      .force('charge', d3.forceManyBody().strength(-120))
+      .forceSimulation<ChannelSimNode, RelationSimLink>(nodes)
+      .force('charge', d3.forceManyBody().strength(-80 * widthIndex))
       .force('center', centerForce)
       .force(
         'link',
         d3
-          .forceLink<ChannelSimDatum, RecommendedSimDatum>(data.links)
+          .forceLink<ChannelSimNode, RelationSimLink>(links)
           .distance(1)
           .id(d => d.channelId)
-          .strength(d => (d.strength / maxStrength) * 0.2)
+          .strength(d => (d.strength / maxStrength) * 0.8)
       )
-      .force('collide', d3.forceCollide<ChannelSimDatum>(d => radius(d)))
+      .force('collide', d3.forceCollide<ChannelSimNode>(getNodeRadius))
 
-    let adjlist = new Map()
-    data.links.forEach(d => {
-      let s = d.source as ChannelSimDatum
-      var t = d.target as ChannelSimDatum
-      adjlist.set(s.channelId + '-' + t.channelId, true)
-      adjlist.set(t.channelId + '-' + s.channelId, true)
-    })
+    let onResize = () => {
+      centerForce.x(this.props.width / 2)
+      centerForce.y(this.props.height / 2)
+    }
+    onResize()
+
+    return { force, getLineWidth, getNodeRadius, onResize }
+  }
+
+  async loadChart() {
+    const { nodes, links, isConnected } = await this.getData()
+    const lay = this.getLayout(nodes, links)
 
     let svg = d3.select(this.ref)
-    let container = svg.append('g')
+    let container = this.chart.createContainer(svg)
+
+    let link = container
+      .append('g')
+      .attr('class', 'links')
+      .selectAll('line')
+      .data(links)
+      .enter()
+      .append('line')
+      .attr('class', 'link')
+      .attr('stroke-width', lay.getLineWidth)
+
+    let node = container
+      .append('g')
+      .attr('class', 'nodes')
+      .selectAll('g')
+      .data(nodes)
+      .enter()
+      .append('g')
+      .attr('class', 'node shape')
+      .append('circle')
+      .attr('class', 'shape')
+      .attr('r', lay.getNodeRadius)
+      .attr('fill', d => YtNetworks.lrPallet()[d.lr])
+
+    this.chart.addDataShapeEvents(node, d => d.channelId, YtNetworks.ChannelIdPath)
 
     let labelPadding = 2
-    let layoutLabels = layoutLabel<ChannelSimDatum[]>(layoutGreedy())
+    let layoutLabels = layoutLabel<ChannelSimNode[]>(layoutGreedy())
       .size((_, i, g) => {
         let e = g[i] as Element
         let textSize = e.getElementsByTagName('text')[0].getBBox()
@@ -121,72 +117,66 @@ export class ChannelRelations extends React.Component<ChartProps, {}> {
           .padding(labelPadding)
           .value(d => d.title)
       )
-
-    let labelsGroup = svg
+    let labelsGroup = container
       .append('g')
       .attr('class', 'labels')
-      .datum(data.nodes)
+      .datum(nodes)
       .call(layoutLabels)
 
     // label layout works at the group level, re-join to data
-    let label = labelsGroup.selectAll('text').data(data.nodes)
-    label.attr("pointer-events", "none")
-    
-    let link = container
-      .append('g')
-      .attr('class', 'links')
-      .selectAll('line')
-      .data(data.links)
-      .enter()
-      .append('line')
-      .attr('class', 'link')
-      .attr('stroke-width', d => (d.strength / maxStrength) * 50)
+    let label = labelsGroup.selectAll('text').data(nodes)
+    label.attr('pointer-events', 'none')
 
-    let node = container
-      .append('g')
-      .attr('class', 'nodes')
-      .selectAll('g')
-      .data(data.nodes)
-      .enter()
-      .append('g')
-      .attr('class', 'node')
+    let updateVisibility = () => {
+      let lighted = this.chart.highlightedItems(YtNetworks.ChannelIdPath)
+      let filtered = this.chart.filteredItems(YtNetworks.ChannelIdPath)
+      let lightedFiltered = lighted.concat(filtered)
 
-    node
-      .append('circle')
-      .attr('r', d => radius(d))
-      .attr('fill', d => lrPallet[d.lr])
+      let nodeLightedFiltered = (c: ChannelSimNode) =>
+        lightedFiltered.some(id => id == c.channelId) || lightedFiltered.some(id => isConnected(id, c.channelId))
 
-    function updateVisibility() {
-      node.style('opacity', nodeOpacity)
-      label.style('visibility', 'hidden')
-      link.style('opacity', linkOpacity)
-      label.style('visibility', d => 'hidden') //(radius(d) > 10 ? 'visible' : 'hidden')
+      console.log('node visibility', lighted, filtered)
+      node.style('opacity', d => lightedFiltered.length == 0 || nodeLightedFiltered(d) ? 1 : 0.3)
+      node.style('stroke', d => (filtered.some(id => id == d.channelId) ? '#ddd' : null))
+      label.style('visibility', d => (nodeLightedFiltered(d) ? 'visible' : 'hidden'))
+
+      link.style('opacity', d => {
+        let s = d.source as ChannelSimNode
+        var t = d.target as ChannelSimNode
+        return lightedFiltered.some(id => s.channelId == id || t.channelId == id) ? 0.8 : 0
+      })
     }
-    node.on('mouseover', focus).on('mouseout', updateVisibility)
-    
-    //label.on('mouseover', focus).on('mouseout', updateVisibility)
 
-    function updateLabels() {
+    function updatePositions(node: d3.Selection<d3.BaseType, ChannelSimNode, d3.BaseType, {}>, width: number, height: number) {
+      var dx = (d: ChannelSimNode) => Math.max(lay.getNodeRadius(d), Math.min(width - lay.getNodeRadius(d), d.x))
+      var dy = (d: ChannelSimNode) => Math.max(lay.getNodeRadius(d), Math.min(height - lay.getNodeRadius(d), d.y))
+
+      node.attr('transform', d => {
+        d.x = dx(d)
+        d.y = dy(d)
+        return `translate(${d.x}, ${d.y})`
+      })
+
+      let fixna = (x?: number) => (x != null && isFinite(x) ? x : 0)
+      link
+        .attr('x1', d => fixna((d.source as ChannelSimNode).x))
+        .attr('y1', d => fixna((d.source as ChannelSimNode).y))
+        .attr('x2', d => fixna((d.target as ChannelSimNode).x))
+        .attr('y2', d => fixna((d.target as ChannelSimNode).y))
+    }
+
+    let tick = () => node.call(d => updatePositions(d, this.props.width, this.props.height))
+    for (var i = 0; i < 10; i++) lay.force.tick()
+    lay.force.on('tick', tick)
+
+    this.stateRender = () => {
+      tick()
       labelsGroup.call(layoutLabels)
+      lay.onResize()
+      updateVisibility()
     }
-
-    function tick(width: number, height: number) {
-      node.call(d => updateNodeAndLinks(d, width, height))
-    }
-
-    for (var i = 0; i < 20; i++) force.tick()
-    force.on("tick", () => tick(this.props.width, this.props.height));
-
-    updateVisibility()
-
-    this.onResize = () => {
-      tick(this.props.width, this.props.height)
-      labelsGroup.call(layoutLabels)
-      centerForce.x(this.props.width / 2)
-      centerForce.y(this.props.height / 2)
-      force.restart()
-    }
-
-    tick(this.props.width, this.props.height)
+    this.stateRender()
   }
+
+  stateRender: () => void
 }

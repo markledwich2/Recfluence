@@ -2,22 +2,30 @@ import * as React from 'react'
 import * as d3 from 'd3'
 import { sankey, sankeyLinkHorizontal, sankeyLeft } from 'd3-sankey'
 import '../styles/Main.css'
-import { layoutTextLabel, layoutGreedy, layoutLabel, layoutRemoveOverlaps } from 'd3fc-label-layout'
-import { YtNetworks, ChannelNodeExtra, RecommendedLinkExtra, SChannelNode, SRecommendedLink, SGraph } from '../ts/YouTubeNetworks'
-import { object } from 'prop-types'
+import { YtNetworks, ChannelSkExtra, RelationSkExtra, ChannelSkNode, RelationSkLink, YtData } from '../ts/YtData'
+import { ChartProps, ChartState,  DataSelections, Chart } from '../ts/Charts'
+import { jsonEquals } from '../ts/Utils';
+import clone from 'clone'
 
-interface Props {
-  dataPath: string
-  width: number
-  height: number
-}
+interface State extends ChartState {}
+interface Props extends ChartProps<YtData> {}
 
-export class RecommendFlows extends React.Component<Props, {}> {
+export class RecommendFlows extends React.Component<Props, State> {
   ref: SVGSVGElement
-  onResize: () => void
+  
+  chart:Chart = new Chart(this)
+  state: Readonly<State> = {
+    selections: new DataSelections()
+  }
+
+  dataRender: (prevState:State) => void
 
   componentDidMount() {
-    this.loadChart()
+    this.createChart()
+  }
+
+  componentDidUpdate(prevProps:ChartProps<YtData>, prevState:State) {
+    this.dataRender(prevState)
   }
 
   render() {
@@ -28,116 +36,99 @@ export class RecommendFlows extends React.Component<Props, {}> {
     )
   }
 
-  async loadData() {
-    let allData = await YtNetworks.sankeyData(this.props.dataPath)
+  renderedSelections:DataSelections
 
-    let fromChannelId = 'UCJdKr0Bgd_5saZYqLCa9mng'// 'UCe02lGcO-ahAURWuxAJnjdA'  //'UCaXkIU1QidjPwiAYu6GcHjg'// //'UCzQUP1qoWDoEbmsQxvdjxgQ'// //rubin report
+  layoutData() {
+    let { nodes, links } = YtNetworks.sankeyData(this.props.dataSet)
+    let channelId = this.chart.filteredItems(YtNetworks.ChannelIdPath).find(() => true)
+    if (!channelId) return { nodes: [], links: [] }
 
     // sankey is not bi-directional, so clone channels with a new id to represent input channels.
-    let inChannels = allData.nodes.filter(c => allData.links.find(r => r.target == c.channelId)).map(c => {
-      return { ...c, channelId: 'in.' + c.channelId }
-    })
+    let inChannels = nodes.filter(c => links.some(r => r.target == c.channelId)).map(c => ({ ...c, channelId: 'in.' + c.channelId }))
+    let inLinks = links.filter(r => r.target == channelId).map(r => ({ ...r, source: 'in.' + r.source }))
+    let outChannels = nodes.filter(c => links.some(r => r.source == c.channelId)).map(c => ({ ...c, channelId: 'out.' + c.channelId }))
+    let outLinks = links.filter(r => r.source == channelId).map(r => ({ ...r, target: 'out.' + r.target }))
+    let channels = inChannels.concat(outChannels).concat(nodes.find(c => c.channelId == channelId))
+    let finalLinks = inLinks.concat(outLinks).sort((a, b) => d3.descending(a.value, b.value))
+    finalLinks = finalLinks
+      .filter(l => channels.some(c => c.channelId == l.target) && channels.some(c => c.channelId == l.source))
+      .filter((c, i) => i < 20)
+    channels = channels.filter(c => finalLinks.some(l => l.source == c.channelId || l.target == c.channelId))
 
-    let inLinks = allData.links.filter(r => r.target == fromChannelId).map(r => {
-      return { ...r, source: 'in.' + r.source }
-    })
-
-    let outChannels = allData.nodes.filter(c => allData.links.find(r => r.source == c.channelId)).map(c => {
-      return { ...c, channelId: 'out.' + c.channelId }
-    })
-
-    let outLinks = allData.links.filter(r => r.source == fromChannelId).map(r => {
-      return { ...r, target: 'out.' + r.target }
-    })
-
-    let channels = inChannels.concat(outChannels).concat(allData.nodes.find(c => c.channelId == fromChannelId))
-
-    let links = inLinks.concat(outLinks)
-      .sort((a,b) => a.value - b.value).filter((c,i) => i < 20)
-      .filter(l => channels.find(c => c.channelId == l.target) && channels.find(c => c.channelId == l.source))
-
-    channels = channels.filter(c => links.find(l => l.source == c.channelId || l.target == c.channelId))
-
-    // .sort(c => c.value).reverse()
-    // .filter((c, i) => i < 20 || c.channelId == fromChannelId)
-
-    return { nodes: channels, links: links }
+    return { nodes: channels, links: finalLinks }
   }
 
-  async loadChart() {
-    let data = await this.loadData()
-
-    console.log(`data`, data)
-
+  async createChart() {
     let lrPallet = YtNetworks.lrPallet()
     let width = this.props.width
     let height = this.props.height
 
-    let layout = sankey<SChannelNode, SRecommendedLink>()
-      .nodeWidth(36)
-      .nodePadding(40)
-      .size([width, height])
-      .nodeAlign(sankeyLeft)
-      .nodeId(d => d.channelId)
-
-    let graph = layout(data)
-
-    //layout.update(data)
     let svg = d3.select(this.ref)
+    let container = this.chart.createContainer(svg)
 
-    let linkPath = svg
-      .append('g')
-      .attr('class', 'links')
-      .attr('fill', 'none')
-      .attr('stroke', '#000')
-      .attr('stroke-opacity', 0.2)
-      .selectAll('path')
+    let linkG = container.append('g').attr('class', 'links')
 
-    let nodeG = svg
-      .append('g')
-      .attr('class', 'nodes')
-      .attr('font-family', 'sans-serif')
-      .attr('font-size', 10)
-      .selectAll('g')
+    let nodeG = container.append('g').attr('class', 'nodes')
 
-    let link = linkPath
-      .data(graph.links)
-      .enter()
-      .append('path')
-      .attr('d', sankeyLinkHorizontal())
-      .attr('stroke-width', d => {
-        return Math.max(1, d.width)
-      })
+    this.dataRender = () => {
+      if(this.renderedSelections != null && jsonEquals(this.renderedSelections.filters, this.state.selections.filters))
+        return;
+      this.renderedSelections = clone(this.state.selections)
 
-    link.append('title').text(d => d.value)
+      let { nodes, links } = this.layoutData();
+      let layout = sankey<ChannelSkExtra, RelationSkExtra>()
+        .nodeWidth(36)
+        .nodePadding(40)
+        .size([width, height])
+        .nodeAlign(sankeyLeft)
+        .nodeId(d => d.channelId);
+      let graph = layout({ nodes, links });
+      let updateLink = linkG.selectAll('path').data(graph.links, (l: RelationSkLink) => l.id);
+      let enterLink = updateLink.enter().append('path')
+        .attr('class', 'link');
+      updateLink.merge(enterLink)
+        .attr('d', sankeyLinkHorizontal())
+        .attr('stroke-width', d => d.width);
 
-    let node = nodeG
-      .data(graph.nodes)
-      .enter()
-      .append('g')
 
-    node
-      .append('rect')
-      .attr('x', d => d.x0)
-      .attr('y', d => d.y0)
-      .attr('height', d => {
-        return Math.max(d.y1 - d.y0, 0)
-      })
-      .attr('width', d => d.x1 - d.x0)
-      .attr('fill', d => lrPallet['L'])
-      .attr('stroke', '#000')
+      updateLink.exit().remove();
+      
+      let updateNode = nodeG.selectAll('g').data(graph.nodes, (n: ChannelSkNode) => n.channelId);
+      let enterNode = updateNode.enter().append('g');
+      enterNode.append('rect')
+        .attr('class', 'selectable')
+        .attr('x', d => d.x0)
+        .attr('y', d => d.y0)
+        .attr('width', d => d.x1 - d.x0)
+        .attr('height', d => Math.max(d.y1 - d.y0, 1));
 
-    node
-      .append('text')
-      .attr('x', d => d.x0 - 6)
-      .attr('y', d => (d.y1 + d.y0) / 2)
-      .attr('dy', '0.35em')
-      .attr('text-anchor', 'end')
-      .text(d => `${d.title}`)
-      .filter(d => d.x0 < width / 2)
-      .attr('x', d => d.x1 + 6)
-      .attr('text-anchor', 'start')
+      enterNode.append('text').text(d => d.title);
+      this.chart.addDataShapeEvents(enterNode.select('rect'), n => n.channelId, YtNetworks.ChannelIdPath);
 
-    //node.append('title').text(d => d.title)
+
+      let mergeNode = updateNode.merge(enterNode);
+      mergeNode.select('rect')
+        .transition().duration(300)
+        .attr('x', d => d.x0)
+        .attr('y', d => d.y0)
+        .attr('height', d => Math.max(d.y1 - d.y0, 1))
+        .attr('width', d => d.x1 - d.x0)
+        .attr('fill', d => lrPallet[d.lr]);
+      let isLeft = (d: ChannelSkNode) => d.x0 < width / 2;
+      mergeNode.select('text')
+        .style('opacity', 0)
+        .attr('x', d => isLeft(d) ? d.x1 + 10 : d.x0 - 10)
+        .attr('y', d => (d.y1 + d.y0) / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', d => isLeft(d) ? 'start' : 'end')
+        .transition().delay(200).duration(200)
+        .style('opacity', 1);
+      updateNode
+        .exit()
+        .transition()
+        .duration(500)
+        .style('fill-opacity', 1e-6)
+        .remove();
+    }
   }
 }

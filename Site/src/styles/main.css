@@ -1,22 +1,41 @@
-.link {
+
+g.chart line.link {
     stroke: #aaa;
-    opacity: 0;
 }
 
-.labels text {
-    stroke: rgb(0, 0, 0);
-    text-shadow: -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;
+g.chart .link {
+    opacity: 0.3;
 }
 
-.labels rect {
+g.chart path.link {
+    fill: none;
+    stroke: #aaa;
+}
+
+g.chart text {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: .8em;
+    fill: #eee;
+    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+}
+
+g.chart g.labels rect {
     display: none;
 }
 
-g.labels circle {
+g.chart g.labels circle {
     display: none;
 }
 
-.node circle {
-    stroke: #fff;
-    stroke-width: 1px;
+g.node .shape {
+    stroke: none;
+}
+
+g.node .shape-selected {
+    stroke: #eee;
+    stroke-width: 2px;
+}
+
+body {
+    background-color: rgb(30, 34, 34)
 }

@@ -24,7 +24,7 @@ outRelations <- recommends %>%
   subset(FromChannelId %in% outChannels$Id) %>%
   inner_join(channelVideos, by = "FromChannelId") %>%
   summarise(Recommends = n(), RecommendedViews = sum(FromVideoViews), RecommendsPerVideo=n()/mean(ChannelRecommends)) %>%
-  filter(RecommendsPerVideo >= 0.008) %>%
+  filter(RecommendsPerVideo >= 0) %>%
   arrange(desc(Recommends))
 
 setwd(outDir)
