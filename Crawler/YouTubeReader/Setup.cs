@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Security.Authentication;
+using Amazon;
+using Amazon.Runtime;
 using LiteDB;
 using Serilog;
 using Serilog.Events;
@@ -42,14 +45,6 @@ namespace YouTubeReader {
 
             return cfg;
         }
-
-        public static LiteDatabase Db() {
-            var db = new LiteDatabase(LocalDataDir.Combine("YouTubeCache.db").FullPath);
-            return db;
-        }
-
-        public static YtCacheDb CacheDb(LiteDatabase db = null, YtReader yt = null) => 
-            new YtCacheDb(db ?? Db(), yt ?? new YtReader(LoadCfg(null)));
     }
 
     public class Cfg {
@@ -62,14 +57,22 @@ namespace YouTubeReader {
         [TypeConverter(typeof(StringConverter<FPath>))]
         public FPath CrawlConfigDir { get; set; }
 
-        public string YTApiKey { get; set; } = "YoutubeAPI key here";
+        public ICollection<string> YTApiKeys { get; set; }
         public int Parallel { get; set; } = 8;
         public int? LimitSeedChannels { get; set; }
 
         public int InfluencersToDetect { get; set; } = 0;
+        public S3Cfg S3 { get; set; } = new S3Cfg {
+            Bucket = "ytnetworks", Credentials = new NameSecret("yourkey", "yoursecret"), Region = RegionEndpoint.APSoutheast2.SystemName
+        };
 
         /// <summary>
-        /// The minimum percentile of the channel's video vies for the given period
+        /// Use this when you want to re-use recommendation cache from a previous day
+        /// </summary>
+        public string RecommendationCacheDayOverride { get; set; }
+
+        /// <summary>
+        /// The minimum percentile of the channel's video vies for the given period.
         /// </summary>
         //public double InfluenceMinViewsPercentile { get; set; } = 0.3;
     }

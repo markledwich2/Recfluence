@@ -46,13 +46,13 @@ export class ChannelRelations extends React.Component<Props, State> {
   getLayout(nodes: ChannelSimNode[], links: RelationSimLink[]) {
     let maxStrength = d3.max(links, l => l.strength)
     let maxSize = d3.max(nodes, n => n.size)
-    let widthIndex = this.props.width / 1024
+    let widthIndex = Math.min(this.props.width, this.props.height) / 1024
     let getNodeRadius = (d: ChannelSimNode) => Math.sqrt(d.size > 0 ? (d.size / maxSize) : 1) * widthIndex * 10
     let getLineWidth = (d: RelationSimLink) => (d.strength / maxStrength) * 40
     let centerForce = d3.forceCenter()
     let force = d3
       .forceSimulation<ChannelSimNode, RelationSimLink>(nodes)
-      .force('charge', d3.forceManyBody().strength(-80 * widthIndex))
+      .force('charge', d3.forceManyBody().strength(-500 * widthIndex))
       .force('center', centerForce)
       .force(
         'link',
@@ -135,7 +135,6 @@ export class ChannelRelations extends React.Component<Props, State> {
       let nodeLightedFiltered = (c: ChannelSimNode) =>
         lightedFiltered.some(id => id == c.channelId) || lightedFiltered.some(id => isConnected(id, c.channelId))
 
-      console.log('node visibility', lighted, filtered)
       node.style('opacity', d => lightedFiltered.length == 0 || nodeLightedFiltered(d) ? 1 : 0.3)
       node.style('stroke', d => (filtered.some(id => id == d.channelId) ? '#ddd' : null))
       label.style('visibility', d => (nodeLightedFiltered(d) ? 'visible' : 'hidden'))
@@ -166,7 +165,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     }
 
     let tick = () => node.call(d => updatePositions(d, this.props.width, this.props.height))
-    for (var i = 0; i < 10; i++) lay.force.tick()
+    for (var i = 0; i < 100; i++) lay.force.tick()
     lay.force.on('tick', tick)
 
     this.stateRender = () => {

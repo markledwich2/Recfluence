@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Humanizer;
-using LiteDB;
+using Parquet;
+using Serilog.Core;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
@@ -11,26 +12,23 @@ using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
-using Logger = Serilog.Core.Logger;
 using static YouTubeReader.YtCrawler.CrawlChannelStatus;
 
-namespace YouTubeReader
-{
+namespace YouTubeReader {
     public class YtCrawler {
-        public YtCrawler(LiteDatabase db, YtReader yt, Cfg cfg, Logger log) {
-            Yt = new YtCacheDb(db, yt);
+        public YtCrawler(YtStore store, Cfg cfg, Logger log) {
+            Yt = store;
             Cfg = cfg;
             Log = log;
         }
 
         Cfg Cfg { get; }
         Logger Log { get; }
-        YtCacheDb Yt { get; }
+        YtStore Yt { get; }
 
         public async Task Crawl() {
             Log.Information("Crawling seeds {@Config}", Cfg);
             var crawlId = DateTime.UtcNow.ToString("yyyy-MM-dd_HH-mm");
-            var localCrawlDir = LocalDataDir.Combine(crawlId);
 
             var channelCfg = new ChannelConfig();
             var seedData = Cfg.CrawlConfigDir.Combine("SeedChannels.csv").ReadFromCsv<SeedChannel>();
@@ -42,11 +40,12 @@ namespace YouTubeReader
                 var c = await Yt.Channel(seed.Id);
                 return ToCrawlChannelData(c, channelCfg);
             }
+
             var seedChannels = (await channelCfg.Seeds.BlockTransform(ChannelFromSeed, Cfg.Parallel)).ToKeyedCollection(c => c.Id);
-            
+
             var firstResult = await Crawl(seedChannels, channelCfg);
             Log.Information("Completed first pass crawl. {Channels} channels, {Visits} visits.", firstResult.Channels.Count, firstResult.Visits.Count);
-            SaveResult(firstResult, localCrawlDir);
+            await SaveResults(firstResult, crawlId);
 
             // with a comprehensive seed list, the discovered channels are only good for reviewing for new seeds, but aren't included in the analysis
             /*
@@ -66,82 +65,108 @@ namespace YouTubeReader
         }
 
         FPath LocalDataDir => "Data".AsPath().InAppData(Setup.AppName);
+        FPath LocalResultsDir => "Results".AsPath().InAppData(Setup.AppName);
 
-        void SaveResult(ChannelCrawlResult result, FPath dir) {
-            dir.EnsureDirectoryExists();
-            Cfg.ToJsonFile(dir.Combine("Cfg.json"));
+        class VisitRow {
+            public string VideoId { get; set; }
+            public string Title { get; set; }
+            public string ChannelId { get; set; }
+            public string ChannelTitle { get; set; }
+            public string FromVideoId { get; set; }
+            public string FromTitle { get; set; }
+            public string FromChannelId { get; set; }
+            public string FromChannelTitle { get; set; }
+            public long FromVideoViews { get; set; }
+            public long ToVideoViews { get; set; }
+            public int Rank { get; set; }
+        }
 
-            result.Visits.Select(v => new {
-                VideoId = v.To.Id, v.To.Title,
-                v.To.ChannelId, v.To.ChannelTitle,
+        class ChannelRow {
+            public string Id { get; set; }
+            public string Title { get; set; }
+            public string Status { get; set; }
+            public string Type { get; set; }
+            public string LR { get; set; }
+            public long ViewCount { get; set; }
+            public long SubCount { get; set; }
+            public int Recommends { get; set; }
+            public double RecommendsRatio { get; set; }
+            public long ChannelVideoViews { get; set; }
+            public long ViewedRecommends { get; set; }
+            public string[] RecommendingChannels { get; set; }
+            public string[] VideoTitles { get; set; }
+        }
+
+        async Task SaveResults(ChannelCrawlResults result, string crawlId) {
+            var localDir = LocalResultsDir.Combine(crawlId);
+            localDir.EnsureDirectoryExists();
+            var s3Dir = StringPath.Relative("Results", crawlId);
+            var localCfgFile = localDir.Combine("Cfg.json");
+            Cfg.ToJsonFile(localCfgFile);
+            await Yt.S3.Save(s3Dir.Add("Cfg.json"), localCfgFile);
+
+            var visits = result.Visits.Select(v => new VisitRow {
+                VideoId = v.To.Id, Title = v.To.Title,
+                ChannelId = v.To.ChannelId, ChannelTitle = v.To.ChannelTitle,
                 FromVideoId = v.From.Id, FromTitle = v.From.Title,
                 FromChannelId = v.From.ChannelId, FromChannelTitle = v.From.ChannelTitle,
-                FromVideoViews = v.From.Views, ToVideoViews = v.To.Views,
-                v.ToListItem.Rank, v.DistanceFromSeed
-            }).WriteToCsv(dir.Combine("Visits.csv"));
+                FromVideoViews = (long) (v.From.Views ?? 0), ToVideoViews = (long) (v.To.Views ?? 0),
+                Rank = v.ToListItem.Rank
+            });
+            await SaveParquet(visits, "Recommends");
 
-            result.Channels.OrderByDescending(c => c.Channel.SubCount).Select(c => new {
-                c.Channel.Id,
-                c.Channel.Title,
-                c.Status,
-                c.Type,
-                c.LR,
-                c.Channel.ViewCount,
-                c.Channel.SubCount,
-                c.Recommends,
-                c.RecommendsRatio,
-                c.ChannelVideoViews,
-                c.ViewedRecommends,
-                RecommendingChannels = c.RecommendingChannels.Join("|", r => r.Channel.Title),
-                VideoTitles = c.ChannelVideoData?.Join("|", v => v.Title) ?? "",
-                
-            }).WriteToCsv(dir.Combine("Channels.csv"));
+            var channels = result.Channels.OrderByDescending(c => c.Channel.SubCount).Select(c => new ChannelRow {
+                Id = c.Channel.Id,
+                Title = c.Channel.Title,
+                Status = c.Status.EnumString(),
+                Type = c.Type,
+                LR = c.LR,
+                ViewCount = (long) (c.Channel.ViewCount ?? 0),
+                SubCount = (long) (c.Channel.SubCount ?? 0),
+                Recommends = c.Recommends,
+                RecommendsRatio = c.RecommendsRatio,
+                ChannelVideoViews = (long) (c.ChannelVideoViews ?? 0),
+                ViewedRecommends = (long) c.ViewedRecommends,
+                RecommendingChannels = c.RecommendingChannels.Select(r => r.Channel.Title).ToArray(),
+                VideoTitles = c.ChannelVideoData?.Select(v => v.Title).ToArray() ?? new string[] { }
+            });
+            await SaveParquet(channels, "Channels");
+
+            async Task SaveParquet<T>(IEnumerable<T> rows, string name) where T : new() {
+                var localFile = localDir.Combine($"{name}.parquet");
+                ParquetConvert.Serialize(rows, localFile.FullPath);
+                await Yt.S3.Save(s3Dir.Add(localFile.FileName), localFile);
+            }
 
             Log.Information("Saved results. {Recommends} recommends, {Channels} channels",
                 result.Visits.Count, result.Channels.Count);
         }
 
-        async Task<ChannelCrawlResult> Crawl(IKeyedCollection<string, CrawlChannelData> seedChannels, ChannelConfig channelCfg,
-            ChannelCrawlResult priorResult = null) {
+        async Task<ChannelCrawlResults> Crawl(IKeyedCollection<string, CrawlChannelData> seedChannels, ChannelConfig channelCfg) {
             void ProgressUpdate(BulkProgressInfo<ChannelCrawlResult> p)
                 => Log.Information("Crawling channels {Channels}/{Total} {Speed}",
                     p.Results.Count, seedChannels.Count, p.Speed("channels").Humanize());
 
-            var perChannelResults = await seedChannels.BlockTransform(c => Crawl(c, channelCfg), 2, null, ProgressUpdate); // sufficiently parallel inside
+            var perChannelResults = await seedChannels.BlockTransform(c => Crawl(c, channelCfg), Cfg.Parallel, null, ProgressUpdate); // sufficiently parallel inside
+            var allChannels = perChannelResults.SelectMany(r => r.Channels).NotNull().ToKeyedCollection(c => c.Id);
+            var allVisits = perChannelResults.SelectMany(r => r.Visits).ToList();
 
-            var allChannels = perChannelResults.SelectMany(r => r.Channels)
-                .Concat((priorResult?.Channels).NotNull()).ToKeyedCollection(c => c.Id);
+            PostCrawUpdateStats(allVisits, allChannels);
 
-            var allVisits = (priorResult?.Visits).NotNull().Concat(perChannelResults.SelectMany(r => r.Visits)).ToList();
+            var detectedInfluencers = allChannels.Where(c => c.Status == Default)
+                .OrderByDescending(c => c.RecommendsRatio).Take(Cfg.InfluencersToDetect).ToList();
+            foreach (var i in detectedInfluencers)
+                i.Status = Detected;
 
-            if (priorResult == null) {
-                PostCrawUpdateStats(allVisits, allChannels);
+            // populate any recommended channel videos for the sake of reviewing influencer detection
+            var toPopulate = allChannels.Where(c => c.ChannelVideoData == null && c.Status == Seed).ToList();
+            var channelVideos = await toPopulate.BlockTransform(async c => (channel: c, videos: await ChannelVideoData(c)), Cfg.Parallel, null,
+                p => Log.Information("reading channel data from potential influencers {Channels}/{ChannelsTotal}. {Speed}",
+                    p.Results.Count, toPopulate.Count, p.NewItems.Count.Speed("channels", p.Elapsed).Humanize()), 30.Seconds());
+            foreach (var c in channelVideos)
+                c.channel.ChannelVideoData = c.videos;
 
-                var detectedInfluencers = allChannels.Where(c => c.Status == CrawlChannelStatus.Default)
-                    .OrderByDescending(c => c.RecommendsRatio).Take(Cfg.InfluencersToDetect).ToList();
-                foreach (var i in detectedInfluencers)
-                    i.Status = CrawlChannelStatus.Detected;
-
-                // add to channel videos that have been cached for the sake of reviewing influencer detection
-                foreach (var c in allChannels.Where(c => c.ChannelVideoData == null)) {
-                    var v = Yt.ChannelVideosCached(c.Channel, Cfg.From, Cfg.To);
-                    if (v != null)
-                        c.ChannelVideoData = await ChannelVideoData(c);
-                }
-
-                // populate any recommended channel videos for the sake of reviewing influencer detection
-                var toPopulate = allChannels.Where(c => c.ChannelVideoData == null && c.InfluencerStatus).ToList();
-                var channelVideos = await toPopulate.BlockTransform(async c => (channel: c, videos: await ChannelVideoData(c)), Cfg.Parallel, null,
-                    p => Log.Information("reading channel data from potential influencers {Channels}/{ChannelsTotal}. {Speed}",
-                        p.Results.Count, toPopulate.Count, p.NewItems.Count.Speed("channels", p.Elapsed).Humanize()), 30.Seconds());
-                foreach (var c in channelVideos)
-                    c.channel.ChannelVideoData = c.videos;
-            }
-            else {
-                PostCrawUpdateStats(allVisits, allChannels);
-            }
-
-            var res = new ChannelCrawlResult(allChannels, allVisits);
+            var res = new ChannelCrawlResults(allChannels, allVisits);
             return res;
         }
 
@@ -152,9 +177,9 @@ namespace YouTubeReader
                 var recommendations = visitsByTo[c.Channel.Id] ?? new List<Visit>();
                 c.Recommends = recommendations.Count;
                 c.ViewedRecommends = recommendations.Sum(r => r.From.Views ?? 0);
-                c.RecommendingChannels.Init(recommendations.GroupBy(i => i.From.ChannelId).Select(g => channels[g.Key]));
+                c.RecommendingChannels = recommendations.GroupBy(i => i.From.ChannelId).Select(g => channels[g.Key]).ToList();
                 c.RecommendsRatio = recommendations.GroupBy(r => r.From.ChannelId)
-                    .Sum(g => (double)g.Count() / visitsByFrom[g.Key].Count);
+                    .Sum(g => (double) g.Count() / visitsByFrom[g.Key].Count);
             }
         }
 
@@ -166,16 +191,24 @@ namespace YouTubeReader
             if (channel.ChannelVideoData == null)
                 channel.ChannelVideoData = await ChannelVideoData(channel);
 
+
+            var result = await Yt.ChannelCrawls.Get(channel.Id);
+            if (result != null) {
+                log.Information("Using cached channel crawl result {Channel}", channel.Title);
+                return result;
+            }
+
             var toCrawl = channel.ChannelVideoData.ToList();
 
-            var res = new ChannelCrawlResult {Channels = {channel}};
+            var res = new ChannelCrawlResult {ChannelId  = channel.Id, Channels = {channel}};
             for (var i = 1; i <= Cfg.StepsFromSeed; i++) {
                 async Task<ICollection<Visit>> Visits(VideoData fromV) {
                     var visits = new List<Visit>();
 
-                    var recommended = (await Yt.VideoRecommended(fromV.Id, Cfg.CacheRelated, Cfg.From))
+                    var recommended = (await Yt.RecommendedVideos(fromV.Id))?
                         .Recommended.Where(r => r.ChannelId != fromV.ChannelId && !channelCfg.Excluded.ContainsKey(r.ChannelId))
                         .Take(Cfg.Related);
+                    if (recommended == null) return visits;
 
                     foreach (var r in recommended) {
                         var v = await Yt.Video(r.Id);
@@ -190,6 +223,7 @@ namespace YouTubeReader
                         log.Verbose("Visited '{Channel}: {Title}' from '{FromChannel}: {FromTitle}'",
                             vis.To.ChannelTitle, vis.To.Title, vis.From.ChannelTitle, vis.From.Title);
                     }
+
 
                     return visits;
                 }
@@ -216,12 +250,14 @@ namespace YouTubeReader
                     channel.Title, p.Results.Count, newChannelIds.Count, p.Speed("channels").Humanize()), 10.Seconds());
 
             res.Channels.AddRange(newCrawlChannels);
+
+            await Yt.ChannelCrawls.Set(res);
             return res;
         }
 
 
         CrawlChannelData ToCrawlChannelData(ChannelData channel, ChannelConfig channelCfg) {
-            var cc = new CrawlChannelData { Channel = channel };
+            var cc = new CrawlChannelData {Channel = channel};
 
             var seed = channelCfg.Seeds[channel.Id];
             if (channelCfg.Seeds.ContainsKey(cc.Id)) {
@@ -229,8 +265,9 @@ namespace YouTubeReader
                 cc.Type = seed.Type;
                 cc.LR = seed.LR;
             }
-            else if (channelCfg.Excluded.ContainsKey(cc.Id))
+            else if (channelCfg.Excluded.ContainsKey(cc.Id)) {
                 cc.Status = Excluded;
+            }
 
             return cc;
         }
@@ -239,7 +276,7 @@ namespace YouTubeReader
         ///     adds channel videos if it is empty and the status is not default
         /// </summary>
         async Task<IReadOnlyCollection<VideoData>> ChannelVideoData(CrawlChannelData cc) {
-            var vidItems = await Yt.ChannelVideos(cc.Channel, Cfg.From, Cfg.To);
+            var vidItems = await Yt.ChannelVideos(cc.Channel);
             var vids = await vidItems.Videos.BlockTransform(v => Yt.Video(v.Id), Cfg.Parallel, progressUpdate:
                 p => Log.Information("Getting '{Channel}' channel video data {Videos}/{VideosTotal} {Speed}",
                     cc.Title, p.Results.Count, vidItems.Videos.Count, p.Speed("videos").Humanize()));
@@ -270,12 +307,22 @@ namespace YouTubeReader
         }
 
         public class ChannelCrawlResult {
-            public ChannelCrawlResult(IEnumerable<CrawlChannelData> channels, IEnumerable<Visit> visits) {
+            public string ChannelId { get; set; }
+
+            public IKeyedCollection<string, CrawlChannelData> Channels { get; } =
+                new KeyedCollection<string, CrawlChannelData>(c => c.Channel.Id, theadSafe: true);
+
+            public IKeyedCollection<string, Visit> Visits { get; } =
+                new KeyedCollection<string, Visit>(v => $"{v.From.Id}.{v.To.Id}", theadSafe: true);
+        }
+
+        public class ChannelCrawlResults {
+            public ChannelCrawlResults(IEnumerable<CrawlChannelData> channels, IEnumerable<Visit> visits) {
                 Channels.AddRange(channels);
                 Visits.AddRange(visits);
             }
 
-            public ChannelCrawlResult() { }
+            public ChannelCrawlResults() { }
 
             public IKeyedCollection<string, CrawlChannelData> Channels { get; } =
                 new KeyedCollection<string, CrawlChannelData>(c => c.Channel.Id, theadSafe: true);
@@ -294,7 +341,10 @@ namespace YouTubeReader
 
             // null if not populated yet
             public IReadOnlyCollection<VideoData> ChannelVideoData { get; set; }
-            public ICollection<CrawlChannelData> RecommendingChannels { get; } = new List<CrawlChannelData>();
+
+
+
+            public ICollection<CrawlChannelData> RecommendingChannels { get; set; }
             public ulong? ChannelVideoViews => ChannelVideoData?.Sum(v => v?.Views ?? 0);
             public ulong ViewedRecommends { get; set; }
 

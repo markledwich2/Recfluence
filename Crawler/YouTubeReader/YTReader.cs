@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
-using Google.Apis.Services;
+using Google;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
+using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
@@ -12,16 +14,36 @@ using SysExtensions.IO;
 
 namespace YouTubeReader {
     public class YtReader {
-        public YtReader(Cfg cfg) {
+        public YtReader(Cfg cfg, ILogger log) {
             Cfg = cfg;
-            YTService = new YouTubeService(new BaseClientService.Initializer {
-                ApiKey = Cfg.YTApiKey,
-                ApplicationName = "YouTubeNetworks"
-            });
+            Log = log;
+            YtService = new YouTubeService();
+            AvailableKeys = cfg.YTApiKeys.ToList();
+            Start = DateTime.UtcNow;
         }
 
-        Cfg Cfg { get; }
-        YouTubeService YTService { get; }
+        ICollection<string> AvailableKeys { get; }
+
+        public DateTime Start { get; }
+
+        public Cfg Cfg { get; }
+        ILogger Log { get; }
+        YouTubeService YtService { get; }
+
+        async Task<T> GetResponse<T>(YouTubeBaseServiceRequest<T> request) {
+            while (true)
+                try {
+                    request.Key = AvailableKeys.First(); // override key in case it has been changed by NextYtService()
+                    var response = await request.ExecuteAsync();
+                    return response;
+                }
+                catch (GoogleApiException ex) {
+                    if (ex.HttpStatusCode == HttpStatusCode.Forbidden)
+                        AvailableKeys.Remove(request.Key);
+                    else
+                        throw;
+                }
+        }
 
         #region Trending
 
@@ -45,7 +67,7 @@ namespace YouTubeReader {
         }
 
         async Task<ICollection<VideoData>> Trending(int max, UsCategoryEnum? category = null) {
-            var s = YTService.Videos.List("snippet");
+            var s = YtService.Videos.List("snippet");
             s.Chart = VideosResource.ListRequest.ChartEnum.MostPopular;
             s.RegionCode = "us";
             s.MaxResults = 50;
@@ -126,7 +148,7 @@ namespace YouTubeReader {
                 ChannelTitle = v.Snippet.ChannelTitle,
                 ChannelId = v.Snippet.ChannelId,
                 Language = v.Snippet.DefaultLanguage,
-                PublishedAt = v.Snippet.PublishedAtRaw,
+                PublishedAt = v.Snippet.PublishedAt,
                 CategoryId = v.Snippet.CategoryId,
                 Views = v.Statistics?.ViewCount,
                 Likes = v.Statistics?.LikeCount,
@@ -140,11 +162,12 @@ namespace YouTubeReader {
             return r;
         }
 
+
         public async Task<VideoData> GetVideoData(string id) {
-            var s = YTService.Videos.List("snippet,topicDetails,statistics");
+            var s = YtService.Videos.List("snippet,topicDetails,statistics");
             s.Id = id;
-            s.CreateRequest();
-            var response = await s.ExecuteAsync();
+            var response = await GetResponse(s);
+
             var v = response.Items.FirstOrDefault();
             if (v == null) return null;
 
@@ -155,14 +178,21 @@ namespace YouTubeReader {
         }
 
         public async Task<ICollection<RecommendedVideoListItem>> GetRelatedVideos(string id) {
-            var s = YTService.Search.List("snippet");
+            var s = YtService.Search.List("snippet");
             s.RelatedToVideoId = id;
             s.Type = "video";
             s.MaxResults = Cfg.CacheRelated;
 
-            var response = await s.ExecuteAsync();
-            var vids = new List<RecommendedVideoListItem>();
+            SearchListResponse response;
+            try {
+                response = await GetResponse(s);
+            }
+            catch (GoogleApiException ex) {
+                Log.Error("Error {ex} GetRelatedVideos for {VideoId} ", ex, id);
+                return null;
+            }
 
+            var vids = new List<RecommendedVideoListItem>();
             var rank = 1;
             foreach (var item in response.Items) {
                 vids.Add(new RecommendedVideoListItem {
@@ -186,9 +216,9 @@ namespace YouTubeReader {
         /// <summary>
         ///     The most popular in that channel. Video's do not include related data.
         /// </summary>
-        public async Task<ICollection<ChannelVideoListItem>> VideosInChannel(string channelId, DateTime publishedAfter, DateTime? publishBefore) {
-            var s = YTService.Search.List("snippet");
-            s.ChannelId = channelId;
+        public async Task<ICollection<ChannelVideoListItem>> VideosInChannel(ChannelData c, DateTime publishedAfter, DateTime publishBefore) {
+            var s = YtService.Search.List("snippet");
+            s.ChannelId = c.Id;
             s.PublishedAfter = publishedAfter;
             s.PublishedBefore = publishBefore;
             s.MaxResults = 50;
@@ -197,7 +227,7 @@ namespace YouTubeReader {
 
             var topVideos = new List<ChannelVideoListItem>();
             while (true) {
-                var res = await s.ExecuteAsync();
+                var res = await GetResponse(s);
                 topVideos.AddRange(res.Items.Select(v => new ChannelVideoListItem {
                     Id = v.Id.VideoId,
                     Title = v.Snippet.Title,
@@ -212,9 +242,9 @@ namespace YouTubeReader {
         }
 
         public async Task<ChannelData> ChannelData(string id) {
-            var s = YTService.Channels.List("snippet,statistics");
+            var s = YtService.Channels.List("snippet,statistics");
             s.Id = id;
-            var r = await s.ExecuteAsync();
+            var r = await GetResponse(s);
             var c = r.Items.FirstOrDefault();
             if (c == null) return new ChannelData {Id = id, Title = "N/A"};
 
@@ -253,7 +283,7 @@ namespace YouTubeReader {
         public string ChannelTitle { get; set; }
         public string ChannelId { get; set; }
         public string Language { get; set; }
-        public string PublishedAt { get; set; }
+        public DateTime? PublishedAt { get; set; }
         public string CategoryId { get; set; }
         public ulong? Views { get; set; }
         public ulong? Likes { get; set; }

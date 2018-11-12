@@ -6,9 +6,9 @@ namespace YouTubeNetworks {
         static void Main(string[] args) {
             using (var log = Setup.CreateLogger()) {
                 var cfg = Setup.LoadCfg(log);
-                var reader = new YtReader(cfg);
-                var db = Setup.Db();
-                var crawler = new YtCrawler(db, reader, cfg, log);
+                var reader = new YtReader(cfg, log);
+                var ytStore = new YtStore(reader);
+                var crawler = new YtCrawler(ytStore, cfg, log);
 
                 var task = crawler.Crawl();
                 try {

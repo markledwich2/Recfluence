@@ -22,7 +22,7 @@ namespace SysExtensions.Serialization {
         /// </summary>
         public static JsonSerializerSettings DefaultSettings {
             get {
-                var settings = new JsonSerializerSettings {NullValueHandling = NullValueHandling.Ignore, Formatting = Formatting.Indented};
+                var settings = new JsonSerializerSettings {NullValueHandling = NullValueHandling.Ignore, Formatting = Formatting.Indented, DefaultValueHandling = DefaultValueHandling.Ignore};
                 settings.Converters.AddRange(new StringEnumConverter());
                 settings.ContractResolver = new CoreSerializeContractResolver { NamingStrategy = new CamelCaseNamingStrategy(false, false) };
                 return settings;

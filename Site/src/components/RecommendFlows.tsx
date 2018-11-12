@@ -44,16 +44,18 @@ export class RecommendFlows extends React.Component<Props, State> {
     if (!channelId) return { nodes: [], links: [] }
 
     // sankey is not bi-directional, so clone channels with a new id to represent input channels.
-    let inChannels = nodes.filter(c => links.some(r => r.target == c.channelId)).map(c => ({ ...c, channelId: 'in.' + c.channelId }))
+    let inChannels = nodes.filter(c => links.some(r => r.target == c.channelId)).map(c => ({ ...c, shapeId: 'in.' + c.channelId }))
     let inLinks = links.filter(r => r.target == channelId).map(r => ({ ...r, source: 'in.' + r.source }))
-    let outChannels = nodes.filter(c => links.some(r => r.source == c.channelId)).map(c => ({ ...c, channelId: 'out.' + c.channelId }))
+    let outChannels = nodes.filter(c => links.some(r => r.source == c.channelId)).map(c => ({ ...c, shapeId: 'out.' + c.channelId }))
     let outLinks = links.filter(r => r.source == channelId).map(r => ({ ...r, target: 'out.' + r.target }))
-    let channels = inChannels.concat(outChannels).concat(nodes.find(c => c.channelId == channelId))
-    let finalLinks = inLinks.concat(outLinks).sort((a, b) => d3.descending(a.value, b.value))
+    let mainChannel = nodes.find(c => c.channelId == channelId);
+    let channels = inChannels.concat(outChannels).concat([{...mainChannel, shapeId:mainChannel.channelId}])
+    let finalLinks = inLinks.concat(outLinks)
+    finalLinks = finalLinks.sort((a, b) => d3.descending(+a.value, +b.value))
     finalLinks = finalLinks
-      .filter(l => channels.some(c => c.channelId == l.target) && channels.some(c => c.channelId == l.source))
-      .filter((c, i) => i < 20)
-    channels = channels.filter(c => finalLinks.some(l => l.source == c.channelId || l.target == c.channelId))
+      .filter(l => channels.some(c => c.shapeId == l.target) && channels.some(c => c.shapeId == l.source))
+      .slice(0, 40)
+    channels = channels.filter(c => finalLinks.some(l => l.source == c.shapeId || l.target == c.shapeId))
 
     return { nodes: channels, links: finalLinks }
   }
@@ -74,6 +76,7 @@ export class RecommendFlows extends React.Component<Props, State> {
       if(this.renderedSelections != null && jsonEquals(this.renderedSelections.filters, this.state.selections.filters))
         return;
       this.renderedSelections = clone(this.state.selections)
+      let selectedChannels = this.chart.filteredItems(YtNetworks.ChannelIdPath)
 
       let { nodes, links } = this.layoutData();
       let layout = sankey<ChannelSkExtra, RelationSkExtra>()
@@ -81,7 +84,7 @@ export class RecommendFlows extends React.Component<Props, State> {
         .nodePadding(40)
         .size([width, height])
         .nodeAlign(sankeyLeft)
-        .nodeId(d => d.channelId);
+        .nodeId(d => d.shapeId);
       let graph = layout({ nodes, links });
       let updateLink = linkG.selectAll('path').data(graph.links, (l: RelationSkLink) => l.id);
       let enterLink = updateLink.enter().append('path')
@@ -105,7 +108,6 @@ export class RecommendFlows extends React.Component<Props, State> {
       enterNode.append('text').text(d => d.title);
       this.chart.addDataShapeEvents(enterNode.select('rect'), n => n.channelId, YtNetworks.ChannelIdPath);
 
-
       let mergeNode = updateNode.merge(enterNode);
       mergeNode.select('rect')
         .transition().duration(300)
@@ -113,7 +115,9 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('y', d => d.y0)
         .attr('height', d => Math.max(d.y1 - d.y0, 1))
         .attr('width', d => d.x1 - d.x0)
-        .attr('fill', d => lrPallet[d.lr]);
+        .attr('fill', d => lrPallet[d.lr])
+        .style('stroke', d => (selectedChannels.some(id => id == d.channelId) ? '#ddd' : null))
+
       let isLeft = (d: ChannelSkNode) => d.x0 < width / 2;
       mergeNode.select('text')
         .style('opacity', 0)

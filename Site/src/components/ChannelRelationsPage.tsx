@@ -25,12 +25,10 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     data: null
   }
   componentDidMount() {
-    console.log('componentDidMount')
     this.load()
   }
 
   componentWillUnmount() {
-    console.log('componentWillMount')
   }
 
   async load() {
@@ -71,7 +69,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
             )}
           </ContainerDimensions>
         </div>
-        <div style={{ height: '800px', width: '100%' }}>
+        <div style={{ height: '95vh', width: '100%' }}>
           <ContainerDimensions>
             {({ height, width }) => (
               <RecommendFlows

@@ -12,6 +12,7 @@ export interface RelationSimLink extends d3.SimulationLinkDatum<ChannelSimNode> 
 export interface ChannelSimNode extends ChannelSkExtra, d3.SimulationNodeDatum {}
 
 export interface ChannelSkExtra {
+  shapeId: string
   channelId: string
   title: string
   size: number
@@ -62,7 +63,7 @@ interface RelationData {
   ChannelTitle: string
   FromChannelId: string
   ChannelId: string
-  RecommendedViews: number
+  FromVideoViews: number
   RecommendsPerVideo: number
 }
 
@@ -70,8 +71,8 @@ export class YtNetworks {
   static ChannelIdPath: string = 'Channels.channelId'
 
   static async dataSet(path: string): Promise<YtData> {
-    let channelsCsvTask = d3.csv(path + 'Channels.csv')
-    let relationsCsvTask = d3.csv(path + 'ChannelRelations.csv')
+    let channelsCsvTask = d3.csv(path + 'VisChannels.csv')
+    let relationsCsvTask = d3.csv(path + 'VisRelations.csv')
     let channels = (await channelsCsvTask).map((c:any) => c as ChannelData)
     let relations = (await relationsCsvTask).map((c:any) => c as RelationData)
 
@@ -100,7 +101,7 @@ export class YtNetworks {
             strength: l.RecommendsPerVideo
           }
       )
-      .filter(l => l.strength > 0.02)
+      .filter(l => l.strength > 0.1)
 
     return { nodes, links }
   }
@@ -125,7 +126,7 @@ export class YtNetworks {
             id: `${n.FromChannelId}.${n.ChannelId}`,
             source: n.FromChannelId,
             target: n.ChannelId,
-            value: n.RecommendedViews
+            value: n.FromVideoViews
           }
       )
 
