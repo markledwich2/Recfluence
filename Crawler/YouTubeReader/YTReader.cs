@@ -33,6 +33,8 @@ namespace YouTubeReader {
         async Task<T> GetResponse<T>(YouTubeBaseServiceRequest<T> request) {
             while (true)
                 try {
+                    if (AvailableKeys.Count == 0)
+                        throw new InvalidOperationException("Ran out of quota for all available keys");
                     request.Key = AvailableKeys.First(); // override key in case it has been changed by NextYtService()
                     var response = await request.ExecuteAsync();
                     return response;
@@ -55,9 +57,9 @@ namespace YouTubeReader {
                 .Select(i =>
                     new {
                         Include = 0,
-                        i.Id,
+                        Id = i.VideoId,
                         i.ChannelTitle,
-                        i.Title,
+                        Title = i.VideoTitle,
                         CategoryName = ((UsCategoryEnum) int.Parse(i.CategoryId)).EnumString(),
                         i.ChannelId
                     });
@@ -142,17 +144,20 @@ namespace YouTubeReader {
 
         VideoData ToVideoData(Video v) {
             var r = new VideoData {
-                Id = v.Id,
-                Title = v.Snippet.Title,
+                VideoId = v.Id,
+                VideoTitle = v.Snippet.Title,
                 Description = v.Snippet.Description,
                 ChannelTitle = v.Snippet.ChannelTitle,
                 ChannelId = v.Snippet.ChannelId,
                 Language = v.Snippet.DefaultLanguage,
-                PublishedAt = v.Snippet.PublishedAt,
+                PublishedAt = (DateTime)v.Snippet.PublishedAt,
                 CategoryId = v.Snippet.CategoryId,
-                Views = v.Statistics?.ViewCount,
-                Likes = v.Statistics?.LikeCount,
-                Dislikes = v.Statistics?.DislikeCount
+                Stats = new VideoStats {
+                    Views = v.Statistics?.ViewCount,
+                    Likes = v.Statistics?.LikeCount,
+                    Dislikes = v.Statistics?.DislikeCount,
+                    Updated = DateTime.UtcNow
+                }
             };
             if (v.Snippet.Tags != null)
                 r.Tags.AddRange(v.Snippet.Tags);
@@ -163,7 +168,7 @@ namespace YouTubeReader {
         }
 
 
-        public async Task<VideoData> GetVideoData(string id) {
+        public async Task<VideoData> VideoData(string id) {
             var s = YtService.Videos.List("snippet,topicDetails,statistics");
             s.Id = id;
             var response = await GetResponse(s);
@@ -172,7 +177,6 @@ namespace YouTubeReader {
             if (v == null) return null;
 
             var data = ToVideoData(v);
-            data.Updated = DateTime.UtcNow;
 
             return data;
         }
@@ -196,11 +200,12 @@ namespace YouTubeReader {
             var rank = 1;
             foreach (var item in response.Items) {
                 vids.Add(new RecommendedVideoListItem {
-                    Id = item.Id.VideoId,
-                    Title = item.Snippet.Title,
+                    VideoId = item.Id.VideoId,
+                    VideoTitle = item.Snippet.Title,
                     ChannelId = item.Snippet.ChannelId,
                     ChannelTitle = item.Snippet.ChannelTitle,
-                    Rank = rank
+                    Rank = rank,
+                    
                 });
 
                 rank++;
@@ -216,7 +221,7 @@ namespace YouTubeReader {
         /// <summary>
         ///     The most popular in that channel. Video's do not include related data.
         /// </summary>
-        public async Task<ICollection<ChannelVideoListItem>> VideosInChannel(ChannelData c, DateTime publishedAfter, DateTime publishBefore) {
+        public async Task<ICollection<ChannelVideoListItem>> VideosInChannel(ChannelData c, DateTime publishedAfter, DateTime? publishBefore = null) {
             var s = YtService.Search.List("snippet");
             s.ChannelId = c.Id;
             s.PublishedAfter = publishedAfter;
@@ -228,10 +233,11 @@ namespace YouTubeReader {
             var topVideos = new List<ChannelVideoListItem>();
             while (true) {
                 var res = await GetResponse(s);
-                topVideos.AddRange(res.Items.Select(v => new ChannelVideoListItem {
-                    Id = v.Id.VideoId,
-                    Title = v.Snippet.Title,
-                    PublishedAt = v.Snippet.PublishedAt
+                topVideos.AddRange(res.Items.Where(v => v.Snippet.PublishedAt != null).Select(v => new ChannelVideoListItem {
+                    VideoId = v.Id.VideoId,
+                    VideoTitle = v.Snippet.Title,
+                    PublishedAt = (DateTime)v.Snippet.PublishedAt,
+                    Updated = DateTime.UtcNow
                 }));
                 if (res.NextPageToken == null)
                     break;
@@ -253,9 +259,12 @@ namespace YouTubeReader {
                 Title = c.Snippet.Title,
                 Description = c.Snippet.Description,
                 Country = c.Snippet.Country,
-                ViewCount = c.Statistics.ViewCount,
-                SubCount = c.Statistics.SubscriberCount,
-                Updated = DateTime.UtcNow
+                Thumbnails = c.Snippet.Thumbnails,
+                Stats = new ChannelStats {
+                    ViewCount = c.Statistics.ViewCount,
+                    SubCount = c.Statistics.SubscriberCount,
+                    Updated = DateTime.UtcNow
+                }
             };
 
             return data;
@@ -268,49 +277,58 @@ namespace YouTubeReader {
         public string Id { get; set; }
         public string Title { get; set; }
         public string Country { get; set; }
-        public ulong? ViewCount { get; set; }
-        public ulong? SubCount { get; set; }
-        public DateTime Updated { get; set; }
         public string Description { get; set; }
-
+        public ThumbnailDetails Thumbnails { get; set; }
+        public ChannelStats Stats { get; set; }
         public override string ToString() => Title;
     }
 
-    public class VideoData {
-        public string Id { get; set; }
-        public string Title { get; set; }
+    public class ChannelStats {
+        public ulong? ViewCount { get; set; }
+        public ulong? SubCount { get; set; }
+        public DateTime Updated { get; set; }
+    }
+
+    public class VideoData : ChannelVideoListItem {
         public string Description { get; set; }
         public string ChannelTitle { get; set; }
         public string ChannelId { get; set; }
         public string Language { get; set; }
-        public DateTime? PublishedAt { get; set; }
+
         public string CategoryId { get; set; }
+
+
+        public ICollection<string> Topics { get; } = new List<string>();
+        public ICollection<string> Tags { get; } = new List<string>();
+
+        public VideoStats Stats { get; set; } = new VideoStats();
+
+        public override string ToString() => $"{ChannelTitle} {VideoTitle}";
+    }
+
+    public class VideoStats {
         public ulong? Views { get; set; }
         public ulong? Likes { get; set; }
         public ulong? Dislikes { get; set; }
         public DateTime Updated { get; set; }
-
-        public ICollection<string> Topics { get; } = new List<string>();
-
-        public ICollection<string> Tags { get; } = new List<string>();
-
-        public override string ToString() => $"{ChannelTitle} {Title}";
     }
 
-    public class RecommendedVideoListItem {
-        public string Id { get; set; }
-        public string Title { get; set; }
-        public string ChannelId { get; set; }
+    public class VideoItem {
+        public string VideoId { get; set; }
+        public string VideoTitle { get; set; }
+
+        public override string ToString() => VideoTitle;
+    }
+
+    public class RecommendedVideoListItem : VideoItem {
         public string ChannelTitle { get; set; }
+        public string ChannelId { get; set; }
         public int Rank { get; set; }
-
-        public override string ToString() => $"{Rank}. {ChannelTitle}: {Title}";
+        public override string ToString() => $"{Rank}. {ChannelTitle}: {VideoTitle}";
     }
 
-    public class ChannelVideoListItem {
-        public string Id { get; set; }
-        public string Title { get; set; }
-        public DateTime? PublishedAt { get; set; }
-        public override string ToString() => Title;
+    public class ChannelVideoListItem : VideoItem {
+        public DateTime PublishedAt { get; set; }
+        public DateTime Updated { get; set; }
     }
 }

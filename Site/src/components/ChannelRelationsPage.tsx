@@ -4,7 +4,9 @@ import { RecommendFlows } from './RecommendFlows'
 import { ChannelRelations } from './ChannelRelations'
 import { YtData, YtNetworks } from '../ts/YtData'
 import { GridLoader } from 'react-spinners'
-import { DataSelections, DataSelection, ChartProps, ChartState } from '../ts/Charts'
+import { DataSelections, DataSelection, ChartProps, InteractiveDataState, InteractiveDataProps } from '../ts/Charts'
+import { ChannelTitle } from './ChannelTitle'
+import '../styles/Main.css'
 
 interface Props {
   dataPath: string
@@ -28,8 +30,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     this.load()
   }
 
-  componentWillUnmount() {
-  }
+  componentWillUnmount() {}
 
   async load() {
     if (this.state.isLoading) return
@@ -43,50 +44,59 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
   onSelection(selection: DataSelection) {
     this.selections.setSelection(selection)
-
-    this.graphComponents().forEach(g => g.setState({ selections: this.selections }))
+    this.graphComponents().filter(g => g).forEach(g => g.setState({ selections: this.selections }))
   }
 
   relations: ChannelRelations
   flows: RecommendFlows
-  graphComponents(): Array<React.Component<ChartProps<YtData>, ChartState>> {
-    return [this.relations, this.flows]
+  title: ChannelTitle
+
+  graphComponents(): Array<React.Component<InteractiveDataProps<YtData>, InteractiveDataState>> {
+    return [this.relations, this.flows, this.title]
   }
 
   render() {
-    return this.state.data ? (
-      <div>
-        <div style={{ height: '70vh', width: '100%' }}>
-          <ContainerDimensions>
-            {({ height, width }) => (
-              <ChannelRelations
-                ref={r => (this.relations = r)}
-                height={height}
-                width={width}
-                dataSet={this.state.data}
-                onSelection={this.onSelection.bind(this)}
-              />
-            )}
-          </ContainerDimensions>
+    if (this.state.data) {
+      return (
+        <div className={'ChannelRelationPage'}>
+          <div className={'Title'}>
+            <ChannelTitle ref={r => (this.title = r)} dataSet={this.state.data} />
+          </div>
+
+          <div className={'Relations'}>
+            <ContainerDimensions>
+              {({ height, width }) => (
+                <ChannelRelations
+                  ref={r => (this.relations = r)}
+                  height={height}
+                  width={width}
+                  dataSet={this.state.data}
+                  onSelection={this.onSelection.bind(this)}
+                />
+              )}
+            </ContainerDimensions>
+          </div>
+          <div className={'Flows'}>
+            <ContainerDimensions>
+              {({ height, width }) => (
+                <RecommendFlows
+                  ref={r => (this.flows = r)}
+                  height={height}
+                  width={width}
+                  dataSet={this.state.data}
+                  onSelection={this.onSelection.bind(this)}
+                />
+              )}
+            </ContainerDimensions>
+          </div>
         </div>
-        <div style={{ height: '95vh', width: '100%' }}>
-          <ContainerDimensions>
-            {({ height, width }) => (
-              <RecommendFlows
-                ref={r => (this.flows = r)}
-                height={height}
-                width={width}
-                dataSet={this.state.data}
-                onSelection={this.onSelection.bind(this)}
-              />
-            )}
-          </ContainerDimensions>
+      )
+    } else {
+      return (
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
+          <GridLoader color="#3D5467" size={30} />
         </div>
-      </div>
-    ) : (
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
-        <GridLoader color="#3D5467" size={30} />
-      </div>
-    )
+      )
+    }
   }
 }

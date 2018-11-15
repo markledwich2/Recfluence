@@ -1,17 +1,30 @@
 import * as React from 'react'
 import * as d3 from 'd3'
 import '../styles/Main.css'
-import { layoutTextLabel, layoutGreedy, layoutLabel, layoutRemoveOverlaps } from 'd3fc-label-layout'
-import { ChannelSimNode, RelationSimLink, YtNetworks, Graph, YtData, SkGraph, SimGraph } from '../ts/YtData'
-import { ChartProps, DataSelections, DataSelection, Chart, ChartState, SelectionType } from '../ts/Charts'
+import { layoutTextLabel, layoutGreedy, layoutLabel } from 'd3fc-label-layout'
+import { Graph, YtNetworks, YtData } from '../ts/YtData'
+import { ChartProps, DataSelections, DataComponentHelper, InteractiveDataState } from '../ts/Charts'
+import * as _ from 'lodash'
 
-interface State extends ChartState {}
+interface State extends InteractiveDataState {}
 interface Props extends ChartProps<YtData> {}
+interface RelationSimLink extends d3.SimulationLinkDatum<ChannelSimNode> {
+  strength: number
+}
+
+interface ChannelSimNode extends d3.SimulationNodeDatum {
+  channelId: string
+  size: number
+  type: string
+  shapeId: string
+  lr: string
+  title: string
+}
 
 export class ChannelRelations extends React.Component<Props, State> {
   ref: SVGSVGElement
 
-  chart:Chart = new Chart(this)
+  chart: DataComponentHelper = new DataComponentHelper(this)
 
   state: Readonly<State> = {
     selections: new DataSelections()
@@ -21,38 +34,67 @@ export class ChannelRelations extends React.Component<Props, State> {
     this.loadChart()
   }
 
-  componentDidUpdate(prevProps:Props, prevState:State) {
+  componentDidUpdate(prevProps: Props, prevState: State) {
     this.stateRender()
   }
 
   render() {
-    return <svg width={this.props.width} height={this.props.height} className="container" ref={ref => (this.ref = ref)} />
+    return <svg ref={ref => (this.ref = ref)} />
   }
 
-  async getData() {
-    let data = await YtNetworks.simData(this.props.dataSet)
+  getData() {
+    let nodes = _(this.props.dataSet.channels)
+      .filter(c => c.ChannelVideoViews > 0)
+      .map(
+        c =>
+          ({
+            channelId: c.ChannelId,
+            title: c.Title,
+            size: +c.ChannelVideoViews,
+            type: c.Type,
+            lr: c.LR
+          } as ChannelSimNode)
+      ).value()
+
+    let links = _(this.props.dataSet.relations)
+      .map(
+        l =>
+          ({
+            source: l.FromChannelId,
+            target: l.ChannelId,
+            strength: +l.RecommendsPercent
+          } as RelationSimLink)
+      )
+      .filter(
+        l =>
+          l.strength > 0.01 && (nodes.some(c => c.channelId == (l.source as string)) && nodes.some(c => c.channelId == (l.target as string)))
+      ).value()
+
+    let keyedNodes = nodes.filter(n => links.some(l => n.channelId == (l.source as string) || n.channelId == (l.target as string)))
 
     let adjlist = new Map()
-    data.links.forEach(d => {
+    links.forEach(d => {
       adjlist.set(d.source + '-' + d.target, true)
       adjlist.set(d.target + '-' + d.source, true)
     })
 
     let isConnected = (a: string, b: string) => a == b || adjlist.get(a + '-' + b)
 
-    return { nodes: data.nodes, links: data.links, isConnected }
+    return { nodes: keyedNodes, links:links, isConnected }
   }
 
   getLayout(nodes: ChannelSimNode[], links: RelationSimLink[]) {
+    let w = this.props.width
+    let h = this.props.height
+
     let maxStrength = d3.max(links, l => l.strength)
     let maxSize = d3.max(nodes, n => n.size)
-    let widthIndex = Math.min(this.props.width, this.props.height) / 1024
-    let getNodeRadius = (d: ChannelSimNode) => Math.sqrt(d.size > 0 ? (d.size / maxSize) : 1) * widthIndex * 10
+    let getNodeRadius = (d: ChannelSimNode) => Math.sqrt(d.size > 0 ? d.size / maxSize : 1) * 30
     let getLineWidth = (d: RelationSimLink) => (d.strength / maxStrength) * 40
     let centerForce = d3.forceCenter()
     let force = d3
       .forceSimulation<ChannelSimNode, RelationSimLink>(nodes)
-      .force('charge', d3.forceManyBody().strength(-500 * widthIndex))
+      .force('charge', d3.forceManyBody().strength(-100))
       .force('center', centerForce)
       .force(
         'link',
@@ -60,7 +102,7 @@ export class ChannelRelations extends React.Component<Props, State> {
           .forceLink<ChannelSimNode, RelationSimLink>(links)
           .distance(1)
           .id(d => d.channelId)
-          .strength(d => (d.strength / maxStrength) * 0.8)
+          .strength(d => (d.strength / maxStrength) * 0.3)
       )
       .force('collide', d3.forceCollide<ChannelSimNode>(getNodeRadius))
 
@@ -101,7 +143,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       .append('circle')
       .attr('class', 'shape')
       .attr('r', lay.getNodeRadius)
-      .attr('fill', d => YtNetworks.lrPallet()[d.lr])
+      .attr('fill', d => YtNetworks.lrColor(d.lr))
 
     this.chart.addDataShapeEvents(node, d => d.channelId, YtNetworks.ChannelIdPath)
 
@@ -135,7 +177,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       let nodeLightedFiltered = (c: ChannelSimNode) =>
         lightedFiltered.some(id => id == c.channelId) || lightedFiltered.some(id => isConnected(id, c.channelId))
 
-      node.style('opacity', d => lightedFiltered.length == 0 || nodeLightedFiltered(d) ? 1 : 0.3)
+      node.style('opacity', d => (lightedFiltered.length == 0 || nodeLightedFiltered(d) ? 1 : 0.3))
       node.style('stroke', d => (filtered.some(id => id == d.channelId) ? '#ddd' : null))
       label.style('visibility', d => (nodeLightedFiltered(d) ? 'visible' : 'hidden'))
 
@@ -147,8 +189,8 @@ export class ChannelRelations extends React.Component<Props, State> {
     }
 
     function updatePositions(node: d3.Selection<d3.BaseType, ChannelSimNode, d3.BaseType, {}>, width: number, height: number) {
-      var dx = (d: ChannelSimNode) => Math.max(lay.getNodeRadius(d), Math.min(width - lay.getNodeRadius(d), d.x))
-      var dy = (d: ChannelSimNode) => Math.max(lay.getNodeRadius(d), Math.min(height - lay.getNodeRadius(d), d.y))
+      var dx = (d: ChannelSimNode) => d.x //Math.max(lay.getNodeRadius(d), Math.min(width - lay.getNodeRadius(d), d.x))
+      var dy = (d: ChannelSimNode) => d.y //Math.max(lay.getNodeRadius(d), Math.min(height - lay.getNodeRadius(d), d.y))
 
       node.attr('transform', d => {
         d.x = dx(d)
@@ -164,14 +206,37 @@ export class ChannelRelations extends React.Component<Props, State> {
         .attr('y2', d => fixna((d.target as ChannelSimNode).y))
     }
 
+    var zoom = d3
+      .zoom()
+      .scaleExtent([1, 8])
+      .on('zoom', () => container.attr('transform', d3.event.transform))
+
+    let zoomToFit = (width: number, height: number) => {
+      var bounds = container
+        .select<SVGGElement>('g.nodes')
+        .node()
+        .getBBox() // BBOX is the size of the container of drawn nodes
+      let midX = bounds.x + bounds.width / 2
+      let midY = bounds.y + bounds.height / 2
+      var scale = 1 / Math.max(bounds.width / width, bounds.height / height)
+      var translate = { w: width / 2 - scale * midX, h: height / 2 - scale * midY }
+
+      container.transition().call(zoom.transform, d3.zoomIdentity.translate(translate.w, translate.h).scale(scale))
+    }
+
     let tick = () => node.call(d => updatePositions(d, this.props.width, this.props.height))
-    for (var i = 0; i < 100; i++) lay.force.tick()
+    for (var i = 0; i < 50; i++) lay.force.tick()
     lay.force.on('tick', tick)
 
     this.stateRender = () => {
-      tick()
+      let svg = d3.select(this.ref)
+      svg.attr('width', this.props.width)
+      svg.attr('height', this.props.height)
+
       labelsGroup.call(layoutLabels)
       lay.onResize()
+      tick()
+      zoomToFit(this.props.width, this.props.height)
       updateVisibility()
     }
     this.stateRender()

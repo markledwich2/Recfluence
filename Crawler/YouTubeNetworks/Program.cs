@@ -8,9 +8,9 @@ namespace YouTubeNetworks {
                 var cfg = Setup.LoadCfg(log);
                 var reader = new YtReader(cfg, log);
                 var ytStore = new YtStore(reader);
-                var crawler = new YtCrawler(ytStore, cfg, log);
+                var crawler = new YtDataUpdater(ytStore, cfg, log);
 
-                var task = crawler.Crawl();
+                var task = crawler.UpdateData();
                 try {
                     task.GetAwaiter().GetResult();
                 }

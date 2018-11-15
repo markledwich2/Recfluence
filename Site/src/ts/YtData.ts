@@ -1,70 +1,36 @@
 import * as d3 from 'd3'
-import * as d3sk from 'd3-sankey'
-import { DSVParsedArray } from 'd3';
-import { DataSelections, SelectionType, DataSelection } from './Charts';
-
-export interface RelationSimLink extends d3.SimulationLinkDatum<ChannelSimNode> {
-  source: ChannelSimNode | string | number
-  target: ChannelSimNode | string | number
-  strength: number
-}
-
-export interface ChannelSimNode extends ChannelSkExtra, d3.SimulationNodeDatum {}
-
-export interface ChannelSkExtra {
-  shapeId: string
-  channelId: string
-  title: string
-  size: number
-  type: string
-  lr: string
-}
-
-export interface RelationSkExtra {
-  id:string
-  source: string
-  target: string
-  value: number
-}
-
-export type ChannelSkNode = d3sk.SankeyNode<ChannelSkExtra, RelationSkExtra>
-export type RelationSkLink = d3sk.SankeyLink<ChannelSkExtra, RelationSkExtra>
-
-export interface SGraph {
-  nodes: ChannelSkNode[]
-  links: RelationSkLink[]
-}
+import { DSVParsedArray } from 'd3'
+import { DataSelections, SelectionType, DataSelection } from './Charts'
+import * as _ from 'lodash'
 
 export interface Graph<N, L> {
   nodes: N
   links: L
 }
 
-export type SimGraph = Graph<ChannelSimNode[],RelationSimLink[]>
-export type SkGraph = Graph<ChannelSkNode[], RelationSkLink[]>
-
 export interface YtData {
-  channels: ChannelData[]
+  channels: _.Dictionary<ChannelData>
   relations: RelationData[]
 }
 
-interface ChannelData {
-  Id: string
+export interface ChannelData {
+  ChannelId: string
   Title: string
-  Status: string
+  Type: string
   SubCount: number
   ChannelVideoViews: number
-  Type: string
+  Thumbnail: string
   LR: string
 }
 
-interface RelationData {
+export interface RelationData {
   FromChannelTitle: string
   ChannelTitle: string
   FromChannelId: string
   ChannelId: string
   FromVideoViews: number
-  RecommendsPerVideo: number
+  RecommendsViewFlow: number
+  RecommendsPercent: number
 }
 
 export class YtNetworks {
@@ -73,67 +39,26 @@ export class YtNetworks {
   static async dataSet(path: string): Promise<YtData> {
     let channelsCsvTask = d3.csv(path + 'VisChannels.csv')
     let relationsCsvTask = d3.csv(path + 'VisRelations.csv')
-    let channels = (await channelsCsvTask).map((c:any) => c as ChannelData)
-    let relations = (await relationsCsvTask).map((c:any) => c as RelationData)
+    let channels = _(await channelsCsvTask).map((c: any) => c as ChannelData).keyBy(c => c.ChannelId).value()
+    let relations = (await relationsCsvTask).map((c: any) => c as RelationData)
 
-    return {channels,relations}
+    return { channels, relations }
   }
 
-  static simData(data: YtData):SimGraph {
-    let nodes = data.channels
-      .map(
-        c =>
-          <ChannelSimNode>{
-            channelId: c.Id,
-            title: c.Title,
-            size: c.ChannelVideoViews,
-            type: c.Type,
-            lr: c.LR
-          }
-      )
+  static lrItems = new Map([
+      ['L', {color:'#3D5467', text:'Left'}],
+      ['C', {color:'#BFBCCB', text:'Center/Heterodox'}],
+      ['PL', {color:'#A26769', text:'Allways Punching Left'}],
+      ['R', {color:'#A4243B', text:'Right'}],
+      ['', {color:'#D8973C', text:'Unknown'}]
+    ])
 
-    let links = data.relations
-      .map(
-        l =>
-          <RelationSimLink>{
-            source: l.FromChannelId,
-            target: l.ChannelId,
-            strength: l.RecommendsPerVideo
-          }
-      )
-      .filter(l => l.strength > 0.1)
-
-    return { nodes, links }
+  static lrColor(key:string) {
+    return this.lrItems.get(key).color
   }
+}
 
-  static sankeyData(data: YtData):SkGraph {
-    let nodes = data.channels
-      .map(
-        n =>
-          <ChannelSkNode>{
-            channelId: n.Id,
-            title: n.Title,
-            size: n.ChannelVideoViews,
-            type: n.Type,
-            lr: n.LR
-          }
-      )
-
-    let links = data.relations
-      .map(
-        n =>
-          <RelationSkLink>{
-            id: `${n.FromChannelId}.${n.ChannelId}`,
-            source: n.FromChannelId,
-            target: n.ChannelId,
-            value: n.FromVideoViews
-          }
-      )
-
-    return { nodes, links }
-  }
-
-  static lrPallet(): { [lr: string]: string } {
-    return { L: '#3D5467', C: '#BFBCCB', PL: '#A26769', R: '#A4243B', '': '#D8973C' }
-  }
+interface LrItem {
+  color:string
+  text:string
 }

@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Security.Authentication;
+using System.Linq;
 using Amazon;
-using Amazon.Runtime;
-using LiteDB;
 using Serilog;
+using Serilog.Core;
 using Serilog.Events;
+using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
+using SysExtensions.Security;
 using SysExtensions.Serialization;
-using Logger = Serilog.Core.Logger;
 
 namespace YouTubeReader {
     public static class Setup {
@@ -19,12 +19,10 @@ namespace YouTubeReader {
         public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
         public static FPath LocalDataDir => "Data".AsPath().InAppData(AppName);
 
-        public static Logger CreateLogger() {
-            return new LoggerConfiguration()
-                .WriteTo.Seq("http://localhost:5341", restrictedToMinimumLevel: LogEventLevel.Verbose)
-                .WriteTo.Console()
-                .CreateLogger();
-        }
+        public static Logger CreateLogger() => new LoggerConfiguration()
+            .WriteTo.Seq("http://localhost:5341", LogEventLevel.Verbose)
+            .WriteTo.Console()
+            .CreateLogger();
 
         static FPath CfgPath => "cfg.json".AsPath().InAppData(AppName);
 
@@ -41,7 +39,7 @@ namespace YouTubeReader {
             }
 
             if (cfg.CrawlConfigDir.IsEmtpy())
-                cfg.CrawlConfigDir = SolutionDataDir.Combine("1.Crawl");
+                cfg.CrawlConfigDir = SolutionDataDir;
 
             return cfg;
         }
@@ -49,31 +47,51 @@ namespace YouTubeReader {
 
     public class Cfg {
         public int CacheRelated = 40;
-        public int StepsFromSeed { get; set; } = 1;
         public int Related { get; set; } = 10;
         public DateTime From { get; set; }
-        public DateTime To { get; set; }
+        public DateTime? To { get; set; }
+        public int DaysToUpdateVideoStats { get; set; } = 90;
 
         [TypeConverter(typeof(StringConverter<FPath>))]
         public FPath CrawlConfigDir { get; set; }
 
         public ICollection<string> YTApiKeys { get; set; }
         public int Parallel { get; set; } = 8;
-        public int? LimitSeedChannels { get; set; }
+        public ICollection<string> LimitedToSeedChannels { get; set; }
 
-        public int InfluencersToDetect { get; set; } = 0;
+        public CollectionCacheType CacheType { get; set; } = CollectionCacheType.Memory;
+
         public S3Cfg S3 { get; set; } = new S3Cfg {
             Bucket = "ytnetworks", Credentials = new NameSecret("yourkey", "yoursecret"), Region = RegionEndpoint.APSoutheast2.SystemName
         };
+    }
 
-        /// <summary>
-        /// Use this when you want to re-use recommendation cache from a previous day
-        /// </summary>
-        public string RecommendationCacheDayOverride { get; set; }
+    public class SeedChannel {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string Type { get; set; }
+        public string LR { get; set; }
+    }
 
-        /// <summary>
-        /// The minimum percentile of the channel's video vies for the given period.
-        /// </summary>
-        //public double InfluenceMinViewsPercentile { get; set; } = 0.3;
+    public class InfluencerOverride {
+        public string Id { get; set; }
+        public string Title { get; set; }
+    }
+
+    public class ChannelConfig {
+        public IKeyedCollection<string, SeedChannel> Seeds { get; } = new KeyedCollection<string, SeedChannel>(c => c.Id);
+        public IKeyedCollection<string, InfluencerOverride> Excluded { get; } = new KeyedCollection<string, InfluencerOverride>(c => c.Id);
+    }
+
+    public static class ChannelConfigExtensions {
+        public static ChannelConfig LoadConfig(this Cfg cfg) {
+            var channelCfg = new ChannelConfig();
+            var seedData = SeedChannels(cfg);
+            channelCfg.Seeds.AddRange(cfg.LimitedToSeedChannels != null ? seedData.Where(s => cfg.LimitedToSeedChannels.Contains(s.Id)) : seedData);
+            channelCfg.Excluded.AddRange(cfg.CrawlConfigDir.Combine("ChannelExclude.csv").ReadFromCsv<InfluencerOverride>());
+            return channelCfg;
+        }
+
+        static IEnumerable<SeedChannel> SeedChannels(this Cfg cfg) => cfg.CrawlConfigDir.Combine("SeedChannels.csv").ReadFromCsv<SeedChannel>();
     }
 }

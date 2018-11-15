@@ -1,14 +1,17 @@
 import * as React from 'react'
 import * as d3 from 'd3'
 
-export interface ChartProps<D> {
-  dataSet?: D
-  width: number
-  height: number
+export interface InteractiveDataProps<D>  {
+  dataSet: D
   onSelection?: (selection: DataSelection) => void
 }
 
-export interface ChartState {
+export interface ChartProps<D> extends InteractiveDataProps<D>{
+  width: number
+  height: number
+}
+
+export interface InteractiveDataState {
   selections: DataSelections
 }
 
@@ -42,12 +45,12 @@ export enum SelectionType {
   Highlight
 }
 
-export class Chart {
-  constructor(component: React.Component<ChartProps<any>, ChartState>) {
+export class DataComponentHelper {
+  constructor(component: React.Component<InteractiveDataProps<any>, InteractiveDataState>) {
     this.component = component
   }
 
-  component: React.Component<ChartProps<any>, ChartState>
+  component: React.Component<InteractiveDataProps<any>, InteractiveDataState>
 
   setSelection(selection: DataSelection) {
     if (this.component.props.onSelection) this.component.props.onSelection(selection)
@@ -56,7 +59,8 @@ export class Chart {
   createContainer(svg: d3.Selection<SVGSVGElement, {}, null, undefined>) {
     let container = svg
       .on('click', d => this.setSelection({ path: null, values: [], type: SelectionType.Filter }))
-      .append('g')
+      .attr('class', 'chart')
+      .append<SVGGElement>('g')
       .attr('class', 'chart')
 
     return container

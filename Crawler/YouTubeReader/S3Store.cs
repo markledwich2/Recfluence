@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Async;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -9,14 +8,15 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
-using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Transfer;
 using Humanizer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
+using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 
@@ -31,6 +31,7 @@ namespace YouTubeReader {
                     //RegionEndpoint = RegionEndpoint.GetBySystemName(Cfg.Region), // with parreleism, this exposes error in the library
                     ServiceURL = "https://s3.us-west-2.amazonaws.com",
                     CacheHttpClient = true,
+                    Timeout = 10.Minutes()
                     //UseAccelerateEndpoint = Cfg.AcceleratedEndpoint,
                     //BufferSize = Cfg.BufferSizeBytes,
                 }
@@ -66,7 +67,7 @@ namespace YouTubeReader {
 
         public async Task Set<T>(StringPath path, T item) {
             using (var memStream = new MemoryStream()) {
-                using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, leaveOpen:true))
+                using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true))
                 using (var tw = new StreamWriter(zipWriter, Encoding.UTF8)) {
                     JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
                 }
@@ -81,11 +82,8 @@ namespace YouTubeReader {
 
 
         public async Task Save(StringPath path, FPath file) {
-            var response = await S3.PutObjectAsync(new PutObjectRequest {
-                BucketName = Cfg.Bucket,
-                Key = BasePath.Add(path),
-                FilePath = file.FullPath
-            });
+            var tu = new TransferUtility(S3);
+            await tu.UploadAsync(file.FullPath, Cfg.Bucket, BasePath.Add(path));
         }
 
         public IAsyncEnumerable<ICollection<StringPath>> ListKeys(StringPath path) {
@@ -100,7 +98,7 @@ namespace YouTubeReader {
                     var response = await S3.ListObjectsV2Async(request);
                     var keys = response.S3Objects.Select(f => f.Key);
                     await yield.ReturnAsync(keys.Select(k => new StringPath(k).RelativePath(prefix).WithoutExtension()).ToList());
-                    
+
                     if (response.IsTruncated)
                         request.ContinuationToken = response.NextContinuationToken;
                     else
@@ -114,79 +112,82 @@ namespace YouTubeReader {
         public string Bucket { get; set; }
         public string Region { get; set; }
         public NameSecret Credentials { get; set; }
-        public int BufferSizeBytes { get; set; } = (int)100.Kilobytes().Bytes;
-        public bool AcceleratedEndpoint { get; set; } = true;
-    }
-
-    /// <summary>
-    ///     Credentials for a user (in the format name:secret).
-    ///     Be careful not to serialize this. it is not encrypted
-    /// </summary>
-    [TypeConverter(typeof(StringConverter<NameSecret>))]
-    public sealed class NameSecret : IStringConvertableWithPattern {
-        public NameSecret() { }
-
-        public NameSecret(string name, string secret) {
-            Name = name;
-            Secret = secret;
-        }
-
-        public string Name { get; set; }
-        public string Secret { get; set; }
-
-        public string StringValue {
-            get => $"{Name}:{Secret}";
-            set {
-                var tokens = value.UnJoin(':', '\\').ToQueue();
-                Name = tokens.TryDequeue();
-                Secret = tokens.TryDequeue();
-            }
-        }
-
-        public string Pattern => @"([^:\n]+):([^:\n]+)";
-
-        public override string ToString() => StringValue;
     }
 
     public class S3Collection<T> where T : class {
-        public S3Collection(S3Store s3, Expression<Func<T, string>> getId, Func<string, Task<T>> create, StringPath path, bool useCache = true) {
+        public S3Collection(S3Store s3, Expression<Func<T, string>> getId, StringPath path, CollectionCacheType cacheType = CollectionCacheType.Memory, FPath localCacheDir = null) {
             S3 = s3;
             GetId = getId.Compile();
-            Create = create;
             Path = path;
-            UseCache = useCache;
+            CacheType = cacheType;
+            LocalCacheDir = localCacheDir;
             Cache = new KeyedCollection<string, T>(getId, theadSafe: true);
         }
 
         S3Store S3 { get; }
         Func<T, string> GetId { get; }
-        Func<string, Task<T>> Create { get; }
         StringPath Path { get; }
-        bool UseCache { get; }
+        CollectionCacheType CacheType { get; }
+        FPath LocalCacheDir { get; }
         IKeyedCollection<string, T> Cache { get; }
 
-        public async Task<T> Get(string id) {
-            if (UseCache) {
-                var cached = Cache[id];
-                if (cached != null) return cached;
+        T GetFromCache(string id) {
+            switch (CacheType) {
+                case CollectionCacheType.None:
+                    return null;
+                case CollectionCacheType.Memory:
+                case CollectionCacheType.MemoryAndDisk:
+                    var item = Cache[id];
+                    if (item != null) return item;
+                    if(CacheType == CollectionCacheType.MemoryAndDisk && LocalCacheDir != null) {
+                        var file = GetFilePath(id);
+                        if (file.Exists)
+                            return file.ToObject<T>();
+                    }
+                    break;
             }
+            return null;
+        }
 
-            var o = await S3.Get<T>(Path.Add(id));
-            if (UseCache && o != null)
-                Cache.Add(o);
+        void SetCache(string id, T item) {
+            if (item == null) return;
+            switch (CacheType) {
+                case CollectionCacheType.Memory:
+                case CollectionCacheType.MemoryAndDisk:
+                    Cache.Add(item);
+                    if (CacheType == CollectionCacheType.MemoryAndDisk && LocalCacheDir != null) {
+
+                        var file = GetFilePath(id);
+
+                        if (!file.Parent().Exists)
+                            file.Parent().EnsureDirectoryExists();
+
+                        item.ToJsonFile(file);
+                    }
+                    break;
+            }
+        }
+
+        private FPath GetFilePath(string id) => LocalCacheDir.Combine(Path.Add($"{id}.json").Tokens.ToArray());
+
+        public async Task<T> Get(string id) {
+            var o = GetFromCache(id);
+            if (o != null)
+                return o;
+            o = await S3.Get<T>(Path.Add(id));
+            SetCache(id, o);
             return o;
         }
 
-        public async Task<T> GetOrCreate(string id) {
-            if (UseCache) {
-                var cached = Cache[id];
-                if (cached != null) return cached;
-            }
+        public async Task<T> GetOrCreate(string id, Func<string, Task<T>> create) {
+            var o = GetFromCache(id);
+            if (o != null)
+                return o;
 
-            var o = await S3.Get<T>(Path.Add(id));
+            o = await S3.Get<T>(Path.Add(id));
             var missingFromS3 = o == null;
             if (missingFromS3)
-                o = await Create(id);
+                o = await create(id);
 
             if (o == null)
                 return null;
@@ -194,13 +195,20 @@ namespace YouTubeReader {
             if (missingFromS3)
                 await S3.Set(Path.Add(id), o);
 
-            if (UseCache)
-                Cache.Add(o);
+            SetCache(id, o);
             return o;
         }
 
-        public Task Set(T item) => S3.Set(Path.Add(GetId(item)), item);
+        public async Task<T> Set(T item) {
+            await S3.Set(Path.Add(GetId(item)), item);
+            SetCache(GetId(item), item);
+            return item;
+        }
+    }
 
-       
+    public enum CollectionCacheType {
+        None,
+        Memory,
+        MemoryAndDisk
     }
 }
