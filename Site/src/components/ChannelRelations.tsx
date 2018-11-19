@@ -3,8 +3,10 @@ import * as d3 from 'd3'
 import '../styles/Main.css'
 import { layoutTextLabel, layoutGreedy, layoutLabel } from 'd3fc-label-layout'
 import { Graph, YtNetworks, YtData } from '../ts/YtData'
+import { delay } from '../ts/Utils'
 import { ChartProps, DataSelections, DataComponentHelper, InteractiveDataState } from '../ts/Charts'
 import * as _ from 'lodash'
+import { lab } from 'd3';
 
 interface State extends InteractiveDataState {}
 interface Props extends ChartProps<YtData> {}
@@ -39,7 +41,23 @@ export class ChannelRelations extends React.Component<Props, State> {
   }
 
   render() {
-    return <svg ref={ref => (this.ref = ref)} />
+    let lrItems = _(Array.from(YtNetworks.lrMap.entries()))
+      .filter(lr => lr[0] != '')
+      .value()
+    return (
+      <>
+        <div style={{ position: 'absolute' }}>
+          <ul className={'legend'}>
+            {lrItems.map(l => (
+              <li style={{ color: l[1].color }} key={l[0]}>
+                <span className={'text'}>{l[1].text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <svg ref={ref => (this.ref = ref)} />
+      </>
+    )
   }
 
   getData() {
@@ -54,7 +72,8 @@ export class ChannelRelations extends React.Component<Props, State> {
             type: c.Type,
             lr: c.LR
           } as ChannelSimNode)
-      ).value()
+      )
+      .value()
 
     let links = _(this.props.dataSet.relations)
       .map(
@@ -67,8 +86,10 @@ export class ChannelRelations extends React.Component<Props, State> {
       )
       .filter(
         l =>
-          l.strength > 0.01 && (nodes.some(c => c.channelId == (l.source as string)) && nodes.some(c => c.channelId == (l.target as string)))
-      ).value()
+          l.strength > 0.03 &&
+          (nodes.some(c => c.channelId == (l.source as string)) && nodes.some(c => c.channelId == (l.target as string)))
+      )
+      .value()
 
     let keyedNodes = nodes.filter(n => links.some(l => n.channelId == (l.source as string) || n.channelId == (l.target as string)))
 
@@ -80,7 +101,7 @@ export class ChannelRelations extends React.Component<Props, State> {
 
     let isConnected = (a: string, b: string) => a == b || adjlist.get(a + '-' + b)
 
-    return { nodes: keyedNodes, links:links, isConnected }
+    return { nodes: keyedNodes, links: links, isConnected }
   }
 
   getLayout(nodes: ChannelSimNode[], links: RelationSimLink[]) {
@@ -122,30 +143,28 @@ export class ChannelRelations extends React.Component<Props, State> {
     let svg = d3.select(this.ref)
     let container = this.chart.createContainer(svg)
 
-    let link = container
+    let linkEnter = container
       .append('g')
       .attr('class', 'links')
       .selectAll('line')
       .data(links)
       .enter()
-      .append('line')
+      .append<SVGLineElement>('line')
       .attr('class', 'link')
       .attr('stroke-width', lay.getLineWidth)
 
-    let node = container
-      .append('g')
-      .attr('class', 'nodes')
+    let nodesContainer = container.append<SVGGElement>('g').attr('class', 'nodes')
+
+    let nodesEnter = nodesContainer
       .selectAll('g')
       .data(nodes)
       .enter()
-      .append('g')
-      .attr('class', 'node shape')
-      .append('circle')
+      .append<SVGCircleElement>('circle')
       .attr('class', 'shape')
       .attr('r', lay.getNodeRadius)
       .attr('fill', d => YtNetworks.lrColor(d.lr))
 
-    this.chart.addDataShapeEvents(node, d => d.channelId, YtNetworks.ChannelIdPath)
+    this.chart.addDataShapeEvents(nodesEnter, d => d.channelId, YtNetworks.ChannelIdPath)
 
     let labelPadding = 2
     let layoutLabels = layoutLabel<ChannelSimNode[]>(layoutGreedy())
@@ -166,8 +185,8 @@ export class ChannelRelations extends React.Component<Props, State> {
       .call(layoutLabels)
 
     // label layout works at the group level, re-join to data
-    let label = labelsGroup.selectAll('text').data(nodes)
-    label.attr('pointer-events', 'none')
+    let labels = labelsGroup.selectAll('text').data(nodes)
+    labels.attr('pointer-events', 'none')
 
     let updateVisibility = () => {
       let lighted = this.chart.highlightedItems(YtNetworks.ChannelIdPath)
@@ -177,14 +196,14 @@ export class ChannelRelations extends React.Component<Props, State> {
       let nodeLightedFiltered = (c: ChannelSimNode) =>
         lightedFiltered.some(id => id == c.channelId) || lightedFiltered.some(id => isConnected(id, c.channelId))
 
-      node.style('opacity', d => (lightedFiltered.length == 0 || nodeLightedFiltered(d) ? 1 : 0.3))
-      node.style('stroke', d => (filtered.some(id => id == d.channelId) ? '#ddd' : null))
-      label.style('visibility', d => (nodeLightedFiltered(d) ? 'visible' : 'hidden'))
+      nodesEnter.style('opacity', d => (lightedFiltered.length == 0 || nodeLightedFiltered(d) ? 1 : 0.3))
+      nodesEnter.style('stroke', d => (filtered.some(id => id == d.channelId) ? '#ddd' : null))
+      labels.style('visibility', d => (nodeLightedFiltered(d) ? 'visible' : 'hidden'))
 
-      link.style('opacity', d => {
+      linkEnter.style('opacity', d => {
         let s = d.source as ChannelSimNode
         var t = d.target as ChannelSimNode
-        return lightedFiltered.some(id => s.channelId == id || t.channelId == id) ? 0.8 : 0
+        return lightedFiltered.some(id => s.channelId == id || t.channelId == id) ? 0.4 : 0
       })
     }
 
@@ -199,46 +218,43 @@ export class ChannelRelations extends React.Component<Props, State> {
       })
 
       let fixna = (x?: number) => (x != null && isFinite(x) ? x : 0)
-      link
+      linkEnter
         .attr('x1', d => fixna((d.source as ChannelSimNode).x))
         .attr('y1', d => fixna((d.source as ChannelSimNode).y))
         .attr('x2', d => fixna((d.target as ChannelSimNode).x))
         .attr('y2', d => fixna((d.target as ChannelSimNode).y))
     }
 
-    var zoom = d3
-      .zoom()
-      .scaleExtent([1, 8])
-      .on('zoom', () => container.attr('transform', d3.event.transform))
-
     let zoomToFit = (width: number, height: number) => {
-      var bounds = container
-        .select<SVGGElement>('g.nodes')
-        .node()
-        .getBBox() // BBOX is the size of the container of drawn nodes
+      var bounds = nodesContainer.node().getBBox() // BBOX is the size of the container of drawn nodes
       let midX = bounds.x + bounds.width / 2
       let midY = bounds.y + bounds.height / 2
       var scale = 1 / Math.max(bounds.width / width, bounds.height / height)
       var translate = { w: width / 2 - scale * midX, h: height / 2 - scale * midY }
 
-      container.transition().call(zoom.transform, d3.zoomIdentity.translate(translate.w, translate.h).scale(scale))
+      let trans = d3.zoomIdentity.translate(translate.w, translate.h).scale(scale)
+      container.attr('transform', d=> trans.toString())
+      labels.attr('transform', d => `scale(${1/trans.k})`) // undo the zoom on labels
     }
-
-    let tick = () => node.call(d => updatePositions(d, this.props.width, this.props.height))
-    for (var i = 0; i < 50; i++) lay.force.tick()
-    lay.force.on('tick', tick)
 
     this.stateRender = () => {
       let svg = d3.select(this.ref)
       svg.attr('width', this.props.width)
       svg.attr('height', this.props.height)
 
-      labelsGroup.call(layoutLabels)
       lay.onResize()
-      tick()
       zoomToFit(this.props.width, this.props.height)
+      labelsGroup.call(layoutLabels)
+      //tick()
       updateVisibility()
     }
+
+    let onTick = () => nodesEnter.call(d => updatePositions(d, this.props.width, this.props.height))
+    for (var i = 0; i < 10; i++) lay.force.tick()
+    onTick()
+    updateVisibility()
+    await delay(1)
+    lay.force.on('tick', onTick)
     this.stateRender()
   }
 

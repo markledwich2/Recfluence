@@ -58,7 +58,10 @@ export class DataComponentHelper {
 
   createContainer(svg: d3.Selection<SVGSVGElement, {}, null, undefined>) {
     let container = svg
-      .on('click', d => this.setSelection({ path: null, values: [], type: SelectionType.Filter }))
+      .on('click', d => {
+        this.setSelection({ path: null, values: [], type: SelectionType.Filter })
+        this.setSelection({ path: null, values: [], type: SelectionType.Highlight })
+      })
       .attr('class', 'chart')
       .append<SVGGElement>('g')
       .attr('class', 'chart')
@@ -92,5 +95,9 @@ export class DataComponentHelper {
   filteredItems(path: string): string[] {
     let r = this.component.state.selections.filters.find(s => s.path == path)
     return r != null && r.values != null ? r.values : []
+  }
+
+  filteredOrHighlightedItems(path: string) {
+    return this.highlightedItems(path).concat(this.filteredItems(path))
   }
 }

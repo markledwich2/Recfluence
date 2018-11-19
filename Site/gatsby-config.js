@@ -1,6 +1,6 @@
 module.exports = {
     siteMetadata: {
-      title: `Pandas Eating Lots`,
+      title: `YouTube Networks`,
     },
     plugins: [ `gatsby-plugin-typescript` ],
     

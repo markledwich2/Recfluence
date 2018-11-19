@@ -37,22 +37,15 @@ namespace SysExtensions.Serialization {
             return contract;
         }
 
-        static readonly HashSet<string> SystemConverters = new HashSet<string>(new[] {
-            "System.ComponentModel.ComponentConverter",
-            "System.ComponentModel.ReferenceConverter",
-            "System.ComponentModel.CollectionConverter"
-        });
-
         public static bool CanNonSystemTypeDescriptorConvertString(Type type, out TypeConverter typeConverter) {
             typeConverter = TypeDescriptor.GetConverter(type);
 
             // use the objectType's TypeConverter if it has one and can convert to a string
-            if (typeConverter == null) return false;
             var converterType = typeConverter.GetType();
-
-            if (!SystemConverters.Contains(converterType.FullName) && converterType != typeof(TypeConverter))
-                return typeConverter.CanConvertTo(typeof(string));
-
+            if (!converterType.FullName.StartsWith("System.ComponentModel") && converterType != typeof(TypeConverter)) {
+                bool canConvert = typeConverter.CanConvertTo(typeof(string));
+                return canConvert;
+            }
             return false;
         }
     }

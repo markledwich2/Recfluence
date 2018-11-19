@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Humanizer;
+using Newtonsoft.Json;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
@@ -20,12 +20,9 @@ namespace YouTubeReader {
             RecommendedVideosCollection = new S3Collection<RecommendedVideoStored>(S3, v => v.VideoId, "RecommendedVideos", Yt.Cfg.CacheType, CacheDataDir);
 
             ChannelVideosCollection = new S3Collection<ChannelVideosStored>(S3, c => c.ChannelId, "ChannelVideos", Yt.Cfg.CacheType, CacheDataDir);
-
-            // this is part of an analysis step
-            //ChannelCrawls = new S3Collection<ChannelCrawlResult>(S3, r => r.ChannelId, $"CrawlResults/{Yt.Cfg.Month.StringValue}", false);
         }
 
-        FPath CacheDataDir =>  "Data".AsPath().InAppData(Setup.AppName);
+        FPath CacheDataDir => "Data".AsPath().InAppData(Setup.AppName);
 
         public S3Store S3 { get; }
         YtReader Yt { get; }
@@ -36,32 +33,43 @@ namespace YouTubeReader {
         public S3Collection<ChannelVideosStored> ChannelVideosCollection { get; }
 
         public S3Collection<RecommendedVideoStored> RecommendedVideosCollection { get; }
-        //public S3Collection<ChannelCrawlResult> ChannelCrawls { get; }
 
         /// <summary>
-        ///     Gets the video with that ID. Caches in d3 (including historical information) with this
+        ///     Gets the video with that ID. Caches in S3 (including historical information) with this
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
         public async Task<VideoStored> GetAndUpdateVideo(string id) {
             var v = await Videos.Get(id);
-            var needsNewStats = v == null || NeedsUpdate(v.Latest.Stats.Updated);
+            if (v != null && v.Latest.Updated == default(DateTime))
+                v.Latest.Updated = v.Latest.Stats.Updated;
+
+            var needsNewStats = v == null || Expired(v.Latest.Updated, VideoRefreshAge(v.Latest));
             if (!needsNewStats) return v;
 
             var videoData = await Yt.VideoData(id);
-            if (v == null)
-                v = new VideoStored {Latest = videoData};
-            else
-                v.SetLatest(videoData);
+            if (videoData != null) {
+                if (v == null)
+                    v = new VideoStored {Latest = videoData};
+                else
+                    v.SetLatest(videoData);
+                v.Latest.Updated = DateTime.UtcNow;
+            }
 
             await Videos.Set(v);
 
             return v;
         }
 
+        TimeSpan VideoRefreshAge(ChannelVideoListItem v) {
+            if (Expired(v.PublishedAt, Cfg.VideoDead)) return TimeSpan.MaxValue;
+            return Expired(v.PublishedAt, Cfg.VideoOld) ? Cfg.RefreshOldVideos : Cfg.RefreshYoungVideos;
+        }
+
         public async Task<ChannelStored> GetAndUpdateChannel(string id) {
             var c = await Channels.Get(id);
-            var needsNewStats = c == null || NeedsUpdate(c.Latest.Stats.Updated);
+
+            var needsNewStats = c == null || Expired(c.Latest.Stats.Updated, Cfg.RefreshChannel);
             if (!needsNewStats) return c;
 
             var channelData = await Yt.ChannelData(id);
@@ -75,20 +83,30 @@ namespace YouTubeReader {
             return c;
         }
 
-        bool NeedsUpdate(DateTime updated) => (Cfg.To ?? DateTime.UtcNow) - updated > 24.Hours();
+        bool Expired(DateTime updated, TimeSpan refreshAge) => (Cfg.To ?? DateTime.UtcNow) - updated > refreshAge;
 
         public async Task<ChannelVideosStored> GetAndUpdateChannelVideos(ChannelData c) {
             var cv = await ChannelVideosCollection.Get(c.Id);
-            var mostRecent = cv?.Videos.OrderByDescending(v => v.PublishedAt).FirstOrDefault();
-            var needsUpdate = mostRecent == null || NeedsUpdate(mostRecent.PublishedAt);
 
+            // fix updated if missing. Remove once all records have been updated
+            var mostRecent = cv?.Vids.OrderByDescending(v => v.Updated).FirstOrDefault();
+            if (cv != null && mostRecent != null && cv.Updated == default(DateTime))
+                cv.Updated = mostRecent.Updated;
+
+            var needsUpdate = cv == null || Expired(cv.Updated, Cfg.RefreshChannelVideos)
+                                         || cv.From != Cfg.From; // when from is chaged, update all videos
             if (!needsUpdate) return cv;
 
             if (cv == null)
-                cv = new ChannelVideosStored {ChannelId = c.Id, ChannelTitle = c.Title};
+                cv = new ChannelVideosStored {ChannelId = c.Id, ChannelTitle = c.Title, Updated = DateTime.UtcNow};
+            else
+                cv.Updated = DateTime.UtcNow;
 
-            var created = await Yt.VideosInChannel(c, mostRecent?.PublishedAt ?? Cfg.From, Cfg.To);
-            cv.Videos.AddRange(created);
+            var queryForm = cv.From != Cfg.From ? Cfg.From : mostRecent?.PublishedAt ?? Cfg.From;
+            var created = await Yt.VideosInChannel(c, queryForm, Cfg.To);
+
+            cv.Vids.AddRange(created);
+            cv.From = Cfg.From;
             await ChannelVideosCollection.Set(cv);
 
             return cv;
@@ -96,10 +114,14 @@ namespace YouTubeReader {
 
         public async Task<ChannelVideosStored> ChannelVideosStored(ChannelData c) => await ChannelVideosCollection.Get(c.Id);
 
-        public async Task<RecommendedVideoStored> GetAndUpdateRecommendedVideos(VideoItem v) {
+        public async Task<RecommendedVideoStored> GetAndUpdateRecommendedVideos(ChannelVideoListItem v) {
             var rv = await RecommendedVideosCollection.Get(v.VideoId);
-            var mostRecent = rv?.Recommended.OrderByDescending(r => r.Updated).FirstOrDefault();
-            var needsUpdate = mostRecent == null || NeedsUpdate(mostRecent.Updated);
+
+            if (Expired(v.PublishedAt, Cfg.VideoDead))
+                return rv;
+
+            //var mostRecent = rv?.Recommended.OrderByDescending(r => r.Updated).FirstOrDefault();
+            var needsUpdate = rv == null || Expired(rv.Updated, Cfg.RefreshRelatedVideos);
 
             if (!needsUpdate) return rv;
 
@@ -108,6 +130,7 @@ namespace YouTubeReader {
 
             var created = await Yt.GetRelatedVideos(v.VideoId);
             rv.Recommended.Add(new RecommendedVideos {Updated = DateTime.UtcNow, Top = Cfg.Related, Recommended = created});
+            rv.Updated = DateTime.UtcNow;
             await RecommendedVideosCollection.Set(rv);
             return rv;
         }
@@ -129,9 +152,18 @@ namespace YouTubeReader {
     public class ChannelVideosStored {
         public string ChannelId { get; set; }
         public string ChannelTitle { get; set; }
-        public IKeyedCollection<string, ChannelVideoListItem> Videos { get; set; } = new KeyedCollection<string, ChannelVideoListItem>(v => v.VideoId);
-    }
+        public DateTime Updated { get; set; }
+        public DateTime From { get; set; }
 
+        [JsonIgnore]
+        public IKeyedCollection<string, ChannelVideoListItem> Vids { get; set; } = new KeyedCollection<string, ChannelVideoListItem>(v => v.VideoId);
+
+        [JsonProperty("videos")]
+        public ChannelVideoListItem[] SerializedVideos {
+            get => Vids.OrderBy(v => v.PublishedAt).ToArray();
+            set => Vids.Init(value);
+        }
+    }
 
     public class VideoStored {
         public string VideoId => Latest?.VideoId;

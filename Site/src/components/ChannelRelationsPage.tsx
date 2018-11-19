@@ -44,7 +44,9 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
   onSelection(selection: DataSelection) {
     this.selections.setSelection(selection)
-    this.graphComponents().filter(g => g).forEach(g => g.setState({ selections: this.selections }))
+    this.graphComponents()
+      .filter(g => g)
+      .forEach(g => g.setState({ selections: this.selections }))
   }
 
   relations: ChannelRelations
@@ -59,35 +61,35 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     if (this.state.data) {
       return (
         <div className={'ChannelRelationPage'}>
-          <div className={'Title'}>
-            <ChannelTitle ref={r => (this.title = r)} dataSet={this.state.data} />
-          </div>
+          <ChannelTitle ref={r => (this.title = r)} dataSet={this.state.data} onSelection={this.onSelection.bind(this)} />
 
-          <div className={'Relations'}>
-            <ContainerDimensions>
-              {({ height, width }) => (
-                <ChannelRelations
-                  ref={r => (this.relations = r)}
-                  height={height}
-                  width={width}
-                  dataSet={this.state.data}
-                  onSelection={this.onSelection.bind(this)}
-                />
-              )}
-            </ContainerDimensions>
-          </div>
-          <div className={'Flows'}>
-            <ContainerDimensions>
-              {({ height, width }) => (
-                <RecommendFlows
-                  ref={r => (this.flows = r)}
-                  height={height}
-                  width={width}
-                  dataSet={this.state.data}
-                  onSelection={this.onSelection.bind(this)}
-                />
-              )}
-            </ContainerDimensions>
+          <div className={'MainChartContainer'}>
+            <div className={'Relations'}>
+              <ContainerDimensions>
+                {({ height, width }) => (
+                  <ChannelRelations
+                    ref={r => (this.relations = r)}
+                    height={height}
+                    width={width}
+                    dataSet={this.state.data}
+                    onSelection={this.onSelection.bind(this)}
+                  />
+                )}
+              </ContainerDimensions>
+            </div>
+            <div className={'Flows'}>
+              <ContainerDimensions>
+                {({ height, width }) => (
+                  <RecommendFlows
+                    ref={r => (this.flows = r)}
+                    height={height}
+                    width={width}
+                    dataSet={this.state.data}
+                    onSelection={this.onSelection.bind(this)}
+                  />
+                )}
+              </ContainerDimensions>
+            </div>
           </div>
         </div>
       )

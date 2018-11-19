@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Parquet;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
@@ -39,14 +40,14 @@ namespace YouTubeReader {
             var channelCfg = Cfg.LoadConfig();
             var seeds = channelCfg.Seeds;
 
-            var channels = await seeds.BlockTransform(Channel, Cfg.Parallel,
-                progressUpdate: p => Log.Information("Getting channel stats {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels") ));
-            await SaveParquet(channels, "Channels", analysisDir);
-
             var videos = await seeds.BlockTransform(Videos, Cfg.Parallel,
                 progressUpdate: p => Log.Information("Getting channel videos {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels")));
             await SaveParquet(videos.SelectMany(r => r), "Videos", analysisDir);
 
+            var channels = await seeds.BlockTransform(Channel, Cfg.Parallel,
+                progressUpdate: p => Log.Information("Getting channel stats {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels") ));
+            await SaveParquet(channels, "Channels", analysisDir);
+            
             var recommendsResult = await seeds.BlockTransform(Recommends, Cfg.Parallel,
                 progressUpdate: p => Log.Information("Getting channel video recommendations {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels")));
             await SaveParquet(recommendsResult.SelectMany(r => r), "Recommends", analysisDir);
@@ -54,13 +55,15 @@ namespace YouTubeReader {
 
         async Task<ICollection<VideoRow>> Videos(SeedChannel c) {
             var channelVids = await Yt.ChannelVideosCollection.Get(c.Id);
-            var vids = await channelVids.Videos.BlockTransform(v => Yt.Videos.Get(v.VideoId));
+            var vids = await channelVids.Vids.BlockTransform(v => Yt.Videos.Get(v.VideoId));
             return vids.Select(v => new VideoRow {
                 VideoId = v.VideoId,
                 Title = v.VideoTitle,
                 ChannelId = c.Id,
                 ChannelTitle = c.Title,
                 Views = (long)(v.Latest.Stats.Views ?? 0),
+                PublishedAt = v.Latest.PublishedAt.ToString("O"),
+                Tags = v.Latest.Tags.NotNull().ToArray()
             }).ToList();
         }
 
@@ -73,33 +76,30 @@ namespace YouTubeReader {
                 ViewCount = (long) (channel.Latest.Stats.ViewCount ?? 0),
                 LR = c.LR,
                 Type = c.Type,
-                Thumbnail = channel.Latest.Thumbnails.Medium.Url
+                Thumbnail = channel.Latest.Thumbnails.Medium.Url,
+                UpdatedAt = channel.Latest.Stats.Updated.ToString("O")
             };
         }
 
         async Task<IReadOnlyCollection<VideoStored>> ChannelVideoStats(ChannelStored c) {
             var channelVideos = await Yt.ChannelVideosCollection.Get(c.ChannelId);
-            var channelVideoStats = await channelVideos.Videos.BlockTransform(v => Yt.Videos.Get(v.VideoId));
+            var channelVideoStats = await channelVideos.Vids.BlockTransform(v => Yt.Videos.Get(v.VideoId));
             return channelVideoStats;
         }
 
         async Task<IReadOnlyCollection<RecommendRow>> Recommends(SeedChannel c) {
             var channelVids = await Yt.ChannelVideosCollection.Get(c.Id);
-            var recommends = await channelVids.Videos.BlockTransform(v => Yt.RecommendedVideosCollection.Get(v.VideoId));
+            var recommends = await channelVids.Vids.BlockTransform(v => Yt.RecommendedVideosCollection.Get(v.VideoId));
 
             var flattened = recommends
                 .SelectMany(r => r.Recommended, (from, rec) => new {from, rec})
                 .SelectMany(r => r.rec.Recommended, (update, to) => new RecommendRow {
                     ChannelId = to.ChannelId,
-                    ChannelTitle = to.ChannelTitle,
                     VideoId = to.VideoId,
-                    Title = to.VideoTitle,
                     FromChannelId = c.Id,
-                    FromChannelTitle = c.Title,
-                    FromTitle = update.from.VideoTitle,
                     FromVideoId = update.from.VideoId,
                     Rank = to.Rank,
-                    UpdatedAt = update.rec.Updated.ToString("yyyy-MM-dd HH:mm:ss")
+                    UpdatedAt = update.rec.Updated.DateString()
                 })
                 .Where(r => r.FromChannelId != r.ChannelId)
                 .ToList();
@@ -128,16 +128,10 @@ namespace YouTubeReader {
 
     public class RecommendRow {
         public string VideoId { get; set; }
-        public string Title { get; set; }
         public string ChannelId { get; set; }
-        public string ChannelTitle { get; set; }
         public string FromVideoId { get; set; }
-        public string FromTitle { get; set; }
         public string FromChannelId { get; set; }
-        public string FromChannelTitle { get; set; }
 
-        //public long FromVideoViews { get; set; } // needs to be a delta from previous snapshot
-        //public long ToVideoViews { get; set; } // delta from previous snap
         public int Rank { get; set; }
         public string UpdatedAt { get; set; }
     }
@@ -152,6 +146,7 @@ namespace YouTubeReader {
         //public long ChannelVideoViews { get; set; }
         //public string Month { get; set; }
         public string Thumbnail { get; set; }
+        public string UpdatedAt { get; set; }
     }
 
     public class VideoRow {
@@ -160,5 +155,7 @@ namespace YouTubeReader {
         public string ChannelId { get; set; }
         public string ChannelTitle { get; set; }
         public long Views { get; set; }
+        public string PublishedAt { get; set; }
+        public string[] Tags { get; set; }
     }
 }

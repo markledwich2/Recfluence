@@ -15,3 +15,7 @@ export function jsonEquals(a:any, b:any) {
 export function jsonClone<T>(o: T): T {
     return JSON.parse(JSON.stringify(o));
 }
+
+export async function delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms) );
+}

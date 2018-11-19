@@ -18,9 +18,12 @@ export interface ChannelData {
   Title: string
   Type: string
   SubCount: number
+  ViewCount: number
   ChannelVideoViews: number
   Thumbnail: string
   LR: string
+  PublishedFrom: string
+  PublishedTo: string
 }
 
 export interface RelationData {
@@ -31,10 +34,20 @@ export interface RelationData {
   FromVideoViews: number
   RecommendsViewFlow: number
   RecommendsPercent: number
+  UpdatedAt: string
 }
 
 export class YtNetworks {
   static ChannelIdPath: string = 'Channels.channelId'
+
+
+  static createChannelHighlight(channelId:string):DataSelection {
+    return { path:this.ChannelIdPath, type:SelectionType.Highlight, values:[channelId]}
+  }
+
+  static createChannelFilter(channelId:string):DataSelection {
+    return { path:this.ChannelIdPath, type:SelectionType.Filter, values:[channelId]}
+  }
 
   static async dataSet(path: string): Promise<YtData> {
     let channelsCsvTask = d3.csv(path + 'VisChannels.csv')
@@ -45,16 +58,16 @@ export class YtNetworks {
     return { channels, relations }
   }
 
-  static lrItems = new Map([
-      ['L', {color:'#3D5467', text:'Left'}],
-      ['C', {color:'#BFBCCB', text:'Center/Heterodox'}],
-      ['PL', {color:'#A26769', text:'Allways Punching Left'}],
-      ['R', {color:'#A4243B', text:'Right'}],
-      ['', {color:'#D8973C', text:'Unknown'}]
+  static lrMap = new Map([
+      ['L', {color:'#3c4455', text:'Left'}],
+      ['C', {color:'#7b4d5e', text:'Center/Heterodox'}],
+      ['PL', {color:'#c3833b', text:'Exclusively Critical of Left'}],
+      ['R', {color:'#d43a3d', text:'Right'}],
+      ['', {color:'#c53f42', text:'Unknown'}]
     ])
 
   static lrColor(key:string) {
-    return this.lrItems.get(key).color
+    return this.lrMap.get(key).color
   }
 }
 

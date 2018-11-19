@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Amazon;
+using Humanizer;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
@@ -50,7 +51,15 @@ namespace YouTubeReader {
         public int Related { get; set; } = 10;
         public DateTime From { get; set; }
         public DateTime? To { get; set; }
-        public int DaysToUpdateVideoStats { get; set; } = 90;
+
+
+        public TimeSpan VideoDead { get; set; } = 365.Days();
+        public TimeSpan VideoOld { get; set; } = 30.Days();
+        public TimeSpan RefreshOldVideos { get; set; } = 7.Days();
+        public TimeSpan RefreshYoungVideos { get; set; } = 24.Hours();
+        public TimeSpan RefreshChannel { get; set; } = 7.Days();
+        public TimeSpan RefreshRelatedVideos { get; set; } = 30.Days();
+        public TimeSpan RefreshChannelVideos { get; set; } = 24.Hours();
 
         [TypeConverter(typeof(StringConverter<FPath>))]
         public FPath CrawlConfigDir { get; set; }

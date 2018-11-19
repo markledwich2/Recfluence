@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Amazon.S3;
@@ -14,6 +15,7 @@ using Amazon.S3.Transfer;
 using Humanizer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Polly;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Security;
@@ -44,12 +46,16 @@ namespace YouTubeReader {
         readonly AmazonS3Client S3;
 
         string FilePath(StringPath path) => BasePath.Add(path).WithExtension(".json.gz");
+        Policy S3Policy = Policy.Handle<HttpRequestException>()
+            .WaitAndRetryAsync(new[] { 1.Seconds(), 4.Seconds(), 30.Seconds() });
 
         [DebuggerHidden]
         public async Task<T> Get<T>(StringPath path) where T : class {
             GetObjectResponse response = null;
             try {
-                response = await S3.GetObjectAsync(new GetObjectRequest {BucketName = Cfg.Bucket, Key = FilePath(path)});
+
+                response = await S3Policy.ExecuteAsync(() => 
+                    S3.GetObjectAsync(new GetObjectRequest {BucketName = Cfg.Bucket, Key = FilePath(path)}));
             }
             catch (AmazonS3Exception e) {
                 if (e.ErrorCode == "NoSuchBucket" || e.ErrorCode == "NotFound" || e.ErrorCode == "NoSuchKey")
@@ -65,18 +71,22 @@ namespace YouTubeReader {
             }
         }
 
+
+
         public async Task Set<T>(StringPath path, T item) {
+
+
             using (var memStream = new MemoryStream()) {
                 using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true))
                 using (var tw = new StreamWriter(zipWriter, Encoding.UTF8)) {
                     JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
                 }
 
-                var response = await S3.PutObjectAsync(new PutObjectRequest {
+                var res = await S3Policy.ExecuteAsync(() => S3.PutObjectAsync(new PutObjectRequest {
                     BucketName = Cfg.Bucket,
                     Key = FilePath(path),
                     InputStream = memStream, AutoCloseStream = false, ContentType = "application/x-gzip"
-                });
+                }));
             }
         }
 

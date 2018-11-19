@@ -1,13 +1,26 @@
-g.chart line.link {
-  stroke: #aaa;
+* {
+  margin: 0;
+  padding: 0;
 }
 
-g.chart .link {
+html {
+  font-size: 11px;
+  background-color: rgb(30, 30, 30);
+}
+@media all and (min-width: 600px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+g.chart line.link {
+  stroke: #aaa;
   opacity: 0.3;
 }
 
 g.chart path.link {
   fill: none;
+  opacity: 0.3;
 }
 
 g.chart text {
@@ -17,6 +30,10 @@ g.chart text {
 
 g.chart text tspan.subtitle {
   fill: #aaa;
+}
+
+g.chart text tspan.subtitle-bold {
+  fill: #ccc;
 }
 
 g.chart g.labels rect {
@@ -37,7 +54,6 @@ g.node .shape-selected {
 }
 
 body {
-  background-color: rgb(30, 30, 30);
   padding: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 1em;
@@ -65,8 +81,8 @@ p {
 }
 
 a {
-    color: rgb(148, 168, 172);
-    text-decoration: none;
+  color: rgb(148, 168, 172);
+  text-decoration: none;
 }
 
 ul.legend {
@@ -87,48 +103,76 @@ div.ChannelRelationPage svg.chart {
 }
 
 div.ChannelRelationPage {
-  display: flex;
-  flex-flow: row wrap;
-  align-items: stretch;
   width: 100%;
 }
 
 div.ChannelRelationPage > * {
-  margin: 1em;
+  margin: 10px;
 }
 
-div.ChannelRelationPage > .Relations {
+div.MainChartContainer > * {
+  margin: 10px;
+}
+
+div.MainChartContainer {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: stretch;
+  flex: 1;
+}
+
+div.MainChartContainer > .Relations {
   height: 50vh;
   min-height: 400px;
   flex: 1 100%;
 }
 
-div.ChannelRelationPage > .Flows {
+div.MainChartContainer > .Flows {
   height: 50vh;
-  min-height: 400px;
+  min-height: 600px;
   flex: 1 100%;
 }
 
 div.ChannelRelationPage > .Title {
-  flex: 1 100%;
-  height: 150px;
   background-color: rgb(37, 37, 38);
-  padding: 2px 20px;
+  padding: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 8em;
+  justify-content: space-between;
 }
 
-@media all and (min-width: 1280px) {
-  div.ChannelRelationPage > .Relations {
+div.ChannelRelationPage > .Title > .Card {
+  display: flex;
+  height: 8em;
+  margin-left: 1em;
+  flex:3 30em
+}
+
+div.ChannelRelationPage > .Title > .Search {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex:1 20em
+}
+
+@media all and (min-width: 1600px) {
+  div.MainChartContainer > .Relations {
+    height: 100%;
     flex: 3 auto;
-    min-width: 600px;
-    height: 80vh;
   }
 
-  div.ChannelRelationPage > .Flows {
+  div.MainChartContainer > .Flows {
     flex: 2 auto;
-    min-width: 600px;
-    height: 80vh;
+    height: 100%;
   }
 
-  div.ChannelRelationPage > .Title {
+  div.ChannelRelationPage {
+    position: absolute;
+    height: 99vh;
+    display: flex;
+    flex-flow: column;
+    justify-content: stretch;
   }
 }

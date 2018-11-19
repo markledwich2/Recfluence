@@ -40,8 +40,10 @@ namespace YouTubeReader {
                     return response;
                 }
                 catch (GoogleApiException ex) {
-                    if (ex.HttpStatusCode == HttpStatusCode.Forbidden)
+                    if (ex.HttpStatusCode == HttpStatusCode.Forbidden) {
                         AvailableKeys.Remove(request.Key);
+                        Log.Error(ex, "Quota exceeded, no longer using key {Key}", request.Key);
+                    }
                     else
                         throw;
                 }
@@ -157,7 +159,8 @@ namespace YouTubeReader {
                     Likes = v.Statistics?.LikeCount,
                     Dislikes = v.Statistics?.DislikeCount,
                     Updated = DateTime.UtcNow
-                }
+                },
+                Updated = DateTime.Now
             };
             if (v.Snippet.Tags != null)
                 r.Tags.AddRange(v.Snippet.Tags);
@@ -171,7 +174,15 @@ namespace YouTubeReader {
         public async Task<VideoData> VideoData(string id) {
             var s = YtService.Videos.List("snippet,topicDetails,statistics");
             s.Id = id;
-            var response = await GetResponse(s);
+            
+            VideoListResponse response;
+            try {
+                response = await GetResponse(s);
+            }
+            catch (GoogleApiException ex) {
+                Log.Error("Error {ex} VideoData for {VideoId} ", ex, id);
+                return null;
+            }
 
             var v = response.Items.FirstOrDefault();
             if (v == null) return null;
@@ -227,13 +238,13 @@ namespace YouTubeReader {
             s.PublishedAfter = publishedAfter;
             s.PublishedBefore = publishBefore;
             s.MaxResults = 50;
-            s.Order = SearchResource.ListRequest.OrderEnum.ViewCount;
+            s.Order = SearchResource.ListRequest.OrderEnum.Date;
             s.Type = "video";
 
-            var topVideos = new List<ChannelVideoListItem>();
+            var vids = new List<ChannelVideoListItem>();
             while (true) {
                 var res = await GetResponse(s);
-                topVideos.AddRange(res.Items.Where(v => v.Snippet.PublishedAt != null).Select(v => new ChannelVideoListItem {
+                vids.AddRange(res.Items.Where(v => v.Snippet.PublishedAt != null).Select(v => new ChannelVideoListItem {
                     VideoId = v.Id.VideoId,
                     VideoTitle = v.Snippet.Title,
                     PublishedAt = (DateTime)v.Snippet.PublishedAt,
@@ -244,7 +255,7 @@ namespace YouTubeReader {
                 s.PageToken = res.NextPageToken;
             }
 
-            return topVideos;
+            return vids;
         }
 
         public async Task<ChannelData> ChannelData(string id) {
