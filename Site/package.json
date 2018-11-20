@@ -19,6 +19,8 @@
     "@types/papaparse": "^4.5.5",
     "@types/react": "^16.7.6",
     "@types/react-dom": "^16.0.9",
+    "@types/react-router": "^4.4.1",
+    "@types/react-router-dom": "^4.3.1",
     "@types/react-select": "^2.0.7",
     "chai": "^4.2.0",
     "clone": "^2.1.2",
@@ -38,6 +40,8 @@
     "react": "^16.6.3",
     "react-container-dimensions": "^1.4.1",
     "react-dom": "^16.6.3",
+    "react-router": "^4.3.1",
+    "react-router-dom": "^4.3.1",
     "react-select": "^2.1.1",
     "react-spinners": "^0.4.7"
   }

@@ -4,13 +4,12 @@ import { RecommendFlows } from './RecommendFlows'
 import { ChannelRelations } from './ChannelRelations'
 import { YtData, YtNetworks } from '../ts/YtData'
 import { GridLoader } from 'react-spinners'
-import { DataSelections, DataSelection, ChartProps, InteractiveDataState, InteractiveDataProps } from '../ts/Charts'
+import { DataSelections, DataSelection, SelectionType, ChartProps, InteractiveDataState, InteractiveDataProps } from '../ts/Charts'
 import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
+import Select from 'react-select/lib/Select'
 
-interface Props {
-  dataPath: string
-}
+interface Props {}
 
 interface State {
   isLoading: boolean
@@ -18,50 +17,71 @@ interface State {
 }
 
 export class ChannelRelationsPage extends React.Component<Props, State> {
-  constructor(props: Props) {
+  constructor(props: any) {
     super(props)
+
+    this.selections = new DataSelections()
+    const params = new URLSearchParams(location.search)
+    if (params.has('c')) {
+      this.selections.filters.push({ path: YtNetworks.ChannelIdPath, values: [params.get('c')], type: SelectionType.Filter })
+    }
   }
 
   state: Readonly<State> = {
     isLoading: false,
     data: null
   }
+
+  selections: DataSelections
+  relations: ChannelRelations
+  flows: RecommendFlows
+  title: ChannelTitle
+
   componentDidMount() {
     this.load()
   }
 
-  componentWillUnmount() {}
-
   async load() {
     if (this.state.isLoading) return
-    let data = await YtNetworks.dataSet(this.props.dataPath)
+    let data = await YtNetworks.dataSet('https://ytnetworks.azureedge.net/data/results/')
     try {
       this.setState({ data, isLoading: false })
     } catch (e) {}
   }
 
-  selections: DataSelections = new DataSelections()
-
   onSelection(selection: DataSelection) {
     this.selections.setSelection(selection)
-    this.graphComponents()
-      .filter(g => g)
-      .forEach(g => g.setState({ selections: this.selections }))
+
+    const params = new URLSearchParams(location.search)
+    if ((selection.type == SelectionType.Filter && selection.path == YtNetworks.ChannelIdPath) || selection.path == null) {
+      let channelId = selection.path == null ? null : selection.values.find(() => true)
+      if (params.has('c')) params.delete('c')
+      if (channelId) params.append('c', channelId)
+      history.replaceState({}, '', `${location.pathname}?${params}`)
+    }
+
+    this.updateComponentSelections()
   }
 
-  relations: ChannelRelations
-  flows: RecommendFlows
-  title: ChannelTitle
+  private updateComponentSelections() {
+    let components = this.graphComponents()
+    components.forEach(g => g.setState({ selections: this.selections }))
+  }
 
   graphComponents(): Array<React.Component<InteractiveDataProps<YtData>, InteractiveDataState>> {
-    return [this.relations, this.flows, this.title]
+    return [this.relations, this.flows, this.title].filter(g => g)
   }
 
   render() {
     if (this.state.data) {
       return (
         <div className={'ChannelRelationPage'}>
-          <ChannelTitle ref={r => (this.title = r)} dataSet={this.state.data} onSelection={this.onSelection.bind(this)} />
+          <ChannelTitle
+            ref={r => (this.title = r)}
+            dataSet={this.state.data}
+            onSelection={this.onSelection.bind(this)}
+            initialSelection={this.selections}
+          />
 
           <div className={'MainChartContainer'}>
             <div className={'Relations'}>
@@ -73,6 +93,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                     width={width}
                     dataSet={this.state.data}
                     onSelection={this.onSelection.bind(this)}
+                    initialSelection={this.selections}
                   />
                 )}
               </ContainerDimensions>
@@ -86,6 +107,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                     width={width}
                     dataSet={this.state.data}
                     onSelection={this.onSelection.bind(this)}
+                    initialSelection={this.selections}
                   />
                 )}
               </ContainerDimensions>

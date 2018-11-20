@@ -14,8 +14,6 @@ interface Option {
   label: string
 }
 
-
-
 export class SearchChannels extends React.Component<Props, State> {
   chart: DataComponentHelper = new DataComponentHelper(this)
 
@@ -28,20 +26,22 @@ export class SearchChannels extends React.Component<Props, State> {
 
   onUserInteracted = () => {
     let r = this.ref as any
-    const focusedOption = r.select.state.focusedOption
+    delay(1).then(() => {
+      const focusedOption = r.select.state.focusedOption
     
-    if (this.lastFocusedOption !== focusedOption && r.state.menuIsOpen) {
-      this.lastFocusedOption = focusedOption
-      this.chart.setSelection(YtNetworks.createChannelHighlight(focusedOption.value))
-    }
+      if (this.lastFocusedOption !== focusedOption && r.state.menuIsOpen) {
+        this.lastFocusedOption = focusedOption
+        this.chart.setSelection(YtNetworks.createChannelHighlight(focusedOption.value))
+      }
+    })
   }
 
   render() {
     //let channelId = this.chart.filteredItems(YtNetworks.ChannelIdPath).find(() => true)
     let options = _(this.props.dataSet.channels)
       .map(c => ({ value: c.ChannelId, label: c.Title } as Option))
+      .orderBy(o => o.label)
       .value()
-    //todo selected option for current channelId
 
     return (
       <div onMouseMove={this.onUserInteracted} onClick={this.onUserInteracted}>
@@ -54,7 +54,7 @@ export class SearchChannels extends React.Component<Props, State> {
           styles={{
             option: (p, s) => ({ ...p, color: '#ccc', backgroundColor: s.isFocused ? '#666' : 'none' }),
             control: styles => ({ ...styles, backgroundColor: 'none', borderColor: '#444', outline: 'none' }),
-            // menu: styles => ({ ...styles, backgroundColor: '#333' }),
+            menu: styles => ({ ...styles, backgroundColor: '#333' }),
             dropdownIndicator: styles => ({ ...styles, color: '#666' }),
             indicatorSeparator: styles => ({})
             //valueContainer: styles => ({}),

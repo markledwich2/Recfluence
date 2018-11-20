@@ -45,7 +45,7 @@ export class RecommendFlows extends React.Component<Props, State> {
 
   chart: DataComponentHelper = new DataComponentHelper(this)
   state: Readonly<State> = {
-    selections: new DataSelections()
+    selections: this.props.initialSelection
   }
 
   dataRender: () => void
@@ -144,15 +144,22 @@ export class RecommendFlows extends React.Component<Props, State> {
       .map(c => ({ ...c, shapeId: 'out.' + c.channelId, mode: NodeMode.To } as ChannelNode))
       .value()
     let outLinks = links.filter(r => r.source == channelId).map(r => ({ ...r, target: 'out.' + r.target } as ChannelLink))
-    let mainChannel:ChannelNode = {
+    let mainChannel: ChannelNode = {
       ...nodes.find(c => c.channelId == channelId),
       mode: NodeMode.Main,
       incomming: _.sum(inLinks.map(l => l.value)),
       outgoing: _.sum(outLinks.map(l => l.value))
     } // calculate value now as to ignore the filter
     let channels = inChannels.concat(outChannels).concat([{ ...mainChannel, shapeId: mainChannel.channelId } as ChannelNode])
-    let finalLinks = _(inLinks).orderBy(l => l.value, 'desc').slice(0, maxNodes)
-      .concat(_(outLinks).orderBy(l => l.value, 'desc').slice(0, maxNodes).value())
+    let finalLinks = _(inLinks)
+      .orderBy(l => l.value, 'desc')
+      .slice(0, maxNodes)
+      .concat(
+        _(outLinks)
+          .orderBy(l => l.value, 'desc')
+          .slice(0, maxNodes)
+          .value()
+      )
       //.filter(l => channels.some(c => c.shapeId == l.target) && channels.some(c => c.shapeId == l.source))
       .value()
     channels = channels.filter(c => finalLinks.some(l => l.source == c.shapeId || l.target == c.shapeId))
@@ -227,6 +234,7 @@ export class RecommendFlows extends React.Component<Props, State> {
       // update the nodes rectangle properties
       let mergeNode = updateNode.merge(enterNode)
       mergeNode
+        .style('display', 'inherit')
         .style('opacity', 1)
         .select('rect')
         .attr('x', d => d.x0)
@@ -234,7 +242,6 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('height', d => Math.max(d.y1 - d.y0, 1))
         .attr('width', d => d.x1 - d.x0)
         .attr('fill', d => YtNetworks.lrColor(d.lr))
-        
 
       //highlight shape when selected
       if (channelId)
@@ -281,7 +288,7 @@ export class RecommendFlows extends React.Component<Props, State> {
                 </tspan>
                 <tspan className={'subtitle'}> received</tspan>
               </>
-            )}           
+            )}
             {outgoing > 0 && (
               <>
                 <tspan className={'subtitle-bold'} dy={'1.3em'} x={0}>
@@ -290,7 +297,6 @@ export class RecommendFlows extends React.Component<Props, State> {
                 <tspan className={'subtitle'}> viewed recommendations</tspan>
               </>
             )}
-
           </text>
         )
       }
@@ -300,10 +306,15 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('transform', d => `translate(${txtMode.get(d.mode).getX(d)}, ${txtMode.get(d.mode).getY(d)})`) //translate makes g coodinates relative
         .html(d => renderToString(labelText(d)))
 
-      updateNode
-        .exit()
+      let exitNode = updateNode.exit()
+
+      exitNode
         .transition()
+        .duration(300)
         .style('opacity', 0)
+        
+
+      exitNode.transition().delay(300).remove()
     }
 
     this.dataRender()

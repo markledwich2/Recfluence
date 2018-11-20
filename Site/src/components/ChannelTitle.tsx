@@ -12,7 +12,7 @@ interface Props extends InteractiveDataProps<YtData> {}
 export class ChannelTitle extends React.Component<Props, State> {
   chart: DataComponentHelper = new DataComponentHelper(this)
   state: Readonly<State> = {
-    selections: new DataSelections()
+    selections: this.props.initialSelection
   }
 
   channel() {

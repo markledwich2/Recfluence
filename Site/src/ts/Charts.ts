@@ -4,6 +4,7 @@ import * as d3 from 'd3'
 export interface InteractiveDataProps<D>  {
   dataSet: D
   onSelection?: (selection: DataSelection) => void
+  initialSelection:DataSelections
 }
 
 export interface ChartProps<D> extends InteractiveDataProps<D>{
@@ -32,6 +33,11 @@ export class DataSelections {
   clearFilters() {
     this.filters = []
   }
+
+  filteredItems(path: string): string[] {
+    let r = this.filters.find(s => s.path == path)
+    return r != null && r.values != null ? r.values : []
+  }
 }
 
 export interface DataSelection {
@@ -41,8 +47,8 @@ export interface DataSelection {
 }
 
 export enum SelectionType {
-  Filter,
-  Highlight
+  Filter = 'filter',
+  Highlight = 'highlight'
 }
 
 export class DataComponentHelper {
@@ -78,11 +84,13 @@ export class DataComponentHelper {
       return { path: path, values: value == null ? [] : [value], type: SelectionType.Filter }
     }
 
+    function onClick(s:DataComponentHelper, d:N) {
+      d3.event.stopPropagation()
+      s.setSelection(createFilter(selectionPath, getValue(d)))
+    }
+
     selector
-      .on('click', d => {
-        d3.event.stopPropagation()
-        this.setSelection(createFilter(selectionPath, getValue(d)))
-      })
+      .on('click', d => onClick(this, d))
       .on('mouseover', d => this.setSelection(createHighlight(selectionPath, getValue(d))))
       .on('mouseout', () => this.setSelection(createHighlight(selectionPath, null)))
   }

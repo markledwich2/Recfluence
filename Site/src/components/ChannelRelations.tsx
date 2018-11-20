@@ -6,15 +6,16 @@ import { Graph, YtNetworks, YtData } from '../ts/YtData'
 import { delay } from '../ts/Utils'
 import { ChartProps, DataSelections, DataComponentHelper, InteractiveDataState } from '../ts/Charts'
 import * as _ from 'lodash'
-import { lab } from 'd3';
+import { lab } from 'd3'
+import { Properties } from 'csstype'
 
 interface State extends InteractiveDataState {}
 interface Props extends ChartProps<YtData> {}
-interface RelationSimLink extends d3.SimulationLinkDatum<ChannelSimNode> {
+interface Link extends d3.SimulationLinkDatum<Node> {
   strength: number
 }
 
-interface ChannelSimNode extends d3.SimulationNodeDatum {
+interface Node extends d3.SimulationNodeDatum {
   channelId: string
   size: number
   type: string
@@ -29,7 +30,7 @@ export class ChannelRelations extends React.Component<Props, State> {
   chart: DataComponentHelper = new DataComponentHelper(this)
 
   state: Readonly<State> = {
-    selections: new DataSelections()
+    selections: this.props.initialSelection
   }
 
   componentDidMount() {
@@ -37,7 +38,7 @@ export class ChannelRelations extends React.Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    this.stateRender()
+    this.stateRender(prevProps)
   }
 
   render() {
@@ -71,7 +72,7 @@ export class ChannelRelations extends React.Component<Props, State> {
             size: +c.ChannelVideoViews,
             type: c.Type,
             lr: c.LR
-          } as ChannelSimNode)
+          } as Node)
       )
       .value()
 
@@ -82,7 +83,7 @@ export class ChannelRelations extends React.Component<Props, State> {
             source: l.FromChannelId,
             target: l.ChannelId,
             strength: +l.RecommendsPercent
-          } as RelationSimLink)
+          } as Link)
       )
       .filter(
         l =>
@@ -104,36 +105,28 @@ export class ChannelRelations extends React.Component<Props, State> {
     return { nodes: keyedNodes, links: links, isConnected }
   }
 
-  getLayout(nodes: ChannelSimNode[], links: RelationSimLink[]) {
-    let w = this.props.width
-    let h = this.props.height
-
+  getLayout(nodes: Node[], links: Link[]) {
+    let simSize = 1024
     let maxStrength = d3.max(links, l => l.strength)
     let maxSize = d3.max(nodes, n => n.size)
-    let getNodeRadius = (d: ChannelSimNode) => Math.sqrt(d.size > 0 ? d.size / maxSize : 1) * 30
-    let getLineWidth = (d: RelationSimLink) => (d.strength / maxStrength) * 40
-    let centerForce = d3.forceCenter()
+    let getNodeRadius = (d: Node) => Math.sqrt(d.size > 0 ? d.size / maxSize : 1) * 30
+    let getLineWidth = (d: Link) => (d.strength / maxStrength) * 40
+    let centerForce = d3.forceCenter(simSize / 2, simSize / 2)
     let force = d3
-      .forceSimulation<ChannelSimNode, RelationSimLink>(nodes)
+      .forceSimulation<Node, Link>(nodes)
       .force('charge', d3.forceManyBody().strength(-100))
       .force('center', centerForce)
       .force(
         'link',
         d3
-          .forceLink<ChannelSimNode, RelationSimLink>(links)
+          .forceLink<Node, Link>(links)
           .distance(1)
           .id(d => d.channelId)
           .strength(d => (d.strength / maxStrength) * 0.3)
       )
-      .force('collide', d3.forceCollide<ChannelSimNode>(getNodeRadius))
+      .force('collide', d3.forceCollide<Node>(getNodeRadius))
 
-    let onResize = () => {
-      centerForce.x(this.props.width / 2)
-      centerForce.y(this.props.height / 2)
-    }
-    onResize()
-
-    return { force, getLineWidth, getNodeRadius, onResize }
+    return { force, getLineWidth, getNodeRadius, simSize }
   }
 
   async loadChart() {
@@ -157,17 +150,20 @@ export class ChannelRelations extends React.Component<Props, State> {
 
     let nodesEnter = nodesContainer
       .selectAll('g')
-      .data(nodes)
+      .data(nodes, (n: Node) => n.channelId)
       .enter()
+      .append('g')
+
+    let nodesCircle = nodesEnter
       .append<SVGCircleElement>('circle')
       .attr('class', 'shape')
       .attr('r', lay.getNodeRadius)
       .attr('fill', d => YtNetworks.lrColor(d.lr))
 
-    this.chart.addDataShapeEvents(nodesEnter, d => d.channelId, YtNetworks.ChannelIdPath)
+    this.chart.addDataShapeEvents(nodesCircle, d => d.channelId, YtNetworks.ChannelIdPath)
 
     let labelPadding = 2
-    let layoutLabels = layoutLabel<ChannelSimNode[]>(layoutGreedy())
+    let layoutLabels = layoutLabel<Node[]>(layoutGreedy())
       .size((_, i, g) => {
         let e = g[i] as Element
         let textSize = e.getElementsByTagName('text')[0].getBBox()
@@ -178,14 +174,23 @@ export class ChannelRelations extends React.Component<Props, State> {
           .padding(labelPadding)
           .value(d => d.title)
       )
+
     let labelsGroup = container
       .append('g')
       .attr('class', 'labels')
       .datum(nodes)
       .call(layoutLabels)
 
-    // label layout works at the group level, re-join to data
-    let labels = labelsGroup.selectAll('text').data(nodes)
+    let updateLabels = (fast:boolean) => {
+      if(fast) {
+        labelsGroup.selectAll<SVGGElement, Node>("g.label")
+          .attr('transform', d => `translate(${d.x}, ${d.y})`)
+      }
+      else
+        labelsGroup.call(layoutLabels)
+    }
+
+    let labels = labelsGroup.selectAll<SVGTextElement, Node>('text')
     labels.attr('pointer-events', 'none')
 
     let updateVisibility = () => {
@@ -193,23 +198,28 @@ export class ChannelRelations extends React.Component<Props, State> {
       let filtered = this.chart.filteredItems(YtNetworks.ChannelIdPath)
       let lightedFiltered = lighted.concat(filtered)
 
-      let nodeLightedFiltered = (c: ChannelSimNode) =>
-        lightedFiltered.some(id => id == c.channelId) || lightedFiltered.some(id => isConnected(id, c.channelId))
+      let nodeFiltered = (c:Node) => filtered.some(id => id == c.channelId)
+      let nodeLightedFiltered = (c: Node) => lightedFiltered.some(id => id == c.channelId)
+      let nodeRelated = (c: Node) => lightedFiltered.some(id => isConnected(id, c.channelId))
 
-      nodesEnter.style('opacity', d => (lightedFiltered.length == 0 || nodeLightedFiltered(d) ? 1 : 0.3))
-      nodesEnter.style('stroke', d => (filtered.some(id => id == d.channelId) ? '#ddd' : null))
-      labels.style('visibility', d => (nodeLightedFiltered(d) ? 'visible' : 'hidden'))
+      let showRelatedLabels = this.props.width > 1024
+
+      nodesCircle.style('opacity', d => (lightedFiltered.length == 0 || nodeLightedFiltered(d) ? 1 : 0.3))
+      nodesCircle.style('stroke', d => nodeFiltered(d) ? '#ddd' : null)
+      labels.style('display', d => nodeLightedFiltered(d) || (showRelatedLabels && nodeRelated(d)) ?  null :'none')
+      //labels.style('fill', d =>  nodeLightedFiltered(d) ? null : '#aaa')
+      labels.style('font-weight', d =>  nodeLightedFiltered(d) ? 'bold' : null)
 
       linkEnter.style('opacity', d => {
-        let s = d.source as ChannelSimNode
-        var t = d.target as ChannelSimNode
+        let s = d.source as Node
+        var t = d.target as Node
         return lightedFiltered.some(id => s.channelId == id || t.channelId == id) ? 0.4 : 0
       })
     }
 
-    function updatePositions(node: d3.Selection<d3.BaseType, ChannelSimNode, d3.BaseType, {}>, width: number, height: number) {
-      var dx = (d: ChannelSimNode) => d.x //Math.max(lay.getNodeRadius(d), Math.min(width - lay.getNodeRadius(d), d.x))
-      var dy = (d: ChannelSimNode) => d.y //Math.max(lay.getNodeRadius(d), Math.min(height - lay.getNodeRadius(d), d.y))
+    function updatePositions(node: d3.Selection<d3.BaseType, Node, d3.BaseType, {}>) {
+      var dx = (d: Node) => d.x
+      var dy = (d: Node) => d.y
 
       node.attr('transform', d => {
         d.x = dx(d)
@@ -219,44 +229,66 @@ export class ChannelRelations extends React.Component<Props, State> {
 
       let fixna = (x?: number) => (x != null && isFinite(x) ? x : 0)
       linkEnter
-        .attr('x1', d => fixna((d.source as ChannelSimNode).x))
-        .attr('y1', d => fixna((d.source as ChannelSimNode).y))
-        .attr('x2', d => fixna((d.target as ChannelSimNode).x))
-        .attr('y2', d => fixna((d.target as ChannelSimNode).y))
+        .attr('x1', d => fixna((d.source as Node).x))
+        .attr('y1', d => fixna((d.source as Node).y))
+        .attr('x2', d => fixna((d.target as Node).x))
+        .attr('y2', d => fixna((d.target as Node).y))
     }
 
-    let zoomToFit = (width: number, height: number) => {
-      var bounds = nodesContainer.node().getBBox() // BBOX is the size of the container of drawn nodes
+    let zoomToExpectedScale = (width: number, height: number) => zoom(width, height, new DOMRect(-39, 17, 1216, 956), 0)
+    let zoomToFit = (width: number, height: number) => zoom(width, height, nodesContainer.node().getBBox(), 1000)
+
+    let zoom = (width: number, height: number, bounds: DOMRect, duration: number) => {
       let midX = bounds.x + bounds.width / 2
       let midY = bounds.y + bounds.height / 2
       var scale = 1 / Math.max(bounds.width / width, bounds.height / height)
-      var translate = { w: width / 2 - scale * midX, h: height / 2 - scale * midY }
+      var t = { x: width / 2 - scale * midX, y: height / 2 - scale * midY, scale: scale }
 
-      let trans = d3.zoomIdentity.translate(translate.w, translate.h).scale(scale)
-      container.attr('transform', d=> trans.toString())
+      let trans = d3.zoomIdentity.translate(t.x, t.y).scale(t.scale)
+      let s = duration > 0 ? container.transition().duration(duration) : container
+      s.attr('transform', () => trans.toString())
       labels.attr('transform', d => `scale(${1/trans.k})`) // undo the zoom on labels
     }
 
-    this.stateRender = () => {
-      let svg = d3.select(this.ref)
-      svg.attr('width', this.props.width)
-      svg.attr('height', this.props.height)
+    let ticks = 0
+    let stopped = false
+    let timesResized = 0
 
-      lay.onResize()
-      zoomToFit(this.props.width, this.props.height)
-      labelsGroup.call(layoutLabels)
+    let stateRender = (prevProps: Props) => {
+      let svg = d3.select(this.ref)
+
+      if (prevProps == null || prevProps.width != this.props.width || prevProps.height != this.props.height) {
+        svg.attr('width', this.props.width)
+        svg.attr('height', this.props.height)
+        if(timesResized == 0)
+          zoomToExpectedScale(this.props.width, this.props.height)
+        if(stopped)
+          zoomToFit(this.props.width, this.props.height) // first zoom should be to the expected bounds, nt the current ones
+        updateLabels(false)
+        timesResized++
+      }
+
       //tick()
       updateVisibility()
     }
 
-    let onTick = () => nodesEnter.call(d => updatePositions(d, this.props.width, this.props.height))
-    for (var i = 0; i < 10; i++) lay.force.tick()
-    onTick()
-    updateVisibility()
-    await delay(1)
+    this.stateRender = stateRender
+
+    let onTick = () => {
+      nodesEnter.call(d => updatePositions(d))
+      updateLabels(true)
+      ticks++
+      if (ticks > 150) {
+        lay.force.stop()
+        stopped = true
+        stateRender(null)
+      }
+    }
+
+    //for (var i = 0; i < 10; i++) lay.force.tick()
     lay.force.on('tick', onTick)
-    this.stateRender()
+    this.stateRender(null)
   }
 
-  stateRender: () => void
+  stateRender: (prevProps: Props) => void
 }
