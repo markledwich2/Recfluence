@@ -10,10 +10,10 @@ steps:
 - task: Npm@1
   inputs:
     command: 'install'
-    workingDirectory: 'Site'
+    workingDirectory: '/Site'
 
 - task: Npm@1
   inputs:
     command: 'custom'
     customCommand: 'build'
-    workingDirectory: 'Site'
+    workingDirectory: '/Site'

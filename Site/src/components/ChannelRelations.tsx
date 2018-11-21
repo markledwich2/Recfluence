@@ -204,7 +204,7 @@ export class ChannelRelations extends React.Component<Props, State> {
 
       let showRelatedLabels = this.props.width > 1024
 
-      nodesCircle.style('opacity', d => (lightedFiltered.length == 0 || nodeLightedFiltered(d) ? 1 : 0.3))
+      nodesCircle.style('opacity', d => (lightedFiltered.length == 0 || nodeLightedFiltered(d) || nodeRelated(d) ? 1 : 0.4))
       nodesCircle.style('stroke', d => nodeFiltered(d) ? '#ddd' : null)
       labels.style('display', d => nodeLightedFiltered(d) || (showRelatedLabels && nodeRelated(d)) ?  null :'none')
       //labels.style('fill', d =>  nodeLightedFiltered(d) ? null : '#aaa')
@@ -263,7 +263,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       updateVisibility()
     }
 
-    function onTick() {
+    let onTick = () => {
       updatePositions()
       updateLabels(true)
       ticks++
