@@ -13,3 +13,9 @@ steps:
 - script: npm run build
   workingDirectory: './Site'
   name: 'build'
+
+- task: CopyFiles@2
+  displayName: Copy site
+  inputs:
+    SourceFolder: ./Site/public/
+    TargetFolder: '$(build.artifactstagingdirectory)/Site'
