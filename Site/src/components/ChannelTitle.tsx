@@ -1,6 +1,6 @@
 import * as React from 'react'
-import { InteractiveDataProps, InteractiveDataState, DataComponentHelper, DataSelections } from '../ts/Charts'
-import { YtNetworks, Graph, YtData } from '../ts/YtData'
+import { InteractiveDataProps, InteractiveDataState, DataComponentHelper, DataSelections } from '../common/Charts'
+import { YtNetworks, Graph, YtData } from '../common/YtData'
 import { compactInteger } from 'humanize-plus'
 import * as _ from 'lodash'
 import { SearchChannels } from '../components/SearchChannels'
@@ -52,7 +52,7 @@ export class ChannelTitle extends React.Component<Props, State> {
           )}
         </div>
         <div className={'Search'} style={{}}>
-          <SearchChannels dataSet={this.props.dataSet} onSelection={this.props.onSelection} />
+          <SearchChannels dataSet={this.props.dataSet} onSelection={this.props.onSelection} initialSelection={this.props.initialSelection} />
         </div>
       </div>
     )

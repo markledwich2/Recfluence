@@ -2,9 +2,9 @@ import * as React from 'react'
 import * as d3 from 'd3'
 import '../styles/Main.css'
 import { layoutTextLabel, layoutGreedy, layoutLabel } from 'd3fc-label-layout'
-import { Graph, YtNetworks, YtData } from '../ts/YtData'
-import { delay } from '../ts/Utils'
-import { ChartProps, DataSelections, DataComponentHelper, InteractiveDataState } from '../ts/Charts'
+import { Graph, YtNetworks, YtData } from '../common/YtData'
+import { delay } from '../common/Utils'
+import { ChartProps, DataSelections, DataComponentHelper, InteractiveDataState } from '../common/Charts'
 import * as _ from 'lodash'
 import { lab } from 'd3'
 import { Properties } from 'csstype'
@@ -87,7 +87,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       )
       .filter(
         l =>
-          l.strength > 0.03 &&
+          l.strength > 0.04 &&
           (nodes.some(c => c.channelId == (l.source as string)) && nodes.some(c => c.channelId == (l.target as string)))
       )
       .value()
@@ -181,7 +181,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       .datum(nodes)
       .call(layoutLabels)
 
-    let updateLabels = (fast:boolean) => {
+    function updateLabels(fast:boolean) {
       if(fast) {
         labelsGroup.selectAll<SVGGElement, Node>("g.label")
           .attr('transform', d => `translate(${d.x}, ${d.y})`)
@@ -217,15 +217,8 @@ export class ChannelRelations extends React.Component<Props, State> {
       })
     }
 
-    function updatePositions(node: d3.Selection<d3.BaseType, Node, d3.BaseType, {}>) {
-      var dx = (d: Node) => d.x
-      var dy = (d: Node) => d.y
-
-      node.attr('transform', d => {
-        d.x = dx(d)
-        d.y = dy(d)
-        return `translate(${d.x}, ${d.y})`
-      })
+    function updatePositions() {
+      nodesCircle.attr('cx', d => d.x).attr('cy', d => d.y) // faster than attr('transform', d => `translate(${d.x}, ${d.y})`)
 
       let fixna = (x?: number) => (x != null && isFinite(x) ? x : 0)
       linkEnter
@@ -254,7 +247,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     let stopped = false
     let timesResized = 0
 
-    let stateRender = (prevProps: Props) => {
+    this.stateRender  = (prevProps: Props) => {
       let svg = d3.select(this.ref)
 
       if (prevProps == null || prevProps.width != this.props.width || prevProps.height != this.props.height) {
@@ -267,21 +260,17 @@ export class ChannelRelations extends React.Component<Props, State> {
         updateLabels(false)
         timesResized++
       }
-
-      //tick()
       updateVisibility()
     }
 
-    this.stateRender = stateRender
-
-    let onTick = () => {
-      nodesEnter.call(d => updatePositions(d))
+    function onTick() {
+      updatePositions()
       updateLabels(true)
       ticks++
       if (ticks > 150) {
         lay.force.stop()
         stopped = true
-        stateRender(null)
+        this.stateRender(null)
       }
     }
 

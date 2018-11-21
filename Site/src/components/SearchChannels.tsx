@@ -1,9 +1,9 @@
 import * as React from 'react'
 import Select from 'react-select'
 import * as _ from 'lodash'
-import { InteractiveDataProps, InteractiveDataState, DataComponentHelper, DataSelections, ChartProps } from '../ts/Charts'
-import { YtNetworks, Graph, YtData } from '../ts/YtData'
-import { delay } from '../ts/Utils';
+import { InteractiveDataProps, InteractiveDataState, DataComponentHelper, DataSelections, ChartProps } from '../common/Charts'
+import { YtNetworks, Graph, YtData } from '../common/YtData'
+import { delay } from '../common/Utils';
 
 interface State extends InteractiveDataState {
 }

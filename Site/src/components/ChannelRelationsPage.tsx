@@ -2,12 +2,12 @@ import * as React from 'react'
 import ContainerDimensions from 'react-container-dimensions'
 import { RecommendFlows } from './RecommendFlows'
 import { ChannelRelations } from './ChannelRelations'
-import { YtData, YtNetworks } from '../ts/YtData'
+import { YtData, YtNetworks } from '../common/YtData'
 import { GridLoader } from 'react-spinners'
-import { DataSelections, DataSelection, SelectionType, ChartProps, InteractiveDataState, InteractiveDataProps } from '../ts/Charts'
+import { DataSelections, DataSelection, SelectionType, ChartProps, InteractiveDataState, InteractiveDataProps } from '../common/Charts'
 import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
-import Select from 'react-select/lib/Select'
+import { navigate,  } from "gatsby"
 
 interface Props {}
 
@@ -21,10 +21,6 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     super(props)
 
     this.selections = new DataSelections()
-    const params = new URLSearchParams(location.search)
-    if (params.has('c')) {
-      this.selections.filters.push({ path: YtNetworks.ChannelIdPath, values: [params.get('c')], type: SelectionType.Filter })
-    }
   }
 
   state: Readonly<State> = {
@@ -38,6 +34,10 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   title: ChannelTitle
 
   componentDidMount() {
+    const params = new URLSearchParams(location.search)
+    if (params.has('c')) {
+      this.selections.filters.push({ path: YtNetworks.ChannelIdPath, values: [params.get('c')], type: SelectionType.Filter })
+    }
     this.load()
   }
 
@@ -51,13 +51,14 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
   onSelection(selection: DataSelection) {
     this.selections.setSelection(selection)
-
+    //let hist = createBrowserHistory()
     const params = new URLSearchParams(location.search)
     if ((selection.type == SelectionType.Filter && selection.path == YtNetworks.ChannelIdPath) || selection.path == null) {
       let channelId = selection.path == null ? null : selection.values.find(() => true)
       if (params.has('c')) params.delete('c')
       if (channelId) params.append('c', channelId)
-      history.replaceState({}, '', `${location.pathname}?${params}`)
+
+      history.replaceState(null, '',`?${params}`)
     }
 
     this.updateComponentSelections()

@@ -3,9 +3,9 @@ import { renderToString } from 'react-dom/server'
 import * as d3 from 'd3'
 import { sankey, sankeyLinkHorizontal, sankeyLeft, SankeyNode, SankeyLink } from 'd3-sankey'
 import '../styles/Main.css'
-import { YtNetworks, YtData, Graph, RelationData } from '../ts/YtData'
-import { ChartProps, InteractiveDataState, DataSelections, DataComponentHelper } from '../ts/Charts'
-import { jsonEquals, jsonClone } from '../ts/Utils'
+import { YtNetworks, YtData, Graph, RelationData } from '../common/YtData'
+import { ChartProps, InteractiveDataState, DataSelections, DataComponentHelper } from '../common/Charts'
+import { jsonEquals, jsonClone } from '../common/Utils'
 import { compactInteger } from 'humanize-plus'
 import * as _ from 'lodash'
 
@@ -294,7 +294,7 @@ export class RecommendFlows extends React.Component<Props, State> {
                 <tspan className={'subtitle-bold'} dy={'1.3em'} x={0}>
                   {compactInteger(outgoing, 1)}
                 </tspan>
-                <tspan className={'subtitle'}> viewed recommendations</tspan>
+                <tspan className={'subtitle'}> portion of viewed recommendations</tspan>
               </>
             )}
           </text>
