@@ -18,4 +18,10 @@ steps:
   displayName: Copy site
   inputs:
     SourceFolder: ./Site/public/
-    TargetFolder: '$(build.artifactstagingdirectory)/Site'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/public'
+
+- task: PublishBuildArtifacts@1
+  displayName: Pubish artifacts
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)/public'
+    artifactName: web
