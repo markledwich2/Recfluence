@@ -2,14 +2,23 @@ pool:
   vmImage: 'vs2017-win2016'
 
 steps:
-- task: NodeTool@0
+
+- task: DotNetCoreCLI@2
   inputs:
-    versionSpec: '10.x'
-  displayName: 'Install Node.js'
+    command: 'pack'
+    configuration: 'release'
+    workingDirectory: './Craler/YouTubeNetworks'
+
+#- task: NodeTool@0
+#  inputs:
+#    versionSpec: '10.x'
+#  displayName: 'Install Node.js'
+
 
 - script: npm install
   workingDirectory: './Site'
   name: 'install'
+
 - script: npm run build
   workingDirectory: './Site'
   name: 'build'

@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/YouTubeNetworks/YouTubeNetworks.csproj"
+                "${workspaceFolder}Crawler/YouTubeNetworks/YouTubeNetworks.csproj"
             ],
             "problemMatcher": "$msCompile"
         }
