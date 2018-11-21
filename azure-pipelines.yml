@@ -5,9 +5,11 @@ steps:
 
 - task: DotNetCoreCLI@2
   inputs:
-    command: 'pack'
+    command: 'publish'
     configuration: 'release'
+    zipAfterPublish: true
     workingDirectory: './Craler/YouTubeNetworks'
+    arguments: '-r win10-x64'
 
 #- task: NodeTool@0
 #  inputs:
