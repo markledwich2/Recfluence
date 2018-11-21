@@ -5,4 +5,4 @@ steps:
 - script: |
     npm install
     npm build
-  workingDirectory: '/Site'
+  workingDirectory: './Site'
