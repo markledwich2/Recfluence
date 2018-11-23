@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <PackAsTool>true</PackAsTool>
+    <PackageOutputPath>./publish</PackageOutputPath>
+    <AssemblyName>mledwich-yt</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.3.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.8.1" />
+    <PackageReference Include="Microsoft.Azure.Batch" Version="9.0.1" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="2.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\YouTubeReader\YouTubeReader.csproj" />
+  </ItemGroup>
+
+</Project>

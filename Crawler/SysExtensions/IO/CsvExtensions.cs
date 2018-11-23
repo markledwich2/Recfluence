@@ -27,5 +27,13 @@ namespace SysExtensions.IO
                 return csv.GetRecords<T>().ToList();
             }
         }
+
+        public static ICollection<T> ReadFromCsv<T>(string data, Configuration cfg = null) {
+            cfg = cfg ?? DefaultConfig;
+            using (var tr = new StringReader(data)) {
+                var csv = new CsvReader(tr, cfg);
+                return csv.GetRecords<T>().ToList();
+            }
+        }
     }
 }

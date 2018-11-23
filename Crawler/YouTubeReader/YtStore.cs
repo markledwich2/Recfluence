@@ -9,30 +9,27 @@ using SysExtensions.IO;
 
 namespace YouTubeReader {
     public class YtStore {
-        public YtStore(YtReader reader) {
+        public YtStore(YtReader reader, ISimpleFileStore store) {
             Yt = reader;
-            S3 = new S3Store(reader.Cfg.S3, "YouTube2");
+            Store = store;
 
-            Videos = new S3Collection<VideoStored>(S3, v => v.VideoId, "Videos", Yt.Cfg.CacheType, CacheDataDir);
-
-            Channels = new S3Collection<ChannelStored>(S3, v => v.ChannelId, "Channels", Yt.Cfg.CacheType, CacheDataDir);
-
-            RecommendedVideosCollection = new S3Collection<RecommendedVideoStored>(S3, v => v.VideoId, "RecommendedVideos", Yt.Cfg.CacheType, CacheDataDir);
-
-            ChannelVideosCollection = new S3Collection<ChannelVideosStored>(S3, c => c.ChannelId, "ChannelVideos", Yt.Cfg.CacheType, CacheDataDir);
+            Videos = new FileCollection<VideoStored>(Store, v => v.VideoId, "Videos", Yt.Cfg.CacheType, CacheDataDir);
+            Channels = new FileCollection<ChannelStored>(Store, v => v.ChannelId, "Channels", Yt.Cfg.CacheType, CacheDataDir);
+            RecommendedVideosCollection = new FileCollection<RecommendedVideoStored>(Store, v => v.VideoId, "RecommendedVideos", Yt.Cfg.CacheType, CacheDataDir);
+            ChannelVideosCollection = new FileCollection<ChannelVideosStored>(Store, c => c.ChannelId, "ChannelVideos", Yt.Cfg.CacheType, CacheDataDir);
         }
 
         FPath CacheDataDir => "Data".AsPath().InAppData(Setup.AppName);
 
-        public S3Store S3 { get; }
+        public ISimpleFileStore Store { get; }
         YtReader Yt { get; }
-        Cfg Cfg => Yt.Cfg;
+        AppCfg Cfg => Yt.Cfg;
 
-        public S3Collection<VideoStored> Videos { get; }
-        public S3Collection<ChannelStored> Channels { get; }
-        public S3Collection<ChannelVideosStored> ChannelVideosCollection { get; }
+        public FileCollection<VideoStored> Videos { get; }
+        public FileCollection<ChannelStored> Channels { get; }
+        public FileCollection<ChannelVideosStored> ChannelVideosCollection { get; }
 
-        public S3Collection<RecommendedVideoStored> RecommendedVideosCollection { get; }
+        public FileCollection<RecommendedVideoStored> RecommendedVideosCollection { get; }
 
         /// <summary>
         ///     Gets the video with that ID. Caches in S3 (including historical information) with this
@@ -55,8 +52,8 @@ namespace YouTubeReader {
                     v.SetLatest(videoData);
                 v.Latest.Updated = DateTime.UtcNow;
             }
-
-            await Videos.Set(v);
+            if(v != null)
+                await Videos.Set(v);
 
             return v;
         }

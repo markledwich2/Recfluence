@@ -14,11 +14,11 @@ using SysExtensions.IO;
 
 namespace YouTubeReader {
     public class YtReader {
-        public YtReader(Cfg cfg, ILogger log) {
+        public YtReader(AppCfg cfg, ILogger log) {
             Cfg = cfg;
             Log = log;
             YtService = new YouTubeService();
-            AvailableKeys = cfg.YTApiKeys.ToList();
+            AvailableKeys = cfg.YTApiKeys?.ToList() ?? throw new InvalidOperationException("configuration requires YTApiKeys");
             Start = DateTime.UtcNow;
         }
 
@@ -26,7 +26,7 @@ namespace YouTubeReader {
 
         public DateTime Start { get; }
 
-        public Cfg Cfg { get; }
+        public AppCfg Cfg { get; }
         ILogger Log { get; }
         YouTubeService YtService { get; }
 

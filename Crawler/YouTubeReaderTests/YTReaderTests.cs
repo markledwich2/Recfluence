@@ -7,13 +7,12 @@ namespace YouTubeReaderTests {
     public class YTReaderTests {
         [TestMethod]
         public async Task SaveChannelRelationData() {
-            var log = Setup.CreateLogger();
-            var cfg = Setup.LoadCfg(log);
-            var store = new YtStore(new YtReader(cfg, log));
-            var analysis = new YtAnaysis(store, cfg, log);
+            var cfg = await Setup.LoadCfg();
+            var log = Setup.CreateTestLogger();
+            
+            var store = new YtStore(new YtReader(cfg.App, log), cfg.FileStore());
+            var analysis = new YtCollect(store, cfg.FileStore(cfg.App.AnalysisPath), cfg.App, log);
             await analysis.SaveChannelRelationData();
-            //var crawler = new YtDataUpdater(store, cfg, log);
-            //var seeds = crawler.SeedChannels();
         }
     }
 }

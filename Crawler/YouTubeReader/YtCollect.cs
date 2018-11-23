@@ -13,16 +13,18 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace YouTubeReader {
-    public class YtAnaysis {
-        public YtAnaysis(YtStore store, Cfg cfg, ILogger log) {
+    public class YtCollect {
+        public YtCollect(YtStore store, ISimpleFileStore simpleFileStore, AppCfg cfg, ILogger log) {
             Yt = store;
+            Store = simpleFileStore;
             Cfg = cfg;
             Log = log;
         }
 
-        Cfg Cfg { get; }
+        AppCfg Cfg { get; }
         ILogger Log { get; }
         YtStore Yt { get; }
+        public ISimpleFileStore Store { get; }
 
         FPath LocalDataDir => "Data".AsPath().InAppData(Setup.AppName);
         FPath LocalResultsDir => "Results".AsPath().InAppData(Setup.AppName);
@@ -30,41 +32,64 @@ namespace YouTubeReader {
         /// <summary>
         ///     For the configured time period creates the following
         ///     Channels.parquet - Basic channel info and statistics about recommendations at the granularity of Channel,Date
-        ///     Recommends.parquet - Details about video recomendations at the granularity of From,To,Date ??
+        ///     Recommends.parquet - Details about video recommendations at the granularity of From,To,Date ??
         /// </summary>
         /// <returns></returns>
         public async Task SaveChannelRelationData() {
             var analysisDir = DateTime.UtcNow.ToString("yyyy-MM-dd");
             await SaveCfg(analysisDir);
             
-            var channelCfg = Cfg.LoadConfig();
+            var channelCfg = await Cfg.LoadChannelConfig();
             var seeds = channelCfg.Seeds;
+            IReadOnlyCollection<ChannelVideoRow> channelVideos = null;
 
-            var videos = await seeds.BlockTransform(Videos, Cfg.Parallel,
-                progressUpdate: p => Log.Information("Getting channel videos {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels")));
-            await SaveParquet(videos.SelectMany(r => r), "Videos", analysisDir);
+            async Task LoadChannels() {
+                var channels = await seeds.BlockTransform(Channel, Cfg.Parallel,
+                    progressUpdate: p => Log.Information("Collecting channels {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels")));
+                await SaveParquet(channels, "Channels", analysisDir);
+            }
 
-            var channels = await seeds.BlockTransform(Channel, Cfg.Parallel,
-                progressUpdate: p => Log.Information("Getting channel stats {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels") ));
-            await SaveParquet(channels, "Channels", analysisDir);
+            async Task LoadChannelVideos() {
+                var cvs  = await seeds.BlockTransform(ChannelVideos, Cfg.Parallel,
+                    progressUpdate: p => Log.Information("Collecting channel videos {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels")));
+                channelVideos = cvs.SelectMany(cv => cv).ToList();
+            }
+
+            await Task.WhenAll(LoadChannels(), LoadChannelVideos());
             
-            var recommendsResult = await seeds.BlockTransform(Recommends, Cfg.Parallel,
-                progressUpdate: p => Log.Information("Getting channel video recommendations {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels")));
+            var videos = (await channelVideos.BlockTransform(Video, Cfg.Parallel,
+                progressUpdate: p => Log.Information("Collecting videos {Videos}/{Total}. {Speed}", p.Results.Count, channelVideos.Count, p.Speed("videos")))).NotNull().ToList();
+            await SaveParquet(videos, "Videos", analysisDir);
+        
+            var recommendsResult = await videos.BlockTransform(Recommends, Cfg.Parallel,
+                progressUpdate: p => Log.Information("Collecting channel video recommendations {Videos}/{Total}. {Speed}", p.Results.Count, channelVideos.Count, p.Speed("videos")));
             await SaveParquet(recommendsResult.SelectMany(r => r), "Recommends", analysisDir);
         }
 
-        async Task<ICollection<VideoRow>> Videos(SeedChannel c) {
+        async Task<ICollection<ChannelVideoRow>> ChannelVideos(SeedChannel c) {
             var channelVids = await Yt.ChannelVideosCollection.Get(c.Id);
-            var vids = await channelVids.Vids.BlockTransform(v => Yt.Videos.Get(v.VideoId));
-            return vids.Select(v => new VideoRow {
+            return channelVids.Vids.Select(v => new ChannelVideoRow {
+                VideoId = v.VideoId,
+                PublishedAt = v.PublishedAt.ToString("O"),
+                ChannelId = c.Id
+            }).ToList();
+        }
+
+        async Task<VideoRow> Video(ChannelVideoRow cv) {
+            var v = await Yt.Videos.Get(cv.VideoId);
+            if (v == null) {
+                Log.Warning("Unable to find video {Video}", cv.VideoId);
+                return null;
+            }
+
+            return new VideoRow {
                 VideoId = v.VideoId,
                 Title = v.VideoTitle,
-                ChannelId = c.Id,
-                ChannelTitle = c.Title,
-                Views = (long)(v.Latest.Stats.Views ?? 0),
+                ChannelId = cv.ChannelId,
+                Views = (long) (v.Latest.Stats.Views ?? 0),
                 PublishedAt = v.Latest.PublishedAt.ToString("O"),
                 Tags = v.Latest.Tags.NotNull().ToArray()
-            }).ToList();
+            };
         }
 
         async Task<ChannelRow> Channel(SeedChannel c) {
@@ -87,19 +112,17 @@ namespace YouTubeReader {
             return channelVideoStats;
         }
 
-        async Task<IReadOnlyCollection<RecommendRow>> Recommends(SeedChannel c) {
-            var channelVids = await Yt.ChannelVideosCollection.Get(c.Id);
-            var recommends = await channelVids.Vids.BlockTransform(v => Yt.RecommendedVideosCollection.Get(v.VideoId));
+        async Task<IReadOnlyCollection<RecommendRow>> Recommends(VideoRow v) {
+            var recommends = await Yt.RecommendedVideosCollection.Get(v.VideoId);
 
-            var flattened = recommends
-                .SelectMany(r => r.Recommended, (from, rec) => new {from, rec})
-                .SelectMany(r => r.rec.Recommended, (update, to) => new RecommendRow {
+            var flattened = recommends.Recommended
+                .SelectMany(r => r.Recommended, (update, to) => new RecommendRow {
                     ChannelId = to.ChannelId,
                     VideoId = to.VideoId,
-                    FromChannelId = c.Id,
-                    FromVideoId = update.from.VideoId,
+                    FromChannelId = v.ChannelId,
+                    FromVideoId = v.VideoId,
                     Rank = to.Rank,
-                    UpdatedAt = update.rec.Updated.DateString()
+                    UpdatedAt = recommends.Updated.DateString()
                 })
                 .Where(r => r.FromChannelId != r.ChannelId)
                 .ToList();
@@ -108,22 +131,28 @@ namespace YouTubeReader {
         }
 
         async Task SaveParquet<T>(IEnumerable<T> rows, string name, string dir) where T : new() {
-            var s3Dir = StringPath.Relative("Results", dir);
+            var storeDir = StringPath.Relative(dir);
             var localFile = LocalResultsDir.Combine(dir).Combine($"{name}.parquet");
             ParquetConvert.Serialize(rows, localFile.FullPath);
-            var s3Path = s3Dir.Add(localFile.FileName);
-            await Yt.S3.Save(s3Path, localFile);
-            Log.Information("Saved to s3 {Path}", s3Path);
+            var storePath = storeDir.Add(localFile.FileName);
+            await Store.Save(storePath, localFile);
+            Log.Information("Saved {Path}", storePath);
         }
 
         async Task SaveCfg(string dir) {
             var localDir = LocalResultsDir.Combine(dir);
             localDir.EnsureDirectoryExists();
-            var s3Dir = StringPath.Relative("Results", dir);
-            var localCfgFile = localDir.Combine("Cfg.json");
+            var storeDir = StringPath.Relative(dir);
+            var localCfgFile = localDir.Combine("cfg.json");
             Cfg.ToJsonFile(localCfgFile);
-            await Yt.S3.Save(s3Dir.Add("Cfg.json"), localCfgFile);
+            await Store.Save(storeDir.Add("cfg.json"), localCfgFile);
         }
+    }
+
+    public class ChannelVideoRow {
+        public string VideoId { get; set; }
+        public string ChannelId { get; set; }
+        public string PublishedAt { get; set; }
     }
 
     public class RecommendRow {
@@ -153,7 +182,6 @@ namespace YouTubeReader {
         public string VideoId { get; set; }
         public string Title { get; set; }
         public string ChannelId { get; set; }
-        public string ChannelTitle { get; set; }
         public long Views { get; set; }
         public string PublishedAt { get; set; }
         public string[] Tags { get; set; }

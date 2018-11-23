@@ -1,17 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using Amazon;
+using System.Net;
+using System.Threading.Tasks;
 using Humanizer;
+using Microsoft.Extensions.Configuration;
+using Microsoft.WindowsAzure.Storage;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
-using SysExtensions.Security;
 using SysExtensions.Serialization;
+using SysExtensions.Text;
 
 namespace YouTubeReader {
     public static class Setup {
@@ -20,33 +22,56 @@ namespace YouTubeReader {
         public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
         public static FPath LocalDataDir => "Data".AsPath().InAppData(AppName);
 
-        public static Logger CreateLogger() => new LoggerConfiguration()
+        public static Logger CreateTestLogger() => new LoggerConfiguration()
             .WriteTo.Seq("http://localhost:5341", LogEventLevel.Verbose)
+            .WriteTo.Trace()
             .WriteTo.Console()
             .CreateLogger();
 
-        static FPath CfgPath => "cfg.json".AsPath().InAppData(AppName);
+        public static Logger CreateCliLogger(AppCfg cfg = null) {
+            var c = new LoggerConfiguration()
+                .WriteTo.Console();
 
-        public static Cfg LoadCfg(ILogger log) {
-            var path = CfgPath;
-            Cfg cfg;
-            if (!path.Exists) {
-                cfg = new Cfg();
-                cfg.ToJsonFile(path);
-                log.Error($"No config found at '{CfgPath}'. Created with default settings, some settings will need to be configured manually");
-            }
-            else {
-                cfg = CfgPath.ToObject<Cfg>();
-            }
+            if (cfg != null)
+                c.WriteTo.ApplicationInsightsTraces(cfg.AppInsightsKey);
 
-            if (cfg.CrawlConfigDir.IsEmtpy())
-                cfg.CrawlConfigDir = SolutionDataDir;
+            return c.CreateLogger();
+        }
 
-            return cfg;
+        static FPath RootCfgPath => "cfg.json".AsPath().InAppData(AppName);
+
+        public static async Task<Cfg> LoadCfg(ILogger log = null) {
+            // the root config can be given as a local file (dev environment), or as environment variables (cloud service)
+            var builder = new ConfigurationBuilder()
+                .AddJsonFile(RootCfgPath.FullPath, true, true)
+                .AddEnvironmentVariables()
+                .Build();
+
+
+            var rootCfg = new RootCfg();
+            builder.Bind(rootCfg);
+
+            var storageAccount = CloudStorageAccount.Parse(rootCfg.AzureStorageCs);
+            var cloudBlobClient = storageAccount.CreateCloudBlobClient();
+            var cfg = (await cloudBlobClient.GetText("cfg", $"{rootCfg.Environment}.json")).ToObject<AppCfg>();
+
+            return new Cfg {App = cfg, Root = rootCfg};
         }
     }
 
+    public class RootCfg {
+        // connection string to the configuration directory
+        public string AzureStorageCs { get; set; }
+
+        // name of environment (Prod/Dev/MarkDev etc..). used to choose appropreate cfg
+        public string Environment { get; set; } = "Prod";
+    }
+
     public class Cfg {
+        public AppCfg App { get; set; }
+        public RootCfg Root { get; set; }
+    }
+    public class AppCfg {
         public int CacheRelated = 40;
         public int Related { get; set; } = 10;
         public DateTime From { get; set; }
@@ -61,8 +86,11 @@ namespace YouTubeReader {
         public TimeSpan RefreshRelatedVideos { get; set; } = 30.Days();
         public TimeSpan RefreshChannelVideos { get; set; } = 24.Hours();
 
-        [TypeConverter(typeof(StringConverter<FPath>))]
-        public FPath CrawlConfigDir { get; set; }
+        public Uri SeedsUrl { get; set; } = new Uri("https://raw.githubusercontent.com/markledwich2/YouTubeNetworks/master/Data/SeedChannels.csv");
+
+
+        public string DbPath { get; set; } = "data/db";
+        public string AnalysisPath { get; set; } = "data/analysis";
 
         public ICollection<string> YTApiKeys { get; set; }
         public int Parallel { get; set; } = 8;
@@ -70,9 +98,20 @@ namespace YouTubeReader {
 
         public CollectionCacheType CacheType { get; set; } = CollectionCacheType.Memory;
 
-        public S3Cfg S3 { get; set; } = new S3Cfg {
-            Bucket = "ytnetworks", Credentials = new NameSecret("yourkey", "yoursecret"), Region = RegionEndpoint.APSoutheast2.SystemName
-        };
+        public string AppInsightsKey { get; set; }
+        public BatchCfg Batch { get; set; }
+
+//        public S3Cfg S3 { get; set; } = new S3Cfg {
+//            Bucket = "ytnetworks", Credentials = new NameSecret("yourkey", "yoursecret"), Region = RegionEndpoint.APSoutheast2.SystemName
+//        };
+    }
+
+    public class BatchCfg {
+        public string Url { get; set; }
+        public string Key { get; set; }
+        public string Account { get; set; }
+        public string Pool { get; set; } = "win";
+
     }
 
     public class SeedChannel {
@@ -93,14 +132,24 @@ namespace YouTubeReader {
     }
 
     public static class ChannelConfigExtensions {
-        public static ChannelConfig LoadConfig(this Cfg cfg) {
+        public static async Task<ChannelConfig> LoadChannelConfig(this AppCfg cfg) {
             var channelCfg = new ChannelConfig();
-            var seedData = SeedChannels(cfg);
+            var csv = await new WebClient().DownloadStringTaskAsync(cfg.SeedsUrl);
+            var seedData = CsvExtensions.ReadFromCsv<SeedChannel>(csv);
             channelCfg.Seeds.AddRange(cfg.LimitedToSeedChannels != null ? seedData.Where(s => cfg.LimitedToSeedChannels.Contains(s.Id)) : seedData);
-            channelCfg.Excluded.AddRange(cfg.CrawlConfigDir.Combine("ChannelExclude.csv").ReadFromCsv<InfluencerOverride>());
+            //channelCfg.Excluded.AddRange(cfg.CrawlConfigDir.Combine("ChannelExclude.csv").ReadFromCsv<InfluencerOverride>());
             return channelCfg;
         }
 
-        static IEnumerable<SeedChannel> SeedChannels(this Cfg cfg) => cfg.CrawlConfigDir.Combine("SeedChannels.csv").ReadFromCsv<SeedChannel>();
+        public static ISimpleFileStore FileStore(this Cfg cfg, StringPath path = null) =>
+            new AzureBlobFileStore(cfg.Root.AzureStorageCs, path ?? cfg.App.DbPath);
+
+        public static YtStore YtStore(this Cfg cfg, ILogger log) {
+            var reader = new YtReader(cfg.App, log);
+            var ytStore = new YtStore(reader, cfg.FileStore(cfg.App.DbPath));
+            return ytStore;
+        }
+
+        //static IEnumerable<SeedChannel> SeedChannels(this Cfg cfg) => cfg.CrawlConfigDir.Combine("SeedChannels.csv").ReadFromCsv<SeedChannel>();
     }
 }

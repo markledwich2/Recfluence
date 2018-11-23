@@ -23,7 +23,14 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 
 namespace YouTubeReader {
-    public class S3Store {
+
+    public interface ISimpleFileStore {
+        Task<T> Get<T>(StringPath path) where T : class;
+        Task Set<T>(StringPath path, T item);
+        Task Save(StringPath path, FPath file);
+    }
+
+    public class S3Store : ISimpleFileStore {
         public S3Store(S3Cfg cfg, StringPath basePath) {
             Cfg = cfg;
             BasePath = basePath;
@@ -71,11 +78,7 @@ namespace YouTubeReader {
             }
         }
 
-
-
         public async Task Set<T>(StringPath path, T item) {
-
-
             using (var memStream = new MemoryStream()) {
                 using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true))
                 using (var tw = new StreamWriter(zipWriter, Encoding.UTF8)) {
@@ -89,7 +92,6 @@ namespace YouTubeReader {
                 }));
             }
         }
-
 
         public async Task Save(StringPath path, FPath file) {
             var tu = new TransferUtility(S3);
@@ -124,9 +126,9 @@ namespace YouTubeReader {
         public NameSecret Credentials { get; set; }
     }
 
-    public class S3Collection<T> where T : class {
-        public S3Collection(S3Store s3, Expression<Func<T, string>> getId, StringPath path, CollectionCacheType cacheType = CollectionCacheType.Memory, FPath localCacheDir = null) {
-            S3 = s3;
+    public class FileCollection<T> where T : class {
+        public FileCollection(ISimpleFileStore s3, Expression<Func<T, string>> getId, StringPath path, CollectionCacheType cacheType = CollectionCacheType.Memory, FPath localCacheDir = null) {
+            Store = s3;
             GetId = getId.Compile();
             Path = path;
             CacheType = cacheType;
@@ -134,7 +136,7 @@ namespace YouTubeReader {
             Cache = new KeyedCollection<string, T>(getId, theadSafe: true);
         }
 
-        S3Store S3 { get; }
+        ISimpleFileStore Store { get; }
         Func<T, string> GetId { get; }
         StringPath Path { get; }
         CollectionCacheType CacheType { get; }
@@ -184,7 +186,7 @@ namespace YouTubeReader {
             var o = GetFromCache(id);
             if (o != null)
                 return o;
-            o = await S3.Get<T>(Path.Add(id));
+            o = await Store.Get<T>(Path.Add(id));
             SetCache(id, o);
             return o;
         }
@@ -194,7 +196,7 @@ namespace YouTubeReader {
             if (o != null)
                 return o;
 
-            o = await S3.Get<T>(Path.Add(id));
+            o = await Store.Get<T>(Path.Add(id));
             var missingFromS3 = o == null;
             if (missingFromS3)
                 o = await create(id);
@@ -203,14 +205,14 @@ namespace YouTubeReader {
                 return null;
 
             if (missingFromS3)
-                await S3.Set(Path.Add(id), o);
+                await Store.Set(Path.Add(id), o);
 
             SetCache(id, o);
             return o;
         }
 
         public async Task<T> Set(T item) {
-            await S3.Set(Path.Add(GetId(item)), item);
+            await Store.Set(Path.Add(GetId(item)), item);
             SetCache(GetId(item), item);
             return item;
         }
