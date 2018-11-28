@@ -1,0 +1,26 @@
+{
+  "version": "2.0",
+  "logging": {
+    "fileLoggingMode": "always",
+    "logLevel": {
+      "default": "Information",
+      "Host": "Error",
+      "Function": "Error",
+      "Host.Aggregator": "Information"
+    }
+  },
+  "aggregator": {
+    "batchSize": 1000,
+    "flushTimeout": "00:00:30"
+  },
+  "applicationInsights": {
+    "sampling": {
+      "isEnabled": false,
+      "maxTelemetryItemsPerSecond": 5
+    }
+  },
+  "durableTask": {
+    "extendedSessionsEnabled": true,
+    "extendedSessionIdleTimeoutInSeconds": 30
+  }
+}

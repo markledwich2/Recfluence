@@ -1,0 +1,9 @@
+{
+  "azureFunctions.projectRuntime": "~2",
+  "azureFunctions.projectLanguage": "C#",
+  "azureFunctions.templateFilter": "Verified",
+  "azureFunctions.deploySubpath": "App/YtFunctions/bin/Release/netcoreapp2.1/publish",
+  "azureFunctions.preDeployTask": "publish YtFunctions",
+  "debug.internalConsoleOptions": "neverOpen",
+  "dotnet-test-explorer.testProjectPath": "/App/Tests"
+}

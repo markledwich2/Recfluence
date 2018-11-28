@@ -1,9 +1,9 @@
 {
-   // Use IntelliSense to find out which attributes exist for C# debugging
-   // Use hover for the description of the existing attributes
-   // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
-   "version": "0.2.0",
-   "configurations": [
+    // Use IntelliSense to find out which attributes exist for C# debugging
+    // Use hover for the description of the existing attributes
+    // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
+    "version": "0.2.0",
+    "configurations": [
         {
             "type": "chrome",
             "request": "launch",
@@ -12,24 +12,28 @@
             "webRoot": "${workspaceFolder}"
         },
         {
-            "name": ".NET Core Launch (console)",
+            "name": "Launch YtCli collect",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
+            "preLaunchTask": "build YtCli",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/YouTubeNetworks/bin/Debug/netcoreapp2.1/YouTubeNetworks.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/YouTubeNetworks",
+            "program": "./bin/Debug/netcoreapp2.1/ytnetworks.dll",
+            "args": [
+                "collect",
+                "-p",
+                "1"
+            ],
+            "cwd": "${workspaceFolder}/App/YtCli/",
             // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
             "console": "internalConsole",
             "stopAtEntry": false,
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
-            "name": ".NET Core Attach",
+            "name": "Debug YtFunctions",
             "type": "coreclr",
             "request": "attach",
-            "processId": "${command:pickProcess}"
+            "processId": "${command:azureFunctions.pickProcess}",
         }
-    ,]
+    ]
 }

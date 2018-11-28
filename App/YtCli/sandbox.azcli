@@ -1,0 +1,11 @@
+
+$n = "ytnetworks"
+$g = "ytnetworks"
+az container create -n $n --resource-group $g --image "ytnetworks.azurecr.io/ytnetworks" -e "YtNetworks_AzureStorageCs=DefaultEndpointsProtocol=https;AccountName=ytnetworks;AccountKey=gXjVL5IrR8MLmkJiquaM5Lj9SqppnOcotr8tJZQNPoZsCNdLlFyULUMXEYWc5eba7LgvQ4u9PQtd1px9kzvb2g==;EndpointSuffix=core.windows.net" --command-line "ytnetworks collect -p 24" --registry-username "ytnetworks" --registry-password "a+WtglWtas/4LSJeyEnGsdo+Q9Xh88w6" --restart-policy Never --cpu 1 --memory 1
+az container show -g $g -n $n --query "{FQDN:ipAddress.fqdn,ProvisioningState:provisioningState}" --out table
+az container attach -n $n -g $g
+az container delete -n $n -g $g
+
+
+
+az ad sp 

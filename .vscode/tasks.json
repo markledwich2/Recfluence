@@ -2,14 +2,86 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "build YtCli",
             "command": "dotnet",
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}Crawler/YouTubeNetworks/YouTubeNetworks.csproj"
+                "${workspaceFolder}/App/YtCli/"
             ],
+            "problemMatcher": "$msCompile",
+            "group": "build"
+        },
+        {
+            "label": "build docker YtCli",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/App/"
+            },
+            "args": [],
+            "command": "./buildYtCli.ps1",
+            "group": "build",
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish docker YtCli",
+            "type": "shell",
+            "dependsOn": [
+                "build docker YtCli"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/App/"
+            },
+            "args": [],
+            "command": "./publishYtCli.ps1",
+            "group": "build",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build & run docker YtCli",
+            "dependsOn": [
+                "build docker YtCli"
+            ],
+            "command": "docker run -it ytnetworks.azurecr.io/ytnetworks:latest",
+            "type": "shell",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build YtFunctions",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/App/YtFunctions/"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": "build"
+        },
+        {
+            "label": "publish YtFunctions",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "-c", "Release",
+                "${workspaceFolder}/App/YtFunctions/"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": "build"
+        },
+        {
+            "label": "runFunctionsHost",
+            "type": "shell",
+            "dependsOn": "build YtFunctions",
+            "options": {
+                "cwd": "${workspaceFolder}/App/YtFunctions/bin/Debug/netcoreapp2.1"
+            },
+            "command": "func host start",
+            "isBackground": true,
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": "$func-watch"
         }
     ]
 }
