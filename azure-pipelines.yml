@@ -39,6 +39,7 @@ jobs:
     inputs:
       command: pack
       workingDirectory: ./App/YtFunctions
+      zipAfterPublish: true
       outputDir: $(Build.ArtifactStagingDirectory)/YtFunctions
 
   - task: PublishBuildArtifacts@1
