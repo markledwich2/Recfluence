@@ -21,13 +21,13 @@ jobs:
     displayName: Build YtCli
     inputs:
       command: Build an image
-      imageName: $(acr)/$(image):$(Build.BuildId)
+      imageName: $(acr)/$(image):latest
 
   - task: Docker@1
     displayName: Push YtCli
     inputs:
       command: Push an image
-      imageName: $(acr)/$(image):$(Build.BuildId)
+      imageName: $(acr)/$(image):latest
 
 - job: App
   pool:
@@ -37,9 +37,11 @@ jobs:
   - task: DotNetCoreCLI@2
     displayName: Build YtFunctions
     inputs:
-      command: pack
+      command: publish
       workingDirectory: ./App/YtFunctions
       zipAfterPublish: true
+      verbosityPack: Normal
+      verbosityRestore: Normal
       outputDir: $(Build.ArtifactStagingDirectory)/YtFunctions
 
   - task: PublishBuildArtifacts@1
