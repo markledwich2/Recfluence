@@ -9,7 +9,7 @@ jobs:
   - task: Docker@1
     displayName: Build YtCli Image
     inputs:
-      imageName: ytnetworks.azurecr.io:/ytnetworks:$(Build.BuildId)
+      imageName: ytnetworks.azurecr.io/ytnetworks:$(Build.BuildId)
 
   - task: Docker@1
     displayName: Login
