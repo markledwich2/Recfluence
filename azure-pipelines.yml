@@ -1,38 +1,64 @@
-pool:
-  vmImage: 'vs2017-win2016'
+jobs:
 
-steps:
+- job: App
+  pool:
+    vmImage: vs2017-win2016
 
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'publish'
-    configuration: 'release'
-    zipAfterPublish: true
-    workingDirectory: './Crawler/YouTubeNetworks'
-    arguments: '-r win10-x64'
+  steps:
 
-#- task: NodeTool@0
-#  inputs:
-#    versionSpec: '10.x'
-#  displayName: 'Install Node.js'
+  - task: Docker@1
+    displayName: Build YtCli Image
+    inputs:
+      imageName: ytnetworks.azurecr.io:/ytnetworks:$(Build.BuildId)
 
+  - task: Docker@1
+    displayName: Login
+    inputs:
+      azureSubscriptionEndpoint: Mark Ledwich Azure
+      azureContainerRegistry: ytnetworks.azurecr.io
+      command: login
 
-- script: npm install
-  workingDirectory: './Site'
-  name: 'install'
+  - task: Docker@1
+    displayName: Push YtCli Image
+    inputs:
+      command: Push an image
+      imageName: ytnetworks.azurecr.io/ytnetworks:$(Build.BuildId)
 
-- script: npm run build
-  workingDirectory: './Site'
-  name: 'build'
+  - task: DotNetCoreCLI@2
+    displayName: Build YtFunctions
+    inputs:
+      command: publish
+      zipAfterPublish: true
+      workingDirectory: ./Crawler/YtFunctions
 
-- task: CopyFiles@2
-  displayName: Copy site
-  inputs:
-    SourceFolder: ./Site/public/
-    TargetFolder: '$(Build.ArtifactStagingDirectory)/public'
+  - task: PublishBuildArtifacts@1
+    displayName: Pubish artifacts
+    inputs:
+        pathtoPublish: $(Build.ArtifactStagingDirectory)/YtFunctions
+        artifactName: YtFunctions
 
-- task: PublishBuildArtifacts@1
-  displayName: Pubish artifacts
-  inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)/public'
-    artifactName: web
+- job: Site
+  pool:
+    vmImage: 'vs2017-win2016'
+    
+  steps:
+
+    - script: npm install
+      displayName: npm install
+      workingDirectory: ./Site
+
+    - script: npm run build
+      displayName: npm build
+      workingDirectory: ./Site
+
+    - task: CopyFiles@2
+      displayName: Copy site
+      inputs:
+          SourceFolder: ./Site/public/
+          TargetFolder: $(Build.ArtifactStagingDirectory)/public
+
+    - task: PublishBuildArtifacts@1
+      displayName: Pubish artifacts
+      inputs:
+          pathtoPublish: $(Build.ArtifactStagingDirectory)/public
+          artifactName: web
