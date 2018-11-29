@@ -40,7 +40,7 @@ jobs:
       command: publish
       publishWebProjects: false
       workingDirectory: ./App/YtFunctions
-      zipAfterPublish: true
+      zipAfterPublish: false
       verbosityPack: Normal
       verbosityRestore: Normal
       outputDir: $(Build.ArtifactStagingDirectory)/YtFunctions
