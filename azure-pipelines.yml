@@ -34,16 +34,18 @@ jobs:
     vmImage: vs2017-win2016
 
   steps:
-  - task: DotNetCoreCLI@2
-    displayName: Build YtFunctions
-    inputs:
-      command: publish
-      publishWebProjects: false
-      workingDirectory: ./App/YtFunctions
-      zipAfterPublish: false
-      verbosityPack: Normal
-      verbosityRestore: Normal
-      outputDir: $(Build.ArtifactStagingDirectory)/YtFunctions
+  - script: dotnet publish -c Release --output $(Build.ArtifactStagingDirectory)/YtFunctions
+
+  # - task: DotNetCoreCLI@2
+  #   displayName: Build YtFunctions
+  #   inputs:
+  #     command: publish
+  #     publishWebProjects: false
+  #     workingDirectory: ./App/YtFunctions
+  #     zipAfterPublish: false
+  #     verbosityPack: Normal
+  #     verbosityRestore: Normal
+  #     outputDir: $(Build.ArtifactStagingDirectory)/YtFunctions
 
   - task: PublishBuildArtifacts@1
     displayName: Pubish YtFunctions Artifact
