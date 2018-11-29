@@ -38,6 +38,7 @@ jobs:
     displayName: Build YtFunctions
     inputs:
       command: publish
+      publishWebProjects: false
       workingDirectory: ./App/YtFunctions
       zipAfterPublish: true
       verbosityPack: Normal
