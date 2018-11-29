@@ -14,7 +14,7 @@ jobs:
   - task: Docker@1
     displayName: Login
     inputs:
-      azureSubscriptionEndpoint: Mark Ledwich Azure
+      azureSubscriptionEndpoint: YtNetworksACR
       azureContainerRegistry: ytnetworks.azurecr.io
       command: login
 
