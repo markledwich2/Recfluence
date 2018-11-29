@@ -35,6 +35,7 @@ jobs:
 
   steps:
   - script: dotnet publish -c Release --output $(Build.ArtifactStagingDirectory)/YtFunctions
+    workingDirectory: ./App/YtFunctions
 
   # - task: DotNetCoreCLI@2
   #   displayName: Build YtFunctions
