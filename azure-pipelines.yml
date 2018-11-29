@@ -1,3 +1,7 @@
+variables:
+  acr: ytnetworks.azurecr.io
+  image: ytnetworks
+
 jobs:
 
 - job: App
@@ -9,30 +13,30 @@ jobs:
   - task: Docker@1
     displayName: Build YtCli Image
     inputs:
-      imageName: ytnetworks.azurecr.io/ytnetworks:$(Build.BuildId)
+      imageName: $(acr)/$(image):$(Build.BuildId)
 
   - task: Docker@1
     displayName: Login
     inputs:
       azureSubscriptionEndpoint: Mark Ledwich ARM
-      azureContainerRegistry: ytnetworks.azurecr.io
+      azureContainerRegistry: $(image)
       command: login
 
   - task: Docker@1
     displayName: Push YtCli Image
     inputs:
       command: Push an image
-      imageName: ytnetworks.azurecr.io/ytnetworks:$(Build.BuildId)
+      imageName: $(acr)/$(image):$(Build.BuildId)
 
   - task: DotNetCoreCLI@2
     displayName: Build YtFunctions
     inputs:
       command: publish
-      zipAfterPublish: true
-      workingDirectory: ./Crawler/YtFunctions
-
+      workingDirectory: ./App/YtFunctions
+      outputDir: $(Build.ArtifactStagingDirectory)/YtFunctions
+      
   - task: PublishBuildArtifacts@1
-    displayName: Pubish artifacts
+    displayName: Pubish YtFunctions Artifact
     inputs:
         pathtoPublish: $(Build.ArtifactStagingDirectory)/YtFunctions
         artifactName: YtFunctions
