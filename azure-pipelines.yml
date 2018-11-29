@@ -4,17 +4,12 @@ variables:
 
 jobs:
 
-- job: App
+
+- job: Docker
   pool:
-    vmImage: vs2017-win2016
+    vmImage: ubuntu-16.04
 
   steps:
-
-  - task: Docker@1
-    displayName: Build YtCli Image
-    inputs:
-      imageName: $(acr)/$(image):$(Build.BuildId)
-
   - task: Docker@1
     displayName: Login
     inputs:
@@ -23,18 +18,29 @@ jobs:
       command: login
 
   - task: Docker@1
-    displayName: Push YtCli Image
+    displayName: Build YtCli
+    inputs:
+      command: Build an image
+      imageName: $(acr)/$(image):$(Build.BuildId)
+
+  - task: Docker@1
+    displayName: Push YtCli
     inputs:
       command: Push an image
       imageName: $(acr)/$(image):$(Build.BuildId)
 
+- job: App
+  pool:
+    vmImage: vs2017-win2016
+
+  steps:
   - task: DotNetCoreCLI@2
     displayName: Build YtFunctions
     inputs:
       command: publish
       workingDirectory: ./App/YtFunctions
       outputDir: $(Build.ArtifactStagingDirectory)/YtFunctions
-      
+
   - task: PublishBuildArtifacts@1
     displayName: Pubish YtFunctions Artifact
     inputs:
@@ -43,7 +49,7 @@ jobs:
 
 - job: Site
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: vs2017-win2016
     
   steps:
 
