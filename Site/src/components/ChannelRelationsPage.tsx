@@ -7,9 +7,9 @@ import { GridLoader } from 'react-spinners'
 import { DataSelections, DataSelection, SelectionType, ChartProps, InteractiveDataState, InteractiveDataProps } from '../common/Charts'
 import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
-import { navigate,  } from "gatsby"
+import { Mention } from 'react-twitter-widgets'
 
-interface Props {}
+interface Props { }
 
 interface State {
   isLoading: boolean
@@ -46,7 +46,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     let data = await YtNetworks.dataSet('https://ytnetworks.azureedge.net/data/results/')
     try {
       this.setState({ data, isLoading: false })
-    } catch (e) {}
+    } catch (e) { }
   }
 
   onSelection(selection: DataSelection) {
@@ -58,7 +58,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
       if (params.has('c')) params.delete('c')
       if (channelId) params.append('c', channelId)
 
-      history.replaceState(null, '',`?${params}`)
+      history.replaceState(null, '', `?${params}`)
     }
 
     this.updateComponentSelections()
@@ -113,6 +113,14 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                 )}
               </ContainerDimensions>
             </div>
+          </div>
+          <div className={'footer'}>
+            <p>
+              <span>Message me &nbsp;</span>
+              <a href={'https://twitter.com/mark_ledwich'}>@mark_ledwich</a>
+              <span style={{ 'padding-left': '20px' }}>Email me &nbsp;</span>
+              <a href={'mailto:mark@ledwich.com.au?Subject=Political YouTube'}>mark@ledwich.com.au</a>
+            </p>
           </div>
         </div>
       )

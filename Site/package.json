@@ -25,6 +25,7 @@
     "gatsby-plugin-typescript": "^2.0.1"
   },
   "dependencies": {
+    "@types/react-helmet": "^5.0.7",
     "chai": "^4.2.0",
     "d3": "^5.7.0",
     "d3-sankey": "^0.7.1",
@@ -32,15 +33,18 @@
     "dateformat": "^3.0.3",
     "gatsby": "^2.0.52",
     "gatsby-link": "^2.0.6",
+    "gatsby-plugin-react-helmet": "^3.0.3",
     "gatsby-transformer-remark": "^2.1.12",
     "humanize-plus": "^1.8.2",
     "lodash": "^4.17.11",
     "react": "^16.6.3",
     "react-container-dimensions": "^1.4.1",
     "react-dom": "^16.6.3",
+    "react-helmet": "^5.2.0",
     "react-router": "^4.3.1",
     "react-router-dom": "^4.3.1",
     "react-select": "^2.1.1",
-    "react-spinners": "^0.4.7"
+    "react-spinners": "^0.4.7",
+    "react-twitter-widgets": "^1.7.1"
   }
 }

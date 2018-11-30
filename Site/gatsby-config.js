@@ -1,8 +1,8 @@
 module.exports = {
     siteMetadata: {
-      title: `YouTube Networks`,
+      title: `YouTube Networks`
     },
-    plugins: [ `gatsby-plugin-typescript` ],
+    plugins: [ `gatsby-plugin-typescript`,`gatsby-plugin-react-helmet` ],
     
   }
   

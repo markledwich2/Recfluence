@@ -157,6 +157,10 @@ div.ChannelRelationPage > .Title > .Search {
   flex:1 20em
 }
 
+div.footer {
+  
+}
+
 @media all and (min-width: 1600px) {
   div.MainChartContainer > .Relations {
     height: 100%;
