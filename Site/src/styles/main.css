@@ -158,7 +158,7 @@ div.ChannelRelationPage > .Title > .Search {
 }
 
 div.footer {
-  
+  margin-top:3em;
 }
 
 @media all and (min-width: 1600px) {
