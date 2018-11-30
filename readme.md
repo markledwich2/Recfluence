@@ -31,7 +31,7 @@ Initially populated using the following criterial: 1k+ subs & significant focus 
 
 Stack: Gatsby, React, D3 hosted on an Azure Static Website.
 
-- Build: Azure Pipeines used to build App & Site on checkin https://dev.azure.com/mledwich/ytnetworks. 
+- Build: Automated. On checking, azure Pipeines will build App & Site. See https://dev.azure.com/mledwich/ytnetworks. 
 - Release: Create a release in Azure pipelines to deploy
 - Update Data: 
     - Run [ChannelRelations notebook](https://community.cloud.databricks.com/?o=5467014801025226#notebook/1340434901968186/command/1340434901968187) the final cell saves the data used by the visualization

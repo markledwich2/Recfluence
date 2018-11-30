@@ -41,7 +41,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     this.load()
   }
 
-  resultUrl = 'https://ytnetworks.azureedge.net/data/results/'
+  resultUrl = 'https://ytnetworks.azureedge.net/data/results/2018-11-28/'
 
   async load() {
     if (this.state.isLoading) return
@@ -128,6 +128,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                 <a href={this.resultUrl + 'VisRelations.csv'}>Relation</a>
                 &nbsp;data
                 </span>
+                <span style={{ 'padding-left': '20px' }}>See &nbsp;<a href={'https://github.com/markledwich2/YouTubeNetworks'}>project source</a> &nbsp;</span>
             </p>
           </div>
         </div>
