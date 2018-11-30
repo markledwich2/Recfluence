@@ -29,7 +29,7 @@ export class ChannelTitle extends React.Component<Props, State> {
         <div className={'Card'}>
           {c == null ? (
             <div style={{}}>
-              <h2>YouTube Channel Recommendations</h2>
+              <h2>Political YouTube</h2>
               <p>select a channel to see more detail</p>
             </div>
           ) : (

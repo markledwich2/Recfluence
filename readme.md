@@ -14,6 +14,8 @@ and [Relations.csv](https://ytnetworks.blob.core.windows.net/data/results/VisRel
 Initially populated using the following criterial: 1k+ subs & significant focus on US political/cultural commentary/contexualizing.
 
 - https://blog.feedspot.com/political_youtube_channels/
+- https://socialblade.com/youtube/top/tag/politics/videoviews
+- https://channelcrawler.com/
 - 2018 viewcount search for Democrats|Republicans.
 - custom algorithm prioritizing most recommended channels from exisitng seed channels. [ChannelExclude.csv](Data/ChannelExclude.csv) is was used to remove recommendations once reviewed.
 - data & society report

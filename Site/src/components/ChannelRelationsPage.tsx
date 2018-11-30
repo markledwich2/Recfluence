@@ -117,21 +117,18 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
             </div>
           </div>
           <div className={'footer'}>
-            <p>
-              <span>Message me &nbsp;</span>
-              <a href={'https://twitter.com/mark_ledwich'}>@mark_ledwich</a>
-              <span style={{ 'padding-left': '20px' }}>Email me &nbsp;</span>
-              <a href={'mailto:mark@ledwich.com.au?Subject=Political YouTube'}>mark@ledwich.com.au</a>
-              <span style={{ 'padding-left': '20px' }}>download &nbsp;
-                <a href={this.resultUrl + 'VisChannels.csv'}>Channel</a>
-                &nbsp; and &nbsp;
+            <a href={'https://twitter.com/mark_ledwich'}>@mark_ledwich</a>
+            <a href={'mailto:mark@ledwich.com.au?Subject=Political YouTube'}>mark@ledwich.com.au</a>
+            <span>
+              download &nbsp;
+            <a href={this.resultUrl + 'VisChannels.csv'}>Channel</a>
+              &nbsp; and &nbsp;
                 <a href={this.resultUrl + 'VisRelations.csv'}>Relation</a>
-                &nbsp;data
-                </span>
-                <span style={{ 'padding-left': '20px' }}>See &nbsp;<a href={'https://github.com/markledwich2/YouTubeNetworks'}>project source</a> &nbsp;</span>
-            </p>
+              &nbsp;data
+            </span>
+            <span>See &nbsp;<a href={'https://github.com/markledwich2/YouTubeNetworks'}>project source</a> &nbsp;</span>
           </div>
-        </div>
+        </div >
       )
     } else {
       return (

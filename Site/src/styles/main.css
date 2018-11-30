@@ -61,7 +61,7 @@ body {
 }
 
 p,
-span.text {
+span {
   color: #aaa;
 }
 
@@ -159,9 +159,16 @@ div.ChannelRelationPage > .Title > .Search {
 
 div.footer {
   margin-top:3em;
+  display: flex;
+  flex-flow: wrap;
+  justify-content: left;
 }
 
-@media all and (min-width: 1600px) {
+div.footer > * {
+  padding-right: 2em;
+}
+
+@media all and (min-width: 1400px) {
   div.MainChartContainer > .Relations {
     height: 100%;
     flex: 3 auto;
