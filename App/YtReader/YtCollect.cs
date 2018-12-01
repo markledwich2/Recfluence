@@ -137,12 +137,15 @@ namespace YtReader {
         }
 
         async Task SaveParquet<T>(IEnumerable<T> rows, string name, string dir) where T : new() {
-            var storeDir = StringPath.Relative(dir);
-            var localFile = LocalResultsDir.Combine(dir).Combine($"{name}.parquet");
-            ParquetConvert.Serialize(rows, localFile.FullPath);
-            var storePath = storeDir.Add(localFile.FileName);
-            await Store.Save(storePath, localFile);
-            Log.Information("Saved {Path}", storePath);
+            await rows.Chunk(200000).Select((r, i) => (chunkRows:r, index:i)).BlockTransform(async chunk => {
+                var storeDir = StringPath.Relative(dir);
+                var localFile = LocalResultsDir.Combine(dir).Combine($"{name}.{chunk.index}.parquet");
+                ParquetConvert.Serialize(chunk.chunkRows, localFile.FullPath);
+                var storePath = storeDir.Add(localFile.FileName);
+                await Store.Save(storePath, localFile);
+                Log.Information("Saved {Path}", storePath);
+                return storeDir;
+            }, 4);
         }
 
         async Task SaveCfg(string dir) {

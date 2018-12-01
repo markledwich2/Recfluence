@@ -85,6 +85,10 @@ namespace SysExtensions.Threading {
             sw.Stop();
             return new TimedResult<T> {Duration = sw.Elapsed, Result = result};
         }
+
+        public static void Wait(this Task task) {
+            task.GetAwaiter().GetResult();
+        }
     }
 
     public class TimedResult<T> {

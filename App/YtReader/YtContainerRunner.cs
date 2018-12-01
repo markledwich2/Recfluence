@@ -10,7 +10,7 @@ using Serilog;
 using SysExtensions.Text;
 
 namespace YtReader {
-    public static class YtCollectRunner {
+    public static class YtContainerRunner {
 
         public static Task<IContainerGroup> Start(ILogger log, Cfg cfg) => Start(log, cfg, new string[] {});
 
@@ -28,7 +28,7 @@ namespace YtReader {
             if (group != null)
                 await azure.ContainerGroups.DeleteByIdAsync(group.Id);
 
-            var cArgs = new string[] {"/app/ytnetworks.dll", "collect"}.Concat(args).ToArray();
+            var cArgs = new string[] {"/app/ytnetworks.dll", "update"}.Concat(args).ToArray();
             log.Information("starting container {Image} {Args}", container.ImageName, cArgs.Join(" "));
             var containerGroup = await azure.ContainerGroups.Define(container.Name)
                 .WithRegion(Region.USWest)

@@ -5,16 +5,16 @@ using Microsoft.Azure;
 using CommandLine;
 using YtReader;
 using SysExtensions.Text;
+using System;
 
-namespace YouTubeCli
-{
+namespace YouTubeCli {
     [Verb("collect", HelpText = "read all channel, video, recommendation data and flatten into parquet files")]
     public class CollectOption : CommonOption {
         [Option('z', "cloudinstance", HelpText = "launch a container instance")]
         public bool LaunchContainer { get; set; }
     }
 
-    [Verb("update", HelpText = "refresh new data from YouTube")]
+    [Verb("update", HelpText = "refresh new data from YouTube and collects it into results")]
     public class UpdateOption : CommonOption { }
 
     public class CommonOption {
@@ -25,13 +25,12 @@ namespace YouTubeCli
         public int Parallel { get; set; }
     }
 
-
     class Program {
         static int Main(string[] args) {
             var res = Parser.Default.ParseArguments<CollectOption, UpdateOption>(args).MapResult(
                 (CollectOption c) => Collect(c, args),
                 (UpdateOption u) => Update(u),
-                errs => (int) ExitCode.UnknownError
+                errs => (int)ExitCode.UnknownError
             );
 
             return res;
@@ -50,18 +49,34 @@ namespace YouTubeCli
             var log = Setup.CreateCliLogger(cfg.App);
 
             if (c.LaunchContainer) {
-                YtCollectRunner.Start(log, cfg, args.Where(a => a != "-z").ToArray()).GetAwaiter().GetResult();
-            }
-            else {
+                YtContainerRunner.Start(log, cfg, args.Where(a => a != "-z").ToArray()).Wait();
+            } else {
                 var ytStore = cfg.YtStore(log);
                 var ytCollect = new YtCollect(ytStore, cfg.DataStore(cfg.App.Storage.AnalysisPath), cfg.App, log);
-                ytCollect.SaveChannelRelationData().GetAwaiter().GetResult();
+                ytCollect.SaveChannelRelationData().Wait();
             }
 
-            return (int) ExitCode.Success;
+            return (int)ExitCode.Success;
         }
 
-        static int Update(UpdateOption u) => (int) ExitCode.Success;
+        static int Update(UpdateOption u) {
+            var cfg = Setup.LoadCfg().Result;
+            UpdateCfgFromOptions(cfg, u);
+            var log = Setup.CreateCliLogger(cfg.App);
+
+            try {
+                var ytStore = cfg.YtStore(log);
+                var ytUpdater = new YtDataUpdater(ytStore, cfg.App, log);
+                ytUpdater.UpdateData().Wait();
+                var ytCollect = new YtCollect(ytStore, cfg.DataStore(cfg.App.Storage.AnalysisPath), cfg.App, log);
+                ytCollect.SaveChannelRelationData().Wait();
+            } catch (Exception ex) {
+                log.Error("Error Updating/Collecting Data: {Error}", ex.Message, ex);
+                return (int)ExitCode.UnknownError;
+            }
+
+            return (int)ExitCode.Success;
+        } 
     }
 
     enum ExitCode {

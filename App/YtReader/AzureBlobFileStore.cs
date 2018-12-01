@@ -20,6 +20,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Net;
 using YtReader;
+using Humanizer;
 
 namespace YtReader {
     public class AzureBlobFileStore : ISimpleFileStore {
@@ -28,13 +29,15 @@ namespace YtReader {
         //path including container
         public StringPath BasePath { get; }
 
-        public CloudStorageAccount Storage {get; }
+        public CloudStorageAccount Storage { get; }
         HttpClient H { get; }
 
         public AzureBlobFileStore(string cs, StringPath path) {
             ContainerName = path.Tokens.FirstOrDefault() ?? throw new InvalidOperationException("path needs to at least have a container");
             BasePath = path;
-            H = new HttpClient();
+            H = new HttpClient {
+                Timeout = 10.Minutes()
+            };
             Storage = CloudStorageAccount.Parse(cs);
         }
 
@@ -69,9 +72,11 @@ namespace YtReader {
         }
 
         public async Task Save(StringPath path, FPath file) {
-            using(var stream = File.OpenRead(file.FullPath)) {
+            using (var stream = File.OpenRead(file.FullPath)) {
                 var req = BlobUri(path).Put().WithStreamContent(stream).WithBlobHeaders(Storage);
+
                 var res = await H.SendAsync(req);
+
                 res.EnsureSuccessStatusCode();
             }
         }

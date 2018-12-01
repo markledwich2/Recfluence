@@ -20,7 +20,7 @@ namespace YtReader {
         YtStore Yt { get; }
 
         public async Task UpdateData() {
-            Log.Information("Starting incremental data update {@Config}", Cfg);
+            Log.Information("Starting incremental data update");
 
             var channelCfg = await Cfg.LoadChannelConfig();
             var seeds = channelCfg.Seeds;
