@@ -145,8 +145,8 @@ namespace YtReader {
         public string Registry { get; set; } = "ytnetworks.azurecr.io";
         public string Name { get; set; } = "ytnetworks-auto";
         public string ImageName { get; set; } = "ytnetworks";
-        public int Cores {get;set;} = 3;
-        public double Mem { get;set;} = 2;
+        public int Cores {get;set;} = 2;
+        public double Mem { get;set;} = 5;
         public NameSecret RegistryCreds { get; set; }
     }
 
