@@ -36,7 +36,6 @@ export class ChannelTitle extends React.Component<Props, State> {
             <>
               <img src={c.Thumbnail} style={{ height: '7em', marginRight: '1em', clipPath: 'circle()' }} />
               <div>
-                <h3>{c.Title}</h3>
                 <p>
                   <b>{compactInteger(c.ChannelVideoViews)}</b> views for video's published
                   <i> {fdate(c.PublishedFrom)}</i> - <i>{fdate(c.PublishedTo)}</i>

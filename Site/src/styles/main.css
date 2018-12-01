@@ -146,7 +146,8 @@ div.ChannelRelationPage > .Title > .Card {
   display: flex;
   height: 8em;
   margin-left: 1em;
-  flex:3 30em
+  flex:3 30em;
+  align-items: center;
 }
 
 div.ChannelRelationPage > .Title > .Search {

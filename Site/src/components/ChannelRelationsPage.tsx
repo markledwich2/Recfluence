@@ -5,6 +5,7 @@ import { ChannelRelations } from './ChannelRelations'
 import { YtData, YtNetworks } from '../common/YtData'
 import { GridLoader } from 'react-spinners'
 import { DataSelections, DataSelection, SelectionType, ChartProps, InteractiveDataState, InteractiveDataProps } from '../common/Charts'
+import { jsonClone } from '../common/Utils'
 import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
 import { Mention } from 'react-twitter-widgets'
@@ -68,7 +69,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
   private updateComponentSelections() {
     let components = this.graphComponents()
-    components.forEach(g => g.setState({ selections: this.selections }))
+    components.forEach(g => g.setState({ selections: jsonClone(this.selections) }))
   }
 
   graphComponents(): Array<React.Component<InteractiveDataProps<YtData>, InteractiveDataState>> {
