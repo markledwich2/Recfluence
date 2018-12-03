@@ -82,12 +82,12 @@ export class ChannelRelations extends React.Component<Props, State> {
           ({
             source: l.FromChannelId,
             target: l.ChannelId,
-            strength: +l.RecommendsPercent
+            strength: +l.RecommendsFlowPercent
           } as Link)
       )
       .filter(
         l =>
-          l.strength > 0.04 &&
+          l.strength > 0.02 &&
           (nodes.some(c => c.channelId == (l.source as string)) && nodes.some(c => c.channelId == (l.target as string)))
       )
       .value()
@@ -253,10 +253,10 @@ export class ChannelRelations extends React.Component<Props, State> {
       if (prevProps == null || prevProps.width != this.props.width || prevProps.height != this.props.height) {
         svg.attr('width', this.props.width)
         svg.attr('height', this.props.height)
-        if(timesResized == 0)
+        //if(timesResized == 0)
           zoomToExpectedScale(this.props.width, this.props.height)
-        if(stopped)
-          zoomToFit(this.props.width, this.props.height) // first zoom should be to the expected bounds, nt the current ones
+        //if(stopped)
+        //  zoomToFit(this.props.width, this.props.height) // first zoom should be to the expected bounds, nt the current ones
         updateLabels(false)
         timesResized++
       }

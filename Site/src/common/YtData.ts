@@ -34,6 +34,7 @@ export interface RelationData {
   FromVideoViews: number
   RecommendsViewFlow: number
   RecommendsPercent: number
+  RecommendsFlowPercent: number
   UpdatedAt: string
 }
 

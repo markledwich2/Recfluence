@@ -182,7 +182,7 @@ div.footer > * {
 
   div.ChannelRelationPage {
     position: absolute;
-    height: 99vh;
+    height: 100vh;
     display: flex;
     flex-flow: column;
     justify-content: stretch;

@@ -42,9 +42,13 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     this.load()
   }
 
-  resultUrl = 'https://ytnetworks.azureedge.net/data/results/2018-11-28/'
+  resultUrl = "https://ytnetworks.blob.core.windows.net/data/results/2018-12-01/"
+
+  //resultUrl = 'https://ytnetworks.azureedge.net/data/results/2018-12-01/'
 
   async load() {
+
+
     if (this.state.isLoading) return
     let data = await YtNetworks.dataSet(this.resultUrl)
     try {
