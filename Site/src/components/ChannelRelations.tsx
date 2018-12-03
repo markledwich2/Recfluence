@@ -228,7 +228,7 @@ export class ChannelRelations extends React.Component<Props, State> {
         .attr('y2', d => fixna((d.target as Node).y))
     }
 
-    let zoomToExpectedScale = (width: number, height: number) => zoom(width, height, new DOMRect(-39, 17, 1216, 956), 0)
+    let zoomToExpectedScale = (width: number, height: number) => zoom(width, height, new DOMRect(100, 400, 900, 300), 0)
     let zoomToFit = (width: number, height: number) => zoom(width, height, nodesContainer.node().getBBox(), 1000)
 
     let zoom = (width: number, height: number, bounds: DOMRect, duration: number) => {
