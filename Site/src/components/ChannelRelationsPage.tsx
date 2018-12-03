@@ -42,9 +42,9 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     this.load()
   }
 
-  resultUrl = "https://ytnetworks.blob.core.windows.net/data/results/2018-12-01/"
+  //resultUrl = "https://ytnetworks.blob.core.windows.net/data/results/2018-12-01/"
 
-  //resultUrl = 'https://ytnetworks.azureedge.net/data/results/2018-12-01/'
+  resultUrl = 'https://ytnetworks.azureedge.net/data/results/2018-12-03/'
 
   async load() {
 

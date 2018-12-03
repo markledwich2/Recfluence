@@ -294,7 +294,7 @@ export class RecommendFlows extends React.Component<Props, State> {
                 <tspan className={'subtitle-bold'} dy={'1.3em'} x={0}>
                   {compactInteger(outgoing, 1)}
                 </tspan>
-                <tspan className={'subtitle'}> portion of viewed recommendations</tspan>
+                <tspan className={'subtitle'}> viewed recommendations</tspan>
               </>
             )}
           </text>
