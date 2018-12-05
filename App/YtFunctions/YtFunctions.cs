@@ -77,7 +77,7 @@ namespace YtFunctions {
         [FunctionName("Update")]
         public static async Task<HttpResponseMessage> Update([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
             HttpRequestMessage req, IMSLogger funcLogger) {
-            return req.CreateResponse(Update(funcLogger));
+            return req.CreateResponse(await Update(funcLogger));
         }
 
         static async Task<string> Update(IMSLogger funcLogger) {
