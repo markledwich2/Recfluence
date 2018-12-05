@@ -9,8 +9,8 @@ import { jsonEquals, jsonClone } from '../common/Utils'
 import { compactInteger } from 'humanize-plus'
 import * as _ from 'lodash'
 
-interface State extends InteractiveDataState {}
-interface Props extends ChartProps<YtData> {}
+interface State extends InteractiveDataState { }
+interface Props extends ChartProps<YtData> { }
 interface ChannelNodeExtra extends NodeExtra {
   channelId: string
   size: number
@@ -133,24 +133,8 @@ export class RecommendFlows extends React.Component<Props, State> {
 
     var maxNodes = 10
 
-    // sankey is not bi-directional, so clone channels with a new id to represent input channels.
-    let inChannels = nodes
-      .filter(c => links.some(r => r.target == c.channelId))
-      .map(c => ({ ...c, shapeId: 'in.' + c.channelId, mode: NodeMode.From } as ChannelNode))
-      .value()
     let inLinks = links.filter(r => r.target == channelId).map(r => ({ ...r, source: 'in.' + r.source } as ChannelLink))
-    let outChannels = nodes
-      .filter(c => links.some(r => r.source == c.channelId))
-      .map(c => ({ ...c, shapeId: 'out.' + c.channelId, mode: NodeMode.To } as ChannelNode))
-      .value()
     let outLinks = links.filter(r => r.source == channelId).map(r => ({ ...r, target: 'out.' + r.target } as ChannelLink))
-    let mainChannel: ChannelNode = {
-      ...nodes.find(c => c.channelId == channelId),
-      mode: NodeMode.Main,
-      incomming: _.sum(inLinks.map(l => l.value)),
-      outgoing: _.sum(outLinks.map(l => l.value))
-    } // calculate value now as to ignore the filter
-    let channels = inChannels.concat(outChannels).concat([{ ...mainChannel, shapeId: mainChannel.channelId } as ChannelNode])
     let finalLinks = _(inLinks)
       .orderBy(l => l.value, 'desc')
       .slice(0, maxNodes)
@@ -160,9 +144,28 @@ export class RecommendFlows extends React.Component<Props, State> {
           .slice(0, maxNodes)
           .value()
       )
-      //.filter(l => channels.some(c => c.shapeId == l.target) && channels.some(c => c.shapeId == l.source))
       .value()
-    channels = channels.filter(c => finalLinks.some(l => l.source == c.shapeId || l.target == c.shapeId))
+
+    // sankey is not bi-directional, so clone channels with a new id to represent input channels.
+    let inChannels = nodes
+      .map(c => ({ ...c, shapeId: 'in.' + c.channelId, mode: NodeMode.From } as ChannelNode))
+      .filter(c => finalLinks.some(r => r.source == c.shapeId))
+      .value()
+
+    let outChannels = nodes
+      .map(c => ({ ...c, shapeId: 'out.' + c.channelId, mode: NodeMode.To } as ChannelNode))
+      .filter(c => finalLinks.some(r => r.target == c.shapeId))
+      .value()
+
+    let mainChannel: ChannelNode = {
+      ...nodes.find(c => c.channelId == channelId),
+      mode: NodeMode.Main,
+      incomming: _.sum(inLinks.map(l => l.value)),
+      outgoing: _.sum(outLinks.map(l => l.value))
+    } // calculate value now as to ignore the filter
+    let channels = inChannels.concat(outChannels).concat([{ ...mainChannel, shapeId: mainChannel.channelId } as ChannelNode])
+
+    //channels = channels.filter(c => finalLinks.some(l => l.source == c.shapeId || l.target == c.shapeId))
 
     return { nodes: channels, links: finalLinks }
   }
@@ -312,7 +315,7 @@ export class RecommendFlows extends React.Component<Props, State> {
         .transition()
         .duration(300)
         .style('opacity', 0)
-        
+
 
       exitNode.transition().delay(300).remove()
     }

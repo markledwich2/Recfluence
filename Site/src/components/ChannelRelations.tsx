@@ -87,7 +87,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       )
       .filter(
         l =>
-          l.strength > 0.01 &&
+          l.strength > 0.03 &&
           (nodes.some(c => c.channelId == (l.source as string)) && nodes.some(c => c.channelId == (l.target as string)))
       )
       .value()
@@ -122,7 +122,7 @@ export class ChannelRelations extends React.Component<Props, State> {
           .forceLink<Node, Link>(links)
           .distance(1)
           .id(d => d.channelId)
-          .strength(d => (d.strength / maxStrength) * 0.3)
+          .strength(d => (d.strength / maxStrength) * 0.7)
       )
       .force('collide', d3.forceCollide<Node>(getNodeRadius))
 
