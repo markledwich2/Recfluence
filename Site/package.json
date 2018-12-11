@@ -33,6 +33,7 @@
     "dateformat": "^3.0.3",
     "gatsby": "^2.0.52",
     "gatsby-link": "^2.0.6",
+    "gatsby-plugin-google-analytics": "^2.0.8",
     "gatsby-plugin-react-helmet": "^3.0.3",
     "gatsby-transformer-remark": "^2.1.12",
     "humanize-plus": "^1.8.2",
