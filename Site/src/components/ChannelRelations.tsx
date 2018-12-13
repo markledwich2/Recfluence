@@ -9,8 +9,8 @@ import * as _ from 'lodash'
 import { lab } from 'd3'
 import { Properties } from 'csstype'
 
-interface State extends InteractiveDataState {}
-interface Props extends ChartProps<YtData> {}
+interface State extends InteractiveDataState { }
+interface Props extends ChartProps<YtData> { }
 interface Link extends d3.SimulationLinkDatum<Node> {
   strength: number
 }
@@ -166,7 +166,15 @@ export class ChannelRelations extends React.Component<Props, State> {
     let layoutLabels = layoutLabel<Node[]>(layoutGreedy())
       .size((_, i, g) => {
         let e = g[i] as Element
-        let textSize = e.getElementsByTagName('text')[0].getBBox()
+        let text = e.getElementsByTagName('text')[0]
+        let displayed = false
+        if(text.style.display == 'none') {
+          displayed = true
+          text.style.display = null
+        }
+        let textSize = text.getBBox()
+        if(displayed)
+          text.style.display = 'none'
         return [textSize.width + labelPadding * 2, textSize.height + labelPadding * 2]
       })
       .component(
@@ -176,39 +184,41 @@ export class ChannelRelations extends React.Component<Props, State> {
       )
 
     let labelsGroup = container
-      .append('g')
+      .append<SVGGElement>('g')
       .attr('class', 'labels')
       .datum(nodes)
-      .call(layoutLabels)
+      .attr('pointer-events', 'none')
 
-    function updateLabels(fast:boolean) {
-      if(fast) {
-        labelsGroup.selectAll<SVGGElement, Node>("g.label")
+    //labelsGroup
+    //  .call(layoutLabels)
+
+    function updateLabels(fast: boolean) {
+      if (fast) {
+        labelsGroup.selectAll<SVGGElement, Node>('g.label')
           .attr('transform', d => `translate(${d.x}, ${d.y})`)
       }
-      else
+      else {
         labelsGroup.call(layoutLabels)
+      }
     }
-
-    let labels = labelsGroup.selectAll<SVGTextElement, Node>('text')
-    labels.attr('pointer-events', 'none')
 
     let updateVisibility = () => {
       let lighted = this.chart.highlightedItems(YtNetworks.ChannelIdPath)
       let filtered = this.chart.filteredItems(YtNetworks.ChannelIdPath)
       let lightedFiltered = lighted.concat(filtered)
 
-      let nodeFiltered = (c:Node) => filtered.some(id => id == c.channelId)
+      let nodeFiltered = (c: Node) => filtered.some(id => id == c.channelId)
       let nodeLightedFiltered = (c: Node) => lightedFiltered.some(id => id == c.channelId)
       let nodeRelated = (c: Node) => lightedFiltered.some(id => isConnected(id, c.channelId))
 
-      let showRelatedLabels = this.props.width > 1024
+      let showRelatedLabels = this.props.width > 1280
 
       nodesCircle.style('opacity', d => (lightedFiltered.length == 0 || nodeLightedFiltered(d) || nodeRelated(d) ? 1 : 0.4))
       nodesCircle.style('stroke', d => nodeFiltered(d) ? '#ddd' : null)
-      labels.style('display', d => nodeLightedFiltered(d) || (showRelatedLabels && nodeRelated(d)) ?  null :'none')
-      //labels.style('fill', d =>  nodeLightedFiltered(d) ? null : '#aaa')
-      labels.style('font-weight', d =>  nodeLightedFiltered(d) ? 'bold' : null)
+
+      let labelText = labelsGroup.selectAll<SVGTextElement, Node>('text')
+      labelText.style('display', d => nodeLightedFiltered(d) || (showRelatedLabels && nodeRelated(d)) ? null : 'none')
+      labelText.style('font-weight', d => nodeLightedFiltered(d) ? 'bold' : null)
 
       linkEnter.style('opacity', d => {
         let s = d.source as Node
@@ -240,21 +250,22 @@ export class ChannelRelations extends React.Component<Props, State> {
       let trans = d3.zoomIdentity.translate(t.x, t.y).scale(t.scale)
       let s = duration > 0 ? container.transition().duration(duration) : container
       s.attr('transform', () => trans.toString())
-      labels.attr('transform', d => `scale(${1/trans.k})`) // undo the zoom on labels
+      labelsGroup.selectAll<SVGTextElement, Node>('text')
+        .attr('transform', d => `scale(${1 / trans.k})`) // undo the zoom on labels
     }
 
     let ticks = 0
     let stopped = false
     let timesResized = 0
 
-    this.stateRender  = (prevProps: Props) => {
+    this.stateRender = (prevProps: Props) => {
       let svg = d3.select(this.ref)
 
       if (prevProps == null || prevProps.width != this.props.width || prevProps.height != this.props.height) {
         svg.attr('width', this.props.width)
         svg.attr('height', this.props.height)
         //if(timesResized == 0)
-          zoomToExpectedScale(this.props.width, this.props.height)
+        zoomToExpectedScale(this.props.width, this.props.height)
         //if(stopped)
         //  zoomToFit(this.props.width, this.props.height) // first zoom should be to the expected bounds, nt the current ones
         updateLabels(false)
