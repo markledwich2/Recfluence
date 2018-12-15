@@ -58,7 +58,7 @@ UCK7tptUDHh-RYDsdxO1-5QQ,Wall Street Journal,News,R
 UCvJJ_dzjViJCoLf5uKUTwoA,CNBC,TVNews,L
 UCqnbDFdCpuN8CMEg0VuEBqA,The New York Times,News,L
 UCVSNOxehfALut52NbkfRBaA,VOA News,News,C
-UCP6HGa63sBC7-KHtkme-p-g,USA TODAY,News,L
+UCP6HGa63sBC7-KHtkme-p-g,USA TODAY,News,C
 UCK0z0_5uL7mb9IjntOKi5XQ,The Atlantic,News,L
 UCUMZ7gohGI9HcU9VNsr2FJQ,Bloomberg,News,L
 UC0p5jTq6Xx_DosDFxVXnWaQ,The Economist,News,C
@@ -175,7 +175,7 @@ UCZWlSUNDvCCS1hBiXV0zKcA,PragerU,Commentary,R
 UCy6kyFxaMqGtpE3pQTflK8A,Real Time with Bill Maher,TVCommentary,L
 UCVTyTA7-g9nopHeHbeuvpRA,Late Night with Seth Meyers,TVCommentary,L
 UCeH6qE4V7n5tVwP7NkdrtJg,The View,TVCommentary,C
-UCLXo7UDZvByw2ixzpQCufnA,Vox,Commentary,L
+UCLXo7UDZvByw2ixzpQCufnA,Vox,News,L
 UCZNk7Jjb2t8EuBdgn4Zj1cw,No Bullshit,Commentary,R
 UC3M7l8ved_rYQ45AVzS0RGA,The Jimmy Dore Show,Commentary,L
 UCLH7qUqM0PLieCVaHA7RegA,Gad Saad,Commentary,PL
@@ -311,3 +311,42 @@ UCG1uayRlzz3ahT8ISRdyw7Q,Genetically Modified Skeptic,Commentary,C
 UCC6ue7UYt1yeS621xmTMKrQ,Rachel Oates,Commentary,C
 UCewUkuIHNuwuMNWMa96q9ZQ,Godless Cranium,Commentary,C
 UCw8rdbWx_3f0iIzL7OWYOcw,Daisy Cousens,Commentary,R
+#
+# From adfontesmedia
+#
+UC8Su5vZCXWRag13H53zWVwA,TimeMagazine,News,C
+UCUMZ7gohGI9HcU9VNsr2FJQ,Bloomberg,News,C
+UCJnS2EsPfv46u1JR8cnD0NA,NPR,News,L
+UCw3SYO_euO0TSPC_m_0Pzgw,Los Angeles Times,News,L
+UCBi2mrWuNuyYy4gbM6fU18Q,ABC News,TVNews,C
+UC52X5wxOL_s5yw0dQk7NtgA,Associated Press,News,C
+UCfU4-ArXuSX0tpyApyklMAg,Axios,News,C
+UCmgnsaQIK1IR808Ebde-ssA,Breitbart News,News,R
+UCcyq283he07B7_KUX07mmtA,Business Insider,Neews,C
+UC8eE25pvmhz-nAMZATep-7g,Conservative Tribune,News,R
+UC7qZ_e097NBkgOljy1joVRA,The Daily Beast,News,L
+UCP4BdwPKyYnfRLjSNfGAPRA,Daily Caller,News,R
+UCw3fku0sH3qA3c3pZeJwdAw,Daily Mail,News,R
+UCHqkXbgqrDrDVInBMSoGQgQ,The Daily Signal,News,L
+UCoUxsWakJucWg46KW5RsvPw,Financial Times,News,C
+UCmh7afBz-uWwOSSNTqUBAhg,Forbes,News,C
+UCP2gdh7HfjgCoi8lO50dA5w,Fortune,News,R
+UCv1RrKT8zaa5J1ueqCmMfsw,freespeechtv,News,L
+UCv002AUCZaPNwiADqwchijg,The Intercept,News,L
+UCgpEN1mWQxivlZ9O6GuZbOw,Mic,News,L
+UCbWB33FQvFiV0Pq9Calkgzw,Mother Jones,News,L
+UCun4tg1BecN4PuxwZ6mL3NA,National Review,News,R
+UCrvhNP_lWuPIP6QZzJmM-bw,New York Post,News,R
+UCx6h-dWzJ5NpAlja1YsApdg,Newsmax TV,News,L
+UCyF0994XbriKL_Vss0fTUMw,OZY,News,C
+UCgyeJxD05YnoDquRMNBfBqw,PBS,TVNews,C
+UCgjtvMmHXbutALaw9XzRkAg,POLITICO,News,C
+UCtCL58_DaVdVRmev3yHK7pg,ProPublica,News,L
+UC9f78Z5hgtDt0n8JWyfBk8Q,Quartz,News,L
+UCLjGwELoFRXojiw8T2t2BDw,Red State Update,News,R
+UCTcCX_XY4l-W2ba5IxIRhsg,TPM TV,News,L
+UCKgJEs_v0JB-6jWb8lIy9Xw,The Blaze,News,R
+UCMk8U2Hmfdxqn3zrCq2g9oQ,The Federalist Society,News,R
+UCHpw8xwDNhU9gdohEcJu4aA,The Guardian,News,L
+UCDGECor7yw2AkrgAcHkcJxQ,The Nation,News,L
+UCdn-M_vxWEK07X3t19ximDQ,Washington Free Beacon,News,R
