@@ -48,7 +48,7 @@ UC6ZFN9Tx6xh-skXCuRHCDpQ,PBS NewsHour,TVNews,C
 UCjXB7nX8bL2U2sje8d212Yw,Roland S. Martin,Commentary,L
 UCHd62-u_v4DvJ8TCFtpi4GA,Washington Post,TVNews,L
 UCzuqE7-t13O4NIDYJfakrhw,Democracy Now!,Commentary,L
-UCNye-wNBqNL5ZzHSJj3l8Bg,Al Jazeera English,TVNews,L
+UCNye-wNBqNL5ZzHSJj3l8Bg,Al Jazeera English,TVNews,C
 UCeY0bbntWzzVIaj2z3QigXg,NBC News,TVNews,L
 UCaeO5vkdj5xOQHp4UmIN6dw,The Daily Wire,Commentary,R
 UCmhT57vCaS4kPIalY_rrysg,Political News Networks,Commentary,L
@@ -62,14 +62,13 @@ UCP6HGa63sBC7-KHtkme-p-g,USA TODAY,News,C
 UCK0z0_5uL7mb9IjntOKi5XQ,The Atlantic,News,L
 UCUMZ7gohGI9HcU9VNsr2FJQ,Bloomberg,News,L
 UC0p5jTq6Xx_DosDFxVXnWaQ,The Economist,News,C
-UCdHkLMxTYwV66Sky1xXVrxQ,BBC America,TVNews,L
 UCJg9wBPyKMNA5sRDnvzmkdg,FOX 10 Phoenix,TVNews,R
 UCsD-Qms-AkXDrsU962OicLw,The New Yorker,News,L
 UCldfgbzNILYZA4dmDt4Cd6A,Secular Talk,Commentary,L
 UCGy6uV7yqGWDeUWTZzT3ZEg,Rebel Media,Commentary,R
 UC18vz5hUUqxbGvym9ghtX_w,Full Frontal with Samantha Bee,TVCommentary,L
 UCIZBXVGIJoJMXf8giib0IiQ,James Allsup,Commentary,R
-UC8p1vwvWtl6T73JiExfWs1g,CBS News,TVNews,L
+UC8p1vwvWtl6T73JiExfWs1g,CBS News,TVNews,C
 UCY0YIply-je0EhSWLgpftVw,BEME News,News,L
 UCIpwPuJsrboNnf200oV8cWQ,Fleccas Talks,Commentary,R
 UCmrLCXSDScliR7q8AxxjvXg,Black Pigeon Speaks,Commentary,R
@@ -315,6 +314,7 @@ UCw8rdbWx_3f0iIzL7OWYOcw,Daisy Cousens,Commentary,R
 # From adfontesmedia
 #
 UC8Su5vZCXWRag13H53zWVwA,TimeMagazine,News,C
+UC16niRr50-MSBwiO3YDb3RA,BBC News,TVNews,L
 UCUMZ7gohGI9HcU9VNsr2FJQ,Bloomberg,News,C
 UCJnS2EsPfv46u1JR8cnD0NA,NPR,News,L
 UCw3SYO_euO0TSPC_m_0Pzgw,Los Angeles Times,News,L
@@ -322,7 +322,7 @@ UCBi2mrWuNuyYy4gbM6fU18Q,ABC News,TVNews,C
 UC52X5wxOL_s5yw0dQk7NtgA,Associated Press,News,C
 UCfU4-ArXuSX0tpyApyklMAg,Axios,News,C
 UCmgnsaQIK1IR808Ebde-ssA,Breitbart News,News,R
-UCcyq283he07B7_KUX07mmtA,Business Insider,Neews,C
+UCcyq283he07B7_KUX07mmtA,Business Insider,News,C
 UC8eE25pvmhz-nAMZATep-7g,Conservative Tribune,News,R
 UC7qZ_e097NBkgOljy1joVRA,The Daily Beast,News,L
 UCP4BdwPKyYnfRLjSNfGAPRA,Daily Caller,News,R
