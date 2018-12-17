@@ -2,7 +2,7 @@ Id,Title,Type,LR
 # ChannelId, Video title, TVNews (news published primarily for tv)|TVCommentary|News|Commentary, R (right) | L (left) | C (center) | PL (punching left)
 # 10k subscribers + significant focus on US political/cultural commentary/contexualizing + activelyproducing content in 2018
 #
-# from channel crawler 200k+ subs in News/Politics/Activism categories
+# from https://channelcrawler.com/ 200k+ subscribers in News/Politics/Activism categories
 UC1yBKRuGpC1tSM73A0ZjYjQ,The Young Turks,Commentary,L
 UCgRvm1yLFoaQKhmaTqXk9SA,NowThis,Commentary,L
 UCzUV5283-l5c0oKRtyenj6Q,Mark Dice,Commentary,R
@@ -166,7 +166,7 @@ UCmtALVZjXFzb4v3fIXDmDyw,The Reality Calls Show,Commentary,R
 UCAgBUlIpzlJaE0693J3s97w,Baked Alaska,Commentary,R
 #
 # Search for political/culture war keywords from https://www.isidewith.com/en-us/polls
-# Also a review related channels once added
+# Also a review of related channels form those searches
 #
 UCMtFAi84ehTSYSE9XoHefig,The Late Show with Stephen Colbert,TVCommentary,L
 UCwWhs_6x42TyRM4Wstoq8HA,The Daily Show with Trevor Noah,TVCommentary,L
@@ -311,7 +311,7 @@ UCC6ue7UYt1yeS621xmTMKrQ,Rachel Oates,Commentary,C
 UCewUkuIHNuwuMNWMa96q9ZQ,Godless Cranium,Commentary,C
 UCw8rdbWx_3f0iIzL7OWYOcw,Daisy Cousens,Commentary,R
 #
-# From adfontesmedia
+# From  https://www.adfontesmedia.com/
 #
 UC8Su5vZCXWRag13H53zWVwA,TimeMagazine,News,C
 UC16niRr50-MSBwiO3YDb3RA,BBC News,TVNews,L

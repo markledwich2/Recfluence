@@ -46,6 +46,17 @@ For all videos, retrieve the top 10 recommended videos
 ### Available Data
 See the list of channels and their political categories in [SeedChannels.csv](Data/SeedChannels.csv). The latest data and statistics retrieved form YouTube is link at the bottom of the [visualization](https://pyt.azureedge.net).
 
+## Visualization Information
+
+**Channel Relation Graph**
+The "bubble" chart is a [force directed graph](https://en.wikipedia.org/wiki/Force-directed_graph_drawing). The area (not the radius) of each bubble corresponds to the number of views of a channels video's. The force/size of link line corresponds to the portion of recommendations between those channels.
+
+NOTE:
+- When new data is added, the orientation and the final clustering of channels changes significantly. Unlike a principal component analysis (or similar) it does not display a quantifiable statistic by the location. The chart animates the simulated forces when opening to show this process.
+
+
+**Recommendation Flow Diagram**
+The left boxes in the flow diagram show the number of views. it is broken down by split by channel (when one is selected) or political category otherwise. The right side shows the portion of those views (according to the number of times the other channels video's were in the recommended list) given to the category/channel. 
 
 ## Implementation
 ### Data Analysis
