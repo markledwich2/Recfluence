@@ -67,16 +67,5 @@ The left boxes in the flow diagram show the number of views. it is broken down b
 - Data from 2018 Jan 1st - Now
 - Analysed using [this DataBricks notebook](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/5467014801025226/1340434901968186/7194280856364978/latest.html) 
 
-### Maintenance
 
-Stack: Gatsby, React, D3 hosted on an Azure Static Website.
-
-- Build: Automated. On checking, azure Pipelines will build App & Site. See https://dev.azure.com/mledwich/ytnetworks. 
-- Release: Create a release in Azure pipelines to deploy
-- Update Data: 
-    - An azure function automatically runs each day to get latest data
-    - The [ChannelRelations notebook](https://community.cloud.databricks.com/?o=5467014801025226#notebook/1340434901968186/command/1340434901968187) needs to be run to process the raw data into the format needed for visualization
-    - update the visualization to point to the latest data 
-    - reviews and fix any zooming issues
-    - check in
  
