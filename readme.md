@@ -1,6 +1,6 @@
 # Political YouTube
 
-A visualization showing the relations and recommendation flows between political & cultural commentary on YouTube
+A [visualization](https://pyt.azureedge.net) showing the relations and recommendation flows between political & cultural commentary on YouTube
 
 ## Data Collection Process 
 
