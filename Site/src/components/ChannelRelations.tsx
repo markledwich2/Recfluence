@@ -168,12 +168,12 @@ export class ChannelRelations extends React.Component<Props, State> {
         let e = g[i] as Element
         let text = e.getElementsByTagName('text')[0]
         let displayed = false
-        if(text.style.display == 'none') {
+        if (text.style.display == 'none') {
           displayed = true
           text.style.display = null
         }
         let textSize = text.getBBox()
-        if(displayed)
+        if (displayed)
           text.style.display = 'none'
         return [textSize.width + labelPadding * 2, textSize.height + labelPadding * 2]
       })
@@ -238,7 +238,7 @@ export class ChannelRelations extends React.Component<Props, State> {
         .attr('y2', d => fixna((d.target as Node).y))
     }
 
-    let zoomToExpectedScale = (width: number, height: number) => zoom(width, height, new DOMRect(0, 0, 1100, 1100), 0)
+    let zoomToExpectedScale = (width: number, height: number) => zoom(width, height, new DOMRect(-100, 0, 1300, 1300), 0)
     let zoomToFit = (width: number, height: number) => zoom(width, height, nodesContainer.node().getBBox(), 1000)
 
     let zoom = (width: number, height: number, bounds: DOMRect, duration: number) => {
