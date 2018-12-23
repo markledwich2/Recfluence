@@ -74,11 +74,15 @@ namespace YtReader {
         public async Task Save(StringPath path, FPath file) {
             using (var stream = File.OpenRead(file.FullPath)) {
                 var req = BlobUri(path).Put().WithStreamContent(stream).WithBlobHeaders(Storage);
-
                 var res = await H.SendAsync(req);
-
                 res.EnsureSuccessStatusCode();
             }
+        }
+
+        public async Task Save(StringPath path, Stream contents) {
+            var req = BlobUri(path).Put().WithStreamContent(contents).WithBlobHeaders(Storage);
+            var res = await H.SendAsync(req);
+            res.EnsureSuccessStatusCode();
         }
     }
 }

@@ -6,6 +6,8 @@ using Newtonsoft.Json;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
+using SysExtensions.Text;
+using YoutubeExplode;
 
 namespace YtReader {
     public class YtStore {
@@ -131,6 +133,20 @@ namespace YtReader {
             rv.Updated = DateTime.UtcNow;
             await RecommendedVideosCollection.Set(rv);
             return rv;
+        }
+
+        YoutubeClient ytScaper = new YoutubeClient();
+
+        public async Task<string> GetAndUpdateVideoCaptions(string videoId) {
+            //var video = await ytScaper.GetVideoAsync(videoId);
+            var tracks = await ytScaper.GetVideoClosedCaptionTrackInfosAsync(videoId);
+            var en = tracks.FirstOrDefault(t => t.Language.Code == "en");
+            if (en == null) return null;
+            var track = await ytScaper.GetClosedCaptionTrackAsync(en);
+            var text = track.Captions.Select(c => c.Text).Join("\n");
+
+            await Store.Save(StringPath.Relative("VideoCaptions", $"{videoId}.txt"), text.AsStream());
+            return text;
         }
     }
 

@@ -89,6 +89,10 @@ namespace YtReader {
             await tu.UploadAsync(file.FullPath, Cfg.Bucket, BasePath.Add(path));
         }
 
+        public Task Save(StringPath path, Stream contents) {
+            throw new System.NotImplementedException();
+        }
+
         public IAsyncEnumerable<ICollection<StringPath>> ListKeys(StringPath path) {
             var prefix = BasePath.Add(path);
             return new AsyncEnumerable<ICollection<StringPath>>(async yield => {

@@ -1,3 +1,4 @@
+using System.IO;
 using System.Threading.Tasks;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Text;
@@ -7,5 +8,6 @@ namespace YtReader {
         Task<T> Get<T>(StringPath path) where T : class;
         Task Set<T>(StringPath path, T item);
         Task Save(StringPath path, FPath file);
+        Task Save(StringPath path, Stream contents);
     }
 }

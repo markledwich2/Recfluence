@@ -23,6 +23,7 @@
     <PackageReference Include="Serilog.Sinks.Trace" Version="2.1.0"/>
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.2"/>
     <PackageReference Include="Serilog.Sinks.Debug" Version="1.0.1"/>
+    <PackageReference Include="YoutubeExplode" Version="4.6.1"/>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SysExtensions\SysExtensions.csproj"/>
