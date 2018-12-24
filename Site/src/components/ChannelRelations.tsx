@@ -189,8 +189,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       .datum(nodes)
       .attr('pointer-events', 'none')
 
-    //labelsGroup
-    //  .call(layoutLabels)
+    labelsGroup.call(layoutLabels)
 
     function updateLabels(fast: boolean) {
       if (fast) {
