@@ -109,7 +109,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     let simSize = 1024
     let maxStrength = d3.max(links, l => l.strength)
     let maxSize = d3.max(nodes, n => n.size)
-    let getNodeRadius = (d: Node) => Math.sqrt(d.size > 0 ? d.size / maxSize : 1) * 30
+    let getNodeRadius = (d: Node) => Math.sqrt(d.size > 0 ? d.size / maxSize : 1) * 40
     let getLineWidth = (d: Link) => (d.strength / maxStrength) * 40
     let centerForce = d3.forceCenter(simSize / 2, simSize / 2)
     let force = d3
@@ -237,7 +237,8 @@ export class ChannelRelations extends React.Component<Props, State> {
         .attr('y2', d => fixna((d.target as Node).y))
     }
 
-    let zoomToExpectedScale = (width: number, height: number) => zoom(width, height, new DOMRect(-100, 0, 1300, 1300), 0)
+    let zoomToExpectedScale = (width: number, height: number) => 
+    zoom(width, height, new DOMRect(0, -200, 1600, 1600), 0)
     let zoomToFit = (width: number, height: number) => zoom(width, height, nodesContainer.node().getBBox(), 1000)
 
     let zoom = (width: number, height: number, bounds: DOMRect, duration: number) => {
