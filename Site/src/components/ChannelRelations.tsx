@@ -254,7 +254,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       })
 
     let zoomToExpectedScale = (width: number, height: number) =>
-      zoom(width, height, new DOMRect(-200, -400, 1600, 1600), 0)
+      zoom(width, height, new DOMRect(-200, -200, 1400, 1400), 0)
 
     let zoom = (width: number, height: number, bounds: DOMRect, duration: number) => {
       let midX = bounds.x + bounds.width / 2
