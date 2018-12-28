@@ -62,13 +62,18 @@ export class YtNetworks {
   static lrMap = new Map([
       ['L', {color:'#3c4455', text:'Left'}],
       ['C', {color:'#7b4d5e', text:'Center/Heterodox'}],
-      ['PL', {color:'#c3833b', text:'Exclusively Critical of Left'}],
       ['R', {color:'#d43a3d', text:'Right'}],
-      ['', {color:'#c53f42', text:'Unknown'}]
+      ['', {color:'#666666', text:'Unknown'}]
     ])
 
   static lrColor(key:string) {
-    return this.lrMap.get(key).color
+    let c = this.lrMap.get(key)
+    return c ? c.color : '#666666'
+  }
+
+  static lrText(key:string) {
+    let c = this.lrMap.get(key)
+    return c ? c.text : 'Unknown'
   }
 }
 

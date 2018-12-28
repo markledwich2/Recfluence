@@ -74,7 +74,7 @@ export class RecommendFlows extends React.Component<Props, State> {
           ({
             shapeId: `from.${t}`,
             lr: t,
-            title: YtNetworks.lrMap.get(t).text,
+            title: YtNetworks.lrText(t),
             mode: NodeMode.From
           } as Node)
       )
@@ -86,7 +86,7 @@ export class RecommendFlows extends React.Component<Props, State> {
           ({
             shapeId: `to.${t}`,
             lr: t,
-            title: YtNetworks.lrMap.get(t).text,
+            title: YtNetworks.lrText(t),
             mode: NodeMode.To
           } as Node)
       )

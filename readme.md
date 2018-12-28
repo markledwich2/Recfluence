@@ -29,8 +29,11 @@ For news:
 
 For political/cultural commentary I considered all of the following:
  - Self identified political label, or support for a party
- - One sided content on divided topics of the day (e.g. Kavanaugh, Migrant Caravan, Gender Pronouns)
+ - One sided content on divided political topics of the day (e.g. Kavanaugh, Migrant Caravan)
+ - One sided content reacting to cultural events topics of the day (e.g. campus protests, trans activism )
  - Clearly matches Democrat (left) or Republican (right) views on issues in the [ISideWith poll](https://www.isidewith.com/en-us/polls)
+
+ If these considerations align in the same direction then the channel is left or right. If there was a mix then they are assigned the center/heterodox category.
 
  Notes/Caveats:
 - There is some criticism for not using a more procedural/quantifiable method for determining political category (e.g. like the process used for https://www.adfontesmedia.com). I don't believe making this process more detailed and quantitative would give you a significantly more accurate/objective answer. Also, US politics is so polarized that there aren't enough in question to make a difference when comparing aggregate views/recommendations.

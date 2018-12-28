@@ -6,7 +6,7 @@ import { Graph, YtNetworks, YtData } from '../common/YtData'
 import { delay } from '../common/Utils'
 import { ChartProps, DataSelections, DataComponentHelper, InteractiveDataState } from '../common/Charts'
 import * as _ from 'lodash'
-import { lab } from 'd3'
+import { lab, ZoomTransform } from 'd3'
 import { Properties } from 'csstype'
 
 interface State extends InteractiveDataState { }
@@ -136,6 +136,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     let svg = d3.select(this.ref)
     let container = this.chart.createContainer(svg)
 
+
     let linkEnter = container
       .append('g')
       .attr('class', 'links')
@@ -210,7 +211,8 @@ export class ChannelRelations extends React.Component<Props, State> {
       let nodeLightedFiltered = (c: Node) => lightedFiltered.some(id => id == c.channelId)
       let nodeRelated = (c: Node) => lightedFiltered.some(id => isConnected(id, c.channelId))
 
-      let showRelatedLabels = this.props.width > 1280
+      let z = d3.zoomTransform(svg.node())
+      let showRelatedLabels = z.k > 1.5
 
       nodesCircle.style('opacity', d => (lightedFiltered.length == 0 || nodeLightedFiltered(d) || nodeRelated(d) ? 1 : 0.4))
       nodesCircle.style('stroke', d => nodeFiltered(d) ? '#ddd' : null)
@@ -237,9 +239,22 @@ export class ChannelRelations extends React.Component<Props, State> {
         .attr('y2', d => fixna((d.target as Node).y))
     }
 
-    let zoomToExpectedScale = (width: number, height: number) => 
-    zoom(width, height, new DOMRect(0, -200, 1600, 1600), 0)
-    let zoomToFit = (width: number, height: number) => zoom(width, height, nodesContainer.node().getBBox(), 1000)
+
+    // see here for good docs on d3 zooming https://www.datamake.io/blog/d3-zoom
+    var zoomHandler = d3.zoom()
+      .scaleExtent([0.2, 5])
+      .on("zoom", () => {
+        let t: d3.ZoomTransform = d3.event.transform
+        container.attr('transform', () => t.toString())
+        labelsGroup.selectAll<SVGTextElement, Node>('text')
+          .attr('transform', d => `scale(${1 / t.k})`) // undo the zoom on labels
+        //console.log("zoom transform", t.x, t.y, t.k)
+        updateLabels(true)
+        updateVisibility()
+      })
+
+    let zoomToExpectedScale = (width: number, height: number) =>
+      zoom(width, height, new DOMRect(-200, -400, 1600, 1600), 0)
 
     let zoom = (width: number, height: number, bounds: DOMRect, duration: number) => {
       let midX = bounds.x + bounds.width / 2
@@ -248,11 +263,12 @@ export class ChannelRelations extends React.Component<Props, State> {
       var t = { x: width / 2 - scale * midX, y: height / 2 - scale * midY, scale: scale }
 
       let trans = d3.zoomIdentity.translate(t.x, t.y).scale(t.scale)
-      let s = duration > 0 ? container.transition().duration(duration) : container
-      s.attr('transform', () => trans.toString())
-      labelsGroup.selectAll<SVGTextElement, Node>('text')
-        .attr('transform', d => `scale(${1 / trans.k})`) // undo the zoom on labels
+      let s = svg.transition().duration(duration)
+      s.call(zoomHandler.transform, trans)
     }
+
+    zoomHandler(svg)
+    zoomToExpectedScale(this.props.width, this.props.height)
 
     let ticks = 0
     let stopped = false
@@ -265,10 +281,12 @@ export class ChannelRelations extends React.Component<Props, State> {
         svg.attr('width', this.props.width)
         svg.attr('height', this.props.height)
         //if(timesResized == 0)
+        
         zoomToExpectedScale(this.props.width, this.props.height)
+        
         //if(stopped)
         //  zoomToFit(this.props.width, this.props.height) // first zoom should be to the expected bounds, nt the current ones
-        updateLabels(false)
+        //updateLabels(false)
         timesResized++
       }
       updateVisibility()
@@ -281,7 +299,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       if (ticks > 150) {
         lay.force.stop()
         stopped = true
-        this.stateRender(null)
+        //this.stateRender(null)
       }
     }
 
