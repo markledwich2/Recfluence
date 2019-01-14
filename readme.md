@@ -38,14 +38,14 @@ For political/cultural commentary I considered all of the following:
 
  If these considerations align in the same direction then the channel is left or right. If there was a mix then they are assigned the center/heterodox category.
 
-**Politcal Category FAQ**
+**Political Category FAQ**
 - The classification of political category is just one persons subjective opinion, how can you trust the results when it is so subjective?  There is some merit to this, you can't trust it as much as if I had manage to get all YouTubers to take a survey about their attitudes/content for example. It doesn't need to be a reason to dismiss my analysis for the following reasons:
     - I used respected sources of classification where possible (i.e. adfontesmedia.com and mediabiasfactcheck.com) which covered a large portion of the large mainstream channels.
     - The top 50 channels by video views make up 78% of all views. Download the channel data, then Go though the top 50 channels and check if you agree with the classification. If you generally accept the classifications then you can generally accept the results.
 
 - Why not perform a more procedural/quantifiable method for determining political category (e.g. like the process used for https://www.adfontesmedia.com)? I don't believe making this process more detailed and quantitative would give you a significantly more accurate/objective answer. .
 - Why is the apposition to Identity Politics/Social Justice considered "right" when it is not normally considered an important part of the standard political definition for left/right?  I understand this, but I am confident this has changed. It is clear when evaluating YouTube content that this is a new and important divide. 
-- The left/right dichotomy is not a good way to classify tribal politics, why do it that way?. I agree, and forcing it into this model creates many needless problems because it is not a natural category for this data. I was forced to use left/right because I wanted to use this data to evaluate the common narratives about YouTube radicalization which was allready framed with this dichotomy.
+- The left/right dichotomy is not a good way to classify tribal politics, why do it that way?. I agree, and forcing it into this model creates many needless problems because it is not a natural category for this data. I was forced to use left/right because I wanted to use this data to evaluate the common narratives about YouTube radicalization which was already framed with this dichotomy.
 
 ### How recommended video's are retrieved
 The YouTube API is used to get all channel, video, recommendation data.
