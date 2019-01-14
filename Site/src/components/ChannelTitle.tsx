@@ -36,17 +36,15 @@ export class ChannelTitle extends React.Component<Props, State> {
             <>
               <img src={c.Thumbnail} style={{ height: '7em', marginRight: '1em', clipPath: 'circle()' }} />
               <div>
-                <p>
-                  <h2>{c.Title}</h2>
-                  <b>{compactInteger(c.ChannelVideoViews)}</b> views for video's published
-                  <i> {fdate(c.PublishedFrom)}</i> - <i>{fdate(c.PublishedTo)}</i>
-                  <br />
-                  <b>{compactInteger(c.SubCount)}</b> subscribers
-                  <br />
-                  <a href={`https://www.youtube.com/channel/${c.ChannelId}`} target="blank">
-                    Open in YouTube
-                  </a>
-                </p>
+                <h2>{c.Title}</h2>
+                <b>{compactInteger(c.ChannelVideoViews)}</b> views for video's published
+                <i> {fdate(c.PublishedFrom)}</i> - <i>{fdate(c.PublishedTo)}</i>
+                <br />
+                <b>{compactInteger(c.SubCount)}</b> subscribers
+                <br />
+                <a href={`https://www.youtube.com/channel/${c.ChannelId}`} target="blank">
+                  Open in YouTube
+                </a>
               </div>
             </>
           )}

@@ -254,7 +254,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       })
 
     let zoomToExpectedScale = (width: number, height: number) =>
-      zoom(width, height, new DOMRect(-200, -200, 1400, 1400), 0)
+      zoom(width, height, new DOMRect(0, -200, 1300, 1300), 0)
 
     let zoom = (width: number, height: number, bounds: DOMRect, duration: number) => {
       let midX = bounds.x + bounds.width / 2
@@ -303,7 +303,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       }
     }
 
-    //for (var i = 0; i < 10; i++) lay.force.tick()
+    for (var i = 0; i < 200; i++) lay.force.tick()
     lay.force.on('tick', onTick)
     this.stateRender(null)
   }

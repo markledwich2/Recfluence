@@ -169,7 +169,7 @@ div.footer > * {
   padding-right: 2em;
 }
 
-@media all and (min-width: 1400px) {
+@media all and (min-width: 1600px) {
   div.MainChartContainer > .Relations {
     height: 100%;
     flex: 3 auto;

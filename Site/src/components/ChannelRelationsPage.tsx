@@ -36,21 +36,21 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
   componentDidMount() {
     const params = new URLSearchParams(location.search)
-    if (params.has('c')) {
+    if (params.has('c'))
       this.selections.filters.push({ path: YtNetworks.ChannelIdPath, values: [params.get('c')], type: SelectionType.Filter })
-    }
+    if (params.has('v'))
+      this.version = params.get('v')
+    
     this.load()
   }
 
+  version:string = '2019-01-13'
+  resultUrl() { return `https://ytnetworks.azureedge.net/data/results/${this.version}/` }
   //resultUrl = "https://ytnetworks.blob.core.windows.net/data/results/2018-12-28/"
 
-  resultUrl = 'https://ytnetworks.azureedge.net/data/results/2018-12-28/'
-
   async load() {
-
-
     if (this.state.isLoading) return
-    let data = await YtNetworks.dataSet(this.resultUrl)
+    let data = await YtNetworks.dataSet(this.resultUrl())
     try {
       this.setState({ data, isLoading: false })
     } catch (e) { }

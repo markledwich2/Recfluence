@@ -2,6 +2,9 @@
 
 A [visualization](https://pyt.azureedge.net) showing the relations and recommendation flows between political & cultural commentary on YouTube
 
+## Updates
+**14 Jan 2019**: New channels and some updates. The network diagram looks quite different at first, but that's mostly cosmetic. The rotation and location of them are somewhat different but it clusters similarly. To see the older version matching the published article use [this link](https://pyt.azureedge.net?v=2018-12-28)
+
 ## Data Collection Process 
 
 ### How channels are selected
@@ -64,6 +67,7 @@ NOTE:
 
 **Recommendation Flow Diagram**
 The left boxes in the flow diagram show the number of views. it is broken down by split by channel (when one is selected) or political category otherwise. The right side shows the portion of those views (according to the number of times the other channels video's were in the recommended list) given to the category/channel. 
+
 
 ## Implementation
 ### Data Analysis

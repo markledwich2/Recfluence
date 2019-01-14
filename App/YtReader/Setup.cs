@@ -54,9 +54,7 @@ namespace YtReader {
             rootCfg.AzureStorageCs = GetEnv("YtNetworks_AzureStorageCs");
 
             if (rootCfg.AzureStorageCs.NullOrEmpty()) throw new InvalidOperationException("AzureStorageCs variable not provided");
-
-
-
+            
             var storageAccount = CloudStorageAccount.Parse(rootCfg.AzureStorageCs);
             var cloudBlobClient = storageAccount.CreateCloudBlobClient();
             var cfg = (await cloudBlobClient.GetText("cfg", $"{rootCfg.Environment}.json")).ToObject<AppCfg>();
