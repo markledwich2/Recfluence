@@ -76,7 +76,7 @@ namespace YouTubeCli {
             }
 
             return (int)ExitCode.Success;
-        } 
+        }
     }
 
     enum ExitCode {

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "YtCli": {
+      "commandName": "Project",
+      "commandLineArgs": "collect"
+    }
+  }
+}

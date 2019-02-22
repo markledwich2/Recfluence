@@ -130,36 +130,6 @@ namespace SysExtensions.Net
             }
         }
 
-        public static async Task<HttpResponseMessage> SendAsyncWithLog(this HttpClient client, Func<HttpRequestMessage> request, ILogger log,
-            HttpCompletionOption completion, Policy<HttpResponseMessage> policy)
-        {
-            try
-            {
-                return await policy.ExecuteAsync(() => InnerSendAsyncWithLog(client, null, request(), completion, log));
-            }
-            catch (TaskCanceledException e)
-            {
-                throw
-                    new HttpRequestException("Request timed out",
-                        e); // throw a diffferent exceptions. Otherwise TPL and other libraries treat this a an intentional cancellation and swallow
-            }
-        }
-
-        public static async Task<HttpResponseMessage> SendAsyncWithLog(this HttpClient client, Func<Task<HttpRequestMessage>> getRequest, ILogger log,
-            HttpCompletionOption completion, Policy<HttpResponseMessage> policy)
-        {
-            try
-            {
-                return await policy.ExecuteAsync(() => InnerSendAsyncWithLog(client, getRequest, null, completion, log));
-            }
-            catch (TaskCanceledException e)
-            {
-                throw
-                    new HttpRequestException("Request timed out",
-                        e); // throw a diffferent exceptions. Otherwise TPL and other libraries treat this a an intentional cancellation and swallow
-            }
-        }
-
         public static HttpRequestMessage WithStreamContent(this HttpRequestMessage request, Stream stream) {
             request.Content = new StreamContent(stream);
             return request;

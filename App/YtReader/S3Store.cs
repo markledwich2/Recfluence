@@ -14,6 +14,7 @@ using Humanizer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Polly;
+using Polly.Retry;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Security;
 using SysExtensions.Serialization;
@@ -44,7 +45,7 @@ namespace YtReader {
         readonly AmazonS3Client S3;
 
         string FilePath(StringPath path) => BasePath.Add(path).WithExtension(".json.gz");
-        Policy S3Policy = Policy.Handle<HttpRequestException>()
+        readonly AsyncRetryPolicy S3Policy = Policy.Handle<HttpRequestException>()
             .WaitAndRetryAsync(new[] { 1.Seconds(), 4.Seconds(), 30.Seconds() });
 
         [DebuggerHidden]

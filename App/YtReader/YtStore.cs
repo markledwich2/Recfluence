@@ -37,8 +37,6 @@ namespace YtReader {
         /// <summary>
         ///     Gets the video with that ID. Caches in S3 (including historical information) with this
         /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
         public async Task<VideoStored> GetAndUpdateVideo(string id) {
             var v = await Videos.Get(id);
             if (v != null && v.Latest.Updated == default(DateTime))

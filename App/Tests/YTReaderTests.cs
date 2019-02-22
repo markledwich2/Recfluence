@@ -23,7 +23,7 @@ namespace YouTubeReaderTests {
             var cfg = await Setup.LoadCfg();
             var log = Setup.CreateTestLogger();
 
-            var videoIds = new[] { "P0dcyAXXmCw" };
+            var videoIds = new[] { "S4hq5uVsb5k" };
             var store = new YtStore(new YtClient(cfg.App, log), cfg.DataStore());
 
             foreach (var videoId in videoIds) {

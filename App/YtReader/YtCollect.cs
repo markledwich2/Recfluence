@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using Parquet;
 using Serilog;
 using SysExtensions;
@@ -41,31 +42,33 @@ namespace YtReader {
 
             var channelCfg = await Cfg.LoadChannelConfig();
             var seeds = channelCfg.Seeds;
-            IReadOnlyCollection<ChannelVideoRow> channelVideos = null;
 
-            async Task LoadChannels() {
+            {
                 var channels = await seeds.BlockTransform(Channel, Cfg.ParallelCollect,
                     progressUpdate: p => Log.Information("Collecting channels {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels")));
                 await SaveParquet(channels, "Channels", analysisDir);
             }
 
-            async Task LoadChannelVideos() {
-                var cvs = await seeds.BlockTransform(ChannelVideos, Cfg.ParallelCollect,
-                    progressUpdate: p => Log.Information("Collecting channel videos {Channels}/{Total}. {Speed}", p.Results.Count, seeds.Count, p.Speed("channels")));
-                channelVideos = cvs.SelectMany(cv => cv).ToList();
+            var par = (int)Math.Sqrt(Cfg.ParallelCollect);
+            var vrTransform = new TransformBlock<SeedChannel, (IReadOnlyCollection<VideoRow> vids, IReadOnlyCollection<RecommendRow> recs)>(
+                async c => {
+                    var vids = (await (await ChannelVideos(c)).BlockTransform(Video, par)).NotNull().ToReadOnly();
+                    var recs = (await vids.BlockTransform(Recommends, par)).NotNull().SelectMany(r => r).NotNull().ToReadOnly();
+                    return (vids, recs);
+                },
+                new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = par, EnsureOrdered = false }
+            );
+           
+            var produceTask = seeds.Produce(vrTransform);
+            var vidSink = new RowSink<VideoRow>((c, name) => SaveParquet(c, name, analysisDir), "Videos", 1000000);
+            var recSink = new RowSink<RecommendRow>((c, name) => SaveParquet(c, name, analysisDir), "Recommends", 1000000);
+
+            while (await vrTransform.OutputAvailableAsync()) {
+                var (vids, recs) = await vrTransform.ReceiveAsync();
+                await Task.WhenAll(vidSink.Add(vids), recSink.Add(recs));
             }
-
-            await Task.WhenAll(LoadChannels(), LoadChannelVideos());
-
-            var videos = (await channelVideos.BlockTransform(Video, Cfg.ParallelCollect,
-                progressUpdate: p => Log.Information("Collecting videos {Videos}/{Total}. {Speed}", p.Results.Count, channelVideos.Count, p.Speed("videos"))))
-                .NotNull();
-            await SaveParquet(videos, "Videos", analysisDir);
-
-            var recommendsResult = (await videos.BlockTransform(Recommends, Cfg.ParallelCollect,
-                progressUpdate: p => Log.Information("Collecting channel video recommendations {Videos}/{Total}. {Speed}", p.Results.Count, channelVideos.Count, p.Speed("videos"))))
-                .NotNull();
-            await SaveParquet(recommendsResult.SelectMany(r => r), "Recommends", analysisDir);
+            await Task.WhenAll(vidSink.End(), recSink.End());
+            await produceTask;
         }
 
         async Task<ICollection<ChannelVideoRow>> ChannelVideos(SeedChannel c) {
@@ -88,7 +91,7 @@ namespace YtReader {
                 VideoId = v.VideoId,
                 Title = v.VideoTitle,
                 ChannelId = cv.ChannelId,
-                Views = (long)(v.Latest.Stats.Views ?? 0),
+                Views = (long) (v.Latest.Stats.Views ?? 0),
                 PublishedAt = v.Latest.PublishedAt.ToString("O"),
                 Tags = v.Latest.Tags.NotNull().ToArray()
             };
@@ -99,8 +102,8 @@ namespace YtReader {
             return new ChannelRow {
                 ChannelId = channel.ChannelId,
                 Title = channel.ChannelTitle,
-                SubCount = (long)(channel.Latest.Stats.SubCount ?? 0),
-                ViewCount = (long)(channel.Latest.Stats.ViewCount ?? 0),
+                SubCount = (long) (channel.Latest.Stats.SubCount ?? 0),
+                ViewCount = (long) (channel.Latest.Stats.ViewCount ?? 0),
                 LR = c.LR,
                 Type = c.Type,
                 Thumbnail = channel.Latest.Thumbnails.Medium.Url,
@@ -137,15 +140,12 @@ namespace YtReader {
         }
 
         async Task SaveParquet<T>(IEnumerable<T> rows, string name, string dir) where T : new() {
-            await rows.Chunk(200000).Select((r, i) => (chunkRows:r, index:i)).BlockTransform(async chunk => {
-                var storeDir = StringPath.Relative(dir);
-                var localFile = LocalResultsDir.Combine(dir).Combine($"{name}.{chunk.index}.parquet");
-                ParquetConvert.Serialize(chunk.chunkRows, localFile.FullPath);
-                var storePath = storeDir.Add(localFile.FileName);
-                await Store.Save(storePath, localFile);
-                Log.Information("Saved {Path}", storePath);
-                return storeDir;
-            }, 4);
+            var storeDir = StringPath.Relative(dir);
+            var localFile = LocalResultsDir.Combine(dir).Combine($"{name}.parquet");
+            ParquetConvert.Serialize(rows, localFile.FullPath);
+            var storePath = storeDir.Add(localFile.FileName);
+            await Store.Save(storePath, localFile);
+            Log.Information("Saved {Path}", storePath);
         }
 
         async Task SaveCfg(string dir) {
@@ -155,6 +155,39 @@ namespace YtReader {
             var localCfgFile = localDir.Combine("cfg.json");
             Cfg.ToJsonFile(localCfgFile);
             await Store.Save(storeDir.Add("cfg.json"), localCfgFile);
+        }
+
+        class RowSink<T> {
+            readonly Func<IReadOnlyCollection<T>, string, Task> _save;
+            int _fileNum = 0;
+            readonly int _maxItems;
+            readonly List<T> _buffer = new List<T>();
+            readonly string _name;
+
+            public RowSink(Func<IReadOnlyCollection<T>, string, Task> save, string name, int maxItems = 100000) {
+                _save = save;
+                _maxItems = maxItems;
+                _name = name;
+            }
+
+            public async Task Add(IEnumerable<T> items) {
+                _buffer.AddRange(items);
+                if (_buffer.Count >= _maxItems) {
+                    await Save();
+                }
+            }
+
+            async Task Save() {
+                await _save(_buffer, $"{_name}.{_fileNum}");
+                _buffer.Clear();
+                _fileNum++;
+            }
+
+            public async Task End() {
+                if (_buffer.Count > 0) {
+                    await Save();
+                }
+            }
         }
     }
 
@@ -180,7 +213,9 @@ namespace YtReader {
         public string Type { get; set; }
         public string LR { get; set; }
         public long ViewCount { get; set; }
+
         public long SubCount { get; set; }
+
         //public long ChannelVideoViews { get; set; }
         //public string Month { get; set; }
         public string Thumbnail { get; set; }

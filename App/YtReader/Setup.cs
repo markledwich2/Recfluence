@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Humanizer;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
 using Serilog;
@@ -39,7 +41,7 @@ namespace YtReader {
                 .WriteTo.Console();
 
             if (cfg != null)
-                c.WriteTo.ApplicationInsightsTraces(cfg.AppInsightsKey);
+                c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces);
 
             return c.CreateLogger();
         }
@@ -57,7 +59,8 @@ namespace YtReader {
             
             var storageAccount = CloudStorageAccount.Parse(rootCfg.AzureStorageCs);
             var cloudBlobClient = storageAccount.CreateCloudBlobClient();
-            var cfg = (await cloudBlobClient.GetText("cfg", $"{rootCfg.Environment}.json")).ToObject<AppCfg>();
+            var cfgText = await cloudBlobClient.GetText("cfg", $"{rootCfg.Environment}.json");
+            var cfg = cfgText.ToObject<AppCfg>( );
 
             return new Cfg { App = cfg, Root = rootCfg };
         }
@@ -109,7 +112,10 @@ namespace YtReader {
         public StorageCfg Storage { get; set; } = new StorageCfg();
         public ICollection<string> YTApiKeys { get; set; }
         public ICollection<string> LimitedToSeedChannels { get; set; }
+
+        [DefaultValue(CollectionCacheType.Memory)]
         public CollectionCacheType CacheType { get; set; } = CollectionCacheType.Memory;
+
         public string SubscriptionId { get; set; }
         public ServicePrincipalCfg ServicePrincipal { get; set; } = new ServicePrincipalCfg();
         public ContainerCfg Container { get; set; } = new ContainerCfg();
@@ -125,7 +131,7 @@ namespace YtReader {
         public TimeSpan VideoDead { get; set; } = 365.Days();
         public TimeSpan VideoOld { get; set; } = 30.Days();
         public TimeSpan RefreshOldVideos { get; set; } = 7.Days();
-        public TimeSpan RefreshYoungVideos { get; set; } = 24.Hours();
+        public TimeSpan RefreshYoungVideos { get; set; } = 23.Hours();
         public TimeSpan RefreshChannel { get; set; } = 7.Days();
         public TimeSpan RefreshRelatedVideos { get; set; } = 30.Days();
         public TimeSpan RefreshChannelVideos { get; set; } = 24.Hours();
@@ -144,7 +150,7 @@ namespace YtReader {
         public string Name { get; set; } = "ytnetworks-auto";
         public string ImageName { get; set; } = "ytnetworks";
         public int Cores {get;set;} = 2;
-        public double Mem { get;set;} = 5;
+        public double Mem { get;set;} = 8;
         public NameSecret RegistryCreds { get; set; }
     }
 
@@ -159,7 +165,6 @@ namespace YtReader {
         public string Key { get; set; }
         public string Account { get; set; }
         public string Pool { get; set; } = "win";
-
     }
 
     public class SeedChannel {
