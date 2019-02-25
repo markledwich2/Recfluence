@@ -15,10 +15,12 @@ namespace YtReader {
             Yt = reader;
             Store = store;
 
+            Channels = new FileCollection<ChannelStored>(Store, v => v.ChannelId, "Channels", CollectionCacheType.Memory, CacheDataDir);
+            ChannelVideosCollection =
+                new FileCollection<ChannelVideosStored>(Store, c => c.ChannelId, "ChannelVideos", CollectionCacheType.Memory, CacheDataDir);
             Videos = new FileCollection<VideoStored>(Store, v => v.VideoId, "Videos", Yt.Cfg.CacheType, CacheDataDir);
-            Channels = new FileCollection<ChannelStored>(Store, v => v.ChannelId, "Channels", Yt.Cfg.CacheType, CacheDataDir);
-            RecommendedVideosCollection = new FileCollection<RecommendedVideoStored>(Store, v => v.VideoId, "RecommendedVideos", Yt.Cfg.CacheType, CacheDataDir);
-            ChannelVideosCollection = new FileCollection<ChannelVideosStored>(Store, c => c.ChannelId, "ChannelVideos", Yt.Cfg.CacheType, CacheDataDir);
+            RecommendedVideosCollection =
+                new FileCollection<RecommendedVideoStored>(Store, v => v.VideoId, "RecommendedVideos", Yt.Cfg.CacheType, CacheDataDir);
         }
 
         FPath CacheDataDir => "Data".AsPath().InAppData(Setup.AppName);
@@ -53,7 +55,8 @@ namespace YtReader {
                     v.SetLatest(videoData);
                 v.Latest.Updated = DateTime.UtcNow;
             }
-            if(v != null)
+
+            if (v != null)
                 await Videos.Set(v);
 
             return v;
@@ -81,7 +84,9 @@ namespace YtReader {
             return c;
         }
 
-        bool Expired(DateTime updated, TimeSpan refreshAge) => (RCfg.To ?? DateTime.UtcNow) - updated > refreshAge;
+        bool Expired(DateTime updated, TimeSpan refreshAge) {
+            return (RCfg.To ?? DateTime.UtcNow) - updated > refreshAge;
+        }
 
         public async Task<ChannelVideosStored> GetAndUpdateChannelVideos(ChannelData c) {
             var cv = await ChannelVideosCollection.Get(c.Id);
@@ -110,7 +115,9 @@ namespace YtReader {
             return cv;
         }
 
-        public async Task<ChannelVideosStored> ChannelVideosStored(ChannelData c) => await ChannelVideosCollection.Get(c.Id);
+        public async Task<ChannelVideosStored> ChannelVideosStored(ChannelData c) {
+            return await ChannelVideosCollection.Get(c.Id);
+        }
 
         public async Task<RecommendedVideoStored> GetAndUpdateRecommendedVideos(ChannelVideoListItem v) {
             var rv = await RecommendedVideosCollection.Get(v.VideoId);
@@ -133,7 +140,7 @@ namespace YtReader {
             return rv;
         }
 
-        YoutubeClient ytScaper = new YoutubeClient();
+        readonly YoutubeClient ytScaper = new YoutubeClient();
 
         public async Task<string> GetAndUpdateVideoCaptions(string videoId) {
             //var video = await ytScaper.GetVideoAsync(videoId);
@@ -202,7 +209,9 @@ namespace YtReader {
             Latest = c;
         }
 
-        public override string ToString() => $"{ChannelTitle}";
+        public override string ToString() {
+            return $"{ChannelTitle}";
+        }
     }
 
 

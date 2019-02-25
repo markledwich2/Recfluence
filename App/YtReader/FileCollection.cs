@@ -103,6 +103,6 @@ namespace YtReader {
     public enum CollectionCacheType {
         None,
         Memory,
-        MemoryAndDisk
+        MemoryAndDisk // useful for local caches during development
     }
 }

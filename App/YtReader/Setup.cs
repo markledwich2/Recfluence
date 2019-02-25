@@ -127,14 +127,13 @@ namespace YtReader {
         public DateTime From { get; set; }
         public DateTime? To { get; set; }
 
-
         public TimeSpan VideoDead { get; set; } = 365.Days();
         public TimeSpan VideoOld { get; set; } = 30.Days();
         public TimeSpan RefreshOldVideos { get; set; } = 7.Days();
         public TimeSpan RefreshYoungVideos { get; set; } = 23.Hours();
         public TimeSpan RefreshChannel { get; set; } = 7.Days();
-        public TimeSpan RefreshRelatedVideos { get; set; } = 30.Days();
-        public TimeSpan RefreshChannelVideos { get; set; } = 24.Hours();
+        public TimeSpan RefreshRelatedVideos { get; set; } = 23.Hours();
+        public TimeSpan RefreshChannelVideos { get; set; } = 23.Hours();
 
         public Uri SeedsUrl { get; set; } = new Uri("https://raw.githubusercontent.com/markledwich2/YouTubeNetworks/master/Data/SeedChannels.csv");
     }
