@@ -41,7 +41,7 @@ namespace YtReader {
             await SaveCfg(analysisDir);
 
             var channelCfg = await Cfg.LoadChannelConfig();
-            var seeds = channelCfg.Seeds;
+            var seeds = channelCfg.Seeds.Take(2).ToList();
 
             {
                 var channels = await seeds.BlockTransform(Channel, Cfg.ParallelCollect,
@@ -60,8 +60,8 @@ namespace YtReader {
             );
            
             var produceTask = seeds.Produce(vrTransform);
-            var vidSink = new RowSink<VideoRow>((c, name) => SaveParquet(c, name, analysisDir), "Videos", 1000000);
-            var recSink = new RowSink<RecommendRow>((c, name) => SaveParquet(c, name, analysisDir), "Recommends", 1000000);
+            var vidSink = new RowSink<VideoRow>((c, name) => SaveParquet(c, name, analysisDir), "Videos", 500000);
+            var recSink = new RowSink<RecommendRow>((c, name) => SaveParquet(c, name, analysisDir), "Recommends", 500000);
 
             while (await vrTransform.OutputAvailableAsync()) {
                 var (vids, recs) = await vrTransform.ReceiveAsync();
@@ -93,7 +93,7 @@ namespace YtReader {
                 ChannelId = cv.ChannelId,
                 Views = (long) (v.Latest.Stats.Views ?? 0),
                 PublishedAt = v.Latest.PublishedAt.ToString("O"),
-                Tags = v.Latest.Tags.NotNull().ToArray()
+                //Tags = v.Latest.Tags.NotNull().ToArray()
             };
         }
 
@@ -228,6 +228,6 @@ namespace YtReader {
         public string ChannelId { get; set; }
         public long Views { get; set; }
         public string PublishedAt { get; set; }
-        public string[] Tags { get; set; }
+        //public string[] Tags { get; set; }
     }
 }

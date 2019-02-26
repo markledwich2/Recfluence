@@ -1,5 +1,8 @@
+using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Parquet;
 using YtReader;
 
 namespace YouTubeReaderTests {
@@ -28,6 +31,14 @@ namespace YouTubeReaderTests {
 
             foreach (var videoId in videoIds) {
                 var txt = await store.GetAndUpdateVideoCaptions(videoId);
+            }
+        }
+
+
+        [TestMethod]
+        public async Task OpenVideos() {
+            using (var s = File.OpenRead("C:\\Users\\mark\\Downloads\\Videos.0.parquet")) {
+                var rows = ParquetConvert.Deserialize<VideoRow>(s);
             }
         }
     }
