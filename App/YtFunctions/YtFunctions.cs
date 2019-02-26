@@ -39,23 +39,29 @@ namespace YtFunctions {
 
         [FunctionName("Update_Timer")]
         public static async Task Update_Timer([TimerTrigger("0 0 21 * * *")] TimerInfo myTimer, IMSLogger log) {
-            await Update(log);
+            await YtCli(log, new []{ "update" });
         }
 
         [FunctionName("Update")]
         public static async Task<HttpResponseMessage> Update([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
             HttpRequestMessage req, IMSLogger funcLogger) {
-            return req.CreateResponse(await Update(funcLogger));
+            return req.CreateResponse(await YtCli(funcLogger, new [] { "update" }));
         }
 
-        static async Task<string> Update(IMSLogger funcLogger) {
+        [FunctionName("Collect")]
+        public static async Task<HttpResponseMessage> Collect([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
+            HttpRequestMessage req, IMSLogger funcLogger) {
+            return req.CreateResponse(await YtCli(funcLogger, new[] { "collect" }));
+        }
+
+        static async Task<string> YtCli(IMSLogger funcLogger, string[] args) {
             var s = await Init(funcLogger);
             s.Log.Information("Function Update started");
 
             IContainerGroup g;
 
             try {
-                g = await YtContainerRunner.Start(s.Log, s.Cfg);
+                g = await YtContainerRunner.Start(s.Log, s.Cfg, args);
             }
             catch (Exception ex) {
                 s.Log.Error("Error starting container to update data {Error}", ex.Message, ex);

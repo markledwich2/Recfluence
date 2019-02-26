@@ -49,7 +49,7 @@ namespace YouTubeCli {
             var log = Setup.CreateCliLogger(cfg.App);
 
             if (c.LaunchContainer) {
-                YtContainerRunner.Start(log, cfg, args.Where(a => a != "-z").ToArray()).Wait();
+                YtContainerRunner.Start(log, cfg, new [] { "collect" }.Concat(args.Where(a => a != "-z")).ToArray()).Wait();
             } else {
                 var ytStore = cfg.YtStore(log);
                 var ytCollect = new YtCollect(ytStore, cfg.DataStore(cfg.App.Storage.AnalysisPath), cfg.App, log);

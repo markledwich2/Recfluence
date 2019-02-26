@@ -28,7 +28,7 @@ namespace YtReader {
             if (group != null)
                 await azure.ContainerGroups.DeleteByIdAsync(group.Id);
 
-            var cArgs = new string[] {"/app/ytnetworks.dll", "update"}.Concat(args).ToArray();
+            var cArgs = new [] {"/app/ytnetworks.dll"}.Concat(args).ToArray();
             log.Information("starting container {Image} {Args}", container.ImageName, cArgs.Join(" "));
             var containerGroup = await azure.ContainerGroups.Define(container.Name)
                 .WithRegion(Region.USWest)

@@ -41,7 +41,7 @@ namespace YtReader {
             await SaveCfg(analysisDir);
 
             var channelCfg = await Cfg.LoadChannelConfig();
-            var seeds = channelCfg.Seeds.Take(2).ToList();
+            var seeds = channelCfg.Seeds.ToList();
 
             {
                 var channels = await seeds.BlockTransform(Channel, Cfg.ParallelCollect,
