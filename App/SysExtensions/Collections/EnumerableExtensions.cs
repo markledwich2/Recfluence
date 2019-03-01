@@ -70,5 +70,10 @@ namespace SysExtensions.Collections {
                 yield return enumerator.Current;
             while (--chunkSize > 0 && enumerator.MoveNext());
         }
+
+        public static IEnumerable<T> Randomize<T>(this IEnumerable<T> source) {
+            var rnd = new Random();
+            return source.OrderBy(item => rnd.Next());
+        }
     }
 }

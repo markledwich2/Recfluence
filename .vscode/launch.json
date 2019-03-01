@@ -5,6 +5,21 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "PySpark",
+            "type": "python",
+            "request": "launch",
+            "osx": {
+                "pythonPath": "${env:SPARK_HOME}/bin/spark-submit"
+            },
+            "windows": {
+                "pythonPath": "${env:SPARK_HOME}/bin/spark-submit.cmd"
+            },
+            "linux": {
+                "pythonPath": "${env:SPARK_HOME}/bin/spark-submit"
+            },
+            "program": "${file}"
+        },
+        {
             "type": "chrome",
             "request": "launch",
             "name": "Launch Chrome against localhost",

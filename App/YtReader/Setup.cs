@@ -6,7 +6,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
 using Serilog;
 using Serilog.Core;
@@ -14,16 +13,9 @@ using Serilog.Events;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
+using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
-using Microsoft.Azure.Management.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
-using Microsoft.Azure.Management.ContainerInstance.Fluent;
-using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
-using SysExtensions.Security;
-using Serilog.Sinks.Debug;
 
 namespace YtReader {
     public static class Setup {
@@ -32,9 +24,11 @@ namespace YtReader {
         public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
         public static FPath LocalDataDir => "Data".AsPath().InAppData(AppName);
 
-        public static Logger CreateTestLogger() => new LoggerConfiguration()
-            .WriteTo.Seq("http://localhost:5341", LogEventLevel.Verbose)
-            .CreateLogger();
+        public static Logger CreateTestLogger() {
+            return new LoggerConfiguration()
+                .WriteTo.Seq("http://localhost:5341", LogEventLevel.Verbose)
+                .CreateLogger();
+        }
 
         public static Logger CreateCliLogger(AppCfg cfg = null) {
             var c = new LoggerConfiguration()
@@ -48,21 +42,24 @@ namespace YtReader {
 
         static FPath RootCfgPath => "cfg.json".AsPath().InAppData(AppName);
 
-        static string GetEnv(string name) => Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
-            ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
+        static string GetEnv(string name) {
+            return Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
+                   ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
+        }
 
         public static async Task<Cfg> LoadCfg(ILogger log = null) {
             var rootCfg = new RootCfg();
+            rootCfg.Env = GetEnv("YtNetworks_Env") ?? "Dev";
             rootCfg.AzureStorageCs = GetEnv("YtNetworks_AzureStorageCs");
 
             if (rootCfg.AzureStorageCs.NullOrEmpty()) throw new InvalidOperationException("AzureStorageCs variable not provided");
-            
+
             var storageAccount = CloudStorageAccount.Parse(rootCfg.AzureStorageCs);
             var cloudBlobClient = storageAccount.CreateCloudBlobClient();
-            var cfgText = await cloudBlobClient.GetText("cfg", $"{rootCfg.Environment}.json");
-            var cfg = cfgText.ToObject<AppCfg>( );
+            var cfgText = await cloudBlobClient.GetText("cfg", $"{rootCfg.Env}.json");
+            var cfg = cfgText.ToObject<AppCfg>();
 
-            return new Cfg { App = cfg, Root = rootCfg };
+            return new Cfg {App = cfg, Root = rootCfg};
         }
     }
 
@@ -76,8 +73,9 @@ namespace YtReader {
             return channelCfg;
         }
 
-        public static ISimpleFileStore DataStore(this Cfg cfg, StringPath path = null) =>
-            new AzureBlobFileStore(cfg.App.Storage.DataStorageCs, path ?? cfg.App.Storage.DbPath);
+        public static ISimpleFileStore DataStore(this Cfg cfg, StringPath path = null) {
+            return new AzureBlobFileStore(cfg.App.Storage.DataStorageCs, path ?? cfg.App.Storage.DbPath);
+        }
 
         public static YtStore YtStore(this Cfg cfg, ILogger log) {
             var reader = new YtClient(cfg.App, log);
@@ -94,7 +92,7 @@ namespace YtReader {
         public string AzureStorageCs { get; set; }
 
         // name of environment (Prod/Dev/MarkDev etc..). used to choose appropreate cfg
-        public string Environment { get; set; } = "Prod";
+        public string Env { get; set; }
     }
 
     public class Cfg {
@@ -105,7 +103,7 @@ namespace YtReader {
     public class AppCfg {
         public string AppInsightsKey { get; set; }
         public int Parallel { get; set; } = 8;
-        public int ParallelCollect {get; set;} = 24;
+        public int ParallelCollect { get; set; } = 24;
 
         public string ResourceGroup { get; set; } = "ytnetworks";
         public YtReaderCfg YtReader { get; set; } = new YtReaderCfg();
@@ -127,12 +125,13 @@ namespace YtReader {
         public DateTime From { get; set; }
         public DateTime? To { get; set; }
 
-        public TimeSpan VideoDead { get; set; } = 365.Days();
+        public TimeSpan VideoDead { get; set; } = 120.Days();
         public TimeSpan VideoOld { get; set; } = 30.Days();
         public TimeSpan RefreshOldVideos { get; set; } = 7.Days();
         public TimeSpan RefreshYoungVideos { get; set; } = 23.Hours();
         public TimeSpan RefreshChannel { get; set; } = 7.Days();
-        public TimeSpan RefreshRelatedVideos { get; set; } = 23.Hours();
+        public TimeSpan RefreshYoungRecommendedVideos { get; set; } = 23.Hours();
+        public TimeSpan RefreshOldRecommendedVideos { get; set; } = 7.Days();
         public TimeSpan RefreshChannelVideos { get; set; } = 23.Hours();
 
         public Uri SeedsUrl { get; set; } = new Uri("https://raw.githubusercontent.com/markledwich2/YouTubeNetworks/master/Data/SeedChannels.csv");
@@ -148,8 +147,8 @@ namespace YtReader {
         public string Registry { get; set; } = "ytnetworks.azurecr.io";
         public string Name { get; set; } = "ytnetworks-auto";
         public string ImageName { get; set; } = "ytnetworks";
-        public int Cores {get;set;} = 2;
-        public double Mem { get;set;} = 8;
+        public int Cores { get; set; } = 2;
+        public double Mem { get; set; } = 8;
         public NameSecret RegistryCreds { get; set; }
     }
 
@@ -182,6 +181,4 @@ namespace YtReader {
         public IKeyedCollection<string, SeedChannel> Seeds { get; } = new KeyedCollection<string, SeedChannel>(c => c.Id);
         public IKeyedCollection<string, InfluencerOverride> Excluded { get; } = new KeyedCollection<string, InfluencerOverride>(c => c.Id);
     }
-
-
 }

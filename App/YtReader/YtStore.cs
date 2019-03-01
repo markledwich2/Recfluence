@@ -62,6 +62,8 @@ namespace YtReader {
             return v;
         }
 
+        public bool VideoDead(ChannelVideoListItem v)  => Expired(v.PublishedAt, RCfg.VideoDead);
+
         TimeSpan VideoRefreshAge(ChannelVideoListItem v) {
             if (Expired(v.PublishedAt, RCfg.VideoDead)) return TimeSpan.MaxValue;
             return Expired(v.PublishedAt, RCfg.VideoOld) ? RCfg.RefreshOldVideos : RCfg.RefreshYoungVideos;
@@ -119,16 +121,18 @@ namespace YtReader {
             return await ChannelVideosCollection.Get(c.Id);
         }
 
+        TimeSpan RecommendedRefreshAge(ChannelVideoListItem v) {
+            if (Expired(v.PublishedAt, RCfg.VideoDead)) return TimeSpan.MaxValue;
+            return Expired(v.PublishedAt, RCfg.VideoOld) ? RCfg.RefreshOldRecommendedVideos : RCfg.RefreshYoungRecommendedVideos;
+        }
+
         public async Task<RecommendedVideoStored> GetAndUpdateRecommendedVideos(ChannelVideoListItem v) {
             var rv = await RecommendedVideosCollection.Get(v.VideoId);
 
-            if (Expired(v.PublishedAt, RCfg.VideoDead))
+            var age = RecommendedRefreshAge(v);
+            var needsUpdate = rv == null || Expired(rv.Updated, age);
+            if (!needsUpdate)
                 return rv;
-
-            //var mostRecent = rv?.Recommended.OrderByDescending(r => r.Updated).FirstOrDefault();
-            var needsUpdate = rv == null || Expired(rv.Updated, RCfg.RefreshRelatedVideos);
-
-            if (!needsUpdate) return rv;
 
             if (rv == null)
                 rv = new RecommendedVideoStored {VideoId = v.VideoId, VideoTitle = v.VideoTitle, Updated = DateTime.UtcNow};

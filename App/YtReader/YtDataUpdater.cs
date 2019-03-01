@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Humanizer;
 using Serilog;
+using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
@@ -23,7 +24,7 @@ namespace YtReader {
             Log.Information("Starting incremental data update");
 
             var channelCfg = await Cfg.LoadChannelConfig();
-            var seeds = channelCfg.Seeds;
+            var seeds = channelCfg.Seeds.Randomize().ToList();
             var res = await seeds.BlockTransform(UpdateChannel, Cfg.Parallel, progressUpdate:
                 p => Log.Verbose("Channel update progress {Channels}/{Total} {Speed}",
                     p.Results.Count, seeds.Count, p.Speed("channels").Humanize())).WithDuration(); // sufficiently parallel inside
@@ -33,7 +34,7 @@ namespace YtReader {
         }
 
 
-        public async Task<(ChannelStored channel, ICollection<VideoStored> videos)> UpdateChannel(SeedChannel seed) {
+        async Task<(ChannelStored channel, ICollection<VideoStored> videos)> UpdateChannel(SeedChannel seed) {
             Log.Information("Updating {Channel} with new data", seed.Title);
             var channel = await Yt.GetAndUpdateChannel(seed.Id);
             var log = Log.ForContext("Channel", channel.Latest.Title);
@@ -46,7 +47,8 @@ namespace YtReader {
             }
 
             var channelVideos = await Yt.GetAndUpdateChannelVideos(channel.Latest);
-            var updateResults = await channelVideos.Vids.BlockTransform(UpdateVideo, Cfg.Parallel, null,
+            var updateResults = await channelVideos.Vids.Where(v => !Yt.VideoDead(v))
+                .BlockTransform(UpdateVideo, Cfg.Parallel, null,
                 p => log.Verbose("{Channel} {Videos}/{Total} channel video's visited. {Speed}",
                     channel.ChannelTitle, p.Results.Count, channelVideos.Vids.Count, p.NewItems.Count.Speed("videos", p.Elapsed).Humanize()));
 
