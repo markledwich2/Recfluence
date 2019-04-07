@@ -47,14 +47,14 @@ namespace YouTubeCli {
     static int Collect(CollectOption c, string[] args) {
       var cfg = Setup.LoadCfg().Result;
       UpdateCfgFromOptions(cfg, c);
-      var log = Setup.CreateCliLogger(cfg.App);
-
-      if (c.LaunchContainer) {
-        YtContainerRunner.Start(log, cfg, new[] {"collect"}.Concat(args.Where(a => a != "-z")).ToArray()).Wait();
-      }
-      else {
-        var ytCollect = new YtCollect(cfg.YtStore(log), cfg.DataStore(cfg.App.Storage.AnalysisPath), cfg.App, log);
-        ytCollect.SaveChannelRelationData().Wait();
+      using (var log = Setup.CreateCliLogger(cfg.App)) {
+        if (c.LaunchContainer) {
+          YtContainerRunner.Start(log, cfg, new[] {"collect"}.Concat(args.Where(a => a != "-z")).ToArray()).Wait();
+        }
+        else {
+          var ytCollect = new YtCollect(cfg.YtStore(log), cfg.DataStore(cfg.App.Storage.AnalysisPath), cfg.App, log);
+          ytCollect.SaveChannelRelationData().Wait();
+        }
       }
 
       return (int) ExitCode.Success;
@@ -63,18 +63,18 @@ namespace YouTubeCli {
     static int Update(UpdateOption u) {
       var cfg = Setup.LoadCfg().Result;
       UpdateCfgFromOptions(cfg, u);
-      var log = Setup.CreateCliLogger(cfg.App);
-
-      try {
-        var ytStore = cfg.YtStore(log);
-        var ytUpdater = new YtDataUpdater(ytStore, cfg.App, log);
-        ytUpdater.UpdateData().Wait();
-        var ytCollect = new YtCollect(ytStore, cfg.DataStore(cfg.App.Storage.AnalysisPath), cfg.App, log);
-        ytCollect.SaveChannelRelationData().Wait();
-      }
-      catch (Exception ex) {
-        log.Error("Error Updating/Collecting Data: {Error}", ex.Message, ex);
-        return (int) ExitCode.UnknownError;
+      using (var log = Setup.CreateCliLogger(cfg.App)) {
+        try {
+          var ytStore = cfg.YtStore(log);
+          var ytUpdater = new YtDataUpdater(ytStore, cfg.App, log);
+          ytUpdater.UpdateData().Wait();
+          var ytCollect = new YtCollect(ytStore, cfg.DataStore(cfg.App.Storage.AnalysisPath), cfg.App, log);
+          ytCollect.SaveChannelRelationData().Wait();
+        }
+        catch (Exception ex) {
+          log.Error("Error Updating/Collecting Data: {Error}", ex.Message, ex);
+          return (int) ExitCode.UnknownError;
+        }
       }
 
       return (int) ExitCode.Success;
@@ -83,18 +83,18 @@ namespace YouTubeCli {
     static int Fix(FixOption options) {
       var cfg = Setup.LoadCfg().Result;
       UpdateCfgFromOptions(cfg, options);
-      var log = Setup.CreateCliLogger(cfg.App);
-      var ytStore = cfg.YtStore(log);
-      var ytUpdater = new YtDataUpdater(ytStore, cfg.App, log);
-      try {
-        ytUpdater.RefreshMissingVideos().Wait();
+      using (var log = Setup.CreateCliLogger(cfg.App)) {
+        var ytStore = cfg.YtStore(log);
+        var ytUpdater = new YtDataUpdater(ytStore, cfg.App, log);
+        try {
+          ytUpdater.RefreshMissingVideos().Wait();
+        }
+        catch (Exception ex) {
+          log.Error("Error Fixing Data: {Error}", ex.Message, ex);
+          return (int) ExitCode.UnknownError;
+        }
+        return (int) ExitCode.Success;
       }
-      catch (Exception ex) {
-        log.Error("Error Fixing Data: {Error}", ex.Message, ex);
-        return (int) ExitCode.UnknownError;
-      }
-
-      return (int) ExitCode.Success;
     }
   }
 

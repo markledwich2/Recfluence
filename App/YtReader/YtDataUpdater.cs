@@ -59,15 +59,21 @@ namespace YtReader {
     public async Task RefreshMissingVideos() {
       var channelCfg = await Cfg.LoadChannelConfig();
       await channelCfg.Seeds.BlockAction(async c => {
-        var channelVids = (await Yt.ChannelVideosCollection.Get(c.Id)).Vids;
-        var missingVids = (await channelVids.Select(v => v)
+        var channelVids = (await Yt.ChannelVideosCollection.Get(c.Id))?.Vids;
+        if (channelVids == null) {
+          Log.Error("{Channel}' has not video's stored", c.Title);
+          return;
+        }
+        var missingVids = (await channelVids.Select(v => v).NotNull()
             .BlockTransform(async v => await Yt.Videos.Get(v.VideoId) == null ? v.VideoId : null, Cfg.Parallel))
           .NotNull().ToList();
         if (missingVids.Count > 0) {
           var videosUpdated = await missingVids.BlockTransform(async v => (Id: v, Vid: await Yt.GetAndUpdateVideo(v)));
-          Log.Information("Missing video's fixed: [{Fixed}] , [{Broken}]",
-            videosUpdated.Where(v => v.Vid != null).Select(v => v.Id),
-            videosUpdated.Where(v => v.Vid == null).Select(v => v.Id));
+          
+          Log.Information("'{Channel}' Missing video's fixed: [{Fixed}] , [{Broken}]",
+            c.Title,
+            videosUpdated.Where(v => v.Vid != null).Join("|", v => v.Id),
+            videosUpdated.Where(v => v.Vid == null).Join("|", v => v.Id));
         }
       });
     }
