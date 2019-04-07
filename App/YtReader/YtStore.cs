@@ -127,7 +127,7 @@ namespace YtReader {
         : Expired(v.PublishedAt, RCfg.VideoOld)
           ? RCfg.RefreshOldRecommendedVideos
           : RCfg.RefreshYoungRecommendedVideos;
-
+    
     public async Task<RecommendedVideoStored> GetAndUpdateRecommendedVideos(ChannelVideoListItem v) {
       var rv = await RecommendedVideosCollection.Get(v.VideoId);
 

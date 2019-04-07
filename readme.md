@@ -53,8 +53,16 @@ For all seed channels, get a list of videos within the configured time range (Ja
 For all videos, retrieve the top 10 recommended videos
 
 
-### Available Data
-See the list of channels and their political categories in [SeedChannels.csv](Data/SeedChannels.csv). The latest data and statistics retrieved form YouTube is link at the bottom of the [visualization](https://pyt.azureedge.net).
+### Download Data
+
+Data as of 4th April 2019 (CSV). 
+
+[Channels](https://ytnetworks.azureedge.net/data/results/2019-04-04/VisChannels.csv)
+
+[Channel Relations](https://ytnetworks.azureedge.net/data/results/2019-04-04/VisRelations.csv)
+
+[Daily Video Recommendations](https://ytnetworks.azureedge.net/data/results/2019-04-04/DailyVideoRecommends.zip)
+
 
 ## Visualization Information
 
@@ -74,9 +82,8 @@ The left boxes in the flow diagram show the number of views. it is broken down b
 
 [A function](App/YtFunctions/YtFunctions.cs) runs each day and updates data from the YouTube API about the seed channels, their videos and recommendations.
 - Cached in cloud storage with history
-- Collected into a snapshot data as of each day into Channels.parquet , Videos.parquet , Recommends.parquet files publicly accessible (replace date and file as required): https://ytnetworks.blob.core.windows.net/data/analysis/2018-11-28/Channels.parquet
-- Data from 2018 Jan 1st - Now
-- Analysed using [this DataBricks notebook](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/5467014801025226/1340434901968186/7194280856364978/latest.html) 
+- Collected into a snapshot data as of each day into .parquet files in azure storage
+- Analysed using a databricks notebook into csv files (as listed in download data)
 
 
  

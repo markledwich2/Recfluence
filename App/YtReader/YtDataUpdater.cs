@@ -59,22 +59,34 @@ namespace YtReader {
     public async Task RefreshMissingVideos() {
       var channelCfg = await Cfg.LoadChannelConfig();
       await channelCfg.Seeds.BlockAction(async c => {
+        
+        Log.Information("Started fixing '{Channel}'", c.Title);
+        
         var channelVids = (await Yt.ChannelVideosCollection.Get(c.Id))?.Vids;
         if (channelVids == null) {
           Log.Error("{Channel}' has not video's stored", c.Title);
           return;
         }
         var missingVids = (await channelVids.Select(v => v).NotNull()
-            .BlockTransform(async v => await Yt.Videos.Get(v.VideoId) == null ? v.VideoId : null, Cfg.Parallel))
+            .BlockTransform(async v => await Yt.Videos.Get(v.VideoId) == null ? v.VideoId : null, Cfg.ParallelCollect))
           .NotNull().ToList();
         if (missingVids.Count > 0) {
-          var videosUpdated = await missingVids.BlockTransform(async v => (Id: v, Vid: await Yt.GetAndUpdateVideo(v)));
+          var videosUpdated = await missingVids.BlockTransform(async v => (Id: v, Vid: await Yt.GetAndUpdateVideo(v)), Cfg.Parallel);
           
-          Log.Information("'{Channel}' Missing video's fixed: [{Fixed}] , [{Broken}]",
+          Log.Information("'{Channel}' Missing video's fixed [{Fixed}], broken [{Broken}]",
             c.Title,
             videosUpdated.Where(v => v.Vid != null).Join("|", v => v.Id),
             videosUpdated.Where(v => v.Vid == null).Join("|", v => v.Id));
         }
+
+        var recommends = await channelVids.BlockTransform(async v => 
+          (From:v, Recs:await Yt.RecommendedVideosCollection.Get(v.VideoId)), Cfg.ParallelCollect);
+        var missinRecs = await recommends.Where(r => r.Recs == null).BlockTransform(async r => 
+          (From:r.From, Recs: await Yt.GetAndUpdateRecommendedVideos(r.From)), Cfg.Parallel);
+        Log.Information("'{Channel}' Missing video's recommendations [{Fixed}], broken [{Broken}]",
+          c.Title,
+          missinRecs.Where(v => v.Recs != null).Join("|", v => v.From.VideoId),
+          missinRecs.Where(v => v.Recs == null).Join("|", v => v.From.VideoId));
       });
     }
   }

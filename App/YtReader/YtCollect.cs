@@ -42,35 +42,42 @@ namespace YtReader {
 
       var channelCfg = await Cfg.LoadChannelConfig();
       var seeds = channelCfg.Seeds.ToList();
-      {
-        var channels = await seeds.BlockTransform(Channel, Cfg.ParallelCollect,
-          progressUpdate: p => Log.Information("Collecting channels {Channels}/{Total}. {Speed}", p.Results.Count,
-            seeds.Count, p.Speed("channels")));
-        await SaveParquet(channels, "Channels", analysisDir);
+
+      async Task SaveVideosAndRecommends() {
+        var par = (int) Math.Sqrt(Cfg.ParallelCollect);
+        var vrTransform =
+          new TransformBlock<SeedChannel, (IReadOnlyCollection<VideoRow> vids, IReadOnlyCollection<RecommendRow> recs)>(
+            async c => {
+              var vids = (await (await ChannelVideos(c)).BlockTransform(Video, par)).NotNull().ToReadOnly();
+              var recs = (await vids.BlockTransform(Recommends, par)).NotNull().SelectMany(r => r).NotNull().ToReadOnly();
+              return (vids, recs);
+            },
+            new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = par, EnsureOrdered = false}
+          );
+        
+        var produceTask = seeds.Produce(vrTransform);
+        var vidSink = new RowSink<VideoRow>((c, name) => SaveParquet(c, name, analysisDir), "Videos", 500000);
+        var recSink = new RowSink<RecommendRow>((c, name) => SaveParquet(c, name, analysisDir), "Recommends", 500000);
+
+        while (await vrTransform.OutputAvailableAsync()) {
+          var (vids, recs) = await vrTransform.ReceiveAsync();
+          await Task.WhenAll(vidSink.Add(vids), recSink.Add(recs));
+        }
+
+        await Task.WhenAll(vidSink.End(), recSink.End());
+        await produceTask;
       }
 
-      var par = (int) Math.Sqrt(Cfg.ParallelCollect);
-      var vrTransform =
-        new TransformBlock<SeedChannel, (IReadOnlyCollection<VideoRow> vids, IReadOnlyCollection<RecommendRow> recs)>(
-          async c => {
-            var vids = (await (await ChannelVideos(c)).BlockTransform(Video, par)).NotNull().ToReadOnly();
-            var recs = (await vids.BlockTransform(Recommends, par)).NotNull().SelectMany(r => r).NotNull().ToReadOnly();
-            return (vids, recs);
-          },
-          new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = par, EnsureOrdered = false}
-        );
-
-      var produceTask = seeds.Produce(vrTransform);
-      var vidSink = new RowSink<VideoRow>((c, name) => SaveParquet(c, name, analysisDir), "Videos", 500000);
-      var recSink = new RowSink<RecommendRow>((c, name) => SaveParquet(c, name, analysisDir), "Recommends", 500000);
-
-      while (await vrTransform.OutputAvailableAsync()) {
-        var (vids, recs) = await vrTransform.ReceiveAsync();
-        await Task.WhenAll(vidSink.Add(vids), recSink.Add(recs));
+      async Task SaveChannels() {
+        {
+          var channels = await seeds.BlockTransform(Channel, Cfg.Parallel,
+            progressUpdate: p => Log.Information("Collecting channels {Channels}/{Total}. {Speed}", p.Results.Count,
+              seeds.Count, p.Speed("channels")));
+          await SaveParquet(channels, "Channels", analysisDir);
+        }
       }
 
-      await Task.WhenAll(vidSink.End(), recSink.End());
-      await produceTask;
+      await Task.WhenAll(SaveVideosAndRecommends(), SaveChannels());
     }
 
     async Task<ICollection<ChannelVideoRow>> ChannelVideos(SeedChannel c) {
@@ -93,9 +100,13 @@ namespace YtReader {
         VideoId = v.VideoId,
         Title = v.VideoTitle,
         ChannelId = cv.ChannelId,
-        Views = (long) (v.Latest.Stats.Views ?? 0),
-        PublishedAt = v.Latest.PublishedAt.ToString("O")
-        //Tags = v.Latest.Tags.NotNull().ToArray()
+        PublishedAt = v.Latest.PublishedAt.ToString("O"),
+        Stats = v.History.Select(h => new VideoRowStats {
+          Views = (long) (h.Views ?? 0),
+          Likes = (long) (h.Likes ?? 0),
+          Diskiles = (long) (h.Dislikes ?? 0),
+          UpdatedAt = h.Updated.ToString("O")
+        }).ToList()
       };
     }
 
@@ -224,8 +235,17 @@ namespace YtReader {
     public string VideoId { get; set; }
     public string Title { get; set; }
     public string ChannelId { get; set; }
-    public long Views { get; set; }
     public string PublishedAt { get; set; }
+    
+    public List<VideoRowStats> Stats { get; set; }
+
     //public string[] Tags { get; set; }
+  }
+
+  public struct VideoRowStats {
+    public string UpdatedAt { get; set; }
+    public long Views { get; set; }
+    public long Likes { get; set; }
+    public long Diskiles { get; set; }
   }
 }
