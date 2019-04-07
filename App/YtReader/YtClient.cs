@@ -152,7 +152,7 @@ namespace YtReader {
         ChannelTitle = v.Snippet.ChannelTitle,
         ChannelId = v.Snippet.ChannelId,
         Language = v.Snippet.DefaultLanguage,
-        PublishedAt = (DateTime) v.Snippet.PublishedAt,
+        PublishedAt = v.Snippet.PublishedAt ?? DateTime.MinValue,
         CategoryId = v.Snippet.CategoryId,
         Stats = new VideoStats {
           Views = v.Statistics?.ViewCount,
@@ -160,7 +160,7 @@ namespace YtReader {
           Dislikes = v.Statistics?.DislikeCount,
           Updated = DateTime.UtcNow
         },
-        Updated = DateTime.Now
+        Updated = DateTime.UtcNow
       };
       if (v.Snippet.Tags != null)
         r.Tags.AddRange(v.Snippet.Tags);
