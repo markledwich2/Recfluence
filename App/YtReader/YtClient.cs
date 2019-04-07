@@ -13,333 +13,333 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 
 namespace YtReader {
-    public class YtClient {
-        public YtClient(AppCfg cfg, ILogger log) {
-            Cfg = cfg;
-            Log = log;
-            YtService = new YouTubeService();
-            AvailableKeys = cfg.YTApiKeys?.ToList() ?? throw new InvalidOperationException("configuration requires YTApiKeys");
-            Start = DateTime.UtcNow;
-        }
-
-        ICollection<string> AvailableKeys { get; }
-
-        public DateTime Start { get; }
-
-        public AppCfg Cfg { get; }
-        ILogger Log { get; }
-        YouTubeService YtService { get; }
-
-        async Task<T> GetResponse<T>(YouTubeBaseServiceRequest<T> request) {
-            while (true)
-                try {
-                    if (AvailableKeys.Count == 0)
-                        throw new InvalidOperationException("Ran out of quota for all available keys");
-                    request.Key = AvailableKeys.First(); // override key in case it has been changed by NextYtService()
-                    var response = await request.ExecuteAsync();
-                    return response;
-                }
-                catch (GoogleApiException ex) {
-                    if (ex.HttpStatusCode == HttpStatusCode.Forbidden) {
-                        AvailableKeys.Remove(request.Key);
-                        Log.Error(ex, "Quota exceeded, no longer using key {Key}", request.Key);
-                    }
-                    else
-                        throw;
-                }
-        }
-
-        #region Trending
-
-        public async Task SaveTrendingCsv() {
-            var trending = await Trending(100);
-            trending.AddRange(await Trending(100, UsCategoryEnum.Entertainment));
-
-            var videos = trending
-                .Select(i =>
-                    new {
-                        Include = 0,
-                        Id = i.VideoId,
-                        i.ChannelTitle,
-                        Title = i.VideoTitle,
-                        CategoryName = ((UsCategoryEnum) int.Parse(i.CategoryId)).EnumString(),
-                        i.ChannelId
-                    });
-
-            TrendingDir.CreateDirectories();
-            videos.WriteToCsv(TrendingDir.Combine(DateTime.UtcNow.FileSafeTimestamp() + " Trending.csv"));
-        }
-
-        async Task<ICollection<VideoData>> Trending(int max, UsCategoryEnum? category = null) {
-            var s = YtService.Videos.List("snippet");
-            s.Chart = VideosResource.ListRequest.ChartEnum.MostPopular;
-            s.RegionCode = "us";
-            s.MaxResults = 50;
-            if (category != null)
-                s.VideoCategoryId = ((int) category).ToString();
-
-            var videos = new List<VideoData>();
-            while (videos.Count < max) {
-                var res = await s.ExecuteAsync();
-                var trending = res.Items.Where(i => !IsExcluded(i.Snippet.CategoryId));
-                videos.AddRange(trending.Take(max - videos.Count).Select(ToVideoData));
-                if (res.NextPageToken == null)
-                    break;
-                s.PageToken = res.NextPageToken;
-            }
-
-            return videos;
-        }
-
-
-        FPath TrendingDir => "Trending".AsPath().InAppData("YoutubeNetworks");
-
-        enum UsCategoryEnum {
-            FilmAnimation = 1,
-            AutoVehicles = 2,
-            Music = 10,
-            PetsAnimals = 15,
-            Sports = 17,
-            ShortMovies = 18,
-            TravelEvents = 19,
-            Gaming = 20,
-            VideoBlogging = 21,
-            PplBlogs = 22,
-            Comedy = 23,
-            Entertainment = 24,
-            NewsPolitics = 25,
-            HowToStyle = 26,
-            Education = 27,
-            ScienceTech = 28,
-            NonprofitsActivism = 29,
-            Movies = 20,
-            Animation = 31,
-            ActionAdventure = 23,
-            Classics = 33,
-            Comedy2 = 34,
-            Doco = 35,
-            Drama = 36,
-            Family = 37,
-            Foreign = 38,
-            Horror = 39,
-            SciFi = 40,
-            Thriller = 41,
-            Shorts = 42,
-            Trailers = 44
-        }
-
-        public static readonly HashSet<string> ExcludeCategories = new[] {
-            UsCategoryEnum.FilmAnimation, UsCategoryEnum.AutoVehicles, UsCategoryEnum.Music,
-            UsCategoryEnum.PetsAnimals, UsCategoryEnum.Sports, UsCategoryEnum.ShortMovies,
-            UsCategoryEnum.TravelEvents, UsCategoryEnum.Gaming,
-            UsCategoryEnum.HowToStyle, UsCategoryEnum.Movies, UsCategoryEnum.Animation, UsCategoryEnum.ActionAdventure,
-            UsCategoryEnum.Classics, UsCategoryEnum.Comedy2, UsCategoryEnum.Drama, UsCategoryEnum.Family,
-            UsCategoryEnum.Foreign, UsCategoryEnum.Horror, UsCategoryEnum.SciFi, UsCategoryEnum.Thriller,
-            UsCategoryEnum.Shorts, UsCategoryEnum.Trailers
-        }.Select(i => ((int) i).ToString()).ToHashSet();
-
-        public static bool IsExcluded(string catId) => ExcludeCategories.Contains(catId);
-
-        #endregion
-
-        #region Videos
-
-        VideoData ToVideoData(Video v) {
-            var r = new VideoData {
-                VideoId = v.Id,
-                VideoTitle = v.Snippet.Title,
-                Description = v.Snippet.Description,
-                ChannelTitle = v.Snippet.ChannelTitle,
-                ChannelId = v.Snippet.ChannelId,
-                Language = v.Snippet.DefaultLanguage,
-                PublishedAt = (DateTime)v.Snippet.PublishedAt,
-                CategoryId = v.Snippet.CategoryId,
-                Stats = new VideoStats {
-                    Views = v.Statistics?.ViewCount,
-                    Likes = v.Statistics?.LikeCount,
-                    Dislikes = v.Statistics?.DislikeCount,
-                    Updated = DateTime.UtcNow
-                },
-                Updated = DateTime.Now
-            };
-            if (v.Snippet.Tags != null)
-                r.Tags.AddRange(v.Snippet.Tags);
-            if (v.TopicDetails?.RelevantTopicIds != null)
-                r.Topics.AddRange(v.TopicDetails.RelevantTopicIds);
-
-            return r;
-        }
-
-
-        public async Task<VideoData> VideoData(string id) {
-            var s = YtService.Videos.List("snippet,topicDetails,statistics");
-            s.Id = id;
-            
-            VideoListResponse response;
-            try {
-                response = await GetResponse(s);
-            }
-            catch (GoogleApiException ex) {
-                Log.Error("Error {ex} VideoData for {VideoId} ", ex, id);
-                return null;
-            }
-
-            var v = response.Items.FirstOrDefault();
-            if (v == null) return null;
-
-            var data = ToVideoData(v);
-
-            return data;
-        }
-
-        public async Task<ICollection<RecommendedVideoListItem>> GetRelatedVideos(string id) {
-            var s = YtService.Search.List("snippet");
-            s.RelatedToVideoId = id;
-            s.Type = "video";
-            s.MaxResults = Cfg.YtReader.CacheRelated;
-
-            SearchListResponse response;
-            try {
-                response = await GetResponse(s);
-            }
-            catch (GoogleApiException ex) {
-                Log.Error("Error {ex} GetRelatedVideos for {VideoId} ", ex, id);
-                return null;
-            }
-
-            var vids = new List<RecommendedVideoListItem>();
-            var rank = 1;
-            foreach (var item in response.Items) {
-                vids.Add(new RecommendedVideoListItem {
-                    VideoId = item.Id.VideoId,
-                    VideoTitle = item.Snippet.Title,
-                    ChannelId = item.Snippet.ChannelId,
-                    ChannelTitle = item.Snippet.ChannelTitle,
-                    Rank = rank,
-                    
-                });
-
-                rank++;
-            }
-
-            return vids;
-        }
-
-        #endregion
-
-        #region Channels
-
-        /// <summary>
-        ///     The most popular in that channel. Video's do not include related data.
-        /// </summary>
-        public async Task<ICollection<ChannelVideoListItem>> VideosInChannel(ChannelData c, DateTime publishedAfter, DateTime? publishBefore = null) {
-            var s = YtService.Search.List("snippet");
-            s.ChannelId = c.Id;
-            s.PublishedAfter = publishedAfter;
-            s.PublishedBefore = publishBefore;
-            s.MaxResults = 50;
-            s.Order = SearchResource.ListRequest.OrderEnum.Date;
-            s.Type = "video";
-
-            var vids = new List<ChannelVideoListItem>();
-            while (true) {
-                var res = await GetResponse(s);
-                vids.AddRange(res.Items.Where(v => v.Snippet.PublishedAt != null).Select(v => new ChannelVideoListItem {
-                    VideoId = v.Id.VideoId,
-                    VideoTitle = v.Snippet.Title,
-                    PublishedAt = (DateTime)v.Snippet.PublishedAt,
-                    Updated = DateTime.UtcNow
-                }));
-                if (res.NextPageToken == null)
-                    break;
-                s.PageToken = res.NextPageToken;
-            }
-
-            return vids;
-        }
-
-        public async Task<ChannelData> ChannelData(string id) {
-            var s = YtService.Channels.List("snippet,statistics");
-            s.Id = id;
-            var r = await GetResponse(s);
-            var c = r.Items.FirstOrDefault();
-            if (c == null) return new ChannelData {Id = id, Title = "N/A"};
-
-            var data = new ChannelData {
-                Id = id,
-                Title = c.Snippet.Title,
-                Description = c.Snippet.Description,
-                Country = c.Snippet.Country,
-                Thumbnails = c.Snippet.Thumbnails,
-                Stats = new ChannelStats {
-                    ViewCount = c.Statistics.ViewCount,
-                    SubCount = c.Statistics.SubscriberCount,
-                    Updated = DateTime.UtcNow
-                }
-            };
-
-            return data;
-        }
-
-        #endregion
+  public class YtClient {
+    public YtClient(AppCfg cfg, ILogger log) {
+      Cfg = cfg;
+      Log = log;
+      YtService = new YouTubeService();
+      AvailableKeys = cfg.YTApiKeys?.ToList() ?? throw new InvalidOperationException("configuration requires YTApiKeys");
+      Start = DateTime.UtcNow;
     }
 
-    public class ChannelData {
-        public string Id { get; set; }
-        public string Title { get; set; }
-        public string Country { get; set; }
-        public string Description { get; set; }
-        public ThumbnailDetails Thumbnails { get; set; }
-        public ChannelStats Stats { get; set; }
-        public override string ToString() => Title;
+    ICollection<string> AvailableKeys { get; }
+
+    public DateTime Start { get; }
+
+    public AppCfg Cfg { get; }
+    ILogger Log { get; }
+    YouTubeService YtService { get; }
+
+    async Task<T> GetResponse<T>(YouTubeBaseServiceRequest<T> request) {
+      while (true)
+        try {
+          if (AvailableKeys.Count == 0)
+            throw new InvalidOperationException("Ran out of quota for all available keys");
+          request.Key = AvailableKeys.First(); // override key in case it has been changed by NextYtService()
+          var response = await request.ExecuteAsync();
+          return response;
+        }
+        catch (GoogleApiException ex) {
+          if (ex.HttpStatusCode == HttpStatusCode.Forbidden) {
+            AvailableKeys.Remove(request.Key);
+            Log.Error(ex, "Quota exceeded, no longer using key {Key}", request.Key);
+          }
+          else {
+            throw;
+          }
+        }
     }
 
-    public class ChannelStats {
-        public ulong? ViewCount { get; set; }
-        public ulong? SubCount { get; set; }
-        public DateTime Updated { get; set; }
+    #region Trending
+
+    public async Task SaveTrendingCsv() {
+      var trending = await Trending(100);
+      trending.AddRange(await Trending(100, UsCategoryEnum.Entertainment));
+
+      var videos = trending
+        .Select(i =>
+          new {
+            Include = 0,
+            Id = i.VideoId,
+            i.ChannelTitle,
+            Title = i.VideoTitle,
+            CategoryName = ((UsCategoryEnum) int.Parse(i.CategoryId)).EnumString(),
+            i.ChannelId
+          });
+
+      TrendingDir.CreateDirectories();
+      videos.WriteToCsv(TrendingDir.Combine(DateTime.UtcNow.FileSafeTimestamp() + " Trending.csv"));
     }
 
-    public class VideoData : ChannelVideoListItem {
-        public string Description { get; set; }
-        public string ChannelTitle { get; set; }
-        public string ChannelId { get; set; }
-        public string Language { get; set; }
+    async Task<ICollection<VideoData>> Trending(int max, UsCategoryEnum? category = null) {
+      var s = YtService.Videos.List("snippet");
+      s.Chart = VideosResource.ListRequest.ChartEnum.MostPopular;
+      s.RegionCode = "us";
+      s.MaxResults = 50;
+      if (category != null)
+        s.VideoCategoryId = ((int) category).ToString();
 
-        public string CategoryId { get; set; }
+      var videos = new List<VideoData>();
+      while (videos.Count < max) {
+        var res = await s.ExecuteAsync();
+        var trending = res.Items.Where(i => !IsExcluded(i.Snippet.CategoryId));
+        videos.AddRange(trending.Take(max - videos.Count).Select(ToVideoData));
+        if (res.NextPageToken == null)
+          break;
+        s.PageToken = res.NextPageToken;
+      }
 
-
-        public ICollection<string> Topics { get; } = new List<string>();
-        public ICollection<string> Tags { get; } = new List<string>();
-
-        public VideoStats Stats { get; set; } = new VideoStats();
-
-        public override string ToString() => $"{ChannelTitle} {VideoTitle}";
+      return videos;
     }
 
-    public class VideoStats {
-        public ulong? Views { get; set; }
-        public ulong? Likes { get; set; }
-        public ulong? Dislikes { get; set; }
-        public DateTime Updated { get; set; }
+    FPath TrendingDir => "Trending".AsPath().InAppData("YoutubeNetworks");
+
+    enum UsCategoryEnum {
+      FilmAnimation = 1,
+      AutoVehicles = 2,
+      Music = 10,
+      PetsAnimals = 15,
+      Sports = 17,
+      ShortMovies = 18,
+      TravelEvents = 19,
+      Gaming = 20,
+      VideoBlogging = 21,
+      PplBlogs = 22,
+      Comedy = 23,
+      Entertainment = 24,
+      NewsPolitics = 25,
+      HowToStyle = 26,
+      Education = 27,
+      ScienceTech = 28,
+      NonprofitsActivism = 29,
+      Movies = 20,
+      Animation = 31,
+      ActionAdventure = 23,
+      Classics = 33,
+      Comedy2 = 34,
+      Doco = 35,
+      Drama = 36,
+      Family = 37,
+      Foreign = 38,
+      Horror = 39,
+      SciFi = 40,
+      Thriller = 41,
+      Shorts = 42,
+      Trailers = 44
     }
 
-    public class VideoItem {
-        public string VideoId { get; set; }
-        public string VideoTitle { get; set; }
+    public static readonly HashSet<string> ExcludeCategories = new[] {
+      UsCategoryEnum.FilmAnimation, UsCategoryEnum.AutoVehicles, UsCategoryEnum.Music,
+      UsCategoryEnum.PetsAnimals, UsCategoryEnum.Sports, UsCategoryEnum.ShortMovies,
+      UsCategoryEnum.TravelEvents, UsCategoryEnum.Gaming,
+      UsCategoryEnum.HowToStyle, UsCategoryEnum.Movies, UsCategoryEnum.Animation, UsCategoryEnum.ActionAdventure,
+      UsCategoryEnum.Classics, UsCategoryEnum.Comedy2, UsCategoryEnum.Drama, UsCategoryEnum.Family,
+      UsCategoryEnum.Foreign, UsCategoryEnum.Horror, UsCategoryEnum.SciFi, UsCategoryEnum.Thriller,
+      UsCategoryEnum.Shorts, UsCategoryEnum.Trailers
+    }.Select(i => ((int) i).ToString()).ToHashSet();
 
-        public override string ToString() => VideoTitle;
+    public static bool IsExcluded(string catId) => ExcludeCategories.Contains(catId);
+
+    #endregion
+
+    #region Videos
+
+    VideoData ToVideoData(Video v) {
+      var r = new VideoData {
+        VideoId = v.Id,
+        VideoTitle = v.Snippet.Title,
+        Description = v.Snippet.Description,
+        ChannelTitle = v.Snippet.ChannelTitle,
+        ChannelId = v.Snippet.ChannelId,
+        Language = v.Snippet.DefaultLanguage,
+        PublishedAt = (DateTime) v.Snippet.PublishedAt,
+        CategoryId = v.Snippet.CategoryId,
+        Stats = new VideoStats {
+          Views = v.Statistics?.ViewCount,
+          Likes = v.Statistics?.LikeCount,
+          Dislikes = v.Statistics?.DislikeCount,
+          Updated = DateTime.UtcNow
+        },
+        Updated = DateTime.Now
+      };
+      if (v.Snippet.Tags != null)
+        r.Tags.AddRange(v.Snippet.Tags);
+      if (v.TopicDetails?.RelevantTopicIds != null)
+        r.Topics.AddRange(v.TopicDetails.RelevantTopicIds);
+
+      return r;
     }
 
-    public class RecommendedVideoListItem : VideoItem {
-        public string ChannelTitle { get; set; }
-        public string ChannelId { get; set; }
-        public int Rank { get; set; }
-        public override string ToString() => $"{Rank}. {ChannelTitle}: {VideoTitle}";
+    public async Task<VideoData> VideoData(string id) {
+      var s = YtService.Videos.List("snippet,topicDetails,statistics");
+      s.Id = id;
+
+      VideoListResponse response;
+      try {
+        response = await GetResponse(s);
+      }
+      catch (GoogleApiException ex) {
+        Log.Error("Error {ex} VideoData for {VideoId} ", ex, id);
+        return null;
+      }
+
+      var v = response.Items.FirstOrDefault();
+      if (v == null) return null;
+
+      var data = ToVideoData(v);
+
+      return data;
     }
 
-    public class ChannelVideoListItem : VideoItem {
-        public DateTime PublishedAt { get; set; }
-        public DateTime Updated { get; set; }
+    public async Task<ICollection<RecommendedVideoListItem>> GetRelatedVideos(string id) {
+      var s = YtService.Search.List("snippet");
+      s.RelatedToVideoId = id;
+      s.Type = "video";
+      s.MaxResults = Cfg.YtReader.CacheRelated;
+
+      SearchListResponse response;
+      try {
+        response = await GetResponse(s);
+      }
+      catch (GoogleApiException ex) {
+        Log.Error("Error {ex} GetRelatedVideos for {VideoId} ", ex, id);
+        return null;
+      }
+
+      var vids = new List<RecommendedVideoListItem>();
+      var rank = 1;
+      foreach (var item in response.Items) {
+        vids.Add(new RecommendedVideoListItem {
+          VideoId = item.Id.VideoId,
+          VideoTitle = item.Snippet.Title,
+          ChannelId = item.Snippet.ChannelId,
+          ChannelTitle = item.Snippet.ChannelTitle,
+          Rank = rank
+        });
+
+        rank++;
+      }
+
+      return vids;
     }
+
+    #endregion
+
+    #region Channels
+
+    /// <summary>
+    ///   The most popular in that channel. Video's do not include related data.
+    /// </summary>
+    public async Task<ICollection<ChannelVideoListItem>> VideosInChannel(ChannelData c, DateTime publishedAfter,
+      DateTime? publishBefore = null) {
+      var s = YtService.Search.List("snippet");
+      s.ChannelId = c.Id;
+      s.PublishedAfter = publishedAfter;
+      s.PublishedBefore = publishBefore;
+      s.MaxResults = 50;
+      s.Order = SearchResource.ListRequest.OrderEnum.Date;
+      s.Type = "video";
+
+      var vids = new List<ChannelVideoListItem>();
+      while (true) {
+        var res = await GetResponse(s);
+        vids.AddRange(res.Items.Where(v => v.Snippet.PublishedAt != null).Select(v => new ChannelVideoListItem {
+          VideoId = v.Id.VideoId,
+          VideoTitle = v.Snippet.Title,
+          PublishedAt = (DateTime) v.Snippet.PublishedAt,
+          Updated = DateTime.UtcNow
+        }));
+        if (res.NextPageToken == null)
+          break;
+        s.PageToken = res.NextPageToken;
+      }
+
+      return vids;
+    }
+
+    public async Task<ChannelData> ChannelData(string id) {
+      var s = YtService.Channels.List("snippet,statistics");
+      s.Id = id;
+      var r = await GetResponse(s);
+      var c = r.Items.FirstOrDefault();
+      if (c == null) return new ChannelData {Id = id, Title = "N/A"};
+
+      var data = new ChannelData {
+        Id = id,
+        Title = c.Snippet.Title,
+        Description = c.Snippet.Description,
+        Country = c.Snippet.Country,
+        Thumbnails = c.Snippet.Thumbnails,
+        Stats = new ChannelStats {
+          ViewCount = c.Statistics.ViewCount,
+          SubCount = c.Statistics.SubscriberCount,
+          Updated = DateTime.UtcNow
+        }
+      };
+
+      return data;
+    }
+
+    #endregion
+  }
+
+  public class ChannelData {
+    public string Id { get; set; }
+    public string Title { get; set; }
+    public string Country { get; set; }
+    public string Description { get; set; }
+    public ThumbnailDetails Thumbnails { get; set; }
+    public ChannelStats Stats { get; set; }
+
+    public override string ToString() => Title;
+  }
+
+  public class ChannelStats {
+    public ulong? ViewCount { get; set; }
+    public ulong? SubCount { get; set; }
+    public DateTime Updated { get; set; }
+  }
+
+  public class VideoData : ChannelVideoListItem {
+    public string Description { get; set; }
+    public string ChannelTitle { get; set; }
+    public string ChannelId { get; set; }
+    public string Language { get; set; }
+
+    public string CategoryId { get; set; }
+
+    public ICollection<string> Topics { get; } = new List<string>();
+    public ICollection<string> Tags { get; } = new List<string>();
+
+    public VideoStats Stats { get; set; } = new VideoStats();
+
+    public override string ToString() => $"{ChannelTitle} {VideoTitle}";
+  }
+
+  public class VideoStats {
+    public ulong? Views { get; set; }
+    public ulong? Likes { get; set; }
+    public ulong? Dislikes { get; set; }
+    public DateTime Updated { get; set; }
+  }
+
+  public class VideoItem {
+    public string VideoId { get; set; }
+    public string VideoTitle { get; set; }
+
+    public override string ToString() => VideoTitle;
+  }
+
+  public class RecommendedVideoListItem : VideoItem {
+    public string ChannelTitle { get; set; }
+    public string ChannelId { get; set; }
+    public int Rank { get; set; }
+
+    public override string ToString() => $"{Rank}. {ChannelTitle}: {VideoTitle}";
+  }
+
+  public class ChannelVideoListItem : VideoItem {
+    public DateTime PublishedAt { get; set; }
+    public DateTime Updated { get; set; }
+  }
 }
