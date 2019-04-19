@@ -73,10 +73,10 @@ namespace YtReader {
           var channels = await seeds.BlockTransform(Channel, Cfg.Parallel,
             progressUpdate: p => Log.Information("Collecting channels {Channels}/{Total}. {Speed}", p.Results.Count,
               seeds.Count, p.Speed("channels")));
-          await SaveParquet(channels, "Channels", analysisDir);
+          await SaveParquet(channels.NotNull(), "Channels", analysisDir);
         }
       }
-
+      
       await Task.WhenAll(SaveVideosAndRecommends(), SaveChannels());
     }
 
@@ -112,15 +112,19 @@ namespace YtReader {
 
     async Task<ChannelRow> Channel(SeedChannel c) {
       var channel = await Yt.Channels.Get(c.Id);
+      if(channel == null) {
+        Log.Error("Unable to find seed channel {Channel}", c.Title);
+        return null;
+      }
       return new ChannelRow {
         ChannelId = channel.ChannelId,
         Title = channel.ChannelTitle,
-        SubCount = (long) (channel.Latest.Stats.SubCount ?? 0),
-        ViewCount = (long) (channel.Latest.Stats.ViewCount ?? 0),
+        SubCount = (long) (channel.Latest?.Stats?.SubCount ?? 0),
+        ViewCount = (long) (channel.Latest?.Stats?.ViewCount ?? 0),
         LR = c.LR,
         Type = c.Type,
-        Thumbnail = channel.Latest.Thumbnails.Medium.Url,
-        UpdatedAt = channel.Latest.Stats.Updated.ToString("O")
+        Thumbnail = channel.Latest?.Thumbnails?.Medium?.Url,
+        UpdatedAt = channel.Latest?.Stats?.Updated.ToString("O")
       };
     }
 
