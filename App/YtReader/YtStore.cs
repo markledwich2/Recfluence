@@ -75,8 +75,8 @@ namespace YtReader {
 
     public async Task<ChannelStored> GetAndUpdateChannel(string id) {
       var c = await Channels.Get(id);
-
-      var needsNewStats = c == null || Expired(c.Latest.Stats.Updated, RCfg.RefreshChannel);
+      var lastUpdated = c?.Latest?.Stats?.Updated;
+      var needsNewStats = lastUpdated == null || Expired(lastUpdated.Value, RCfg.RefreshChannel);
       if (!needsNewStats) return c;
 
       var channelData = await Yt.ChannelData(id);

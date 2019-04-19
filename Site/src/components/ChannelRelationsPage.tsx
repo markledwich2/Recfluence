@@ -44,7 +44,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     this.load()
   }
 
-  version:string = '2019-01-14'
+  version:string = '2019-04-04'
   resultUrl() { return `https://ytnetworks.azureedge.net/data/results/${this.version}/` }
   //resultUrl = "https://ytnetworks.blob.core.windows.net/data/results/2018-12-28/"
 
