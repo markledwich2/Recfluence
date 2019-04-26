@@ -87,6 +87,7 @@ namespace YtReader {
     }
 
     public Task Save(StringPath path, Stream contents) => throw new NotImplementedException();
+    public Task<ICollection<StringPath>> List(StringPath path) => throw new NotImplementedException();
 
     string FilePath(StringPath path) => BasePath.Add(path).WithExtension(".json.gz");
 

@@ -1,7 +1,12 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Parquet;
+using SysExtensions.Collections;
+using SysExtensions.Text;
+using SysExtensions.Threading;
 using YtReader;
 
 namespace YouTubeReaderTests {
@@ -23,12 +28,19 @@ namespace YouTubeReaderTests {
     public async Task SaveCaptions() {
       var cfg = await Setup.LoadCfg();
       var log = Setup.CreateTestLogger();
-
-      var videoIds = new[] {"S4hq5uVsb5k"};
+      
       var store = new YtStore(new YtClient(cfg.App, log), cfg.DataStore());
-
-      foreach (var videoId in videoIds) {
-        var txt = await store.GetAndUpdateVideoCaptions(videoId);
+      var channelCfg = await cfg.App.LoadChannelConfig();
+      
+      foreach (var c in channelCfg.Seeds.Randomize()) {
+        var existingCaptionIds = (await store.Store.List(StringPath.Relative("VideoCaptions", c.Id)))
+          .Select(b => b.NameSansExtension).ToHashSet();
+        if(existingCaptionIds.Any())
+          continue;
+        var cvc = await store.ChannelVideosCollection.Get(c.Id);
+        var toUpdate = cvc.Vids.OrderByDescending(v => v.PublishedAt).Take(50)
+          .Where(v => !existingCaptionIds.Contains(v.VideoId)).ToList();
+        await toUpdate.BlockAction(v => store.GetAndUpdateVideoCaptions(c.Id, v.VideoId, log), cfg.App.ParallelCollect);
       }
     }
 

@@ -38,10 +38,11 @@ namespace YtReader {
       var log = Log.ForContext("Channel", channel.Latest.Title);
 
       async Task<(VideoStored video, RecommendedVideoStored recommended)> UpdateVideo(ChannelVideoListItem fromV) {
-        var video = await Yt.GetAndUpdateVideo(fromV.VideoId);
-        if (video == null) return (null, null);
+        var vu = await Yt.GetAndUpdateVideo(fromV.VideoId);
+        if (vu.Video == null) return (null, null);
+        await Yt.GetAndUpdateVideoCaptions(seed.Id, vu.Video.VideoId, Log);
         var allRecommended = await Yt.GetAndUpdateRecommendedVideos(fromV);
-        return (video, allRecommended);
+        return (vu.Video, allRecommended);
       }
 
       var channelVideos = await Yt.GetAndUpdateChannelVideos(channel.Latest);
@@ -58,7 +59,7 @@ namespace YtReader {
 
     public async Task RefreshMissingVideos() {
       var channelCfg = await Cfg.LoadChannelConfig();
-      await channelCfg.Seeds.BlockAction(async c => {
+      await channelCfg.Seeds.Randomize().BlockAction(async c => {
         
         Log.Information("Started fixing '{Channel}'", c.Title);
         
@@ -71,12 +72,12 @@ namespace YtReader {
             .BlockTransform(async v => await Yt.Videos.Get(v.VideoId) == null ? v.VideoId : null, Cfg.ParallelCollect))
           .NotNull().ToList();
         if (missingVids.Count > 0) {
-          var videosUpdated = await missingVids.BlockTransform(async v => (Id: v, Vid: await Yt.GetAndUpdateVideo(v)), Cfg.Parallel);
+          var videosUpdated = await missingVids.BlockTransform(async v => (Id: v, Video: await Yt.GetAndUpdateVideo(v)), Cfg.Parallel);
           
           Log.Information("'{Channel}' Missing video's fixed [{Fixed}], broken [{Broken}]",
             c.Title,
-            videosUpdated.Where(v => v.Vid != null).Join("|", v => v.Id),
-            videosUpdated.Where(v => v.Vid == null).Join("|", v => v.Id));
+            videosUpdated.Where(v => v.Video.Video != null).Join("|", v => v.Id),
+            videosUpdated.Where(v => v.Video.Video == null).Join("|", v => v.Id));
         }
 
         var recommends = await channelVids.BlockTransform(async v => 
@@ -88,6 +89,11 @@ namespace YtReader {
           missinRecs.Where(v => v.Recs != null).Join("|", v => v.From.VideoId),
           missinRecs.Where(v => v.Recs == null).Join("|", v => v.From.VideoId));
       });
+    }
+
+
+    public async Task SaveAllRecentVideoCaptions() {
+      
     }
   }
 }

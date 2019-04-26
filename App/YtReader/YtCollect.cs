@@ -101,12 +101,14 @@ namespace YtReader {
         Title = v.VideoTitle,
         ChannelId = cv.ChannelId,
         PublishedAt = v.Latest.PublishedAt.ToString("O"),
+        Views = (long) (v.Latest.Stats.Views ?? 0),
+        /*
         Stats = v.History.Select(h => new VideoRowStats {
           Views = (long) (h.Views ?? 0),
           Likes = (long) (h.Likes ?? 0),
           Diskiles = (long) (h.Dislikes ?? 0),
           UpdatedAt = h.Updated.ToString("O")
-        }).ToList()
+        }).ToList()*/
       };
     }
 
@@ -226,7 +228,6 @@ namespace YtReader {
     public string Type { get; set; }
     public string LR { get; set; }
     public long ViewCount { get; set; }
-
     public long SubCount { get; set; }
 
     //public long ChannelVideoViews { get; set; }
@@ -240,9 +241,9 @@ namespace YtReader {
     public string Title { get; set; }
     public string ChannelId { get; set; }
     public string PublishedAt { get; set; }
-    
-    public List<VideoRowStats> Stats { get; set; }
+    public long Views { get; set; }
 
+    //public List<VideoRowStats> Stats { get; set; }
     //public string[] Tags { get; set; }
   }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using SysExtensions.Fluent.IO;
@@ -9,5 +10,6 @@ namespace YtReader {
     Task Set<T>(StringPath path, T item);
     Task Save(StringPath path, FPath file);
     Task Save(StringPath path, Stream contents);
+    Task<ICollection<StringPath>> List(StringPath path);
   }
 }

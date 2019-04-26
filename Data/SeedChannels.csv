@@ -1,5 +1,5 @@
 Id,Title,Type,LR
-# ChannelId, Video title, TVNews (news published primarily for tv)|TVCommentary|News|Commentary, R (right) | L (left) | C (center) | PL (punching left)
+# ChannelId, Video title, TVNews (news published primarily for tv)|TVCommentary|News|Commentary, R (right) | L (left) | C (center)
 # 10k subscribers + significant focus on US political/cultural commentary/contexualizing + activelyproducing content in 2018
 #
 # from https://channelcrawler.com/ 200k+ subscribers in News/Politics/Activism categories
@@ -12,7 +12,6 @@ UCJdKr0Bgd_5saZYqLCa9mng,The Rubin Report,Commentary,C
 UCV3Nm3T-XAgVhKH9jT0ViRg,AJ+,News,L
 UCKZGcrxRAhdUi58Mdr565mw,TheAdviseShowTV,Commentary,R
 UCDgchsbJnrX604K-xWsd-fQ,Hunter Avallone,Commentary,R
-UChwwoeOZ3EJPobW83dgQfAg,WeAreChange,Commentary,R
 UChwwoeOZ3EJPobW83dgQfAg,WeAreChange,Commentary,R
 UCvixJtaXuNdMPUGdOPcY8Ag,David Pakman Shown,Commentary,L
 UCDmCBKaKOtOrEqgsL4-3C8Q,Blair White,Commentary,R

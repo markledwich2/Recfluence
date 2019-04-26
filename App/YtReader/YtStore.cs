@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YoutubeExplode;
+using YoutubeExplode.Exceptions;
+using YoutubeExplode.Models.ClosedCaptions;
 
 namespace YtReader {
   public class YtStore {
@@ -44,13 +47,14 @@ namespace YtReader {
     /// <summary>
     ///   Gets the video with that ID. Caches in S3 (including historical information) with this
     /// </summary>
-    public async Task<VideoStored> GetAndUpdateVideo(string id) {
+    public async Task<(VideoStored Video, UpdateStatus Status)> GetAndUpdateVideo(string id) {
       var v = await Videos.Get(id);
       if (v != null && v.Latest.Updated == default(DateTime))
         v.Latest.Updated = v.Latest.Stats.Updated;
 
+      var status = v == null ? UpdateStatus.Created : UpdateStatus.Updated;
       var needsNewStats = v == null || Expired(v.Latest.Updated, VideoRefreshAge(v.Latest));
-      if (!needsNewStats) return v;
+      if (!needsNewStats) return (v, status);
 
       var videoData = await Yt.VideoData(id);
       if (videoData != null) {
@@ -64,7 +68,7 @@ namespace YtReader {
       if (v != null)
         await Videos.Set(v);
 
-      return v;
+      return (v, status);
     }
 
     public bool VideoDead(ChannelVideoListItem v) => Expired(v.PublishedAt, RCfg.VideoDead);
@@ -127,7 +131,7 @@ namespace YtReader {
         : Expired(v.PublishedAt, RCfg.VideoOld)
           ? RCfg.RefreshOldRecommendedVideos
           : RCfg.RefreshYoungRecommendedVideos;
-    
+
     public async Task<RecommendedVideoStored> GetAndUpdateRecommendedVideos(ChannelVideoListItem v) {
       var rv = await RecommendedVideosCollection.Get(v.VideoId);
 
@@ -146,15 +150,30 @@ namespace YtReader {
       return rv;
     }
 
-    public async Task<string> GetAndUpdateVideoCaptions(string videoId) {
-      //var video = await ytScaper.GetVideoAsync(videoId);
-      var tracks = await ytScaper.GetVideoClosedCaptionTrackInfosAsync(videoId);
+    public async Task<string> GetAndUpdateVideoCaptions(string channelId, string videoId, ILogger log) {
+      IReadOnlyList<ClosedCaptionTrackInfo> tracks;
+      try {
+        tracks = await ytScaper.GetVideoClosedCaptionTrackInfosAsync(videoId);
+      }
+      catch (Exception ex) {
+        log.Warning(ex, "Unable to get captionsfor {VideoID}: {Error}", videoId, ex.Message);
+        return null;
+      }
       var en = tracks.FirstOrDefault(t => t.Language.Code == "en");
       if (en == null) return null;
-      var track = await ytScaper.GetClosedCaptionTrackAsync(en);
+
+      ClosedCaptionTrack track;
+      try {
+        track = await ytScaper.GetClosedCaptionTrackAsync(en);
+      }
+      catch (Exception ex) {
+        log.Warning(ex, "Unable to get captions for {VideoID}: {Error}", videoId, ex.Message);
+        return null;
+      }
       var text = track.Captions.Select(c => c.Text).Join("\n");
 
-      await Store.Save(StringPath.Relative("VideoCaptions", $"{videoId}.txt"), text.AsStream());
+      if (text != null)
+        await Store.Save(StringPath.Relative("VideoCaptions", channelId, $"{videoId}.txt"), text.AsStream());
       return text;
     }
   }
@@ -189,6 +208,11 @@ namespace YtReader {
     }
   }
 
+  public enum UpdateStatus {
+    Updated,
+    Created
+  }
+  
   public class VideoStored {
     public string VideoId => Latest?.VideoId;
     public string VideoTitle => Latest?.VideoTitle;
