@@ -156,7 +156,7 @@ namespace YtReader {
         tracks = await ytScaper.GetVideoClosedCaptionTrackInfosAsync(videoId);
       }
       catch (Exception ex) {
-        log.Warning(ex, "Unable to get captionsfor {VideoID}: {Error}", videoId, ex.Message);
+        log.Warning(ex, "Unable to get captions for {VideoID}: {Error}", videoId, ex.Message);
         return null;
       }
       var en = tracks.FirstOrDefault(t => t.Language.Code == "en");
@@ -172,8 +172,15 @@ namespace YtReader {
       }
       var text = track.Captions.Select(c => c.Text).Join("\n");
 
-      if (text != null)
-        await Store.Save(StringPath.Relative("VideoCaptions", channelId, $"{videoId}.txt"), text.AsStream());
+      if (text != null) {
+        var path = StringPath.Relative("VideoCaptions", channelId, $"{videoId}.txt");
+        try {
+          await Store.Save(path, text.AsStream());
+        }
+        catch (Exception ex) {
+          log.Warning(ex, "Error when saving captions {Path}", path);
+        }
+      }
       return text;
     }
   }

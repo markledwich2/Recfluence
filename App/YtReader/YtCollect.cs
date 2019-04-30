@@ -56,8 +56,8 @@ namespace YtReader {
           );
         
         var produceTask = seeds.Produce(vrTransform);
-        var vidSink = new RowSink<VideoRow>((c, name) => SaveParquet(c, name, analysisDir), "Videos", 500000);
-        var recSink = new RowSink<RecommendRow>((c, name) => SaveParquet(c, name, analysisDir), "Recommends", 500000);
+        var vidSink = new RowSink<VideoRow>((c, name) => SaveParquet(c, name, analysisDir), "Videos", 500_000);
+        var recSink = new RowSink<RecommendRow>((c, name) => SaveParquet(c, name, analysisDir), "Recommends", 500_000);
 
         while (await vrTransform.OutputAvailableAsync()) {
           var (vids, recs) = await vrTransform.ReceiveAsync();
