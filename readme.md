@@ -55,7 +55,9 @@ For all videos, retrieve the top 10 recommended videos
 
 ### Download Data
 
-Data as of 4th April 2019 (CSV). 
+**CSV**
+
+Updated 4th April 2019
 
 [Channels](https://ytnetworks.azureedge.net/data/results/2019-04-04/VisChannels.csv)
 
@@ -63,6 +65,11 @@ Data as of 4th April 2019 (CSV).
 
 [Daily Video Recommendations](https://ytnetworks.azureedge.net/data/results/2019-04-04/DailyVideoRecommends.zip)
 
+
+**Connect Directly to Azure Storage**
+
+Example [Databricks notebook](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/5467014801025226/3416558578232351/7194280856364978/latest.html)
+connecting to azure storage (public read access)
 
 ## Visualization Information
 
