@@ -24,7 +24,7 @@ There is no definitive list of YouTube channels, so a variety of techniques were
 - Searches for keywords from [ISideWith social issues list](https://www.isidewith.com/en-us/polls)
 - Suggestions from reviewers and my own knowledge
 
-Over time, the ease of finding channels has diminished. I estimate the list as of 2008-12-13 is at least 2/3 of all channels that meet this criteria (in terms of views). Please [email me](mailto:mark@ledwich.com.au) if you have additional channel suggestions.
+Over time, the ease of finding channels has diminished. I estimate the list as of 2018-12-13 is at least 2/3 of all channels that meet this criteria (in terms of views). Please [email me](mailto:mark@ledwich.com.au) if you have additional channel suggestions.
 
 ### How channels political category was determined
 For news:
