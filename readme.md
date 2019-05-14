@@ -24,7 +24,7 @@ There is no definitive list of YouTube channels, so a variety of techniques were
 - Searches for keywords from [ISideWith social issues list](https://www.isidewith.com/en-us/polls)
 - Suggestions from reviewers and my own knowledge
 
-Over time, the ease of finding channels has diminished. I estimate the list as of 2008-12-13 is at least 2/3 of all channels that meet this criteria (in terms of views). Please [email me](mailto:mark@ledwich.com.au) if you have additional channel suggestions.
+Over time, the ease of finding channels has diminished. I estimate the list as of 2018-12-13 is at least 2/3 of all channels that meet this criteria (in terms of views). Please [email me](mailto:mark@ledwich.com.au) if you have additional channel suggestions.
 
 ### How channels political category was determined
 For news:
@@ -55,7 +55,9 @@ For all videos, retrieve the top 10 recommended videos
 
 ### Download Data
 
-Data as of 4th April 2019 (CSV). 
+**CSV**
+
+Updated 4th April 2019
 
 [Channels](https://ytnetworks.azureedge.net/data/results/2019-04-04/VisChannels.csv)
 
@@ -63,6 +65,11 @@ Data as of 4th April 2019 (CSV).
 
 [Daily Video Recommendations](https://ytnetworks.azureedge.net/data/results/2019-04-04/DailyVideoRecommends.zip)
 
+
+**Connect Directly to Azure Storage**
+
+Example [Databricks notebook](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/5467014801025226/3416558578232351/7194280856364978/latest.html)
+connecting to azure storage (public read access)
 
 ## Visualization Information
 
