@@ -48,7 +48,7 @@ namespace YtReader {
         var vrTransform =
           new TransformBlock<SeedChannel, (IReadOnlyCollection<VideoRow> vids, IReadOnlyCollection<RecommendRow> recs)>(
             async c => {
-              var vids = (await (await ChannelVideos(c)).BlockTransform(Video, par)).NotNull().ToReadOnly();
+              var vids = (await (await ChannelVideos(c)).NotNull().BlockTransform(Video, par)).NotNull().ToReadOnly();
               var recs = (await vids.BlockTransform(Recommends, par)).NotNull().SelectMany(r => r).NotNull().ToReadOnly();
               return (vids, recs);
             },
@@ -82,7 +82,7 @@ namespace YtReader {
 
     async Task<ICollection<ChannelVideoRow>> ChannelVideos(SeedChannel c) {
       var channelVids = await Yt.ChannelVideosCollection.Get(c.Id);
-      return channelVids.Vids.Select(v => new ChannelVideoRow {
+      return channelVids?.Vids.Select(v => new ChannelVideoRow {
         VideoId = v.VideoId,
         PublishedAt = v.PublishedAt.ToString("O"),
         ChannelId = c.Id
