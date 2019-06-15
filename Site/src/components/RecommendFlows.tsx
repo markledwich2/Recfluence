@@ -26,6 +26,7 @@ interface NodeExtra {
   mode: NodeMode
   incomming: number
   outgoing: number
+  topic:string
 }
 
 type ChannelNode = SankeyNode<ChannelNodeExtra, RecommendFlowExtra>
@@ -66,15 +67,15 @@ export class RecommendFlows extends React.Component<Props, State> {
 
   layoutForAll(): Graph<Node[], Link[]> {
     let channels = this.props.dataSet.channels
-    let byType = _(channels).groupBy(c => c.LR)
+    let byType = _(channels).groupBy(c => c.Topic)
 
     let fromNodes = byType
       .map(
         (g, t) =>
           ({
             shapeId: `from.${t}`,
-            lr: t,
-            title: YtNetworks.lrText(t),
+            topic: t,
+            title: t, // YtNetworks.lrText(t),
             mode: NodeMode.From
           } as Node)
       )
@@ -85,15 +86,15 @@ export class RecommendFlows extends React.Component<Props, State> {
         (g, t) =>
           ({
             shapeId: `to.${t}`,
-            lr: t,
-            title: YtNetworks.lrText(t),
+            topic: t,
+            title: t, //YtNetworks.lrText(t),
             mode: NodeMode.To
           } as Node)
       )
       .value()
 
     let flows = _(this.props.dataSet.relations)
-      .groupBy<RelationData>(r => `${channels[r.FromChannelId].LR}.${channels[r.ChannelId].LR}`)
+      .groupBy<RelationData>(r => `${channels[r.FromChannelId].Topic}.${channels[r.ChannelId].Topic}`)
       .map(
         (g, t) =>
           ({
@@ -117,7 +118,8 @@ export class RecommendFlows extends React.Component<Props, State> {
             channelId: n.ChannelId,
             title: n.Title,
             size: +n.ChannelVideoViews,
-            lr: n.LR
+            lr: n.LR,
+            topic: n.Topic
           } as ChannelNode)
       )
       .keyBy(c => c.channelId)
@@ -214,7 +216,7 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('stroke', d => {
           let s = d.source as Node
           let t = d.target as Node
-          return YtNetworks.lrColor(s.mode == NodeMode.From ? s.lr : t.lr)
+          return YtNetworks.topicColor(s.mode == NodeMode.From ? s.topic : t.topic)
         })
 
       updateLink.exit().remove()
@@ -244,7 +246,7 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('y', d => d.y0)
         .attr('height', d => Math.max(d.y1 - d.y0, 1))
         .attr('width', d => d.x1 - d.x0)
-        .attr('fill', d => YtNetworks.lrColor(d.lr))
+        .attr('fill', d => YtNetworks.topicColor(d.topic))
 
       //highlight shape when selected
       if (channelId)

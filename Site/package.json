@@ -25,9 +25,11 @@
     "gatsby-plugin-typescript": "^2.0.1"
   },
   "dependencies": {
+    "@types/d3-cloud": "^1.2.2",
     "@types/react-helmet": "^5.0.7",
     "chai": "^4.2.0",
     "d3": "^5.7.0",
+    "d3-cloud": "^1.2.5",
     "d3-sankey": "^0.7.1",
     "d3fc-label-layout": "^5.1.0",
     "dateformat": "^3.0.3",

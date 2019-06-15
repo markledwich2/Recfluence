@@ -5,7 +5,7 @@
 
 html {
   font-size: 11px;
-  background-color: rgb(30, 30, 30);
+  background-color: rgb(5, 5, 5);
 }
 @media all and (min-width: 600px) {
   html {
@@ -133,8 +133,14 @@ div.MainChartContainer > .Flows {
   flex: 1 100%;
 }
 
+div.MainChartContainer > .Words {
+  height: 30vh;
+  min-height: 400px;
+  flex: 1 100%;
+}
+
 div.ChannelRelationPage > .Title {
-  background-color: rgb(37, 37, 38);
+  background-color: rgb(17, 17, 17);
   padding: 5px;
   display: flex;
   flex-wrap: wrap;
@@ -177,6 +183,11 @@ div.footer > * {
 
   div.MainChartContainer > .Flows {
     flex: 2 auto;
+    height: 100%;
+  }
+
+  div.MainChartContainer > .Words {
+    flex: 1 auto;
     height: 100%;
   }
 

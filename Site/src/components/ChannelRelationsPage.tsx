@@ -9,6 +9,7 @@ import { jsonClone } from '../common/Utils'
 import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
 import { Mention } from 'react-twitter-widgets'
+import { ChannelWords } from './ChannelWords';
 
 interface Props { }
 
@@ -33,6 +34,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   relations: ChannelRelations
   flows: RecommendFlows
   title: ChannelTitle
+  words: ChannelWords
 
   componentDidMount() {
     const params = new URLSearchParams(location.search)
@@ -45,8 +47,9 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   }
 
   version:string = '2019-04-04'
-  resultUrl() { return `https://ytnetworks.azureedge.net/data/results/${this.version}/` }
-  //resultUrl = "https://ytnetworks.blob.core.windows.net/data/results/2018-12-28/"
+  //resultUrl() { return `https://ytnetworks.azureedge.net/data/results/${this.version}/` }
+
+  resultUrl() { return `` }
 
   async load() {
     if (this.state.isLoading) return
@@ -77,7 +80,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   }
 
   graphComponents(): Array<React.Component<InteractiveDataProps<YtData>, InteractiveDataState>> {
-    return [this.relations, this.flows, this.title].filter(g => g)
+    return [this.relations, this.flows, this.title, this.words].filter(g => g)
   }
 
   render() {
@@ -97,6 +100,20 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                 {({ height, width }) => (
                   <ChannelRelations
                     ref={r => (this.relations = r)}
+                    height={height}
+                    width={width}
+                    dataSet={this.state.data}
+                    onSelection={this.onSelection.bind(this)}
+                    initialSelection={this.selections}
+                  />
+                )}
+              </ContainerDimensions>
+            </div>
+            <div className={'Words'}>
+              <ContainerDimensions>
+                {({ height, width }) => (
+                  <ChannelWords
+                    ref={r => (this.words = r)}
                     height={height}
                     width={width}
                     dataSet={this.state.data}

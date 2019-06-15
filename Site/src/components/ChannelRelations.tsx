@@ -22,6 +22,7 @@ interface Node extends d3.SimulationNodeDatum {
   shapeId: string
   lr: string
   title: string
+  topic: string
 }
 
 export class ChannelRelations extends React.Component<Props, State> {
@@ -71,7 +72,8 @@ export class ChannelRelations extends React.Component<Props, State> {
             title: c.Title,
             size: +c.ChannelVideoViews,
             type: c.Type,
-            lr: c.LR
+            lr: c.LR,
+            topic: c.Topic
           } as Node)
       )
       .value()
@@ -159,7 +161,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       .append<SVGCircleElement>('circle')
       .attr('class', 'shape')
       .attr('r', lay.getNodeRadius)
-      .attr('fill', d => YtNetworks.lrColor(d.lr))
+      .attr('fill', d => YtNetworks.topicColor(d.topic))
 
     this.chart.addDataShapeEvents(nodesCircle, d => d.channelId, YtNetworks.ChannelIdPath)
 
