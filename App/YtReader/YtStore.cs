@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Polly;
 using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
+using SysExtensions.Net;
 using SysExtensions.Text;
 using YoutubeExplode;
 using YoutubeExplode.Exceptions;
@@ -164,7 +167,9 @@ namespace YtReader {
 
       ClosedCaptionTrack track;
       try {
-        track = await ytScaper.GetClosedCaptionTrackAsync(en);
+        track = await Policy.Handle<HttpRequestException>()
+          .RetryWithBackoff()
+          .ExecuteAsync(() => ytScaper.GetClosedCaptionTrackAsync(en));
       }
       catch (Exception ex) {
         log.Warning(ex, "Unable to get captions for {VideoID}: {Error}", videoId, ex.Message);

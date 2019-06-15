@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
 using Humanizer;
+using Polly;
+using Polly.Retry;
 using Troschuetz.Random;
 
 namespace SysExtensions.Net {
-  public static class RetryPolicy {
+  public static class Policies {
     const double DeviationPercent = 0.2;
     static readonly TRandom _rand = new TRandom();
     static readonly TimeSpan MinWait = 10.Milliseconds();
@@ -17,12 +20,16 @@ namespace SysExtensions.Net {
       return waitWithRandomness;
     }
     
-    
-
     public static bool IsTransient(this HttpStatusCode code) {
       if (code < HttpStatusCode.InternalServerError)
         return code == HttpStatusCode.RequestTimeout;
       return true;
     }
+    
+    public static AsyncRetryPolicy<T> RetryWithBackoff<T>(this PolicyBuilder<T> policy, int retryCount = 3) =>
+      policy.RetryAsync(retryCount, (r, i) => i.ExponentialBackoff(1.Seconds()));
+    
+    public static AsyncRetryPolicy RetryWithBackoff(this PolicyBuilder policy, int retryCount = 3) =>
+      policy.RetryAsync(retryCount, (e, i) => i.ExponentialBackoff(1.Seconds()));
   }
 }
