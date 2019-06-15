@@ -1,16 +1,21 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Google;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
+using Humanizer;
+using Polly;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
+using SysExtensions.Net;
 
 namespace YtReader {
   public class YtClient {
@@ -18,11 +23,12 @@ namespace YtReader {
       Cfg = cfg;
       Log = log;
       YtService = new YouTubeService();
-      AvailableKeys = cfg.YTApiKeys?.ToList() ?? throw new InvalidOperationException("configuration requires YTApiKeys");
+      var keys = cfg.YTApiKeys ?? throw new InvalidOperationException("configuration requires YTApiKeys");
+      AvailableKeys = new ConcurrentDictionary<string, string>(keys.Select(k => new KeyValuePair<string, string>(k, null)));
       Start = DateTime.UtcNow;
     }
 
-    ICollection<string> AvailableKeys { get; }
+    public ConcurrentDictionary<string, string>AvailableKeys { get; set; }
 
     public DateTime Start { get; }
 
@@ -31,23 +37,29 @@ namespace YtReader {
     YouTubeService YtService { get; }
 
     async Task<T> GetResponse<T>(YouTubeBaseServiceRequest<T> request) {
-      while (true)
-        try {
-          if (AvailableKeys.Count == 0)
-            throw new InvalidOperationException("Ran out of quota for all available keys");
-          request.Key = AvailableKeys.First(); // override key in case it has been changed by NextYtService()
-          var response = await request.ExecuteAsync();
-          return response;
-        }
-        catch (GoogleApiException ex) {
-          if (ex.HttpStatusCode == HttpStatusCode.Forbidden) {
-            AvailableKeys.Remove(request.Key);
-            Log.Error(ex, "Quota exceeded, no longer using key {Key}", request.Key);
-          }
-          else {
-            throw;
-          }
-        }
+      void SetRequestKey() {
+        if (AvailableKeys.Count == 0)
+          throw new InvalidOperationException("Ran out of quota for all available keys");
+        request.Key = AvailableKeys.First().Key;
+      }
+
+      SetRequestKey();
+      return await Policy
+        // handle quote limits
+        .Handle<GoogleApiException>(g => {
+          if (g.HttpStatusCode != HttpStatusCode.Forbidden) return false;
+          AvailableKeys.TryRemove(request.Key, out var value);
+          Log.Error(g, "Quota exceeded, no longer using key {Key}", request.Key);
+          SetRequestKey();
+          return true;
+        })
+        .RetryForeverAsync()
+        // wrap generic transient fault handling
+        .WrapAsync(Policy
+          .Handle<HttpRequestException>()
+          .Or<GoogleApiException>(g => g.HttpStatusCode.IsTransient())
+          .WaitAndRetryAsync(3, i => i.ExponentialBackoff(1.Seconds())))
+        .ExecuteAsync(request.ExecuteAsync);
     }
 
     #region Trending

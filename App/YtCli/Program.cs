@@ -72,7 +72,7 @@ namespace YouTubeCli {
           ytCollect.SaveChannelRelationData().Wait();
         }
         catch (Exception ex) {
-          log.Error("Error Updating/Collecting Data: {Error}", ex.Message, ex);
+          log.Error(ex,"Error Updating/Collecting Data: {Error}", ex.Message);
           return (int) ExitCode.UnknownError;
         }
       }

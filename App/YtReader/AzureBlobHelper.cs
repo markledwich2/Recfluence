@@ -11,7 +11,8 @@ using SysExtensions.Text;
 
 namespace YtReader {
   public static class AzureBlobHelper {
-    public static Uri BlobUri(this CloudStorageAccount storage, StringPath path) => new Uri($"{storage.BlobEndpoint}{path}");
+    public static Uri BlobUri(this CloudStorageAccount storage, StringPath path) => 
+      new Uri(storage.BlobEndpoint.ToString().AddJoin("/", path));
 
     public static HttpRequestMessage WithBlobHeaders(this HttpRequestMessage req, CloudStorageAccount storage) {
       var creds = storage.Credentials;

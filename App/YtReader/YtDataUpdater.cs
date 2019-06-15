@@ -90,10 +90,5 @@ namespace YtReader {
           missinRecs.Where(v => v.Recs == null).Join("|", v => v.From.VideoId));
       });
     }
-
-
-    public async Task SaveAllRecentVideoCaptions() {
-      
-    }
   }
 }

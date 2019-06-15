@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AsyncEnumerator" Version="2.2.2" />
@@ -14,7 +14,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
     <PackageReference Include="Parquet.Net" Version="3.3.3" />
-    <PackageReference Include="Polly" Version="7.0.2" />
+    <PackageReference Include="Polly" Version="7.1.0" />
     <PackageReference Include="ScrapySharp" Version="3.0.0" />
     <PackageReference Include="Serilog" Version="2.8.0" />
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.0.1" />
@@ -24,7 +24,7 @@
     <PackageReference Include="UriBuilder.Fluent" Version="1.5.2" />
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
     <PackageReference Include="Serilog.Sinks.Debug" Version="1.0.1" />
-    <PackageReference Include="YoutubeExplode" Version="4.6.5" />
+    <PackageReference Include="YoutubeExplode" Version="4.7.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />

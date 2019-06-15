@@ -12,6 +12,7 @@ using Humanizer;
 using Microsoft.WindowsAzure.Storage;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Polly;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Net;
@@ -60,10 +61,23 @@ namespace YtReader {
         using (var tw = new StreamWriter(zipWriter, Encoding.UTF8))
           JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
 
-        memStream.Seek(0, SeekOrigin.Begin);
-        var req = BlobUri(path.WithExtension(".json.gz")).Put().WithStreamContent(memStream).WithBlobHeaders(Storage);
-        var res = await H.SendAsync(req);
-        res.EnsureSuccessStatusCode();
+        HttpRequestMessage Request() {
+          memStream.Seek(0, SeekOrigin.Begin);
+          var fullPath = path.WithExtension(".json.gz");
+          var req = BlobUri(fullPath).Put().WithStreamContent(memStream).WithBlobHeaders(Storage);
+          return req;
+        }
+
+        try {
+          await Policy
+            .Handle<HttpRequestException>()
+            .OrResult<HttpResponseMessage>(r => r.StatusCode.IsTransient())
+            .RetryAsync(3, (r, i) => i.ExponentialBackoff())
+            .ExecuteAsync(() => H.SendAsync(Request()));
+        }
+        catch (Exception ex) {
+          throw new InvalidOperationException($"Unable to write to blob storage '{Request().RequestUri}'", ex);
+        }
       }
     }
 

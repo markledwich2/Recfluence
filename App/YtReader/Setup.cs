@@ -35,6 +35,9 @@ namespace YtReader {
       var c = new LoggerConfiguration()
         .WriteTo.Console();
 
+      if (cfg?.SeqUrl.HasValue() == true)
+        c.WriteTo.Seq(cfg.SeqUrl);
+
       if (cfg != null)
         c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces);
 
@@ -77,7 +80,8 @@ namespace YtReader {
 
     public static YtStore YtStore(this Cfg cfg, ILogger log) {
       var reader = new YtClient(cfg.App, log);
-      var ytStore = new YtStore(reader, cfg.DataStore(cfg.App.Storage.DbPath));
+      
+      var ytStore = new YtStore(reader,  cfg.DataStore(cfg.App.Storage.DbPath));
       return ytStore;
     }
 
@@ -114,6 +118,7 @@ namespace YtReader {
     public string SubscriptionId { get; set; }
     public ServicePrincipalCfg ServicePrincipal { get; set; } = new ServicePrincipalCfg();
     public ContainerCfg Container { get; set; } = new ContainerCfg();
+    public string SeqUrl { get; set; }
   }
 
   public class YtReaderCfg {

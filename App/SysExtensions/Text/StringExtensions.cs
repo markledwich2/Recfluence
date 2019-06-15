@@ -46,7 +46,7 @@ namespace SysExtensions.Text {
       foreach (var c in input) {
         if (wasEscaped) {
           if (c != escapeCharacter && c != separator)
-            throw new FormatException($"input ocntains unknown escape sequence ({escapeCharacter}{c})");
+            throw new FormatException($"input contains unknown escape sequence ({escapeCharacter}{c})");
           itemBuffer += c; // add the escped spcial char
           wasEscaped = false;
           continue;
@@ -93,8 +93,8 @@ namespace SysExtensions.Text {
     }
 
     public static string AddJoin<T>(this string s, string sep, params T[] items) {
-      var notNull = items.NotNull().ToList();
-      return s + (notNull.IsEmpty() ? "" : sep + notNull.Join(sep));
+      var list = items.NotNull().ToList();
+      return s + (list.IsEmpty() ? "" : (s.EndsWith(sep) ? "" : sep) + list.Join(sep));
     }
 
     /// <summary>
