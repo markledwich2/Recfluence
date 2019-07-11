@@ -1,13 +1,13 @@
 import * as React from 'react'
 import { InteractiveDataProps, InteractiveDataState, DataComponentHelper, DataSelections } from '../common/Charts'
-import { YtNetworks, Graph, YtData } from '../common/YtData'
+import { YtNetworks, Graph, RelationsData } from '../common/YtData'
 import { compactInteger } from 'humanize-plus'
 import * as _ from 'lodash'
 import { SearchChannels } from '../components/SearchChannels'
 import * as dateformat from 'dateformat'
 
 interface State extends InteractiveDataState {}
-interface Props extends InteractiveDataProps<YtData> {}
+interface Props extends InteractiveDataProps<RelationsData> {}
 
 export class ChannelTitle extends React.Component<Props, State> {
   chart: DataComponentHelper = new DataComponentHelper(this)

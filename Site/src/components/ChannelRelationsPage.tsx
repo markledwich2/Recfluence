@@ -2,7 +2,7 @@ import * as React from 'react'
 import ContainerDimensions from 'react-container-dimensions'
 import { RecommendFlows } from './RecommendFlows'
 import { ChannelRelations } from './ChannelRelations'
-import { YtData, YtNetworks } from '../common/YtData'
+import { RelationsData, YtNetworks } from '../common/YtData'
 import { GridLoader } from 'react-spinners'
 import { DataSelections, DataSelection, SelectionType, ChartProps, InteractiveDataState, InteractiveDataProps } from '../common/Charts'
 import { jsonClone } from '../common/Utils'
@@ -10,12 +10,13 @@ import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
 import { Mention } from 'react-twitter-widgets'
 import { ChannelWords } from './ChannelWords';
+import { ChannelTopics } from './ChannelTopics'
 
 interface Props { }
 
 interface State {
   isLoading: boolean
-  data?: YtData
+  data?: RelationsData
 }
 
 export class ChannelRelationsPage extends React.Component<Props, State> {
@@ -35,6 +36,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   flows: RecommendFlows
   title: ChannelTitle
   words: ChannelWords
+  topics: ChannelTopics
 
   componentDidMount() {
     const params = new URLSearchParams(location.search)
@@ -53,7 +55,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
   async load() {
     if (this.state.isLoading) return
-    let data = await YtNetworks.dataSet(this.resultUrl())
+    let data = await YtNetworks.loadRelationsData(this.resultUrl())
     try {
       this.setState({ data, isLoading: false })
     } catch (e) { }
@@ -79,8 +81,8 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     components.forEach(g => g.setState({ selections: jsonClone(this.selections) }))
   }
 
-  graphComponents(): Array<React.Component<InteractiveDataProps<YtData>, InteractiveDataState>> {
-    return [this.relations, this.flows, this.title, this.words].filter(g => g)
+  graphComponents(): Array<React.Component<InteractiveDataProps<RelationsData>, InteractiveDataState>> {
+    return [this.relations, this.flows, this.title, this.words, this.topics].filter(g => g)
   }
 
   render() {
@@ -100,6 +102,20 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                 {({ height, width }) => (
                   <ChannelRelations
                     ref={r => (this.relations = r)}
+                    height={height}
+                    width={width}
+                    dataSet={this.state.data}
+                    onSelection={this.onSelection.bind(this)}
+                    initialSelection={this.selections}
+                  />
+                )}
+              </ContainerDimensions>
+            </div>
+            <div className={'Topics'}>
+              <ContainerDimensions>
+                {({ height, width }) => (
+                  <ChannelTopics
+                    ref={r => (this.topics = r)}
                     height={height}
                     width={width}
                     dataSet={this.state.data}

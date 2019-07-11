@@ -2,12 +2,12 @@ import React, { Component, Fragment } from 'react';
 import Select from 'react-select'
 import _ from 'lodash'
 import { InteractiveDataProps, InteractiveDataState, DataComponentHelper, DataSelections, ChartProps } from '../common/Charts'
-import { YtNetworks, Graph, YtData } from '../common/YtData'
+import { YtNetworks, Graph, RelatiosData } from '../common/YtData'
 import { delay, jsonEquals } from '../common/Utils';
 
 interface State extends InteractiveDataState {
 }
-interface Props extends InteractiveDataProps<YtData> { }
+interface Props extends InteractiveDataProps<RelatiosData> { }
 
 interface Option {
   value: string
@@ -24,7 +24,7 @@ export class SearchChannels extends React.Component<Props, State> {
   lastFocusedOption: Option
   lastSelectedOption: Option
 
-  shouldComponentUpdate(props: ChartProps<YtData>, nextState: State) {
+  shouldComponentUpdate(props: ChartProps<RelatiosData>, nextState: State) {
     var channelId = this.chart.filteredItems(YtNetworks.ChannelIdPath).find(() => true);
     let r = this.ref as any
     let selectedOption =  r.select.state.selectValue.find(() => true)

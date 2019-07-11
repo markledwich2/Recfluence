@@ -1,16 +1,17 @@
-import * as React from 'react'
+import React from 'react'
 import { renderToString } from 'react-dom/server'
 import * as d3 from 'd3'
 import { sankey, sankeyLinkHorizontal, sankeyLeft, SankeyNode, SankeyLink } from 'd3-sankey'
 import '../styles/Main.css'
-import { YtNetworks, YtData, Graph, RelationData } from '../common/YtData'
+import { YtNetworks, RelationsData, Graph, RelationData, Topic } from '../common/YtData'
 import { ChartProps, InteractiveDataState, DataSelections, DataComponentHelper } from '../common/Charts'
 import { jsonEquals, jsonClone } from '../common/Utils'
 import { compactInteger } from 'humanize-plus'
-import * as _ from 'lodash'
+import _ from 'lodash'
+import { oc } from 'ts-optchain'
 
 interface State extends InteractiveDataState { }
-interface Props extends ChartProps<YtData> { }
+interface Props extends ChartProps<RelationsData> { }
 interface ChannelNodeExtra extends NodeExtra {
   channelId: string
   size: number
@@ -26,7 +27,8 @@ interface NodeExtra {
   mode: NodeMode
   incomming: number
   outgoing: number
-  topic:string
+  topic:Topic
+  color:string
 }
 
 type ChannelNode = SankeyNode<ChannelNodeExtra, RecommendFlowExtra>
@@ -55,7 +57,7 @@ export class RecommendFlows extends React.Component<Props, State> {
     this.createChart()
   }
 
-  componentDidUpdate(prevProps: ChartProps<YtData>, prevState: State) {
+  componentDidUpdate(prevProps: ChartProps<RelationsData>, prevState: State) {
     this.dataRender()
   }
 
@@ -68,15 +70,17 @@ export class RecommendFlows extends React.Component<Props, State> {
   layoutForAll(): Graph<Node[], Link[]> {
     let channels = this.props.dataSet.channels
     let byType = _(channels).groupBy(c => c.Topic)
+    let topics = this.props.dataSet.topics
 
     let fromNodes = byType
       .map(
         (g, t) =>
           ({
             shapeId: `from.${t}`,
-            topic: t,
+            topic: topics[t],
             title: t, // YtNetworks.lrText(t),
-            mode: NodeMode.From
+            mode: NodeMode.From,
+            color: oc(topics[t]).color()
           } as Node)
       )
       .value()
@@ -86,7 +90,7 @@ export class RecommendFlows extends React.Component<Props, State> {
         (g, t) =>
           ({
             shapeId: `to.${t}`,
-            topic: t,
+            topic: topics[t],
             title: t, //YtNetworks.lrText(t),
             mode: NodeMode.To
           } as Node)
@@ -94,7 +98,7 @@ export class RecommendFlows extends React.Component<Props, State> {
       .value()
 
     let flows = _(this.props.dataSet.relations)
-      .groupBy<RelationData>(r => `${channels[r.FromChannelId].Topic}.${channels[r.ChannelId].Topic}`)
+      .groupBy(r => `${channels[r.FromChannelId].Topic}.${channels[r.ChannelId].Topic}`)
       .map(
         (g, t) =>
           ({
@@ -119,7 +123,7 @@ export class RecommendFlows extends React.Component<Props, State> {
             title: n.Title,
             size: +n.ChannelVideoViews,
             lr: n.LR,
-            topic: n.Topic
+            topic: oc(n.Topic).topic()
           } as ChannelNode)
       )
       .keyBy(c => c.channelId)
@@ -216,7 +220,7 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('stroke', d => {
           let s = d.source as Node
           let t = d.target as Node
-          return YtNetworks.topicColor(s.mode == NodeMode.From ? s.topic : t.topic)
+          return s.mode == NodeMode.From ? s.color : t.color
         })
 
       updateLink.exit().remove()
@@ -246,7 +250,7 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('y', d => d.y0)
         .attr('height', d => Math.max(d.y1 - d.y0, 1))
         .attr('width', d => d.x1 - d.x0)
-        .attr('fill', d => YtNetworks.topicColor(d.topic))
+        .attr('fill', d => d.color)
 
       //highlight shape when selected
       if (channelId)

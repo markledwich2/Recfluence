@@ -2,15 +2,16 @@ import * as React from 'react'
 import * as d3 from 'd3'
 import '../styles/Main.css'
 import { layoutTextLabel, layoutGreedy, layoutLabel } from 'd3fc-label-layout'
-import { Graph, YtNetworks, YtData } from '../common/YtData'
+import { Graph, YtNetworks, RelationsData, Topic } from '../common/YtData'
 import { delay } from '../common/Utils'
 import { ChartProps, DataSelections, DataComponentHelper, InteractiveDataState } from '../common/Charts'
 import * as _ from 'lodash'
 import { lab, ZoomTransform } from 'd3'
 import { Properties } from 'csstype'
+import { oc } from 'ts-optchain'
 
 interface State extends InteractiveDataState { }
-interface Props extends ChartProps<YtData> { }
+interface Props extends ChartProps<RelationsData> { }
 interface Link extends d3.SimulationLinkDatum<Node> {
   strength: number
 }
@@ -22,7 +23,8 @@ interface Node extends d3.SimulationNodeDatum {
   shapeId: string
   lr: string
   title: string
-  topic: string
+  topic: Topic
+  color?: string
 }
 
 export class ChannelRelations extends React.Component<Props, State> {
@@ -43,16 +45,14 @@ export class ChannelRelations extends React.Component<Props, State> {
   }
 
   render() {
-    let lrItems = _(Array.from(YtNetworks.lrMap.entries()))
-      .filter(lr => lr[0] != '')
-      .value()
+    let topics = _.values(this.props.dataSet.topics)
     return (
       <>
         <div style={{ position: 'absolute' }}>
           <ul className={'legend'}>
-            {lrItems.map(l => (
-              <li style={{ color: l[1].color }} key={l[0]}>
-                <span className={'text'}>{l[1].text}</span>
+            {topics.map(t => (
+              <li style={{ color: t.color }} key={t.label}>
+                <span className={'text'}>{t.label}</span>
               </li>
             ))}
           </ul>
@@ -73,7 +73,8 @@ export class ChannelRelations extends React.Component<Props, State> {
             size: +c.ChannelVideoViews,
             type: c.Type,
             lr: c.LR,
-            topic: c.Topic
+            topic: oc(c.Topic).topic(),
+            color: c.Topic ? c.Topic.color() : "grey"
           } as Node)
       )
       .value()
@@ -161,7 +162,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       .append<SVGCircleElement>('circle')
       .attr('class', 'shape')
       .attr('r', lay.getNodeRadius)
-      .attr('fill', d => YtNetworks.topicColor(d.topic))
+      .attr('fill', d => d.color)
 
     this.chart.addDataShapeEvents(nodesCircle, d => d.channelId, YtNetworks.ChannelIdPath)
 
@@ -250,7 +251,6 @@ export class ChannelRelations extends React.Component<Props, State> {
         container.attr('transform', () => t.toString())
         labelsGroup.selectAll<SVGTextElement, Node>('text')
           .attr('transform', d => `scale(${1 / t.k})`) // undo the zoom on labels
-        //console.log("zoom transform", t.x, t.y, t.k)
         updateLabels(true)
         updateVisibility()
       })

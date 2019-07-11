@@ -1,5 +1,5 @@
 Id,Title,Type,LR
-# ChannelId, Video title, TVNews (news published primarily for tv)|TVCommentary|News|Commentary, R (right) | L (left) | C (center)
+# ChannelId, Video title, TVNews (news published primarily for tv)|TVCommentary|News|Commentary, R (right) | L (left) | C (center)|0
 # 10k subscribers + significant focus on US political/cultural commentary/contexualizing + activelyproducing content in 2018
 #
 # from https://channelcrawler.com/ 200k+ subscribers in News/Politics/Activism categories
@@ -58,7 +58,7 @@ UCK7tptUDHh-RYDsdxO1-5QQ,Wall Street Journal,News,R
 UCvJJ_dzjViJCoLf5uKUTwoA,CNBC,TVNews,L
 UCqnbDFdCpuN8CMEg0VuEBqA,The New York Times,News,L
 UCVSNOxehfALut52NbkfRBaA,VOA News,News,C
-UCP6HGa63sBC7-KHtkme-p-g,USA TODAY,News,C
+UCP6HGa63sBC7-KHtkme-p-g,USA TODAY,TVNews,C
 UCK0z0_5uL7mb9IjntOKi5XQ,The Atlantic,News,L
 UCUMZ7gohGI9HcU9VNsr2FJQ,Bloomberg,News,L
 UC0p5jTq6Xx_DosDFxVXnWaQ,The Economist,News,C
@@ -384,6 +384,8 @@ UCfhkaO2fOmIX05DQ72uZsig,The Asian Capitalists,Commentary,R
 UCtlfyd1Xs9CtxfBNP9_IgAw,Cult of Dusty,Commentary,L
 UCUowFWIWGw6Pv2JqfEj8njQ,Aydin Paladin,Commentary,R
 UCT7BLBDnD-wEXeqZSg24aJw,soph,Commentary,R
+UCLMSv1UJp9sfoHyo-9s6sdw,Subverse,Commentary,C
+UC7oPkqeHTwuOZ5CZ-R9f-6w,Triggernometry,Commentary,R
 #
 # Breadtube list https://np.reddit.com/r/BreadTube/comments/9kwkxa/master_list_of_leftwing_youtube_and_podcast/
 #

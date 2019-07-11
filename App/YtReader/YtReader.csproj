@@ -4,34 +4,29 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AsyncEnumerator" Version="2.2.2" />
-    <PackageReference Include="AWSSDK.S3" Version="3.3.31.19" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.102.17" />
     <PackageReference Include="CsvHelper" Version="12.1.2" />
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.38.0.1488" />
-    <PackageReference Include="Humanizer.Core" Version="2.5.16" />
-    <PackageReference Include="Microsoft.Azure.Management.Fluent" Version="1.19.0" />
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.40.2.1593" />
+    <PackageReference Include="Humanizer.Core" Version="2.6.2" />
+    <PackageReference Include="Microsoft.Azure.Management.Fluent" Version="1.22.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.2.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
-    <PackageReference Include="Parquet.Net" Version="3.3.3" />
+    <PackageReference Include="Parquet.Net" Version="3.3.4" />
     <PackageReference Include="Polly" Version="7.1.0" />
     <PackageReference Include="ScrapySharp" Version="3.0.0" />
     <PackageReference Include="Serilog" Version="2.8.0" />
-    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.0.1" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.0.3" />
     <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.Trace" Version="2.1.0" />
     <PackageReference Include="UriBuilder.Fluent" Version="1.5.2" />
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
     <PackageReference Include="Serilog.Sinks.Debug" Version="1.0.1" />
-    <PackageReference Include="YoutubeExplode" Version="4.7.2" />
+    <PackageReference Include="YoutubeExplode" Version="4.7.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="System.Runtime.Extensions">
-      <HintPath>..\..\..\..\..\..\Program Files\dotnet\sdk\NuGetFallbackFolder\microsoft.netcore.app\2.1.0\ref\netcoreapp2.1\System.Runtime.Extensions.dll</HintPath>
-    </Reference>
   </ItemGroup>
 </Project>
