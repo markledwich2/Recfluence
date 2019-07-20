@@ -1,3 +1,4 @@
+using System.Collections.Async;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -33,8 +34,8 @@ namespace YouTubeReaderTests {
       var channelCfg = await cfg.App.LoadChannelConfig();
       
       foreach (var c in channelCfg.Seeds.Randomize()) {
-        var existingCaptionIds = (await store.Store.List(StringPath.Relative("VideoCaptions", c.Id)))
-          .Select(b => b.NameSansExtension).ToHashSet();
+        var existingCaptionIds = (await store.Store.List(StringPath.Relative("VideoCaptions", c.Id)).ToListAsync()).SelectMany()
+          .Select(b => b.Path.NameSansExtension).ToHashSet();
         if(existingCaptionIds.Any())
           continue;
         var cvc = await store.ChannelVideosCollection.Get(c.Id);

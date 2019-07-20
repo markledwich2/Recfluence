@@ -9,6 +9,9 @@ using SysExtensions.Text;
 
 namespace YtReader {
   public class FileCollection<T> where T : class {
+    
+    const string Extension = ".json.gz";
+    
     public FileCollection(ISimpleFileStore s3, Expression<Func<T, string>> getId, StringPath path,
       CollectionCacheType cacheType = CollectionCacheType.Memory,
       FPath localCacheDir = null) {
@@ -72,7 +75,7 @@ namespace YtReader {
       var o = GetFromCache(id);
       if (o != null)
         return o;
-      o = await Store.Get<T>(Path.Add(id));
+      o = await Store.Get<T>(Path.Add(id).WithExtension(Extension));
       SetCache(id, o);
       return o;
     }
@@ -82,7 +85,7 @@ namespace YtReader {
       if (o != null)
         return o;
 
-      o = await Store.Get<T>(Path.Add(id));
+      o = await Store.Get<T>(Path.Add(id).WithExtension(Extension));
       var missingFromS3 = o == null;
       if (missingFromS3)
         o = await create(id);
@@ -91,14 +94,14 @@ namespace YtReader {
         return null;
 
       if (missingFromS3)
-        await Store.Set(Path.Add(id), o);
+        await Store.Set(Path.Add(id).WithExtension(Extension), o);
 
       SetCache(id, o);
       return o;
     }
 
     public async Task<T> Set(T item) {
-      await Store.Set(Path.Add(GetId(item)), item);
+      await Store.Set(Path.Add(GetId(item)).WithExtension(Extension), item);
       SetCache(GetId(item), item);
       return item;
     }

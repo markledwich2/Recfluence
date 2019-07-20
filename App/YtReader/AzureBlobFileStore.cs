@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Async;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -6,12 +7,12 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using System.Xml.Serialization;
 using Humanizer;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
@@ -41,8 +42,16 @@ namespace YtReader {
     public CloudStorageAccount Storage { get; }
     HttpClient H { get; }
 
+    public async Task<Stream> Load(StringPath path) {
+      var blob = BlobRef(path);
+      var mem = new MemoryStream();
+      await blob.DownloadToStreamAsync(mem);
+      mem.Seek(0, SeekOrigin.Begin);
+      return mem;
+    }
+
     public async Task<T> Get<T>(StringPath path) where T : class {
-      var blob = BlobRef(path.WithExtension(".json.gz"));
+      var blob = BlobRef(path);
 
       using (var mem = new MemoryStream()) {
         try {
@@ -73,7 +82,7 @@ namespace YtReader {
           JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
 
         memStream.Seek(0, SeekOrigin.Begin);
-        var blob = BlobRef(path.WithExtension(".json.gz"));
+        var blob = BlobRef(path);
         await blob.UploadFromStreamAsync(memStream);
       }
     }
@@ -88,37 +97,31 @@ namespace YtReader {
       await blob.UploadFromStreamAsync(contents);
     }
 
-    public async Task<ICollection<StringPath>> List(StringPath path) {
-      var list = new List<StringPath>();
-      BlobContinuationToken token = null;
-      do {
-        var res = await Container.ListBlobsSegmentedAsync(BasePathSansContainer.Add(path) + "/", null);
-        list.AddRange(res.Results.Select(r => new StringPath(r.Uri.AbsolutePath).RelativePath(BasePath)));
-        token = res.ContinuationToken;
-      } while (token != null);
-      return list;
-    }
+    public IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path = null, bool allDirectories = false) =>
+      new AsyncEnumerable<IReadOnlyCollection<FileListItem>>(async yield => {
+        BlobContinuationToken token = null;
+        do {
+          var p = path != null ? BasePathSansContainer.Add(path) : BasePathSansContainer;
+          var res = await Container.ListBlobsSegmentedAsync(p + "/", allDirectories, BlobListingDetails.None,
+            null, token, null, null).ConfigureAwait(false);
+
+          var items = res.Results.OfType<ICloudBlob>().Select(r =>
+            new FileListItem {
+              Path = new StringPath(r.Uri.AbsolutePath).RelativePath(BasePath),
+              Modified = r.Properties.LastModified
+            });
+
+          await yield.ReturnAsync(items.ToReadOnly()).ConfigureAwait(false);
+
+          token = res.ContinuationToken;
+        } while (token != null);
+      });
 
     Uri BlobUri(StringPath path) => Storage.BlobUri(BasePath.Add(path));
   }
 
-  [XmlRoot("EnumerationResults")]
-  public class ListBlobsResponse {
-    public string Prefix { get; set; }
-    public string Delimiter { get; set; }
-
-    public List<Blob> Blobs { get; set; }
-
-    public string NextMarker { get; set; }
-
-    public class Blob {
-      public string Name { get; set; }
-      public bool Deleted { get; set; }
-      public string BlobType { get; set; }
-    }
-
-    public class BlobPrefix {
-      public string Name { get; set; }
-    }
+  public class FileListItem {
+    public StringPath Path { get; set; }
+    public DateTimeOffset? Modified { get; set; }
   }
 }

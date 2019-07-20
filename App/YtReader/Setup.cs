@@ -31,16 +31,17 @@ namespace YtReader {
         .WriteTo.Seq("http://localhost:5341", LogEventLevel.Verbose)
         .CreateLogger();
 
-    public static Logger CreateCliLogger(AppCfg cfg = null) {
+    public static Logger CreateLogger(AppCfg cfg = null) {
       var c = new LoggerConfiguration()
         .WriteTo.Console();
 
       if (cfg?.SeqUrl.HasValue() == true)
-        c.WriteTo.Seq(cfg.SeqUrl);
+        c.WriteTo.Seq(cfg.SeqUrl, LogEventLevel.Debug);
 
       if (cfg != null)
         c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces);
 
+      c.MinimumLevel.Debug();
       return c.CreateLogger();
     }
 
