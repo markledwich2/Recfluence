@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using Humanizer;
 using Parquet;
 using Serilog;
 using SysExtensions;
@@ -37,6 +39,7 @@ namespace YtReader {
     /// </summary>
     /// <returns></returns>
     public async Task SaveChannelRelationData() {
+      var sw = Stopwatch.StartNew();
       var analysisDir = DateTime.UtcNow.ToString("yyyy-MM-dd");
       await SaveCfg(analysisDir);
 
@@ -65,6 +68,8 @@ namespace YtReader {
         }
 
         await Task.WhenAll(vidSink.End(), recSink.End());
+        
+        Log.Information("Completed collect of {Channels} in {Duration}", seeds.Count, sw.Elapsed.Humanize(2));
         await produceTask;
       }
 

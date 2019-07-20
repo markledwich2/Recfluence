@@ -3,19 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Humanizer;
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Polly;
-using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
-using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 
@@ -28,9 +25,13 @@ namespace YtReader {
         Timeout = 10.Minutes()
       };
       Storage = CloudStorageAccount.Parse(cs);
+      Client = new CloudBlobClient(Storage.BlobEndpoint, Storage.Credentials);
+      Container = Client.GetContainerReference(ContainerName);
     }
 
-    public string ContainerName { get; }
+    CloudBlobContainer Container { get; }
+    CloudBlobClient Client { get; }
+    string ContainerName { get; }
 
     //path including container
     public StringPath BasePath { get; }
@@ -41,19 +42,29 @@ namespace YtReader {
     HttpClient H { get; }
 
     public async Task<T> Get<T>(StringPath path) where T : class {
-      var req = BlobUri(path.WithExtension(".json.gz")).Get().WithBlobHeaders(Storage);
-      var res = await H.SendAsync(req);
-      if (res.StatusCode == HttpStatusCode.NotFound)
-        return null;
-      res.EnsureSuccessStatusCode();
-      using (var stream = await res.Content.ReadAsStreamAsync())
-      using (var zr = new GZipStream(stream, CompressionMode.Decompress))
-      using (var tr = new StreamReader(zr, Encoding.UTF8)) {
-        var jObject = await JObject.LoadAsync(new JsonTextReader(tr));
-        var r = jObject.ToObject<T>(JsonExtensions.DefaultSerializer);
-        return r;
+      var blob = BlobRef(path.WithExtension(".json.gz"));
+
+      using (var mem = new MemoryStream()) {
+        try {
+          await blob.DownloadToStreamAsync(mem);
+        }
+        catch (Exception) {
+          var exists = await blob.ExistsAsync();
+          if (!exists) return default(T);
+          throw;
+        }
+
+        mem.Position = 0;
+        using (var zr = new GZipStream(mem, CompressionMode.Decompress))
+        using (var tr = new StreamReader(zr, Encoding.UTF8)) {
+          var jObject = await JObject.LoadAsync(new JsonTextReader(tr));
+          var r = jObject.ToObject<T>(JsonExtensions.DefaultSerializer);
+          return r;
+        }
       }
     }
+
+    CloudBlockBlob BlobRef(StringPath path) => Container.GetBlockBlobReference(BasePathSansContainer.Add(path));
 
     public async Task Set<T>(StringPath path, T item) {
       using (var memStream = new MemoryStream()) {
@@ -61,62 +72,31 @@ namespace YtReader {
         using (var tw = new StreamWriter(zipWriter, Encoding.UTF8))
           JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
 
-        HttpRequestMessage Request() {
-          memStream.Seek(0, SeekOrigin.Begin);
-          var fullPath = path.WithExtension(".json.gz");
-          var req = BlobUri(fullPath).Put().WithStreamContent(memStream).WithBlobHeaders(Storage);
-          return req;
-        }
-
-        try {
-          await Policy
-            .Handle<HttpRequestException>()
-            .OrResult<HttpResponseMessage>(r => r.StatusCode.IsTransient())
-            .RetryAsync(3, (r, i) => i.ExponentialBackoff())
-            .ExecuteAsync(() => H.SendAsync(Request()));
-        }
-        catch (Exception ex) {
-          throw new InvalidOperationException($"Unable to write to blob storage '{Request().RequestUri}'", ex);
-        }
+        memStream.Seek(0, SeekOrigin.Begin);
+        var blob = BlobRef(path.WithExtension(".json.gz"));
+        await blob.UploadFromStreamAsync(memStream);
       }
     }
 
     public async Task Save(StringPath path, FPath file) {
-      using (var stream = File.OpenRead(file.FullPath)) {
-        var req = BlobUri(path).Put().WithStreamContent(stream).WithBlobHeaders(Storage);
-        var res = await H.SendAsync(req);
-        res.EnsureSuccessStatusCode();
-      }
+      var blob = BlobRef(path);
+      await blob.UploadFromFileAsync(file.FullPath);
     }
 
     public async Task Save(StringPath path, Stream contents) {
-      var req = BlobUri(path).Put().WithStreamContent(contents).WithBlobHeaders(Storage);
-      var res = await H.SendAsync(req);
-      res.EnsureSuccessStatusCode();
+      var blob = BlobRef(path);
+      await blob.UploadFromStreamAsync(contents);
     }
-    
+
     public async Task<ICollection<StringPath>> List(StringPath path) {
-      var basePath = BasePathSansContainer;
-      
-      var req = new UriBuilder(Storage.BlobEndpoint)
-        .WithPathSegment(ContainerName)
-        .WithParameter("restype", "container")
-        .WithParameter("comp", "list")
-        .WithParameter("prefix", basePath.Add(path) + "/")
-        .WithParameter("delimiter","/")
-        .Uri.Get().WithBlobHeaders(Storage);
-
-      var res = await H.SendAsync(req);
-      res.EnsureSuccessStatusCode();
-
-      var sr = await res.ContentAsStream();
-      var debugText = sr.ReadToEnd();
-
-      var response = (ListBlobsResponse)new XmlSerializer(typeof(ListBlobsResponse)).Deserialize(new StringReader(debugText));
-      if(response.NextMarker.HasValue())
-        throw new NotImplementedException("paging for listing blobs not implemented");
-      var blobs = response.Blobs.Select(b => new StringPath(b.Name).RelativePath(basePath)).ToList();
-      return blobs;
+      var list = new List<StringPath>();
+      BlobContinuationToken token = null;
+      do {
+        var res = await Container.ListBlobsSegmentedAsync(BasePathSansContainer.Add(path) + "/", null);
+        list.AddRange(res.Results.Select(r => new StringPath(r.Uri.AbsolutePath).RelativePath(BasePath)));
+        token = res.ContinuationToken;
+      } while (token != null);
+      return list;
     }
 
     Uri BlobUri(StringPath path) => Storage.BlobUri(BasePath.Add(path));
@@ -124,14 +104,13 @@ namespace YtReader {
 
   [XmlRoot("EnumerationResults")]
   public class ListBlobsResponse {
-
     public string Prefix { get; set; }
     public string Delimiter { get; set; }
 
     public List<Blob> Blobs { get; set; }
 
     public string NextMarker { get; set; }
-    
+
     public class Blob {
       public string Name { get; set; }
       public bool Deleted { get; set; }

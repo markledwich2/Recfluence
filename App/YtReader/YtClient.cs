@@ -49,7 +49,7 @@ namespace YtReader {
         .Handle<GoogleApiException>(g => {
           if (g.HttpStatusCode != HttpStatusCode.Forbidden) return false;
           AvailableKeys.TryRemove(request.Key, out var value);
-          Log.Error(g, "Quota exceeded, no longer using key {Key}", request.Key);
+          Log.Warning(g, "Quota exceeded, no longer using key {Key}", request.Key);
           SetRequestKey();
           return true;
         })

@@ -12,7 +12,6 @@ using SysExtensions.IO;
 using SysExtensions.Net;
 using SysExtensions.Text;
 using YoutubeExplode;
-using YoutubeExplode.Exceptions;
 using YoutubeExplode.Models.ClosedCaptions;
 
 namespace YtReader {
@@ -80,21 +79,25 @@ namespace YtReader {
       Expired(v.PublishedAt, RCfg.VideoDead) ? TimeSpan.MaxValue :
       Expired(v.PublishedAt, RCfg.VideoOld) ? RCfg.RefreshOldVideos : RCfg.RefreshYoungVideos;
 
-    public async Task<ChannelStored> GetAndUpdateChannel(string id) {
+    public async Task<(ChannelStored c, bool isNew)> GetAndUpdateChannel(string id) {
       var c = await Channels.Get(id);
       var lastUpdated = c?.Latest?.Stats?.Updated;
       var needsNewStats = lastUpdated == null || Expired(lastUpdated.Value, RCfg.RefreshChannel);
-      if (!needsNewStats) return c;
+      if (!needsNewStats) return (c, false);
 
       var channelData = await Yt.ChannelData(id);
-      if (c == null)
+      var isNew = false;
+      if (c == null) {
+        isNew = true;
         c = new ChannelStored {Latest = channelData};
-      else
+      }
+      else {
         c.SetLatest(channelData);
+      }
 
       await Channels.Set(c);
 
-      return c;
+      return (c, isNew);
     }
 
     bool Expired(DateTime updated, TimeSpan refreshAge) => (RCfg.To ?? DateTime.UtcNow) - updated > refreshAge;

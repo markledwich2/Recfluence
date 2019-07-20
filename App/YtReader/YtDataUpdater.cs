@@ -34,7 +34,7 @@ namespace YtReader {
 
     async Task<(ChannelStored channel, ICollection<VideoStored> videos)> UpdateChannel(SeedChannel seed) {
       Log.Information("Updating {Channel} with new data", seed.Title);
-      var channel = await Yt.GetAndUpdateChannel(seed.Id);
+      var (channel, isNew) = await Yt.GetAndUpdateChannel(seed.Id);
       var log = Log.ForContext("Channel", channel.Latest.Title);
 
       async Task<(VideoStored video, RecommendedVideoStored recommended)> UpdateVideo(ChannelVideoListItem fromV) {
@@ -46,13 +46,14 @@ namespace YtReader {
       }
 
       var channelVideos = await Yt.GetAndUpdateChannelVideos(channel.Latest);
-      var updateResults = await channelVideos.Vids.Where(v => !Yt.VideoDead(v))
+      var updateResults = await channelVideos.Vids.Where(v => isNew || !Yt.VideoDead(v))
         .BlockTransform(UpdateVideo, Cfg.Parallel, null,
           p => log.Verbose("{Channel} {Videos}/{Total} channel video's visited. {Speed}",
             channel.ChannelTitle, p.Results.Count, channelVideos.Vids.Count, p.NewItems.Count.Speed("videos", p.Elapsed).Humanize()));
 
       updateResults = updateResults.Where(r => r.video != null).ToList();
-      log.Information("Completed {Channel} update", channel.ChannelTitle, updateResults.Count);
+      log.Information("Completed {Channel} update of {Videos} videos", 
+        channel.ChannelTitle, updateResults.Count);
 
       return (channel, updateResults.Select(r => r.video).ToList());
     }
