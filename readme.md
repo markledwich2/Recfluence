@@ -57,14 +57,15 @@ For all videos, retrieve the top 10 recommended videos
 
 **CSV**
 
-Updated 4th April 2019
+Updated 20th July 2019
 
-[Channels](https://ytnetworks.azureedge.net/data/results/2019-04-04/VisChannels.csv)
+[Channels](https://ytnetworks.blob.core.windows.net/data/results/2019-07-19/VisChannels.csv.gz)
 
-[Channel Relations](https://ytnetworks.azureedge.net/data/results/2019-04-04/VisRelations.csv)
+[Channel Relations](https://ytnetworks.blob.core.windows.net/data/results/2019-07-19/VisRelations.csv.gz)
 
-[Daily Video Recommendations](https://ytnetworks.azureedge.net/data/results/2019-04-04/DailyVideoRecommends.zip)
+[Daily Video Recommendations](https://ytnetworks.blob.core.windows.net/data/results/2019-07-19/DailyVideoRecommends.csv.gz)
 
+[Videos](https://ytnetworks.blob.core.windows.net/data/results/2019-07-19/Videos.csv.gz)
 
 **Connect Directly to Azure Storage**
 
