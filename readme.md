@@ -63,7 +63,7 @@ Updated 20th July 2019
 
 [Channel Relations](https://ytnetworks.blob.core.windows.net/data/results/2019-07-19/VisRelations.csv.gz)
 
-[Daily Video Recommendations](https://ytnetworks.blob.core.windows.net/data/results/2019-07-19/DailyVideoRecommends.csv.gz)
+[Daily Video Recommendations](https://pyt.blob.core.windows.net/data/results/2019-08-04/DailyVideoRecommends.csv.gz)
 
 [Videos](https://ytnetworks.blob.core.windows.net/data/results/2019-07-19/Videos.csv.gz)
 
