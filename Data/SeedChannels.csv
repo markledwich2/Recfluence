@@ -1,424 +1,424 @@
-Id,Title,Type,LR
-# ChannelId, Video title, TVNews (news published primarily for tv)|TVCommentary|News|Commentary, R (right) | L (left) | C (center)
+Id,Title,Type,LR,Tag
+# ChannelId, Video title, TVNews (news published primarily for tv)|TVCommentary|News|Commentary, R (right) | L (left) | C (center), Tag (Conspiracy|AIN|Fox)
 # 10k subscribers + significant focus on US political/cultural commentary/contexualizing + activelyproducing content in 2018
 #
 # from https://channelcrawler.com/ 200k+ subscribers in News/Politics/Activism categories
-UC1yBKRuGpC1tSM73A0ZjYjQ,The Young Turks,Commentary,L
-UCgRvm1yLFoaQKhmaTqXk9SA,NowThis,Commentary,L
-UCzUV5283-l5c0oKRtyenj6Q,Mark Dice,Commentary,R
-UCnQC_G5Xsjhp9fEJKuIcrSw,Ben Shapiro,Commentary,R
-UCf4FYTsGFFcdc68AUPIU3RA,BuzzFeed News,News,L
-UCJdKr0Bgd_5saZYqLCa9mng,The Rubin Report,Commentary,C
-UCV3Nm3T-XAgVhKH9jT0ViRg,AJ+,News,L
-UCKZGcrxRAhdUi58Mdr565mw,TheAdviseShowTV,Commentary,R
-UCDgchsbJnrX604K-xWsd-fQ,Hunter Avallone,Commentary,R
-UChwwoeOZ3EJPobW83dgQfAg,WeAreChange,Commentary,R
-UCvixJtaXuNdMPUGdOPcY8Ag,David Pakman Shown,Commentary,L
-UCDmCBKaKOtOrEqgsL4-3C8Q,Blair White,Commentary,R
-UC0uVZd8N7FfIZnPu0y7o95A,ReasonTV,Commentary,C
-UCBDrbqudUtPUQxAK_K2JaNQ,Lisa Haven,Commentary,R
-UCsGg9JQ4X7u2A6gCEmtVRmw,The Liberty Hound,Commentary,R
-UCQcPBLsq9rRc5TxDqSz_Dog,The Black World,Commentary,L
-UCLUrVTVTA3PnUFpYvpfMcpg,Lauren Chen,Commentary,R
-UCrmm_7RDZJeQzq2-wvmjueg,The Real News,News,L
-UCG749Dj4V2fKa143f8sE60Q,Tim Pool,Commentary,C
-UCYWIEbibRcZav6xMLo9qWWw,The Ring of Fire,Commentary,L
-UC0RJJ_Wm7jyOU9eY10LgcwA,AdamKokesh,Commentary,L
-UC7Edgk9RxP7Fm7vjQ1d-cDA,FeministFrequency,Commentary,L
+UC1yBKRuGpC1tSM73A0ZjYjQ,The Young Turks,Commentary,L,
+UCgRvm1yLFoaQKhmaTqXk9SA,NowThis,Commentary,L,
+UCzUV5283-l5c0oKRtyenj6Q,Mark Dice,Commentary,R,Conspiracy
+UCnQC_G5Xsjhp9fEJKuIcrSw,Ben Shapiro,Commentary,R,
+UCf4FYTsGFFcdc68AUPIU3RA,BuzzFeed News,News,L,
+UCJdKr0Bgd_5saZYqLCa9mng,The Rubin Report,Commentary,C,AIN
+UCV3Nm3T-XAgVhKH9jT0ViRg,AJ+,News,L,
+UCKZGcrxRAhdUi58Mdr565mw,TheAdviseShowTV,Commentary,R,
+UCDgchsbJnrX604K-xWsd-fQ,Hunter Avallone,Commentary,R,
+UChwwoeOZ3EJPobW83dgQfAg,WeAreChange,Commentary,R,
+UCvixJtaXuNdMPUGdOPcY8Ag,David Pakman Shown,Commentary,L,
+UCDmCBKaKOtOrEqgsL4-3C8Q,Blair White,Commentary,R,AIN
+UC0uVZd8N7FfIZnPu0y7o95A,ReasonTV,Commentary,C,
+UCBDrbqudUtPUQxAK_K2JaNQ,Lisa Haven,Commentary,R,Conspiracy
+UCsGg9JQ4X7u2A6gCEmtVRmw,The Liberty Hound,Commentary,R,
+UCQcPBLsq9rRc5TxDqSz_Dog,The Black World,Commentary,L,
+UCLUrVTVTA3PnUFpYvpfMcpg,Lauren Chen,Commentary,R,AIN
+UCrmm_7RDZJeQzq2-wvmjueg,The Real News,News,L,
+UCG749Dj4V2fKa143f8sE60Q,Tim Pool,Commentary,C,AIN
+UCYWIEbibRcZav6xMLo9qWWw,The Ring of Fire,Commentary,L,
+UC0RJJ_Wm7jyOU9eY10LgcwA,AdamKokesh,Commentary,L,
+UC7Edgk9RxP7Fm7vjQ1d-cDA,FeministFrequency,Commentary,L,
 #
 # from https://blog.feedspot.com/political_youtube_channels/
 #
-UC-3jIAlnQmbbVMV6gR7K8aQ,The Majority Report w/ Sam Seder,Commentary,L
-UCIveFvW-ARp_B_RckhweNJw,Steven Crowder,Commentary,R
-UCzIjg5vIfBGcdyLWu6lhXxw,Julie Borowski,Commentary,R
-UCctjGdm2NlMNzIlxz02IsXA,Chris Ray Gun,Commentary,R
+UC-3jIAlnQmbbVMV6gR7K8aQ,The Majority Report w/ Sam Seder,Commentary,L,
+UCIveFvW-ARp_B_RckhweNJw,Steven Crowder,Commentary,R,AIN
+UCzIjg5vIfBGcdyLWu6lhXxw,Julie Borowski,Commentary,R,
+UCctjGdm2NlMNzIlxz02IsXA,Chris Ray Gun,Commentary,R,AIN
 #
 # Commonly recommended from above channels
 #
-UC3XTzVzaHQEd30rQbuvCtTQ,LastWeekTonight,TVCommentary,L
-UCa6vGFO9ty8v5KZJXQxdhaw,Jimmy Kimmel Live,TVCommentary,L
-UClFSU9_bUb4Rc6OYfTt5SPw,Philip DeFranco,Commentary,C
-UCupvZG-5ko_eiXAupbDfxWw,CNN,TVNews,L
-UCzQUP1qoWDoEbmsQxvdjxgQ,PowerfulJRE,Commentary,C
-UCZaT_X_mc0BI-djXOlfhqWQ,VICE News,News,L
-UCaXkIU1QidjPwiAYu6GcHjg,MSNBC,TVNews,L
-UCXIJgqnII2ZOINSWNOGFThA,Fox News,TVNews,R
-UCczrL-2b-gYK3l4yDld4XlQ,RT America,TVNews,C
-UC6ZFN9Tx6xh-skXCuRHCDpQ,PBS NewsHour,TVNews,C
-UCjXB7nX8bL2U2sje8d212Yw,Roland S. Martin,Commentary,L
-UCHd62-u_v4DvJ8TCFtpi4GA,Washington Post,TVNews,L
-UCzuqE7-t13O4NIDYJfakrhw,Democracy Now!,Commentary,L
-UCNye-wNBqNL5ZzHSJj3l8Bg,Al Jazeera English,TVNews,C
-UCeY0bbntWzzVIaj2z3QigXg,NBC News,TVNews,L
-UCaeO5vkdj5xOQHp4UmIN6dw,The Daily Wire,Commentary,R
-UCmhT57vCaS4kPIalY_rrysg,Political News Networks,Commentary,L
-UCnxGkOGNMqQEUMvroOWps6Q,JRE Clips,Commentary,C
-UCrm7RGOsstgF4qAG5mFGK-w,Joe Rogan University - Fan Channel,Commentary,C
-UCK7tptUDHh-RYDsdxO1-5QQ,Wall Street Journal,News,R
-UCvJJ_dzjViJCoLf5uKUTwoA,CNBC,TVNews,L
-UCqnbDFdCpuN8CMEg0VuEBqA,The New York Times,News,L
-UCVSNOxehfALut52NbkfRBaA,VOA News,News,C
-UCP6HGa63sBC7-KHtkme-p-g,USA TODAY,News,C
-UCK0z0_5uL7mb9IjntOKi5XQ,The Atlantic,News,L
-UCUMZ7gohGI9HcU9VNsr2FJQ,Bloomberg,News,L
-UC0p5jTq6Xx_DosDFxVXnWaQ,The Economist,News,C
-UCJg9wBPyKMNA5sRDnvzmkdg,FOX 10 Phoenix,TVNews,R
-UCsD-Qms-AkXDrsU962OicLw,The New Yorker,News,L
-UCldfgbzNILYZA4dmDt4Cd6A,Secular Talk,Commentary,L
-UCGy6uV7yqGWDeUWTZzT3ZEg,Rebel Media,Commentary,R
-UC18vz5hUUqxbGvym9ghtX_w,Full Frontal with Samantha Bee,TVCommentary,L
-UCIZBXVGIJoJMXf8giib0IiQ,James Allsup,Commentary,R
-UC8p1vwvWtl6T73JiExfWs1g,CBS News,TVNews,C
-UCY0YIply-je0EhSWLgpftVw,BEME News,News,L
-UCIpwPuJsrboNnf200oV8cWQ,Fleccas Talks,Commentary,R
-UCmrLCXSDScliR7q8AxxjvXg,Black Pigeon Speaks,Commentary,R
-UCZfsrIV68Oegr5bJgAMLBDA,HuffPost,News,L
-UC0aVoboXBUx2-tVIWHc3W2Q,MILO,Commentary,R
-UCB1o7_gbFp2PLsamWxFenBg,X22Report,Commentary,R
-UCC3L8QaxqEGUiBC252GHy3w,Stefan Molyneux,Commentary,R
-UC8bTQzxgvKkXDAaWkeuUlkg,Trevor Noah,TVCommentary,L
-UCittVh8imKanO_5KohzDbpg,Paul Joseph Watson,Commentary,R
-UCa3-BNaCeCvGSfhMuotYskg,Lionel Nation,Commentary,R
-UCAhmDfQ1LfOYECmNNWgXJ7Q,David Icke,Commentary,R
-UCJ7hqXLdgXlzjKpZY-K_6HA,Chelsea,Commentary,L
-UCWq53_f3zgMcWuE-XFKSpyQ,PJ Media,Commentary,R
-UC-yewGHQbNFpDrGM0diZOLA,Sargon of Akkad,Commentary,R
-UCqlYzSgsh5jdtWYfVIBoTDw,Fox News Insider,TVNews,R
-UCb--64Gl51jIEVE-GLDAVTg,C-SPAN,TVNews,C
-UCLoNQH9RCndfUGOb2f7E1Ew,The Next News Network,Commentary,R
-UC2nQYGjfe9I_tgWpqgJorUg,SGTreport,Commentary,R
-UCNbIDJNNgaRrXOD7VllIMRQ,One America News Network,Commentary,R
-UC7e57qWIEAZTQAaFwHpKdlw,SomeBlackGuy,Commentary,C
-UC0rZoXAD5lxgBHMsjrGwWWQ,Styxhexenhammer666,Commentary,R
-UCxzcBfvmeLmUNjlyM7FMgFg,Larry King,Commentary,C
-UCu8ebUHoKbhVY0tavNdhwvw,Anthony Brian Logan,Commentary,R
-UC-jlxuVAVEl2PXTaGno7gSA,SJWCentral,Commentary,R
-UC7Q4rvzJDbHeBHYk5rnvZeA,The Humanist Report,Commentary,L
-UCWXPkK02j6MHW-4xCJzgMuw,Golden State Times,News,R
-UCuMo0RRtnNDuMB8DV5stEag,Rebel HQ,Commentary,L
-UCKgJEs_v0JB-6jWb8lIy9Xw,TheBlaze,Commentary,R
-UCw5pSFA1KVZJruigo_FVv2Q,OpenMind,Commentary,R
-UClJ8Z0YvEm-ClFj3fdQgQkw,The Iconoclast,Commentary,R
-UCtZIK88xkeTXf49BgVXs0HA,Trump Fan Network,Commentary,R
-UCjo1uN-aM3rmBV46xj7l2KA,John Stossel,Commentary,R
-UCeZ3rXtghQn72DPeeH4Tu7g,KGP TV,Commentary,R
-UCe02lGcO-ahAURWuxAJnjdA,Timcast,Commentary,C
-UCUSySH2YjIwsDu2Hx6DWwTA,dollemore,Commentary,L
-UCh2p1Pb4o-NXQsbL__ikakw,GLOBAL News,TVNews,L
-UCwpDBy43upJR7LZLrgnKkPA,"Don't Walk, Run! Productions",Commentary,R
-UCHkapYFq5ev4PDAxZQ_PF9Q,Skavlan,Commentary,R
-UC7PfGhJXlJiDs4jvGGGgqsQ,StudioBrule,Commentary,R
-UCu_u-P3cBFO7D-sAjxd_I-w,The Agenda with Steve Paikin,TVNews,C
-UCJ-qLG1bdWVrHM-Hu2W73CQ,Operation Freedom,Commentary,R
-UC4-AGCUwX7C-D4BsBook9fQ,YAFTV,Commentary,R
-UCRPdcY4_Al8TrRtgkMzkrQQ,"Tony's - 24/7 Eyes",Commentary,L
-UCMfKNuYXBc9bxb0fg2cGTBg,Tipping Point With Liz Wheeler on OAN,Commentary,R
-UCDow765I-QrmVp9Kfz0HqGA,Florida Maquis,Commentary,C
-UC7qCAvNXX0Pi05tufrDN0XQ,Adam Carolla,Commentary,R
-UCVrK_pMRp_q8IelpfUCTGLQ,Turning Point USA,Commentary,R
-UCK70NBiy-dXseWDTfWDIVlQ,Connors Conquest,Commentary,R
-UCrp_UI8XtuYfpiqluWLD7Lw,CNBC Television,TVNews,L
-UCLMjHGVwfhKfPVd2LarCAjw,David Heavener,Commentary,R
-UCqxzXCQqNQ9wSwHPtZKHrlQ,Domination Station,Commentary,R
-UCod8IyoN-ua9gDxlDpoEklQ,kytekuttertv,News,R
-UCXyLkBdJzh3SfFw6GvHkXKw,Atheism-is-Unstoppable-2,Commentary,R
-UC7K0wNhrt6fQdTj9zQQwLtw,The Josh Bernstein Show,Commentary,R
-UCyXhXAmTRVfeiD8JkWJ7Tzg,MeaningofLife.tv,Commentary,C
-UC_qQ2_AVAh8pzj7yklimASQ,Kalvin Garrah,Commentary,C
-UC2TNY0ME37MkgM15RpORfIw,Rekt Idiots,Commentary,R
-UCaFNs3ETMvkmy0JahAS6WJA,Logicked,Commentary,C
-UCEL5udLvhpEOG8Lc9O-xbmQ,Metokurist Murdochian Archiver,Commentary,R
-UC5ft8escJDZqT-QIWkHsImQ,Oof Curator,Commentary,R
-UC1Y7SRZlf6BNmBPakawhLXA,Shmufkin TV,Commentary,R
-UClFLXO6ecX-ucJp9gGJYiDw,Counter Arguments,Commentary,C
-UC7SeFWZYFmsm1tqWxfuOTPQ,Count Dankula,Commentary,R
-UCQZdMTHwIw_fZRk0wI8oqkQ,Dismantle The Matrix,Commentary,R
-UCfI7lYIToulrt868GBLHn7Q,MNN NYC,Commentary,L
+UC3XTzVzaHQEd30rQbuvCtTQ,LastWeekTonight,TVCommentary,L,LateNightComedy
+UCa6vGFO9ty8v5KZJXQxdhaw,Jimmy Kimmel Live,TVCommentary,L,LateNightComedy
+UClFSU9_bUb4Rc6OYfTt5SPw,Philip DeFranco,Commentary,C,
+UCupvZG-5ko_eiXAupbDfxWw,CNN,TVNews,L,
+UCzQUP1qoWDoEbmsQxvdjxgQ,PowerfulJRE,Commentary,C,AIN
+UCZaT_X_mc0BI-djXOlfhqWQ,VICE News,TVNews,L,
+UCaXkIU1QidjPwiAYu6GcHjg,MSNBC,TVNews,L,
+UCXIJgqnII2ZOINSWNOGFThA,Fox News,TVNews,R,Fox
+UCczrL-2b-gYK3l4yDld4XlQ,RT America,TVNews,C,RT
+UC6ZFN9Tx6xh-skXCuRHCDpQ,PBS NewsHour,TVNews,C,
+UCjXB7nX8bL2U2sje8d212Yw,Roland S. Martin,Commentary,L,
+UCHd62-u_v4DvJ8TCFtpi4GA,Washington Post,TVNews,L,
+UCzuqE7-t13O4NIDYJfakrhw,Democracy Now!,Commentary,L,
+UCNye-wNBqNL5ZzHSJj3l8Bg,Al Jazeera English,TVNews,C,
+UCeY0bbntWzzVIaj2z3QigXg,NBC News,TVNews,L,
+UCaeO5vkdj5xOQHp4UmIN6dw,The Daily Wire,Commentary,R,AIN
+UCmhT57vCaS4kPIalY_rrysg,Political News Networks,Commentary,L,
+UCnxGkOGNMqQEUMvroOWps6Q,JRE Clips,Commentary,C,AIN
+UCrm7RGOsstgF4qAG5mFGK-w,Joe Rogan University - Fan Channel,Commentary,C,AIN
+UCK7tptUDHh-RYDsdxO1-5QQ,Wall Street Journal,News,R,
+UCvJJ_dzjViJCoLf5uKUTwoA,CNBC,TVNews,L,
+UCqnbDFdCpuN8CMEg0VuEBqA,The New York Times,News,L,
+UCVSNOxehfALut52NbkfRBaA,VOA News,News,C,
+UCP6HGa63sBC7-KHtkme-p-g,USA TODAY,TVNews,C,
+UCK0z0_5uL7mb9IjntOKi5XQ,The Atlantic,News,L,
+UCUMZ7gohGI9HcU9VNsr2FJQ,Bloomberg,News,L,
+UC0p5jTq6Xx_DosDFxVXnWaQ,The Economist,News,C,
+UCJg9wBPyKMNA5sRDnvzmkdg,FOX 10 Phoenix,TVNews,R,Fox
+UCsD-Qms-AkXDrsU962OicLw,The New Yorker,News,L,
+UCldfgbzNILYZA4dmDt4Cd6A,Secular Talk,Commentary,L,
+UCGy6uV7yqGWDeUWTZzT3ZEg,Rebel Media,Commentary,R,AIN
+UC18vz5hUUqxbGvym9ghtX_w,Full Frontal with Samantha Bee,TVCommentary,L,LateNightComedy
+UCIZBXVGIJoJMXf8giib0IiQ,James Allsup,Commentary,R,AIN
+UC8p1vwvWtl6T73JiExfWs1g,CBS News,TVNews,C,
+UCY0YIply-je0EhSWLgpftVw,BEME News,News,L,
+UCIpwPuJsrboNnf200oV8cWQ,Fleccas Talks,Commentary,R,
+UCmrLCXSDScliR7q8AxxjvXg,Black Pigeon Speaks,Commentary,R,AIN
+UCZfsrIV68Oegr5bJgAMLBDA,HuffPost,News,L,
+UC0aVoboXBUx2-tVIWHc3W2Q,MILO,Commentary,R,AIN
+UCB1o7_gbFp2PLsamWxFenBg,X22Report,Commentary,R,Conspiracy
+UCC3L8QaxqEGUiBC252GHy3w,Stefan Molyneux,Commentary,R,AIN
+UC8bTQzxgvKkXDAaWkeuUlkg,Trevor Noah,TVCommentary,L,LateNightComedy
+UCittVh8imKanO_5KohzDbpg,Paul Joseph Watson,Commentary,R,AIN
+UCa3-BNaCeCvGSfhMuotYskg,Lionel Nation,Commentary,R,
+UCAhmDfQ1LfOYECmNNWgXJ7Q,David Icke,Commentary,R,
+UCJ7hqXLdgXlzjKpZY-K_6HA,Chelsea,Commentary,L,
+UCWq53_f3zgMcWuE-XFKSpyQ,PJ Media,Commentary,R,
+UC-yewGHQbNFpDrGM0diZOLA,Sargon of Akkad,Commentary,R,AIN
+UCqlYzSgsh5jdtWYfVIBoTDw,Fox News Insider,TVNews,R,Fox
+UCb--64Gl51jIEVE-GLDAVTg,C-SPAN,TVNews,C,
+UCLoNQH9RCndfUGOb2f7E1Ew,The Next News Network,Commentary,R,Conspiracy
+UC2nQYGjfe9I_tgWpqgJorUg,SGTreport,Commentary,R,Conspiracy
+UCNbIDJNNgaRrXOD7VllIMRQ,One America News Network,Commentary,R,
+UC7e57qWIEAZTQAaFwHpKdlw,SomeBlackGuy,Commentary,C,AIN
+UC0rZoXAD5lxgBHMsjrGwWWQ,Styxhexenhammer666,Commentary,R,AIN
+UCxzcBfvmeLmUNjlyM7FMgFg,Larry King,Commentary,C,
+UCu8ebUHoKbhVY0tavNdhwvw,Anthony Brian Logan,Commentary,R,
+UC-jlxuVAVEl2PXTaGno7gSA,SJWCentral,Commentary,R,
+UC7Q4rvzJDbHeBHYk5rnvZeA,The Humanist Report,Commentary,L,
+UCWXPkK02j6MHW-4xCJzgMuw,Golden State Times,News,R,
+UCuMo0RRtnNDuMB8DV5stEag,Rebel HQ,Commentary,L,
+UCKgJEs_v0JB-6jWb8lIy9Xw,TheBlaze,Commentary,R,
+UCw5pSFA1KVZJruigo_FVv2Q,OpenMind,Commentary,R,
+UClJ8Z0YvEm-ClFj3fdQgQkw,The Iconoclast,Commentary,R,
+UCtZIK88xkeTXf49BgVXs0HA,Trump Fan Network,Commentary,R,
+UCjo1uN-aM3rmBV46xj7l2KA,John Stossel,Commentary,R,
+UCeZ3rXtghQn72DPeeH4Tu7g,KGP TV,Commentary,R,
+UCe02lGcO-ahAURWuxAJnjdA,Timcast,Commentary,C,AIN
+UCUSySH2YjIwsDu2Hx6DWwTA,dollemore,Commentary,L,
+UCh2p1Pb4o-NXQsbL__ikakw,GLOBAL News,TVNews,L,
+UCwpDBy43upJR7LZLrgnKkPA,"Don't Walk, Run! Productions",Commentary,R,
+UCHkapYFq5ev4PDAxZQ_PF9Q,Skavlan,Commentary,R,
+UC7PfGhJXlJiDs4jvGGGgqsQ,StudioBrule,Commentary,R,
+UCu_u-P3cBFO7D-sAjxd_I-w,The Agenda with Steve Paikin,TVNews,C,
+UCJ-qLG1bdWVrHM-Hu2W73CQ,Operation Freedom,Commentary,R,Conspiracy
+UC4-AGCUwX7C-D4BsBook9fQ,YAFTV,Commentary,R,
+UCRPdcY4_Al8TrRtgkMzkrQQ,"Tony's - 24/7 Eyes",Commentary,L,
+UCMfKNuYXBc9bxb0fg2cGTBg,Tipping Point With Liz Wheeler on OAN,Commentary,R,
+UCDow765I-QrmVp9Kfz0HqGA,Florida Maquis,Commentary,C,
+UC7qCAvNXX0Pi05tufrDN0XQ,Adam Carolla,Commentary,R,
+UCVrK_pMRp_q8IelpfUCTGLQ,Turning Point USA,Commentary,R,
+UCK70NBiy-dXseWDTfWDIVlQ,Connors Conquest,Commentary,R,
+UCrp_UI8XtuYfpiqluWLD7Lw,CNBC Television,TVNews,L,
+UCLMjHGVwfhKfPVd2LarCAjw,David Heavener,Commentary,R,
+UCqxzXCQqNQ9wSwHPtZKHrlQ,Domination Station,Commentary,R,
+UCod8IyoN-ua9gDxlDpoEklQ,kytekuttertv,News,R,
+UCXyLkBdJzh3SfFw6GvHkXKw,Atheism-is-Unstoppable-2,Commentary,R,
+UC7K0wNhrt6fQdTj9zQQwLtw,The Josh Bernstein Show,Commentary,R,
+UCyXhXAmTRVfeiD8JkWJ7Tzg,MeaningofLife.tv,Commentary,C,
+UC_qQ2_AVAh8pzj7yklimASQ,Kalvin Garrah,Commentary,C,
+UC2TNY0ME37MkgM15RpORfIw,Rekt Idiots,Commentary,R,
+UCaFNs3ETMvkmy0JahAS6WJA,Logicked,Commentary,C,
+UCEL5udLvhpEOG8Lc9O-xbmQ,Metokurist Murdochian Archiver,Commentary,R,
+UC5ft8escJDZqT-QIWkHsImQ,Oof Curator,Commentary,R,
+UC1Y7SRZlf6BNmBPakawhLXA,Shmufkin TV,Commentary,R,
+UClFLXO6ecX-ucJp9gGJYiDw,Counter Arguments,Commentary,C,
+UC7SeFWZYFmsm1tqWxfuOTPQ,Count Dankula,Commentary,R,
+UCQZdMTHwIw_fZRk0wI8oqkQ,Dismantle The Matrix,Commentary,R,
+UCfI7lYIToulrt868GBLHn7Q,MNN NYC,Commentary,L,
 #
 # data & society report. Only included those that are active on YouTube
 #
-UC2h3yPmh9TfQv2z3aTDTHHA,Andywarski,Commentary,R
-UCka_dz0F1gYuvN8LTefNcJQ,Bunty King,Commentary,C
-UCZeP6H2mELnRI9imY5Iga0g,Ayla Stewart Wife with a Purpose,Commentary,R
-UCesrUK_dMDBZAf7cnjQPdgQ,Brittany Pettibone,Commentary,R
-UCFpvg5yg5fMda91yiI1owSQ,Caolan Robertson,Commentary,R
-UCpiCH7qvGVlzMOqy3dncA5Q,The Thinkery,Commentary,R
-UC5tEELgWBfKbA9fVPRzBzPQ,Coach Red Pill,Commentary,R
-UCT9D87j5W7PtE7NHOR5DUOQ,Computing Forever,Commentary,R
-UClMWnUHbxJKJLUgloN1mPUA,Faith J Goldy,Commentary,R
-UCFUC7NaTxZanB_FVOJN92eg,Red Ice TV,Commentary,R
-UCL9PlYkRD3Q-RZca6CCnPKw,Project Veritas,Commentary,R
-UCEE8w-v6Gg4j3ze3oX-urEw,Project Veritas Action,Commentary,R
-UCMLbmp5tcLxzahMLTmeM4lg,American Renaissance,Commentary,R
-UCowcNKm1w2GGw5U_XQeduhg,Jean-Francois Gariépy,Commentary,R
-UCAldq8BAAGdsX9UyK_09-ZA,Jeff Holiday,Commentary,C
-UC87YBeLMwXhgaw5tcCxsXgQ,Mike Cernovich,Commentary,R
-UCLfhh63n0fWn0gXXKQ5NWvw,Millennial Woes,Commentary,R
-UCfYbb7nga6-icsFWWgS-kWw,Mister Metokur,Commentary,R
-UCKEt1xKVBLuL175dkk8rqLg,Mouthy Buddha,Commentary,R
-UCsJ86N5n7fcEC_Ds8dYJKzA,America First with Nicholas J Fuentes,Commentary,R
-UCyQsQSKayfcZoHaCjqxxSlg,Owen Benjamin,Commentary,R
-UC554eY5jNUfDq3yDOJYirOQ,Destiny,Commentary,L
-UCLJkNhB1Eg_mXx0quUju0Og,That Guy T,Commentary,R
-UCmtALVZjXFzb4v3fIXDmDyw,The Reality Calls Show,Commentary,R
-UCAgBUlIpzlJaE0693J3s97w,Baked Alaska,Commentary,R
+UC2h3yPmh9TfQv2z3aTDTHHA,Andywarski,Commentary,R,AIN
+UCka_dz0F1gYuvN8LTefNcJQ,Bunty King,Commentary,C,AIN
+UCZeP6H2mELnRI9imY5Iga0g,Ayla Stewart Wife with a Purpose,Commentary,R,AIN
+UCesrUK_dMDBZAf7cnjQPdgQ,Brittany Pettibone,Commentary,R,AIN
+UCFpvg5yg5fMda91yiI1owSQ,Caolan Robertson,Commentary,R,AIN
+UCpiCH7qvGVlzMOqy3dncA5Q,The Thinkery,Commentary,R,AIN
+UC5tEELgWBfKbA9fVPRzBzPQ,Coach Red Pill,Commentary,R,AIN
+UCT9D87j5W7PtE7NHOR5DUOQ,Computing Forever,Commentary,R,AIN
+UClMWnUHbxJKJLUgloN1mPUA,Faith J Goldy,Commentary,R,AIN
+UCFUC7NaTxZanB_FVOJN92eg,Red Ice TV,Commentary,R,AIN
+UCL9PlYkRD3Q-RZca6CCnPKw,Project Veritas,Commentary,R,AIN
+UCEE8w-v6Gg4j3ze3oX-urEw,Project Veritas Action,Commentary,R,AIN
+UCMLbmp5tcLxzahMLTmeM4lg,American Renaissance,Commentary,R,AIN
+UCowcNKm1w2GGw5U_XQeduhg,Jean-Francois Gariépy,Commentary,R,AIN
+UCAldq8BAAGdsX9UyK_09-ZA,Jeff Holiday,Commentary,C,AIN
+UC87YBeLMwXhgaw5tcCxsXgQ,Mike Cernovich,Commentary,R,AIN
+UCLfhh63n0fWn0gXXKQ5NWvw,Millennial Woes,Commentary,R,AIN
+UCfYbb7nga6-icsFWWgS-kWw,Mister Metokur,Commentary,R,AIN
+UCKEt1xKVBLuL175dkk8rqLg,Mouthy Buddha,Commentary,R,AIN
+UCsJ86N5n7fcEC_Ds8dYJKzA,America First with Nicholas J Fuentes,Commentary,R,AIN
+UCyQsQSKayfcZoHaCjqxxSlg,Owen Benjamin,Commentary,R,AIN
+UC554eY5jNUfDq3yDOJYirOQ,Destiny,Commentary,L,AIN
+UCLJkNhB1Eg_mXx0quUju0Og,That Guy T,Commentary,R,AIN
+UCmtALVZjXFzb4v3fIXDmDyw,The Reality Calls Show,Commentary,R,AIN
+UCAgBUlIpzlJaE0693J3s97w,Baked Alaska,Commentary,R,AIN
 #
 # Search for political/culture war keywords from https://www.isidewith.com/en-us/polls
 # Also a review of related channels form those searches
 #
-UCMtFAi84ehTSYSE9XoHefig,The Late Show with Stephen Colbert,TVCommentary,L
-UCwWhs_6x42TyRM4Wstoq8HA,The Daily Show with Trevor Noah,TVCommentary,L
-UCZWlSUNDvCCS1hBiXV0zKcA,PragerU,Commentary,R
-UCy6kyFxaMqGtpE3pQTflK8A,Real Time with Bill Maher,TVCommentary,L
-UCVTyTA7-g9nopHeHbeuvpRA,Late Night with Seth Meyers,TVCommentary,L
-UCeH6qE4V7n5tVwP7NkdrtJg,The View,TVCommentary,C
-UCLXo7UDZvByw2ixzpQCufnA,Vox,News,L
-UCZNk7Jjb2t8EuBdgn4Zj1cw,No Bullshit,Commentary,R
-UC3M7l8ved_rYQ45AVzS0RGA,The Jimmy Dore Show,Commentary,L
-UCLH7qUqM0PLieCVaHA7RegA,Gad Saad,Commentary,C
-UCL-KWzX_hw7yfVR7WPQxIeA,T Я U Σ Ð I L T O M,Commentary,R
-UCIozLvxEM3CwkhC8B9pGD9Q,Jamarl Thomas,Commentary,L
-UCK-6FjMu9OI8i0Fo6bkW0VA,Democracy At Work,Commentary,L
-UCeamuoYuBeRnRRbmq5CmjVg,Bloggingheads.tv,Commentary,C
-UCNvsIonJdJ5E4EXMa65VYpA,ContraPoints,Commentary,L
-UCL_f53ZEJxp8TtlOkHwMV9Q,Jordan Peterson,Commentary,R
-UCjNxszyFPasDdRoD9J6X-sw,TheAmazingAtheist,Commentary,L
-UCbjBOso0vpWgDht9dPIVwhQ,Thom Hartmann Program,Commentary,L
-UCptHRIwEDG34Ffu0AB5MsbQ,Stephanie Miller Show,Commentary,L
-UCpU4j-LN_aibXA1gONvWzxw,Mike Malloy,Commentary,L
-UCQuX4jRgybTdKu5YvVKfVSw,Bill Press Video,Commentary,L
-UCFLRxVeYcB1H7DbuYZQG-lg,The Laura Flanders Show,Commentary,L
-UCcnNWp-tx3-FaCWV4pMFTAg,The Zero Hour with RJ Eskow,Commentary,L
-UCo9oQdIk1MfcnzypG3UnURA,The Rational National,Commentary,L
-UCjRXO-HSl5XpuF-cWvtMV_g,TBTV,Commentary,L
-UC0pCsHlEEmCfxllZSlRB2Og,Status Coup,Commentary,L
-UCwFnxeT6z_ZO-fG2zGubPLw,Ron Placone,Commentary,L
-UCyvaZ2RHEDrgKXz43gz7CbQ,Redacted Tonight,Commentary,L
-UCT3v6vL2H5HK4loLMc8pmCw,VisualPolitik EN,Commentary,L
-UCyuAKnN3g2fZ7_R9irgEUZQ,The Exploration with William C. Fox,Commentary,L
-UCnxuOd8obvLLtf5_-YKFbiQ,Ezra Klein Show,Commentary,L
-UCfrlXVXz-pT9AmmDELhpyOw,Justin Murphy,Commentary,C
-UCdHT7KB1gDAXZYpPW71fn0Q,The Distributist,Commentary,R
-UCqZMgLgGlYAWvSU8lZ9xiVg,Rationality Rules,Commentary,C
-UC7kIy8fZavEni8Gzl8NLjOQ,CosmicSkeptic,Commentary,C
-UCNAxrHudMfdzNi6NxruKPLw,Sam Harris,Commentary,C
-UCfsuI3-92QNO3DVy06PO9wg,Skeptic,Commentary,C
-UCvQECJukTDE2i6aCoMnS-Vg,Big Think,Commentary,C
-UCAuUUnT6oDeKwE6v1NGQxug,TED,Commentary,C
-UCsT0YIqwnpJCM-mx7-gSA4Q,TEDx Talks,Commentary,L
-UCBjBZmguQzn6WCYR7DQykLw,TED Fellows,Commentary,L
-UCl9roQQwv4o4OuBj3FhQdDQ,The Damage Report,Commentary,L
-UCPhKAfBMRI-GDozE1ldix3A,Ana Kasparian,Commentary,L
-UCvb-DqrtgHRX-hPypnjfkdw,The Point with Ana Kasparian,Commentary,L
-UCKw8kdkYfmuNSVehGoDw8Mg,TYT Interviews,Commentary,L
-UCIAXaU6LIcZyoHYWqVLM4wg,TYT Nation,Commentary,L
-UC17knbFWwBQOSaLCiTO_5jw,Acronym TV,Commentary,L
-UCfDdlNLRVb1h3_7Xh-WhL3w,TheDC Shorts,Commentary,R
-UCElqfal0wzzpLsHlRuqZjaA,Alexandria Ocasio-Cortez,Commentary,L
-UCy6Q3wg-PgsgO2XtQxZpZEg,ADAM FRIENDED,Commentary,C
-UCyGEPFftZEOU1v6RtU73ylA,PSA Sitch,Commentary,C
-UC8RJExf7iNpV6tp6hvNtwww,Vee,Commentary,R
-UCi5N_uAqApEUIlg32QzkPlg,Bret Weinstein,Commentary,C
-UCR85PW_B_7_Aisx5vNS7Gjw,Eric Weinstein,Commentary,C
-UCm13xHVNFVwzHzK3QHSaZ3Q,Benjamin A Boyce,Commentary,C
-UCfwE_ODI1YTbdjkzuSi1Nag,TheQuartering,Commentary,R
-UCFQ6Gptuq-sLflbJ4YY3Umw,Rebel Wisdom,Commentary,C
-UCkNJfjuNyIopt8UyC5ofhwg,Planned Parenthood,Commentary,L
-UCaDVcGDMkvcRb4qGARkWlyg,SoulPancake,Commentary,L
-UCNHVVFmsJL8vk0VHnBU_GBw,Libertatem,Commentary,R
-UCVF8SAGEQnBA-yKM4iQNqfw,Riley J. Dennis,Commentary,L
-UCa1DgvQUuQnJmMCwlxZ7SSg,We the Internet TV,Commentary,R
-UCB0XYqBHnsSg-CR-qHF7pGg,Family Policy Institute of Washington,Commentary,R
-UCWsiCjgGjMxOL_lVFo8wMHg,Tomorrow's World Viewpoint,Commentary,R
-UC059kFc5oApruDS2QFmZfeA,Autumn Asphodel,Commentary,C
-UCswH8ovgUp5Bdg-0_JTYFNw,Russell Brand,Commentary,L
-UCjH72OaQxPoKgtv56C-4NOA,Tariq Radio,Commentary,C
-UCCUQbQivBq233fSOm39kg1w,TBA,Commentary,L
-UChDKyKQ59fYz3JO2fl0Z6sg,TODAY,TVNews,L
-UCLrVxw4H4ZJ3LovpdbzF7bw,TheFallenState,Commentary,R
-UC51_awyLXl2nxCduuzzmw4w,LibertyPen,Commentary,R
-UCzWwWbbKHg4aodl0S35R6XA,HooverInstitution,Commentary,R
-UCZm2IEBVHdtaAhSyYhWu9mg,InstituteForJustice,Commentary,C
-UCyl7zwI6giPG6zC3uC8GGVg,The Cato Institute,Commentary,R
-UCFJNcE0iHj7P6dhp5iCZRLg,Learn Liberty,Commentary,R
-UCKtFwcQCsl1ttW2CgOqFMUQ,Mercatus Center,Commentary,C
-UC5bEfSFTYQVfLCwkhBt8NtQ,The Heritage Foundation,Commentary,R
-UCHqkXbgqrDrDVInBMSoGQgQ,The Daily Signal,Commentary,R
-UCt8lRYpzb-sSrKFb4DT2ECw,American Enterprise Institute,Commentary,R
-UCNiNWbmPWehjpQohglWsKxw,The Red Elephants Vincent James,Commentary,R
-UCDuIxfEt_VoI1yfARYmfCGA,Vincent James of The Red Elephants,Commentary,R
-UCxWqlhmDlq4nQ0Jv5hD2wlw,SHUTTERSHOT45,Commentary,R
-UCNxZtF2pZWV7Squ4AQtGpkA,Very Fake News,Commentary,R
-UC3X8lQvudZJ6fMsL7WwqEDw,Airliner World & More,Commentary,R
-UCAJqGdQ-KO8jEcsEx4PA-Lg,The Common Sense Conservative,Commentary,R
-UCtcX0OObQQRC9XiU26P-V9A,American Patriot,Commentary,R
-UCtBfQmeHxSMsU2ghPAhGoRQ,Gotcha News Network,Commentary,R
-UCenxjWEkb0Sv67vejOgZ3Tg,IntelligenceSquared Debates,Commentary,C
-UCCHIKONeGp9nlB9XNhsLbRQ,The Conservative Station,Commentary,R
-UCy-N04M3rGQMznjIv5g2LGQ,The Patriotic Report,Commentary,R
-UClHpw6AX6AAKHQCaWtGVqSg,TheWishmaster,Commentary,C
-UC0hVVwpx_zoLEuKI8bOgFdg,NumbersUSA,Commentary,R
-UCJjSDX-jUChzOEyok9XYRJQ,Jubilee,Commentary,C
-UCvQ2kejN6UkrEVhE5oiYwBw,GOP War Room,Commentary,R
-UCMRxoFJPZiBcxgFzxN0ao-w,Slightly Offens*ve,Commentary,R
-UCJ7hqXLdgXlzjKpZY-K_6HA,Chelsea,Commentary,L
-UCabaQPYxxKepWUsEVQMT4Kw,Healthcare Triage,Commentary,L
-UCm5J1Fu_dHgBcMTpXu-NXUw,Pangburn Philosophy,Commentary,C
-UCJ6o36XL0CpYb6U5dNBiXHQ,Shaun,Commentary,L
-UClt01z1wHHT7c5lKcU8pxRQ,hbomberguy,Commentary,L
-UC8Cl9QaRtuW9CNjP7pP4BBQ,Jason Goodman,Commentary,R
-UCrQ-wHKVi0JDWjQGcuoYnew,George Webb,Commentary,R
-UCv0dEcvXLOf4ZFvjCahK4Lw,American Intelligence Media,Commentary,R
-UCVxYHHMK9DcnMup3t2A15qg,Right Wing News!,Commentary,R
-UCIjuLiLHdFxYtFmWlbTGQRQ,Peter Schiff,Commentary,R
-UCWsiCjgGjMxOL_lVFo8wMHg,TomWoodsTV,Commentary,R
-UCkJ1N-7g9Q6n7KnriGit-Ig,RonPaulLibertyReport,Commentary,R
-UCsnG5Ld5iYFIyAaW5oifzgQ,Blackstone Intelligence Network,Commentary,R
-UCpimAnNpH_JQxDa0YMTwdnw,HighImpactVlogs,Commentary,R
-UCuNfok7ozooi0LZgp6JJS4A,RichieFromBoston,Commentary,R
-UCcDC6kQcOgMw1fNTwgiBn_Q,RFB II,Commentary,R
-UCTYu3LHeW4GliTc5iBAkX-w,pocketsofthefuture,Commentary,R
-UCVEaFSr-jdTa_QE4PPSkVJw,Truthstream Media,Commentary,R
-UCDUBDASXQ-rVXsjqblQwG7A,DTRHRadioArchives,Commentary,R
-UC3dZNn_1-kP76SmIqy4rHSw,ChangeDaChannel,Commentary,R
-UCRVno4GDsO4Fs2lLAHGKfkQ,Montagraph,Commentary,R
-UCtZ2JhJGOIgoRg6OGQqwb8w,MaKaElectric,Commentary,R
-UC7TvL4GlQyMBLlUsTrN_C4Q,corbettreport,Commentary,R
-UC7kaw8NXcqb7jdRsRIHaswQ,The Fowler Show,Commentary,L
-UCWW3gYCvKS412p7o6qSK5gg,#WeThePeople 24/7 Patriots' Soapbox Stream,Commentary,R
-UCHqC-yWZ1kri4YzwRSt6RGQ,Right Side Broadcasting Network,Commentary,R
-UCCT8a7d6S6RJUivBgNRsiYg,Three Arrows,Commentary,L
-UCla6APLHX6W3FeNLc8PYuvg,Lauren Southern,Commentary,R
-UCViO5gRp5Boa6QslAo-gPAQ,Rational Disconnect,Commentary,L
-UCT5jxI_OYY2r--TjAGXD03A,Peter Coffin,Commentary,L
-UCaN8DZdc8EHo5y1LsQWMiig,Big Joel,Commentary,L
-UCFEmOPY04flXH-QpMMAGeJA,BadMouseProductions,Commentary,L
-UCidbCSNfzJXScnt8LWtwrhA,DemocraticSocialist01,Commentary,L
-UC2PA-AKmVpU6NKCGtZq_rKQ,Philosophy Tube,Commentary,L
-UCK-6FjMu9OI8i0Fo6bkW0VA,Democracy At Work,Commentary,L
-UCrmm_7RDZJeQzq2-wvmjueg,TheRealNews,Commentary,L
-UCzkFu0AVOtXy-vTo028mJxw,chescaleigh,Commentary,L
-UCJ2yCFYUDiBJajga4tXRdNA,marinashutup,Commentary,L
-UCLA7mHQtzSiU2MUEmdHyXsg,TheeKatsMeoww,Commentary,L
-UCxFWzKZa74SyAqpJyVlG5Ew,Kat Blaque,Commentary,L
-UCGaVdbSav8xWuFWTadK6loA,vlogbrothers,Commentary,L
-UCCsiAKRKcgzA_372WbXNBaw,Dr. Steve Turley,Commentary,R
-UCG1uayRlzz3ahT8ISRdyw7Q,Genetically Modified Skeptic,Commentary,C
-UCC6ue7UYt1yeS621xmTMKrQ,Rachel Oates,Commentary,C
-UCewUkuIHNuwuMNWMa96q9ZQ,Godless Cranium,Commentary,C
-UCw8rdbWx_3f0iIzL7OWYOcw,Daisy Cousens,Commentary,R
-UCxeY-wRrb65Jt37QHa5xMog,Matt Christiansen,Commentary,R
-UCwW_vaMPlq8J4weKDsfeJzw,Bearing,Commentary,R
-UCaEgjV59fLXgnN5BJdLsD3Q,Liberty Doll,Commentary,R
-UCDc_MCu3ZstNXmAqqT36SNA,SugarTits,Commentary,R
-UC-EREEErQQqgYNyNB4YGQnQ,Patrick,Commentary,R
-UCl9s0VpZwQuvTCyZj_VtCwg,Sinatra_Says,Commentary,R
-UCVt7ujK-9TT9KByzL9g_2QQ,ShortFatOtaku,Commentary,R
-UC0aanx5rpr7D1M7KCFYzrLQ,Shoe0nHead,Commentary,C
-UCvBSa6Tzhiz7MrVI_DkwvWA,NateTalksToYou,Commentary,C
-UCGP7Obfm6Z1TFg_Pwx4ctxg,ABitOfBritt,Commentary,R
-UCLjcPQo6Tn1Iwfdr8X7S2CA,Ami Horowitz,Commentary,R
-UC1BWMtZbNLVMSFgwSukjqCw,Armoured Skeptic,Commentary,C
+UCMtFAi84ehTSYSE9XoHefig,The Late Show with Stephen Colbert,TVCommentary,L,LateNightComedy
+UCwWhs_6x42TyRM4Wstoq8HA,The Daily Show with Trevor Noah,TVCommentary,L,LateNightComedy
+UCZWlSUNDvCCS1hBiXV0zKcA,PragerU,Commentary,R,AIN
+UCy6kyFxaMqGtpE3pQTflK8A,Real Time with Bill Maher,TVCommentary,L,LateNightComedy
+UCVTyTA7-g9nopHeHbeuvpRA,Late Night with Seth Meyers,TVCommentary,L,LateNightComedy
+UCeH6qE4V7n5tVwP7NkdrtJg,The View,TVCommentary,C,
+UCLXo7UDZvByw2ixzpQCufnA,Vox,News,L,
+UCZNk7Jjb2t8EuBdgn4Zj1cw,No Bullshit,Commentary,R,AIN
+UC3M7l8ved_rYQ45AVzS0RGA,The Jimmy Dore Show,Commentary,L,
+UCLH7qUqM0PLieCVaHA7RegA,Gad Saad,Commentary,C,
+UCL-KWzX_hw7yfVR7WPQxIeA,T Я U Σ Ð I L T O M,Commentary,R,
+UCIozLvxEM3CwkhC8B9pGD9Q,Jamarl Thomas,Commentary,L,
+UCK-6FjMu9OI8i0Fo6bkW0VA,Democracy At Work,Commentary,L,
+UCeamuoYuBeRnRRbmq5CmjVg,Bloggingheads.tv,Commentary,C,
+UCNvsIonJdJ5E4EXMa65VYpA,ContraPoints,Commentary,L,
+UCL_f53ZEJxp8TtlOkHwMV9Q,Jordan Peterson,Commentary,R,AIN
+UCjNxszyFPasDdRoD9J6X-sw,TheAmazingAtheist,Commentary,L,
+UCbjBOso0vpWgDht9dPIVwhQ,Thom Hartmann Program,Commentary,L,
+UCptHRIwEDG34Ffu0AB5MsbQ,Stephanie Miller Show,Commentary,L,
+UCpU4j-LN_aibXA1gONvWzxw,Mike Malloy,Commentary,L,
+UCQuX4jRgybTdKu5YvVKfVSw,Bill Press Video,Commentary,L,
+UCFLRxVeYcB1H7DbuYZQG-lg,The Laura Flanders Show,Commentary,L,
+UCcnNWp-tx3-FaCWV4pMFTAg,The Zero Hour with RJ Eskow,Commentary,L,
+UCo9oQdIk1MfcnzypG3UnURA,The Rational National,Commentary,L,
+UCjRXO-HSl5XpuF-cWvtMV_g,TBTV,Commentary,L,
+UC0pCsHlEEmCfxllZSlRB2Og,Status Coup,Commentary,L,
+UCwFnxeT6z_ZO-fG2zGubPLw,Ron Placone,Commentary,L,
+UCyvaZ2RHEDrgKXz43gz7CbQ,Redacted Tonight,Commentary,L,
+UCT3v6vL2H5HK4loLMc8pmCw,VisualPolitik EN,Commentary,L,
+UCyuAKnN3g2fZ7_R9irgEUZQ,The Exploration with William C. Fox,Commentary,L,
+UCnxuOd8obvLLtf5_-YKFbiQ,Ezra Klein Show,Commentary,L,
+UCfrlXVXz-pT9AmmDELhpyOw,Justin Murphy,Commentary,C,
+UCdHT7KB1gDAXZYpPW71fn0Q,The Distributist,Commentary,R,
+UCqZMgLgGlYAWvSU8lZ9xiVg,Rationality Rules,Commentary,C,
+UC7kIy8fZavEni8Gzl8NLjOQ,CosmicSkeptic,Commentary,C,
+UCNAxrHudMfdzNi6NxruKPLw,Sam Harris,Commentary,C,AIN
+UCfsuI3-92QNO3DVy06PO9wg,Skeptic,Commentary,C,
+UCvQECJukTDE2i6aCoMnS-Vg,Big Think,Commentary,C,
+UCAuUUnT6oDeKwE6v1NGQxug,TED,Commentary,C,Education
+UCsT0YIqwnpJCM-mx7-gSA4Q,TEDx Talks,Commentary,L,Education
+UCBjBZmguQzn6WCYR7DQykLw,TED Fellows,Commentary,L,Education
+UCl9roQQwv4o4OuBj3FhQdDQ,The Damage Report,Commentary,L,
+UCPhKAfBMRI-GDozE1ldix3A,Ana Kasparian,Commentary,L,
+UCvb-DqrtgHRX-hPypnjfkdw,The Point with Ana Kasparian,Commentary,L,
+UCKw8kdkYfmuNSVehGoDw8Mg,TYT Interviews,Commentary,L,
+UCIAXaU6LIcZyoHYWqVLM4wg,TYT Nation,Commentary,L,
+UC17knbFWwBQOSaLCiTO_5jw,Acronym TV,Commentary,L,
+UCfDdlNLRVb1h3_7Xh-WhL3w,TheDC Shorts,Commentary,R,
+UCElqfal0wzzpLsHlRuqZjaA,Alexandria Ocasio-Cortez,Commentary,L,
+UCy6Q3wg-PgsgO2XtQxZpZEg,ADAM FRIENDED,Commentary,C,
+UCyGEPFftZEOU1v6RtU73ylA,PSA Sitch,Commentary,C,
+UC8RJExf7iNpV6tp6hvNtwww,Vee,Commentary,R,AIN
+UCi5N_uAqApEUIlg32QzkPlg,Bret Weinstein,Commentary,C,
+UCR85PW_B_7_Aisx5vNS7Gjw,Eric Weinstein,Commentary,C,
+UCm13xHVNFVwzHzK3QHSaZ3Q,Benjamin A Boyce,Commentary,C,
+UCfwE_ODI1YTbdjkzuSi1Nag,TheQuartering,Commentary,R,
+UCFQ6Gptuq-sLflbJ4YY3Umw,Rebel Wisdom,Commentary,C,
+UCkNJfjuNyIopt8UyC5ofhwg,Planned Parenthood,Commentary,L,
+UCaDVcGDMkvcRb4qGARkWlyg,SoulPancake,Commentary,L,
+UCNHVVFmsJL8vk0VHnBU_GBw,Libertatem,Commentary,R,
+UCVF8SAGEQnBA-yKM4iQNqfw,Riley J. Dennis,Commentary,L,
+UCa1DgvQUuQnJmMCwlxZ7SSg,We the Internet TV,Commentary,R,
+UCB0XYqBHnsSg-CR-qHF7pGg,Family Policy Institute of Washington,Commentary,R,
+UCWsiCjgGjMxOL_lVFo8wMHg,Tomorrow's World Viewpoint,Commentary,R,
+UC059kFc5oApruDS2QFmZfeA,Autumn Asphodel,Commentary,C,
+UCswH8ovgUp5Bdg-0_JTYFNw,Russell Brand,Commentary,L,
+UCjH72OaQxPoKgtv56C-4NOA,Tariq Radio,Commentary,C,
+UCCUQbQivBq233fSOm39kg1w,TBA,Commentary,L,
+UChDKyKQ59fYz3JO2fl0Z6sg,TODAY,TVNews,L,
+UCLrVxw4H4ZJ3LovpdbzF7bw,TheFallenState,Commentary,R,
+UC51_awyLXl2nxCduuzzmw4w,LibertyPen,Commentary,R,
+UCzWwWbbKHg4aodl0S35R6XA,HooverInstitution,Commentary,R,
+UCZm2IEBVHdtaAhSyYhWu9mg,InstituteForJustice,Commentary,C,
+UCyl7zwI6giPG6zC3uC8GGVg,The Cato Institute,Commentary,R,
+UCFJNcE0iHj7P6dhp5iCZRLg,Learn Liberty,Commentary,R,
+UCKtFwcQCsl1ttW2CgOqFMUQ,Mercatus Center,Commentary,C,
+UC5bEfSFTYQVfLCwkhBt8NtQ,The Heritage Foundation,Commentary,R,
+UCHqkXbgqrDrDVInBMSoGQgQ,The Daily Signal,Commentary,R,
+UCt8lRYpzb-sSrKFb4DT2ECw,American Enterprise Institute,Commentary,R,
+UCNiNWbmPWehjpQohglWsKxw,The Red Elephants Vincent James,Commentary,R,AIN
+UCDuIxfEt_VoI1yfARYmfCGA,Vincent James of The Red Elephants,Commentary,R,AIN
+UCxWqlhmDlq4nQ0Jv5hD2wlw,SHUTTERSHOT45,Commentary,R,
+UCNxZtF2pZWV7Squ4AQtGpkA,Very Fake News,Commentary,R,
+UC3X8lQvudZJ6fMsL7WwqEDw,Airliner World & More,Commentary,R,
+UCAJqGdQ-KO8jEcsEx4PA-Lg,The Common Sense Conservative,Commentary,R,
+UCtcX0OObQQRC9XiU26P-V9A,American Patriot,Commentary,R,
+UCtBfQmeHxSMsU2ghPAhGoRQ,Gotcha News Network,Commentary,R,
+UCenxjWEkb0Sv67vejOgZ3Tg,IntelligenceSquared Debates,Commentary,C,
+UCCHIKONeGp9nlB9XNhsLbRQ,The Conservative Station,Commentary,R,
+UCy-N04M3rGQMznjIv5g2LGQ,The Patriotic Report,Commentary,R,
+UClHpw6AX6AAKHQCaWtGVqSg,TheWishmaster,Commentary,C,
+UC0hVVwpx_zoLEuKI8bOgFdg,NumbersUSA,Commentary,R,
+UCJjSDX-jUChzOEyok9XYRJQ,Jubilee,Commentary,C,
+UCvQ2kejN6UkrEVhE5oiYwBw,GOP War Room,Commentary,R,
+UCMRxoFJPZiBcxgFzxN0ao-w,Slightly Offens*ve,Commentary,R,
+UCJ7hqXLdgXlzjKpZY-K_6HA,Chelsea,Commentary,L,
+UCabaQPYxxKepWUsEVQMT4Kw,Healthcare Triage,Commentary,L,
+UCm5J1Fu_dHgBcMTpXu-NXUw,Pangburn Philosophy,Commentary,C,
+UCJ6o36XL0CpYb6U5dNBiXHQ,Shaun,Commentary,L,
+UClt01z1wHHT7c5lKcU8pxRQ,hbomberguy,Commentary,L,
+UC8Cl9QaRtuW9CNjP7pP4BBQ,Jason Goodman,Commentary,R,
+UCrQ-wHKVi0JDWjQGcuoYnew,George Webb,Commentary,R,
+UCv0dEcvXLOf4ZFvjCahK4Lw,American Intelligence Media,Commentary,R,Conspiracy
+UCVxYHHMK9DcnMup3t2A15qg,Right Wing News!,Commentary,R,
+UCIjuLiLHdFxYtFmWlbTGQRQ,Peter Schiff,Commentary,R,
+UCWsiCjgGjMxOL_lVFo8wMHg,TomWoodsTV,Commentary,R,
+UCkJ1N-7g9Q6n7KnriGit-Ig,RonPaulLibertyReport,Commentary,R,
+UCsnG5Ld5iYFIyAaW5oifzgQ,Blackstone Intelligence Network,Commentary,R,
+UCpimAnNpH_JQxDa0YMTwdnw,HighImpactVlogs,Commentary,R,
+UCuNfok7ozooi0LZgp6JJS4A,RichieFromBoston,Commentary,R,
+UCcDC6kQcOgMw1fNTwgiBn_Q,RFB II,Commentary,R,
+UCTYu3LHeW4GliTc5iBAkX-w,pocketsofthefuture,Commentary,R,
+UCVEaFSr-jdTa_QE4PPSkVJw,Truthstream Media,Commentary,R,
+UCDUBDASXQ-rVXsjqblQwG7A,DTRHRadioArchives,Commentary,R,
+UC3dZNn_1-kP76SmIqy4rHSw,ChangeDaChannel,Commentary,R,
+UCRVno4GDsO4Fs2lLAHGKfkQ,Montagraph,Commentary,R,
+UCtZ2JhJGOIgoRg6OGQqwb8w,MaKaElectric,Commentary,R,
+UC7TvL4GlQyMBLlUsTrN_C4Q,corbettreport,Commentary,R,
+UC7kaw8NXcqb7jdRsRIHaswQ,The Fowler Show,Commentary,L,
+UCWW3gYCvKS412p7o6qSK5gg,#WeThePeople 24/7 Patriots' Soapbox Stream,Commentary,R,Conspiracy
+UCHqC-yWZ1kri4YzwRSt6RGQ,Right Side Broadcasting Network,Commentary,R,
+UCCT8a7d6S6RJUivBgNRsiYg,Three Arrows,Commentary,L,
+UCla6APLHX6W3FeNLc8PYuvg,Lauren Southern,Commentary,R,AIN
+UCViO5gRp5Boa6QslAo-gPAQ,Rational Disconnect,Commentary,L,
+UCT5jxI_OYY2r--TjAGXD03A,Peter Coffin,Commentary,L,
+UCaN8DZdc8EHo5y1LsQWMiig,Big Joel,Commentary,L,
+UCFEmOPY04flXH-QpMMAGeJA,BadMouseProductions,Commentary,L,
+UCidbCSNfzJXScnt8LWtwrhA,DemocraticSocialist01,Commentary,L,
+UC2PA-AKmVpU6NKCGtZq_rKQ,Philosophy Tube,Commentary,L,
+UCK-6FjMu9OI8i0Fo6bkW0VA,Democracy At Work,Commentary,L,
+UCrmm_7RDZJeQzq2-wvmjueg,TheRealNews,Commentary,L,
+UCzkFu0AVOtXy-vTo028mJxw,chescaleigh,Commentary,L,
+UCJ2yCFYUDiBJajga4tXRdNA,marinashutup,Commentary,L,
+UCLA7mHQtzSiU2MUEmdHyXsg,TheeKatsMeoww,Commentary,L,
+UCxFWzKZa74SyAqpJyVlG5Ew,Kat Blaque,Commentary,L,
+UCGaVdbSav8xWuFWTadK6loA,vlogbrothers,Commentary,L,
+UCCsiAKRKcgzA_372WbXNBaw,Dr. Steve Turley,Commentary,R,
+UCG1uayRlzz3ahT8ISRdyw7Q,Genetically Modified Skeptic,Commentary,C,
+UCC6ue7UYt1yeS621xmTMKrQ,Rachel Oates,Commentary,C,
+UCewUkuIHNuwuMNWMa96q9ZQ,Godless Cranium,Commentary,C,
+UCw8rdbWx_3f0iIzL7OWYOcw,Daisy Cousens,Commentary,R,
+UCxeY-wRrb65Jt37QHa5xMog,Matt Christiansen,Commentary,R,AIN
+UCwW_vaMPlq8J4weKDsfeJzw,Bearing,Commentary,R,
+UCaEgjV59fLXgnN5BJdLsD3Q,Liberty Doll,Commentary,R,
+UCDc_MCu3ZstNXmAqqT36SNA,SugarTits,Commentary,R,
+UC-EREEErQQqgYNyNB4YGQnQ,Patrick,Commentary,R,
+UCl9s0VpZwQuvTCyZj_VtCwg,Sinatra_Says,Commentary,R,
+UCVt7ujK-9TT9KByzL9g_2QQ,ShortFatOtaku,Commentary,R,
+UC0aanx5rpr7D1M7KCFYzrLQ,Shoe0nHead,Commentary,C,
+UCvBSa6Tzhiz7MrVI_DkwvWA,NateTalksToYou,Commentary,C,
+UCGP7Obfm6Z1TFg_Pwx4ctxg,ABitOfBritt,Commentary,R,
+UCLjcPQo6Tn1Iwfdr8X7S2CA,Ami Horowitz,Commentary,R,
+UC1BWMtZbNLVMSFgwSukjqCw,Armoured Skeptic,Commentary,C,
 #
 # From  https://www.adfontesmedia.com/
 #
-UC8Su5vZCXWRag13H53zWVwA,TimeMagazine,News,C
-UC16niRr50-MSBwiO3YDb3RA,BBC News,TVNews,L
-UCUMZ7gohGI9HcU9VNsr2FJQ,Bloomberg,News,C
-UCJnS2EsPfv46u1JR8cnD0NA,NPR,News,L
-UCw3SYO_euO0TSPC_m_0Pzgw,Los Angeles Times,News,L
-UCBi2mrWuNuyYy4gbM6fU18Q,ABC News,TVNews,C
-UC52X5wxOL_s5yw0dQk7NtgA,Associated Press,News,C
-UCfU4-ArXuSX0tpyApyklMAg,Axios,News,C
-UCmgnsaQIK1IR808Ebde-ssA,Breitbart News,News,R
-UCcyq283he07B7_KUX07mmtA,Business Insider,News,C
-UC8eE25pvmhz-nAMZATep-7g,Conservative Tribune,News,R
-UC7qZ_e097NBkgOljy1joVRA,The Daily Beast,News,L
-UCP4BdwPKyYnfRLjSNfGAPRA,Daily Caller,News,R
-UCw3fku0sH3qA3c3pZeJwdAw,Daily Mail,News,R
-UCHqkXbgqrDrDVInBMSoGQgQ,The Daily Signal,News,L
-UCoUxsWakJucWg46KW5RsvPw,Financial Times,News,C
-UCmh7afBz-uWwOSSNTqUBAhg,Forbes,News,C
-UCP2gdh7HfjgCoi8lO50dA5w,Fortune,News,R
-UCv1RrKT8zaa5J1ueqCmMfsw,freespeechtv,News,L
-UCv002AUCZaPNwiADqwchijg,The Intercept,News,L
-UCgpEN1mWQxivlZ9O6GuZbOw,Mic,News,L
-UCbWB33FQvFiV0Pq9Calkgzw,Mother Jones,News,L
-UCun4tg1BecN4PuxwZ6mL3NA,National Review,News,R
-UCrvhNP_lWuPIP6QZzJmM-bw,New York Post,News,R
-UCx6h-dWzJ5NpAlja1YsApdg,Newsmax TV,News,L
-UCyF0994XbriKL_Vss0fTUMw,OZY,News,C
-UCgyeJxD05YnoDquRMNBfBqw,PBS,TVNews,C
-UCgjtvMmHXbutALaw9XzRkAg,POLITICO,News,C
-UCtCL58_DaVdVRmev3yHK7pg,ProPublica,News,L
-UC9f78Z5hgtDt0n8JWyfBk8Q,Quartz,News,L
-UCLjGwELoFRXojiw8T2t2BDw,Red State Update,News,R
-UCTcCX_XY4l-W2ba5IxIRhsg,TPM TV,News,L
-UCKgJEs_v0JB-6jWb8lIy9Xw,The Blaze,News,R
-UCMk8U2Hmfdxqn3zrCq2g9oQ,The Federalist Society,News,R
-UCHpw8xwDNhU9gdohEcJu4aA,The Guardian,News,L
-UCDGECor7yw2AkrgAcHkcJxQ,The Nation,News,L
-UCdn-M_vxWEK07X3t19ximDQ,Washington Free Beacon,News,R
+UC8Su5vZCXWRag13H53zWVwA,TimeMagazine,News,C,
+UC16niRr50-MSBwiO3YDb3RA,BBC News,TVNews,L,
+UCUMZ7gohGI9HcU9VNsr2FJQ,Bloomberg,News,C,
+UCJnS2EsPfv46u1JR8cnD0NA,NPR,News,L,
+UCw3SYO_euO0TSPC_m_0Pzgw,Los Angeles Times,News,L,
+UCBi2mrWuNuyYy4gbM6fU18Q,ABC News,TVNews,C,
+UC52X5wxOL_s5yw0dQk7NtgA,Associated Press,News,C,
+UCfU4-ArXuSX0tpyApyklMAg,Axios,News,C,
+UCmgnsaQIK1IR808Ebde-ssA,Breitbart News,News,R,
+UCcyq283he07B7_KUX07mmtA,Business Insider,News,C,
+UC8eE25pvmhz-nAMZATep-7g,Conservative Tribune,News,R,
+UC7qZ_e097NBkgOljy1joVRA,The Daily Beast,News,L,
+UCP4BdwPKyYnfRLjSNfGAPRA,Daily Caller,News,R,
+UCw3fku0sH3qA3c3pZeJwdAw,Daily Mail,News,R,
+UCHqkXbgqrDrDVInBMSoGQgQ,The Daily Signal,News,L,
+UCoUxsWakJucWg46KW5RsvPw,Financial Times,News,C,
+UCmh7afBz-uWwOSSNTqUBAhg,Forbes,News,C,
+UCP2gdh7HfjgCoi8lO50dA5w,Fortune,News,R,
+UCv1RrKT8zaa5J1ueqCmMfsw,freespeechtv,News,L,
+UCv002AUCZaPNwiADqwchijg,The Intercept,News,L,
+UCgpEN1mWQxivlZ9O6GuZbOw,Mic,News,L,
+UCbWB33FQvFiV0Pq9Calkgzw,Mother Jones,News,L,
+UCun4tg1BecN4PuxwZ6mL3NA,National Review,News,R,
+UCrvhNP_lWuPIP6QZzJmM-bw,New York Post,News,R,
+UCx6h-dWzJ5NpAlja1YsApdg,Newsmax TV,News,L,
+UCyF0994XbriKL_Vss0fTUMw,OZY,News,C,
+UCgyeJxD05YnoDquRMNBfBqw,PBS,TVNews,C,
+UCgjtvMmHXbutALaw9XzRkAg,POLITICO,News,C,
+UCtCL58_DaVdVRmev3yHK7pg,ProPublica,News,L,
+UC9f78Z5hgtDt0n8JWyfBk8Q,Quartz,News,L,
+UCLjGwELoFRXojiw8T2t2BDw,Red State Update,News,R,
+UCTcCX_XY4l-W2ba5IxIRhsg,TPM TV,News,L,
+UCKgJEs_v0JB-6jWb8lIy9Xw,The Blaze,News,R,
+UCMk8U2Hmfdxqn3zrCq2g9oQ,The Federalist Society,News,R,
+UCHpw8xwDNhU9gdohEcJu4aA,The Guardian,News,L,
+UCDGECor7yw2AkrgAcHkcJxQ,The Nation,News,L,
+UCdn-M_vxWEK07X3t19ximDQ,Washington Free Beacon,News,R,
 #
 # Suggestions after publication - 24th Dec 2018
 #
-UCgGgkVyadk0TdxmVzYcAM-Q,Hugo and Jake,Commentary,L
-UCp4oMaqaY0hIoT9jafj1g8g,1791,Commentary,R
-UCQNqxS0Fu6CmzmVHSlnrShw,Nuance Bro,Commentary,C
-UC6P8LT59hNgA8bes61IA9Ow,Bill Whittle,Commentary,R
-UCRhV1rWIpm_pU19bBm_2RXw,Sean Carrol,Commentary,L
-UCmb8hO2ilV9vRa8cilis88A,Thunderf00t,Commentary,L
-UCSkzHxIcfoEr69MWBdo0ppg,Cuck Philosophy,Commentary,L
-UCyoQK-mZXr2ws4C0nXGCH1w,Zero Books,Commentary,L
-UCL0u5uz7KZ9q-pe-VC8TY-w,Candace Owens,Commentary,R
-UCarEovlrD9QY-fy-Z6apIDQ,Patriot Act,Commentary,L
-UCeFlOi54kYIgbJHt_1ApDpg,The Justicar,Commentary,R
-UCBVYmXSIzHq_gXMZpsfd9kg,6oodfella,Commentary,R
-UCVt7ujK-9TT9KByzL9g_2QQ,ShortFatOtaku,Commentary,R
-UCXIN3HIH0eon5hVYYpnoNuQ,azureScapegoat,Commentary,L
-UCkeGEMunZIoGUyP7z0pMYmQ,John Ward,Commentary,R
-UC2w1CQqPli4w94-PCg2UvJQ,The Alternative Hypothesis,Commentary,R
-UCIibK0GTXCaQCAamJAepm1g,ramzpaul,Commentary,R
-UCtoaZpBnrd0lhycxYJ4MNOQ,Hasan Piker,Commentary,L
-UCfhkaO2fOmIX05DQ72uZsig,The Asian Capitalists,Commentary,R
-UCtlfyd1Xs9CtxfBNP9_IgAw,Cult of Dusty,Commentary,L
-UCUowFWIWGw6Pv2JqfEj8njQ,Aydin Paladin,Commentary,R
+UCgGgkVyadk0TdxmVzYcAM-Q,Hugo and Jake,Commentary,L,
+UCp4oMaqaY0hIoT9jafj1g8g,1791,Commentary,R,
+UCQNqxS0Fu6CmzmVHSlnrShw,Nuance Bro,Commentary,C,
+UC6P8LT59hNgA8bes61IA9Ow,Bill Whittle,Commentary,R,
+UCRhV1rWIpm_pU19bBm_2RXw,Sean Carrol,Commentary,L,
+UCmb8hO2ilV9vRa8cilis88A,Thunderf00t,Commentary,L,
+UCSkzHxIcfoEr69MWBdo0ppg,Cuck Philosophy,Commentary,L,
+UCyoQK-mZXr2ws4C0nXGCH1w,Zero Books,Commentary,L,
+UCL0u5uz7KZ9q-pe-VC8TY-w,Candace Owens,Commentary,R,AIN
+UCarEovlrD9QY-fy-Z6apIDQ,Patriot Act,Commentary,L,
+UCeFlOi54kYIgbJHt_1ApDpg,The Justicar,Commentary,R,
+UCBVYmXSIzHq_gXMZpsfd9kg,6oodfella,Commentary,R,
+UCVt7ujK-9TT9KByzL9g_2QQ,ShortFatOtaku,Commentary,R,
+UCXIN3HIH0eon5hVYYpnoNuQ,azureScapegoat,Commentary,L,
+UCkeGEMunZIoGUyP7z0pMYmQ,John Ward,Commentary,R,
+UC2w1CQqPli4w94-PCg2UvJQ,The Alternative Hypothesis,Commentary,R,
+UCIibK0GTXCaQCAamJAepm1g,ramzpaul,Commentary,R,
+UCtoaZpBnrd0lhycxYJ4MNOQ,Hasan Piker,Commentary,L,
+UCfhkaO2fOmIX05DQ72uZsig,The Asian Capitalists,Commentary,R,
+UCtlfyd1Xs9CtxfBNP9_IgAw,Cult of Dusty,Commentary,L,
+UCUowFWIWGw6Pv2JqfEj8njQ,Aydin Paladin,Commentary,R,
 UCT7BLBDnD-wEXeqZSg24aJw,soph,Commentary,R,
-UCm5CkXzGXb-A2XX0nuTctMQ,JustInformed Talk,Commentary,R
+UCm5CkXzGXb-A2XX0nuTctMQ,JustInformed Talk,Commentary,R,Conspiracy
 UC_7vFlErTHxVD-IFNB-BFCg,America Uncovered,Commentary,R,
-UCSio3E7kYvPeHKhfuYZWriA,prayingmedic,Commentary,R
-UCk0rJN52_9-cLGW-TeZwDGw,RedPill78,Commentary,R
-UCWW3gYCvKS412p7o6qSK5gg,WeThePeople 24/7 Patriots' Soapbox Stream,Commentary,R
-UCpwXjOAwWDuWlmA2gTjjBwg,TRUreporting,Commentary,R
-UCzFSNq-Q7QV6kBSw9zCoVXg,And We Know,Commentary,R
-UC_rHIryFaY1d9Tt46SQE8tQ,Lift the Veil,Commentary,R
+UCSio3E7kYvPeHKhfuYZWriA,prayingmedic,Commentary,R,Conspiracy
+UCk0rJN52_9-cLGW-TeZwDGw,RedPill78,Commentary,R,Conspiracy
+UCWW3gYCvKS412p7o6qSK5gg,WeThePeople 24/7 Patriots' Soapbox Stream,Commentary,R,Conspiracy
+UCpwXjOAwWDuWlmA2gTjjBwg,TRUreporting,Commentary,R,Conspiracy
+UCzFSNq-Q7QV6kBSw9zCoVXg,And We Know,Commentary,R,Conspiracy
+UC_rHIryFaY1d9Tt46SQE8tQ,Lift the Veil,Commentary,R,Conspiracy
 #
 # Breadtube list https://np.reddit.com/r/BreadTube/comments/9kwkxa/master_list_of_leftwing_youtube_and_podcast/
 #
-UC5fdssPqmmGhkhsJi4VcckA,Innuendo Studios,Commentary,L
-UCljE1ODdSF7LS9xx9eWq0GQ,potholer54,Commentary,L
-UCQlNT2xADrXblBd1Tz1Fjzg,Claudia Brown,Commentary,L
-UCQpltQMhYFvyeS5M6P0Zg-Q,Creationist Cat,Commentary,L
-UCmFJ77PwU4PD4Im3s9kiWCg,EssenceOfThought,Commentary,L
-UCVY0aIaw-V9GbWmlab4Z_dw,Libertarian Socialist Rants,Commentary,L
-UCB-5u8VgFc_TI1aAj8_SmDA,RichardDWolff,Commentary,L
-UCQb22imbIqKKWOC98C8Rm2A,TMM,Commentary,L
-UCOjLfFE0TABS9bk05oH-kgw,Eric Taxxon,Commentary,L
-UC4YM0NX86SgxJRf8y0lQ3gA,Messy Elliott,Commentary,L
-UCepkun0sH16b-mqxBN22ogA,Mexie,Commentary,L
-UCkZFKKK-0YB0FvwoS8P7nHg,NonCompete,Commentary,L
-UC8XjmAEDVZSCQjI150cb4QA,Knowing Better,Commentary,L
-UCw-4391y4Lm0LZz2Z6pau9Q,Thom Avella,Commentary,L
-UCrr7y8rEXb7_RiVniwvzk9w,Thought Slime,Commentary,L
-UCDULjo1v2Hivuu4h4LZSTUQ,Xexizy,Commentary,L
-UC_oi8JESlRbOQW5n7Pl07NA,Bat'ko,Commentary,L
-UCs8mbJ-M142ZskR5VR0gBig,YUGOPNIK,Commentary,L
-UC3FD64RRsrCLpiZNkq7ZkSg,anarchopac,Commentary,L
-UCdQKvqmHKe_8fv4Rwe7ag9Q,Jack Saint / LackingSaint,Commentary,L
-UC9infsKo33_2LUoiqXGgQWg,Renegade Cut,Commentary,L
-UCxTdWpLJurbGlFMWOwXWG_A,Step Back History,Commentary,L
-UCvlj0IzjSnNoduQF0l3VGng,Some More News,Commentary,L
+UC5fdssPqmmGhkhsJi4VcckA,Innuendo Studios,Commentary,L,
+UCljE1ODdSF7LS9xx9eWq0GQ,potholer54,Commentary,L,
+UCQlNT2xADrXblBd1Tz1Fjzg,Claudia Brown,Commentary,L,
+UCQpltQMhYFvyeS5M6P0Zg-Q,Creationist Cat,Commentary,L,
+UCmFJ77PwU4PD4Im3s9kiWCg,EssenceOfThought,Commentary,L,
+UCVY0aIaw-V9GbWmlab4Z_dw,Libertarian Socialist Rants,Commentary,L,
+UCB-5u8VgFc_TI1aAj8_SmDA,RichardDWolff,Commentary,L,
+UCQb22imbIqKKWOC98C8Rm2A,TMM,Commentary,L,
+UCOjLfFE0TABS9bk05oH-kgw,Eric Taxxon,Commentary,L,
+UC4YM0NX86SgxJRf8y0lQ3gA,Messy Elliott,Commentary,L,
+UCepkun0sH16b-mqxBN22ogA,Mexie,Commentary,L,
+UCkZFKKK-0YB0FvwoS8P7nHg,NonCompete,Commentary,L,
+UC8XjmAEDVZSCQjI150cb4QA,Knowing Better,Commentary,L,
+UCw-4391y4Lm0LZz2Z6pau9Q,Thom Avella,Commentary,L,
+UCrr7y8rEXb7_RiVniwvzk9w,Thought Slime,Commentary,L,
+UCDULjo1v2Hivuu4h4LZSTUQ,Xexizy,Commentary,L,
+UC_oi8JESlRbOQW5n7Pl07NA,Bat'ko,Commentary,L,
+UCs8mbJ-M142ZskR5VR0gBig,YUGOPNIK,Commentary,L,
+UC3FD64RRsrCLpiZNkq7ZkSg,anarchopac,Commentary,L,
+UCdQKvqmHKe_8fv4Rwe7ag9Q,Jack Saint / LackingSaint,Commentary,L,
+UC9infsKo33_2LUoiqXGgQWg,Renegade Cut,Commentary,L,
+UCxTdWpLJurbGlFMWOwXWG_A,Step Back History,Commentary,L,
+UCvlj0IzjSnNoduQF0l3VGng,Some More News,Commentary,L,
 #
 # To compare with algotransparency.org
 #
-UCpwvZwUam-URkxB7g4USKpg,RussiaToday,News,C
+UCpwvZwUam-URkxB7g4USKpg,RussiaToday,News,C,RT
