@@ -31,6 +31,12 @@ namespace YouTubeCli {
     public string PathB { get; set; }
   }
 
+  [Verb(name:"ChannelInfo", HelpText = "Show channel information (ID,Name) given a video ID")]
+  public class ChannelInfoOption : CommonOption {
+    [Option('v', Required = true, HelpText = "the ID of a video")]
+    public string VideoId { get; set; }
+  }
+
   public abstract class CommonOption {
     [Option('c', "channels", HelpText = "optional '|' separated list of channels to process")]
     public string ChannelIds { get; set; }
@@ -51,11 +57,12 @@ namespace YouTubeCli {
 
   class Program {
     static int Main(string[] args) {
-      var res = Parser.Default.ParseArguments<CollectOption, UpdateOption, FixOption, SyncOption>(args).MapResult(
+      var res = Parser.Default.ParseArguments<CollectOption, UpdateOption, FixOption, SyncOption, ChannelInfoOption>(args).MapResult(
         (CollectOption c) => Run(c, args, Collect),
         (UpdateOption u) => Run(u, args, Update),
         (FixOption f) => Run(f, args, Fix),
         (SyncOption s) => Run(s, args, Sync),
+        (ChannelInfoOption v) => Run(v, args, ChannelInfo),
         errs => (int) ExitCode.UnknownError
       );
       return res;
@@ -108,6 +115,13 @@ namespace YouTubeCli {
 
     static async Task<ExitCode> Sync(TaskCtx<SyncOption> ctx) {
       await SyncBlobs.Sync(ctx.Option.CsA, ctx.Option.CsB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.App.Parallel, ctx.Log);
+      return ExitCode.Success;
+    }
+
+    static async Task<ExitCode> ChannelInfo(TaskCtx<ChannelInfoOption> ctx) {
+      var yt = ctx.Cfg.YtClient(ctx.Log);
+      var v = await yt.VideoData(ctx.Option.VideoId);
+      ctx.Log.Information("{ChannelId},{ChannelTitle}", v.ChannelId, v.ChannelTitle);
       return ExitCode.Success;
     }
   }

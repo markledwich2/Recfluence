@@ -79,7 +79,9 @@ namespace YtReader {
     public static ISimpleFileStore DataStore(this Cfg cfg, StringPath path = null) =>
       new AzureBlobFileStore(cfg.App.Storage.DataStorageCs, path ?? cfg.App.Storage.DbPath);
 
-    public static YtStore YtStore(this Cfg cfg, ILogger log) {
+    public static YtClient YtClient(this Cfg cfg, ILogger log) => new YtClient(cfg.App, log);
+
+    public static YtStore YtStore(this Cfg cfg, ILogger log) {  
       var reader = new YtClient(cfg.App, log);
       
       var ytStore = new YtStore(reader,  cfg.DataStore(cfg.App.Storage.DbPath));
