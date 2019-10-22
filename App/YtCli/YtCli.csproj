@@ -14,7 +14,7 @@
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.10.0" />
     <PackageReference Include="Microsoft.Packaging.Tools.Trimming" Version="1.1.0-preview1-26619-01" />
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.0.3" />
-    <PackageReference Include="YoutubeExplode" Version="4.7.6" />
+    <PackageReference Include="YoutubeExplode" Version="4.7.10" />
   </ItemGroup>
 
   <ItemGroup>

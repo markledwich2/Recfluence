@@ -20,10 +20,9 @@ namespace YtReader {
     YtStore Yt { get; }
 
     public async Task UpdateData() {
-      Log.Information("Starting incremental data update");
+      Log.Information("Starting data update");
 
-      var channelCfg = await Cfg.LoadChannelConfig();
-      var seeds = channelCfg.Seeds.Randomize().ToList();
+      var seeds = (await ChannelSheets.SeedChannels(Cfg.Sheets, Log, Cfg.LimitedToSeedChannels)).Randomize().ToList();
       var res = await seeds.BlockTransform(UpdateChannel, Cfg.Parallel, progressUpdate:
         p => Log.Verbose("Channel update progress {Channels}/{Total} {Speed}",
           p.Results.Count, seeds.Count, p.Speed("channels").Humanize())).WithDuration(); // sufficiently parallel inside
@@ -32,7 +31,7 @@ namespace YtReader {
         res.Duration.Humanize(), res.Result.Count, res.Result.Sum(r => r.videos.Count));
     }
 
-    async Task<(ChannelStored channel, ICollection<VideoStored> videos)> UpdateChannel(SeedChannel seed) {
+    async Task<(ChannelStored channel, ICollection<VideoStored> videos)> UpdateChannel(IChannelId seed) {
       Log.Information("Updating {Channel} with new data", seed.Title);
       var (channel, isNew) = await Yt.GetAndUpdateChannel(seed.Id);
       var log = Log.ForContext("Channel", channel.Latest.Title);
@@ -59,9 +58,8 @@ namespace YtReader {
     }
 
     public async Task RefreshMissingVideos() {
-      var channelCfg = await Cfg.LoadChannelConfig();
-      await channelCfg.Seeds.Randomize().BlockAction(async c => {
-        
+      var seeds = await ChannelSheets.SeedChannels(Cfg.Sheets, Log, Cfg.LimitedToSeedChannels);
+      await seeds.Randomize().BlockAction(async c => {
         Log.Information("Started fixing '{Channel}'", c.Title);
         
         var channelVids = (await Yt.ChannelVideosCollection.Get(c.Id))?.Vids;

@@ -2,7 +2,7 @@
   "profiles": {
     "YtCli": {
       "commandName": "Project",
-      "commandLineArgs": "update"
+      "commandLineArgs": "collect"
     }
   }
 }

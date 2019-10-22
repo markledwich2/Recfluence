@@ -66,16 +66,6 @@ namespace YtReader {
   }
 
   public static class ChannelConfigExtensions {
-    public static async Task<ChannelConfig> LoadChannelConfig(this AppCfg cfg) {
-      var channelCfg = new ChannelConfig();
-      var csv = await new WebClient().DownloadStringTaskAsync(cfg.YtReader.SeedsUrl);
-      var seedData = CsvExtensions.ReadFromCsv<SeedChannel>(csv);
-      channelCfg.Seeds.AddRange(
-        cfg.LimitedToSeedChannels != null ? seedData.Where(s => cfg.LimitedToSeedChannels.Contains(s.Id)) : seedData);
-      //channelCfg.Excluded.AddRange(cfg.CrawlConfigDir.Combine("ChannelExclude.csv").ReadFromCsv<InfluencerOverride>());
-      return channelCfg;
-    }
-
     public static ISimpleFileStore DataStore(this Cfg cfg, StringPath path = null) =>
       new AzureBlobFileStore(cfg.App.Storage.DataStorageCs, path ?? cfg.App.Storage.DbPath);
 
@@ -122,6 +112,14 @@ namespace YtReader {
     public ServicePrincipalCfg ServicePrincipal { get; set; } = new ServicePrincipalCfg();
     public ContainerCfg Container { get; set; } = new ContainerCfg();
     public string SeqUrl { get; set; }
+
+    public SheetsCfg Sheets { get; set; }
+  }
+
+  public class SheetsCfg {
+    public NameSecret Creds { get; set; }
+    public string MainChannelSheetId { get; set; }
+    public ICollection<string> UserChannelSheetIds { get; set; }
   }
 
   public class YtReaderCfg {
@@ -157,34 +155,10 @@ namespace YtReader {
     public double Mem { get; set; } = 8;
     public NameSecret RegistryCreds { get; set; }
   }
-
+  
   public class ServicePrincipalCfg {
     public string ClientId { get; set; }
     public string Secret { get; set; }
     public string TennantId { get; set; }
-  }
-
-  public class BatchCfg {
-    public string Url { get; set; }
-    public string Key { get; set; }
-    public string Account { get; set; }
-    public string Pool { get; set; } = "win";
-  }
-
-  public class SeedChannel {
-    public string Id { get; set; }
-    public string Title { get; set; }
-    public string Type { get; set; }
-    public string LR { get; set; }
-  }
-
-  public class InfluencerOverride {
-    public string Id { get; set; }
-    public string Title { get; set; }
-  }
-
-  public class ChannelConfig {
-    public IKeyedCollection<string, SeedChannel> Seeds { get; } = new KeyedCollection<string, SeedChannel>(c => c.Id);
-    public IKeyedCollection<string, InfluencerOverride> Excluded { get; } = new KeyedCollection<string, InfluencerOverride>(c => c.Id);
   }
 }

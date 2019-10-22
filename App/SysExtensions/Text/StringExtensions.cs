@@ -79,8 +79,6 @@ namespace SysExtensions.Text {
 
     public static string Hash(this string content) => _hash.ComputeHash(content.ToBytesUtf8()).ToBase64String();
 
-    public static string SurroundWith(this string s, string prefix, string suffix) => prefix + s + suffix;
-
     //public static string ToStringOrEmpty(this object o) => o == null ? "" : o.ToString();
 
     /// <summary>

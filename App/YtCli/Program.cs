@@ -31,7 +31,7 @@ namespace YouTubeCli {
     public string PathB { get; set; }
   }
 
-  [Verb(name:"ChannelInfo", HelpText = "Show channel information (ID,Name) given a video ID")]
+  [Verb(name: "ChannelInfo", HelpText = "Show channel information (ID,Name) given a video ID")]
   public class ChannelInfoOption : CommonOption {
     [Option('v', Required = true, HelpText = "the ID of a video")]
     public string VideoId { get; set; }

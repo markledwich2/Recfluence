@@ -42,14 +42,14 @@ namespace YtReader {
       var sw = Stopwatch.StartNew();
       var analysisDir = DateTime.UtcNow.ToString("yyyy-MM-dd");
       await SaveCfg(analysisDir);
-
-      var channelCfg = await Cfg.LoadChannelConfig();
-      var seeds = channelCfg.Seeds.ToList();
+      
+      var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
+      await Task.WhenAll(SaveVideosAndRecommends(), SaveChannels());
 
       async Task SaveVideosAndRecommends() {
         var par = (int) Math.Sqrt(Cfg.ParallelCollect);
         var vrTransform =
-          new TransformBlock<SeedChannel, (IReadOnlyCollection<VideoRow> vids, IReadOnlyCollection<RecommendRow> recs)>(
+          new TransformBlock<ChannelWithUserData, (IReadOnlyCollection<VideoRow> vids, IReadOnlyCollection<RecommendRow> recs)>(
             async c => {
               var vids = (await (await ChannelVideos(c)).NotNull().BlockTransform(Video, par)).NotNull().ToReadOnly();
               var recs = (await vids.BlockTransform(Recommends, par)).NotNull().SelectMany(r => r).NotNull().ToReadOnly();
@@ -74,18 +74,15 @@ namespace YtReader {
       }
 
       async Task SaveChannels() {
-        {
           var channels = await seeds.BlockTransform(Channel, Cfg.Parallel,
             progressUpdate: p => Log.Information("Collecting channels {Channels}/{Total}. {Speed}", p.Results.Count,
               seeds.Count, p.Speed("channels")));
+          
           await SaveParquet(channels.NotNull(), "Channels", analysisDir);
-        }
       }
-      
-      await Task.WhenAll(SaveVideosAndRecommends(), SaveChannels());
     }
 
-    async Task<ICollection<ChannelVideoRow>> ChannelVideos(SeedChannel c) {
+    async Task<ICollection<ChannelVideoRow>> ChannelVideos(IChannelId c) {
       var channelVids = await Yt.ChannelVideosCollection.Get(c.Id);
       return channelVids?.Vids.Select(v => new ChannelVideoRow {
         VideoId = v.VideoId,
@@ -117,21 +114,25 @@ namespace YtReader {
       };
     }
 
-    async Task<ChannelRow> Channel(SeedChannel c) {
+    async Task<ChannelRow> Channel(ChannelWithUserData c) {
       var channel = await Yt.Channels.Get(c.Id);
       if(channel == null) {
         Log.Error("Unable to find seed channel {Channel}", c.Title);
         return null;
       }
+      
       return new ChannelRow {
         ChannelId = channel.ChannelId,
         Title = channel.ChannelTitle,
         SubCount = (long) (channel.Latest?.Stats?.SubCount ?? 0),
         ViewCount = (long) (channel.Latest?.Stats?.ViewCount ?? 0),
-        LR = c.LR,
-        Type = c.Type,
         Thumbnail = channel.Latest?.Thumbnails?.Medium?.Url,
-        UpdatedAt = channel.Latest?.Stats?.Updated.ToString("O")
+        UpdatedAt = channel.Latest?.Stats?.Updated.ToString("O"),
+        Country = channel.Latest?.Country,
+        Relevance = c.Relevance,
+        Tags = c.HardTags.Concat(c.SoftTags).ToArray(),
+        LR = c.LR,
+        SheetIds = c.SheetIds.ToArray()
       };
     }
 
@@ -163,10 +164,20 @@ namespace YtReader {
       return flattened;
     }
 
+    async Task SaveJsonl<T>(IEnumerable<T> rows, string name, string dir) {
+      var localFile = LocalResultsDir.Combine(dir).Combine($"{name}.jsonl");
+      rows.ToJsonl(localFile.FullPath);
+      await Upload(dir, localFile);
+    }
+
     async Task SaveParquet<T>(IEnumerable<T> rows, string name, string dir) where T : new() {
-      var storeDir = StringPath.Relative(dir);
       var localFile = LocalResultsDir.Combine(dir).Combine($"{name}.parquet");
       ParquetConvert.Serialize(rows, localFile.FullPath);
+      await Upload(dir, localFile);
+    }
+
+    async Task Upload(string dir, FPath localFile) {
+      var storeDir = StringPath.Relative(dir);
       var storePath = storeDir.Add(localFile.FileName);
       await Store.Save(storePath, localFile);
       Log.Information("Saved {Path}", storePath);
@@ -230,15 +241,16 @@ namespace YtReader {
   public class ChannelRow {
     public string ChannelId { get; set; }
     public string Title { get; set; }
-    public string Type { get; set; }
-    public string LR { get; set; }
     public long ViewCount { get; set; }
     public long SubCount { get; set; }
-
-    //public long ChannelVideoViews { get; set; }
-    //public string Month { get; set; }
     public string Thumbnail { get; set; }
     public string UpdatedAt { get; set; }
+    public string Country { get; set; }
+    
+    public double Relevance { get; set; }
+    public string LR { get; set; }
+    public string[] Tags { get; set; }
+    public string[] SheetIds { get; set; }
   }
 
   public class VideoRow {
