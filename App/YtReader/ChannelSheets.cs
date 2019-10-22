@@ -108,11 +108,10 @@ namespace YtReader {
     }
 
     static async Task<SheetsService> GetService(SheetsCfg sheetsCfg) {
-      var creds = new ClientSecrets {ClientId = sheetsCfg.Creds.Name, ClientSecret = sheetsCfg.Creds.Secret};
+      //var creds = new ClientSecrets {ClientId = sheetsCfg.Creds.Name, ClientSecret = sheetsCfg.Creds.Secret};
+      var creds = GoogleCredential.FromJson(sheetsCfg.CredJson.ToString()).CreateScoped(SheetsService.Scope.SpreadsheetsReadonly);
       var service = new SheetsService(new BaseClientService.Initializer() {
-        HttpClientInitializer = await GoogleWebAuthorizationBroker.AuthorizeAsync(
-          creds, new[] {SheetsService.Scope.SpreadsheetsReadonly},
-          Setup.AppName, CancellationToken.None),
+        HttpClientInitializer = creds,
         ApplicationName = Setup.AppName,
       });
       return service;

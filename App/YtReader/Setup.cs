@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.WindowsAzure.Storage;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
@@ -77,8 +79,6 @@ namespace YtReader {
       var ytStore = new YtStore(reader,  cfg.DataStore(cfg.App.Storage.DbPath));
       return ytStore;
     }
-
-    //static IEnumerable<SeedChannel> SeedChannels(this Cfg cfg) => cfg.CrawlConfigDir.Combine("SeedChannels.csv").ReadFromCsv<SeedChannel>();
   }
 
   public class RootCfg {
@@ -117,6 +117,7 @@ namespace YtReader {
   }
 
   public class SheetsCfg {
+    public JObject CredJson { get; set; }
     public NameSecret Creds { get; set; }
     public string MainChannelSheetId { get; set; }
     public ICollection<string> UserChannelSheetIds { get; set; }

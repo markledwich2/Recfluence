@@ -44,7 +44,7 @@ namespace YtReader {
       await SaveCfg(analysisDir);
       
       var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
-      await Task.WhenAll(SaveVideosAndRecommends(), SaveChannels());
+      await Task.WhenAll(SaveChannels(), SaveVideosAndRecommends());
 
       async Task SaveVideosAndRecommends() {
         var par = (int) Math.Sqrt(Cfg.ParallelCollect);
