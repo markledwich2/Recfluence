@@ -118,7 +118,6 @@ namespace YtReader {
 
   public class SheetsCfg {
     public JObject CredJson { get; set; }
-    public NameSecret Creds { get; set; }
     public string MainChannelSheetId { get; set; }
     public ICollection<string> UserChannelSheetIds { get; set; }
   }
