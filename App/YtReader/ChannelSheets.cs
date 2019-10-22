@@ -46,10 +46,10 @@ namespace YtReader {
     }
 
     public static async Task<IReadOnlyCollection<IChannelId>> SeedChannels(SheetsCfg sheetsCfg, ILogger log, IEnumerable<string> channelIdFilter = null) {
-      var filter = new HashSet<string>(channelIdFilter ?? new string[] {});
+      var filter = channelIdFilter == null ? null : new HashSet<string>(channelIdFilter);
       var service = await GetService(sheetsCfg);
       var seeds = await MainChannels(sheetsCfg, service, log);
-      return seeds.Where(s => filter.Contains(s.Id)).ToList();
+      return seeds.Where(s => filter == null || filter.Contains(s.Id)).ToList();
     }
 
     static async Task<IReadOnlyCollection<MainChannelSheet>> MainChannels(SheetsCfg sheetsCfg, SheetsService service, ILogger log) => 
