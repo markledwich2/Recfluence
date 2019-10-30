@@ -84,7 +84,7 @@ namespace Mutuo.Etl {
 
     public async Task<IReadOnlyCollection<T>> LatestItems() {
       var file = await LatestFile();
-      return await LoadJsonl(file);
+      return file == null ? new T[] {} : await LoadJsonl(file);
     }
 
     async Task<IReadOnlyCollection<T>> LoadJsonl(StringPath path) {

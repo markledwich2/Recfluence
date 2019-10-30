@@ -30,11 +30,8 @@ namespace YtFunctions {
 
     static async Task<(Cfg Cfg, ILogger Log, TelemetryClient Telem)> Init(IMSLogger funcLogger) {
       var cfg = await Setup.LoadCfg();
-
       var telem = new TelemetryClient {InstrumentationKey = cfg.App.AppInsightsKey};
-
       var log = Logger(telem, funcLogger);
-
       return (cfg, log, telem);
     }
 
@@ -61,11 +58,9 @@ namespace YtFunctions {
         throw;
       }
 
-      var started = DateTime.Now;
       g.Refresh();
       var log = await g.GetLogContentAsync(g.Name);
       s.Log.Information("Started container '{ProvisionState}' '{State}': {LogContent}", g.ProvisioningState, g.State, log);
-
       return $"Started container, last in state '{g.State}'";
     }
   }
