@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Async;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -21,7 +20,7 @@ using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 
-namespace YtReader {
+namespace Mutuo.Etl {
   public class S3Store : ISimpleFileStore {
     readonly AmazonS3Client S3;
     readonly AsyncRetryPolicy S3Policy = Policy.Handle<HttpRequestException>()
@@ -87,29 +86,29 @@ namespace YtReader {
     }
 
     public Task Save(StringPath path, Stream contents) => throw new NotImplementedException();
+    public Task<Stream> Load(StringPath path) => throw new NotImplementedException();
+
     public IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false) => throw new NotImplementedException();
 
     string FilePath(StringPath path) => BasePath.Add(path).WithExtension(".json.gz");
 
-    public IAsyncEnumerable<ICollection<StringPath>> ListKeys(StringPath path) {
+    public async IAsyncEnumerable<ICollection<StringPath>> ListKeys(StringPath path) {
       var prefix = BasePath.Add(path);
-      return new AsyncEnumerable<ICollection<StringPath>>(async yield => {
-        var request = new ListObjectsV2Request {
-          BucketName = Cfg.Bucket,
-          Prefix = prefix
-        };
+      var request = new ListObjectsV2Request {
+        BucketName = Cfg.Bucket,
+        Prefix = prefix
+      };
 
-        while (true) {
-          var response = await S3.ListObjectsV2Async(request);
-          var keys = response.S3Objects.Select(f => f.Key);
-          await yield.ReturnAsync(keys.Select(k => new StringPath(k).RelativePath(prefix).WithoutExtension()).ToList());
+      while (true) {
+        var response = await S3.ListObjectsV2Async(request);
+        var keys = response.S3Objects.Select(f => f.Key);
+        yield return keys.Select(k => new StringPath(k).RelativePath(prefix).WithoutExtension()).ToList();
 
-          if (response.IsTruncated)
-            request.ContinuationToken = response.NextContinuationToken;
-          else
-            break;
-        }
-      });
+        if (response.IsTruncated)
+          request.ContinuationToken = response.NextContinuationToken;
+        else
+          break;
+      }
     }
   }
 
