@@ -6,6 +6,7 @@ WORKDIR /app
 COPY SysExtensions SysExtensions
 COPY YtCli YtCli
 COPY YtReader YtReader
+COPY "Mutuo.Etl" "Mutuo.Etl"
 WORKDIR /app/YtCli
 #RUN dotnet restore
 RUN dotnet publish -c Release -o publish
