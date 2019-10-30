@@ -1,9 +1,9 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.Azure.Storage.Blob;
 using SysExtensions.Text;
 
-namespace YtReader {
+namespace Mutuo.Etl {
   public static class AzureExtensions {
     public static async Task<string> GetText(this CloudBlobClient client, string containerName, string blob) {
       var container = client.GetContainerReference(containerName);

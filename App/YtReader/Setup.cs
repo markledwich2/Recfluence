@@ -1,23 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.WindowsAzure.Storage;
-using Newtonsoft.Json;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
+using Mutuo.Etl;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
-using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using YtReader.Yt;
 
 namespace YtReader {
   public static class Setup {
@@ -30,7 +28,7 @@ namespace YtReader {
 
     public static Logger CreateTestLogger() =>
       new LoggerConfiguration()
-        .WriteTo.Seq("http://localhost:5341", LogEventLevel.Verbose)
+        .WriteTo.Seq("http://localhost:5341")
         .CreateLogger();
 
     public static Logger CreateLogger(AppCfg cfg = null) {
@@ -73,10 +71,8 @@ namespace YtReader {
 
     public static YtClient YtClient(this Cfg cfg, ILogger log) => new YtClient(cfg.App, log);
 
-    public static YtStore YtStore(this Cfg cfg, ILogger log) {  
-      var reader = new YtClient(cfg.App, log);
-      
-      var ytStore = new YtStore(reader,  cfg.DataStore(cfg.App.Storage.DbPath));
+    public static YtStore2 YtStore(this Cfg cfg, ILogger log) {
+      var ytStore = new YtStore2(cfg.App, cfg.DataStore(cfg.App.Storage.DbPath), log);
       return ytStore;
     }
   }
@@ -96,17 +92,14 @@ namespace YtReader {
 
   public class AppCfg {
     public string AppInsightsKey { get; set; }
-    public int Parallel { get; set; } = 8;
-    public int ParallelCollect { get; set; } = 24;
+    public int ParallelChannels { get; set; } = 4;
+    public int ParallelGets { get; set; } = 8;
 
     public string ResourceGroup { get; set; } = "ytnetworks";
     public YtReaderCfg YtReader { get; set; } = new YtReaderCfg();
     public StorageCfg Storage { get; set; } = new StorageCfg();
     public ICollection<string> YTApiKeys { get; set; }
-    public ICollection<string> LimitedToSeedChannels { get; set; }
-
-    [DefaultValue(CollectionCacheType.Memory)]
-    public CollectionCacheType CacheType { get; set; } = CollectionCacheType.Memory;
+    public HashSet<string> LimitedToSeedChannels { get; set; }
 
     public string SubscriptionId { get; set; }
     public ServicePrincipalCfg ServicePrincipal { get; set; } = new ServicePrincipalCfg();
@@ -114,6 +107,13 @@ namespace YtReader {
     public string SeqUrl { get; set; }
 
     public SheetsCfg Sheets { get; set; }
+
+    public ProxyCfg Proxy { get; set; }
+  }
+
+  public class ProxyCfg {
+    public string Url { get; set; }
+    public NameSecret Creds { get; set; }
   }
 
   public class SheetsCfg {
@@ -129,13 +129,7 @@ namespace YtReader {
     public DateTime? To { get; set; }
 
     public TimeSpan VideoDead { get; set; } = 120.Days();
-    public TimeSpan VideoOld { get; set; } = 30.Days();
-    public TimeSpan RefreshOldVideos { get; set; } = 7.Days();
-    public TimeSpan RefreshYoungVideos { get; set; } = 23.Hours();
-    public TimeSpan RefreshChannel { get; set; } = 7.Days();
-    public TimeSpan RefreshYoungRecommendedVideos { get; set; } = 23.Hours();
-    public TimeSpan RefreshOldRecommendedVideos { get; set; } = 7.Days();
-    public TimeSpan RefreshChannelVideos { get; set; } = 23.Hours();
+    public TimeSpan RefreshChannel { get; set; } = 23.Hours();
 
     public Uri SeedsUrl { get; set; } =
       new Uri("https://raw.githubusercontent.com/markledwich2/YouTubeNetworks/master/Data/SeedChannels.csv");
@@ -155,7 +149,7 @@ namespace YtReader {
     public double Mem { get; set; } = 8;
     public NameSecret RegistryCreds { get; set; }
   }
-  
+
   public class ServicePrincipalCfg {
     public string ClientId { get; set; }
     public string Secret { get; set; }

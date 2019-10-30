@@ -8,13 +8,13 @@ using SysExtensions.Collections;
 
 namespace SysExtensions.Threading {
   public static class TaskExtensions {
-      /// <summary>
-      ///   Waits for all of the tasks, however will cancel the tasks and throw an exception if any of the tasks have a fault
-      /// </summary>
-      /// <param name="tasks"></param>
-      /// <param name="cancelSource"></param>
-      /// <returns></returns>
-      public static async Task WhenAllCancelOnException(this IEnumerable<Task> tasks, CancellationTokenSource cancelSource) {
+    /// <summary>
+    ///   Waits for all of the tasks, however will cancel the tasks and throw an exception if any of the tasks have a fault
+    /// </summary>
+    /// <param name="tasks"></param>
+    /// <param name="cancelSource"></param>
+    /// <returns></returns>
+    public static async Task WhenAllCancelOnException(this IEnumerable<Task> tasks, CancellationTokenSource cancelSource) {
       var tList = tasks.ToList();
       while (tList.HasItems()) {
         var t = await Task.WhenAny(tList);
@@ -83,6 +83,12 @@ namespace SysExtensions.Threading {
     }
 
     public static void Wait(this Task task) => task.GetAwaiter().GetResult();
+
+    public static async Task<IReadOnlyCollection<T>> SelectManyList<T>(this IAsyncEnumerable<IReadOnlyCollection<T>> items) {
+      var res = new List<T>();
+      await foreach (var list in items) res.AddRange(list);
+      return res;
+    }
   }
 
   public class TimedResult<T> {

@@ -9,7 +9,7 @@ using SysExtensions.Text;
 namespace SysExtensions.Threading {
   public static class BlockExtensions {
     public static async Task BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallelism = 1, int? capacity = null) {
-      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism};
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
 
       var block = new ActionBlock<T>(action, options);
@@ -24,7 +24,7 @@ namespace SysExtensions.Threading {
     public static async Task<IReadOnlyCollection<R>> BlockTransform<T, R>(this IEnumerable<T> source,
       Func<T, Task<R>> transform, int parallelism = 1, int? capacity = null,
       Action<BulkProgressInfo<R>> progressUpdate = null, TimeSpan progressPeriod = default(TimeSpan)) {
-      progressPeriod = progressPeriod == default(TimeSpan) ? 10.Seconds() : progressPeriod;
+      progressPeriod = progressPeriod == default(TimeSpan) ? 60.Seconds() : progressPeriod;
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
       var block = new TransformBlock<T, R>(transform, options);
@@ -57,8 +57,7 @@ namespace SysExtensions.Threading {
         }
       }
 
-      progressUpdate?.Invoke(new BulkProgressInfo<R>(result, result, totalProgress.Elapsed));
-
+      //progressUpdate?.Invoke(new BulkProgressInfo<R>(result, result, totalProgress.Elapsed));
       await Task.WhenAll(produce, block.Completion);
 
       return result;

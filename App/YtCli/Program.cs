@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
+using Mutuo.Etl;
 using Serilog;
 using SysExtensions.Text;
 using YtReader;
@@ -58,9 +59,7 @@ namespace YouTubeCli {
   class Program {
     static int Main(string[] args) {
       var res = Parser.Default.ParseArguments<CollectOption, UpdateOption, FixOption, SyncOption, ChannelInfoOption>(args).MapResult(
-        (CollectOption c) => Run(c, args, Collect),
         (UpdateOption u) => Run(u, args, Update),
-        (FixOption f) => Run(f, args, Fix),
         (SyncOption s) => Run(s, args, Sync),
         (ChannelInfoOption v) => Run(v, args, ChannelInfo),
         errs => (int) ExitCode.UnknownError
@@ -72,49 +71,33 @@ namespace YouTubeCli {
       var cfg = Setup.LoadCfg().Result;
 
       if (option.ChannelIds.HasValue())
-        cfg.App.LimitedToSeedChannels = option.ChannelIds.UnJoin('|').ToList();
+        cfg.App.LimitedToSeedChannels = option.ChannelIds.UnJoin('|').ToHashSet();
       if (option.Parallel.HasValue)
-        cfg.App.Parallel = option.Parallel.Value;
+        cfg.App.ParallelGets = cfg.App.ParallelChannels = option.Parallel.Value;
 
-      using (var log = Setup.CreateLogger(cfg.App))
-        try {
-          if (option.LaunchContainer) {
-            YtContainerRunner.Start(log, cfg, args.Where(a => a != "-z").ToArray()).Wait();
-            return (int)ExitCode.Success;
-          }
-          return (int) task(new TaskCtx<TOption> {Cfg = cfg, Log = log, Option = option, OriginalArgs = args}).Result;
+      using var log = Setup.CreateLogger(cfg.App);
+      try {
+        if (option.LaunchContainer) {
+          YtContainerRunner.Start(log, cfg, args.Where(a => a != "-z").ToArray()).Wait();
+          return (int)ExitCode.Success;
         }
-        catch (Exception ex) {
-          log.Error(ex, "Unhandled error: {Error}", ex.Message);
-          return (int) ExitCode.UnknownError;
-        }
-    }
-
-    static async Task<ExitCode> Collect(TaskCtx<CollectOption> ctx) {
-      var cfg = Setup.LoadCfg().Result;
-      var ytCollect = new YtCollect(cfg.YtStore(ctx.Log), cfg.DataStore(cfg.App.Storage.AnalysisPath), cfg.App, ctx.Log);
-      ytCollect.SaveChannelRelationData().Wait();
-      return ExitCode.Success;
+        return (int) task(new TaskCtx<TOption> {Cfg = cfg, Log = log, Option = option, OriginalArgs = args}).Result;
+      }
+      catch (Exception ex) {
+        log.Error(ex, "Unhandled error: {Error}", ex.Message);
+        return (int) ExitCode.UnknownError;
+      }
     }
 
     static async Task<ExitCode> Update(TaskCtx<UpdateOption> ctx) {
       var ytStore = ctx.Cfg.YtStore(ctx.Log);
-      var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, ctx.Log);
+      var ytUpdater = new YtDataUpdater2(ytStore, ctx.Cfg.App, ctx.Log);
       await ytUpdater.UpdateData();
-      var ytCollect = new YtCollect(ytStore, ctx.Cfg.DataStore(ctx.Cfg.App.Storage.AnalysisPath), ctx.Cfg.App, ctx.Log);
-      await ytCollect.SaveChannelRelationData();
-      return ExitCode.Success;
-    }
-
-    static async Task<ExitCode> Fix(TaskCtx<FixOption> ctx) {
-      var ytStore = ctx.Cfg.YtStore(ctx.Log);
-      var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, ctx.Log);
-      await ytUpdater.RefreshMissingVideos();
       return ExitCode.Success;
     }
 
     static async Task<ExitCode> Sync(TaskCtx<SyncOption> ctx) {
-      await SyncBlobs.Sync(ctx.Option.CsA, ctx.Option.CsB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.App.Parallel, ctx.Log);
+      await SyncBlobs.Sync(ctx.Option.CsA, ctx.Option.CsB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.App.ParallelGets, ctx.Log);
       return ExitCode.Success;
     }
 

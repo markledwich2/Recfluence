@@ -25,7 +25,7 @@ namespace SysExtensions.Serialization {
         var settings = new JsonSerializerSettings {
           NullValueHandling = NullValueHandling.Ignore, Formatting = Formatting.Indented, DefaultValueHandling = DefaultValueHandling.Ignore
         };
-        settings.Converters.AddRange(new StringEnumConverter(false));
+        settings.Converters.AddRange(new StringEnumConverter(new CamelCaseNamingStrategy(false, false), false));
         settings.ContractResolver = new CoreSerializeContractResolver {NamingStrategy = new CamelCaseNamingStrategy(false, false)};
         return settings;
       }

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Humanizer;
 using Polly;
 using Polly.Retry;
+using Serilog;
 using Troschuetz.Random;
 
 namespace SysExtensions.Net {
@@ -26,10 +28,12 @@ namespace SysExtensions.Net {
       return true;
     }
     
-    public static AsyncRetryPolicy<T> RetryWithBackoff<T>(this PolicyBuilder<T> policy, int retryCount = 3) =>
-      policy.RetryAsync(retryCount, (r, i) => i.ExponentialBackoff(1.Seconds()));
-    
-    public static AsyncRetryPolicy RetryWithBackoff(this PolicyBuilder policy, int retryCount = 3) =>
-      policy.RetryAsync(retryCount, (e, i) => i.ExponentialBackoff(1.Seconds()));
+    public static AsyncRetryPolicy RetryWithBackoff(this PolicyBuilder policy, string description, int retryCount = 3, ILogger log = null) =>
+      policy.RetryAsync(retryCount, async (e, i) => {
+        var delay = i.ExponentialBackoff(1.Seconds());
+        log?.Debug("retryable error with {Description}: '{Error}'. Retrying in {Duration}, attempt {Attempt}/{Total}", 
+          description, e.Message, delay, i, retryCount);
+        await Task.Delay(delay);
+      });
   }
 }

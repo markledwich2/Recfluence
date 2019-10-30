@@ -14,8 +14,16 @@ namespace SysExtensions.Serialization {
     }
 
     public static void ToJsonl<T>(this IEnumerable<T> items, string filePath) {
-      using (var tw = new StreamWriter(filePath, false)) {
-        items.ToJsonl(tw);
+      using var tw = new StreamWriter(filePath, false);
+      items.ToJsonl(tw);
+    }
+
+    public static IEnumerable<T> FromJsonL<T>(TextReader tr) {
+      while (true) {
+        var line = tr.ReadLine();
+        if (line == null)
+          break;
+        yield return JsonConvert.DeserializeObject<T>(line);
       }
     }
   }

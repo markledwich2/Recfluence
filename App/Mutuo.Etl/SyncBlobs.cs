@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Async;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -10,7 +9,7 @@ using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
-namespace YtReader {
+namespace Mutuo.Etl {
   public static class SyncBlobs {
     public static async Task Sync(string csA, string csB, StringPath pathA, StringPath pathB, int parallel, ILogger log) {
       pathB = pathB ?? pathA;
@@ -65,10 +64,10 @@ namespace YtReader {
   public static class AsyncExtensions {
     public static async Task<IReadOnlyCollection<T>> ToListWithAction<T>(this IAsyncEnumerable<IReadOnlyCollection<T>> enumerable, Action<int> action) {
       var list = new List<T>();
-      await enumerable.ForEachAsync(b => {
-        list.AddRange(b);
+      await foreach (var item in enumerable) {
+        list.AddRange(item);
         action(list.Count);
-      });
+      }
       return list;
     }
   }

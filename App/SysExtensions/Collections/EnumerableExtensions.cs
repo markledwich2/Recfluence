@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace SysExtensions.Collections {
@@ -26,7 +27,9 @@ namespace SysExtensions.Collections {
     /// <summary>
     ///   If items is null return an empty set, if an item is null remove it from the list
     /// </summary>
-    public static IEnumerable<T> NotNull<T>(this IEnumerable<T> items) => items?.Where(i => i != null) ?? new T[] { };
+    [return: NotNull]
+    public static IEnumerable<T> NotNull<T>(this IEnumerable<T> items) 
+      => items?.Where(i => i != null) ?? new T[] { };
     
     public static IEnumerable<T> Randomize<T>(this IEnumerable<T> source) {
       var rnd = new Random();

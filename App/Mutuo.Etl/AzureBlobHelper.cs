@@ -6,10 +6,10 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web;
-using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure.Storage;
 using SysExtensions.Text;
 
-namespace YtReader {
+namespace Mutuo.Etl {
   public static class AzureBlobHelper {
     public static Uri BlobUri(this CloudStorageAccount storage, StringPath path) => 
       new Uri(storage.BlobEndpoint.ToString().AddJoin("/", path));

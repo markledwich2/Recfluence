@@ -11,13 +11,10 @@ using Google.Apis.YouTube.v3.Data;
 using Humanizer;
 using Polly;
 using Serilog;
-using SysExtensions;
 using SysExtensions.Collections;
-using SysExtensions.Fluent.IO;
-using SysExtensions.IO;
 using SysExtensions.Net;
 
-namespace YtReader {
+namespace YtReader.Yt {
   public class YtClient {
     public YtClient(AppCfg cfg, ILogger log) {
       Cfg = cfg;
@@ -28,7 +25,7 @@ namespace YtReader {
       Start = DateTime.UtcNow;
     }
 
-    public ConcurrentDictionary<string, string>AvailableKeys { get; set; }
+    public ConcurrentDictionary<string, string> AvailableKeys { get; set; }
 
     public DateTime Start { get; }
 
@@ -61,98 +58,6 @@ namespace YtReader {
           .WaitAndRetryAsync(3, i => i.ExponentialBackoff(1.Seconds())))
         .ExecuteAsync(request.ExecuteAsync);
     }
-
-    #region Trending
-
-    public async Task SaveTrendingCsv() {
-      var trending = await Trending(100);
-      trending.AddRange(await Trending(100, UsCategoryEnum.Entertainment));
-
-      var videos = trending
-        .Select(i =>
-          new {
-            Include = 0,
-            Id = i.VideoId,
-            i.ChannelTitle,
-            Title = i.VideoTitle,
-            CategoryName = ((UsCategoryEnum) int.Parse(i.CategoryId)).EnumString(),
-            i.ChannelId
-          });
-
-      TrendingDir.CreateDirectories();
-      videos.WriteToCsv(TrendingDir.Combine(DateTime.UtcNow.FileSafeTimestamp() + " Trending.csv"));
-    }
-
-    async Task<ICollection<VideoData>> Trending(int max, UsCategoryEnum? category = null) {
-      var s = YtService.Videos.List("snippet");
-      s.Chart = VideosResource.ListRequest.ChartEnum.MostPopular;
-      s.RegionCode = "us";
-      s.MaxResults = 50;
-      if (category != null)
-        s.VideoCategoryId = ((int) category).ToString();
-
-      var videos = new List<VideoData>();
-      while (videos.Count < max) {
-        var res = await s.ExecuteAsync();
-        var trending = res.Items.Where(i => !IsExcluded(i.Snippet.CategoryId));
-        videos.AddRange(trending.Take(max - videos.Count).Select(ToVideoData));
-        if (res.NextPageToken == null)
-          break;
-        s.PageToken = res.NextPageToken;
-      }
-
-      return videos;
-    }
-
-    FPath TrendingDir => "Trending".AsPath().InAppData("YoutubeNetworks");
-
-    enum UsCategoryEnum {
-      FilmAnimation = 1,
-      AutoVehicles = 2,
-      Music = 10,
-      PetsAnimals = 15,
-      Sports = 17,
-      ShortMovies = 18,
-      TravelEvents = 19,
-      Gaming = 20,
-      VideoBlogging = 21,
-      PplBlogs = 22,
-      Comedy = 23,
-      Entertainment = 24,
-      NewsPolitics = 25,
-      HowToStyle = 26,
-      Education = 27,
-      ScienceTech = 28,
-      NonprofitsActivism = 29,
-      Movies = 20,
-      Animation = 31,
-      ActionAdventure = 23,
-      Classics = 33,
-      Comedy2 = 34,
-      Doco = 35,
-      Drama = 36,
-      Family = 37,
-      Foreign = 38,
-      Horror = 39,
-      SciFi = 40,
-      Thriller = 41,
-      Shorts = 42,
-      Trailers = 44
-    }
-
-    public static readonly HashSet<string> ExcludeCategories = new[] {
-      UsCategoryEnum.FilmAnimation, UsCategoryEnum.AutoVehicles, UsCategoryEnum.Music,
-      UsCategoryEnum.PetsAnimals, UsCategoryEnum.Sports, UsCategoryEnum.ShortMovies,
-      UsCategoryEnum.TravelEvents, UsCategoryEnum.Gaming,
-      UsCategoryEnum.HowToStyle, UsCategoryEnum.Movies, UsCategoryEnum.Animation, UsCategoryEnum.ActionAdventure,
-      UsCategoryEnum.Classics, UsCategoryEnum.Comedy2, UsCategoryEnum.Drama, UsCategoryEnum.Family,
-      UsCategoryEnum.Foreign, UsCategoryEnum.Horror, UsCategoryEnum.SciFi, UsCategoryEnum.Thriller,
-      UsCategoryEnum.Shorts, UsCategoryEnum.Trailers
-    }.Select(i => ((int) i).ToString()).ToHashSet();
-
-    public static bool IsExcluded(string catId) => ExcludeCategories.Contains(catId);
-
-    #endregion
 
     #region Videos
 

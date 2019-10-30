@@ -41,21 +41,11 @@ namespace YtFunctions {
     [FunctionName("Update_Timer")]
     public static async Task Update_Timer([TimerTrigger("0 0 21 * * *")] TimerInfo myTimer, IMSLogger log) =>
       await YtCli(log, new[] {"update"});
-
-    [FunctionName("Fix")]
-    public static async Task<HttpResponseMessage> Fix([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
-      HttpRequestMessage req, IMSLogger funcLogger) =>
-      req.CreateResponse(await YtCli(funcLogger, new[] {"fix"}));
-
+    
     [FunctionName("Update")]
     public static async Task<HttpResponseMessage> Update([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
       HttpRequestMessage req, IMSLogger funcLogger) =>
       req.CreateResponse(await YtCli(funcLogger, new[] {"update"}));
-
-    [FunctionName("Collect")]
-    public static async Task<HttpResponseMessage> Collect([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
-      HttpRequestMessage req, IMSLogger funcLogger) =>
-      req.CreateResponse(await YtCli(funcLogger, new[] {"collect"}));
 
     static async Task<string> YtCli(IMSLogger funcLogger, string[] args) {
       var s = await Init(funcLogger);

@@ -52,13 +52,7 @@ namespace SysExtensions.Text {
     /// <summary>
     ///   A name minus a file extension, except anything after the first "." is considered part of the extension
     /// </summary>
-    public string NameSansExtension {
-      get {
-        var split = Name?.Split('.');
-        if (split == null || split.Length == 1) return Name;
-        return split.Take(split.Length - 1).Join(".");
-      }
-    }
+    public string NameSansExtension => Name?.Split('.').FirstOrDefault();
 
     public StringPath WithExtension(string extension) => Parent.Add(NameSansExtension + extension);
     public StringPath WithoutExtension() => Parent.Add(NameSansExtension);
@@ -89,7 +83,7 @@ namespace SysExtensions.Text {
 
     public StringPath Clone() => FromString(StringValue);
 
-    public StringPath Add(IEnumerable<string> path) => new StringPath(Tokens.Concat(path)) {IsAbsolute = IsAbsolute};
+    public StringPath Add(IEnumerable<string> path) => new StringPath(Tokens.Concat(path.NotNull())) {IsAbsolute = IsAbsolute};
     public StringPath Add(StringPath path) => Add(path.Tokens);
     public StringPath Add(string token) => Add(token.AsEnumerable());
     public StringPath Add(params string[] path) => Add((IEnumerable<string>) path);

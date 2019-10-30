@@ -47,7 +47,7 @@ namespace YtReader {
 
     public static async Task<IReadOnlyCollection<IChannelId>> SeedChannels(SheetsCfg sheetsCfg, ILogger log, IEnumerable<string> channelIdFilter = null) {
       var filter = channelIdFilter == null ? null : new HashSet<string>(channelIdFilter);
-      var service = await GetService(sheetsCfg);
+      var service = GetService(sheetsCfg);
       var seeds = await MainChannels(sheetsCfg, service, log);
       return seeds.Where(s => filter == null || filter.Contains(s.Id)).ToList();
     }
@@ -56,7 +56,7 @@ namespace YtReader {
       await SheetValues<MainChannelSheet>(service, sheetsCfg.MainChannelSheetId, "Channels", log);
 
     public static async Task<IReadOnlyCollection<ChannelWithUserData>> Channels(SheetsCfg sheetsCfg, ILogger log) {
-      var service = await GetService(sheetsCfg);
+      var service = GetService(sheetsCfg);
       var userChannelSheets = await sheetsCfg.UserChannelSheetIds
         .Select((v, i) => new {SheetId = v, Weight = 1 - i / 100d})
         .BlockTransform(async s => new {
@@ -107,7 +107,7 @@ namespace YtReader {
         .Select(i => i.Value).FirstOrDefault();
     }
 
-    static async Task<SheetsService> GetService(SheetsCfg sheetsCfg) {
+    static SheetsService GetService(SheetsCfg sheetsCfg) {
       //var creds = new ClientSecrets {ClientId = sheetsCfg.Creds.Name, ClientSecret = sheetsCfg.Creds.Secret};
       var creds = GoogleCredential.FromJson(sheetsCfg.CredJson.ToString()).CreateScoped(SheetsService.Scope.SpreadsheetsReadonly);
       var service = new SheetsService(new BaseClientService.Initializer() {

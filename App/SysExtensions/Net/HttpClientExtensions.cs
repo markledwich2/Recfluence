@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -183,5 +184,9 @@ namespace SysExtensions.Net {
 
       return response;
     }
+    
+    public static string UrlEncode(this string url) => WebUtility.UrlEncode(url);
+
+    public static string UrlDecode(this string url) => WebUtility.UrlDecode(url);
   }
 }
