@@ -13,9 +13,8 @@ namespace SysExtensions.Threading {
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
 
       var block = new ActionBlock<T>(action, options);
-      var produce = Produce(source, block);
-
-      await Task.WhenAll(produce, block.Completion);
+      await ProduceAsync(source, block);
+      await block.Completion;
     }
 
     /// <summary>
@@ -23,7 +22,8 @@ namespace SysExtensions.Threading {
     /// </summary>
     public static async Task<IReadOnlyCollection<R>> BlockTransform<T, R>(this IEnumerable<T> source,
       Func<T, Task<R>> transform, int parallelism = 1, int? capacity = null,
-      Action<BulkProgressInfo<R>> progressUpdate = null, TimeSpan progressPeriod = default) {
+      Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default) {
+      
       progressPeriod = progressPeriod == default ? 60.Seconds() : progressPeriod;
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
@@ -32,7 +32,7 @@ namespace SysExtensions.Threading {
       var swProgress = Stopwatch.StartNew();
 
       // by producing asynchronously and using SendAsync we can throttle how much we can form the source and consume at the same time
-      var produce = Produce(source, block);
+      var produceTask = ProduceAsync(source, block);
       var result = new List<R>();
       var newResults = new List<R>();
       while (true) {
@@ -50,35 +50,39 @@ namespace SysExtensions.Threading {
 
         var elapsed = swProgress.Elapsed;
         if (elapsed > progressPeriod) {
-          progressUpdate?.Invoke(new BulkProgressInfo<R>(result, newResults, elapsed));
+          progressUpdate?.Invoke(new BulkProgressInfo(newResults.Count, result.Count, elapsed));
           swProgress.Restart();
           newResults.Clear();
         }
       }
 
-      await Task.WhenAll(produce, block.Completion);
+      await produceTask;
+      await block.Completion;
 
       return result;
     }
-
-    static async Task Produce<T>(this IEnumerable<T> source, ITargetBlock<T> block) {
-      foreach (var item in source)
-        await block.SendAsync(item);
+    
+    static async Task ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block) {
+      foreach (var item in source) {
+        var res = await block.SendAsync(item);
+        if(!res)
+          throw new InvalidOperationException("Unable to send item to target block");
+      }
       block.Complete();
     }
   }
 
-  public class BulkProgressInfo<T> {
-    public IReadOnlyCollection<T> Results { get; }
-    public IReadOnlyCollection<T> NewItems { get; }
+  public class BulkProgressInfo {
+    public int Completed { get; }
+    public int CompletedTotal { get; }
     public TimeSpan Elapsed { get; }
 
-    public BulkProgressInfo(IReadOnlyCollection<T> results, IReadOnlyCollection<T> newItems, TimeSpan elapsed) {
-      Results = results;
-      NewItems = newItems;
+    public BulkProgressInfo(int completed, int completedTotal, TimeSpan elapsed) {
+      Completed = completed;
+      CompletedTotal = completedTotal;
       Elapsed = elapsed;
     }
 
-    public Speed Speed(string units) => NewItems.Count.Speed(units, Elapsed);
+    public Speed Speed(string units) => Completed.Speed(units, Elapsed);
   }
 }

@@ -47,7 +47,7 @@ namespace Mutuo.Etl {
             return f.Path;
           },
           parallel,
-          progressUpdate: p => log.Debug("{Action} {Files} at {Speed}", action, p.Results.Count, p.Speed("files")));
+          progressUpdate: p => log.Debug("{Action} {Files} at {Speed}", action, p.CompletedTotal, p.Speed("files")));
 
       sw.Restart();
       log.Information("Starting sync. {Update} to update, {Create} to create",

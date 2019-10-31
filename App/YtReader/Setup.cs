@@ -40,7 +40,7 @@ namespace YtReader {
 
       if (cfg != null)
         c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces);
-
+      
       c.MinimumLevel.Debug();
       return c.CreateLogger();
     }

@@ -76,15 +76,16 @@ namespace YouTubeCli {
         cfg.App.ParallelGets = cfg.App.ParallelChannels = option.Parallel.Value;
 
       using var log = Setup.CreateLogger(cfg.App);
+      var envLog = log.ForContext("Env", cfg.Root.Env);
       try {
         if (option.LaunchContainer) {
-          YtContainerRunner.Start(log, cfg, args.Where(a => a != "-z").ToArray()).Wait();
+          YtContainerRunner.Start(envLog, cfg, args.Where(a => a != "-z").ToArray()).Wait();
           return (int)ExitCode.Success;
         }
-        return (int) task(new TaskCtx<TOption> {Cfg = cfg, Log = log, Option = option, OriginalArgs = args}).Result;
+        return (int) task(new TaskCtx<TOption> {Cfg = cfg, Log = envLog, Option = option, OriginalArgs = args}).Result;
       }
       catch (Exception ex) {
-        log.Error(ex, "Unhandled error: {Error}", ex.Message);
+        envLog.Error(ex, "Unhandled error: {Error}", ex.Message);
         return (int) ExitCode.UnknownError;
       }
     }

@@ -51,7 +51,7 @@ namespace YtReader {
         .Where(c => c.ChannelId.HasValue())
         .ToKeyedCollection(c => c.ChannelId, StringComparer.Ordinal);
 
-      var stored = await seeds.Randomize().BlockTransform(async channel => {
+      var stored = await seeds.BlockTransform(async channel => {
           var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
           var channelStored = latestStored[channel.Id];
           var isNew = channelStored == null;
@@ -83,7 +83,7 @@ namespace YtReader {
           return (Channel: channelStored, Refresh: refreshChannel, IsNew: isNew, Include: includeChannel);
         },
         Cfg.ParallelGets,
-        progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.Results.Count, seeds.Count));
+        progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count));
 
       if (stored.Any(c => c.IsNew || c.Refresh))
         await store.Append(stored.Select(c => c.Channel).NotNull().ToList());
@@ -144,7 +144,7 @@ namespace YtReader {
       var vidItems = await ChannelVidItems(c, log, from).ToListAsync();
       var vids = await vidItems.BlockTransform(async v => await Scraper.GetVideoAsync(v.Id, log),
         Cfg.ParallelGets,
-        progressUpdate: p => log.Debug("Reading {Channel} videos: {Video}{VideoTotal}", c.ChannelTitle, p.Results.Count, vidItems.Count));
+        progressUpdate: p => log.Debug("Reading {Channel} videos: {Video}{VideoTotal}", c.ChannelTitle, p.CompletedTotal, vidItems.Count));
       return vids;
     }
 
