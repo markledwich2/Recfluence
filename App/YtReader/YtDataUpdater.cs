@@ -51,7 +51,7 @@ namespace YtReader {
         .Where(c => c.ChannelId.HasValue())
         .ToKeyedCollection(c => c.ChannelId, StringComparer.Ordinal);
 
-      var stored = await seeds.BlockTransform2(async channel => {
+      var stored = await seeds.BlockTransform(async channel => {
           var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
           var channelStored = latestStored[channel.Id];
           var isNew = channelStored == null;
@@ -83,6 +83,7 @@ namespace YtReader {
           return (Channel: channelStored, Refresh: refreshChannel, IsNew: isNew, Include: includeChannel);
         },
         Cfg.ParallelGets,
+        progressPeriod:10.Seconds(),
         progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count));
 
       if (stored.Any(c => c.IsNew || c.Refresh))

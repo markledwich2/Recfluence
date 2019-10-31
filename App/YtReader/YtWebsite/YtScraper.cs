@@ -38,7 +38,7 @@ namespace YtReader.YtWebsite {
         Proxy = new WebProxy("us.smartproxy.com:10000", true, new string[] { }, new NetworkCredential(Proxy.Creds.Name, Proxy.Creds.Secret)),
         UseProxy = true
       }) {
-        Timeout = 20.Seconds()
+        Timeout = Proxy.TimeoutSeconds.Seconds()
       };
 
     AsyncRetryPolicy Poly(string desc, ILogger log) =>
@@ -46,8 +46,13 @@ namespace YtReader.YtWebsite {
         .RetryWithBackoff(desc, 5, log);
 
     async Task<string> GetRaw(string url, string desc, ILogger log) {
-      log.Verbose("Scraping {Desc} {Url}", desc, url);
-      var res = await Poly(url, log).ExecuteAsync(() => Http.GetStringAsync(url)).WithDuration();
+      log.Debug("Scraping {Desc} {Url}", desc, url);
+      var res = await Poly(url, log).ExecuteAsync(async () => {
+        var task = Http.GetStringAsync(url);
+        if (await Task.WhenAny(task, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) == task)
+          return await task;
+        throw new TaskCanceledException($"GetStringAsync on {url} took to long without timing out itself");
+      }).WithDuration();
       log.Debug("Scraped {Desc} {Url} in {Duration}", desc, url, res.Duration);
       return res.Result;
     }
@@ -307,10 +312,10 @@ namespace YtReader.YtWebsite {
     public async Task<Video> GetVideoAsync(string videoId, ILogger log) {
       if (!ValidateVideoId(videoId))
         throw new ArgumentException($"Invalid YouTube video ID [{videoId}].", nameof(videoId));
-      
+
       var videoInfoDicTask = GetVideoInfoDicAsync(videoId, log);
       var videoWatchPageTask = GetVideoWatchPageHtmlAsync(videoId, log);
-      
+
       var videoInfoDic = await videoInfoDicTask;
       var playerResponseJson = JToken.Parse(videoInfoDic["player_response"]);
 

@@ -17,44 +17,6 @@ namespace SysExtensions.Threading {
       await ProduceAsync(source, block);
       await block.Completion;
     }
-    
-    /// <summary>
-    ///   Simplified method for async operations that don't need to be chained, and when the result can fit in memory
-    /// </summary>
-    public static async Task<IReadOnlyCollection<R>> BlockTransform2<T, R>(this IEnumerable<T> source,
-      Func<T, Task<R>> transform, int parallelism = 1, int? capacity = null,
-      Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default) {
-      
-      progressPeriod = progressPeriod == default ? 60.Seconds() : progressPeriod;
-      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
-      if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
-      var block = new TransformBlock<T, R>(transform, options);
-
-      var sw = Stopwatch.StartNew();
-
-      // by producing asynchronously and using SendAsync we can throttle how much we can form the source and consume at the same time
-      var produceTask = ProduceAsync(source, block);
-      var result = new ConcurrentBag<R>();
-      var newResults = new ConcurrentBag<R>();
-
-      while (await block.OutputAvailableAsync()) {
-        var item = await block.ReceiveAsync();
-        result.Add(item);
-        newResults.Add(item);
-        
-        var elapsed = sw.Elapsed;
-        if (elapsed <= progressPeriod) continue;
-        
-        progressUpdate?.Invoke(new BulkProgressInfo(newResults.Count, result.Count, elapsed));
-        sw.Restart();
-        newResults.Clear();
-      }
-      
-      await produceTask;
-      await block.Completion;
-
-      return result;
-    }
 
     /// <summary>
     ///   Simplified method for async operations that don't need to be chained, and when the result can fit in memory

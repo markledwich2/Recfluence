@@ -114,6 +114,7 @@ namespace YtReader {
   public class ProxyCfg {
     public string Url { get; set; }
     public NameSecret Creds { get; set; }
+    public int TimeoutSeconds { get; set; } = 30;
   }
 
   public class SheetsCfg {
