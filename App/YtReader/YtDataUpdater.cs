@@ -51,7 +51,7 @@ namespace YtReader {
         .Where(c => c.ChannelId.HasValue())
         .ToKeyedCollection(c => c.ChannelId, StringComparer.Ordinal);
 
-      var stored = await seeds.BlockTransform(async channel => {
+      var stored = await seeds.BlockTransform2(async channel => {
           var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
           var channelStored = latestStored[channel.Id];
           var isNew = channelStored == null;

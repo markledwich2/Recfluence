@@ -261,7 +261,7 @@ namespace YtReader.YtWebsite {
         throw new ArgumentException($"Invalid YouTube channel ID [{channelId}].", nameof(channelId));
 
       // Get channel page HTML
-      var channelPageHtml = await GetChannelPageHtmlAsync(channelId, log).ConfigureAwait(false);
+      var channelPageHtml = await GetChannelPageHtmlAsync(channelId, log);
 
       var alertMessage = channelPageHtml.GetElementsBySelector("div.yt-alert-message").FirstOrDefault()?.GetInnerText();
       if (alertMessage.HasValue())
@@ -307,19 +307,17 @@ namespace YtReader.YtWebsite {
     public async Task<Video> GetVideoAsync(string videoId, ILogger log) {
       if (!ValidateVideoId(videoId))
         throw new ArgumentException($"Invalid YouTube video ID [{videoId}].", nameof(videoId));
-
-      // Get video info dictionary
-      var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
-
-      // Get player response JSON
+      
+      var videoInfoDicTask = GetVideoInfoDicAsync(videoId, log);
+      var videoWatchPageTask = GetVideoWatchPageHtmlAsync(videoId, log);
+      
+      var videoInfoDic = await videoInfoDicTask;
       var playerResponseJson = JToken.Parse(videoInfoDic["player_response"]);
 
-      // If video is unavailable - throw
       if (string.Equals(playerResponseJson.SelectToken("playabilityStatus.status")?.Value<string>(), "error",
         StringComparison.OrdinalIgnoreCase))
         throw new InvalidOperationException($"Video [{videoId}] is unavailable.");
 
-      // Extract video info
       var videoAuthor = playerResponseJson.SelectToken("videoDetails.author").Value<string>();
       var videoTitle = playerResponseJson.SelectToken("videoDetails.title").Value<string>();
       var videoDuration = TimeSpan.FromSeconds(playerResponseJson.SelectToken("videoDetails.lengthSeconds").Value<double>());
@@ -327,7 +325,7 @@ namespace YtReader.YtWebsite {
       var videoDescription = playerResponseJson.SelectToken("videoDetails.shortDescription").Value<string>();
       var videoViewCount = playerResponseJson.SelectToken("videoDetails.viewCount")?.Value<long>() ?? 0; // some videos have no views
 
-      var videoWatchPageHtml = await GetVideoWatchPageHtmlAsync(videoId, log).ConfigureAwait(false);
+      var videoWatchPageHtml = await videoWatchPageTask;
       var videoUploadDate = videoWatchPageHtml.GetElementsBySelector("meta[itemprop=\"datePublished\"]")
         .First().GetAttribute("content").Value.ParseDateTimeOffset("yyyy-MM-dd");
       var videoLikeCountRaw = videoWatchPageHtml.GetElementsByClassName("like-button-renderer-like-button")

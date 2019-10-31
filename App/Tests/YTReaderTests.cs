@@ -19,7 +19,7 @@ namespace YouTubeReaderTests {
       var source = Enumerable.Range(1, 10000).ToList();
       var random = new Random();
 
-      var results = await source.BlockTransform(async l => {
+      var results = await source.BlockTransform2(async l => {
         await Task.Delay(random.NextDouble().Seconds()).ConfigureAwait(false);
         return l + "p";
       }, 80, 

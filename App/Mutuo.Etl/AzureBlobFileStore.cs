@@ -99,7 +99,7 @@ namespace Mutuo.Etl {
       do {
         var p = path != null ? BasePathSansContainer.Add(path) : BasePathSansContainer;
         var res = await Container.ListBlobsSegmentedAsync(p + "/", allDirectories, BlobListingDetails.None,
-          null, token, null, null).ConfigureAwait(false);
+          null, token, null, null);
 
         var items = res.Results.OfType<ICloudBlob>().Select(r =>
           new FileListItem {
