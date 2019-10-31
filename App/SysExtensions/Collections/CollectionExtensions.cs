@@ -45,8 +45,8 @@ namespace SysExtensions.Collections {
     public static bool IsEmpty<T>(this ICollection<T> list) => list == null || list.Count == 0;
 
     public static IKeyedCollection<K, V> ToKeyedCollection<K, V>(this IEnumerable<V> list, Expression<Func<V, K>> getKey,
-      StringComparison keyComparison = StringComparison.Ordinal) =>
-      new KeyedCollection<K, V>(getKey, list);
+      IEqualityComparer<K> comparer = null, bool threadSafe = false) =>
+      new KeyedCollection<K, V>(getKey, list, comparer, threadSafe);
 
     public static IKeyedCollection<K, V> ToKeyedCollection<K, V, U>(this IEnumerable<U> list, Func<U, V> getValue,
       Expression<Func<V, K>> getKey) => new KeyedCollection<K, V>(getKey, list.Select(getValue));

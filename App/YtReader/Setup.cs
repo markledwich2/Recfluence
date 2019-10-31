@@ -71,8 +71,8 @@ namespace YtReader {
 
     public static YtClient YtClient(this Cfg cfg, ILogger log) => new YtClient(cfg.App, log);
 
-    public static YtStore2 YtStore(this Cfg cfg, ILogger log) {
-      var ytStore = new YtStore2(cfg.App, cfg.DataStore(cfg.App.Storage.DbPath), log);
+    public static YtStore YtStore(this Cfg cfg, ILogger log) {
+      var ytStore = new YtStore(cfg.DataStore(cfg.App.Storage.DbPath), log);
       return ytStore;
     }
   }

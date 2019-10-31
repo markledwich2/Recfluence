@@ -1,89 +1,81 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using Newtonsoft.Json;
-using SysExtensions.Collections;
-using YtReader.Yt;
+using Mutuo.Etl;
+using Serilog;
+using SysExtensions;
+using SysExtensions.Text;
+using YtReader.YtWebsite;
 
 namespace YtReader {
-  public class RecommendedVideoStored {
-    public string VideoId { get; set; }
-    public string VideoTitle { get; set; }
-    public ICollection<RecommendedVideos> Recommended { get; set; } = new List<RecommendedVideos>();
-    public DateTime Updated { get; set; }
+  public class YtStore {
+    readonly ISimpleFileStore Store;
+    readonly ILogger Log;
+
+    public YtStore(ISimpleFileStore store, ILogger log) {
+      Store = store;
+      Log = log;
+      ChannelStore = new AppendCollectionStore<ChannelStored2>(Store, "channels", c => c.Updated.FileSafeTimestamp(), Log);
+    }
+
+    public AppendCollectionStore<ChannelStored2> ChannelStore { get; }
+    
+    public AppendCollectionStore<VideoStored2> VideoStore(string channelId) => 
+      new AppendCollectionStore<VideoStored2>(Store, StringPath.Relative("videos", channelId), v => v.UploadDate.FileSafeTimestamp(), Log);
+
+    public AppendCollectionStore<RecStored2> RecStore(string channelId) => 
+      new AppendCollectionStore<RecStored2>(Store, StringPath.Relative("recs", channelId), r => r.Updated.FileSafeTimestamp(), Log);
+    
+    public AppendCollectionStore<VideoCaptionStored2> CaptionStore(string channelId) => 
+      new AppendCollectionStore<VideoCaptionStored2>(Store, StringPath.Relative("captions", channelId), c => c.UploadDate.FileSafeTimestamp(), Log);
   }
 
-  public class RecommendedVideos {
-    public DateTime Updated { get; set; }
-    public int Top { get; set; }
-    public ICollection<RecommendedVideoListItem> Recommended { get; set; } = new List<RecommendedVideoListItem>();
-  }
-
-  public class ChannelVideosStored {
+  public class ChannelStored2 {
     public string ChannelId { get; set; }
     public string ChannelTitle { get; set; }
+    public string LogoUrl { get; set; }
+    public double Relevance { get; set; }
+    public string LR { get; set; }
+
+    public long? Subs { get; set; }
+
+    public IReadOnlyCollection<string> HardTags { get; set; }
+    public IReadOnlyCollection<string> SoftTags { get; set; }
+    public IReadOnlyCollection<string> SheetIds { get; set; }
+
     public DateTime Updated { get; set; }
-    public DateTime From { get; set; }
-
-    [JsonIgnore]
-    public IKeyedCollection<string, ChannelVideoListItem> Vids { get; set; } =
-      new KeyedCollection<string, ChannelVideoListItem>(v => v.VideoId);
-
-    [JsonProperty("videos")]
-    public ChannelVideoListItem[] SerializedVideos {
-      get => Vids.OrderBy(v => v.PublishedAt).ToArray();
-      set => Vids.Init(value);
-    }
-  }
-
-  public enum UpdateStatus {
-    Updated,
-    Created
-  }
-
-  public class VideoStored {
-    public string VideoId => Latest?.VideoId;
-    public string VideoTitle => Latest?.VideoTitle;
-    public VideoData Latest { get; set; }
-    public ICollection<VideoStats> History { get; set; } = new List<VideoStats>();
-
-    public void SetLatest(VideoData v) {
-      History.Add(Latest.Stats);
-      Latest = v;
-    }
-  }
-
-  public class ChannelStored {
-    public string ChannelId => Latest?.Id;
-    public string ChannelTitle => Latest?.Title;
-
-    public ChannelData Latest { get; set; }
-    public ICollection<ChannelStats> History { get; set; } = new List<ChannelStats>();
-
-    public void SetLatest(ChannelData c) {
-      History.Add(Latest.Stats);
-      Latest = c;
-    }
-
+    public string StatusMessage { get; set; }
     public override string ToString() => $"{ChannelTitle}";
   }
 
-  public class ChannelRecommendations {
-    string ChannelId { get; set; }
-    string ChannelTitle { get; set; }
-    public ICollection<Recommendation> Recomendations { get; set; } = new List<Recommendation>();
+  public class VideoStored2 {
+    public string VideoId { get; set; }
+    public string Title { get; set; }
+    public string ChannelId { get; set; }
+    public string ChannelTitle { get; set; }
+    public DateTime UploadDate { get; set; }
+    public string Description { get; set; }
+    public ThumbnailSet Thumbnails { get; set; }
+    public TimeSpan Duration { get; set; }
+    public IReadOnlyList<string> Keywords { get; set; } = new List<string>();
+    public Statistics Statistics { get; set; }
+    //public IReadOnlyCollection<ClosedCaptionTrackInfo> Captions { get; set; }
+
+    public override string ToString() => $"{Title}";
   }
 
-  public class Recommendation {
-    public Recommendation() { }
-
-    public Recommendation(VideoItem from, RecommendedVideoListItem to) {
-      From = from;
-      To = to;
-    }
-
-    public VideoItem From { get; set; }
-    public RecommendedVideoListItem To { get; set; }
+  public class RecStored2 : Rec {
+    public string FromVideoId { get; set; }
+    public string FromVideoTitle { get; set; }
+    public string FromChannelId { get; set; }
     public DateTime Updated { get; set; }
+
+    public override string ToString() => $"{FromVideoTitle} -> {ToVideoTitle}";
+  }
+
+  public class VideoCaptionStored2 {
+    public string VideoId { get; set; }
+    public DateTime UploadDate { get; set; }
+    public ClosedCaptionTrackInfo Info { get; set; }
+    public IReadOnlyCollection<ClosedCaption> Captions { get; set; } = new List<ClosedCaption>();
   }
 }

@@ -91,7 +91,7 @@ namespace YouTubeCli {
 
     static async Task<ExitCode> Update(TaskCtx<UpdateOption> ctx) {
       var ytStore = ctx.Cfg.YtStore(ctx.Log);
-      var ytUpdater = new YtDataUpdater2(ytStore, ctx.Cfg.App, ctx.Log);
+      var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, ctx.Log);
       await ytUpdater.UpdateData();
       return ExitCode.Success;
     }

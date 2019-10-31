@@ -23,13 +23,12 @@ namespace SysExtensions.Threading {
     /// </summary>
     public static async Task<IReadOnlyCollection<R>> BlockTransform<T, R>(this IEnumerable<T> source,
       Func<T, Task<R>> transform, int parallelism = 1, int? capacity = null,
-      Action<BulkProgressInfo<R>> progressUpdate = null, TimeSpan progressPeriod = default(TimeSpan)) {
-      progressPeriod = progressPeriod == default(TimeSpan) ? 60.Seconds() : progressPeriod;
+      Action<BulkProgressInfo<R>> progressUpdate = null, TimeSpan progressPeriod = default) {
+      progressPeriod = progressPeriod == default ? 60.Seconds() : progressPeriod;
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
       var block = new TransformBlock<T, R>(transform, options);
 
-      var totalProgress = Stopwatch.StartNew();
       var swProgress = Stopwatch.StartNew();
 
       // by producing asynchronously and using SendAsync we can throttle how much we can form the source and consume at the same time
@@ -57,25 +56,12 @@ namespace SysExtensions.Threading {
         }
       }
 
-      //progressUpdate?.Invoke(new BulkProgressInfo<R>(result, result, totalProgress.Elapsed));
       await Task.WhenAll(produce, block.Completion);
 
       return result;
     }
 
-/*
-
-        public static async Task BatchTransform<T, R>(this IEnumerable<T> source,
-            Func<T, Task<R>> transform, Func<R, Task> batchAction, int parallelism = 1, int batch = 1000) {
-            var options = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = parallelism };
-            var transformBlock = new TransformBlock<T, R>(transform, options);
-
-            var batchBlock = new BatchBlock<R>(batch);
-
-            batchBlock.LinkTo()
-        }*/
-
-    public static async Task Produce<T>(this IEnumerable<T> source, ITargetBlock<T> block) {
+    static async Task Produce<T>(this IEnumerable<T> source, ITargetBlock<T> block) {
       foreach (var item in source)
         await block.SendAsync(item);
       block.Complete();

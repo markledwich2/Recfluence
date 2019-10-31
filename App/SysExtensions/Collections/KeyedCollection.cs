@@ -37,8 +37,8 @@ namespace SysExtensions.Collections {
       //_dic = comparer == null ? new Dictionary<K, V>() : new Dictionary<K, V>(comparer);
     }
 
-    public KeyedCollection(Expression<Func<V, K>> getKey, IEnumerable<V> list, IEqualityComparer<K> comparer = null)
-      : this(getKey, comparer) {
+    public KeyedCollection(Expression<Func<V, K>> getKey, IEnumerable<V> list, IEqualityComparer<K> comparer = null, bool theadSafe = false)
+      : this(getKey, comparer, theadSafe) {
       foreach (var item in list)
         Add(item);
     }

@@ -13,13 +13,13 @@ using SysExtensions.Threading;
 using YtReader.YtWebsite;
 
 namespace YtReader {
-  public class YtDataUpdater2 {
-    YtStore2 Store { get; }
+  public class YtDataUpdater {
+    YtStore Store { get; }
     AppCfg Cfg { get; }
     ILogger Log { get; }
     readonly YtScraper Scraper;
 
-    public YtDataUpdater2(YtStore2 store, AppCfg cfg, ILogger log) {
+    public YtDataUpdater(YtStore store, AppCfg cfg, ILogger log) {
       Store = store;
       Cfg = cfg;
       Log = log;
@@ -49,7 +49,7 @@ namespace YtReader {
       var store = Store.ChannelStore;
       var latestStored = (await store.LatestItems())
         .Where(c => c.ChannelId.HasValue())
-        .ToKeyedCollection(c => c.ChannelId);
+        .ToKeyedCollection(c => c.ChannelId, StringComparer.Ordinal);
 
       var stored = await seeds.Randomize().BlockTransform(async channel => {
           var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
