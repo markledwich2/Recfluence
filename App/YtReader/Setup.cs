@@ -33,13 +33,13 @@ namespace YtReader {
 
     public static Logger CreateLogger(AppCfg cfg = null) {
       var c = new LoggerConfiguration()
-        .WriteTo.Console();
+        .WriteTo.Console(LogEventLevel.Information);
 
       if (cfg?.SeqUrl.HasValue() == true)
         c.WriteTo.Seq(cfg.SeqUrl, LogEventLevel.Debug);
 
       if (cfg != null)
-        c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces);
+        c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces, LogEventLevel.Information);
       
       c.MinimumLevel.Debug();
       return c.CreateLogger();

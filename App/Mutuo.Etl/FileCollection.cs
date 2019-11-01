@@ -70,21 +70,24 @@ namespace Mutuo.Etl {
     /// <summary>
     ///   Returns the most recent appended collection
     /// </summary>
-    async Task<StringPath> LatestFile() {
+    async Task<FileListItem> LatestFile() {
       var files = (await Store.List(Path).SelectManyList()).Where(p => !p.Path.Name.StartsWith("_"));
-      var latest = files.OrderByDescending(f => Ts(f.Path)).FirstOrDefault()?.Path;
+      var latest = files.OrderByDescending(f => Ts(f.Path)).FirstOrDefault();
       return latest;
     }
 
-    public async Task<string> LatestTimestamp() {
+    public async Task<(string Ts, DateTime Modified, string Path)?> LatestFileMetadata() {
       var file = await LatestFile();
-      var ts = file?.NameSansExtension.Split(".").FirstOrDefault();
-      return ts;
+      if (file == null)
+        return null;
+      var ts = file.Path.NameSansExtension.Split(".").FirstOrDefault();
+      return (ts, file.Modified?.UtcDateTime ?? DateTime.MinValue, file.Path);
     }
 
-    public async Task<IReadOnlyCollection<T>> LatestItems() {
-      var file = await LatestFile();
-      return file == null ? new T[] {} : await LoadJsonl(file);
+    public async Task<(string Ts, DateTime Modified, IReadOnlyCollection<T> Items)> LatestItems() {
+      var file = await LatestFileMetadata();
+      return file == null ? (null, DateTime.MinValue, new T[] {}) : 
+        (file.Value.Ts, file.Value.Modified, await LoadJsonl(file.Value.Path));
     }
 
     async Task<IReadOnlyCollection<T>> LoadJsonl(StringPath path) {

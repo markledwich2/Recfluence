@@ -21,8 +21,6 @@ namespace YtReader {
         AzureEnvironment.AzureGlobalCloud);
       var azure = Azure.Authenticate(creds).WithSubscription(cfg.App.SubscriptionId);
 
-      var sub = azure.GetCurrentSubscription();
-
       var rg = cfg.App.ResourceGroup;
       var group = await azure.ContainerGroups.GetByResourceGroupAsync(rg, container.Name);
       if (group != null)

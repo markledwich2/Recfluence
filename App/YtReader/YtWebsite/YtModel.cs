@@ -70,19 +70,6 @@ namespace YtReader.YtWebsite {
     public override string ToString() => Title;
   }
 
-  public class Video : VideoItem {
-    public IReadOnlyCollection<ClosedCaptionTrackInfo> Captions { get; }
-    public IReadOnlyCollection<Rec> Recs { get; }
-
-    public Video(string id, string author, DateTimeOffset uploadDate, string title, string description, 
-      ThumbnailSet thumbnails, TimeSpan duration, IReadOnlyList<string> keywords, Statistics statistics,
-      IReadOnlyCollection<ClosedCaptionTrackInfo> captions, IReadOnlyCollection<Rec> recs) 
-      : base(id, author, uploadDate, title, description, thumbnails, duration, keywords, statistics) {
-      Captions = captions;
-      Recs = recs;
-    }
-  }  
-
   /// <summary>
   ///   User activity statistics.
   /// </summary>

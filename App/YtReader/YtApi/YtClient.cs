@@ -163,7 +163,7 @@ namespace YtReader.Yt {
         vids.AddRange(res.Items.Where(v => v.Snippet.PublishedAt != null).Select(v => new ChannelVideoListItem {
           VideoId = v.Id.VideoId,
           VideoTitle = v.Snippet.Title,
-          PublishedAt = (DateTime) v.Snippet.PublishedAt,
+          PublishedAt = v.Snippet.PublishedAt ?? DateTime.MinValue,
           Updated = DateTime.UtcNow
         }));
         if (res.NextPageToken == null)

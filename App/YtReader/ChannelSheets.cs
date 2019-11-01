@@ -23,20 +23,18 @@ namespace YtReader {
       return "\"" + value.Replace("\"", "\\\"") + "\"";
     }
 
-    static IReadOnlyCollection<T> RangeWithHeaderToClass<T>(IList<IList<object>> range, ILogger log) {
+    static IReadOnlyCollection<T> RangeWithHeaderToClass<T>(ICollection<IList<object>> range, ILogger log) {
       if (range.Count == 0) return new T[]{};
       var csvText = range.Join("\n",l => l.Join(",", o => Quote(o?.ToString() ?? "")));
-      using(var reader = new StringReader(csvText))
-      using (var csv = new CsvReader(reader)) {
-        csv.Configuration.MissingFieldFound = null;
-        csv.Configuration.Escape = '\\';
-        csv.Configuration.BadDataFound = c => {
-          log.Warning("Error reading csv data at {RowNumber}: {RowData}", c.Row, c.RawRecord);
-        };
-        csv.Configuration.LineBreakInQuotedFieldIsBadData = false;
-        var rows = csv.GetRecords<T>().ToList();
-        return rows;
-      }
+      using var reader = new StringReader(csvText);
+      using var csv = new CsvReader(reader);
+      csv.Configuration.PrepareHeaderForMatch = (h, i) => h.ToLowerInvariant();
+      csv.Configuration.MissingFieldFound = null;
+      csv.Configuration.Escape = '\\';
+      csv.Configuration.BadDataFound = c => log.Warning("Error reading csv data at {RowNumber}: {RowData}", c.Row, c.RawRecord);
+      csv.Configuration.LineBreakInQuotedFieldIsBadData = false;
+      var rows = csv.GetRecords<T>().ToList();
+      return rows;
     }
     
     static async Task<IReadOnlyCollection<T>> SheetValues<T>(SheetsService service, string sheetId, string range, ILogger log) {
@@ -124,6 +122,11 @@ namespace YtReader {
   }
 
   public class MainChannelSheet : IChannelId {
+    public MainChannelSheet(string id, string title) {
+      Id = id ?? throw new ArgumentNullException(nameof(id));
+      Title = title ?? throw new ArgumentNullException(nameof(title));
+    }
+
     public string Id { get; set; }
     public string Title { get; set; }
     
@@ -135,7 +138,7 @@ namespace YtReader {
   }
 
   public class UserChannelSheet {
-    public string Id { get; set; }
+    public string Id { get; set; } = default!;
     public string LR { get; set; }
     public int Relevance { get; set; }
     public string SoftTag1 { get; set; }
@@ -154,9 +157,9 @@ namespace YtReader {
     // between 0 and 1
     public double Relevance { get; set; }
     public string LR { get; set; }
-    public IReadOnlyCollection<string> HardTags { get; set; }
-    public IReadOnlyCollection<string> SoftTags { get; set; }
-    public IReadOnlyCollection<string> SheetIds { get; set; }
+    public IReadOnlyCollection<string> HardTags { get; set; } = new List<string>();
+    public IReadOnlyCollection<string> SoftTags { get; set; } = new List<string>();
+    public IReadOnlyCollection<string> SheetIds { get; set; }= new List<string>();
   }
 
   public enum ChannelHardTag {
