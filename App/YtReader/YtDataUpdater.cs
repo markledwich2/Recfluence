@@ -91,7 +91,7 @@ namespace YtReader {
         return (Channel: channelStored, Refresh: refreshChannel, IsNew: isNew, Include: includeChannel);
       }
 
-      var channels = await seeds.BlockTransform(UpdateChannel, Cfg.ParallelGets,
+      var channels = await seeds.Randomize().BlockTransform(UpdateChannel, Cfg.ParallelGets,
         progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count));
 
       if (channels.Any(c => c.IsNew || c.Refresh))
