@@ -64,7 +64,7 @@ namespace YtReader {
             newJ["Rank"] = i + 1;
             return newJ;
           });
-        }).ToList();
+        });
         var newPath = StoreFileMd.FilePath(f.Path.Parent, V0UpdateTime.FileSafeTimestamp(), "1");
         await ReplaceJsonLFile(f, newPath, upgradedJs);
       }, Cfg.ParallelGets);
@@ -75,15 +75,12 @@ namespace YtReader {
     async Task<int> UpdateCaptions_0to1() {
       var toUpgrade = await FilesToUpgrade("captions", 0);
       await toUpgrade.BlockAction(async f => {
-        var existingJs = await Jsonl(f);
-        var upgradedJs = existingJs.Select(j => {
-            var newJ = j.DeepClone();
-            newJ["Updated"] = V0UpdateTime;
-            return newJ;
-          }).ToList();
-        await ReplaceJsonLFile(f, NewFilePath(f, 1), upgradedJs);
-      }, Cfg.ParallelGets);
-
+        var js = await Jsonl(f);
+        foreach (var j in js) {
+          j["Updated"] = V0UpdateTime;
+        }
+        await ReplaceJsonLFile(f, NewFilePath(f, 1), js);
+      }, 4);
       return toUpgrade.Count;
     }
 
@@ -102,7 +99,7 @@ namespace YtReader {
       return toUpgrade;
     }
 
-    async Task ReplaceJsonLFile(StoreFileMd f, StringPath newPath, IReadOnlyCollection<JToken> upgradedJs) {
+    async Task ReplaceJsonLFile(StoreFileMd f, StringPath newPath, IEnumerable<JToken> upgradedJs) {
       await using var stream = upgradedJs.ToJsonlGzStream();
       await Store.Save(newPath, stream);
       var deleted = await Store.Delete(f.Path);

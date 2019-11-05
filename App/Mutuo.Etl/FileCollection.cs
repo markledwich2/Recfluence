@@ -76,8 +76,7 @@ namespace Mutuo.Etl {
       var ts = items.Max(GetTs);
       var path = StoreFileMd.FilePath(Path, ts, Version);
 
-      var memStream = items.ToJsonlGzStream();
-
+      await using var memStream = items.ToJsonlGzStream();
       var res = await Store.Save(path, memStream).WithDuration();
       Log.Debug("Store - Saved '{Path}' in {Duration}", path, res);
     }
