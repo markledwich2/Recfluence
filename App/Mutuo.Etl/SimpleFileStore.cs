@@ -13,6 +13,7 @@ namespace Mutuo.Etl {
     Task Save(StringPath path, Stream contents);
     Task<Stream> Load(StringPath path);
     IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false);
+    Task<bool> Delete(StringPath path);
   }
   
   public static class SimpleStoreExtensions {

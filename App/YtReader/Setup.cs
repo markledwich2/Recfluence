@@ -129,7 +129,15 @@ namespace YtReader {
     public DateTime From { get; set; }
     public DateTime? To { get; set; }
 
-    public TimeSpan VideoDead { get; set; } = 120.Days();
+    
+    /// <summary>
+    /// How old a video before we stop collecting recommendation stats
+    /// </summary>
+    public TimeSpan VideoDead { get; set; } = 90.Days();
+    
+    /// <summary>
+    /// How frequently to refresh channel & video stats
+    /// </summary>
     public TimeSpan RefreshChannel { get; set; } = 23.Hours();
 
     public Uri SeedsUrl { get; set; } =

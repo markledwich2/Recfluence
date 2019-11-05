@@ -113,6 +113,11 @@ namespace Mutuo.Etl {
       } while (token != null);
     }
 
+    public async Task<bool> Delete(StringPath path) {
+      var blob = BlobRef(path);
+      return await blob.DeleteIfExistsAsync();
+    }
+
     Uri BlobUri(StringPath path) => Storage.BlobUri(BasePath.Add(path));
   }
 

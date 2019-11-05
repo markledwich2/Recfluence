@@ -8,8 +8,6 @@ using SysExtensions.Text;
 using YtReader;
 
 namespace YouTubeCli {
-  [Verb("collect", HelpText = "read all channel, video, recommendation data and flatten into parquet files")]
-  public class CollectOption : CommonOption { }
 
   [Verb("update", HelpText = "refresh new data from YouTube and collects it into results")]
   public class UpdateOption : CommonOption { }
@@ -58,10 +56,11 @@ namespace YouTubeCli {
 
   class Program {
     static int Main(string[] args) {
-      var res = Parser.Default.ParseArguments<CollectOption, UpdateOption, FixOption, SyncOption, ChannelInfoOption>(args).MapResult(
+      var res = Parser.Default.ParseArguments<UpdateOption, FixOption, SyncOption, ChannelInfoOption>(args).MapResult(
         (UpdateOption u) => Run(u, args, Update),
         (SyncOption s) => Run(s, args, Sync),
         (ChannelInfoOption v) => Run(v, args, ChannelInfo),
+        (FixOption f) => Run(f, args, Fix),
         errs => (int) ExitCode.UnknownError
       );
       return res;
@@ -106,6 +105,11 @@ namespace YouTubeCli {
       var yt = ctx.Cfg.YtClient(ctx.Log);
       var v = await yt.VideoData(ctx.Option.VideoId);
       ctx.Log.Information("{ChannelId},{ChannelTitle}", v.ChannelId, v.ChannelTitle);
+      return ExitCode.Success;
+    }
+    
+    static async Task<ExitCode> Fix(TaskCtx<FixOption> ctx) {
+      await new StoreUpgrader(ctx.Cfg.App, ctx.Cfg.DataStore(), ctx.Log).UpgradeStore();
       return ExitCode.Success;
     }
   }

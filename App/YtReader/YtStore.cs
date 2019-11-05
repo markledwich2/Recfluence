@@ -8,25 +8,29 @@ using YtReader.YtWebsite;
 
 namespace YtReader {
   public class YtStore {
+    public static readonly int StoreVersion = 1;
+
     readonly ISimpleFileStore Store;
     readonly ILogger Log;
 
     public YtStore(ISimpleFileStore store, ILogger log) {
       Store = store;
       Log = log;
-      ChannelStore = new AppendCollectionStore<ChannelStored2>(Store, "channels", c => c.Updated.FileSafeTimestamp(), Log);
+      ChannelStore = new AppendCollectionStore<ChannelStored2>(Store, "channels", c => c.Updated.FileSafeTimestamp(), StoreVersion.ToString(), Log);
     }
 
     public AppendCollectionStore<ChannelStored2> ChannelStore { get; }
-    
-    public AppendCollectionStore<VideoStored2> VideoStore(string channelId) => 
-      new AppendCollectionStore<VideoStored2>(Store, StringPath.Relative("videos", channelId), v => v.UploadDate.FileSafeTimestamp(), Log);
 
-    public AppendCollectionStore<RecStored2> RecStore(string channelId) => 
-      new AppendCollectionStore<RecStored2>(Store, StringPath.Relative("recs", channelId), r => r.Updated.FileSafeTimestamp(), Log);
-    
-    public AppendCollectionStore<VideoCaptionStored2> CaptionStore(string channelId) => 
-      new AppendCollectionStore<VideoCaptionStored2>(Store, StringPath.Relative("captions", channelId), c => c.UploadDate.FileSafeTimestamp(), Log);
+    public AppendCollectionStore<VideoStored2> VideoStore(string channelId) =>
+      new AppendCollectionStore<VideoStored2>(Store, StringPath.Relative("videos", channelId), v => v.UploadDate.FileSafeTimestamp(), StoreVersion.ToString(),
+        Log);
+
+    public AppendCollectionStore<RecStored2> RecStore(string channelId) =>
+      new AppendCollectionStore<RecStored2>(Store, StringPath.Relative("recs", channelId), r => r.Updated.FileSafeTimestamp(), StoreVersion.ToString(), Log);
+
+    public AppendCollectionStore<VideoCaptionStored2> CaptionStore(string channelId) =>
+      new AppendCollectionStore<VideoCaptionStored2>(Store, StringPath.Relative("captions", channelId), c => c.UploadDate.FileSafeTimestamp(),
+        StoreVersion.ToString(), Log);
   }
 
   public class ChannelStored2 {
@@ -58,6 +62,7 @@ namespace YtReader {
     public TimeSpan Duration { get; set; }
     public IReadOnlyList<string> Keywords { get; set; } = new List<string>();
     public Statistics Statistics { get; set; }
+    public DateTime Updated { get; set; }
     //public IReadOnlyCollection<ClosedCaptionTrackInfo> Captions { get; set; }
 
     public override string ToString() => $"{Title}";
@@ -68,14 +73,19 @@ namespace YtReader {
     public string FromVideoTitle { get; set; }
     public string FromChannelId { get; set; }
     public DateTime Updated { get; set; }
+    public int Rank { get; set; }
 
     public override string ToString() => $"{FromVideoTitle} -> {ToVideoTitle}";
   }
 
-  public class VideoCaptionStored2 {
+  public class VideoCaptionStored2 : StoredItem {
     public string VideoId { get; set; }
     public DateTime UploadDate { get; set; }
     public ClosedCaptionTrackInfo Info { get; set; }
     public IReadOnlyCollection<ClosedCaption> Captions { get; set; } = new List<ClosedCaption>();
+  }
+
+  public abstract class StoredItem {
+    public DateTime Updated { get; set; }
   }
 }

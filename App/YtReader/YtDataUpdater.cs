@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Humanizer;
 using Mutuo.Etl;
 using Serilog;
 using SysExtensions;
@@ -55,14 +54,15 @@ namespace YtReader {
     async Task<IReadOnlyCollection<(ChannelStored2 Channel, bool Refresh, bool IsNew, bool Include)>> UpdateChannels() {
       var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
       var store = Store.ChannelStore;
-      var latestItems = await store.LatestItems();
-      var latestStored = latestItems.Items
+      var laststMd = await store.LatestFileMetadata();
+      var latestItems = laststMd == null ? new ChannelStored2[] { } : await store.Items(laststMd.Path);
+      var storedById = latestItems
         .Where(c => c.ChannelId.HasValue())
         .ToKeyedCollection(c => c.ChannelId, StringComparer.Ordinal);
 
       async Task<(ChannelStored2 Channel, bool Refresh, bool IsNew, bool Include)> UpdateChannel(ChannelWithUserData channel) {
         var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
-        var channelStored = latestStored[channel.Id];
+        var channelStored = storedById[channel.Id];
         var isNew = channelStored == null;
         var includeChannel = Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(channel.Id);
         var refreshChannel = includeChannel && (channelStored == null || Expired(channelStored.Updated, RCfg.RefreshChannel));
@@ -128,15 +128,16 @@ namespace YtReader {
       var updateFrom = md == null ? RCfg.From : DateTime.UtcNow - RCfg.VideoDead;
 
       var vids = await ChannelVidItems(c, updateFrom, log).ToListAsync();
-      await UpdateVids(c, vids, vidStore, lastUpload, log);
-      await UpdateRecs(c, vids, log);
-      await UpdateCaptions(c, vids, log);
+      await SaveVids(c, vids, vidStore, lastUpload, log);
+      await SaveRecs(c, vids, log);
+      await SaveNewCaptions(c, vids, log);
 
       log.Information("{Channel} - Completed  update of videos/recs/captions in {Duration}", c.ChannelTitle, sw.Elapsed);
     }
 
-    async Task UpdateVids(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AppendCollectionStore<VideoStored2> vidStore, DateTime? lastUpload,
+    async Task SaveVids(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AppendCollectionStore<VideoStored2> vidStore, DateTime? lastUpload,
       ILogger log) {
+      var updated = DateTime.UtcNow;
       var vidsStored = vids.Select(v => new VideoStored2 {
         VideoId = v.Id,
         Title = v.Title,
@@ -147,13 +148,14 @@ namespace YtReader {
         Thumbnails = v.Thumbnails,
         ChannelId = c.ChannelId,
         ChannelTitle = c.ChannelTitle,
-        UploadDate = v.UploadDate.UtcDateTime
+        UploadDate = v.UploadDate.UtcDateTime,
+        Updated = updated
       }).ToList();
 
       if (vidsStored.Count > 0)
         await vidStore.Append(vidsStored);
 
-      var newVideos = vids.Count(v => v.UploadDate > lastUpload);
+      var newVideos = vidsStored.Count(v => lastUpload == null || v.UploadDate > lastUpload);
 
       log.Information("{Channel} - Recorded {VideoCount} videos. {NewCount} new, {UpdatedCount} updated",
         c.ChannelTitle, vids.Count, newVideos, vids.Count - newVideos);
@@ -172,7 +174,7 @@ namespace YtReader {
     /// <summary>
     ///   Saves captions for all new videos from the vids list
     /// </summary>
-    async Task UpdateCaptions(ChannelStored2 channel, IEnumerable<VideoItem> vids, ILogger log) {
+    async Task SaveNewCaptions(ChannelStored2 channel, IEnumerable<VideoItem> vids, ILogger log) {
       var store = Store.CaptionStore(channel.ChannelId);
       var lastUpload = (await store.LatestFileMetadata())?.Ts.ParseFileSafeTimestamp(); // last video upload we have captions for
 
@@ -190,7 +192,14 @@ namespace YtReader {
           log.Warning(ex, "Unable to get captions for {VideoID}: {Error}", v.Id, ex.Message);
           return null;
         }
-        return new VideoCaptionStored2 {VideoId = v.Id, UploadDate = v.UploadDate.UtcDateTime, Info = track.Info, Captions = track.Captions};
+
+        return new VideoCaptionStored2 {
+          VideoId = v.Id,
+          UploadDate = v.UploadDate.UtcDateTime,
+          Updated = DateTime.Now,
+          Info = track.Info,
+          Captions = track.Captions
+        };
       }
 
       var captionsToStore =
@@ -206,21 +215,22 @@ namespace YtReader {
     /// <summary>
     ///   Saves recs for all of the given vids
     /// </summary>
-    async Task UpdateRecs(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, ILogger log) {
-      RecStored2 Rec(VideoItem v, Rec r) =>
-        new RecStored2 {
-          FromChannelId = c.ChannelId,
-          FromVideoId = v.Id,
-          FromVideoTitle = v.Title,
-          ToChannelTitle = r.ToChannelTitle,
-          ToVideoId = r.ToVideoId,
-          ToVideoTitle = r.ToVideoTitle
-        };
+    async Task SaveRecs(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, ILogger log) {
+      var updated = DateTime.UtcNow;
 
       var recsStored = (await vids.BlockTransform(
           async v => (v, recs: await Scraper.GetRecs(v.Id, log)),
-          Cfg.ParallelGets)).ToList()
-        .SelectMany(v => v.recs.Select(r => Rec(v.v, r))).ToList();
+          Cfg.ParallelGets))
+        .SelectMany(v => v.recs.Select((r, i) => new RecStored2 {
+          FromChannelId = c.ChannelId,
+          FromVideoId = v.v.Id,
+          FromVideoTitle = v.v.Title,
+          ToChannelTitle = r.ToChannelTitle,
+          ToVideoId = r.ToVideoId,
+          ToVideoTitle = r.ToVideoTitle,
+          Rank = i + 1,
+          Updated = updated
+        })).ToList();
 
       if (recsStored.Any())
         await Store.RecStore(c.ChannelId).Append(recsStored);
