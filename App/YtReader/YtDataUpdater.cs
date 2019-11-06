@@ -47,6 +47,7 @@ namespace YtReader {
             return null;
           }
         }, Cfg.ParallelChannels);
+
       Log.Information("Updated {Channels} channel's videos/captions/recs in {Duration}",
         includedChannels.Count, sw.Elapsed);
     }
@@ -54,18 +55,21 @@ namespace YtReader {
     async Task<IReadOnlyCollection<(ChannelStored2 Channel, bool Refresh, bool IsNew, bool Include)>> UpdateChannels() {
       var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
       var store = Store.ChannelStore;
-      var laststMd = await store.LatestFileMetadata();
-      var latestItems = laststMd == null ? new ChannelStored2[] { } : await store.Items(laststMd.Path);
+      var lastMd = await store.LatestFileMetadata();
+      var latestItems = lastMd == null ? new ChannelStored2[] { } : await store.Items(lastMd.Path);
       var storedById = latestItems
         .Where(c => c.ChannelId.HasValue())
         .ToKeyedCollection(c => c.ChannelId, StringComparer.Ordinal);
+
+      Log.Information("Starting channels update. Limited to ({Included})",
+        Cfg.LimitedToSeedChannels?.HasItems() == true ? Cfg.LimitedToSeedChannels.Join("|") : "All");
 
       async Task<(ChannelStored2 Channel, bool Refresh, bool IsNew, bool Include)> UpdateChannel(ChannelWithUserData channel) {
         var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
         var channelStored = storedById[channel.Id];
         var isNew = channelStored == null;
         var includeChannel = Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(channel.Id);
-        var refreshChannel = includeChannel && (channelStored == null || Expired(channelStored.Updated, RCfg.RefreshChannel));
+        var refreshChannel = includeChannel && (channelStored == null || Expired(channelStored.Updated, RCfg.RefreshAllAfter));
         if (isNew || includeChannel && refreshChannel)
           try {
             var channelData = await Scraper.GetChannelAsync(channel.Id, log);
@@ -119,15 +123,15 @@ namespace YtReader {
       var md = await vidStore.LatestFileMetadata();
       var lastUpload = md?.Ts?.ParseFileSafeTimestamp();
       var lastModified = md?.Modified;
-      if (lastModified != null && Expired(lastModified.Value, RCfg.RefreshChannel)) {
+      if (lastModified != null && Expired(lastModified.Value, RCfg.RefreshAllAfter)) {
         log.Information("{Channel} - skipping update, video stats have been updated recently {LastModified}", c.ChannelTitle, lastModified);
         return;
       }
 
       // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.
-      var updateFrom = md == null ? RCfg.From : DateTime.UtcNow - RCfg.VideoDead;
+      var uploadedFrom = md == null ? RCfg.From : DateTime.UtcNow - RCfg.RefreshVideosWithin;
 
-      var vids = await ChannelVidItems(c, updateFrom, log).ToListAsync();
+      var vids = await ChannelVidItems(c, uploadedFrom, log).ToListAsync();
       await SaveVids(c, vids, vidStore, lastUpload, log);
       await SaveRecs(c, vids, log);
       await SaveNewCaptions(c, vids, log);
@@ -135,7 +139,7 @@ namespace YtReader {
       log.Information("{Channel} - Completed  update of videos/recs/captions in {Duration}", c.ChannelTitle, sw.Elapsed);
     }
 
-    async Task SaveVids(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AppendCollectionStore<VideoStored2> vidStore, DateTime? lastUpload,
+    static async Task SaveVids(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AppendCollectionStore<VideoStored2> vidStore, DateTime? uploadedFrom,
       ILogger log) {
       var updated = DateTime.UtcNow;
       var vidsStored = vids.Select(v => new VideoStored2 {
@@ -155,20 +159,17 @@ namespace YtReader {
       if (vidsStored.Count > 0)
         await vidStore.Append(vidsStored);
 
-      var newVideos = vidsStored.Count(v => lastUpload == null || v.UploadDate > lastUpload);
+      var newVideos = vidsStored.Count(v => uploadedFrom == null || v.UploadDate > uploadedFrom);
 
       log.Information("{Channel} - Recorded {VideoCount} videos. {NewCount} new, {UpdatedCount} updated",
         c.ChannelTitle, vids.Count, newVideos, vids.Count - newVideos);
     }
 
-    async IAsyncEnumerable<VideoItem> ChannelVidItems(ChannelStored2 c, DateTime updateFrom, ILogger log) {
-      await foreach (var vids in Scraper.GetChannelUploadsAsync(c.ChannelId, log)) {
-        if (!vids.Any(v => v.UploadDate > updateFrom))
-          yield break;
-        foreach (var v in vids)
-          if (v.UploadDate > updateFrom)
-            yield return v;
-      }
+    async IAsyncEnumerable<VideoItem> ChannelVidItems(ChannelStored2 c, DateTime uploadFrom, ILogger log) {
+      await foreach (var vids in Scraper.GetChannelUploadsAsync(c.ChannelId, log))
+      foreach (var v in vids)
+        if (v.UploadDate > uploadFrom) yield return v;
+        else yield break; // break on the first video older than updateFrom.
     }
 
     /// <summary>
@@ -203,7 +204,7 @@ namespace YtReader {
       }
 
       var captionsToStore =
-        (await vids.Where(v => lastUpload == null || v.UploadDate > lastUpload)
+        (await vids.Where(v => lastUpload == null || v.UploadDate.UtcDateTime > lastUpload)
           .BlockTransform(GetCaption, Cfg.ParallelGets)).NotNull().ToList();
 
       if (captionsToStore.Any())
@@ -216,11 +217,22 @@ namespace YtReader {
     ///   Saves recs for all of the given vids
     /// </summary>
     async Task SaveRecs(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, ILogger log) {
-      var updated = DateTime.UtcNow;
+      var recStore = Store.RecStore(c.ChannelId);
+      var prevUpdate = await recStore.LatestFileMetadata();
 
-      var recsStored = (await vids.BlockTransform(
-          async v => (v, recs: await Scraper.GetRecs(v.Id, log)),
-          Cfg.ParallelGets))
+      var vidsDesc = vids.OrderByDescending(v => v.UploadDate).ToList();
+      // refresh all videos if this is the first time for this channel, otherwise take up to max
+      var toUpdate = prevUpdate == null ? vidsDesc : vidsDesc.Take(RCfg.RefreshRecsMax).ToList();
+      var deficit = RCfg.RefreshRecsMin - toUpdate.Count;
+      if (deficit > 0)
+        toUpdate.AddRange(vidsDesc.Take(deficit));
+
+      var recs = await toUpdate.BlockTransform(
+        async v => (v, recs: await Scraper.GetRecs(v.Id, log)),
+        Cfg.ParallelGets);
+
+      var updated = DateTime.UtcNow;
+      var recsStored = recs
         .SelectMany(v => v.recs.Select((r, i) => new RecStored2 {
           FromChannelId = c.ChannelId,
           FromVideoId = v.v.Id,
@@ -233,7 +245,7 @@ namespace YtReader {
         })).ToList();
 
       if (recsStored.Any())
-        await Store.RecStore(c.ChannelId).Append(recsStored);
+        await recStore.Append(recsStored);
 
       Log.Information("{Channel} - Recorded {RecCount} recs for {VideoCount} videos", c.ChannelTitle, recsStored.Count, vids.Count);
     }

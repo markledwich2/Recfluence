@@ -112,7 +112,7 @@ namespace YtReader.Yt {
       var s = YtService.Search.List("snippet");
       s.RelatedToVideoId = id;
       s.Type = "video";
-      s.MaxResults = Cfg.YtReader.CacheRelated;
+      s.MaxResults = 10;
 
       SearchListResponse response;
       try {

@@ -24,11 +24,10 @@ namespace YtReader {
     }
 
     public async Task UpgradeStore() {
-
       async Task Run(Task<int> upgrade, string desc) {
         Log.Information("Started upgrade of {desc}", desc);
         var res = await upgrade.WithDuration();
-        Log.Information("Completed vid upgrade of {FileCount} in {Duration}", res.Result, res.Duration);
+        Log.Information("Completed {desc} upgrade of {FileCount} in {Duration}", desc, res.Result, res.Duration);
       }
 
       await Run(UpdateVids_0to1(), "videos");
@@ -76,15 +75,13 @@ namespace YtReader {
       var toUpgrade = await FilesToUpgrade("captions", 0);
       await toUpgrade.BlockAction(async f => {
         var js = await Jsonl(f);
-        foreach (var j in js) {
-          j["Updated"] = V0UpdateTime;
-        }
+        foreach (var j in js) j["Updated"] = V0UpdateTime;
         await ReplaceJsonLFile(f, NewFilePath(f, 1), js);
       }, 4);
       return toUpgrade.Count;
     }
 
-    static StringPath NewFilePath(StoreFileMd f, int version) => 
+    static StringPath NewFilePath(StoreFileMd f, int version) =>
       StoreFileMd.FilePath(f.Path.Parent, StoreFileMd.GetTs(f.Path), version.ToString());
 
     async Task<IReadOnlyCollection<JObject>> Jsonl(StoreFileMd f) {

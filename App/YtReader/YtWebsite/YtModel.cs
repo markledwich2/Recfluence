@@ -301,17 +301,17 @@ namespace YtReader.YtWebsite {
     /// <summary>
     ///   Time at which this caption starts being displayed.
     /// </summary>
-    public TimeSpan Offset { get; }
+    public TimeSpan? Offset { get; }
 
     /// <summary>
     ///   Duration this caption is displayed.
     /// </summary>
-    public TimeSpan Duration { get; }
+    public TimeSpan? Duration { get; }
 
     /// <summary>
     ///   Initializes an instance of <see cref="ClosedCaption" />.
     /// </summary>
-    public ClosedCaption(string text, TimeSpan offset, TimeSpan duration) {
+    public ClosedCaption(string text, TimeSpan? offset, TimeSpan? duration) {
       Text = text;
       Offset = offset;
       Duration = duration;

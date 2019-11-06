@@ -38,7 +38,7 @@ namespace YtReader {
       if (cfg?.SeqUrl.HasValue() == true)
         c.WriteTo.Seq(cfg.SeqUrl, LogEventLevel.Debug);
 
-      if (cfg != null)
+      if (cfg?.AppInsightsKey != null)
         c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces, LogEventLevel.Information);
       
       c.MinimumLevel.Debug();
@@ -124,24 +124,35 @@ namespace YtReader {
   }
 
   public class YtReaderCfg {
-    public int CacheRelated = 40;
-    public int Related { get; set; } = 10;
     public DateTime From { get; set; }
     public DateTime? To { get; set; }
-
     
     /// <summary>
-    /// How old a video before we stop collecting recommendation stats
+    /// How old a video before we stop collecting video stats.
+    /// This is cheap, due to video stats being returned in a video's playlist
     /// </summary>
-    public TimeSpan VideoDead { get; set; } = 90.Days();
+    public TimeSpan RefreshVideosWithin { get; set; } = 120.Days();
+
+    /// <summary>
+    /// We want to keep monitoring YouTube influence even if no new videos have been created (min).
+    /// Get at least this number of recs per channel
+    /// </summary>
+    public int RefreshRecsMin { get; set; } = 1;
     
+    /// <summary>
+    /// The number of videos within RefreshRecsWithin to refresh recommendations for per channel
+    /// </summary>
+    public int RefreshRecsMax { get; set; } = 10;
+    
+    /// <summary>
+    /// Gets recs for videos younger than this
+    /// </summary>
+    public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
+
     /// <summary>
     /// How frequently to refresh channel & video stats
     /// </summary>
-    public TimeSpan RefreshChannel { get; set; } = 23.Hours();
-
-    public Uri SeedsUrl { get; set; } =
-      new Uri("https://raw.githubusercontent.com/markledwich2/YouTubeNetworks/master/Data/SeedChannels.csv");
+    public TimeSpan RefreshAllAfter { get; set; } = 23.Hours();
   }
 
   public class StorageCfg {

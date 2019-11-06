@@ -426,9 +426,9 @@ namespace YtReader.YtWebsite {
       var captions = from captionXml in trackXml.Descendants("p")
         let text = (string) captionXml
         where !text.IsNullOrWhiteSpace()
-        let offset = TimeSpan.FromMilliseconds((double) captionXml.Attribute("t"))
-        let duration = TimeSpan.FromMilliseconds((double) captionXml.Attribute("d"))
-        select new ClosedCaption(text, offset, duration);
+        let offset = (double?) captionXml.Attribute("t")
+        let duration = (double?) captionXml.Attribute("d")
+        select new ClosedCaption(text, offset?.Milliseconds(), duration?.Milliseconds());
 
       return new ClosedCaptionTrack(info, captions.ToList());
     }
