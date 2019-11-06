@@ -37,19 +37,20 @@ namespace YtReader {
         channels.Result.Count(c => c.Refresh), channels.Result.Count, channels.Duration);
 
       var includedChannels = channels.Result.Where(c => c.Include).ToList();
-      await includedChannels
-        .BlockAction(c => {
+      var channelResults = await includedChannels
+        .BlockTransform(async c => {
           try {
-            return UpdateAllInChannel(c.Channel);
+            await UpdateAllInChannel(c.Channel);
+            return (c.Channel, Success:true);
           }
           catch (Exception ex) {
             Log.Error(ex, "Error updating channel {Channel}: {Error}", c.Channel.ChannelTitle, ex.Message);
-            return null;
+            return (c.Channel, Success: false);
           }
         }, Cfg.ParallelChannels);
 
-      Log.Information("Updated {Channels} channel's videos/captions/recs in {Duration}",
-        includedChannels.Count, sw.Elapsed);
+      Log.Information("Updated {Completed} channel videos/captions/recs, {Errors} failed in {Duration}",
+        channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed);
     }
 
     async Task<IReadOnlyCollection<(ChannelStored2 Channel, bool Refresh, bool IsNew, bool Include)>> UpdateChannels() {
@@ -247,7 +248,7 @@ namespace YtReader {
       if (recsStored.Any())
         await recStore.Append(recsStored);
 
-      Log.Information("{Channel} - Recorded {RecCount} recs for {VideoCount} videos", c.ChannelTitle, recsStored.Count, vids.Count);
+      Log.Information("{Channel} - Recorded {RecCount} recs for {VideoCount} videos", c.ChannelTitle, recsStored.Count, toUpdate);
     }
   }
 }

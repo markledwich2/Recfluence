@@ -361,17 +361,19 @@ namespace YtReader.YtWebsite {
         thumbnails, videoDuration, videoKeywords, statistics);
     }
     
-    static IReadOnlyCollection<Rec> GetRecs(HtmlDocument videoWatchPageHtml) =>
-      (from d in videoWatchPageHtml.GetElementsBySelector("li.video-list-item.related-list-item")
+    static IReadOnlyCollection<Rec> GetRecs(HtmlDocument videoWatchPageHtml) {
+      var recs = (from d in videoWatchPageHtml.GetElementsBySelector("li.video-list-item.related-list-item")
         let titleSpan = d.GetElementsBySelector("span.title").FirstOrDefault()
         let channelSpan = d.GetElementsBySelector("span.stat.attribution > span").FirstOrDefault()
         let videoA = d.GetElementsBySelector("a.content-link").FirstOrDefault()
-        where videoA != null
+        where videoA != null && channelSpan != null && videoA != null
         select new Rec {
           ToVideoId = ParseVideoId($"https://youtube.com/{videoA.GetAttribute("href").Value}"),
           ToVideoTitle = titleSpan.GetInnerText(),
           ToChannelTitle = channelSpan.GetInnerText()
         }).ToList();
+      return recs;
+    }
 
     static IReadOnlyCollection<ClosedCaptionTrackInfo> GetCaptions(JToken playerResponseJson) =>
       (from trackJson in playerResponseJson.SelectToken("..captionTracks").NotNull()
