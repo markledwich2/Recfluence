@@ -84,7 +84,8 @@ namespace YouTubeCli {
         return (int) task(new TaskCtx<TOption> {Cfg = cfg, Log = envLog, Option = option, OriginalArgs = args}).Result;
       }
       catch (Exception ex) {
-        envLog.Error(ex, "Unhandled error: {Error}", ex.Message);
+        var flatEx = ex switch { AggregateException a => a.Flatten(), _ => ex };
+        envLog.Error(flatEx, "Unhandled error: {Error}", flatEx.Message);
         return (int) ExitCode.UnknownError;
       }
     }

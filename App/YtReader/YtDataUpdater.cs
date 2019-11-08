@@ -9,7 +9,9 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Yt;
 using YtReader.YtWebsite;
+using VideoItem = YtReader.YtWebsite.VideoItem;
 
 namespace YtReader {
   public class YtDataUpdater {
@@ -17,12 +19,14 @@ namespace YtReader {
     AppCfg Cfg { get; }
     ILogger Log { get; }
     readonly YtScraper Scraper;
+    readonly YtClient Api;
 
     public YtDataUpdater(YtStore store, AppCfg cfg, ILogger log) {
       Store = store;
       Cfg = cfg;
       Log = log;
       Scraper = new YtScraper(cfg.Proxy);
+      Api = new YtClient(cfg, log);
     }
 
     YtReaderCfg RCfg => Cfg.YtReader;
@@ -71,28 +75,34 @@ namespace YtReader {
         var isNew = channelStored == null;
         var includeChannel = Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(channel.Id);
         var refreshChannel = includeChannel && (channelStored == null || Expired(channelStored.Updated, RCfg.RefreshAllAfter));
-        if (isNew || includeChannel && refreshChannel)
+        if (isNew || includeChannel && refreshChannel) {
+          ChannelData channelData = null;
+          string statusMessage = null;
           try {
-            var channelData = await Scraper.GetChannelAsync(channel.Id, log);
-
-            channelStored = new ChannelStored2 {
-              ChannelId = channelData.Id,
-              ChannelTitle = channelData.Title ?? channel.Title,
-              LogoUrl = channelData.LogoUrl,
-              Subs = channelData.Subs,
-              Updated = DateTime.UtcNow,
-              Relevance = channel.Relevance,
-              LR = channel.LR,
-              HardTags = channel.HardTags,
-              SoftTags = channel.SoftTags,
-              SheetIds = channel.SheetIds,
-              StatusMessage = channelData.StatusMessage
-            };
-            Log.Information("{Channel} - read channel details", channelStored.ChannelTitle);
+            channelData = await Api.ChannelData(channel.Id); // Use API to get channel instea of scraper. We get better info faster
+            log.Information("{Channel} - read channel details", channelStored.ChannelTitle);
           }
           catch (Exception ex) {
-            Log.Error(ex, "{Channel} - Error when updating details for channel : {Error}", channel.Title, ex.Message);
+            statusMessage = ex.Message;
+            log.Error(ex, "{Channel} - Error when updating details for channel : {Error}", channel.Title, ex.Message);
           }
+          channelStored = new ChannelStored2 {
+            ChannelId = channel.Id,
+            ChannelTitle = channelData?.Title ?? channel.Title,
+            Description = channelData?.Description,
+            LogoUrl = channelData?.Thumbnails?.Standard?.Url,
+            Subs = channelData?.Stats?.SubCount,
+            ChannelViews = channelData?.Stats?.ViewCount,
+            Country = channelData?.Country,
+            Updated = DateTime.UtcNow,
+            Relevance = channel.Relevance,
+            LR = channel.LR,
+            HardTags = channel.HardTags,
+            SoftTags = channel.SoftTags,
+            SheetIds = channel.SheetIds,
+            StatusMessage = statusMessage
+          };
+        }
         return (Channel: channelStored, Refresh: refreshChannel, IsNew: isNew, Include: includeChannel);
       }
 
@@ -124,7 +134,7 @@ namespace YtReader {
       var md = await vidStore.LatestFileMetadata();
       var lastUpload = md?.Ts?.ParseFileSafeTimestamp();
       var lastModified = md?.Modified;
-      if (lastModified != null && Expired(lastModified.Value, RCfg.RefreshAllAfter)) {
+      if (lastModified != null && !Expired(lastModified.Value, RCfg.RefreshAllAfter)) {
         log.Information("{Channel} - skipping update, video stats have been updated recently {LastModified}", c.ChannelTitle, lastModified);
         return;
       }

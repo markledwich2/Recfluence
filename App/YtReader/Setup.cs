@@ -143,11 +143,6 @@ namespace YtReader {
     /// The number of videos within RefreshRecsWithin to refresh recommendations for per channel
     /// </summary>
     public int RefreshRecsMax { get; set; } = 10;
-    
-    /// <summary>
-    /// Gets recs for videos younger than this
-    /// </summary>
-    public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
 
     /// <summary>
     /// How frequently to refresh channel & video stats

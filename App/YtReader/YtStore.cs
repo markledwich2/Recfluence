@@ -36,11 +36,13 @@ namespace YtReader {
   public class ChannelStored2 {
     public string ChannelId { get; set; }
     public string ChannelTitle { get; set; }
+    public string Description { get; set; }
     public string LogoUrl { get; set; }
     public double Relevance { get; set; }
     public string LR { get; set; }
-
-    public long? Subs { get; set; }
+    public ulong? Subs { get; set; }
+    public ulong? ChannelViews { get; set; }
+    public string Country { get; set; }
 
     public IReadOnlyCollection<string> HardTags { get; set; }
     public IReadOnlyCollection<string> SoftTags { get; set; }

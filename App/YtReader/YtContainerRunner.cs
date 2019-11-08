@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,9 +24,11 @@ namespace YtReader {
 
       var rg = cfg.App.ResourceGroup;
       var group = await azure.ContainerGroups.GetByResourceGroupAsync(rg, container.Name);
-      if (group != null)
+      if (group != null) {
+        if(group.State.HasValue() && group.State != "Terminated")
+          throw new InvalidOperationException("Won't start container - it's not terminated");
         await azure.ContainerGroups.DeleteByIdAsync(group.Id);
-
+      }
       var cArgs = new[] {"/app/ytnetworks.dll"}.Concat(args).ToArray();
       log.Information("starting container {Image} {Args}", container.ImageName, cArgs.Join(" "));
       var containerGroup = await azure.ContainerGroups.Define(container.Name)
