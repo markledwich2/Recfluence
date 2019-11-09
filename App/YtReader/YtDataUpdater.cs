@@ -89,6 +89,7 @@ namespace YtReader {
           channelStored = new ChannelStored2 {
             ChannelId = channel.Id,
             ChannelTitle = channelData?.Title ?? channel.Title,
+            MainChannelId = channel.MainChannelId,
             Description = channelData?.Description,
             LogoUrl = channelData?.Thumbnails?.Standard?.Url,
             Subs = channelData?.Stats?.SubCount,

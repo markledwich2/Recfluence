@@ -8,6 +8,7 @@ using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
+using Microsoft.Azure.Management.Sql.Fluent.Models;
 using Serilog;
 using SysExtensions.Text;
 
@@ -25,7 +26,7 @@ namespace YtReader {
       var rg = cfg.App.ResourceGroup;
       var group = await azure.ContainerGroups.GetByResourceGroupAsync(rg, container.Name);
       if (group != null) {
-        if(group.State.HasValue() && group.State != "Terminated")
+        if(group.State.HasValue() && group.State == "Running")
           throw new InvalidOperationException("Won't start container - it's not terminated");
         await azure.ContainerGroups.DeleteByIdAsync(group.Id);
       }

@@ -36,6 +36,7 @@ namespace YtReader {
   public class ChannelStored2 {
     public string ChannelId { get; set; }
     public string ChannelTitle { get; set; }
+    public string MainChannelId { get; set; }
     public string Description { get; set; }
     public string LogoUrl { get; set; }
     public double Relevance { get; set; }
