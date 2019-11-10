@@ -40,6 +40,9 @@ namespace YtReader {
       return RangeWithHeaderToClass<T>(res.Values, log).ToList();
     }
 
+    public static Task<IReadOnlyCollection<MainChannelSheet>> MainChannels(SheetsCfg sheetsCfg, ILogger log) =>
+      MainChannels(sheetsCfg, GetService(sheetsCfg), log);
+
     static async Task<IReadOnlyCollection<MainChannelSheet>> MainChannels(SheetsCfg sheetsCfg, SheetsService service, ILogger log) =>
       await SheetValues<MainChannelSheet>(service, sheetsCfg.MainChannelSheetId, "Channels", log);
 

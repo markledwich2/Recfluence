@@ -20,9 +20,9 @@ using YtReader.Yt;
 namespace YtReader {
   public static class Setup {
     public static string AppName = "YouTubeNetworks";
-    public static FPath SolutionDir => typeof(Setup).LocalAssemblyPath().ParentWithFile("YouTubeNetworks.sln");
-    public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
-    public static FPath LocalDataDir => "Data".AsPath().InAppData(AppName);
+    public static FPath  SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("YouTubeNetworks.sln");
+    public static FPath  SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
+    public static FPath  LocalDataDir    => "Data".AsPath().InAppData(AppName);
 
     static FPath RootCfgPath => "cfg.json".AsPath().InAppData(AppName);
 
@@ -39,8 +39,8 @@ namespace YtReader {
         c.WriteTo.Seq(cfg.SeqUrl, LogEventLevel.Debug);
 
       if (cfg?.AppInsightsKey != null)
-        c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces, LogEventLevel.Information);
-      
+        c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces, LogEventLevel.Debug);
+
       c.MinimumLevel.Debug();
       return c.CreateLogger();
     }
@@ -86,88 +86,90 @@ namespace YtReader {
   }
 
   public class Cfg {
-    public AppCfg App { get; set; }
+    public AppCfg  App  { get; set; }
     public RootCfg Root { get; set; }
   }
 
   public class AppCfg {
-    public string AppInsightsKey { get; set; }
-    public int ParallelChannels { get; set; } = 4;
-    public int ParallelGets { get; set; } = 8;
+    public string AppInsightsKey       { get; set; }
+    public int    ParallelChannels     { get; set; } = 4;
+    public int    ParallelGets         { get; set; } = 8;
+    public int    ChannelsPerContainer { get; set; } = 200;
 
-    public string ResourceGroup { get; set; } = "ytnetworks";
-    public YtReaderCfg YtReader { get; set; } = new YtReaderCfg();
-    public StorageCfg Storage { get; set; } = new StorageCfg();
-    public ICollection<string> YTApiKeys { get; set; }
-    public HashSet<string> LimitedToSeedChannels { get; set; }
+    public string              ResourceGroup         { get; set; } = "ytnetworks";
+    public YtReaderCfg         YtReader              { get; set; } = new YtReaderCfg();
+    public StorageCfg          Storage               { get; set; } = new StorageCfg();
+    public ICollection<string> YTApiKeys             { get; set; }
+    public HashSet<string>     LimitedToSeedChannels { get; set; }
 
-    public string SubscriptionId { get; set; }
+    public string              SubscriptionId   { get; set; }
     public ServicePrincipalCfg ServicePrincipal { get; set; } = new ServicePrincipalCfg();
-    public ContainerCfg Container { get; set; } = new ContainerCfg();
-    public string SeqUrl { get; set; }
+    public ContainerCfg        Container        { get; set; } = new ContainerCfg();
+    public string              SeqUrl           { get; set; }
 
     public SheetsCfg Sheets { get; set; }
 
-    public ProxyCfg Proxy { get; set; }
+    public ScraperCfg Scraper { get; set; } = new ScraperCfg();
   }
 
-  public class ProxyCfg {
-    public string Url { get; set; }
-    public NameSecret Creds { get; set; }
-    public int TimeoutSeconds { get; set; } = 30;
+  public class ScraperCfg {
+    public string     Url            { get; set; }
+    public NameSecret Creds          { get; set; }
+    public int        TimeoutSeconds { get; set; } = 30;
+    public int        Retry          { get; set; } = 10;
   }
 
   public class SheetsCfg {
-    public JObject CredJson { get; set; }
-    public string MainChannelSheetId { get; set; }
+    public JObject             CredJson            { get; set; }
+    public string              MainChannelSheetId  { get; set; }
     public ICollection<string> UserChannelSheetIds { get; set; }
   }
 
   public class YtReaderCfg {
-    public DateTime From { get; set; }
-    public DateTime? To { get; set; }
-    
+    public DateTime  From { get; set; }
+    public DateTime? To   { get; set; }
+
     /// <summary>
-    /// How old a video before we stop collecting video stats.
-    /// This is cheap, due to video stats being returned in a video's playlist
+    ///   How old a video before we stop collecting video stats.
+    ///   This is cheap, due to video stats being returned in a video's playlist
     /// </summary>
     public TimeSpan RefreshVideosWithin { get; set; } = 120.Days();
 
     /// <summary>
-    /// We want to keep monitoring YouTube influence even if no new videos have been created (min).
-    /// Get at least this number of recs per channel
+    ///   We want to keep monitoring YouTube influence even if no new videos have been created (min).
+    ///   Get at least this number of recs per channel
     /// </summary>
     public int RefreshRecsMin { get; set; } = 1;
-    
+
     /// <summary>
-    /// The number of videos within RefreshRecsWithin to refresh recommendations for per channel
+    ///   The number of videos within RefreshRecsWithin to refresh recommendations for per channel
     /// </summary>
     public int RefreshRecsMax { get; set; } = 10;
 
     /// <summary>
-    /// How frequently to refresh channel & video stats
+    ///   How frequently to refresh channel & video stats
     /// </summary>
     public TimeSpan RefreshAllAfter { get; set; } = 23.Hours();
   }
 
   public class StorageCfg {
     public string DataStorageCs { get; set; }
-    public string DbPath { get; set; } = "data/db";
-    public string AnalysisPath { get; set; } = "data/analysis";
+    public string DbPath        { get; set; } = "data/db";
+    public string AnalysisPath  { get; set; } = "data/analysis";
   }
 
   public class ContainerCfg {
-    public string Registry { get; set; } = "ytnetworks.azurecr.io";
-    public string Name { get; set; } = "ytnetworks-auto";
-    public string ImageName { get; set; } = "ytnetworks";
-    public int Cores { get; set; } = 4;
-    public double Mem { get; set; } = 16;
+    public string     Registry      { get; set; } = "ytnetworks.azurecr.io";
+    public string     Name          { get; set; } = "ytnetworks";
+    public string     ImageName     { get; set; } = "ytnetworks";
+    public int        Cores         { get; set; } = 4;
+    public double     Mem           { get; set; } = 16;
     public NameSecret RegistryCreds { get; set; }
   }
 
   public class ServicePrincipalCfg {
-    public string ClientId { get; set; }
-    public string Secret { get; set; }
+    public string ClientId  { get; set; }
+    public string Secret    { get; set; }
     public string TennantId { get; set; }
   }
 }

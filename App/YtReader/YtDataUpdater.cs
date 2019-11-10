@@ -15,17 +15,17 @@ using VideoItem = YtReader.YtWebsite.VideoItem;
 
 namespace YtReader {
   public class YtDataUpdater {
-    YtStore Store { get; }
-    AppCfg Cfg { get; }
-    ILogger Log { get; }
+    YtStore            Store { get; }
+    AppCfg             Cfg   { get; }
+    ILogger            Log   { get; }
     readonly YtScraper Scraper;
-    readonly YtClient Api;
+    readonly YtClient  Api;
 
     public YtDataUpdater(YtStore store, AppCfg cfg, ILogger log) {
       Store = store;
       Cfg = cfg;
       Log = log;
-      Scraper = new YtScraper(cfg.Proxy);
+      Scraper = new YtScraper(cfg.Scraper);
       Api = new YtClient(cfg, log);
     }
 
@@ -37,19 +37,17 @@ namespace YtReader {
       var sw = Stopwatch.StartNew();
 
       var channels = await UpdateChannels().WithDuration();
-      Log.Information("Completed channel info list. {RefreshedChannels}/{Channels} channels in {Duration}",
-        channels.Result.Count(c => c.Refresh), channels.Result.Count, channels.Duration);
-
-      var includedChannels = channels.Result.Where(c => c.Include).ToList();
-      var channelResults = await includedChannels
+      Log.Information("Updated stats for {Channels} channels in {Duration}", channels.Result.Count, channels.Duration);
+      
+      var channelResults = await channels.Result
         .BlockTransform(async c => {
           try {
-            await UpdateAllInChannel(c.Channel);
-            return (c.Channel, Success:true);
+            await UpdateAllInChannel(c);
+            return (c, Success: true);
           }
           catch (Exception ex) {
-            Log.Error(ex, "Error updating channel {Channel}: {Error}", c.Channel.ChannelTitle, ex.Message);
-            return (c.Channel, Success: false);
+            Log.Error(ex, "Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
+            return (c, Success: false);
           }
         }, Cfg.ParallelChannels);
 
@@ -57,61 +55,53 @@ namespace YtReader {
         channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed);
     }
 
-    async Task<IReadOnlyCollection<(ChannelStored2 Channel, bool Refresh, bool IsNew, bool Include)>> UpdateChannels() {
-      var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
+    async Task<IReadOnlyCollection<ChannelStored2>> UpdateChannels() {
       var store = Store.ChannelStore;
-      var lastMd = await store.LatestFileMetadata();
-      var latestItems = lastMd == null ? new ChannelStored2[] { } : await store.Items(lastMd.Path);
-      var storedById = latestItems
-        .Where(c => c.ChannelId.HasValue())
-        .ToKeyedCollection(c => c.ChannelId, StringComparer.Ordinal);
 
       Log.Information("Starting channels update. Limited to ({Included})",
         Cfg.LimitedToSeedChannels?.HasItems() == true ? Cfg.LimitedToSeedChannels.Join("|") : "All");
 
-      async Task<(ChannelStored2 Channel, bool Refresh, bool IsNew, bool Include)> UpdateChannel(ChannelWithUserData channel) {
+      async Task<ChannelStored2> UpdateChannel(ChannelWithUserData channel) {
         var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
-        var channelStored = storedById[channel.Id];
-        var isNew = channelStored == null;
-        var includeChannel = Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(channel.Id);
-        var refreshChannel = includeChannel && (channelStored == null || Expired(channelStored.Updated, RCfg.RefreshAllAfter));
-        if (isNew || includeChannel && refreshChannel) {
-          ChannelData channelData = null;
-          string statusMessage = null;
-          try {
-            channelData = await Api.ChannelData(channel.Id); // Use API to get channel instea of scraper. We get better info faster
-            log.Information("{Channel} - read channel details", channelStored.ChannelTitle);
-          }
-          catch (Exception ex) {
-            statusMessage = ex.Message;
-            log.Error(ex, "{Channel} - Error when updating details for channel : {Error}", channel.Title, ex.Message);
-          }
-          channelStored = new ChannelStored2 {
-            ChannelId = channel.Id,
-            ChannelTitle = channelData?.Title ?? channel.Title,
-            MainChannelId = channel.MainChannelId,
-            Description = channelData?.Description,
-            LogoUrl = channelData?.Thumbnails?.Standard?.Url,
-            Subs = channelData?.Stats?.SubCount,
-            ChannelViews = channelData?.Stats?.ViewCount,
-            Country = channelData?.Country,
-            Updated = DateTime.UtcNow,
-            Relevance = channel.Relevance,
-            LR = channel.LR,
-            HardTags = channel.HardTags,
-            SoftTags = channel.SoftTags,
-            SheetIds = channel.SheetIds,
-            StatusMessage = statusMessage
-          };
+
+        ChannelData channelData = null;
+        string statusMessage = null;
+        try {
+          channelData = await Api.ChannelData(channel.Id); // Use API to get channel instead of scraper. We get better info faster
+          log.Information("{Channel} - read channel details", channelData.Title);
         }
-        return (Channel: channelStored, Refresh: refreshChannel, IsNew: isNew, Include: includeChannel);
+        catch (Exception ex) {
+          statusMessage = ex.Message;
+          log.Error(ex, "{Channel} - Error when updating details for channel : {Error}", channel.Title, ex.Message);
+        }
+        var channelStored = new ChannelStored2 {
+          ChannelId = channel.Id,
+          ChannelTitle = channelData?.Title ?? channel.Title,
+          MainChannelId = channel.MainChannelId,
+          Description = channelData?.Description,
+          LogoUrl = channelData?.Thumbnails?.Standard?.Url,
+          Subs = channelData?.Stats?.SubCount,
+          ChannelViews = channelData?.Stats?.ViewCount,
+          Country = channelData?.Country,
+          Updated = DateTime.UtcNow,
+          Relevance = channel.Relevance,
+          LR = channel.LR,
+          HardTags = channel.HardTags,
+          SoftTags = channel.SoftTags,
+          SheetIds = channel.SheetIds,
+          StatusMessage = statusMessage
+        };
+        return channelStored;
       }
 
-      var channels = await seeds.Randomize().BlockTransform(UpdateChannel, Cfg.ParallelGets,
-        progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count));
+      var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
 
-      if (channels.Any(c => c.IsNew || c.Refresh))
-        await store.Append(channels.Select(c => c.Channel).NotNull().ToList());
+      var channels = await seeds.Where(c => Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(c.Id))
+        .BlockTransform(UpdateChannel, Cfg.ParallelGets,
+          progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count));
+
+      if (channels.Any())
+        await store.Append(channels);
 
       return channels;
     }

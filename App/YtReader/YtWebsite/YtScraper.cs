@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Humanizer;
@@ -23,33 +25,54 @@ using SysExtensions.Threading;
 
 namespace YtReader.YtWebsite {
   public class YtScraper {
-    readonly ProxyCfg Proxy;
+    readonly ScraperCfg   Cfg;
+    
     readonly HttpClient Http;
+    readonly HttpClient ProxyHttp;
 
-    public YtScraper(ProxyCfg proxy) {
-      Proxy = proxy;
-      Http = CreateHttpClient();
+    public YtScraper(ScraperCfg scraperCfg) {
+      Cfg = scraperCfg;
+      Http = CreateHttpClient(false);
+      ProxyHttp = CreateHttpClient(true);
     }
 
-    public HttpClient CreateHttpClient() =>
-      new HttpClient(new HttpClientHandler {
+    HttpClient CreateHttpClient(bool useProxy) {
+      return new HttpClient(new HttpClientHandler {
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         UseCookies = false,
-        Proxy = new WebProxy("us.smartproxy.com:10000", true, new string[] { }, new NetworkCredential(Proxy.Creds.Name, Proxy.Creds.Secret)),
-        UseProxy = true
+        Proxy = useProxy ? new WebProxy("us.smartproxy.com:10000", true, new string[] { }, new NetworkCredential(Cfg.Creds.Name, Cfg.Creds.Secret)) : null,
+        UseProxy = useProxy
       }) {
-        Timeout = Proxy.TimeoutSeconds.Seconds()
+        Timeout = Cfg.TimeoutSeconds.Seconds()
       };
+    }
 
-    AsyncRetryPolicy Poly(string desc, ILogger log) =>
-      Policy.Handle<HttpRequestException>().Or<TaskCanceledException>()
-        .RetryWithBackoff(desc, 5, log);
+    long DirectHttpFailures;
 
     async Task<string> GetRaw(string url, string desc, ILogger log) {
       log.Debug("Scraping {Desc} {Url}", desc, url);
-      var res = await Poly(url, log).ExecuteAsync(async () => {
-        var task = Http.GetStringAsync(url);
-        if (await Task.WhenAny(task, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) == task)
+      
+      var retryPolicy = Policy.Handle<HttpRequestException>().Or<TaskCanceledException>()
+          .RetryWithBackoff(desc, Cfg.Retry, log);
+
+      var retryWithProxyPolicy = Policy.Handle<HttpRequestException>().Or<TaskCanceledException>()
+        .RetryAsync(Cfg.Retry, async (e, i) => {
+          if(Interlocked.Read(ref DirectHttpFailures) == 0) { // if this is the first fallback call
+            Interlocked.Increment(ref DirectHttpFailures);
+            log.Debug("Direct Http failed. Falling back to proxy");
+          }
+          var delay = i.ExponentialBackoff(1.Seconds());
+          log.Debug("retryable error with {Description}: '{Error}'. Retrying in {Duration}, attempt {Attempt}/{Total}",
+            desc, e.Message, delay, i, Cfg.Retry);
+          await Task.Delay(delay);
+        });
+
+      // if we are starting this call with no failures attempt to communicate directly with a wrapped policy that will use the proxy 
+      var policy = Interlocked.Read(ref DirectHttpFailures) > 0 ? retryPolicy : (IAsyncPolicy)retryWithProxyPolicy.WrapAsync(retryPolicy);
+      
+      var res = await policy.ExecuteAsync(async () => {
+        var task = (Interlocked.Read(ref DirectHttpFailures) > 0 ? ProxyHttp : Http).GetStringAsync(url);
+        if (await Task.WhenAny(task, Task.Delay((Cfg.TimeoutSeconds + 10).Seconds())) == task)
           return await task;
         throw new TaskCanceledException($"GetStringAsync on {url} took to long without timing out itself");
       }).WithDuration();
@@ -314,7 +337,7 @@ namespace YtReader.YtWebsite {
       var recs = GetRecs(html);
       return recs;
     }
-    
+
     public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptions(string videoId, ILogger log) {
       var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
       var playerResponseJson = JToken.Parse(videoInfoDic["player_response"]);
@@ -328,7 +351,7 @@ namespace YtReader.YtWebsite {
 
       var videoInfoDicTask = GetVideoInfoDicAsync(videoId, log);
       var videoWatchPageTask = GetVideoWatchPageHtmlAsync(videoId, log);
-      
+
       var videoInfoDic = await videoInfoDicTask;
       var playerResponseJson = JToken.Parse(videoInfoDic["player_response"]);
 
@@ -343,10 +366,11 @@ namespace YtReader.YtWebsite {
       var videoDescription = playerResponseJson.SelectToken("videoDetails.shortDescription").Value<string>();
       var videoViewCount = playerResponseJson.SelectToken("videoDetails.viewCount")?.Value<long>() ?? 0; // some videos have no views
 
-      
+
       var videoWatchPageHtml = await videoWatchPageTask;
       var videoUploadDate = videoWatchPageHtml.GetElementsBySelector("meta[itemprop=\"datePublished\"]")
-        .FirstOrDefault()?.GetAttribute("content").Value.ParseDateTimeOffset("yyyy-MM-dd") ?? throw new InvalidOperationException("No upload date found in page");
+                              .FirstOrDefault()?.GetAttribute("content").Value.ParseDateTimeOffset("yyyy-MM-dd") ??
+                            throw new InvalidOperationException("No upload date found in page");
       var videoLikeCountRaw = videoWatchPageHtml.GetElementsByClassName("like-button-renderer-like-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
       var videoLikeCount = !videoLikeCountRaw.IsNullOrWhiteSpace() ? videoLikeCountRaw.ParseLong() : 0;
@@ -356,11 +380,11 @@ namespace YtReader.YtWebsite {
 
       var statistics = new Statistics(videoViewCount, videoLikeCount, videoDislikeCount);
       var thumbnails = new ThumbnailSet(videoId);
-      
+
       return new VideoItem(videoId, videoAuthor, videoUploadDate, videoTitle, videoDescription,
         thumbnails, videoDuration, videoKeywords, statistics);
     }
-    
+
     static IReadOnlyCollection<Rec> GetRecs(HtmlDocument videoWatchPageHtml) {
       var recs = (from d in videoWatchPageHtml.GetElementsBySelector("li.video-list-item.related-list-item")
         let titleSpan = d.GetElementsBySelector("span.title").FirstOrDefault()
@@ -444,16 +468,16 @@ namespace YtReader.YtWebsite {
   }
 
   public class ChannelExtended {
-    public string Id { get; set; }
-    public string Title { get; set; }
-    public string LogoUrl { get; set; }
-    public long? Subs { get; set; }
+    public string Id            { get; set; }
+    public string Title         { get; set; }
+    public string LogoUrl       { get; set; }
+    public long?  Subs          { get; set; }
     public string StatusMessage { get; set; }
   }
 
   public class Rec {
-    public string ToVideoId { get; set; }
-    public string ToVideoTitle { get; set; }
+    public string ToVideoId      { get; set; }
+    public string ToVideoTitle   { get; set; }
     public string ToChannelTitle { get; set; }
   }
 }

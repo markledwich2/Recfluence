@@ -37,5 +37,18 @@ namespace SysExtensions.Collections {
     }
     
     public static IEnumerable<T> SelectMany<T>(this IEnumerable<IEnumerable<T>> items) => items.SelectMany(i => i);
+    
+    public static IEnumerable<IEnumerable<T>> Batch<T>(this IEnumerable<T> source, int size) {
+      using IEnumerator<T> enumerator = source.GetEnumerator();
+      while (enumerator.MoveNext())
+        yield return TakeIEnumerator(enumerator, size);
+    }
+
+    static IEnumerable<T> TakeIEnumerator<T>(IEnumerator<T> source, int size) {
+      var i = 0;
+      do
+        yield return source.Current;
+      while (++i < size && source.MoveNext());
+    }
   }
 }

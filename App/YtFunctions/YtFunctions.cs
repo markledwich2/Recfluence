@@ -37,21 +37,20 @@ namespace YtFunctions {
 
     [FunctionName("Update_Timer")]
     public static async Task Update_Timer([TimerTrigger("0 0 21 * * *")] TimerInfo myTimer, IMSLogger log) =>
-      await YtCli(log, new[] {"update"});
+      await YtCli(log);
     
     [FunctionName("Update")]
     public static async Task<HttpResponseMessage> Update([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
-      HttpRequestMessage req, IMSLogger funcLogger) =>
-      req.CreateResponse(await YtCli(funcLogger, new[] {"update"}));
+      HttpRequestMessage req, IMSLogger funcLogger) => req.CreateResponse(await YtCli(funcLogger));
 
-    static async Task<string> YtCli(IMSLogger funcLogger, string[] args) {
+    static async Task<string> YtCli(IMSLogger funcLogger) {
       var s = await Init(funcLogger);
       s.Log.Information("Function Update started");
 
       IContainerGroup g;
 
       try {
-        g = await YtContainerRunner.Start(s.Log, s.Cfg, args);
+        g = await YtContainerRunner.StartFleet(s.Log, s.Cfg);
       }
       catch (Exception ex) {
         s.Log.Error("Error starting container to update data {Error}", ex.Message, ex);

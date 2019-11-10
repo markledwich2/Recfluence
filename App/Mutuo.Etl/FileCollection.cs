@@ -65,7 +65,7 @@ namespace Mutuo.Etl {
       return list.Select(StoreFileMd.FromFileItem).ToList();
     }
 
-    public async Task<StoreFileMd?> LatestFileMetadata() {
+    public async Task<StoreFileMd> LatestFileMetadata() {
       var file = await LatestFile();
       return file == null ? null : StoreFileMd.FromFileItem(file);
     }
