@@ -12,85 +12,52 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Text;
+using SysExtensions.Threading;
 
 namespace YtReader {
   public static class YtContainerRunner {
-    public static async Task<IContainerGroup> StartFleet(ILogger log, Cfg cfg) {
+    public static async Task<IReadOnlyCollection<IContainerGroup>> StartFleet(ILogger log, Cfg cfg) {
       var sheets = (await ChannelSheets.MainChannels(cfg.App.Sheets, log)).ToList();
-      var containerGroup = await ContainerGroup(cfg.App, cfg.App.Container.Name + "-fleet");
+      var evenBatchSize = (int)Math.Ceiling(sheets.Count / Math.Ceiling( sheets.Count / (double)cfg.App.ChannelsPerContainer));
+      
+      var batches = sheets.Batch(evenBatchSize).Select((b, i) => (batch:b.ToList(), name: $"{cfg.App.Container.Name}-fleet-{i}")).ToList();
 
-      if (sheets.IsEmpty())
-        throw new InvalidOperationException("Must have sheets to start fleet");
+      var azure = GetAzure(cfg);
 
-      IWithNextContainerInstance withInstances = null;
-      foreach (var (b, i) in sheets.Batch(cfg.App.ChannelsPerContainer).Select((b, i) => (b, i))) {
-        var name = $"{cfg.App.Container.Name}-{i}";
-        var args = new[] {"update", "-c", b.Join("|", c => c.Id)};
-        withInstances = withInstances == null
-          ? containerGroup.DefineFirstInstance(name, cfg, args)
-          : withInstances.DefineNextInstance(name, cfg, args);
-      }
+      // before starting feel. Ensure they are all not already running
+      await batches.BlockAction(async b => await EnsureNotRunning(b.name, azure, cfg.App.ResourceGroup), cfg.App.DefaultParallel);
 
-      log.Information("starting container fleet {Image}", cfg.App.Container.ImageName);
-      return await withInstances.WithRestartPolicy(ContainerGroupRestartPolicy.Never).CreateAsync();
+      var fleet = await batches.BlockTransform(async b => {
+        var (batch, fleetName) = b;
+        var args = new[] {"update", "-c", batch.Join("|", c => c.Id)};
+        var group = await ContainerGroup(cfg, azure, fleetName, args);
+        return await group.CreateAsync();
+      }, cfg.App.DefaultParallel);
+      
+      log.Information("Started fleet  containers: ", fleet.Join(", ", f => f.Name));
+      return fleet;
     }
 
     public static async Task<IContainerGroup> Start(ILogger log, Cfg cfg, string[] args) {
-      
       log.Information("starting container {Image} {Args}", cfg.App.Container.ImageName, args.Join(" "));
-
-      var containerGroup = await ContainerGroup(cfg.App, cfg.App.Container.Name);
-
-      var withInstances = await containerGroup.DefineFirstInstance(cfg.App.Container.Name, cfg, args)
-        .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
-        .CreateAsync();
-
-      return withInstances;
+      var containerGroup = await ContainerGroup(cfg, GetAzure(cfg), cfg.App.Container.Name, args);
+      return await containerGroup.CreateAsync();
     }
 
-    static async Task<IWithFirstContainerInstance> ContainerGroup(AppCfg cfg, string groupName) {
-      var sp = cfg.ServicePrincipal;
-      var container = cfg.Container;
-      var creds = new AzureCredentialsFactory().FromServicePrincipal(sp.ClientId, sp.Secret, sp.TennantId,
-        AzureEnvironment.AzureGlobalCloud);
-      var azure = Azure.Authenticate(creds).WithSubscription(cfg.SubscriptionId);
+    static async Task<IWithCreate> ContainerGroup(Cfg cfg, IAzure azure, string groupName, string[] args) {
+      var sp = cfg.App.ServicePrincipal;
+      var container = cfg.App.Container;
 
-      var rg = cfg.ResourceGroup;
-      var group = await azure.ContainerGroups.GetByResourceGroupAsync(rg, groupName);
-      if (group != null) {
-        if (group.State.HasValue() && group.State == "Running")
-          throw new InvalidOperationException("Won't start container - it's not terminated");
-        await azure.ContainerGroups.DeleteByIdAsync(group.Id);
-      }
+      var rg = cfg.App.ResourceGroup;
+      await EnsureNotRunning(groupName, azure, rg);
 
       var containerGroup = azure.ContainerGroups.Define(groupName)
         .WithRegion(Region.USWest)
         .WithExistingResourceGroup(rg)
         .WithLinux()
         .WithPrivateImageRegistry(container.Registry, container.RegistryCreds.Name, container.RegistryCreds.Secret)
-        .WithoutVolume();
-
-      return containerGroup;
-    }
-
-    static IWithNextContainerInstance DefineNextInstance(this IWithNextContainerInstance cg, string instanceName, Cfg cfg, string[] args) {
-      var container = cfg.App.Container;
-      return cg.DefineContainerInstance(instanceName)
-        .WithImage($"{container.Registry}/{container.ImageName}")
-        .WithoutPorts()
-        .WithCpuCoreCount(container.Cores)
-        .WithMemorySizeInGB(container.Mem)
-        .WithEnvironmentVariables(new Dictionary<string, string> {
-          {$"YtNetworks_{nameof(RootCfg.AzureStorageCs)}", cfg.Root.AzureStorageCs},
-          {$"YtNetworks_{nameof(RootCfg.Env)}", cfg.Root.Env}
-        })
-        .WithStartingCommandLine("dotnet", args)
-        .Attach();
-    }
-
-    static IWithNextContainerInstance DefineFirstInstance(this IWithFirstContainerInstance cg, string instanceName, Cfg cfg, string[] args) {
-      var container = cfg.App.Container;
-      return cg.DefineContainerInstance(instanceName)
+        .WithoutVolume()
+        .DefineContainerInstance(groupName)
         .WithImage($"{container.Registry}/{container.ImageName}")
         .WithoutPorts()
         .WithCpuCoreCount(container.Cores)
@@ -100,7 +67,25 @@ namespace YtReader {
           {$"YtNetworks_{nameof(RootCfg.Env)}", cfg.Root.Env}
         })
         .WithStartingCommandLine("dotnet", new[] {"/app/ytnetworks.dll"}.Concat(args).ToArray())
-        .Attach();
+        .Attach()
+        .WithRestartPolicy(ContainerGroupRestartPolicy.Never);
+      return containerGroup;
+    }
+
+    static IAzure GetAzure(Cfg cfg) {
+      var sp = cfg.App.ServicePrincipal;
+      var creds = new AzureCredentialsFactory().FromServicePrincipal(sp.ClientId, sp.Secret, sp.TennantId, AzureEnvironment.AzureGlobalCloud);
+      var azure = Azure.Authenticate(creds).WithSubscription(cfg.App.SubscriptionId);
+      return azure;
+    }
+
+    static async Task EnsureNotRunning(string groupName, IAzure azure, string rg) {
+      var group = await azure.ContainerGroups.GetByResourceGroupAsync(rg, groupName);
+      if (@group != null) {
+        if (@group.State.HasValue() && @group.State == "Running")
+          throw new InvalidOperationException("Won't start container - it's not terminated");
+        await azure.ContainerGroups.DeleteByIdAsync(@group.Id);
+      }
     }
   }
 }

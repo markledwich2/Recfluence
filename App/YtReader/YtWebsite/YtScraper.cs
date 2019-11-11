@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -27,12 +29,12 @@ namespace YtReader.YtWebsite {
   public class YtScraper {
     readonly ScraperCfg   Cfg;
     
-    readonly HttpClient Http;
+    readonly HttpClient DirectHttp;
     readonly HttpClient ProxyHttp;
 
     public YtScraper(ScraperCfg scraperCfg) {
       Cfg = scraperCfg;
-      Http = CreateHttpClient(false);
+      DirectHttp = CreateHttpClient(false);
       ProxyHttp = CreateHttpClient(true);
     }
 
@@ -48,36 +50,61 @@ namespace YtReader.YtWebsite {
     }
 
     long DirectHttpFailures;
+    const string MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
 
     async Task<string> GetRaw(string url, string desc, ILogger log) {
       log.Debug("Scraping {Desc} {Url}", desc, url);
-      
-      var retryPolicy = Policy.Handle<HttpRequestException>().Or<TaskCanceledException>()
-          .RetryWithBackoff(desc, Cfg.Retry, log);
 
-      var retryWithProxyPolicy = Policy.Handle<HttpRequestException>().Or<TaskCanceledException>()
-        .RetryAsync(Cfg.Retry, async (e, i) => {
-          if(Interlocked.Read(ref DirectHttpFailures) == 0) { // if this is the first fallback call
-            Interlocked.Increment(ref DirectHttpFailures);
-            log.Debug("Direct Http failed. Falling back to proxy");
-          }
-          var delay = i.ExponentialBackoff(1.Seconds());
-          log.Debug("retryable error with {Description}: '{Error}'. Retrying in {Duration}, attempt {Attempt}/{Total}",
-            desc, e.Message, delay, i, Cfg.Retry);
-          await Task.Delay(delay);
-        });
-
-      // if we are starting this call with no failures attempt to communicate directly with a wrapped policy that will use the proxy 
-      var policy = Interlocked.Read(ref DirectHttpFailures) > 0 ? retryPolicy : (IAsyncPolicy)retryWithProxyPolicy.WrapAsync(retryPolicy);
+      var useDirect = Interlocked.Read(ref DirectHttpFailures) == 0;
       
-      var res = await policy.ExecuteAsync(async () => {
-        var task = (Interlocked.Read(ref DirectHttpFailures) > 0 ? ProxyHttp : Http).GetStringAsync(url);
-        if (await Task.WhenAny(task, Task.Delay((Cfg.TimeoutSeconds + 10).Seconds())) == task)
-          return await task;
-        throw new TaskCanceledException($"GetStringAsync on {url} took to long without timing out itself");
+      if (useDirect) {
+        try {
+          var directPolicy = Policy
+            .HandleResult<HttpResponseMessage>(m => m.IsTransientError())
+            .RetryWithBackoff(desc, Cfg.Retry, log);
+
+          var directRes = await directPolicy.ExecuteAsync(async () => {
+            var get = await DirectHttp.GetAsync(url);
+            ThrowMissingResourceInvalidOpIfNeeded(get);
+            return get;
+          });
+
+          var sw = Stopwatch.StartNew();
+          directRes.EnsureSuccessStatusCode();
+          var raw = await directRes.ContentAsString();
+          log.Debug("Direct scraped {Desc} {Url} in {Duration}", desc, url, sw.Elapsed);
+          return raw;
+        }
+        catch (Exception ex) {
+          if (ex is InvalidOperationException && ex.Message == MissingYtResourceMessage)
+            throw; // fail early, don't fall back to proxy for this error
+          Interlocked.Increment(ref DirectHttpFailures);
+          log.Debug(ex, "Direct connection failed with {Error}. Falling back to proxy", ex.Message);
+        }
+      }
+
+      var proxyPolicy = Policy
+        .Handle<HttpRequestException>().Or<TaskCanceledException>()
+        .RetryWithBackoff(desc, Cfg.Retry, log);
+      
+      var res = await proxyPolicy.ExecuteAsync(async () => {
+        var get = ProxyHttp.GetAsync(url);
+        if (await Task.WhenAny(get, Task.Delay((Cfg.TimeoutSeconds + 10).Seconds())) != get)
+          throw new TaskCanceledException($"GetStringAsync on {url} took to long without timing out itself");
+        
+        var innerRes = await get;
+        ThrowMissingResourceInvalidOpIfNeeded(innerRes);
+        innerRes.EnsureSuccessStatusCode();
+        return await innerRes.ContentAsString();
       }).WithDuration();
-      log.Debug("Scraped {Desc} {Url} in {Duration}", desc, url, res.Duration);
+
+      log.Debug("Proxy scraped {Desc} {Url} in {Duration}", desc, url, res.Duration);
       return res.Result;
+    }
+
+    static void ThrowMissingResourceInvalidOpIfNeeded(HttpResponseMessage directRes) {
+      if (directRes.StatusCode == HttpStatusCode.BadRequest)
+        throw new InvalidOperationException(MissingYtResourceMessage);
     }
 
     async Task<HtmlDocument> GetHtml(string url, string desc, ILogger log) => HtmlParser.Default.ParseDocument(await GetRaw(url, desc, log));

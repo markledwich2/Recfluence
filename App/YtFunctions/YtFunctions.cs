@@ -47,20 +47,20 @@ namespace YtFunctions {
       var s = await Init(funcLogger);
       s.Log.Information("Function Update started");
 
-      IContainerGroup g;
 
       try {
-        g = await YtContainerRunner.StartFleet(s.Log, s.Cfg);
+        var g = await YtContainerRunner.StartFleet(s.Log, s.Cfg);
+        return $"Started containers: {g.Join(", ", c => c.Name)}";
       }
       catch (Exception ex) {
         s.Log.Error("Error starting container to update data {Error}", ex.Message, ex);
         throw;
       }
 
-      g.Refresh();
+/*      g.Refresh();
       var log = await g.GetLogContentAsync(g.Name);
       s.Log.Information("Started container '{ProvisionState}' '{State}': {LogContent}", g.ProvisioningState, g.State, log);
-      return $"Started container, last in state '{g.State}'";
+      return $"Started container, last in state '{g.State}'";*/
     }
   }
 }

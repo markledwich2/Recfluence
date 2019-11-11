@@ -179,7 +179,7 @@ namespace YtReader.Yt {
       s.Id = id;
       var r = await GetResponse(s);
       var c = r.Items.FirstOrDefault();
-      if (c == null) return new ChannelData {Id = id, Title = "N/A"};
+      if (c == null) return null;
 
       var data = new ChannelData {
         Id = id,

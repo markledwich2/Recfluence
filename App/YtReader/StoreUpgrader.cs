@@ -46,7 +46,7 @@ namespace YtReader {
         }).ToList();
         var newPath = NewFilePath(f, 1);
         await ReplaceJsonLFile(f, newPath, upgradedJs);
-      }, Cfg.ParallelGets);
+      }, Cfg.DefaultParallel);
 
       return filesToUpgrade.Count;
     }
@@ -66,7 +66,7 @@ namespace YtReader {
         });
         var newPath = StoreFileMd.FilePath(f.Path.Parent, V0UpdateTime.FileSafeTimestamp(), "1");
         await ReplaceJsonLFile(f, newPath, upgradedJs);
-      }, Cfg.ParallelGets);
+      }, Cfg.DefaultParallel);
 
       return toUpgrade.Count;
     }

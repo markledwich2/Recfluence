@@ -93,8 +93,8 @@ namespace YtReader {
   public class AppCfg {
     public string AppInsightsKey       { get; set; }
     public int    ParallelChannels     { get; set; } = 4;
-    public int    ParallelGets         { get; set; } = 8;
-    public int    ChannelsPerContainer { get; set; } = 200;
+    public int    DefaultParallel         { get; set; } = 8;
+    public int    ChannelsPerContainer { get; set; } = 150;
 
     public string              ResourceGroup         { get; set; } = "ytnetworks";
     public YtReaderCfg         YtReader              { get; set; } = new YtReaderCfg();
@@ -115,7 +115,7 @@ namespace YtReader {
   public class ScraperCfg {
     public string     Url            { get; set; }
     public NameSecret Creds          { get; set; }
-    public int        TimeoutSeconds { get; set; } = 30;
+    public int        TimeoutSeconds { get; set; } = 40;
     public int        Retry          { get; set; } = 10;
   }
 
@@ -163,7 +163,7 @@ namespace YtReader {
     public string     Name          { get; set; } = "ytnetworks";
     public string     ImageName     { get; set; } = "ytnetworks";
     public int        Cores         { get; set; } = 4;
-    public double     Mem           { get; set; } = 16;
+    public double     Mem           { get; set; } = 8;
     public NameSecret RegistryCreds { get; set; }
   }
 

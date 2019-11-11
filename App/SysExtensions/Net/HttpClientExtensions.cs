@@ -157,6 +157,8 @@ namespace SysExtensions.Net {
         throw new HttpRequestException($"{response.StatusCode}: '{body}'. Original request: {response.RequestMessage.FormatAsCurl()}");
       }
     }
+    
+    public static bool IsTransientError(this HttpResponseMessage msg) => (int)msg.StatusCode >= 500 || msg.StatusCode == HttpStatusCode.RequestTimeout;
 
     static async Task<HttpResponseMessage> InnerSendAsyncWithLog(HttpClient client,
       Func<Task<HttpRequestMessage>> getRequest,

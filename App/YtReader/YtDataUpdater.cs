@@ -64,10 +64,10 @@ namespace YtReader {
       async Task<ChannelStored2> UpdateChannel(ChannelWithUserData channel) {
         var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
 
-        ChannelData channelData = null;
+        var channelData = new ChannelData { Id = channel.Id, Title = channel.Title };
         string statusMessage = null;
         try {
-          channelData = await Api.ChannelData(channel.Id); // Use API to get channel instead of scraper. We get better info faster
+          channelData = await Api.ChannelData(channel.Id) ?? channelData; // Use API to get channel instead of scraper. We get better info faster
           log.Information("{Channel} - read channel details", channelData.Title);
         }
         catch (Exception ex) {
@@ -76,13 +76,13 @@ namespace YtReader {
         }
         var channelStored = new ChannelStored2 {
           ChannelId = channel.Id,
-          ChannelTitle = channelData?.Title ?? channel.Title,
+          ChannelTitle = channelData.Title ?? channel.Title,
           MainChannelId = channel.MainChannelId,
-          Description = channelData?.Description,
-          LogoUrl = channelData?.Thumbnails?.Standard?.Url,
-          Subs = channelData?.Stats?.SubCount,
-          ChannelViews = channelData?.Stats?.ViewCount,
-          Country = channelData?.Country,
+          Description = channelData.Description,
+          LogoUrl = channelData.Thumbnails?.Standard?.Url,
+          Subs = channelData.Stats?.SubCount,
+          ChannelViews = channelData.Stats?.ViewCount,
+          Country = channelData.Country,
           Updated = DateTime.UtcNow,
           Relevance = channel.Relevance,
           LR = channel.LR,
@@ -97,7 +97,7 @@ namespace YtReader {
       var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
 
       var channels = await seeds.Where(c => Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(c.Id))
-        .BlockTransform(UpdateChannel, Cfg.ParallelGets,
+        .BlockTransform(UpdateChannel, Cfg.DefaultParallel,
           progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count));
 
       if (channels.Any())
@@ -207,7 +207,7 @@ namespace YtReader {
 
       var captionsToStore =
         (await vids.Where(v => lastUpload == null || v.UploadDate.UtcDateTime > lastUpload)
-          .BlockTransform(GetCaption, Cfg.ParallelGets)).NotNull().ToList();
+          .BlockTransform(GetCaption, Cfg.DefaultParallel)).NotNull().ToList();
 
       if (captionsToStore.Any())
         await store.Append(captionsToStore);
@@ -231,7 +231,7 @@ namespace YtReader {
 
       var recs = await toUpdate.BlockTransform(
         async v => (v, recs: await Scraper.GetRecs(v.Id, log)),
-        Cfg.ParallelGets);
+        Cfg.DefaultParallel);
 
       var updated = DateTime.UtcNow;
       var recsStored = recs

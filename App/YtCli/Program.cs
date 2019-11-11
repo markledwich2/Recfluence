@@ -77,7 +77,7 @@ namespace YouTubeCli {
       var cfg = Setup.LoadCfg().Result;
       
       if (option.Parallel.HasValue)
-        cfg.App.ParallelGets = cfg.App.ParallelChannels = option.Parallel.Value;
+        cfg.App.DefaultParallel = cfg.App.ParallelChannels = option.Parallel.Value;
 
       using var log = Setup.CreateLogger(cfg.App);
       var envLog = log.ForContext("Env", cfg.Root.Env);
@@ -106,7 +106,7 @@ namespace YouTubeCli {
     }
 
     static async Task<ExitCode> Sync(TaskCtx<SyncOption> ctx) {
-      await SyncBlobs.Sync(ctx.Option.CsA, ctx.Option.CsB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.App.ParallelGets, ctx.Log);
+      await SyncBlobs.Sync(ctx.Option.CsA, ctx.Option.CsB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.App.DefaultParallel, ctx.Log);
       return ExitCode.Success;
     }
 
