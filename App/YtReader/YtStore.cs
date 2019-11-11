@@ -4,6 +4,7 @@ using Mutuo.Etl;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
+using YtReader.Yt;
 using YtReader.YtWebsite;
 
 namespace YtReader {
@@ -44,7 +45,8 @@ namespace YtReader {
     public ulong? Subs { get; set; }
     public ulong? ChannelViews { get; set; }
     public string Country { get; set; }
-
+    public ChannelStatus Status { get; set; }
+  
     public IReadOnlyCollection<string> HardTags { get; set; }
     public IReadOnlyCollection<string> SoftTags { get; set; }
     public IReadOnlyCollection<string> SheetIds { get; set; }

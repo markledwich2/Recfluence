@@ -40,12 +40,20 @@ namespace YtReader {
       Log.Information("Updated stats for {Channels} channels in {Duration}", channels.Result.Count, channels.Duration);
       
       var channelResults = await channels.Result
-        .BlockTransform(async c => {
+        .Where(c => c.Status == ChannelStatus.Alive)
+        .Select((c,i) =>(c,i)).BlockTransform(async item => {
+          var (c, i) = item;
+          var log = Log
+            .ForContext("ChannelId", c.ChannelId)
+            .ForContext("Channel", c.ChannelTitle);
           try {
-            await UpdateAllInChannel(c);
+            await UpdateAllInChannel(c, log);
+            log.Information("{Channel} - Completed {Count}/{Total} update of videos/recs/captions in {Duration}", 
+              c.ChannelTitle, i, channels.Result.Count, sw.Elapsed);
             return (c, Success: true);
           }
           catch (Exception ex) {
+            
             Log.Error(ex, "Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
             return (c, Success: false);
           }
@@ -64,19 +72,20 @@ namespace YtReader {
       async Task<ChannelStored2> UpdateChannel(ChannelWithUserData channel) {
         var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
 
-        var channelData = new ChannelData { Id = channel.Id, Title = channel.Title };
-        string statusMessage = null;
+        var channelData = new ChannelData { Id = channel.Id, Title = channel.Title};
         try {
-          channelData = await Api.ChannelData(channel.Id) ?? channelData; // Use API to get channel instead of scraper. We get better info faster
+          channelData = await Api.ChannelData(channel.Id) ??   // Use API to get channel instead of scraper. We get better info faster
+                        new ChannelData { Id = channel.Id, Title = channel.Title, Status = ChannelStatus.Dead }; 
           log.Information("{Channel} - read channel details", channelData.Title);
         }
         catch (Exception ex) {
-          statusMessage = ex.Message;
+          channelData.Status = ChannelStatus.Dead;
           log.Error(ex, "{Channel} - Error when updating details for channel : {Error}", channel.Title, ex.Message);
         }
         var channelStored = new ChannelStored2 {
           ChannelId = channel.Id,
           ChannelTitle = channelData.Title ?? channel.Title,
+          Status = channelData.Status,
           MainChannelId = channel.MainChannelId,
           Description = channelData.Description,
           LogoUrl = channelData.Thumbnails?.Standard?.Url,
@@ -86,10 +95,9 @@ namespace YtReader {
           Updated = DateTime.UtcNow,
           Relevance = channel.Relevance,
           LR = channel.LR,
-          HardTags = channel.HardTags,
+          HardTags = channel.HardTags,  
           SoftTags = channel.SoftTags,
-          SheetIds = channel.SheetIds,
-          StatusMessage = statusMessage
+          SheetIds = channel.SheetIds
         };
         return channelStored;
       }
@@ -106,18 +114,13 @@ namespace YtReader {
       return channels;
     }
 
-    async Task UpdateAllInChannel(ChannelStored2 c) {
-      var log = Log
-        .ForContext("ChannelId", c.ChannelId)
-        .ForContext("Channel", c.ChannelTitle);
-
+    async Task UpdateAllInChannel(ChannelStored2 c, ILogger log) {
       if (c.StatusMessage.HasValue()) {
         log.Information("{Channel} - Not updating videos/recs/captions because it has a status msg: {StatusMessage} ",
           c.ChannelTitle, c.StatusMessage);
         return;
       }
       log.Information("{Channel} - Starting channel update of videos/recs/captions", c.ChannelTitle);
-      var sw = Stopwatch.StartNew();
 
       // fix updated if missing. Remove once all records have been updated
       var vidStore = Store.VideoStore(c.ChannelId);
@@ -137,8 +140,6 @@ namespace YtReader {
       await SaveVids(c, vids, vidStore, lastUpload, log);
       await SaveRecs(c, vids, log);
       await SaveNewCaptions(c, vids, log);
-
-      log.Information("{Channel} - Completed  update of videos/recs/captions in {Duration}", c.ChannelTitle, sw.Elapsed);
     }
 
     static async Task SaveVids(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AppendCollectionStore<VideoStored2> vidStore, DateTime? uploadedFrom,

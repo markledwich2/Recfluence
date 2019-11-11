@@ -34,7 +34,7 @@ namespace YtReader {
         return await group.CreateAsync();
       }, cfg.App.DefaultParallel);
       
-      log.Information("Started fleet  containers: ", fleet.Join(", ", f => f.Name));
+      log.Information("Started fleet containers: {Containers}", fleet.Join(", ", f => f.Name));
       return fleet;
     }
 

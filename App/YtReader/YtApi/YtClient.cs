@@ -191,7 +191,8 @@ namespace YtReader.Yt {
           ViewCount = c.Statistics.ViewCount,
           SubCount = c.Statistics.SubscriberCount,
           Updated = DateTime.UtcNow
-        }
+        },
+        Status = ChannelStatus.Alive
       };
 
       return data;
@@ -200,9 +201,16 @@ namespace YtReader.Yt {
     #endregion
   }
 
+  public enum ChannelStatus {
+    None,
+    Alive,
+    Dead
+  }
+  
   public class ChannelData {
     public string Id { get; set; }
     public string Title { get; set; }
+    public ChannelStatus Status { get; set; }
     public string Country { get; set; }
     public string Description { get; set; }
     public ThumbnailDetails Thumbnails { get; set; }
