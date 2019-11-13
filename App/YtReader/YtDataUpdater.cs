@@ -88,7 +88,7 @@ namespace YtReader {
           Status = channelData.Status,
           MainChannelId = channel.MainChannelId,
           Description = channelData.Description,
-          LogoUrl = channelData.Thumbnails?.Standard?.Url,
+          LogoUrl = channelData.Thumbnails?.Default__?.Url,
           Subs = channelData.Stats?.SubCount,
           ChannelViews = channelData.Stats?.ViewCount,
           Country = channelData.Country,
