@@ -1,13 +1,17 @@
-import React, { Component, Fragment } from 'react';
+import React, { } from 'react'
 import Select from 'react-select'
 import _ from 'lodash'
-import { InteractiveDataProps, InteractiveDataState, DataComponentHelper, DataSelections, ChartProps } from '../common/Charts'
-import { YtNetworks, Graph, YtData } from '../common/YtData'
-import { delay, jsonEquals } from '../common/Utils';
+import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
+import { YtModel, ChannelData } from '../common/YtModel'
+import { delay } from '../common/Utils'
+import { InteractiveDataProps, ChartProps, InteractiveDataState, SelectionState, SelectionStateHelper } from '../common/Chart'
+import { Dim, Col } from '../common/Dim'
 
-interface State extends InteractiveDataState {
+interface State {
 }
-interface Props extends InteractiveDataProps<YtData> { }
+interface Props extends InteractiveDataProps<YtModel> { 
+  selections:SelectionState
+}
 
 interface Option {
   value: string
@@ -15,22 +19,28 @@ interface Option {
 }
 
 export class SearchChannels extends React.Component<Props, State> {
-  chart: DataComponentHelper = new DataComponentHelper(this)
-  state: Readonly<State> = {
-    selections: this.props.initialSelection,
+  state: Readonly<State>
+
+  constructor(props:Readonly<Props>) {
+    super(props)
   }
 
   ref: Select<Option>
   lastFocusedOption: Option
   lastSelectedOption: Option
+  selectionHelper = new SelectionStateHelper(this.props.onSelection, () => this.props.selections)
 
-  shouldComponentUpdate(props: ChartProps<YtData>, nextState: State) {
-    var channelId = this.chart.filteredItems(YtNetworks.ChannelIdPath).find(() => true);
+  get dim(): Dim<ChannelData> {
+    return this.props.dataSet.channelDim
+  }
+
+  shouldComponentUpdate(props: Props, nextState: State) {
+    let sh = new SelectionStateHelper(null, () => props.selections)
+    const channelId = sh.selectedSingleValue(this.idCol)
     let r = this.ref as any
-    let selectedOption =  r.select.state.selectValue.find(() => true)
+    let selectedOption = r.select.state.selectValue.find(() => true)
     let selectedValue = selectedOption ? selectedOption.value : undefined
-
-    return channelId != selectedValue;
+    return channelId != selectedValue
   }
 
   onUserInteracted = () => {
@@ -40,41 +50,42 @@ export class SearchChannels extends React.Component<Props, State> {
 
       if (this.lastFocusedOption !== focusedOption && r.state.menuIsOpen) {
         this.lastFocusedOption = focusedOption
-        this.chart.setSelection(YtNetworks.createChannelHighlight(focusedOption.value))
+        this.selectionHelper.select(this.idCol, focusedOption.value)
       }
     })
   }
 
   onSelected = (c: Option) => {
-    this.chart.setSelection(YtNetworks.createChannelFilter(c.value))
+    this.selectionHelper.select(this.idCol, c.value)
+  }
+
+  private get idCol() : Col<ChannelData> {
+    return this.dim.col("channelId")
   }
 
   render() {
-    let channelId = this.chart.filteredItems(YtNetworks.ChannelIdPath).find(() => true)
+    console.log("search render", this.props.selections)
+    
+    let channelId = this.selectionHelper.selectedSingleValue(this.idCol)
     let options = _(this.props.dataSet.channels)
-      .map(c => ({ value: c.ChannelId, label: c.Title } as Option))
+      .map(c => ({ value: c.channelId, label: c.title } as Option))
       .orderBy(o => o.label)
       .value()
 
     let selectedVlaue = options.find(c => c.value == channelId)
 
     return (
-      <div onMouseMove={this.onUserInteracted} onClick={this.onUserInteracted}>
+      // onMouseMove={this.onUserInteracted onClick={this.onUserInteracted}
+      <div>
         <Select<Option>
-          // value={this.state.selectedOption}
-          onKeyDown={this.onUserInteracted}
+          //onKeyDown={this.onUserInteracted}
           onChange={this.onSelected}
           options={options}
           placeholder="Select Channel"
           styles={{
             option: (p, s) => ({ ...p, color: '#ccc', backgroundColor: s.isFocused ? '#666' : 'none' }),
             control: styles => ({ ...styles, backgroundColor: 'none', borderColor: '#333', outline: 'none' }),
-            //menu: styles => ({ ...styles, backgroundColor: '#333' }),
             dropdownIndicator: styles => ({ ...styles, color: '#ccc' }),
-            //indicatorSeparator: styles => ({}),
-            //valueContainer: styles => ({ ...styles, color: '#ccc'}),
-            //singleValue: styles => ({...styles, color:'#ccc'}),
-            //input: styles => ({...styles, color:'#ccc'})
             placeholder: styles => ({ ...styles, outline: 'none', color: '#ccc' })
           }}
           theme={theme => ({

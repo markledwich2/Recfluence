@@ -2,81 +2,79 @@ import * as React from 'react'
 import ContainerDimensions from 'react-container-dimensions'
 import { RecommendFlows } from './RecommendFlows'
 import { ChannelRelations } from './ChannelRelations'
-import { YtData, YtNetworks } from '../common/YtData'
+import { YtModel } from '../common/YtModel'
 import { GridLoader } from 'react-spinners'
-import { DataSelections, DataSelection, SelectionType, ChartProps, InteractiveDataState, InteractiveDataProps } from '../common/Charts'
 import { jsonClone } from '../common/Utils'
 import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
-import { Mention } from 'react-twitter-widgets'
+import { InteractiveDataProps, SelectionStateHelper, ActionType, InteractiveDataState, ActionClass } from '../common/Chart'
 
 interface Props { }
 
 interface State {
   isLoading: boolean
-  data?: YtData
+  data?: YtModel
 }
 
 export class ChannelRelationsPage extends React.Component<Props, State> {
-  constructor(props: any) {
-    super(props)
-
-    this.selections = new DataSelections()
-  }
-
+  selections: SelectionStateHelper
+  relations: ChannelRelations
+  flows: RecommendFlows
+  title: ChannelTitle
   state: Readonly<State> = {
     isLoading: false,
     data: null
   }
 
-  selections: DataSelections
-  relations: ChannelRelations
-  flows: RecommendFlows
-  title: ChannelTitle
+  constructor(props: any) {
+    super(props)
+    this.selections = new SelectionStateHelper(this.onSelection, () => this.state.data.selectionState)
+  }
 
   componentDidMount() {
     const params = new URLSearchParams(location.search)
+
     if (params.has('c'))
-      this.selections.filters.push({ path: YtNetworks.ChannelIdPath, values: [params.get('c')], type: SelectionType.Filter })
+      this.selections.select(YtModel.channelDimStatic.col("channelId"), params.get('c'))
     if (params.has('v'))
       this.version = params.get('v')
-    
-    this.load()
+
+      this.load()
   }
 
-  version:string = '2019-04-04'
-  resultUrl() { return `https://ytnetworks.azureedge.net/data/results/${this.version}/` }
-  //resultUrl = "https://ytnetworks.blob.core.windows.net/data/results/2018-12-28/"
+  version: string = '2019-11-18'
+  resultsPath: string = `https://pyt.blob.core.windows.net/data/results/${this.version}/` //https://ytnetworks.azureedge.net/data/results/${this.version}/
+
+  resultUrl() { return this.resultsPath }
 
   async load() {
     if (this.state.isLoading) return
-    let data = await YtNetworks.dataSet(this.resultUrl())
+    let data = await YtModel.dataSet(this.resultUrl())
     try {
       this.setState({ data, isLoading: false })
     } catch (e) { }
   }
 
-  onSelection(selection: DataSelection) {
-    this.selections.setSelection(selection)
-    //let hist = createBrowserHistory()
+  onSelection(action: ActionClass) {
     const params = new URLSearchParams(location.search)
-    if ((selection.type == SelectionType.Filter && selection.path == YtNetworks.ChannelIdPath) || selection.path == null) {
-      let channelId = selection.path == null ? null : selection.values.find(() => true)
-      if (params.has('c')) params.delete('c')
-      if (channelId) params.append('c', channelId)
+    const idAttribute = YtModel.channelDimStatic.col("channelId")
 
-      history.replaceState(null, '', `?${params}`)
+    if (action.type == ActionType.Clear && params.has('c'))
+      params.delete('c')
+
+    if (action.type == ActionType.Select) {
+      let channelId = this.selections.selectedSingleValue(idAttribute)
+      if(channelId) {
+        if (params.has('c')) params.delete('c')
+        if (channelId) params.append('c', channelId)
+      }
     }
 
-    this.updateComponentSelections()
+    this.state.data.selectionState = this.selections.applyAction(action)
+    this.graphComponents().forEach(g => g.setState({ selections: jsonClone(this.state.data.selectionState) }))
   }
 
-  private updateComponentSelections() {
-    let components = this.graphComponents()
-    components.forEach(g => g.setState({ selections: jsonClone(this.selections) }))
-  }
-
-  graphComponents(): Array<React.Component<InteractiveDataProps<YtData>, InteractiveDataState>> {
+  graphComponents(): Array<React.Component<InteractiveDataProps<YtModel>, InteractiveDataState>> {
     return [this.relations, this.flows, this.title].filter(g => g)
   }
 
@@ -88,7 +86,6 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
             ref={r => (this.title = r)}
             dataSet={this.state.data}
             onSelection={this.onSelection.bind(this)}
-            initialSelection={this.selections}
           />
 
           <div className={'MainChartContainer'}>
@@ -101,7 +98,6 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                     width={width}
                     dataSet={this.state.data}
                     onSelection={this.onSelection.bind(this)}
-                    initialSelection={this.selections}
                   />
                 )}
               </ContainerDimensions>
@@ -115,7 +111,6 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                     width={width}
                     dataSet={this.state.data}
                     onSelection={this.onSelection.bind(this)}
-                    initialSelection={this.selections}
                   />
                 )}
               </ContainerDimensions>

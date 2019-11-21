@@ -13,46 +13,6 @@ html {
   }
 }
 
-g.chart line.link {
-  stroke: #aaa;
-  opacity: 0.3;
-}
-
-g.chart path.link {
-  fill: none;
-  opacity: 0.3;
-}
-
-g.chart text {
-  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
-  fill: #eee;
-}
-
-g.chart text tspan.subtitle {
-  fill: #aaa;
-}
-
-g.chart text tspan.subtitle-bold {
-  fill: #ccc;
-}
-
-g.chart g.labels rect {
-  display: none;
-}
-
-g.chart g.labels circle {
-  display: none;
-}
-
-g.node .shape {
-  stroke: none;
-}
-
-g.node .shape-selected {
-  stroke: #eee;
-  stroke-width: 2px;
-}
-
 body {
   padding: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -85,17 +45,87 @@ a {
   text-decoration: none;
 }
 
-ul.legend {
-  list-style: none;
+/* common chart elements */
+
+g.chart line.link {
+  opacity: 0.2;
 }
 
-ul.legend li:before {
-  content: '█';
-  padding-right: 8px;
+g.chart path.link {
+  fill: none;
+  opacity: 0.3;
 }
 
-ul.legend li {
-  padding-top: 4px;
+g.chart text {
+  text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+  fill: #eee;
+}
+
+g.chart text tspan.subtitle {
+  fill: #aaa;
+}
+
+g.chart text tspan.subtitle-bold {
+  fill: #ccc;
+}
+
+/* common chart shapes */
+g.node .selectable {
+  stroke: none;
+}
+
+g.node .selectable.selected {
+  stroke: #eee;
+  stroke-width: 2px;
+}
+
+g.node .selectable.dimmed {
+  opacity: 0.2;
+}
+
+
+/* relations chart */
+
+g.chart.relations g.node circle.related {
+  opacity: 1;
+}
+
+g.chart.relations g.labels rect,
+g.chart.relations g.labels circle
+{
+  display: none;
+}
+
+g.chart.relations line.link {
+  display: none;
+}
+g.chart.relations line.link.related {
+  display: inherit;
+}
+
+g.chart.relations g.label text {
+  display: none;
+}
+g.chart.relations g.label text.selected,
+g.chart.relations g.label text.highlighted,
+g.chart.relations g.label text.related
+{
+  display: inherit;
+}
+g.chart.relations g.label text.selected {
+  font-weight: bold;
+}
+
+/* flows chart */
+g.chart.flows g.node .selectable.dimmed {
+  opacity: 1; /* remove dimming effect */
+}
+
+
+
+/* Legend SVG */
+g.legend text {
+  fill: #eee;
 }
 
 div.ChannelRelationPage svg.chart {
@@ -169,14 +199,14 @@ div.footer > * {
   padding-right: 2em;
 }
 
-@media all and (min-width: 1600px) {
+@media all and (min-width: 1200px) {
   div.MainChartContainer > .Relations {
     height: 100%;
     flex: 3 auto;
   }
 
   div.MainChartContainer > .Flows {
-    flex: 2 auto;
+    flex: 50px;
     height: 100%;
   }
 

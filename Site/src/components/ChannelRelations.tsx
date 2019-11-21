@@ -2,35 +2,33 @@ import * as React from 'react'
 import * as d3 from 'd3'
 import '../styles/Main.css'
 import { layoutTextLabel, layoutGreedy, layoutLabel } from 'd3fc-label-layout'
-import { Graph, YtNetworks, YtData } from '../common/YtData'
-import { delay } from '../common/Utils'
-import { ChartProps, DataSelections, DataComponentHelper, InteractiveDataState } from '../common/Charts'
+import { YtModel, ChannelData } from '../common/YtModel'
+import { Col, Cell, SelectableCell, Dim } from '../common/Dim'
+import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
 import * as _ from 'lodash'
-import { lab, ZoomTransform } from 'd3'
-import { Properties } from 'csstype'
+import { ChannelChartState, YtChart } from '../common/YtChart'
+import { ChartProps, InteractiveDataState } from '../common/Chart'
 
-interface State extends InteractiveDataState { }
-interface Props extends ChartProps<YtData> { }
+interface State extends InteractiveDataState, ChannelChartState { }
+interface Props extends ChartProps<YtModel> { }
 interface Link extends d3.SimulationLinkDatum<Node> {
   strength: number
+  color: string
 }
 
-interface Node extends d3.SimulationNodeDatum {
+interface Node extends d3.SimulationNodeDatum, SelectableCell<Node> {
   channelId: string
   size: number
-  type: string
-  shapeId: string
-  lr: string
-  title: string
 }
 
 export class ChannelRelations extends React.Component<Props, State> {
   ref: SVGSVGElement
 
-  chart: DataComponentHelper = new DataComponentHelper(this)
+  chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this)
 
   state: Readonly<State> = {
-    selections: this.props.initialSelection
+    selections: this.props.dataSet.selectionState,
+    colorCol: "ideology"
   }
 
   componentDidMount() {
@@ -38,57 +36,47 @@ export class ChannelRelations extends React.Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props, prevState: State) {
-    this.stateRender(prevProps)
+    this.stateRender(prevProps, prevState)
   }
 
   render() {
-    let lrItems = _(Array.from(YtNetworks.lrMap.entries()))
-      .filter(lr => lr[0] != '')
-      .value()
-    return (
-      <>
-        <div style={{ position: 'absolute' }}>
-          <ul className={'legend'}>
-            {lrItems.map(l => (
-              <li style={{ color: l[1].color }} key={l[0]}>
-                <span className={'text'}>{l[1].text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <svg ref={ref => (this.ref = ref)} />
-      </>
-    )
+    return (<svg ref={ref => (this.ref = ref)} />)
   }
 
+  // a cheap render. Set by loadChat() so that it can use a buch of context
+  stateRender: (prevProps: Props, prevState: State) => void
+
   getData() {
-    let nodes = _(this.props.dataSet.channels)
-      .filter(c => c.ChannelVideoViews > 0)
+    const channelCells = _.keyBy(this.dim.rowCells(this.props.dataSet.channels,
+      {
+        group: ['channelId'], colorBy: this.state.colorCol,
+        label: 'title'
+      }), c => c.row.channelId)
+
+    let nodes: Node[] = _(channelCells)
+      .filter(c => c.row.channelVideoViews > 0)
       .map(
         c =>
           ({
-            channelId: c.ChannelId,
-            title: c.Title,
-            size: +c.ChannelVideoViews,
-            type: c.Type,
-            lr: c.LR
+            channelId: c.row.channelId,
+            size: c.row.channelVideoViews,
+            ...c.cell
           } as Node)
-      )
-      .value()
+      ).value()
 
     let links = _(this.props.dataSet.relations)
+      .filter(l => l.channelId != l.fromChannelId) //l.recommendsViewChannelPercent > 0.005 && 
       .map(
         l =>
           ({
-            source: l.FromChannelId,
-            target: l.ChannelId,
-            strength: +l.RecommendsFlowPercent
+            source: l.fromChannelId,
+            target: l.channelId,
+            strength: l.recommendsViewChannelPercent,
+            color: channelCells[l.fromChannelId].cell.color
           } as Link)
       )
       .filter(
-        l =>
-          l.strength > 0.03 &&
-          (nodes.some(c => c.channelId == (l.source as string)) && nodes.some(c => c.channelId == (l.target as string)))
+        l => (nodes.some(c => c.channelId == (l.source as string)) && nodes.some(c => c.channelId == (l.target as string)))
       )
       .value()
 
@@ -105,16 +93,20 @@ export class ChannelRelations extends React.Component<Props, State> {
     return { nodes: keyedNodes, links: links, isConnected }
   }
 
+  private get dim() {
+    return this.props.dataSet.channelDim
+  }
+
   getLayout(nodes: Node[], links: Link[]) {
     let simSize = 1024
     let maxStrength = d3.max(links, l => l.strength)
     let maxSize = d3.max(nodes, n => n.size)
     let getNodeRadius = (d: Node) => Math.sqrt(d.size > 0 ? d.size / maxSize : 1) * 40
-    let getLineWidth = (d: Link) => (d.strength / maxStrength) * 40
+    let getLineWidth = (d: Link) => (d.strength / maxStrength) * 100
     let centerForce = d3.forceCenter(simSize / 2, simSize / 2)
     let force = d3
       .forceSimulation<Node, Link>(nodes)
-      .force('charge', d3.forceManyBody().strength(-100))
+      .force('charge', d3.forceManyBody().strength(-40))
       .force('center', centerForce)
       .force(
         'link',
@@ -129,13 +121,12 @@ export class ChannelRelations extends React.Component<Props, State> {
     return { force, getLineWidth, getNodeRadius, simSize }
   }
 
-  async loadChart() {
-    const { nodes, links, isConnected } = await this.getData()
+  loadChart() {
+    const { nodes, links, isConnected } = this.getData()
     const lay = this.getLayout(nodes, links)
 
     let svg = d3.select(this.ref)
-    let container = this.chart.createContainer(svg)
-
+    let container = this.chart.createContainer(svg, 'relations')
 
     let linkEnter = container
       .append('g')
@@ -146,43 +137,22 @@ export class ChannelRelations extends React.Component<Props, State> {
       .append<SVGLineElement>('line')
       .attr('class', 'link')
       .attr('stroke-width', lay.getLineWidth)
+      .attr('stroke', (l: Link) => l.color)
 
-    let nodesContainer = container.append<SVGGElement>('g').attr('class', 'nodes')
+    let nodesContainer = container.append<SVGGElement>('g').attr('class', 'node')
 
     let nodesEnter = nodesContainer
       .selectAll('g')
-      .data(nodes, (n: Node) => n.channelId)
+      .data<Node>(nodes, (n: Node) => n.channelId)
       .enter()
       .append('g')
 
     let nodesCircle = nodesEnter
       .append<SVGCircleElement>('circle')
-      .attr('class', 'shape')
       .attr('r', lay.getNodeRadius)
-      .attr('fill', d => YtNetworks.lrColor(d.lr))
+      .attr('fill', d => d.color)
 
-    this.chart.addDataShapeEvents(nodesCircle, d => d.channelId, YtNetworks.ChannelIdPath)
-
-    let labelPadding = 2
-    let layoutLabels = layoutLabel<Node[]>(layoutGreedy())
-      .size((_, i, g) => {
-        let e = g[i] as Element
-        let text = e.getElementsByTagName('text')[0]
-        let displayed = false
-        if (text.style.display == 'none') {
-          displayed = true
-          text.style.display = null
-        }
-        let textSize = text.getBBox()
-        if (displayed)
-          text.style.display = 'none'
-        return [textSize.width + labelPadding * 2, textSize.height + labelPadding * 2]
-      })
-      .component(
-        layoutTextLabel()
-          .padding(labelPadding)
-          .value(d => d.title)
-      )
+    this.chart.addShapeEvents(nodesCircle, true)
 
     let labelsGroup = container
       .append<SVGGElement>('g')
@@ -190,7 +160,30 @@ export class ChannelRelations extends React.Component<Props, State> {
       .datum(nodes)
       .attr('pointer-events', 'none')
 
-    labelsGroup.call(layoutLabels)
+    let textRatio: [number, number] = null
+
+    let labelPadding = 2
+    let layoutLabels = layoutLabel<Node[]>(layoutGreedy())
+      .size((n: any, i, g) => {
+        const node = n as Node
+        if (!textRatio) {
+
+          // render a label to know the size to calclate with
+          let e = g[i] as Element
+          let text = e.getElementsByTagName('text')[0]
+          text.style.display = 'inherit'
+          let bbox = text.getBBox()
+          textRatio = [bbox.width / node.label.length, bbox.height]
+          text.style.display = null
+        }
+
+        return [node.label.length * textRatio[0], textRatio[1]]
+      })
+      .component(
+        layoutTextLabel()
+          .padding(labelPadding)
+          .value((d: Node) => d.label)
+      )
 
     function updateLabels(fast: boolean) {
       if (fast) {
@@ -202,29 +195,25 @@ export class ChannelRelations extends React.Component<Props, State> {
       }
     }
 
+    this.renderLegend(svg)
+
     let updateVisibility = () => {
-      let lighted = this.chart.highlightedItems(YtNetworks.ChannelIdPath)
-      let filtered = this.chart.filteredItems(YtNetworks.ChannelIdPath)
-      let lightedFiltered = lighted.concat(filtered)
 
-      let nodeFiltered = (c: Node) => filtered.some(id => id == c.channelId)
-      let nodeLightedFiltered = (c: Node) => lightedFiltered.some(id => id == c.channelId)
-      let nodeRelated = (c: Node) => lightedFiltered.some(id => isConnected(id, c.channelId))
+      this.chart.selectionHelper.updateSelectableCells(nodes)
+      const zoomTrans = d3.zoomTransform(svg.node())
+      let focused = nodes.filter(n => n.highlighted || n.selected)
 
-      let z = d3.zoomTransform(svg.node())
-      let showRelatedLabels = z.k > 1.5
+      this.chart.addShapeClasses(nodesCircle)
 
-      nodesCircle.style('opacity', d => (lightedFiltered.length == 0 || nodeLightedFiltered(d) || nodeRelated(d) ? 1 : 0.4))
-      nodesCircle.style('stroke', d => nodeFiltered(d) ? '#ddd' : null)
-
-      let labelText = labelsGroup.selectAll<SVGTextElement, Node>('text')
-      labelText.style('display', d => nodeLightedFiltered(d) || (showRelatedLabels && nodeRelated(d)) ? null : 'none')
-      labelText.style('font-weight', d => nodeLightedFiltered(d) ? 'bold' : null)
-
-      linkEnter.style('opacity', d => {
+      const labelText = labelsGroup.selectAll<SVGTextElement, Node>('text')
+      this.chart.addShapeClasses(labelText)
+      const related = (n: Node): boolean => focused.length <= 2 && focused.some(c => isConnected(n.channelId, c.channelId))
+      nodesCircle.classed('related', related)
+      labelText.classed('related', d => this.relatedLabelsVisible(zoomTrans) && related(d))
+      linkEnter.classed('related', d => {
         let s = d.source as Node
         var t = d.target as Node
-        return lightedFiltered.some(id => s.channelId == id || t.channelId == id) ? 0.4 : 0
+        return focused.some(n => s.channelId == n.channelId || t.channelId == n.channelId)
       })
     }
 
@@ -244,13 +233,17 @@ export class ChannelRelations extends React.Component<Props, State> {
     var zoomHandler = d3.zoom()
       .scaleExtent([0.2, 5])
       .on("zoom", () => {
-        let t: d3.ZoomTransform = d3.event.transform
+        const t = d3.zoomTransform(svg.node())
         container.attr('transform', () => t.toString())
-        labelsGroup.selectAll<SVGTextElement, Node>('text')
-          .attr('transform', d => `scale(${1 / t.k})`) // undo the zoom on labels
-        //console.log("zoom transform", t.x, t.y, t.k)
-        updateLabels(true)
-        updateVisibility()
+
+        const labelsTrans = `scale(${1 / t.k})`
+        const existingTrans = labelsGroup.select('text').attr('transform')
+        if (labelsTrans != existingTrans) {
+          labelsGroup.selectAll<SVGTextElement, Node>('text')
+            .attr('transform', () => labelsTrans) // undo the zoom on labels
+          updateVisibility()
+          updateLabels(false)
+        }
       })
 
     let zoomToExpectedScale = (width: number, height: number) =>
@@ -270,9 +263,6 @@ export class ChannelRelations extends React.Component<Props, State> {
     zoomHandler(svg)
     zoomToExpectedScale(this.props.width, this.props.height)
 
-    let ticks = 0
-    let stopped = false
-    let timesResized = 0
 
     this.stateRender = (prevProps: Props) => {
       let svg = d3.select(this.ref)
@@ -280,33 +270,48 @@ export class ChannelRelations extends React.Component<Props, State> {
       if (prevProps == null || prevProps.width != this.props.width || prevProps.height != this.props.height) {
         svg.attr('width', this.props.width)
         svg.attr('height', this.props.height)
-        //if(timesResized == 0)
-        
-        zoomToExpectedScale(this.props.width, this.props.height)
-        
-        //if(stopped)
-        //  zoomToFit(this.props.width, this.props.height) // first zoom should be to the expected bounds, nt the current ones
-        //updateLabels(false)
-        timesResized++
-      }
-      updateVisibility()
-    }
 
-    let onTick = () => {
-      updatePositions()
-      updateLabels(true)
-      ticks++
-      if (ticks > 150) {
-        lay.force.stop()
-        stopped = true
-        //this.stateRender(null)
+        zoomToExpectedScale(this.props.width, this.props.height)
       }
+
+      updateVisibility()
+      updatePositions()
     }
 
     for (var i = 0; i < 200; i++) lay.force.tick()
-    lay.force.on('tick', onTick)
-    this.stateRender(null)
+    this.stateRender(null, null)
+
+    updateLabels(false)
   }
 
-  stateRender: (prevProps: Props) => void
+  private relatedLabelsVisible(zoomTrans: d3.ZoomTransform) {
+    return zoomTrans.k > 1
+  }
+
+  private renderLegend(svg: d3.Selection<SVGSVGElement, unknown, null, undefined>) {
+    let legendNodes = this.props.dataSet.channelDim.cells(this.props.dataSet.channels, {
+      group: [this.state.colorCol], // if the group has a color, it should be colored
+      order: { col: 'dailyViews', order: 'desc' }
+    })
+
+    this.chart.selectionHelper.updateSelectableCells(legendNodes)
+
+    let legendGroup = svg.append<SVGGElement>('g')
+      .attr('transform', () => `translate(5, 5)`)
+      .attr('class', 'legend')
+      .selectAll('g')
+      .data<Cell<ChannelData>>(legendNodes)
+      .enter()
+      .append<SVGGElement>('g')
+      .attr('transform', (d, i) => `translate(5, ${10 + (i * 21)})`)
+    legendGroup.append<SVGCircleElement>("circle")
+      .attr('r', 8)
+      .attr('fill', d => d.color)
+    legendGroup
+      .append<SVGTextElement>('text')
+      .text(d => d.label)
+      .attr('x', 14).attr('y', 5)
+
+    this.chart.addShapeEvents(legendGroup, false)
+  }
 }

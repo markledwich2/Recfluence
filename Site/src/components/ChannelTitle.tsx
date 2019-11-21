@@ -1,24 +1,30 @@
 import * as React from 'react'
-import { InteractiveDataProps, InteractiveDataState, DataComponentHelper, DataSelections } from '../common/Charts'
-import { YtNetworks, Graph, YtData } from '../common/YtData'
+import { InteractiveDataProps, InteractiveDataState } from '../common/Chart'
+import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
+import { YtModel, ChannelData } from '../common/YtModel'
 import { compactInteger } from 'humanize-plus'
 import * as _ from 'lodash'
 import { SearchChannels } from '../components/SearchChannels'
 import * as dateformat from 'dateformat'
+import { Dim } from '../common/Dim'
 
-interface State extends InteractiveDataState {}
-interface Props extends InteractiveDataProps<YtData> {}
+interface State extends InteractiveDataState { }
+interface Props extends InteractiveDataProps<YtModel> { }
 
 export class ChannelTitle extends React.Component<Props, State> {
-  chart: DataComponentHelper = new DataComponentHelper(this)
+  chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this)
   state: Readonly<State> = {
-    selections: this.props.initialSelection
+    selections: this.props.dataSet.selectionState
+  }
+
+  get dim(): Dim<ChannelData> {
+    return this.props.dataSet.channelDim
   }
 
   channel() {
-    let channelId = this.chart.highlightedItems(YtNetworks.ChannelIdPath).find(() => true)
-    if (!channelId) channelId = this.chart.filteredItems(YtNetworks.ChannelIdPath).find(() => true)
-    return channelId ? this.props.dataSet.channels[channelId] : null
+    const channelId = this.chart.selectionHelper
+      .highlitedOrSelectedValue(this.dim.col("channelId"))
+    return channelId ? this.props.dataSet.channels.find(c => c.channelId == channelId) : null
   }
 
   render() {
@@ -33,24 +39,24 @@ export class ChannelTitle extends React.Component<Props, State> {
               <p>select a channel to see more detail</p>
             </div>
           ) : (
-            <>
-              <img src={c.Thumbnail} style={{ height: '7em', marginRight: '1em', clipPath: 'circle()' }} />
-              <div>
-                <h2>{c.Title}</h2>
-                <b>{compactInteger(c.ChannelVideoViews)}</b> views for video's published
-                <i> {fdate(c.PublishedFrom)}</i> - <i>{fdate(c.PublishedTo)}</i>
+              <>
+                <img src={c.thumbnail} style={{ height: '7em', marginRight: '1em', clipPath: 'circle()' }} />
+                <div>
+                  <h2>{c.title}</h2>
+                  <b>{compactInteger(c.channelVideoViews)}</b> views for video's published
+                <i> {fdate(c.publishedFrom)}</i> - <i>{fdate(c.publishedTo)}</i>
+                  <br />
+                  <b>{compactInteger(c.subCount)}</b> subscribers
                 <br />
-                <b>{compactInteger(c.SubCount)}</b> subscribers
-                <br />
-                <a href={`https://www.youtube.com/channel/${c.ChannelId}`} target="blank">
-                  Open in YouTube
+                  <a href={`https://www.youtube.com/channel/${c.channelId}`} target="blank">
+                    Open in YouTube
                 </a>
-              </div>
-            </>
-          )}
+                </div>
+              </>
+            )}
         </div>
         <div className={'Search'} style={{}}>
-          <SearchChannels dataSet={this.props.dataSet} onSelection={this.props.onSelection} initialSelection={this.props.initialSelection} />
+          <SearchChannels dataSet={this.props.dataSet} onSelection={this.props.onSelection} selections={this.state.selections}  />
         </div>
       </div>
     )

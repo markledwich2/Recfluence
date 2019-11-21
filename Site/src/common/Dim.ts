@@ -1,0 +1,228 @@
+import * as d3 from 'd3'
+import _ from 'lodash'
+import { useCallback } from 'react'
+import { toDic } from './Utils'
+
+
+
+
+// export type Tuple<T, V> = Record<keyof T, V> // ColValue<T>[]
+
+// export class TupleEx {
+//   static isTuple(o: Object): o is Tuple<any> {
+//     const isArray = o instanceof Array
+//     let array = o as Tuple<any>
+//     if (array.length == 0) return true
+//     return array[0].col !== undefined && array[0].value !== undefined
+//   }
+// }
+
+// export interface ColValue<T> {
+//   col: string
+//   value: T
+// }
+
+
+/** A cell with state for ocntrolid display and interaction in a chart */
+export interface SelectableCell<T> extends Cell<T> {
+  /**
+   * **true** when this segement is highlighted
+   */
+  highlighted?: boolean,
+
+  /** 
+   * **true** when other segments are highlighted/selected 
+   * */
+  dimmed?: boolean,
+
+  /**
+   * **true** when this segment it selected
+   */
+  selected?: boolean
+}
+
+export function cellValue<T>(cell: Cell<T>, name: keyof T) {
+  return cell.keys[name] ?? cell.props[name] ?? cell.measures[name]
+}
+
+export interface Cell<T> {
+  /**  coordinates to this peice of aggregated data */
+  keys: Record<keyof T, string>
+
+  /** property values for this cell */
+  props: Record<keyof T, any>
+  measures: Record<keyof T, number>
+
+  label: string
+  color?: string
+}
+
+export interface DimMeta<T> {
+  name: string
+  cols: Col<T>[]
+}
+
+export enum ColType {
+  Dim,
+  Measure
+}
+
+export enum Aggregation {
+  Sum,
+  Min,
+  Max
+}
+
+export interface Col<T> {
+  type?: ColType
+  name: keyof T
+  values?: ColValueMeta<string>[]
+  pallet?: readonly string[]
+  props?: (keyof T)[]
+  aggreagtion?: Aggregation
+}
+
+export class ColEx {
+  /** a string of all the values of a tuple combined */
+  static valueString<T>(t: T[]): string {
+    return t.join("|")
+  }
+
+  static isCol(o: Object): o is Col<any> {
+    const col = o as Col<any>
+    return col && col.name !== undefined
+  }
+}
+
+export interface ColValueMeta<T> {
+  value: T,
+  color?: string,
+  label?: string
+}
+
+export interface DimQuery<T> {
+  /** cols to group by. Must be provided, even when preAggregated is true so that the results can be formed correctly  */
+  group: (keyof T)[]
+  preAggregated?: boolean
+  colorBy?: keyof T
+  label?: keyof T
+  order?: { col: keyof T, order: 'asc' | 'desc' }
+  measures?: (keyof T)[],
+}
+
+interface QueryContext<T> {
+  q: DimQuery<T>,
+  groupCols: (keyof T)[],
+  props: (keyof T)[],
+  valueCol: keyof T,
+  getColor: (r: T) => string,
+  getLabel: (r: T) => string
+}
+
+export class Dim<T> {
+
+  meta: DimMeta<T>
+  private colDic: _.Dictionary<Col<T>>
+
+  constructor(dim: DimMeta<T>, rows?: T[]) {
+    this.meta = dim
+    this.colDic = _(dim.cols).keyBy(c => c.name).value()
+  }
+
+  get name(): string {
+    return this.meta.name
+  }
+
+  col(name: keyof T): Col<T> {
+    return this.colDic[name as string] ?? { name: name }
+  }
+
+  get cols(): Col<T>[] {
+    return _(this.colDic).values().value()
+  }
+
+  private queryContext(rows: T[], q: DimQuery<T>): QueryContext<T> {
+    let groupCols = this.colSet(q.group, q.colorBy)
+    let props = this.colSet(groupCols, q.order?.col, q.label) // unique attribute properties and order by
+    let defaultCol = groupCols[0]
+
+    // colours can come explicitly from a columns metadata, or fall back or a pallet then none
+    let colorBy = this.col(q.colorBy ?? defaultCol)
+    let colorValues = colorBy ? _.uniq(rows.map(r => r[colorBy.name]?.toString())) : [] // need the full list of possible vlaues to create a pallet
+
+    let pallet = colorBy ? d3.scaleOrdinal(colorBy.pallet ?? d3.schemeCategory10).domain(colorValues) : null
+    let colorByValue = _(colorBy?.values ?? []).keyBy(c => c.value).value()
+    let getColor = (r: T) => colorBy ? colorByValue[r[colorBy.name]?.toString()]?.color ?? pallet(r[colorBy.name]?.toString()) : null
+
+    // labels can come explicitly form a columns metadata, otherwise it is the value
+    let labelBy = this.col(q.label ?? defaultCol)
+    let labelByValue = _(labelBy.values).keyBy(c => c.value).value()
+    let getLabel = (r: T) => labelByValue[r[labelBy.name]?.toString()]?.label ?? r[labelBy.name]?.toString()
+
+    return { q, groupCols, props, valueCol: defaultCol, getColor, getLabel }
+  }
+
+  private createCell(x: QueryContext<T>, g: T[]): Cell<T> {
+    let keys = toDic(x.groupCols, c => c, c => g[0][c]?.toString())
+    let measures = toDic(x.q.measures, m => m, m => this.colValue(this.col(m), g))
+    let props = toDic(x.props, p => p, p => this.colValue(this.col(p), g))
+    return <Cell<T>>{
+      keys: keys,
+      props: props,
+      color: x.getColor(g[0]),
+      label: x.getLabel(g[0]),
+      measures: measures
+    }
+  }
+
+  /** get cell information for data that is pre-aggregated */
+  rowCells(rows: T[], q: DimQuery<T>): { row: T, cell: Cell<T> }[] {
+    let x = this.queryContext(rows, q)
+    let rowCells = rows.map(r => ({ row: r, cell: this.createCell(x, [r]) }))
+    return rowCells
+  }
+
+  /** get cell information for a set of rows. This will aggregate the given rows into cells */
+  cells(rows: T[], q: DimQuery<T>): Cell<T>[] {
+    let x = this.queryContext(rows, q)
+    let cells = _(rows)
+      .groupBy(r => ColEx.valueString(x.groupCols.map(c => r[c].toString())))
+      .map((g, k) => this.createCell(x, g))
+
+    if (q.order) {
+
+      cells = cells.orderBy(c => cellValue(c, q.order.col), q.order.order)
+    }
+
+    return cells.value()
+  }
+
+  private colValue(col: Col<T>, g: T[]): string | number {
+    if (col.type && col.type == ColType.Measure || typeof (g[0][col.name]) == "number") {
+      return this.agg(col, g)
+    }
+    return g[0][col.name].toString()
+  }
+
+  private agg(col: Col<T>, g: T[]): number {
+    let values = g.map(r => r[col.name] as unknown as number)
+    let reducer = (sum: number, v: number) => sum + v
+    if (col.aggreagtion) {
+      switch (col.aggreagtion) {
+        case Aggregation.Max:
+          reducer = (max: number, v: number) => v > max ? v : max
+          break
+        case Aggregation.Min:
+          reducer = (min: number, v: number) => v < min ? v : min
+      }
+    }
+
+    let res = values.reduce(reducer, 0)
+    return res
+  }
+
+  private colSet(cols: (keyof T)[], ...more: (keyof T)[]): (keyof T)[] {
+    return _.uniq(cols.concat(more).filter(c => c))
+  }
+}
+
