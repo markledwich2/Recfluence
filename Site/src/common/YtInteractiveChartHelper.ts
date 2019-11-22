@@ -1,20 +1,27 @@
 import { event } from 'd3'
-import { InteractiveDataProps, InteractiveDataState, ActionType, SelectionStateHelper} from './Chart'
+import { InteractiveDataProps, InteractiveDataState, ActionType, SelectionStateHelper } from './Chart'
 import { SelectableCell } from './Dim'
+import { ChannelData } from './YtModel'
+
+
+export interface YtParams {
+    colorBy: keyof ChannelData
+}
+
 export class YtInteractiveChartHelper {
 
-    selectionHelper: SelectionStateHelper
+    selections: SelectionStateHelper<ChannelData, YtParams>
     component: React.Component<InteractiveDataProps<any>, InteractiveDataState>
 
     constructor(component: React.Component<InteractiveDataProps<any>, InteractiveDataState>) {
         this.component = component
-        this.selectionHelper = new SelectionStateHelper(component.props.onSelection, () => this.component.state.selections)
+        this.selections = new SelectionStateHelper(component.props.onSelection, () => this.component.state.selections)
     }
 
-    createContainer(svg: d3.Selection<SVGSVGElement, {}, null, undefined>, chartName:string) {
+    createContainer(svg: d3.Selection<SVGSVGElement, {}, null, undefined>, chartName: string) {
         let container = svg
             .on('click', () => {
-                this.selectionHelper.clearAll()
+                this.selections.clearAll()
             })
             .classed('chart', true)
             .classed(chartName, true)
@@ -24,21 +31,23 @@ export class YtInteractiveChartHelper {
         return container
     }
 
+
     addShapeEvents<GElement extends d3.BaseType, Datum extends SelectableCell<any>, PElement extends d3.BaseType>(
-        selector: d3.Selection<GElement, Datum, PElement, {}>, selectable: boolean = true) {
+        selector: d3.Selection<GElement, Datum, PElement, {}>, selectable: boolean = true, hoverable: boolean = true) {
         function onClick(chartHelper: YtInteractiveChartHelper, d: Datum) {
             event.stopPropagation()
-            chartHelper.selectionHelper.select(d.keys)
+            chartHelper.selections.select(d.keys)
         }
         if (selectable)
             selector.on('click', d => onClick(this, d))
 
-        selector
-            .on('mouseover', d => {
-                if(d.keys)
-                    this.selectionHelper.highlight(d.keys)
-            })
-            .on('mouseout', d => this.selectionHelper.clearHighlight())
+        if (hoverable)
+            selector
+                .on('mouseover', d => {
+                    if (d.keys)
+                        this.selections.highlight(d.keys)
+                })
+                .on('mouseout', d => this.selections.clearHighlight())
     }
 
     addShapeClasses<GElement extends d3.BaseType, Datum extends SelectableCell<any>, PElement extends d3.BaseType>(

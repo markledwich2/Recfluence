@@ -20,7 +20,7 @@ namespace YtReader {
       var sheets = (await ChannelSheets.MainChannels(cfg.App.Sheets, log)).ToList();
       var evenBatchSize = (int)Math.Ceiling(sheets.Count / Math.Ceiling( sheets.Count / (double)cfg.App.ChannelsPerContainer));
       
-      var batches = sheets.Batch(evenBatchSize).Select((b, i) => (batch:b.ToList(), name: $"{cfg.App.Container.Name}-fleet-{i}")).ToList();
+      var batches = sheets.Randomize().Batch(evenBatchSize).Select((b, i) => (batch:b.ToList(), name: $"{cfg.App.Container.Name}-fleet-{i}")).ToList();
 
       var azure = GetAzure(cfg);
 

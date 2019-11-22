@@ -1,11 +1,12 @@
 import React, { } from 'react'
 import Select from 'react-select'
 import _ from 'lodash'
-import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
+import { YtInteractiveChartHelper, YtParams } from "../common/YtInteractiveChartHelper"
 import { YtModel, ChannelData } from '../common/YtModel'
 import { delay } from '../common/Utils'
 import { InteractiveDataProps, ChartProps, InteractiveDataState, SelectionState, SelectionStateHelper } from '../common/Chart'
 import { Dim, Col } from '../common/Dim'
+import { YtTheme } from '../common/YtTheme'
 
 interface State {
 }
@@ -28,15 +29,15 @@ export class SearchChannels extends React.Component<Props, State> {
   ref: Select<Option>
   lastFocusedOption: Option
   lastSelectedOption: Option
-  selectionHelper = new SelectionStateHelper(this.props.onSelection, () => this.props.selections)
+  selectionHelper = new SelectionStateHelper<ChannelData, YtParams>(this.props.onSelection, () => this.props.selections)
 
   get dim(): Dim<ChannelData> {
-    return this.props.dataSet.channelDim
+    return this.props.model.channelDim
   }
 
   shouldComponentUpdate(props: Props, nextState: State) {
-    let sh = new SelectionStateHelper(null, () => props.selections)
-    const channelId = sh.selectedSingleValue(this.idCol)
+    let sh = new SelectionStateHelper<ChannelData, YtParams>(null, () => props.selections)
+    const channelId = sh.selectedSingleValue('channelId')
     let r = this.ref as any
     let selectedOption = r.select.state.selectValue.find(() => true)
     let selectedValue = selectedOption ? selectedOption.value : undefined
@@ -67,7 +68,7 @@ export class SearchChannels extends React.Component<Props, State> {
     console.log("search render", this.props.selections)
     
     let channelId = this.selectionHelper.selectedSingleValue(this.idCol)
-    let options = _(this.props.dataSet.channels)
+    let options = _(this.props.model.channels)
       .map(c => ({ value: c.channelId, label: c.title } as Option))
       .orderBy(o => o.label)
       .value()
@@ -82,21 +83,8 @@ export class SearchChannels extends React.Component<Props, State> {
           onChange={this.onSelected}
           options={options}
           placeholder="Select Channel"
-          styles={{
-            option: (p, s) => ({ ...p, color: '#ccc', backgroundColor: s.isFocused ? '#666' : 'none' }),
-            control: styles => ({ ...styles, backgroundColor: 'none', borderColor: '#333', outline: 'none' }),
-            dropdownIndicator: styles => ({ ...styles, color: '#ccc' }),
-            placeholder: styles => ({ ...styles, outline: 'none', color: '#ccc' })
-          }}
-          theme={theme => ({
-            ...theme,
-            colors: {
-              //...theme.colors,
-              text: '#ccc',
-              primary: '#ccc',
-              neutral0: '#333'
-            }
-          })}
+          styles={YtTheme.selectStyle}
+          theme={YtTheme.selectTheme}
           value={selectedVlaue ? selectedVlaue : null}
           ref={(r) => (this.ref = r)}
         />

@@ -3,26 +3,6 @@ import _ from 'lodash'
 import { useCallback } from 'react'
 import { toDic } from './Utils'
 
-
-
-
-// export type Tuple<T, V> = Record<keyof T, V> // ColValue<T>[]
-
-// export class TupleEx {
-//   static isTuple(o: Object): o is Tuple<any> {
-//     const isArray = o instanceof Array
-//     let array = o as Tuple<any>
-//     if (array.length == 0) return true
-//     return array[0].col !== undefined && array[0].value !== undefined
-//   }
-// }
-
-// export interface ColValue<T> {
-//   col: string
-//   value: T
-// }
-
-
 /** A cell with state for ocntrolid display and interaction in a chart */
 export interface SelectableCell<T> extends Cell<T> {
   /**
@@ -41,9 +21,18 @@ export interface SelectableCell<T> extends Cell<T> {
   selected?: boolean
 }
 
-export function cellValue<T>(cell: Cell<T>, name: keyof T) {
-  return cell.keys[name] ?? cell.props[name] ?? cell.measures[name]
+
+export class CellEx {
+  static cellValue<T>(cell: Cell<T>, name: keyof T) {
+    return cell.keys[name] ?? cell.props[name] ?? cell.measures[name]
+  }
+
+  static isCell<T>(o: Object): o is Cell<T> {
+    const col = o as Cell<T>
+    return col && col.keys !== undefined && col.label !== undefined && col.measures != undefined
+  }
 }
+
 
 export interface Cell<T> {
   /**  coordinates to this peice of aggregated data */
@@ -76,10 +65,12 @@ export enum Aggregation {
 export interface Col<T> {
   type?: ColType
   name: keyof T
+  label?: string
   values?: ColValueMeta<string>[]
   pallet?: readonly string[]
   props?: (keyof T)[]
   aggreagtion?: Aggregation
+  valueLabel?: keyof T
 }
 
 export class ColEx {
@@ -88,8 +79,12 @@ export class ColEx {
     return t.join("|")
   }
 
-  static isCol(o: Object): o is Col<any> {
-    const col = o as Col<any>
+  static valueStringCol<T>(row: T, cols: (keyof T)[]): string {
+    return cols.map(c => row[c].toString()).join('|')
+  }
+
+  static isCol<T>(o: Object): o is Col<T> {
+    const col = o as Col<T>
     return col && col.name !== undefined
   }
 }
@@ -141,7 +136,7 @@ export class Dim<T> {
     return _(this.colDic).values().value()
   }
 
-  private queryContext(rows: T[], q: DimQuery<T>): QueryContext<T> {
+  createCellContext(rows: T[], q: DimQuery<T>): QueryContext<T> {
     let groupCols = this.colSet(q.group, q.colorBy)
     let props = this.colSet(groupCols, q.order?.col, q.label) // unique attribute properties and order by
     let defaultCol = groupCols[0]
@@ -154,8 +149,8 @@ export class Dim<T> {
     let colorByValue = _(colorBy?.values ?? []).keyBy(c => c.value).value()
     let getColor = (r: T) => colorBy ? colorByValue[r[colorBy.name]?.toString()]?.color ?? pallet(r[colorBy.name]?.toString()) : null
 
-    // labels can come explicitly form a columns metadata, otherwise it is the value
-    let labelBy = this.col(q.label ?? defaultCol)
+    // labels can come explicitly form a columns metadata, otherwise it will come from the default columsn value lable, otherwise it is the value
+    let labelBy = this.col(q.label ?? this.col(defaultCol).valueLabel ?? defaultCol)
     let labelByValue = _(labelBy.values).keyBy(c => c.value).value()
     let getLabel = (r: T) => labelByValue[r[labelBy.name]?.toString()]?.label ?? r[labelBy.name]?.toString()
 
@@ -177,21 +172,21 @@ export class Dim<T> {
 
   /** get cell information for data that is pre-aggregated */
   rowCells(rows: T[], q: DimQuery<T>): { row: T, cell: Cell<T> }[] {
-    let x = this.queryContext(rows, q)
+    let x = this.createCellContext(rows, q)
     let rowCells = rows.map(r => ({ row: r, cell: this.createCell(x, [r]) }))
     return rowCells
   }
 
   /** get cell information for a set of rows. This will aggregate the given rows into cells */
   cells(rows: T[], q: DimQuery<T>): Cell<T>[] {
-    let x = this.queryContext(rows, q)
+    let x = this.createCellContext(rows, q)
     let cells = _(rows)
       .groupBy(r => ColEx.valueString(x.groupCols.map(c => r[c].toString())))
       .map((g, k) => this.createCell(x, g))
 
     if (q.order) {
 
-      cells = cells.orderBy(c => cellValue(c, q.order.col), q.order.order)
+      cells = cells.orderBy(c => CellEx.cellValue(c, q.order.col), q.order.order)
     }
 
     return cells.value()

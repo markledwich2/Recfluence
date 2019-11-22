@@ -1,7 +1,7 @@
 import * as d3 from 'd3'
 import * as _ from 'lodash'
-import { Dim, Col, DimMeta, ColType } from './Dim'
-import { SelectionStateHelper, SelectionState } from './Chart'
+import { Dim, Col } from './Dim'
+import { SelectionState } from './Chart'
 
 export interface Graph<N, L> {
   nodes: N
@@ -27,7 +27,7 @@ export interface ChannelData {
   media: string
 }
 
-export interface RelationData {
+export interface RecData {
   fromChannelId: string
   channelId: string
   fromVideoViews: number
@@ -38,7 +38,7 @@ export interface RelationData {
 export class YtModel {
 
   channels: ChannelData[]
-  relations: RelationData[]
+  recs: RecData[]
   channelDim: Dim<ChannelData>
   selectionState: SelectionState
 
@@ -49,7 +49,7 @@ export class YtModel {
       return <ChannelData>{
         channelId: c.CHANNEL_ID,
         title: c.CHANNEL_TITLE,
-        tags: c.TAGS,
+        tags: JSON.parse(c.TAGS),
         subCount: c.SUBS,
         channelVideoViews: +c.VIEWS,
         thumbnail: c.LOGO_URL,
@@ -67,7 +67,7 @@ export class YtModel {
     const channelDic = _(channels).keyBy(c => c.channelId).value()
 
     let relations = (await relationsCsvTask).map((c: any) => {
-      return <RelationData>{
+      return <RecData>{
         fromChannelId: c.FROM_CHANNEL_ID,
         channelId: c.TO_CHANNEL_ID,
         recommendsViewFlow: +c.REC_VIEW_PORTION,
@@ -78,9 +78,9 @@ export class YtModel {
 
     return {
       channels: channels, 
-      relations,
+      recs: relations,
       channelDim: new Dim(this.channelDimStatic.meta, channels),
-      selectionState: { selected: [] }
+      selectionState: { selected: [], parameters: { colorBy: 'ideology' } },
     }
   }
 
@@ -89,10 +89,12 @@ export class YtModel {
     cols: [
       {
         name: 'channelId',
-        props: ['lr', 'ideology', 'media']
+        props: ['lr', 'ideology', 'media'],
+        valueLabel: 'title'
       },
       {
         name: 'lr',
+        label: 'Left/Center/Right',
         values: [
           { value: 'L', label: 'Left', color: '#3c4455' },
           { value: 'C', label: 'Center', color: '#7b4d5e' },
@@ -102,6 +104,7 @@ export class YtModel {
       },
       {
         name: 'ideology',
+        label: 'Idiology - Ledwich &  Zaitsev',
         values: [
           { value: 'IDW', color: '#E42C6A' },
           { value: 'Partisan Right', color: '#E40C2B' },
@@ -124,7 +127,8 @@ export class YtModel {
         ]
       },
       {
-        name: 'dailyViews'
+        name: 'media',
+        label: 'Media Type'
       }
     ]
   })

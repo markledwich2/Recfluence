@@ -7,7 +7,7 @@ import { GridLoader } from 'react-spinners'
 import { jsonClone } from '../common/Utils'
 import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
-import { InteractiveDataProps, SelectionStateHelper, ActionType, InteractiveDataState, ActionClass } from '../common/Chart'
+import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, ActionType, Action } from '../common/Chart'
 
 interface Props { }
 
@@ -17,7 +17,7 @@ interface State {
 }
 
 export class ChannelRelationsPage extends React.Component<Props, State> {
-  selections: SelectionStateHelper
+  selections: SelectionStateHelper<any, any>
   relations: ChannelRelations
   flows: RecommendFlows
   title: ChannelTitle
@@ -28,7 +28,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
   constructor(props: any) {
     super(props)
-    this.selections = new SelectionStateHelper(this.onSelection, () => this.state.data.selectionState)
+    this.selections = new SelectionStateHelper<any, any>(this.onSelection, () => this.state.data.selectionState)
   }
 
   componentDidMount() {
@@ -55,7 +55,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     } catch (e) { }
   }
 
-  onSelection(action: ActionClass) {
+  onSelection(action: Action) {
     const params = new URLSearchParams(location.search)
     const idAttribute = YtModel.channelDimStatic.col("channelId")
 
@@ -84,7 +84,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
         <div className={'ChannelRelationPage'}>
           <ChannelTitle
             ref={r => (this.title = r)}
-            dataSet={this.state.data}
+            model={this.state.data}
             onSelection={this.onSelection.bind(this)}
           />
 
@@ -96,7 +96,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                     ref={r => (this.relations = r)}
                     height={height}
                     width={width}
-                    dataSet={this.state.data}
+                    model={this.state.data}
                     onSelection={this.onSelection.bind(this)}
                   />
                 )}
@@ -109,7 +109,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                     ref={r => (this.flows = r)}
                     height={height}
                     width={width}
-                    dataSet={this.state.data}
+                    model={this.state.data}
                     onSelection={this.onSelection.bind(this)}
                   />
                 )}
@@ -119,14 +119,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
           <div className={'footer'}>
             <a href={'https://twitter.com/mark_ledwich'}>@mark_ledwich</a>
             <a href={'mailto:mark@ledwich.com.au?Subject=Political YouTube'}>mark@ledwich.com.au</a>
-            <span>
-              download &nbsp;
-            <a href={this.resultUrl + 'VisChannels.csv'}>Channel</a>
-              &nbsp; and &nbsp;
-                <a href={this.resultUrl + 'VisRelations.csv'}>Relation</a>
-              &nbsp;data
-            </span>
-            <span>See &nbsp;<a href={'https://github.com/markledwich2/YouTubeNetworks'}>project source</a> &nbsp;</span>
+            <span> &nbsp;<a href={'https://github.com/markledwich2/YouTubeNetworks'}>GitHUb project</a> &nbsp;</span>
           </div>
         </div >
       )

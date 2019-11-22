@@ -14,49 +14,54 @@ interface Props extends InteractiveDataProps<YtModel> { }
 export class ChannelTitle extends React.Component<Props, State> {
   chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this)
   state: Readonly<State> = {
-    selections: this.props.dataSet.selectionState
+    selections: this.props.model.selectionState
   }
 
   get dim(): Dim<ChannelData> {
-    return this.props.dataSet.channelDim
+    return this.props.model.channelDim
   }
 
   channel() {
-    const channelId = this.chart.selectionHelper
+    const channelId = this.chart.selections
       .highlitedOrSelectedValue(this.dim.col("channelId"))
-    return channelId ? this.props.dataSet.channels.find(c => c.channelId == channelId) : null
+    return channelId ? this.props.model.channels.find(c => c.channelId == channelId) : null
   }
 
+
+
   render() {
-    let c = this.channel()
+    let channel = this.channel()
     let fdate = (d: string) => dateformat(new Date(d), 'd mmm yyyy')
+
+    const renderChannel = (c: ChannelData) => {
+      let tags = c.tags.length == 0 ? ['None'] : c.tags
+      return (<>
+        <a href={`https://www.youtube.com/channel/${c.channelId}`} target="blank">
+          <img src={c.thumbnail} style={{ height: '7em', marginRight: '1em', clipPath: 'circle()' }} />
+        </a>
+        <div className="title-details">
+          <div><b>{c.title}</b></div>
+          <div><b>{compactInteger(c.dailyViews)}</b> daily views (<i>{fdate(c.publishedFrom)}</i> - <i>{fdate(c.publishedTo)}</i>)</div>
+          <div><b>{compactInteger(c.subCount)}</b> subscribers</div>
+          <div>{tags.map(t => (<span key={t} className={'tag'}>{t}</span>))}</div>
+        </div>
+      </>)
+    }
+
     return (
       <div className={'Title'}>
         <div className={'Card'}>
-          {c == null ? (
+          {channel == null ? (
             <div style={{}}>
-              <h2>Political YouTube</h2>
-              <p>select a channel to see more detail</p>
+              <h2>Recfluence</h2>
+              <p>Analysis of YouTube's political inlfuence through recommendations</p>
             </div>
           ) : (
-              <>
-                <img src={c.thumbnail} style={{ height: '7em', marginRight: '1em', clipPath: 'circle()' }} />
-                <div>
-                  <h2>{c.title}</h2>
-                  <b>{compactInteger(c.channelVideoViews)}</b> views for video's published
-                <i> {fdate(c.publishedFrom)}</i> - <i>{fdate(c.publishedTo)}</i>
-                  <br />
-                  <b>{compactInteger(c.subCount)}</b> subscribers
-                <br />
-                  <a href={`https://www.youtube.com/channel/${c.channelId}`} target="blank">
-                    Open in YouTube
-                </a>
-                </div>
-              </>
+              renderChannel(channel)
             )}
         </div>
         <div className={'Search'} style={{}}>
-          <SearchChannels dataSet={this.props.dataSet} onSelection={this.props.onSelection} selections={this.state.selections}  />
+          <SearchChannels model={this.props.model} onSelection={this.props.onSelection} selections={this.state.selections} />
         </div>
       </div>
     )

@@ -3,10 +3,10 @@ import _ from "lodash"
 import { Col, ColEx, SelectableCell } from "./Dim"
 
 
-export type SelectionHandler = (action: ActionClass) => void
+export type SelectionHandler = (action: Action) => void
 
 export interface InteractiveDataProps<D> {
-    dataSet: D
+    model: D
     onSelection?: SelectionHandler
 }
 
@@ -22,46 +22,44 @@ export interface InteractiveDataState {
 export interface SelectionState {
     selected: Record<string, string>[]
     highlighted?: Record<string, string>
-}
-
-export type ActionClass = SelectAction | HighlightAction | ClearAction | ClearHighlight
-
-export class SelectAction {
-
-    constructor(...tuples: Record<string, string>[]) {
-        this.tuples = tuples
-    }
-
-    type = ActionType.Select
-    tuples: Record<string, string>[]
-}
-
-export class HighlightAction {
-    constructor(tuple: Record<string, string>) {
-        this.tuple = tuple
-    }
-
-    type = ActionType.Highlight
-    tuple: Record<string, string>
-}
-
-class ClearAction {
-    type = ActionType.Clear
-}
-
-class ClearHighlight {
-    type = ActionType.ClearHighlight
+    parameters: Record<string, any>
 }
 
 export enum ActionType {
-    Select = 'select',
-    Highlight = 'highlight',
-    Clear = 'clear',
-    ClearHighlight = 'clearHighlight'
+    Select,
+    Highlight,
+    Clear,
+    ClearHighlight,
+    SetParams
+}
+
+export type Action = SelectAction | HighlightAction | ClearAction | ClearHighlight | SetParams
+
+export interface SelectAction {
+    type: ActionType.Select
+    select: Record<string, string>[]
+}
+
+interface HighlightAction {
+    type: ActionType.Highlight
+    highlight: Record<string, string>
+}
+
+interface ClearAction {
+    type: ActionType.Clear
+}
+
+interface ClearHighlight {
+    type: ActionType.ClearHighlight
+}
+
+interface SetParams {
+    type: ActionType.SetParams
+    params: Record<string, any>
 }
 
 /** funcitoanlity to help modify selection state */
-export class SelectionStateHelper {
+export class SelectionStateHelper<T, TParams> {
 
     onSelection: SelectionHandler
     getState: () => SelectionState
@@ -72,58 +70,68 @@ export class SelectionStateHelper {
     }
 
     // returns the updated state according to the given action
-    applyAction = (action: ActionClass): SelectionState => {
+    applyAction = (action: Action): SelectionState => {
         let state = this.getState()
+        let s = (s: any) => Object.assign({}, state, s)
         switch (action.type) {
             case ActionType.Clear:
-                return { selected: [], highlighted: null }
+                return s({ selected: [], highlighted: null })
 
             case ActionType.Select:
                 const select = action as SelectAction
-                const bySelectionKey = _(select.tuples).groupBy(this.selectionKey).value()
-                const nonConfictingSelections = select.tuples.filter(s => !(this.selectionKey(s) in bySelectionKey))
-                const newSelect = nonConfictingSelections.concat(select.tuples)
-                return { selected: newSelect, highlighted: state.highlighted }
+                const bySelectionKey = _(select.select).groupBy(this.selectionKey).value()
+                const nonConfictingSelections = select.select.filter(s => !(this.selectionKey(s) in bySelectionKey))
+                const newSelect = nonConfictingSelections.concat(select.select)
+                return s({ selected: newSelect, highlighted: state.highlighted })
 
             case ActionType.Highlight:
-                return { selected: state.selected, highlighted: (action as HighlightAction).tuple }
+                return s({ highlighted: action.highlight })
 
             case ActionType.ClearHighlight:
-                return { selected: state.selected, highlighted: null }
+                return s({ highlighted: null })
+
+            case ActionType.SetParams:
+                return s({ parameters: action.params })
         }
     }
 
 
-    highlight = (toHighlight: string | Col<any> | Record<string, string>, value: string = null) => {
-        var action
+    highlight = (toHighlight: keyof T | Col<T> | Record<keyof T, string>, value: string = null) => {
+        var action: HighlightAction
         if (typeof (toHighlight) == 'string')
-            action = new HighlightAction({ [toHighlight]: value })
+            action = { type: ActionType.Highlight, highlight: { [toHighlight]: value } }
         else if (ColEx.isCol(toHighlight))
-            action = new HighlightAction({ [toHighlight.name]: value })
+            action = { type: ActionType.Highlight, highlight: { [toHighlight.name]: value } }
         else
-            action = new HighlightAction(toHighlight)
+            action = { type: ActionType.Highlight, highlight: toHighlight as Record<string, string> }
 
         this.onSelection(action)
     }
 
-    select = (toSelect: string | Col<any> | Record<string, string>, value: string = null) => {
-        var action
+    select = (toSelect: keyof T | Col<T> | Record<keyof T, string>, value: string = null) => {
+        var action: SelectAction
         if (typeof (toSelect) == 'string')
-            action = new SelectAction({ [toSelect]: value })
+            action = { type: ActionType.Select, select: [{ [toSelect]: value }] }
         else if (ColEx.isCol(toSelect))
-            action = new SelectAction({ [toSelect.name]: value })
+            action = { type: ActionType.Select, select: [{ [toSelect.name]: value }] }
         else
-            action = new SelectAction(toSelect)
+            action = { type: ActionType.Select, select: [toSelect as Record<string, string>] }
 
         this.onSelection(action)
     }
+
+    setParam = (params: Record<string, any>) => {
+        this.onSelection({ type: ActionType.SetParams, params })
+    }
+
+    params = (): TParams => this.getState().parameters
 
     clearAll = () => {
-        this.onSelection(new ClearAction())
+        this.onSelection({ type: ActionType.Clear })
     }
 
     clearHighlight = () => {
-        this.onSelection(new ClearHighlight())
+        this.onSelection({ type: ActionType.ClearHighlight })
     }
 
     /** a unique string of the tuple columns (not values) e.g. 'name|type' */
@@ -142,23 +150,29 @@ export class SelectionStateHelper {
     }
 
     // return selected value for the attribute if only one item has been selected
-    selectedSingleValue = (col: string | Col<any>): string => {
+    selectedSingleValue = (col: keyof T | Col<T>): string => {
         const values = this.selectedValues(col)
         return (values.length == 1) ? values[0] : null
     }
 
     /** return the selected values for the given column */
-    selectedValues = (col: string | Col<any>): string[] => {
+    selectedValues = (col: keyof T | Col<T>): string[] => {
         const state = this.getState()
-        const name = ColEx.isCol(col) ? col.name : col
+        const name = ColEx.isCol<T>(col) ? col.name : col
         const selected = state.selected
             .filter(s => name in s)
             .map(s => s[name])
         return selected
     }
 
-    highlitedOrSelectedValue = (col: string | Col<any>): string => {
-        const name = ColEx.isCol(col) ? col.name : col
+    highlightedOrSelected = (): Record<string, string> => {
+        const state = this.getState()
+        if (state.highlighted) return state.highlighted
+        return (state.selected.length == 1) ? state.selected[0] : null
+    }
+
+    highlitedOrSelectedValue = (col: keyof T | Col<T>): string => {
+        const name = ColEx.isCol<T>(col) ? col.name : col
         const highighted = this.getHighlightedValue(name)
         if (highighted) return highighted[name]
         const selected = this.selectedSingleValue(name)
