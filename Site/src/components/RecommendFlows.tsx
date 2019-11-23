@@ -10,14 +10,9 @@ import * as _ from 'lodash'
 import { ChartProps, InteractiveDataState } from '../common/Chart'
 import { SelectableCell, ColEx, Cell, CellEx } from '../common/Dim'
 import { typedKeys } from '../common/Utils'
-import { selection } from 'd3'
 
 interface State extends InteractiveDataState { }
 interface Props extends ChartProps<YtModel> { }
-interface ChannelNodeExtra extends NodeExtra {
-  channelId: string
-  size: number
-}
 
 interface RecommendFlowExtra {
   id: string
@@ -131,8 +126,10 @@ export class RecommendFlows extends React.Component<Props, State> {
     var maxNodes = 10
     let selectedKey = ColEx.valueString(_.values(selection))
 
-    let inLinks = links.filter(r => r.target == selectedKey).map(r => ({ ...r, source: 'in.' + r.source } as Link))
-    let outLinks = links.filter(r => r.source == selectedKey).map(r => ({ ...r, target: 'out.' + r.target } as Link))
+    let inLinks = links.filter(r => r.target == selectedKey)
+      .map(r => ({ ...r, source: 'in.' + r.source } as Link))
+    let outLinks = links.filter(r => r.source == selectedKey)
+      .map(r => ({ ...r, target: 'out.' + r.target } as Link))
     let finalLinks = _(inLinks)
       .orderBy(l => l.value, 'desc')
       .slice(0, maxNodes)
@@ -302,7 +299,6 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('transform', d => `translate(${txtMode.get(d.mode).getX(d)}, ${txtMode.get(d.mode).getY(d)})`) //translate makes g coodinates relative
         .html(d => renderToString(labelText(d)))
 
-      let exitNode = updateNode.exit().remove()
 
       // exitNode
       //   .transition()

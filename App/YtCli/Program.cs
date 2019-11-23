@@ -13,6 +13,9 @@ namespace YouTubeCli {
   public class UpdateOption : CommonOption {
     [Option('c', "channels", HelpText = "optional '|' separated list of channels to process")]
     public string ChannelIds { get; set; }
+    
+    [Option('t', "type", HelpText = "Control what parts of the update process to run")]
+    public UpdateType UpdateType { get; set; }
   }
 
   [Verb("fix", HelpText = "try to fix missing/inconsistent data")]
@@ -100,7 +103,7 @@ namespace YouTubeCli {
         ctx.Cfg.App.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
       
       var ytStore = ctx.Cfg.YtStore(ctx.Log);
-      var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, ctx.Log);
+      var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, ctx.Option.UpdateType, ctx.Log);
       await ytUpdater.UpdateData();
       return ExitCode.Success;
     }

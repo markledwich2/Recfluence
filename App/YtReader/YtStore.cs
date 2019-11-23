@@ -12,7 +12,7 @@ namespace YtReader {
     public static readonly int StoreVersion = 1;
 
     readonly ISimpleFileStore Store;
-    readonly ILogger Log;
+    readonly ILogger          Log;
 
     public YtStore(ISimpleFileStore store, ILogger log) {
       Store = store;
@@ -35,59 +35,68 @@ namespace YtReader {
   }
 
   public class ChannelStored2 {
-    public string ChannelId { get; set; }
-    public string ChannelTitle { get; set; }
-    public string MainChannelId { get; set; }
-    public string Description { get; set; }
-    public string LogoUrl { get; set; }
-    public double Relevance { get; set; }
-    public string LR { get; set; }
-    public ulong? Subs { get; set; }
-    public ulong? ChannelViews { get; set; }
-    public string Country { get; set; }
-    public ChannelStatus Status { get; set; }
-  
-    public IReadOnlyCollection<string> HardTags { get; set; }
-    public IReadOnlyCollection<string> SoftTags { get; set; }
-    public IReadOnlyCollection<string> SheetIds { get; set; }
+    public string        ChannelId     { get; set; }
+    public string        ChannelTitle  { get; set; }
+    public string        MainChannelId { get; set; }
+    public string        Description   { get; set; }
+    public string        LogoUrl       { get; set; }
+    public double        Relevance     { get; set; }
+    public string        LR            { get; set; }
+    public ulong?        Subs          { get; set; }
+    public ulong?        ChannelViews  { get; set; }
+    public string        Country       { get; set; }
+    public ChannelStatus Status        { get; set; }
 
-    public DateTime Updated { get; set; }
-    public string StatusMessage { get; set; }
+    public IReadOnlyCollection<string>            HardTags     { get; set; }
+    public IReadOnlyCollection<string>            SoftTags     { get; set; }
+    public IReadOnlyCollection<UserChannelStore2> UserChannels { get; set; }
+
+    public DateTime Updated       { get; set; }
+    public string   StatusMessage { get; set; }
     public override string ToString() => $"{ChannelTitle}";
   }
 
+  public class UserChannelStore2 {
+    public string                      SheetId   { get; set; }
+    public string                      LR        { get; set; }
+    public int                         Relevance { get; set; }
+    public IReadOnlyCollection<string> SoftTags  { get; set; } = new List<string>();
+    public string                      Notes     { get; set; }
+    public double                      Weight    { get; set; }
+  }
+
   public class VideoStored2 {
-    public string VideoId { get; set; }
-    public string Title { get; set; }
-    public string ChannelId { get; set; }
-    public string ChannelTitle { get; set; }
-    public DateTime UploadDate { get; set; }
-    public string Description { get; set; }
-    public ThumbnailSet Thumbnails { get; set; }
-    public TimeSpan Duration { get; set; }
-    public IReadOnlyList<string> Keywords { get; set; } = new List<string>();
-    public Statistics Statistics { get; set; }
-    public DateTime Updated { get; set; }
+    public string                VideoId      { get; set; }
+    public string                Title        { get; set; }
+    public string                ChannelId    { get; set; }
+    public string                ChannelTitle { get; set; }
+    public DateTime              UploadDate   { get; set; }
+    public string                Description  { get; set; }
+    public ThumbnailSet          Thumbnails   { get; set; }
+    public TimeSpan              Duration     { get; set; }
+    public IReadOnlyList<string> Keywords     { get; set; } = new List<string>();
+    public Statistics            Statistics   { get; set; }
+    public DateTime              Updated      { get; set; }
     //public IReadOnlyCollection<ClosedCaptionTrackInfo> Captions { get; set; }
 
     public override string ToString() => $"{Title}";
   }
 
   public class RecStored2 : Rec {
-    public string FromVideoId { get; set; }
-    public string FromVideoTitle { get; set; }
-    public string FromChannelId { get; set; }
-    public DateTime Updated { get; set; }
-    public int Rank { get; set; }
+    public string   FromVideoId    { get; set; }
+    public string   FromVideoTitle { get; set; }
+    public string   FromChannelId  { get; set; }
+    public DateTime Updated        { get; set; }
+    public int      Rank           { get; set; }
 
     public override string ToString() => $"{FromVideoTitle} -> {ToVideoTitle}";
   }
 
   public class VideoCaptionStored2 : StoredItem {
-    public string VideoId { get; set; }
-    public DateTime UploadDate { get; set; }
-    public ClosedCaptionTrackInfo Info { get; set; }
-    public IReadOnlyCollection<ClosedCaption> Captions { get; set; } = new List<ClosedCaption>();
+    public string                             VideoId    { get; set; }
+    public DateTime                           UploadDate { get; set; }
+    public ClosedCaptionTrackInfo             Info       { get; set; }
+    public IReadOnlyCollection<ClosedCaption> Captions   { get; set; } = new List<ClosedCaption>();
   }
 
   public abstract class StoredItem {

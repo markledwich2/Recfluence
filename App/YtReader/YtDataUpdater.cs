@@ -14,14 +14,21 @@ using YtReader.YtWebsite;
 using VideoItem = YtReader.YtWebsite.VideoItem;
 
 namespace YtReader {
-  public class YtDataUpdater {
-    YtStore            Store { get; }
-    AppCfg             Cfg   { get; }
-    ILogger            Log   { get; }
-    readonly YtScraper Scraper;
-    readonly YtClient  Api;
+  public enum UpdateType {
+    All,
+    Channels
+  }
 
-    public YtDataUpdater(YtStore store, AppCfg cfg, ILogger log) {
+  public class YtDataUpdater {
+    readonly UpdateType Type;
+    YtStore             Store { get; }
+    AppCfg              Cfg   { get; }
+    ILogger             Log   { get; }
+    readonly YtScraper  Scraper;
+    readonly YtClient   Api;
+
+    public YtDataUpdater(YtStore store, AppCfg cfg, UpdateType type, ILogger log) {
+      Type = type;
       Store = store;
       Cfg = cfg;
       Log = log;
@@ -33,34 +40,37 @@ namespace YtReader {
     bool Expired(DateTime updated, TimeSpan refreshAge) => (RCfg.To ?? DateTime.UtcNow) - updated > refreshAge;
 
     public async Task UpdateData() {
-      Log.Information("Starting data update");
+      Log.Information("Starting data update: {Type}", Type);
       var sw = Stopwatch.StartNew();
 
       var channels = await UpdateChannels().WithDuration();
       Log.Information("Updated stats for {Channels} channels in {Duration}", channels.Result.Count, channels.Duration);
-      
-      var channelResults = await channels.Result
-        .Where(c => c.Status == ChannelStatus.Alive)
-        .Select((c,i) =>(c,i)).BlockTransform(async item => {
-          var (c, i) = item;
-          var log = Log
-            .ForContext("ChannelId", c.ChannelId)
-            .ForContext("Channel", c.ChannelTitle);
-          try {
-            await UpdateAllInChannel(c, log);
-            log.Information("{Channel} - Completed {Count}/{Total} update of videos/recs/captions in {Duration}", 
-              c.ChannelTitle, i, channels.Result.Count, sw.Elapsed);
-            return (c, Success: true);
-          }
-          catch (Exception ex) {
-            
-            Log.Error(ex, "Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
-            return (c, Success: false);
-          }
-        }, Cfg.ParallelChannels);
 
-      Log.Information("Updated {Completed} channel videos/captions/recs, {Errors} failed in {Duration}",
-        channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed);
+      if (Type == UpdateType.Channels) {
+        Log.Information("Update complete");
+      }
+      else {
+        var channelResults = await channels.Result
+          .Where(c => c.Status == ChannelStatus.Alive)
+          .Select((c, i) => (c, i)).BlockTransform(async item => {
+            var (c, i) = item;
+            var log = Log
+              .ForContext("ChannelId", c.ChannelId)
+              .ForContext("Channel", c.ChannelTitle);
+            try {
+              await UpdateAllInChannel(c, log);
+              log.Information("{Channel} - Completed {Count}/{Total} update of videos/recs/captions in {Duration}",
+                c.ChannelTitle, i, channels.Result.Count, sw.Elapsed);
+              return (c, Success: true);
+            }
+            catch (Exception ex) {
+              Log.Error(ex, "Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
+              return (c, Success: false);
+            }
+          }, Cfg.ParallelChannels);
+        Log.Information("Update complete: {Completed} channel videos/captions/recs, {Errors} failed in {Duration}",
+          channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed);
+      }
     }
 
     async Task<IReadOnlyCollection<ChannelStored2>> UpdateChannels() {
@@ -69,13 +79,13 @@ namespace YtReader {
       Log.Information("Starting channels update. Limited to ({Included})",
         Cfg.LimitedToSeedChannels?.HasItems() == true ? Cfg.LimitedToSeedChannels.Join("|") : "All");
 
-      async Task<ChannelStored2> UpdateChannel(ChannelWithUserData channel) {
+      async Task<ChannelStored2> UpdateChannel(ChannelSheet channel) {
         var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
 
-        var channelData = new ChannelData { Id = channel.Id, Title = channel.Title};
+        var channelData = new ChannelData {Id = channel.Id, Title = channel.Title};
         try {
-          channelData = await Api.ChannelData(channel.Id) ??   // Use API to get channel instead of scraper. We get better info faster
-                        new ChannelData { Id = channel.Id, Title = channel.Title, Status = ChannelStatus.Dead }; 
+          channelData = await Api.ChannelData(channel.Id) ?? // Use API to get channel instead of scraper. We get better info faster
+                        new ChannelData {Id = channel.Id, Title = channel.Title, Status = ChannelStatus.Dead};
           log.Information("{Channel} - read channel details", channelData.Title);
         }
         catch (Exception ex) {
@@ -95,9 +105,9 @@ namespace YtReader {
           Updated = DateTime.UtcNow,
           Relevance = channel.Relevance,
           LR = channel.LR,
-          HardTags = channel.HardTags,  
+          HardTags = channel.HardTags,
           SoftTags = channel.SoftTags,
-          SheetIds = channel.SheetIds
+          UserChannels = channel.UserChannels
         };
         return channelStored;
       }

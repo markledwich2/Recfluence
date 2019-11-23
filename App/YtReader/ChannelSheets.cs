@@ -46,10 +46,11 @@ namespace YtReader {
     static async Task<IReadOnlyCollection<MainChannelSheet>> MainChannels(SheetsCfg sheetsCfg, SheetsService service, ILogger log) =>
       await SheetValues<MainChannelSheet>(service, sheetsCfg.MainChannelSheetId, "Channels", log);
 
-    public static async Task<IReadOnlyCollection<ChannelWithUserData>> Channels(SheetsCfg sheetsCfg, ILogger log) {
+    public static async Task<IReadOnlyCollection<ChannelSheet>> Channels(SheetsCfg sheetsCfg, ILogger log) {
       var service = GetService(sheetsCfg);
       var userChannelSheets = await sheetsCfg.UserChannelSheetIds
-        .Select((v, i) => new {SheetId = v, Weight = 1 - i / 100d})
+        .Select((v, i) => new
+          {SheetId = v, Weight = 1}) // I used to weight some users higher (that's why there is that logic). Now we weight them all the same (1)
         .BlockTransform(async s => new {
           Channels = await SheetValues<UserChannelSheet>(service, s.SheetId, "Channels", log),
           s.SheetId,
@@ -66,24 +67,30 @@ namespace YtReader {
             var ucs = userChannelsById[mc.Id]
               .Where(uc => uc.Channel.Complete == "TRUE").ToList();
 
-            var allSoftTags = ucs.Select(c =>
-              new {
-                Tags = new[] {c.Channel.SoftTag1, c.Channel.SoftTag2, c.Channel.SoftTag3, c.Channel.SoftTag4}.Where(t => t.HasValue()).ToList(),
-                c.Weight
+            var classifications = ucs.Select(uc =>
+              new UserChannelStore2 {
+                SoftTags = SoftTags(uc.Channel),
+                Relevance = uc.Channel.Relevance,
+                LR = uc.Channel.LR,
+                SheetId = uc.SheetId,
+                Notes = uc.Channel.Notes,
+                Weight = uc.Weight
               }).ToList();
-            var totalWeight = allSoftTags.Sum(t => t.Weight);
-            var distinctTags = allSoftTags.SelectMany(t => t.Tags).Distinct();
-            var softTags = distinctTags.Select(t => allSoftTags.Sum(s => s.Tags.Contains(t) ? s.Weight : 0) > totalWeight / 2d ? t : null).NotNull().ToList();
 
-            var res = new ChannelWithUserData {
+            var totalWeight = classifications.Sum(c => c.Weight);
+            var distinctTags = classifications.SelectMany(t => t.SoftTags).Distinct();
+            var softTags = distinctTags
+              .Select(t => classifications.Sum(s => s.SoftTags.Contains(t) ? s.Weight : 0) > totalWeight / 2d ? t : null).NotNull().ToList();
+
+            var res = new ChannelSheet {
               Id = mc.Id,
               Title = mc.Title,
               LR = MajorityValue(ucs, c => c.Channel.LR, c => c.Weight),
               MainChannelId = mc.MainChannelId,
               HardTags = new[] {mc.HardTag1, mc.HardTag2, mc.HardTag3}.Where(t => t.HasValue()).OrderBy(t => t).ToList(),
               SoftTags = softTags,
-              SheetIds = ucs.Select(s => s.SheetId).ToList(),
-              Relevance = ucs.Average(s => s.Channel.Relevance) / 10d
+              Relevance = ucs.Any() ? ucs.Average(s => s.Channel.Relevance) / 10d : 1,
+              UserChannels = classifications
             };
             return res;
           }
@@ -91,6 +98,10 @@ namespace YtReader {
 
       return channels;
     }
+
+    static IReadOnlyCollection<string> SoftTags(UserChannelSheet sheet) =>
+      new[] {sheet.SoftTag1, sheet.SoftTag2, sheet.SoftTag3, sheet.SoftTag4}
+        .Where(t => t.HasValue()).ToList();
 
     static V MajorityValue<T, V>(IEnumerable<T> items, Func<T, V> getValue, Func<T, double> getWeight) =>
       items.GroupBy(getValue)
@@ -131,14 +142,17 @@ namespace YtReader {
     public                                 string Complete { get; set; }
   }
 
-  public class ChannelWithUserData {
-    public string                      Id            { get; set; }
-    public string                      Title         { get; set; }
-    public double                      Relevance     { get; set; } // between 0 and 1
-    public string                      LR            { get; set; }
-    public string                      MainChannelId { get; set; }
-    public IReadOnlyCollection<string> HardTags      { get; set; } = new List<string>();
-    public IReadOnlyCollection<string> SoftTags      { get; set; } = new List<string>();
-    public IReadOnlyCollection<string> SheetIds      { get; set; } = new List<string>();
+  /// <summary>
+  ///   Main & User sheet combined into a record representing the majority view
+  /// </summary>
+  public class ChannelSheet {
+    public string                                 Id            { get; set; }
+    public string                                 Title         { get; set; }
+    public double                                 Relevance     { get; set; } // between 0 and 1
+    public string                                 LR            { get; set; }
+    public string                                 MainChannelId { get; set; }
+    public IReadOnlyCollection<string>            HardTags      { get; set; } = new List<string>();
+    public IReadOnlyCollection<string>            SoftTags      { get; set; } = new List<string>();
+    public IReadOnlyCollection<UserChannelStore2> UserChannels  { get; set; } = new List<UserChannelStore2>();
   }
 }
