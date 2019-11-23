@@ -2,6 +2,8 @@
 
 A [visualization](https://pyt.azureedge.net) showing the relations and recommendation flows between political & cultural commentary on YouTube
 
+[![Build Status](https://dev.azure.com/mledwich/ytnetworks/_apis/build/status/markledwich2.YouTubeNetworks?branchName=master)](https://dev.azure.com/mledwich/ytnetworks/_build/latest?definitionId=1&branchName=master)
+
 ## Updates
 **14 Jan 2019**: New channels and some updates. The network diagram looks quite different at first, but that's mostly cosmetic. The rotation and location of them are somewhat different but it clusters similarly. To see the older version matching the published article use [this link](https://pyt.azureedge.net?v=2018-12-28)
 
