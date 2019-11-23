@@ -18,12 +18,7 @@
             "problemMatcher": [
                 "$eslint-stylish"
             ],
-            "group": "build",
-            "options": {
-                "env": {
-                    "GATSBY_ACTIVE_ENV": "dev"
-                }
-            }
+            "group": "build"
         },
         {
             "label": "beta build",
@@ -35,7 +30,7 @@
             "group": "build",
             "options": {
                 "env": {
-                    "GATSBY_ACTIVE_ENV": "beta"
+                    "GATSBY_PATH_PREFIX": "beta"
                 }
             }
         },
