@@ -51,11 +51,11 @@ jobs:
     
   steps:
 
-    - bash: npm install
+    - script: npm install
       displayName: npm install
       workingDirectory: ./Site
       
-    - bash: npm run build
+    - script: npm run build
       env:
         NODE_ENV: ${env}
       displayName: npm build

@@ -8,7 +8,6 @@ import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
 import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, ActionType, Action } from '../common/Chart'
 import "react-loader-spinner/dist/loader/css/react-spinner-loader.css"
-import Loader from 'react-loader-spinner'
 
 interface Props { }
 

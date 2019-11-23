@@ -12,7 +12,7 @@
             "group": "build"
         },
         {
-            "label": "dev build",
+            "label": "build",
             "type": "npm",
             "script": "build",
             "problemMatcher": [
