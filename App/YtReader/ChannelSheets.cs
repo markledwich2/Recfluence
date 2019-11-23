@@ -85,7 +85,7 @@ namespace YtReader {
             var res = new ChannelSheet {
               Id = mc.Id,
               Title = mc.Title,
-              LR = MajorityValue(ucs, c => c.Channel.LR, c => c.Weight),
+              LR = AverageLR(ucs.Select(c => c.Channel.LR)),
               MainChannelId = mc.MainChannelId,
               HardTags = new[] {mc.HardTag1, mc.HardTag2, mc.HardTag3}.Where(t => t.HasValue()).OrderBy(t => t).ToList(),
               SoftTags = softTags,
@@ -103,11 +103,30 @@ namespace YtReader {
       new[] {sheet.SoftTag1, sheet.SoftTag2, sheet.SoftTag3, sheet.SoftTag4}
         .Where(t => t.HasValue()).ToList();
 
-    static V MajorityValue<T, V>(IEnumerable<T> items, Func<T, V> getValue, Func<T, double> getWeight) =>
-      items.GroupBy(getValue)
+    static string AverageLR(IEnumerable<string> lrs) {
+      double? LrNum(string lr) => lr switch {
+        "L" => -1,
+        "R" => 1,
+        "C" => 0,
+        _ => (double?)null
+      };
+
+      var vg = Math.Round(lrs.Select(LrNum).NotNull().Select(v => v.Value).Average(), 0);
+      var lr = vg switch {
+        -1 => "L",
+        0 => "C",
+        1 => "R",
+        _ => throw new InvalidOperationException("rounded to outside expected bounds")
+      };
+      return lr;
+    }
+
+    static V MajorityValue<T, V>(IEnumerable<T> items, Func<T, V> getValue, Func<T, double> getWeight) {
+      return items.GroupBy(getValue)
         .Select(g => new {Wieght = g.Sum(getWeight), Value = g.Key})
         .OrderByDescending(g => g.Wieght)
         .Select(i => i.Value).FirstOrDefault();
+    }
 
     static SheetsService GetService(SheetsCfg sheetsCfg) {
       //var creds = new ClientSecrets {ClientId = sheetsCfg.Creds.Name, ClientSecret = sheetsCfg.Creds.Secret};
