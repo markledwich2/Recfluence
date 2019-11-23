@@ -6,14 +6,45 @@
         {
             "type": "npm",
             "script": "develop",
-            "problemMatcher": ["$eslint-stylish"],
+            "problemMatcher": [
+                "$eslint-stylish"
+            ],
             "group": "build"
         },
         {
+            "label": "dev build",
             "type": "npm",
             "script": "build",
-            "problemMatcher": ["$eslint-stylish"],
-            "group": "build"
+            "problemMatcher": [
+                "$eslint-stylish"
+            ],
+            "group": "build",
+            "options": {
+                "env": {
+                    "GATSBY_ACTIVE_ENV": "dev"
+                }
+            }
+        },
+        {
+            "label": "beta build",
+            "type": "npm",
+            "script": "betabuild",
+            "problemMatcher": [
+                "$eslint-stylish"
+            ],
+            "group": "build",
+            "options": {
+                "env": {
+                    "GATSBY_ACTIVE_ENV": "beta"
+                }
+            }
+        },
+        {
+            "type": "npm",
+            "script": "publish",
+            "problemMatcher": [
+                "$eslint-stylish"
+            ]
         }
     ]
 }

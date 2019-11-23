@@ -72,14 +72,13 @@ div.title-details > div {
 }
 
 /* common chart elements */
-
 g.chart line.link {
   opacity: 0.2;
 }
 
 g.chart path.link {
+  opacity: 0.4;
   fill: none;
-  opacity: 0.3;
 }
 
 g.chart text {
@@ -96,16 +95,21 @@ g.chart text tspan.subtitle-bold {
 }
 
 /* common chart shapes */
-g.chart .selectable {
+g.chart g.node .selectable {
   stroke: none;
 }
 
+g.chart g.node .selectable.highlighted {
+  stroke: #eee;
+  stroke-width: 1px;
+  stroke-opacity: 0.5;
+}
 g.chart g.node .selectable.selected {
   stroke: #eee;
-  stroke-width: 2px;
+  stroke-width: 1px;
 }
 g.chart g.node .selectable.dimmed {
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
 g.chart text.label.selected {
@@ -143,8 +147,8 @@ g.chart.relations g.label text.related
 }
 
 g.chart.relations g.label text.related {
-  font-size: .8em;
-  fill-opacity: 0.6;
+  font-size: .9em;
+  fill-opacity: 0.8;
   /* fill: #aaa; */
 }
 
@@ -167,7 +171,9 @@ div.legend {
   display:flex;
   flex-flow:column;
   padding:5px;
-  width: 250px;
+  min-width: 150px;
+  width:20%;
+  max-width: 250px;
   height: auto;
   /* height: 100%; */
   background-color: rgba(37, 37, 37, 0.5);
@@ -260,11 +266,11 @@ div.footer > * {
 @media all and (min-width: 1200px) {
   div.MainChartContainer > .Relations {
     height: 100%;
-    flex: 3 auto;
+    flex: 2 auto;
   }
 
   div.MainChartContainer > .Flows {
-    flex: 50px;
+    flex: 1 auto;
     height: 100%;
   }
 

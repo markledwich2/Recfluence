@@ -1,6 +1,7 @@
 variables:
   acr: ytnetworks.azurecr.io
   image: ytnetworks
+  env: prod
 
 jobs:
 
@@ -38,17 +39,6 @@ jobs:
     workingDirectory: ./App/YtFunctions
     displayName: Publish YtFunctions
 
-  # - task: DotNetCoreCLI@2
-  #   displayName: Build YtFunctions
-  #   inputs:
-  #     command: publish
-  #     publishWebProjects: false
-  #     workingDirectory: ./App/YtFunctions
-  #     zipAfterPublish: false
-  #     verbosityPack: Normal
-  #     verbosityRestore: Normal
-  #     outputDir: $(Build.ArtifactStagingDirectory)/YtFunctions
-
   - task: PublishBuildArtifacts@1
     displayName: Pubish YtFunctions Artifact
     inputs:
@@ -61,11 +51,13 @@ jobs:
     
   steps:
 
-    - script: npm install
+    - bash: npm install
       displayName: npm install
       workingDirectory: ./Site
-
-    - script: npm run build
+      
+    - bash: npm run build
+      env:
+        NODE_ENV: ${env}
       displayName: npm build
       workingDirectory: ./Site
 

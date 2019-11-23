@@ -85,7 +85,7 @@ export class RecommendFlows extends React.Component<Props, State> {
             id: t,
             source: `from.${t.split('.')[0]}`,
             target: `to.${t.split('.')[1]}`,
-            value: _(g).sumBy(r => +r.recommendsViewFlow)
+            value: _(g).sumBy(r => +r.relevantImpressions)
           } as Link)
       )
       //.filter(f => f.source != f.target)
@@ -119,7 +119,7 @@ export class RecommendFlows extends React.Component<Props, State> {
           id: k,
           source: groupId(g[0].from),
           target: groupId(g[0].to),
-          value: _.sumBy(g, r => r.recommendsViewFlow)
+          value: _.sumBy(g, r => r.relevantImpressions)
         } as Link
       }).value()
 
@@ -178,7 +178,7 @@ export class RecommendFlows extends React.Component<Props, State> {
       svg.attr('height', h)
 
       let highlightedOrSelected = this.chart.selections.highlightedOrSelected()
-      
+
       this.chart.selections.highlightedOrSelected()
 
       let { nodes, links } = highlightedOrSelected ? this.LayoutForSelection(highlightedOrSelected) : this.layoutForAll()
@@ -237,6 +237,8 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('height', d => Math.max(d.y1 - d.y0, 1))
         .attr('width', d => d.x1 - d.x0)
         .attr('fill', d => d.color)
+
+      updateNode.exit().remove()
 
       this.chart.addShapeClasses(mergedRec)
 
@@ -298,14 +300,6 @@ export class RecommendFlows extends React.Component<Props, State> {
         .select('g.label')
         .attr('transform', d => `translate(${txtMode.get(d.mode).getX(d)}, ${txtMode.get(d.mode).getY(d)})`) //translate makes g coodinates relative
         .html(d => renderToString(labelText(d)))
-
-
-      // exitNode
-      //   .transition()
-      //   .duration(300)
-      //   .style('opacity', 0)
-
-      //exitNode.transition().delay(300).remove()
     }
 
     this.dataRender()

@@ -53,10 +53,10 @@ export class ChannelRelations extends React.Component<Props, State> {
       </>)
   }
 
-  channelQuery(): DimQuery<ChannelData> {
+  channelQuery(withColor:boolean): DimQuery<ChannelData> {
     return {
       group: ['channelId'],
-      colorBy: this.chart.selections.params().colorBy,
+      colorBy: withColor ? this.chart.selections.params().colorBy : null,
       label: 'title'
     }
   }
@@ -77,7 +77,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     selections.updateSelectableCells(legendNodes)
 
     let dim = this.props.model.channelDim
-    let colorBys: (keyof ChannelData)[] = ['ideology', 'lr', 'media']
+    let colorBys: (keyof ChannelData)[] = ['ideology', 'lr', 'media', 'manoel', 'ain']
     let options = colorBys.map(c => dim.col(c)).map(c => ({ value: c.name, label: c.label ?? c.name }))
     let selected = options.find(o => o.value == colorBy)
     return (
@@ -122,7 +122,7 @@ export class ChannelRelations extends React.Component<Props, State> {
   stateRender: (prevProps: Props, prevState: State) => void
 
   getData() {
-    const channelCells = this.dim.rowCells(this.props.model.channels, this.channelQuery())
+    const channelCells = this.dim.rowCells(this.props.model.channels, this.channelQuery(false))
 
     let nodes: Node[] = _(channelCells)
       .filter(c => c.row.channelVideoViews > 0)
@@ -144,7 +144,7 @@ export class ChannelRelations extends React.Component<Props, State> {
             source: l.fromChannelId,
             target: l.channelId,
             strength: l.recommendsViewChannelPercent,
-            impressions: l.recommendsViewFlow
+            impressions: l.relevantImpressions
           } as Link)
       )
       .filter(
@@ -187,7 +187,7 @@ export class ChannelRelations extends React.Component<Props, State> {
           .forceLink<Node, Link>(links)
           .distance(1)
           .id(d => d.channelId)
-          .strength(d => (d.strength / maxStrength) * 0.7)
+          .strength(d => (d.strength / maxStrength) * 0.3)
       )
       .force('collide', d3.forceCollide<Node>(getNodeRadius))
 
@@ -270,7 +270,7 @@ export class ChannelRelations extends React.Component<Props, State> {
 
     let updateColor = () => {
       // this is a bit hacky, but we want to re-use color logic without re-creating the cells
-      let queryContext = this.dim.createCellContext(this.props.model.channels, this.channelQuery())
+      let queryContext = this.dim.createCellContext(this.props.model.channels, this.channelQuery(true))
       nodes.forEach(c => c.color = queryContext.getColor(c.row))
 
       const nodeById = _.keyBy(nodes, n => n.channelId)
@@ -280,7 +280,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       linkEnter.attr('stroke', (l: Link) => l.color)
     }
 
-    let updateSelections = () => {
+    let updateVisibility = () => {
       this.chart.selections.updateSelectableCells(nodes)
 
       const zoomTrans = d3.zoomTransform(svg.node())
@@ -326,7 +326,7 @@ export class ChannelRelations extends React.Component<Props, State> {
         if (labelsTrans != existingTrans) {
           labelsGroup.selectAll<SVGTextElement, Node>('text')
             .attr('transform', () => labelsTrans) // undo the zoom on labels
-          updateSelections()
+          updateVisibility()
           updateLabels(false)
         }
       })
@@ -358,7 +358,7 @@ export class ChannelRelations extends React.Component<Props, State> {
         zoomToExpectedScale(this.props.width, this.props.height)
       }
 
-      updateSelections()
+      updateVisibility()
       updatePositions()
 
       if (prevState?.selections.parameters['colorBy'] != this.state.selections.parameters['colorBy']) {
@@ -366,7 +366,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       }
     }
 
-    for (var i = 0; i < 200; i++) lay.force.tick()
+    for (var i = 0; i < 80; i++) lay.force.tick()
 
     this.stateRender(null, null)
 
@@ -374,6 +374,6 @@ export class ChannelRelations extends React.Component<Props, State> {
   }
 
   private relatedLabelsVisible(zoomTrans: d3.ZoomTransform) {
-    return zoomTrans.k > 1
+    return zoomTrans.k > 2
   }
 }

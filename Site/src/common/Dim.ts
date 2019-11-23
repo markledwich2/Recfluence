@@ -137,12 +137,14 @@ export class Dim<T> {
   }
 
   createCellContext(rows: T[], q: DimQuery<T>): QueryContext<T> {
-    let groupCols = this.colSet(q.group, q.colorBy)
-    let props = this.colSet(groupCols, q.order?.col, q.label) // unique attribute properties and order by
-    let defaultCol = groupCols[0]
+    const groupProps = this.set(_(q.group).flatMap(g => [g].concat(this.col(g).props)).value())
+    const allProps =this.set(groupProps.concat(q.colorBy, q.order?.col))
+
+    let defaultCol = q.group[0]
 
     // colours can come explicitly from a columns metadata, or fall back or a pallet then none
     let colorBy = this.col(q.colorBy ?? defaultCol)
+
     let colorValues = colorBy ? _.uniq(rows.map(r => r[colorBy.name]?.toString())) : [] // need the full list of possible vlaues to create a pallet
 
     let pallet = colorBy ? d3.scaleOrdinal(colorBy.pallet ?? d3.schemeCategory10).domain(colorValues) : null
@@ -154,7 +156,7 @@ export class Dim<T> {
     let labelByValue = _(labelBy.values).keyBy(c => c.value).value()
     let getLabel = (r: T) => labelByValue[r[labelBy.name]?.toString()]?.label ?? r[labelBy.name]?.toString()
 
-    return { q, groupCols, props, valueCol: defaultCol, getColor, getLabel }
+    return { q, groupCols:q.group, props:allProps, valueCol: defaultCol, getColor, getLabel }
   }
 
   private createCell(x: QueryContext<T>, g: T[]): Cell<T> {
@@ -216,8 +218,8 @@ export class Dim<T> {
     return res
   }
 
-  private colSet(cols: (keyof T)[], ...more: (keyof T)[]): (keyof T)[] {
-    return _.uniq(cols.concat(more).filter(c => c))
+  private set(cols: (keyof T)[]): (keyof T)[] {
+    return _.uniq(cols.filter(c => c))
   }
 }
 

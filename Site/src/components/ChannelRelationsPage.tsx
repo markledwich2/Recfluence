@@ -3,16 +3,16 @@ import ContainerDimensions from 'react-container-dimensions'
 import { RecommendFlows } from './RecommendFlows'
 import { ChannelRelations } from './ChannelRelations'
 import { YtModel } from '../common/YtModel'
-import { GridLoader } from 'react-spinners'
 import { jsonClone } from '../common/Utils'
 import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
 import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, ActionType, Action } from '../common/Chart'
+import "react-loader-spinner/dist/loader/css/react-spinner-loader.css"
+import Loader from 'react-loader-spinner'
 
 interface Props { }
 
 interface State {
-  isLoading: boolean
   data?: YtModel
 }
 
@@ -22,7 +22,6 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   flows: RecommendFlows
   title: ChannelTitle
   state: Readonly<State> = {
-    isLoading: false,
     data: null
   }
 
@@ -42,16 +41,17 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
       this.load()
   }
 
-  version: string = '2019-11-18'
-  resultsPath: string = `https://pyt.blob.core.windows.net/data/results/${this.version}/` //https://ytnetworks.azureedge.net/data/results/${this.version}/
+  version: string = 'latest'
+  //resultsPath: string = `https://ytnetworks.blob.core.windows.net/data/results/${this.version}/` 
+  resultsPath: string = `https://ytnetworks.azureedge.net/data/results/${this.version}/`
+
 
   resultUrl() { return this.resultsPath }
 
   async load() {
-    if (this.state.isLoading) return
     let data = await YtModel.dataSet(this.resultUrl())
     try {
-      this.setState({ data, isLoading: false })
+      this.setState({ data })
     } catch (e) { }
   }
 
@@ -126,7 +126,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     } else {
       return (
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
-          <GridLoader color="#3D5467" size={30} />
+          <img src='spinner.png'></img>
         </div>
       )
     }

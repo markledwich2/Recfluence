@@ -1,3 +1,10 @@
+let activeEnv =
+  process.env.GATSBY_ACTIVE_ENV || process.env.NODE_ENV || "dev"
+console.log(`Using environment config: '${activeEnv}'`)
+require("dotenv").config({
+  path: `.env.${activeEnv}`,
+})
+
 module.exports = {
     siteMetadata: {
       title: `Political YouTube`
@@ -12,6 +19,7 @@ module.exports = {
           head: true,
         }
       }
-    ]
+    ],
+    pathPrefix:process.env.PREFIX
   }
   

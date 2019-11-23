@@ -27,21 +27,38 @@ export class ChannelTitle extends React.Component<Props, State> {
     return channelId ? this.props.model.channels.find(c => c.channelId == channelId) : null
   }
 
-
+  tagAlias: Record<string, string> = {
+    ManoelAltLite: 'Ribeiro - Alt-light',
+    ManoelAltRight: 'Ribeiro - Alt-right',
+    ManoelIDW: 'Ribeiro - IDW',
+    ManoelControl: 'Ribeiro - Control',
+    AntiSJW: 'Anti-SJW',
+    SocialJusticeL: 'Social Justice',
+    WhiteIdentitarian: 'White Identitarian',
+    PartisanLeft: 'Partisan Left',
+    PartisanRight: 'Partisan Right',
+    AntiTheist: 'Anti-theist',
+    ReligiousConservative: 'Religious Conservative',
+    MissingLinkMedia: 'Missing Link Media',
+    StateFunded: 'State Funded',
+    AntiWhiteness: 'Anti-whiteness',
+    LateNightTalkShow: '_',
+    Revolutionary: '_'
+  }
 
   render() {
     let channel = this.channel()
-    let fdate = (d: string) => dateformat(new Date(d), 'd mmm yyyy')
+    let fdate = (d: string) => d ? dateformat(new Date(d), 'd mmm yyyy') : d
 
     const renderChannel = (c: ChannelData) => {
-      let tags = c.tags.length == 0 ? ['None'] : c.tags
+      let tags = c.tags.length == 0 ? ['None'] : c.tags.map(t => this.tagAlias[t] ?? t).filter(t => t != '_')
       return (<>
         <a href={`https://www.youtube.com/channel/${c.channelId}`} target="blank">
           <img src={c.thumbnail} style={{ height: '7em', marginRight: '1em', clipPath: 'circle()' }} />
         </a>
         <div className="title-details">
           <div><b>{c.title}</b></div>
-          <div><b>{compactInteger(c.dailyViews)}</b> daily views (<i>{fdate(c.publishedFrom)}</i> - <i>{fdate(c.publishedTo)}</i>)</div>
+          <div><b>{compactInteger(c.relevantDailyViews)}</b> relevant daily views (<i>{fdate(c.publishedFrom)}</i> - <i>{fdate(c.publishedTo)}</i>)</div>
           <div><b>{compactInteger(c.subCount)}</b> subscribers</div>
           <div>{tags.map(t => (<span key={t} className={'tag'}>{t}</span>))}</div>
         </div>

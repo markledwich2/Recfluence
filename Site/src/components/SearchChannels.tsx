@@ -65,8 +65,6 @@ export class SearchChannels extends React.Component<Props, State> {
   }
 
   render() {
-    console.log("search render", this.props.selections)
-    
     let channelId = this.selectionHelper.selectedSingleValue(this.idCol)
     let options = _(this.props.model.channels)
       .map(c => ({ value: c.channelId, label: c.title } as Option))

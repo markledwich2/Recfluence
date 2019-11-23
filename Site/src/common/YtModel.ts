@@ -21,17 +21,20 @@ export interface ChannelData {
   publishedFrom: string
   publishedTo: string
   dailyViews: number
+  relevantDailyViews: number
   relevance: number
   views: number
   ideology: string
-  media: string
+  media: string,
+  manoel: string,
+  ain: string
 }
 
 export interface RecData {
   fromChannelId: string
   channelId: string
   fromVideoViews: number
-  recommendsViewFlow: number
+  relevantImpressions: number
   recommendsViewChannelPercent: number
 }
 
@@ -57,10 +60,13 @@ export class YtModel {
         publishedFrom: c.FROM_DATE,
         publishedTo: c.TO_DATE,
         dailyViews: +c.DAILY_VIEWS,
+        relevantDailyViews: +c.RELEVANT_DAILY_VIEWS,
         views: +c.CHANNEL_VIEWS,
         ideology: c.IDEOLOGY,
         media: c.MEDIA,
-        relevance: c.RELEVANCE
+        relevance: c.RELEVANCE,
+        manoel: c.MANOEL,
+        ain: c.AIN
       }
     })
 
@@ -70,7 +76,7 @@ export class YtModel {
       return <RecData>{
         fromChannelId: c.FROM_CHANNEL_ID,
         channelId: c.TO_CHANNEL_ID,
-        recommendsViewFlow: +c.REC_VIEW_PORTION,
+        relevantImpressions: +c.RELEVANT_IMPRESSIONS,
         recommendsViewChannelPercent: +c.REC_VIEW_CHANNEL_PERCENT
       }
     }).filter(r => channelDic[r.fromChannelId] && channelDic[r.channelId])
@@ -89,66 +95,71 @@ export class YtModel {
     cols: [
       {
         name: 'channelId',
-        props: ['lr', 'ideology', 'media'],
+        props: ['lr', 'ideology', 'media', 'manoel', 'ain'],
         valueLabel: 'title'
       },
       {
         name: 'lr',
         label: 'Left/Center/Right',
         values: [
-          { value: 'L', label: 'Left', color: '#3c4455' },
-          { value: 'C', label: 'Center', color: '#7b4d5e' },
-          { value: 'R', label: 'Right', color: '#d43a3d' },
-          { value: '', label: 'Unknown', color: '#666666' }
+          { value: 'L', label: 'Left', color: '#3887be' },
+          { value: 'C', label: 'Center', color: '#50667f' },
+          { value: 'R', label: 'Right', color: '#e0393e' },
+          { value: '', label: 'Unknown', color: '#555' }
         ]
       },
       {
         name: 'ideology',
         label: 'Idiology - Ledwich &  Zaitsev',
         values: [
-          { value: 'IDW', color: '#E42C6A' },
-          { value: 'Partisan Right', color: '#E40C2B' },
-          { value: 'Alt-light', color: '#A03137' },
-          { value: 'White Identitarian', color: '#A51C30' },
-          { value: 'MRA', color: '#EF8354' },
-
-          { value: 'Social Justice', color: '#265D6D' },
-          { value: 'Socialist', color: '#2A598C' },
-          { value: 'Revolutionary Socialist', color: '#5DB7DE' },
-          { value: 'Partisan Left', color: '#468BA8' },
-
-          { value: 'Anti-White', color: '#7A5C61' },
-
-          { value: 'Anti-theist', color: '#EDB183' },
-          { value: 'Libertarian', color: '#D8A47F' },
-          { value: 'Religious Conservative', color: '#6B4E71' },
-          { value: 'Conspiracy', color: '#F3A712' },
-          { value: '', label: 'Other', color: '#8E8384' },
+          { value: 'Anti-SJW', color: '#50667f' },
+          { value: 'Partisan Right', color: '#e0393e' },
+          { value: 'Alt-light', color: '#8a8acb' },
+          { value: 'Alt-right', color: '#e55e5e' },
+          { value: 'MRA', color: '#ed6498' },
+          { value: 'Social Justice', color: '#56b881' },
+          { value: 'Socialist', color: '#6ec9e0' },
+          { value: 'Partisan Left', color: '#3887be' },
+          { value: 'Anti-theist', color: '#96cbb3' },
+          { value: 'Libertarian', color: '#b7b7b7' },
+          { value: 'Religious Conservative', color: '#41afa5' },
+          { value: 'Conspiracy', color: '#ffc168' },
+          { value: '', label: 'Other', color: '#333' },
         ]
       },
       {
         name: 'media',
-        label: 'Media Type'
+        label: 'Media Type',
+        values: [
+          { value: '', label: 'Other', color: '#333' },
+          { value: 'Mainstream Media',  color: '#3887be' },
+          { value: 'YouTube',  color: '#e55e5e' },
+          { value: 'Missing Link Media',  color: '#41afa5' },
+        ]
+      },
+      {
+        name: 'manoel',
+        label: 'Radicalization Pathways - Ribeiro et al.',
+        values: [
+          { value: 'Alt-light', color: '#8a8acb' },
+          { value: 'IDW', color: '#50667f' },
+          { value: 'Alt-right', color: '#e55e5e' },
+          { value: 'Control', color: '#D8A47F' },
+          { value: '', label: 'Other', color: '#333' },
+        ]
+      },
+      {
+        name: 'ain',
+        label: 'Alternative Influence Network',
+        values: [
+          { value: '', label: 'Other', color: '#333' },
+          { value: 'AIN', color: '#41afa5'}
+        ]
       }
     ]
   })
 }
 
-  //   import * as rp from 'request-promise'
-  // import { Gunzip  } from 'zlibt2'
-  // import * as Papa from 'papaparse'
-  // static async LoadCsvGz(path: string) : Promise<any[]> {
-  //   let buffer = await d3.buffer(path)
-
-
-  //   //let response = await rp(path)
-  //   //let rawZip = new Uint8Array(response)
-  //   let rawUnzip = new Gunzip(buffer.).decompress();
-  //   let text = String.fromCharCode.apply(null, new Uint16Array(rawUnzip))
-  //   let data = Papa.parse(text).data
-  //   return data
-  // }
-  //  let channelsData = await this.LoadCsvGz(path + 'channel_recs.csv.gz')
 
 
 
