@@ -42,7 +42,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
   version: string = 'latest'
   //resultsPath: string = `https://ytnetworks.blob.core.windows.net/data/results/${this.version}/` 
-  resultsPath: string = `https://ytnetworks.azureedge.net/data/results/${this.version}/`
+  resultsPath: string = `https://ytnetworks-data.azureedge.net/data/results/${this.version}/`
 
 
   resultUrl() { return this.resultsPath }
