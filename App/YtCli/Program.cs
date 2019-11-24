@@ -6,6 +6,7 @@ using Mutuo.Etl;
 using Serilog;
 using SysExtensions.Text;
 using YtReader;
+using YtReader.Results;
 
 namespace YouTubeCli {
 
@@ -56,6 +57,11 @@ namespace YouTubeCli {
     
   }
 
+  [Verb("results")]
+  public class ResultsOption : CommonOption {
+    
+  }
+
   public class TaskCtx<TOption> {
     public Cfg Cfg { get; set; }
     public ILogger Log { get; set; }
@@ -65,12 +71,13 @@ namespace YouTubeCli {
 
   class Program {
     static int Main(string[] args) {
-      var res = Parser.Default.ParseArguments<UpdateOption, FixOption, SyncOption, ChannelInfoOption, UpdateFleetOption>(args).MapResult(
+      var res = Parser.Default.ParseArguments<UpdateOption, FixOption, SyncOption, ChannelInfoOption, UpdateFleetOption, ResultsOption>(args).MapResult(
         (UpdateOption u) => Run(u, args, Update),
         (SyncOption s) => Run(s, args, Sync),
         (ChannelInfoOption v) => Run(v, args, ChannelInfo),
         (FixOption f) => Run(f, args, Fix),
         (UpdateFleetOption f) => Run(f, args, Fleet),
+        (ResultsOption f) => Run(f, args, Results),
         errs => (int) ExitCode.UnknownError
       );
       return res;
@@ -127,6 +134,13 @@ namespace YouTubeCli {
     
     static async Task<ExitCode> Fleet(TaskCtx<UpdateFleetOption> ctx) {
       await YtContainerRunner.StartFleet(ctx.Log, ctx.Cfg);
+      return ExitCode.Success;
+    }
+    
+    static async Task<ExitCode> Results(TaskCtx<ResultsOption> ctx) {
+      var store = ctx.Cfg.DataStore(ctx.Cfg.App.Storage.ResultsPath);
+      var result = new YtResults(ctx.Cfg.App.Snowflake, store, ctx.Log);
+      await result.SaveResults();
       return ExitCode.Success;
     }
   }

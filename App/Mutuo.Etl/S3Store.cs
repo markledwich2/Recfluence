@@ -89,6 +89,7 @@ namespace Mutuo.Etl {
     public Task<Stream> Load(StringPath path) => throw new NotImplementedException();
     public IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false) => throw new NotImplementedException();
     public Task<bool> Delete(StringPath path) => throw new NotImplementedException();
+    public Task<Stream> OpenForWrite(StringPath path, FileProps props = null) => throw new NotImplementedException();
 
     string FilePath(StringPath path) => BasePath.Add(path).WithExtension(".json.gz");
 

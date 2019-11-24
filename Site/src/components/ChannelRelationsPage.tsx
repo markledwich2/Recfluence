@@ -40,9 +40,9 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
       this.load()
   }
 
-  version: string = 'latest'
+  version: string = '2019-11-24'
   //resultsPath: string = `https://ytnetworks.blob.core.windows.net/data/results/${this.version}/` 
-  resultsPath: string = `https://ytnetworks-data.azureedge.net/data/results/${this.version}/`
+  resultsPath: string = `https://pyt-data.azureedge.net/data/results/${this.version}/`
 
 
   resultUrl() { return this.resultsPath }
@@ -125,7 +125,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     } else {
       return (
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
-          <img src='spinner.png'></img>
+          <img src='spinner.svg'></img>
         </div>
       )
     }

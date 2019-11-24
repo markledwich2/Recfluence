@@ -110,8 +110,18 @@ namespace YtReader {
     public SheetsCfg Sheets { get; set; }
 
     public ScraperCfg Scraper { get; set; } = new ScraperCfg();
+
+    public SnowflakeCfg Snowflake { get; set; } = new SnowflakeCfg();
   }
 
+  public class SnowflakeCfg {
+    public NameSecret Creds     { get; set; } = new NameSecret();
+    public string     Account   { get; set; } = "MUTUO";
+    public string     Warehouse { get; set; } = "YT";
+    public string     Db        { get; set; } = "YT";
+    public string     Schema    { get; set; } = "PUBLIC";
+  }
+ 
   public class ScraperCfg {
     public string     Url            { get; set; }
     public NameSecret Creds          { get; set; }
@@ -155,7 +165,7 @@ namespace YtReader {
   public class StorageCfg {
     public string DataStorageCs { get; set; }
     public string DbPath        { get; set; } = "data/db";
-    public string AnalysisPath  { get; set; } = "data/analysis";
+    public string ResultsPath  { get; set; } = "data/results";
   }
 
   public class ContainerCfg {

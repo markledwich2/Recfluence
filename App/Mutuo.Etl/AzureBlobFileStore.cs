@@ -70,7 +70,7 @@ namespace Mutuo.Etl {
       return r;
     }
 
-    CloudBlockBlob BlobRef(StringPath path) => Container.GetBlockBlobReference(BasePathSansContainer.Add(path));
+    public CloudBlockBlob BlobRef(StringPath path) => Container.GetBlockBlobReference(BasePathSansContainer.Add(path));
 
     public async Task Set<T>(StringPath path, T item) {
       await using var memStream = new MemoryStream();
@@ -94,6 +94,16 @@ namespace Mutuo.Etl {
       await blob.UploadFromStreamAsync(contents);
     }
 
+    public async Task<Stream> OpenForWrite(StringPath path, FileProps props = null) {
+      var blob = BlobRef(path);
+      await blob.DeleteIfExistsAsync();
+      if (props != null) {
+        blob.Properties.ContentType = props.ContentType;
+        blob.Properties.ContentEncoding = props.Encoding;
+      }
+      return await blob.OpenWriteAsync();
+    }
+    
     public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path = null, bool allDirectories = false) {
       BlobContinuationToken token = null;
       do {
@@ -124,5 +134,10 @@ namespace Mutuo.Etl {
   public class FileListItem {
     public StringPath Path { get; set; }
     public DateTimeOffset? Modified { get; set; }
+  }
+
+  public class FileProps {
+    public string ContentType { get; set; }
+    public string Encoding { get; set; }
   }
 }

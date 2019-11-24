@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Humanizer;
 using Newtonsoft.Json;
+using Polly;
 using Serilog;
 using SysExtensions.Security;
 using SysExtensions.Serialization;
@@ -109,6 +110,30 @@ namespace SysExtensions.Net {
       }
     }
 
+    public static async Task<HttpResponseMessage> SendAsyncWithLog(this HttpClient client, Func<HttpRequestMessage> request, ILogger log,
+      HttpCompletionOption completion, AsyncPolicy<HttpResponseMessage> policy) {
+      try {
+        return await policy.ExecuteAsync(() => InnerSendAsyncWithLog(client, null, request(), completion, log));
+      }
+      catch (TaskCanceledException e) {
+        throw
+          new HttpRequestException("Request timed out",
+            e); // throw a diffferent exceptions. Otherwise TPL and other libraries treat this a an intentional cancellation and swallow
+      }
+    }
+
+    public static async Task<HttpResponseMessage> SendAsyncWithLog(this HttpClient client, Func<Task<HttpRequestMessage>> getRequest, ILogger log,
+      HttpCompletionOption completion, AsyncPolicy<HttpResponseMessage> policy) {
+      try {
+        return await policy.ExecuteAsync(() => InnerSendAsyncWithLog(client, getRequest, null, completion, log));
+      }
+      catch (TaskCanceledException e) {
+        throw
+          new HttpRequestException("Request timed out",
+            e); // throw a diffferent exceptions. Otherwise TPL and other libraries treat this a an intentional cancellation and swallow
+      }
+    }
+
     public static HttpRequestMessage WithStreamContent(this HttpRequestMessage request, Stream stream) {
       request.Content = new StreamContent(stream);
       return request;
@@ -157,8 +182,8 @@ namespace SysExtensions.Net {
         throw new HttpRequestException($"{response.StatusCode}: '{body}'. Original request: {response.RequestMessage.FormatAsCurl()}");
       }
     }
-    
-    public static bool IsTransientError(this HttpResponseMessage msg) => (int)msg.StatusCode >= 500 || msg.StatusCode == HttpStatusCode.RequestTimeout;
+
+    public static bool IsTransientError(this HttpResponseMessage msg) => (int) msg.StatusCode >= 500 || msg.StatusCode == HttpStatusCode.RequestTimeout;
 
     static async Task<HttpResponseMessage> InnerSendAsyncWithLog(HttpClient client,
       Func<Task<HttpRequestMessage>> getRequest,
@@ -186,7 +211,7 @@ namespace SysExtensions.Net {
 
       return response;
     }
-    
+
     public static string UrlEncode(this string url) => WebUtility.UrlEncode(url);
 
     public static string UrlDecode(this string url) => WebUtility.UrlDecode(url);

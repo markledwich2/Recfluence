@@ -46,8 +46,8 @@ export class YtModel {
   selectionState: SelectionState
 
   static async dataSet(path: string): Promise<YtModel> {
-    const channelsCsvTask = d3.csv(path + 'channel_stats.csv')
-    const relationsCsvTask = d3.csv(path + 'channel_recs.csv')
+    const channelsCsvTask = d3.csv(path + 'channel_stats.csv.gz')
+    const relationsCsvTask = d3.csv(path + 'channel_recs.csv.gz')
     const channels = (await channelsCsvTask).map((c: any) => {
       return <ChannelData>{
         channelId: c.CHANNEL_ID,

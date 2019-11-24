@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Security;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
@@ -31,6 +32,14 @@ namespace SysExtensions.Security {
 
     public string Pattern => @"([^:\n]+):([^:\n]+)";
 
+    public SecureString SecureString() {
+      var ss = new SecureString();
+      foreach (char c in Secret)
+        ss.AppendChar(c);
+      return ss;
+    }
+
     public override string ToString() => StringValue;
+    
   }
 }
