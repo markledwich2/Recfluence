@@ -10,7 +10,7 @@ import { ChartProps, InteractiveDataState } from '../common/Chart'
 import { YtTheme } from '../common/YtTheme'
 import Select from 'react-select'
 import { renderToString } from 'react-dom/server'
-import { classNames } from '../common/Utils'
+import { classNames, delay } from '../common/Utils'
 
 interface State extends InteractiveDataState { }
 interface Props extends ChartProps<YtModel> { }
@@ -53,7 +53,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       </>)
   }
 
-  channelQuery(withColor:boolean): DimQuery<ChannelData> {
+  channelQuery(withColor: boolean): DimQuery<ChannelData> {
     return {
       group: ['channelId'],
       colorBy: withColor ? this.chart.selections.params().colorBy : null,
@@ -98,12 +98,12 @@ export class ChannelRelations extends React.Component<Props, State> {
                 dimmed: d.dimmed
               })
               const events = ({
-                click: (e:React.MouseEvent<Element, MouseEvent>) => {
+                click: (e: React.MouseEvent<Element, MouseEvent>) => {
                   e.stopPropagation()
                   return selections.select(d.keys)
                 },
-                in: (e:React.MouseEvent<Element, MouseEvent>) => selections.highlight(d.keys),
-                out: (e:React.MouseEvent<Element, MouseEvent>) => selections.clearHighlight()
+                in: (e: React.MouseEvent<Element, MouseEvent>) => selections.highlight(d.keys),
+                out: (e: React.MouseEvent<Element, MouseEvent>) => selections.clearHighlight()
               })
 
               return (<g key={d.color} transform={`translate(10, ${10 + (i * 21)})`}
@@ -284,22 +284,34 @@ export class ChannelRelations extends React.Component<Props, State> {
       this.chart.selections.updateSelectableCells(nodes)
 
       const zoomTrans = d3.zoomTransform(svg.node())
-      let focused = nodes.filter(n => n.highlighted || n.selected)
+      let selectedOrHighlighted = nodes.filter(n => n.highlighted || n.selected)
+      let selected = nodes.filter(n => n.selected)
+      let highlighted = nodes.filter(n => n.highlighted)
 
-
-      const related = (n: Node): boolean => focused.length <= 2 && focused.some(c => isConnected(n.channelId, c.channelId))
+      const related = (n: Node): boolean => selectedOrHighlighted.length <= 2 && selectedOrHighlighted.some(c => isConnected(n.channelId, c.channelId))
 
       nodesCircle.classed('related', related)
       this.chart.addShapeClasses(nodesCircle)
 
+
       const labelText = labelsGroup.selectAll<SVGTextElement, Node>('text')
-      this.chart.addShapeClasses(labelText)
-      labelText.classed('related', d => this.relatedLabelsVisible(zoomTrans) && related(d))
+      labelText
+        .style('display', d => {
+          let z = zoomTrans.k > 2
+          let display = selectedOrHighlighted.length > 2 ?
+            (d.selected && (z || selected.length < 2)) || (d.highlighted  && (z || highlighted.length < 2)) // many selected -  only show labels when zoomed
+            : (d.selected || d.highlighted) || related(d) && z// few selected - show labels of selected/highlighted, and also related when zoomed
+
+          return display ? 'inherit' : 'none'
+        })
+
       linkEnter.classed('related', d => {
         let s = d.source as Node
         var t = d.target as Node
-        return focused.some(n => s.channelId == n.channelId || t.channelId == n.channelId)
+        return selectedOrHighlighted.some(n => s.channelId == n.channelId || t.channelId == n.channelId)
       })
+
+      linkEnter.style('opacity', selectedOrHighlighted.length > 2 ? 0.1 : 0.3)
     }
 
     function updatePositions() {
@@ -327,7 +339,8 @@ export class ChannelRelations extends React.Component<Props, State> {
           labelsGroup.selectAll<SVGTextElement, Node>('text')
             .attr('transform', () => labelsTrans) // undo the zoom on labels
           updateVisibility()
-          updateLabels(false)
+
+          updateLabels(true)
         }
       })
 
@@ -343,6 +356,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       let trans = d3.zoomIdentity.translate(t.x, t.y).scale(t.scale)
       let s = svg.transition().duration(duration)
       s.call(zoomHandler.transform, trans)
+      console.log("zoomed")
     }
 
     zoomHandler(svg)
@@ -356,6 +370,7 @@ export class ChannelRelations extends React.Component<Props, State> {
         svg.attr('height', this.props.height)
 
         zoomToExpectedScale(this.props.width, this.props.height)
+        console.log("state rendered - size change")
       }
 
       updateVisibility()
@@ -364,16 +379,14 @@ export class ChannelRelations extends React.Component<Props, State> {
       if (prevState?.selections.parameters['colorBy'] != this.state.selections.parameters['colorBy']) {
         updateColor()
       }
+      console.log("state rendered")
     }
 
-    for (var i = 0; i < 80; i++) lay.force.tick()
+    for (var i = 0; i < 120; i++) lay.force.tick()
+    lay.force.stop()
 
     this.stateRender(null, null)
 
     updateLabels(false)
-  }
-
-  private relatedLabelsVisible(zoomTrans: d3.ZoomTransform) {
-    return zoomTrans.k > 2
   }
 }

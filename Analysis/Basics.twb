@@ -14,6 +14,418 @@
     <preference name='ui.shelf.height' value='26' />
   </preferences>
   <datasources>
+    <datasource caption='Video Recs' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy)' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy)'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' />
+          </named-connection>
+        </named-connections>
+        <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy)' name='VIDEO_RECS' table='[PUBLIC].[VIDEO_RECS]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>FROM_VIDEO_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_VIDEO_ID]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>FROM_VIDEO_ID</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_VIDEO_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_VIDEO_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>FROM_VIDEO_TITLE</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_CHANNEL_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_CHANNEL_ID]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>FROM_CHANNEL_ID</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_CHANNEL_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>FROM_CHANNEL_TITLE</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_MAIN_CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_MAIN_CHANNEL_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>FROM_MAIN_CHANNEL_TITLE</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_VIDEO_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_VIDEO_ID]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>TO_VIDEO_ID</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_VIDEO_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_VIDEO_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>TO_VIDEO_TITLE</remote-alias>
+            <ordinal>7</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_CHANNEL_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_CHANNEL_ID]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>TO_CHANNEL_ID</remote-alias>
+            <ordinal>8</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_CHANNEL_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>TO_CHANNEL_TITLE</remote-alias>
+            <ordinal>9</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_MAIN_CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_MAIN_CHANNEL_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>TO_MAIN_CHANNEL_TITLE</remote-alias>
+            <ordinal>10</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_MEDIA</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_MEDIA]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>FROM_MEDIA</remote-alias>
+            <ordinal>11</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>18</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_IDEOLOGY</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_IDEOLOGY]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>FROM_IDEOLOGY</remote-alias>
+            <ordinal>12</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_MEDIA</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_MEDIA]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>TO_MEDIA</remote-alias>
+            <ordinal>13</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>18</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_IDEOLOGY</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_IDEOLOGY]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>TO_IDEOLOGY</remote-alias>
+            <ordinal>14</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[FROM_VIEWS]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>FROM_VIEWS</remote-alias>
+            <ordinal>15</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>RECS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[RECS]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>RECS</remote-alias>
+            <ordinal>16</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>18</precision>
+            <scale>0</scale>
+            <contains-null>false</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_VIDEO_RECS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[FROM_VIDEO_RECS]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>FROM_VIDEO_RECS</remote-alias>
+            <ordinal>17</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>18</precision>
+            <scale>0</scale>
+            <contains-null>false</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>REC_VIEW_PORTION</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[REC_VIEW_PORTION]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>REC_VIEW_PORTION</remote-alias>
+            <ordinal>18</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>6</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>IMPRESSIONS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[IMPRESSIONS]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>IMPRESSIONS</remote-alias>
+            <ordinal>19</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>6</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>IMPRESSIONS_PER_TO_VIEW</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[IMPRESSIONS_PER_TO_VIEW]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>IMPRESSIONS_PER_TO_VIEW</remote-alias>
+            <ordinal>20</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>12</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>REC_VIEW_CHANNEL_PERCENT</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[REC_VIEW_CHANNEL_PERCENT]</local-name>
+            <parent-name>[VIDEO_RECS]</parent-name>
+            <remote-alias>REC_VIEW_CHANNEL_PERCENT</remote-alias>
+            <ordinal>21</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>12</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='From Channel Id' datatype='string' name='[FROM_CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='From Channel Title' datatype='string' name='[FROM_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='From Ideology' datatype='string' name='[FROM_IDEOLOGY]' role='dimension' type='nominal' />
+      <column caption='From Main Channel Title' datatype='string' name='[FROM_MAIN_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='From Media' datatype='string' name='[FROM_MEDIA]' role='dimension' type='nominal' />
+      <column caption='From Video Id' datatype='string' name='[FROM_VIDEO_ID]' role='dimension' type='nominal' />
+      <column caption='From Video Recs' datatype='integer' name='[FROM_VIDEO_RECS]' role='measure' type='quantitative' />
+      <column caption='From Video Title' datatype='string' name='[FROM_VIDEO_TITLE]' role='dimension' type='nominal' />
+      <column caption='From Views' datatype='integer' name='[FROM_VIEWS]' role='measure' type='quantitative' />
+      <column caption='Impressions' datatype='real' name='[IMPRESSIONS]' role='measure' type='quantitative' />
+      <column caption='Impressions Per To View' datatype='real' name='[IMPRESSIONS_PER_TO_VIEW]' role='measure' type='quantitative' />
+      <column caption='Channels' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
+        <calculation class='tableau' formula='1' />
+      </column>
+      <column caption='Recs' datatype='integer' name='[RECS]' role='measure' type='quantitative' />
+      <column caption='Rec View Channel Percent' datatype='real' name='[REC_VIEW_CHANNEL_PERCENT]' role='measure' type='quantitative' />
+      <column caption='Rec View Portion' datatype='real' name='[REC_VIEW_PORTION]' role='measure' type='quantitative' />
+      <column caption='To Channel Id' datatype='string' name='[TO_CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='To Channel Title' datatype='string' name='[TO_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='To Ideology' datatype='string' name='[TO_IDEOLOGY]' role='dimension' type='nominal' />
+      <column caption='To Main Channel Title' datatype='string' name='[TO_MAIN_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='To Media' datatype='string' name='[TO_MEDIA]' role='dimension' type='nominal' />
+      <column caption='To Video Id' datatype='string' name='[TO_VIDEO_ID]' role='dimension' type='nominal' />
+      <column caption='To Video Title' datatype='string' name='[TO_VIDEO_TITLE]' role='dimension' type='nominal' />
+      <layout dim-ordering='alphabetic' dim-percentage='0.556028' measure-ordering='alphabetic' measure-percentage='0.443972' show-structure='true' />
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+    </datasource>
     <datasource caption='Channel Stats' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9' version='18.1'>
       <connection class='federated'>
         <named-connections>
@@ -515,7 +927,11 @@
       <column caption='Daily Views' datatype='real' name='[DAILY_VIEWS]' role='measure' type='quantitative' />
       <column caption='From Date' datatype='datetime' name='[FROM_DATE]' role='dimension' type='ordinal' />
       <column caption='Hard Tags' datatype='string' name='[HARD_TAGS]' role='dimension' type='nominal' />
-      <column caption='Ideology' datatype='string' name='[IDEOLOGY]' role='dimension' type='nominal' />
+      <column caption='Ideology' datatype='string' name='[IDEOLOGY]' role='dimension' type='nominal'>
+        <aliases>
+          <alias key='%null%' value='Other' />
+        </aliases>
+      </column>
       <column caption='Logo Url' datatype='string' name='[LOGO_URL]' role='dimension' type='nominal' />
       <column caption='Main Channel Id' datatype='string' name='[MAIN_CHANNEL_ID]' role='dimension' type='nominal' />
       <column caption='Main Channel Title' datatype='string' name='[MAIN_CHANNEL_TITLE]' role='dimension' type='nominal' />
@@ -533,7 +949,464 @@
       <column caption='To Date' datatype='datetime' name='[TO_DATE]' role='dimension' type='ordinal' />
       <column caption='Updated' datatype='datetime' name='[UPDATED]' role='dimension' type='ordinal' />
       <column caption='Views' datatype='integer' name='[VIEWS]' role='measure' type='quantitative' />
-      <layout dim-ordering='alphabetic' dim-percentage='0.565145' measure-ordering='alphabetic' measure-percentage='0.434855' show-structure='true' />
+      <column-instance column='[IDEOLOGY]' derivation='None' name='[none:IDEOLOGY:nk]' pivot='key' type='nominal' />
+      <column-instance column='[MEDIA]' derivation='None' name='[none:MEDIA:nk]' pivot='key' type='nominal' />
+      <group caption='Action (Ideology)' hidden='true' name='[Action (Ideology)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[IDEOLOGY]' />
+        </groupfilter>
+      </group>
+      <extract count='-1' enabled='true' units='records'>
+        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks/.Data/Basics.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='11/25/2019 12:50:19 AM' username='tableau_internal_user'>
+          <relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <refresh>
+            <refresh-event add-from-file-path='Channel Stats' increment-value='%null%' refresh-type='create' rows-inserted='817' timestamp-start='2019-11-25 00:50:19.401' />
+          </refresh>
+          <metadata-records>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[CHANNEL_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_ID</remote-alias>
+              <ordinal>0</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>817</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[CHANNEL_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_TITLE</remote-alias>
+              <ordinal>1</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>817</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>MAIN_CHANNEL_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[MAIN_CHANNEL_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>MAIN_CHANNEL_ID</remote-alias>
+              <ordinal>2</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>31</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_DECRIPTION</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[CHANNEL_DECRIPTION]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_DECRIPTION</remote-alias>
+              <ordinal>3</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>741</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>LOGO_URL</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[LOGO_URL]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>LOGO_URL</remote-alias>
+              <ordinal>4</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>806</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>RELEVANCE</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[RELEVANCE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>RELEVANCE</remote-alias>
+              <ordinal>5</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>26</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>LR</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[LR]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>LR</remote-alias>
+              <ordinal>6</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>3</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>SUBS</remote-name>
+              <remote-type>20</remote-type>
+              <local-name>[SUBS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>SUBS</remote-alias>
+              <ordinal>7</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>integer</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>618</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_VIEWS</remote-name>
+              <remote-type>20</remote-type>
+              <local-name>[CHANNEL_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_VIEWS</remote-alias>
+              <ordinal>8</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>integer</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>804</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>COUNTRY</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[COUNTRY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>COUNTRY</remote-alias>
+              <ordinal>9</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>23</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>HARD_TAGS</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[HARD_TAGS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>HARD_TAGS</remote-alias>
+              <ordinal>10</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>17</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>SOFT_TAGS</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[SOFT_TAGS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>SOFT_TAGS</remote-alias>
+              <ordinal>11</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>115</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>USER_CHANNELS</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[USER_CHANNELS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>USER_CHANNELS</remote-alias>
+              <ordinal>12</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>810</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>UPDATED</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[UPDATED]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>UPDATED</remote-alias>
+              <ordinal>13</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>722</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>STATUS_MSG</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[STATUS_MSG]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>STATUS_MSG</remote-alias>
+              <ordinal>14</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>1</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>MAIN_CHANNEL_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[MAIN_CHANNEL_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>MAIN_CHANNEL_TITLE</remote-alias>
+              <ordinal>15</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>753</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>AGE</remote-name>
+              <remote-type>20</remote-type>
+              <local-name>[AGE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>AGE</remote-alias>
+              <ordinal>16</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>integer</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>1</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TAGS</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TAGS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TAGS</remote-alias>
+              <ordinal>17</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>217</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>IDEOLOGY</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[IDEOLOGY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>IDEOLOGY</remote-alias>
+              <ordinal>18</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>12</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>MEDIA</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[MEDIA]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>MEDIA</remote-alias>
+              <ordinal>19</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>3</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>MANOEL</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[MANOEL]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>MANOEL</remote-alias>
+              <ordinal>20</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>5</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>AIN</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[AIN]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>AIN</remote-alias>
+              <ordinal>21</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>2</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>VIEWS</remote-name>
+              <remote-type>20</remote-type>
+              <local-name>[VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>VIEWS</remote-alias>
+              <ordinal>22</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>integer</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>789</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>FROM_DATE</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[FROM_DATE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_DATE</remote-alias>
+              <ordinal>23</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>777</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_DATE</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[TO_DATE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_DATE</remote-alias>
+              <ordinal>24</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>785</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>DAILY_VIEWS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[DAILY_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>DAILY_VIEWS</remote-alias>
+              <ordinal>25</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>784</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>RELEVANT_VIEWS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[RELEVANT_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>RELEVANT_VIEWS</remote-alias>
+              <ordinal>26</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>789</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>RELEVANT_DAILY_VIEWS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[RELEVANT_DAILY_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>RELEVANT_DAILY_VIEWS</remote-alias>
+              <ordinal>27</ordinal>
+              <family>CHANNEL_STATS</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>784</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+          </metadata-records>
+        </connection>
+      </extract>
+      <layout dim-ordering='alphabetic' dim-percentage='0.582979' measure-ordering='alphabetic' measure-percentage='0.417021' show-structure='true' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[none:MEDIA:nk]' type='palette'>
+            <map to='#3887be'>
+              <bucket>&quot;Mainstream Media&quot;</bucket>
+            </map>
+            <map to='#41afa5'>
+              <bucket>&quot;Missing Link Media&quot;</bucket>
+            </map>
+            <map to='#e55e5e'>
+              <bucket>&quot;YouTube&quot;</bucket>
+            </map>
+          </encoding>
+          <encoding attr='color' field='[none:IDEOLOGY:nk]' type='palette'>
+            <map to='#333333'>
+              <bucket>%null%</bucket>
+            </map>
+            <map to='#3887be'>
+              <bucket>&quot;Partisan Left&quot;</bucket>
+            </map>
+            <map to='#41afa5'>
+              <bucket>&quot;Religious Conservative&quot;</bucket>
+            </map>
+            <map to='#50667f'>
+              <bucket>&quot;Anti-SJW&quot;</bucket>
+            </map>
+            <map to='#56b881'>
+              <bucket>&quot;Social Justice&quot;</bucket>
+            </map>
+            <map to='#6ec9e0'>
+              <bucket>&quot;Socialist&quot;</bucket>
+            </map>
+            <map to='#8a8acb'>
+              <bucket>&quot;Alt-light&quot;</bucket>
+            </map>
+            <map to='#96cbb3'>
+              <bucket>&quot;Anti-Theist&quot;</bucket>
+            </map>
+            <map to='#b7b7b7'>
+              <bucket>&quot;Libertarian&quot;</bucket>
+            </map>
+            <map to='#e0393e'>
+              <bucket>&quot;Partisan Right&quot;</bucket>
+            </map>
+            <map to='#e55e5e'>
+              <bucket>&quot;Alt-right&quot;</bucket>
+            </map>
+            <map to='#e55e5e'>
+              <bucket>&quot;Anti-white&quot;</bucket>
+            </map>
+            <map to='#ed6498'>
+              <bucket>&quot;MRA&quot;</bucket>
+            </map>
+            <map to='#ffc168'>
+              <bucket>&quot;Conspiracy&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
       <semantic-values>
         <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
       </semantic-values>
@@ -699,425 +1572,207 @@
       <column caption='To Video Title' datatype='string' name='[TO_VIDEO_TITLE]' role='dimension' type='nominal' />
       <column caption='Updated' datatype='datetime' name='[UPDATED]' role='dimension' type='ordinal' />
       <column caption='Updated Day' datatype='datetime' name='[UPDATED_DAY]' role='dimension' type='ordinal' />
+      <extract count='-1' enabled='true' units='records'>
+        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks/.Data/Recs.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='11/23/2019 05:08:57 AM' username='tableau_internal_user'>
+          <relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <refresh>
+            <refresh-event add-from-file-path='Recs' increment-value='%null%' refresh-type='create' rows-inserted='10087283' timestamp-start='2019-11-23 05:08:57.571' />
+          </refresh>
+          <metadata-records>
+            <metadata-record class='column'>
+              <remote-name>FROM_CHANNEL_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_CHANNEL_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_CHANNEL_ID</remote-alias>
+              <ordinal>0</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>938</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>FROM_VIDEO_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_VIDEO_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_VIDEO_ID</remote-alias>
+              <ordinal>1</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>1334932</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>FROM_VIDEO_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_VIDEO_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_VIDEO_TITLE</remote-alias>
+              <ordinal>2</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>1317363</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_CHANNEL_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_CHANNEL_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_CHANNEL_TITLE</remote-alias>
+              <ordinal>3</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>52853</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_VIDEO_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_VIDEO_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_VIDEO_ID</remote-alias>
+              <ordinal>4</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>455192</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_VIDEO_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_VIDEO_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_VIDEO_TITLE</remote-alias>
+              <ordinal>5</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>454885</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>UPDATED</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[UPDATED]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>UPDATED</remote-alias>
+              <ordinal>6</ordinal>
+              <family>REC</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>62386</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>UPDATED_DAY</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[UPDATED_DAY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>UPDATED_DAY</remote-alias>
+              <ordinal>7</ordinal>
+              <family>REC</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>16</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+          </metadata-records>
+        </connection>
+      </extract>
       <layout dim-ordering='alphabetic' dim-percentage='0.550668' measure-ordering='alphabetic' measure-percentage='0.449332' show-structure='true' />
       <semantic-values>
         <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
       </semantic-values>
     </datasource>
-    <datasource caption='Video Recs' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy)' version='18.1'>
-      <connection class='federated'>
-        <named-connections>
-          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy)'>
-            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' />
-          </named-connection>
-        </named-connections>
-        <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy)' name='VIDEO_RECS' table='[PUBLIC].[VIDEO_RECS]' type='table' />
-        <metadata-records>
-          <metadata-record class='column'>
-            <remote-name>FROM_VIDEO_ID</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[FROM_VIDEO_ID]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>FROM_VIDEO_ID</remote-alias>
-            <ordinal>1</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>FROM_VIDEO_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[FROM_VIDEO_TITLE]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>FROM_VIDEO_TITLE</remote-alias>
-            <ordinal>2</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>FROM_CHANNEL_ID</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[FROM_CHANNEL_ID]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>FROM_CHANNEL_ID</remote-alias>
-            <ordinal>3</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>FROM_CHANNEL_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[FROM_CHANNEL_TITLE]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>FROM_CHANNEL_TITLE</remote-alias>
-            <ordinal>4</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>FROM_MAIN_CHANNEL_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[FROM_MAIN_CHANNEL_TITLE]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>FROM_MAIN_CHANNEL_TITLE</remote-alias>
-            <ordinal>5</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TO_VIDEO_ID</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[TO_VIDEO_ID]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>TO_VIDEO_ID</remote-alias>
-            <ordinal>6</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TO_VIDEO_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[TO_VIDEO_TITLE]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>TO_VIDEO_TITLE</remote-alias>
-            <ordinal>7</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TO_CHANNEL_ID</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[TO_CHANNEL_ID]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>TO_CHANNEL_ID</remote-alias>
-            <ordinal>8</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TO_CHANNEL_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[TO_CHANNEL_TITLE]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>TO_CHANNEL_TITLE</remote-alias>
-            <ordinal>9</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TO_MAIN_CHANNEL_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[TO_MAIN_CHANNEL_TITLE]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>TO_MAIN_CHANNEL_TITLE</remote-alias>
-            <ordinal>10</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>FROM_MEDIA</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[FROM_MEDIA]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>FROM_MEDIA</remote-alias>
-            <ordinal>11</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>18</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>FROM_IDEOLOGY</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[FROM_IDEOLOGY]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>FROM_IDEOLOGY</remote-alias>
-            <ordinal>12</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TO_MEDIA</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[TO_MEDIA]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>TO_MEDIA</remote-alias>
-            <ordinal>13</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>18</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TO_IDEOLOGY</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[TO_IDEOLOGY]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>TO_IDEOLOGY</remote-alias>
-            <ordinal>14</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>FROM_VIEWS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[FROM_VIEWS]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>FROM_VIEWS</remote-alias>
-            <ordinal>15</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>RECS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[RECS]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>RECS</remote-alias>
-            <ordinal>16</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>18</precision>
-            <scale>0</scale>
-            <contains-null>false</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>FROM_VIDEO_RECS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[FROM_VIDEO_RECS]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>FROM_VIDEO_RECS</remote-alias>
-            <ordinal>17</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>18</precision>
-            <scale>0</scale>
-            <contains-null>false</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>REC_VIEW_PORTION</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[REC_VIEW_PORTION]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>REC_VIEW_PORTION</remote-alias>
-            <ordinal>18</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>6</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>IMPRESSIONS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[IMPRESSIONS]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>IMPRESSIONS</remote-alias>
-            <ordinal>19</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>6</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>IMPRESSIONS_PER_TO_VIEW</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[IMPRESSIONS_PER_TO_VIEW]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>IMPRESSIONS_PER_TO_VIEW</remote-alias>
-            <ordinal>20</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>12</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>REC_VIEW_CHANNEL_PERCENT</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[REC_VIEW_CHANNEL_PERCENT]</local-name>
-            <parent-name>[VIDEO_RECS]</parent-name>
-            <remote-alias>REC_VIEW_CHANNEL_PERCENT</remote-alias>
-            <ordinal>21</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>12</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-        </metadata-records>
-      </connection>
-      <aliases enabled='yes' />
-      <column caption='From Channel Id' datatype='string' name='[FROM_CHANNEL_ID]' role='dimension' type='nominal' />
-      <column caption='From Channel Title' datatype='string' name='[FROM_CHANNEL_TITLE]' role='dimension' type='nominal' />
-      <column caption='From Ideology' datatype='string' name='[FROM_IDEOLOGY]' role='dimension' type='nominal' />
-      <column caption='From Main Channel Title' datatype='string' name='[FROM_MAIN_CHANNEL_TITLE]' role='dimension' type='nominal' />
-      <column caption='From Media' datatype='string' name='[FROM_MEDIA]' role='dimension' type='nominal' />
-      <column caption='From Video Id' datatype='string' name='[FROM_VIDEO_ID]' role='dimension' type='nominal' />
-      <column caption='From Video Recs' datatype='integer' name='[FROM_VIDEO_RECS]' role='measure' type='quantitative' />
-      <column caption='From Video Title' datatype='string' name='[FROM_VIDEO_TITLE]' role='dimension' type='nominal' />
-      <column caption='From Views' datatype='integer' name='[FROM_VIEWS]' role='measure' type='quantitative' />
-      <column caption='Impressions' datatype='real' name='[IMPRESSIONS]' role='measure' type='quantitative' />
-      <column caption='Impressions Per To View' datatype='real' name='[IMPRESSIONS_PER_TO_VIEW]' role='measure' type='quantitative' />
-      <column caption='Channels' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
-        <calculation class='tableau' formula='1' />
-      </column>
-      <column caption='Recs' datatype='integer' name='[RECS]' role='measure' type='quantitative' />
-      <column caption='Rec View Channel Percent' datatype='real' name='[REC_VIEW_CHANNEL_PERCENT]' role='measure' type='quantitative' />
-      <column caption='Rec View Portion' datatype='real' name='[REC_VIEW_PORTION]' role='measure' type='quantitative' />
-      <column caption='To Channel Id' datatype='string' name='[TO_CHANNEL_ID]' role='dimension' type='nominal' />
-      <column caption='To Channel Title' datatype='string' name='[TO_CHANNEL_TITLE]' role='dimension' type='nominal' />
-      <column caption='To Ideology' datatype='string' name='[TO_IDEOLOGY]' role='dimension' type='nominal' />
-      <column caption='To Main Channel Title' datatype='string' name='[TO_MAIN_CHANNEL_TITLE]' role='dimension' type='nominal' />
-      <column caption='To Media' datatype='string' name='[TO_MEDIA]' role='dimension' type='nominal' />
-      <column caption='To Video Id' datatype='string' name='[TO_VIDEO_ID]' role='dimension' type='nominal' />
-      <column caption='To Video Title' datatype='string' name='[TO_VIDEO_TITLE]' role='dimension' type='nominal' />
-      <layout dim-ordering='alphabetic' dim-percentage='0.54343' measure-ordering='alphabetic' measure-percentage='0.45657' show-structure='true' />
-      <semantic-values>
-        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
-      </semantic-values>
-    </datasource>
   </datasources>
+  <actions>
+    <action caption='Filter 1 (generated)' name='[Action1]'>
+      <activation auto-clear='true' type='on-select' />
+      <source dashboard='Channel OVerview' type='sheet' worksheet='Idelogy' />
+      <command command='tsc:tsl-filter'>
+        <param name='special-fields' value='all' />
+        <param name='target' value='Channel OVerview' />
+      </command>
+    </action>
+    <action caption='Filter 2 (generated)' name='[Action2]'>
+      <activation auto-clear='true' type='on-select' />
+      <source dashboard='Channel OVerview' type='sheet' worksheet='Media' />
+      <command command='tsc:tsl-filter'>
+        <param name='special-fields' value='all' />
+        <param name='target' value='Channel OVerview' />
+      </command>
+    </action>
+  </actions>
   <worksheets>
+    <worksheet name='Channels'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='Channel Stats' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9' />
+          </datasources>
+          <datasource-dependencies datasource='federated.1ickkp80mdi8fx14z9gti1p1c6t9'>
+            <column caption='Channel Title' datatype='string' name='[CHANNEL_TITLE]' role='dimension' type='nominal' />
+            <column caption='Daily Views' datatype='real' name='[DAILY_VIEWS]' role='measure' type='quantitative' />
+            <column caption='Ideology' datatype='string' name='[IDEOLOGY]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='%null%' value='Other' />
+              </aliases>
+            </column>
+            <column-instance column='[CHANNEL_TITLE]' derivation='None' name='[none:CHANNEL_TITLE:nk]' pivot='key' type='nominal' />
+            <column-instance column='[IDEOLOGY]' derivation='None' name='[none:IDEOLOGY:nk]' pivot='key' type='nominal' />
+            <column-instance column='[DAILY_VIEWS]' derivation='Sum' name='[sum:DAILY_VIEWS:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[Action (Ideology)]'>
+            <groupfilter function='level-members' level='[IDEOLOGY]' user:ui-action-filter='[Action1]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <shelf-sorts>
+            <shelf-sort-v2 dimension-to-sort='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:CHANNEL_TITLE:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:DAILY_VIEWS:qk]' shelf='rows' />
+          </shelf-sorts>
+          <slices>
+            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[Action (Ideology)]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='cell'>
+            <format attr='height' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:CHANNEL_TITLE:nk]' value='31' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane id='2' selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:IDEOLOGY:nk]' />
+            </encodings>
+            <style>
+              <style-rule element='pane'>
+                <format attr='minheight' value='-1' />
+                <format attr='maxheight' value='-1' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows>[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:CHANNEL_TITLE:nk]</rows>
+        <cols>[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:DAILY_VIEWS:qk]</cols>
+      </table>
+      <simple-id uuid='{E474FAB1-86F4-4BFD-91C4-19381D7FEA30}' />
+    </worksheet>
     <worksheet name='Idelogy'>
       <table>
         <view>
@@ -1126,7 +1781,11 @@
           </datasources>
           <datasource-dependencies datasource='federated.1ickkp80mdi8fx14z9gti1p1c6t9'>
             <column caption='Daily Views' datatype='real' name='[DAILY_VIEWS]' role='measure' type='quantitative' />
-            <column caption='Ideology' datatype='string' name='[IDEOLOGY]' role='dimension' type='nominal' />
+            <column caption='Ideology' datatype='string' name='[IDEOLOGY]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='%null%' value='Other' />
+              </aliases>
+            </column>
             <column caption='Channels' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
               <calculation class='tableau' formula='1' />
             </column>
@@ -1136,9 +1795,6 @@
             <column-instance column='[Number of Records]' derivation='Sum' name='[sum:Number of Records:qk]' pivot='key' type='quantitative' />
             <column-instance column='[SUBS]' derivation='Sum' name='[sum:SUBS:qk]' pivot='key' type='quantitative' />
           </datasource-dependencies>
-          <shelf-sorts>
-            <shelf-sort-v2 dimension-to-sort='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:IDEOLOGY:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:Number of Records:qk]' shelf='rows' />
-          </shelf-sorts>
           <aggregation value='true' />
         </view>
         <style>
@@ -1152,6 +1808,9 @@
               <breakdown value='auto' />
             </view>
             <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:IDEOLOGY:nk]' />
+            </encodings>
             <style>
               <style-rule element='pane'>
                 <format attr='minheight' value='-1' />
@@ -1164,6 +1823,9 @@
               <breakdown value='auto' />
             </view>
             <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:IDEOLOGY:nk]' />
+            </encodings>
             <style>
               <style-rule element='pane'>
                 <format attr='minheight' value='-1' />
@@ -1176,6 +1838,9 @@
               <breakdown value='auto' />
             </view>
             <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:IDEOLOGY:nk]' />
+            </encodings>
             <style>
               <style-rule element='pane'>
                 <format attr='minheight' value='-1' />
@@ -1188,6 +1853,9 @@
               <breakdown value='auto' />
             </view>
             <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:IDEOLOGY:nk]' />
+            </encodings>
             <style>
               <style-rule element='pane'>
                 <format attr='minheight' value='-1' />
@@ -1209,6 +1877,11 @@
           </datasources>
           <datasource-dependencies datasource='federated.1ickkp80mdi8fx14z9gti1p1c6t9'>
             <column caption='Daily Views' datatype='real' name='[DAILY_VIEWS]' role='measure' type='quantitative' />
+            <column caption='Ideology' datatype='string' name='[IDEOLOGY]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='%null%' value='Other' />
+              </aliases>
+            </column>
             <column caption='Media' datatype='string' name='[MEDIA]' role='dimension' type='nominal' />
             <column caption='Channels' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
               <calculation class='tableau' formula='1' />
@@ -1219,9 +1892,15 @@
             <column-instance column='[Number of Records]' derivation='Sum' name='[sum:Number of Records:qk]' pivot='key' type='quantitative' />
             <column-instance column='[SUBS]' derivation='Sum' name='[sum:SUBS:qk]' pivot='key' type='quantitative' />
           </datasource-dependencies>
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[Action (Ideology)]'>
+            <groupfilter function='level-members' level='[IDEOLOGY]' user:ui-action-filter='[Action1]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
           <shelf-sorts>
             <shelf-sort-v2 dimension-to-sort='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:MEDIA:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:Number of Records:qk]' shelf='rows' />
           </shelf-sorts>
+          <slices>
+            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[Action (Ideology)]</column>
+          </slices>
           <aggregation value='true' />
         </view>
         <style>
@@ -1235,6 +1914,9 @@
               <breakdown value='auto' />
             </view>
             <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:MEDIA:nk]' />
+            </encodings>
             <style>
               <style-rule element='pane'>
                 <format attr='minheight' value='-1' />
@@ -1247,6 +1929,9 @@
               <breakdown value='auto' />
             </view>
             <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:MEDIA:nk]' />
+            </encodings>
             <style>
               <style-rule element='pane'>
                 <format attr='minheight' value='-1' />
@@ -1259,6 +1944,9 @@
               <breakdown value='auto' />
             </view>
             <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:MEDIA:nk]' />
+            </encodings>
             <style>
               <style-rule element='pane'>
                 <format attr='minheight' value='-1' />
@@ -1271,6 +1959,9 @@
               <breakdown value='auto' />
             </view>
             <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:MEDIA:nk]' />
+            </encodings>
             <style>
               <style-rule element='pane'>
                 <format attr='minheight' value='-1' />
@@ -1310,7 +2001,7 @@
             <column-instance column='[REC_VIEW_CHANNEL_PERCENT]' derivation='Sum' name='[sum:REC_VIEW_CHANNEL_PERCENT:qk]' pivot='key' type='quantitative' />
           </datasource-dependencies>
           <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy)].[none:FROM_CHANNEL_TITLE:nk]'>
-            <groupfilter function='member' level='[none:FROM_CHANNEL_TITLE:nk]' member='&quot;PowerfulJRE&quot;' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+            <groupfilter function='member' level='[none:FROM_CHANNEL_TITLE:nk]' member='&quot;Rebecca Watson&quot;' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
           </filter>
           <shelf-sorts>
             <shelf-sort-v2 dimension-to-sort='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy)].[none:TO_CHANNEL_TITLE:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy)].[sum:IMPRESSIONS:qk]' shelf='rows' />
@@ -1388,21 +2079,33 @@
       <size sizing-mode='automatic' />
       <zones>
         <zone h='100000' id='4' type='layout-basic' w='100000' x='0' y='0'>
-          <zone h='66421' id='3' name='Idelogy' w='98974' x='513' y='404'>
-            <zone-style>
-              <format attr='border-color' value='#000000' />
-              <format attr='border-style' value='none' />
-              <format attr='border-width' value='0' />
-              <format attr='margin' value='4' />
-            </zone-style>
-          </zone>
-          <zone h='32771' id='5' name='Media' w='98974' x='513' y='66825'>
-            <zone-style>
-              <format attr='border-color' value='#000000' />
-              <format attr='border-style' value='none' />
-              <format attr='border-width' value='0' />
-              <format attr='margin' value='4' />
-            </zone-style>
+          <zone h='99232' id='13' param='horz' type='layout-flow' w='99140' x='430' y='384'>
+            <zone h='99232' id='11' type='layout-basic' w='99140' x='430' y='384'>
+              <zone h='66428' id='3' name='Idelogy' w='49568' x='430' y='384'>
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='4' />
+                </zone-style>
+              </zone>
+              <zone h='32804' id='5' name='Media' w='49568' x='430' y='66812'>
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='4' />
+                </zone-style>
+              </zone>
+              <zone h='99232' id='10' name='Channels' w='49572' x='49998' y='384'>
+                <zone-style>
+                  <format attr='border-color' value='#000000' />
+                  <format attr='border-style' value='none' />
+                  <format attr='border-width' value='0' />
+                  <format attr='margin' value='4' />
+                </zone-style>
+              </zone>
+            </zone>
           </zone>
           <zone-style>
             <format attr='border-color' value='#000000' />
@@ -1414,11 +2117,11 @@
       </zones>
       <devicelayouts>
         <devicelayout auto-generated='true' name='Phone'>
-          <size maxheight='700' minheight='700' sizing-mode='vscroll' />
+          <size maxheight='850' minheight='850' sizing-mode='vscroll' />
           <zones>
-            <zone h='100000' id='8' type='layout-basic' w='100000' x='0' y='0'>
-              <zone h='99192' id='9' param='vert' type='layout-flow' w='98974' x='513' y='404'>
-                <zone fixed-size='280' h='66421' id='3' is-fixed='true' name='Idelogy' w='98974' x='513' y='404'>
+            <zone h='100000' id='16' type='layout-basic' w='100000' x='0' y='0'>
+              <zone h='99232' id='17' param='vert' type='layout-flow' w='99140' x='430' y='384'>
+                <zone fixed-size='280' h='66428' id='3' is-fixed='true' name='Idelogy' w='49568' x='430' y='384'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
                     <format attr='border-style' value='none' />
@@ -1427,7 +2130,16 @@
                     <format attr='padding' value='0' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='254' h='32771' id='5' is-fixed='true' name='Media' w='98974' x='513' y='66825'>
+                <zone fixed-size='280' h='99232' id='10' is-fixed='true' name='Channels' w='49572' x='49998' y='384'>
+                  <zone-style>
+                    <format attr='border-color' value='#000000' />
+                    <format attr='border-style' value='none' />
+                    <format attr='border-width' value='0' />
+                    <format attr='margin' value='4' />
+                    <format attr='padding' value='0' />
+                  </zone-style>
+                </zone>
+                <zone fixed-size='255' h='32804' id='5' is-fixed='true' name='Media' w='49568' x='430' y='66812'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
                     <format attr='border-style' value='none' />
@@ -1450,9 +2162,10 @@
       <simple-id uuid='{B622598E-96D4-4C42-BFDC-702BD3DC60A5}' />
     </dashboard>
   </dashboards>
-  <windows saved-dpi-scale-factor='1.25' source-height='89'>
+  <windows pres-mode='true' saved-dpi-scale-factor='1.25' source-height='89'>
     <window class='dashboard' maximized='true' name='Channel OVerview'>
       <viewpoints>
+        <viewpoint name='Channels' />
         <viewpoint name='Idelogy'>
           <zoom type='entire-view' />
         </viewpoint>
@@ -1460,7 +2173,7 @@
           <zoom type='entire-view' />
         </viewpoint>
       </viewpoints>
-      <active id='3' />
+      <active id='10' />
       <simple-id uuid='{3596EAE8-0534-4A52-8019-89259056C718}' />
     </window>
     <window class='worksheet' name='Recs Reorded'>
@@ -1529,6 +2242,42 @@
       </viewpoint>
       <simple-id uuid='{7EC34508-0CA6-4211-95EA-E0CAAB516F5C}' />
     </window>
+    <window class='worksheet' name='Channels'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='title' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card pane-specification-id='2' param='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:IDEOLOGY:nk]' type='color' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <highlight>
+          <color-one-way>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:CHANNEL_TITLE:nk]</field>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:IDEOLOGY:nk]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{ED14C4BC-FB44-4F58-9C1B-F0B0E35A66C7}' />
+    </window>
     <window class='worksheet' hidden='true' name='Idelogy'>
       <cards>
         <edge name='left'>
@@ -1549,19 +2298,14 @@
             <card type='title' />
           </strip>
         </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card pane-specification-id='3' param='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:IDEOLOGY:nk]' type='color' />
+          </strip>
+        </edge>
       </cards>
       <viewpoint>
         <zoom type='entire-view' />
-        <selection-collection>
-          <node-selection select-tuples='false'>
-            <oriented-node-reference orientation='horizontal'>
-              <node-reference>
-                <axis>[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:Number of Records:qk]</axis>
-              </node-reference>
-              <page-reference />
-            </oriented-node-reference>
-          </node-selection>
-        </selection-collection>
         <highlight>
           <color-one-way>
             <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:IDEOLOGY:nk]</field>
@@ -1590,6 +2334,11 @@
             <card type='title' />
           </strip>
         </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card pane-specification-id='1' param='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[none:MEDIA:nk]' type='color' />
+          </strip>
+        </edge>
       </cards>
       <viewpoint>
         <zoom type='entire-view' />
@@ -1606,378 +2355,559 @@
   <thumbnails>
     <thumbnail height='192' name='Channel OVerview' width='192'>
       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
-      AAARU0lEQVR4nO3d6W8bd37H8ffM8L4PkRIl67J8xrETN5tsNtmgSREE2A26wKLAokD7oMWi
-      6IM+KdouWvRBH7RA/4DubpvtP1Cg3Z7PemTbAi12202CbRLbsWRZt2RRIimKNzlHH0i2JcuW
-      SA1FUZ7vC7BNk6Mff8PRh3P9vjOKZVkWQjiUetodEOI0SQCEo0kAhKNJAISjSQCEo+0LQKu2
-      TbHafPT/4voCD4r1fT9g6GVmZ1d60zshTti+AJTWprm9WMCyLCzLYju7yHqx8ej/lmVhGhVm
-      59b2PQfs+/+Tf4ToV66nPbk88xl3V7cxC/MMvnKDH//nh7gCEYpVnbe/MgXAvc8/YnXboF7M
-      8drb7/H5j3+EJ5xkdn6B1y4kKYaucDle5yfTW7z75ss9nSkh2vXUfYBPZ5Z49+2v8sLFSSzT
-      4O7sHJqmUdzKP5pmenGDn3/zdd565SKf/N9dSrqLL7/2JWJBH+dfeoOF2z/lZz+7zZdeud6z
-      mRGiU08NQDKgsbC+xXo2i6KoxKJRrr54g1dv3ng0zUDIzWJ2iy+m55maGqNZKVKrVdksFFE1
-      D8NhmCspxHxaz2ZGiE4pe4dCtGolapaXsN/N7N1bBCIJIok0PrXJrdvTjJ6/SCzkplhsEIuF
-      mJv5An98iMxAjHp1m5m5VeYX5vjF97/Og5mPWdCH+PLVkdOcPyEOpXRnLJDF3VufUqo2GBie
-      YHQgyCe3Znnl527IcVbR17oUACHOJvmCFo4mARCOJgEQjiYBEI4mARCOJgEQjvZoLJBlWZTL
-      5RN9M8uyME0TTbN3dtiyLBRF6Ys2gL7py2m3oes6LtdTh5cdeB9o73PrpE/Hmban5wF0XafZ
-      bBIIBGy3084HfdJtGIaBqqq2f/H6ZX7stlEqlQiHw0dOZxgGiqKgqkdvgHTSp+NMa+8TOwbL
-      sjBM01YbZr+0YVqABYq975C+mZ8221AV5amhb/fnTctCAaw2p213vo4zbc8D8Nvf/Wey282j
-      JxR964PffZ9M8uA3/Z/98H/46F7uFHp0fLITLBxNAiAcTQIgHE0CIBxNAiAcratHgUy9QbGi
-      43ErBHeP9Rt6g0Zr56SD2yXlkaK/dDUArfo2n99ZI530k0wkiAW9bObyVFoqmuri3PBAN99O
-      CNu6fh7g3GCC2eWdC2cFXWG2Kw00j7/bbyNEV3Q1AJonyMBgDNNqkoqFWVjdYCA9hKa5UBTZ
-      3RD9p6sBcHkChD0QPn8egEgite91Xde7+XZC2CZfy8LRJADC0SQAwtEkAMLRej4c+vJYkkzd
-      3rj1fqh+2mkDFNj967T70rs2vO6n/9qMDUZptfMr9bB8oo3uSkXYM9o57eonkIqwJ53FijDZ
-      BBKOJgEQjiYBEI7W851gw7TQDXs7wbphgnL6bRiGiWrZvyxKv8zPUW2oioKqPnteDdNsa9k+
-      vJiA2sbeZyfzZR5jd7bnAfid70lR/Fn1W998lfdenXrm69/92/891aL4b751hV/7Wmf3o5NN
-      IOFoEgDhaBIA4WgSAOFoEgDhaB0FIJfbZO+BJsuywDIpV6oAlLZyLCyvYbFzWrxSqVLeLtDU
-      TSq70wjRT9o+DGqZBkv37mC4XqW8Po/lCbC+dJ+pK9dRVYVQ0M/s3DxTF69gAfMLC/h9PhSj
-      jidYpWXA2MjgCc6KEJ1rew1Qzq1QVUOsLc+jeYK4sEgNDpNORMjlN5mfX+bqlcvM3L5N07BQ
-      VRUNC9UXpri+SCieOvpNhOixttcALS3EV14do5DPoWluwMJo1tgolEgNpEnGo6wszBFOptl6
-      sEQylSHiNqgoflyKwkDEgyk1waLPtB2ARCKx+29yz7PRfdOMjJ8/8HMBgGgQAHsn6oXoPjkK
-      JBxNAiAcTQIgHE0CIByt58Ohr4wPMPLcFMXbb6Of+nJUGwPRw2u5x4diGIq7jTei7QsJdDJf
-      wwOh9hrdQ4ribZCi+P2kKF6IM0YCIBxNAiAcrec7wS3DpNkybLVhGAamZW+7uyttmAaqaqHY
-      vDTccfricfff7ab0NpetaZooCijKwd1PVVVwab37Xu55AH7v+/8iRfE2uV0qP/zjb512Nw74
-      3t/ZL4r/+usX+c1vvNKlHh1NNoGEo0kAhKNJAISjSQCEo0kAhKN1HADLNMjlCph6g2q9hWnu
-      jOvRG1VqjSbVauPhlNRqdYBH0wjRbzo+DLqVXWE2W+WmL8H9+W02c2u88eZbNIrrbGlJglis
-      LN7HG46wubJKLD3I2uJ9Ll67SWK3MkyIftFhACyW1rIotRr5SgR/KMK5gEZxYwW93sT019nI
-      ZglmJqjmlkmmM4BBemiYVCKCYdg7ASZEt3UWAAvOjU8Ri4Yo5PMk42Hy2S1iqUms+hY13Jie
-      cyzO3cVw+RkciqJgojeqbBa2iUdkDSD6S2cBUBQSiTgAydTONX5ikUs7rwVjeAArYFJLp0mk
-      M/g8D5vfKZ6XO8WLftP1oRCKojJ8brTbzQpxIuQwqHA0CYBwNAmAcLSeD4d+YSLFqN2ieOyP
-      we+XNo7TjsvVn99bk5kYluo5crrD5ndsMNLtbh1KiuJtkKL4/aQoXogzRgIgHE0CIByt5zvB
-      zZaB2rR3RtgwDHSbA0y71UY39gGe7IvHpR16R/Z+1dIN6m0s252ieAWljTvAP2s5ed1aV67K
-      1/MAfOcv/lWK4o/wp7/xC1ybTJ92Nzr2/b//ac/uFP9Xf/RLBHxtXIbxCLIJJBxNAiAcTQIg
-      HE0CIBxNAiAcbU8ALFaX5vli5v6BicqVyqPHteIG5d2DOA/WHhyYtlquYGJR2fMzQvSrfYdB
-      t4tbhJIjrC7Okd/aJppMUi7V8QU80Koxfe8+gwNR3K4UIQ/kNjdptpr4LCgrOs2mSm1zlfj4
-      FGqrwdryIr5wlMLGOoFYmnG5U7zoM/s2gTLnJsivLpGvNRhMBFle32J4eIhGo87GxgZ6rchW
-      pQVAs9nABGrVKvlcHl8gSKVQIJxIkkzEaNRr6KZKxK+Q36rhdvXf1YyF2LcGUCyDzMR54mEf
-      G1tlXn85zoP1DcZHx9Asg2A0STgcxuWB6naJiakLaGaDUqVFJOhDnRgjFQuRL1YYHRvH1Bs0
-      DI0XX5jCE4w+qw9CnJo9AVCIxB/fBT6T9u38mxl69Fza//iqDtH4wO4jH4Hde5P5/TsPUgPe
-      x68BsPO8FMWLfiNHgYSjSQCEo0kAhKNJAISj9Xw49IuTaUoNuVP8Ye2EA95Dpu5f54fjKK6j
-      +75Thq7Qzkf3rM9Y07pTLyFF8TZIUfx+UhQvxBkjARCOJgEQjtbzneB6Uwe1ZasNwzDQdHu7
-      Ll1pw9zdBzjm1eG8Hg2tje3gs6LZMqjWj162j4viFTxurad3hn9SzwPw+x/8mxTF7/qTb7/D
-      jannZ4Tsn/9D50Xx3/nlN/jqjbET6tHRnp+vHyGOQQIgHE0CIBxNAiAcTQIgHO3QALTqZe7c
-      uUOxXD+yoUpZiuDF2XPoYdD5hWUuXblKq5Tj089nicWS5LNLBKMD1EsFBkcnWF9eRPOFCPo8
-      ZNeWcAVjVLeyaP4YRm2bYDiE5o2gN+tkhs7e9S7F8+3QNYDfo5ErbFHYyBMfGqJWLpFMZ/C4
-      IBwOkc/l8AXDqJZBo9FAdfvIDITYLjXYyK5hah6SqSFyy/fwhWK9mich2nboGmBk4gIb62sk
-      xiYp5jYYujiFZeiARXm7SCoQ5v69GSYvXMalgqooaG43ExNjBCIRrFaDZquF5Q4yEAtgSE2w
-      6DOHBkBRFNJDwwCkhzI7T2o7N0FLDOxszly/cePAz6UGd89u+v0701y/1pXOCtFtchRIOJoE
-      QDiaBEA4mgRAOFrPh0NfP5+m3LA3Dr9fCtrtthEJns3i92eZGomjuX1HTmexWxQPJCL+E+/X
-      YaQo3gYpit9PiuKFOGMkAMLRJADC0Xq+E1xr6JiKvZpgwzDQNHtXlztOG26Xitfd84/szKg3
-      dZTa0ct2b1H8UZ62nII+d1euyAenEIA/+MHZLYr/xpuX+fb7N0+7G33rg3/8qCd3iu/WXeJB
-      NoGEw0kAhKN1FADLMrk/c5f1za0nX8AwDJq1Mi2jm90T4mR1tg9gmhiqm8LmGjRLlJsQ9ipU
-      6w1m55a5fvUSLl+T9WyO0eFBlpdXSA3EWdvYYmh4hFjodM/6CfGkjjeBsmvLhKJJtre3WV5e
-      pliqMT4+zujoKFa9RNMEzBbZzQLNRomVpVUyo5OUK+UT6L4Q9nS2BlBVrl1/iVg0wkqrwshI
-      iHQyjqJo+N3gCiZwe1xsuzzEoyEMo0ksEiXodeGORk5oFoQ4vo4CoCgqsejO/X5Hxib3vTY6
-      cf7R40h455c9nnh821WfJyi3SRV9pytHgVrNBrVaHcsyMYyHJy2sPY+F6E9dORE2fecOPr+L
-      QHwYr8tDrbSJJxghu7xMYijDyvwMYxeukYgGj25MiB7qyhrANHQ2CxUCXpPNlUVaniiFzSxu
-      X5B6pUw0PkA6Ge3GWwnRVV1ZAwwMjeD3KDQaBuFEklx2mRYK54ZSgEmzXmYjXyQekTWA6C9d
-      CUBmOPPosWm2qJaLDA+O7NnkSQHITrDoO10fDKeqbqYuXep2s0KcCBkLJByt58OhX7oweGaL
-      4ieGZEf+MBdGEri9Rw93eViG3s7n/7TlpKndqQUAKYq31YYUxe8nRfFCnDESAOFoEgDhaD3f
-      Ca7UW+hWw1YbO4XS9ipvjtOGx63h80hR/LPUGi0s9ehla1omCp0Uxbe3nI4zbc+X5h/+5YdS
-      FP+c+sE/fdyTovhukk0g4WgSAOFoEgDhaBIA4WgSAOFoTwTAYvr259yZnuXJ8RGlUglTb1Bt
-      PHtIs2m02MzlH7dmGsxM36VQLHWxy0J0z4HDoLoBitUg+2CJewtZRtMRdMXNwv1ZbrxwgZLu
-      5sFalmuXJ5menmZw5Bwbq2uEEykmR1IUSyUCmsmte3PEIlGWH2ywsrrGC9dvSkmk6DsHAtBs
-      1Bm/dIUHi7PUikUaQ0kujk/QqJbxuxXyupuwD+Zm50DTyOXzpDOj6K0KAI1alS2jiuXyEYnF
-      GPX4MGplImF7A+CEOAkHAnD1+nW8Xi/eiUnSwxOEdq/mNjY6iqW5GQu7KbotEsk4hcI2kUgQ
-      VXVhWVFUt4tkLEIwmmAyvE00niAWM1HMFvVmC5fP0/MZFOIwTwRAwevduXFbIBRh73d2MPx4
-      LHx6cOcu8alUkicNZkYACAX2jgv34EFKIkX/kaNAwtEkAMLRJADC0SQAwtF6Phz65YtDZ7Yo
-      fjITs/Wez7uL55J4fG0c7rYsUGD3ryMmbX85HWdaKYq3QYri95OieCHOGAmAcDQJgHC0nu8E
-      /81/3KbWstfGSewEJyJ+vvXONXsdc7gffTJHJBLhnZsTp92VtvU8AP/16WJfFsWPpaMSAJs+
-      nV0nGq2dqQDIJpBwNAmAcDQJgHA0CYBwNAmAcLSOjgI1yzlu318nM5whGvSiub1g6hgWNBpN
-      vG4NxeVhdXWFZCxGIOCjqVtsZh+QHhrGpUneRH/pKACax4+GTqtVY2ZmFdWlgmmQGR5mo7BF
-      s7hJoakxmIyw/iCL0SyjBBKU8+vEkmlcmpREiv7S0VeyaRi4PB7K5QqW0UTR3GiKRbOloynQ
-      slQCXg8uTUNzaSQHUmxtFYhFwjSaNs9+CXECOloDuP1hrl658oxX08D5A8+mMucePZaaYNFv
-      ZKNcOJoEQDiaBEA4mgRAOJoEQDhaz2uCl9YLuN1eW+0YpoGmal1tw+1SGUyEOmtDaoL3WVjJ
-      Eo6ESYQPv1t8P9UE97weYDAefG6K4sV+iYif8BG//P1GNoGEo0kAhKNJAISj9Xwj+K///RZV
-      u0XxpoWi2iyK39PGr3/tZfxet71OCT78eI5yE371vRun3ZW29TwA//3ZUt8Vxf/Ku9clAF3w
-      2f11lnL1MxWA/wdYnBE/0QBMawAAAABJRU5ErkJggg==
+      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
+      +hAsVvt/XClXJtnczDgAAAAASUVORK5CYII=
+    </thumbnail>
+    <thumbnail height='192' name='Channels' width='192'>
+      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
+      rkJggg==
     </thumbnail>
     <thumbnail height='192' name='Recs From Channel' width='192'>
       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
-      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
-      F8//P/GP+i85tuFFAAAAAElFTkSuQmCC
+      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
+      rkJggg==
     </thumbnail>
     <thumbnail height='192' name='Recs Reorded' width='192'>
       iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAABJ0AAASdAHeZh94
-      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
-      QS0AAAAASUVORK5CYII=
+      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
     </thumbnail>
   </thumbnails>
 </workbook>

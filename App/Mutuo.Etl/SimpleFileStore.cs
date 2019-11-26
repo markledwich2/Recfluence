@@ -14,7 +14,7 @@ namespace Mutuo.Etl {
     Task<Stream> Load(StringPath path);
     IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false);
     Task<bool> Delete(StringPath path);
-    Task<Stream> OpenForWrite(StringPath path, FileProps props = null);
+    Task<Stream> OpenForWrite(StringPath path);
   }
   
   public static class SimpleStoreExtensions {

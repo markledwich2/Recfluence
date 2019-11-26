@@ -11,6 +11,7 @@ using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Serialization;
@@ -29,9 +30,9 @@ namespace Mutuo.Etl {
       Container = Client.GetContainerReference(ContainerName);
     }
 
-    CloudBlobContainer Container { get; }
-    CloudBlobClient Client { get; }
-    string ContainerName { get; }
+    CloudBlobContainer Container     { get; }
+    CloudBlobClient    Client        { get; }
+    string             ContainerName { get; }
 
     //path including container
     public StringPath BasePath { get; }
@@ -39,7 +40,7 @@ namespace Mutuo.Etl {
     StringPath BasePathSansContainer => new StringPath(BasePath.Tokens.Skip(1));
 
     public CloudStorageAccount Storage { get; }
-    HttpClient H { get; }
+    HttpClient                 H       { get; }
 
     public async Task<Stream> Load(StringPath path) {
       var blob = BlobRef(path);
@@ -81,29 +82,29 @@ namespace Mutuo.Etl {
 
       memStream.Seek(0, SeekOrigin.Begin);
       var blob = BlobRef(path);
+      AutoPopulateProps(path, blob);
       await blob.UploadFromStreamAsync(memStream);
     }
 
     public async Task Save(StringPath path, FPath file) {
       var blob = BlobRef(path);
+      AutoPopulateProps(path, blob);
       await blob.UploadFromFileAsync(file.FullPath);
     }
 
     public async Task Save(StringPath path, Stream contents) {
       var blob = BlobRef(path);
+      AutoPopulateProps(path, blob);
       await blob.UploadFromStreamAsync(contents);
     }
 
-    public async Task<Stream> OpenForWrite(StringPath path, FileProps props = null) {
+    public async Task<Stream> OpenForWrite(StringPath path) {
       var blob = BlobRef(path);
       await blob.DeleteIfExistsAsync();
-      if (props != null) {
-        blob.Properties.ContentType = props.ContentType;
-        blob.Properties.ContentEncoding = props.Encoding;
-      }
+      AutoPopulateProps(path, blob);
       return await blob.OpenWriteAsync();
     }
-    
+
     public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path = null, bool allDirectories = false) {
       BlobContinuationToken token = null;
       do {
@@ -123,21 +124,34 @@ namespace Mutuo.Etl {
       } while (token != null);
     }
 
+    /// <summary>
+    ///   autoamtically work set the blob properties based on the extenions.
+    ///   Assumes the format ContentType[.Encoding] (e.g. csv.gz or csv)
+    /// </summary>
+    static void AutoPopulateProps(StringPath path, CloudBlockBlob blob) {
+      var ext = new Stack<string>(path.Extensions);
+
+      if (ext.Peek().In("gz", "gzip")) {
+        ext.Pop(); // pop so we can work at the content type appropreately
+        blob.Properties.ContentEncoding = "gzip";
+      }
+
+      if (ext.TryPop(out var ex))
+        blob.Properties.ContentType = ex switch {
+          "csv" => "text/css",
+          "json" => "application/json",
+          _ => null
+        };
+    }
+
     public async Task<bool> Delete(StringPath path) {
       var blob = BlobRef(path);
       return await blob.DeleteIfExistsAsync();
     }
-
-    Uri BlobUri(StringPath path) => Storage.BlobUri(BasePath.Add(path));
   }
 
   public class FileListItem {
-    public StringPath Path { get; set; }
+    public StringPath      Path     { get; set; }
     public DateTimeOffset? Modified { get; set; }
-  }
-
-  public class FileProps {
-    public string ContentType { get; set; }
-    public string Encoding { get; set; }
   }
 }

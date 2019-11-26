@@ -103,19 +103,19 @@ export class YtModel {
         label: 'Left/Center/Right',
         values: [
           { value: 'L', label: 'Left', color: '#3887be' },
-          { value: 'C', label: 'Center', color: '#50667f' },
+          { value: 'C', label: 'Center', color: '#8a8acb' },
           { value: 'R', label: 'Right', color: '#e0393e' },
           { value: '', label: 'Unknown', color: '#555' }
         ]
       },
       {
         name: 'ideology',
-        label: 'Idiology - Ledwich &  Zaitsev',
+        label: 'Ideology - Ledwich &  Zaitsev',
         values: [
-          { value: 'Anti-SJW', color: '#50667f' },
+          { value: 'Anti-SJW', color: '#8a8acb' },
           { value: 'Partisan Right', color: '#e0393e' },
-          { value: 'Alt-light', color: '#8a8acb' },
-          { value: 'Alt-right', color: '#e55e5e' },
+          { value: 'Alt-light', color: '#e55e5e' },
+          { value: 'Alt-right', label:'White Identitarian', color: '#c68143' },
           { value: 'MRA', color: '#ed6498' },
           { value: 'Social Justice', color: '#56b881' },
           { value: 'Socialist', color: '#6ec9e0' },
@@ -133,7 +133,7 @@ export class YtModel {
         values: [
           { value: '', label: 'Other', color: '#333' },
           { value: 'Mainstream Media',  color: '#3887be' },
-          { value: 'YouTube',  color: '#e55e5e' },
+          { value: 'YouTube', label:'YouTube Creator', color: '#e55e5e' },
           { value: 'Missing Link Media',  color: '#41afa5' },
         ]
       },
@@ -141,10 +141,10 @@ export class YtModel {
         name: 'manoel',
         label: 'Radicalization Pathways - Ribeiro et al.',
         values: [
-          { value: 'Alt-light', color: '#8a8acb' },
-          { value: 'IDW', color: '#50667f' },
-          { value: 'Alt-right', color: '#e55e5e' },
-          { value: 'Control', color: '#D8A47F' },
+          { value: 'Alt-light', color: '#e55e5e' },
+          { value: 'IDW', color: '#8a8acb' },
+          { value: 'Alt-right', color: '#c68143' },
+          { value: 'Control', color: '#b7b7b7' },
           { value: '', label: 'Other', color: '#333' },
         ]
       },

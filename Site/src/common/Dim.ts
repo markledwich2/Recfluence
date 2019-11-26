@@ -87,6 +87,18 @@ export class ColEx {
     const col = o as Col<T>
     return col && col.name !== undefined
   }
+
+  static labelFunc<T>(col:Col<T>) : (value:string) => string {
+    if(!col.values) return v => v;
+    const metaByVal = _.keyBy(col.values.filter(l => l.label), v => v.value)
+    return v => metaByVal[v]?.label ?? v
+  }
+
+  static colorFunc<T>(col:Col<T>) : (value:string) => string {
+    if(!col.values) return v => v;
+    const metaByVal = _.keyBy(col.values.filter(l => l.color), v => v.value)
+    return v => metaByVal[v]?.color ?? v
+  }
 }
 
 export interface ColValueMeta<T> {
@@ -151,13 +163,15 @@ export class Dim<T> {
     let colorByValue = _(colorBy?.values ?? []).keyBy(c => c.value).value()
     let getColor = (r: T) => colorBy ? colorByValue[r[colorBy.name]?.toString()]?.color ?? pallet(r[colorBy.name]?.toString()) : null
 
-    // labels can come explicitly form a columns metadata, otherwise it will come from the default columsn value lable, otherwise it is the value
+    // labels can come explicitly form a columns metadata, otherwise it will come from the default columns value label, otherwise it is the value
     let labelBy = this.col(q.label ?? this.col(defaultCol).valueLabel ?? defaultCol)
     let labelByValue = _(labelBy.values).keyBy(c => c.value).value()
     let getLabel = (r: T) => labelByValue[r[labelBy.name]?.toString()]?.label ?? r[labelBy.name]?.toString()
 
     return { q, groupCols:q.group, props:allProps, valueCol: defaultCol, getColor, getLabel }
   }
+
+
 
   private createCell(x: QueryContext<T>, g: T[]): Cell<T> {
     let keys = toDic(x.groupCols, c => c, c => g[0][c]?.toString())

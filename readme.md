@@ -1,15 +1,25 @@
-# Political YouTube
-
-A [visualization](https://pyt.azureedge.net) showing the relations and recommendation flows between political & cultural commentary on YouTube
-
+# Recfluence
 [![Build Status](https://dev.azure.com/mledwich/ytnetworks/_apis/build/status/markledwich2.YouTubeNetworks?branchName=master)](https://dev.azure.com/mledwich/ytnetworks/_build/latest?definitionId=1&branchName=master)
 
-## Updates
-**14 Jan 2019**: New channels and some updates. The network diagram looks quite different at first, but that's mostly cosmetic. The rotation and location of them are somewhat different but it clusters similarly. To see the older version matching the published article use [this link](https://pyt.azureedge.net?v=2018-12-28)
+[Recfluence](https://www.recfluence.net) is an analysis of YouTube's political influence through recommendations. This is important, because the algorithm that determines suggested videos has become an influential but underappreciated part of politics. A [Pew survey](https://www.journalism.org/2017/09/07/news-use-across-social-media-platforms-2017/) found that 18% of US adults consume news through YouTube, and — according to YouTube Chief Product Officer [Neal Mohan](https://www.cnet.com/news/youtube-ces-2018-neal-mohan/) — 70% of the watch time is from YouTube’s suggested videos.
+
 
 ## Data Collection Process 
+A list of political channels is manually created, categorized and improved over time. An automated process run daily. It collects:
+- **Channels** information & stats (e.g. subscribers, country) 
+  - from the YouTube API.
+- **Videos** information & stats (e.g. views, likes, title), captions
+  - by scraping the website from a US IP address.
+  - since 1st Jan 2018
+  - updated daily stats for video's younger than 120 days
+- **Recommendations** (i.e. from video A to video B)
+  -  by scraping the website from a US IP address
+  -  for video's younger than 120 days old (max 10)
+  -  if no young video's, take the latest video's recommendations.
 
-### How channels are selected
+This is then analysed to provide statistics and data which is freely available for researches and media. 
+
+### Channel Selection
 Channels were included if the met the following criteria
 - 10k+ subscribers. If subscriber data is missing/lower, still include if video's average above 10k views
 - Significant focus (more than 30% of content) on US political or cultural news/commentary. I considered cultural commentary was anything from the [ISideWith social issues list](https://www.isidewith.com/en-us/polls)
@@ -22,13 +32,20 @@ There is no definitive list of YouTube channels, so a variety of techniques were
     - https://channelcrawler.com/
     - custom algorithm prioritizing most recommended channels from existing seed channels. [ChannelExclude.csv](Data/ChannelExclude.csv) is was used to remove recommendations once reviewed.
     - Data & Society [Alternative Influence Report](https://datasociety.net/output/alternative-influence/)
+    - Ribeiro et al. [Auditing Radicalization Pathways on YouTube](https://arxiv.org/pdf/1908.08313.pdf)
 - Related videos/channels from existing channels
 - Searches for keywords from [ISideWith social issues list](https://www.isidewith.com/en-us/polls)
-- Suggestions from reviewers and my own knowledge
+- Suggestions from reviewers
 
-Over time, the ease of finding channels has diminished. I estimate the list as of 2018-12-13 is at least 2/3 of all channels that meet this criteria (in terms of views). Please [email me](mailto:mark@ledwich.com.au) if you have additional channel suggestions.
+This is not a repeatable process, but by using a variety of methods we are able to collect a much more comprehensive collection of relevant political channels than we could otherwise. By having the most complete list of channels possible, we are able to get a more accurate understanding of YouTube recommendation and we value this more than repeatability.
 
-### How channels political category was determined
+### Channel Classification
+To understand the influence of recommendations we need to classify channels using fairly soft criteria to be relevant to way people discuss politics. To limit the subjectivity in this, a well defined process was followed to 'tag' channels appropriately based on the content of the videos. 3 or more reviewers have independently classified > 90% of the channels and the majority opinion used. The full [list of channels and each reviewers notes and classifications](https://docs.google.com/spreadsheets/d/17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs/edit?usp=sharing) are available to review and use as you wish.
+
+The following describes the process the revilers used to classify each channel:
+
+### Left/Center/Right
+
 For news:
 - Compare https://www.adfontesmedia.com and https://mediabiasfactcheck.com/. If they exist in those lists and were in agreement then I accepted that category. Otherwise I used the same process as with the commentary channels.
 
@@ -40,7 +57,98 @@ For political/cultural commentary I considered all of the following:
 
  If these considerations align in the same direction then the channel is left or right. If there was a mix then they are assigned the center/heterodox category.
 
-**Political Category FAQ**
+
+To calculated the *majority view*, Left/Center/Right are coded as -1, 0, and 1 respectively. The average is taken then rounded back to the nearest Left/Center/Right value.
+
+### Hard Tags
+Any combination of the following tags can be applied to a channel. Hard tags did not require any judgement and were classified by Mark. Soft tags were reviewed by each reviewer.
+
+|Hard Tag|Examples|
+|-|-|
+|**Mainstream News**: Reporting on newly received or noteworthy information. Widely accepted and self-identified as news (even if mostly opinion). Appears in either https://www.adfontesmedia.com  or https://mediabiasfactcheck.com.|[Fox News](https://www.youtube.com/user/FoxNewsChannel), [Buzzfeed News](https://www.youtube.com/user/BuzzFeed)|
+|**TV**: Content originally created for broadcast TV or cable|[CNN](https://www.youtube.com/results?search_query=CNN), [Vice](https://www.youtube.com/user/vice) |
+|**AIN**: Listed in the [Alternative Influence Network](https://datasociety.net/output/alternative-influence/) report|[Sam Harris](https://www.youtube.com/user/samharrisorg), [Rubin Report](https://www.youtube.com/user/RubinReport)|
+|Ribeiro's **AltLite,AltRight,IDW**: As listed in[ Auditing Radicalization Pathways on YouTube](https://arxiv.org/pdf/1908.08313.pdf)|
+
+### Soft Tags
+I used these heuristics to decide on the right soft tags to use
+- **A natural Category for US YouTube content**. Many traditional ways of dividing politics are not a natural category for YouTube channels. In general, YouTubers are providing reaction and sense making to other channels or current events in the United States. In this way categories in align with their stand against positions are more natural.
+- **Topical/Interesting**. The tag needs to be interesting in some way to the current meta-discussion about YouTube’s influence on politics. Intention with this is that topical cultural labels are hard to define. In this case I tried to find specific positions that could be mixed together to re-create these softer cultural categories.
+- **Able to judged by the content itself**. It is important not to rely on outside judgements about the channels content. It's important to interpret the content with full context, but there should be no mind reading, or relying on judgement from other sources.
+Enough Channels. It shouldn't be a minor niche, unless it is important for the radicalization pathway theory.
+
+
+|Soft Tag|Examples|
+|-|-|
+|**Conspiracy**: Regularly promotes a variety of conspiracy theories. A conspiracy theory explains an evert/circumstance as the result of a secret plot that is not widely accepted to be true (even though sometimes it is). Example conspiracy theories: [Moon landings were faked](https://en.wikipedia.org/wiki/Moon_landing_conspiracy_theories), [QAnon](https://en.wikipedia.org/wiki/QAnon) & [Pizzagate](https://en.wikipedia.org/wiki/Pizzagate_conspiracy_theory), [Epstein was murdered](https://en.wikipedia.org/wiki/Death_of_Jeffrey_Epstein), [Trump-russia collusion](https://rationalwiki.org/wiki/Trump-Russia_connection).|[X22Report](https://www.youtube.com/user/X22Report), [The Next News Network](https://www.youtube.com/user/NextNewsNetwork)|
+|**Libertarian**: A [political philosophy](https://en.wikipedia.org/wiki/Libertarianism) wth individual liberty as its main principal. Generally skeptical of authority and state power (e.g. regulation, taxes, government programs). Favor free markets and private ownership. To tag, this should be the main driver of their politics. Does not include libertarian socialists who also are anti-state but are anti-capitalist and promote communal living.|[Reason](https://www.youtube.com/user/ReasonTV), [John Stossel](https://www.youtube.com/user/ReasonTV), [The Cato Institute](https://www.youtube.com/user/catoinstitutevideo)|
+|**Anti-SJW**: Significant focus on criticizing *Social Justice* (see below) with a positive view of the marketplace of ideas and discussing controversial topics. To tag, this should be a common focus in their content.|[MILO](https://www.youtube.com/user/yiannopoulosm), [Tim Pool](https://www.youtube.com/user/Timcasts)|
+|**Social Justice**: <br> Beleive or promote: Identity Politics & Intersectionality (narratives of oppression though the combination of historically oppressed identities), *Political Correctness* (the restriction of ideas and words you can say in polite society), *Social Constructionism* (the idea that the differences between individuals and groups are explained entirely by environment. For example sex differences are caused by culture not by biological sex).<br><br>Content in reaction to Anti-SJW or conservative content.<br><br>Their supporters are active on [r/Breadtube](https://www.reddit.com/r/BreadTube/) and the creators often identify with this label. This tag only includes breadtuber’s if their content is criticizing ant-SJW’s (promoting socialism is its own, separate tag).| [Peter Coffin](https://www.youtube.com/user/petercoffin), [hbomberguy](https://www.youtube.com/user/hbomberguy)|
+|**White Identitarian** Identifies-with/is-proud-of the superiority of “whites” and western Civilization.<br><br>An example of identifying with “western heritage”  would be to refer to the sistine chapel, or bach as “our culture”.<br><br>Promotes or defends: An ethno-state where residence or citizenship would be limited to “whites” OR a type of nationalist that seek to maintain a white national identity (white nationalism), historical narratives focused on the “white” lineage and its superiority, Essentialist concepts of racial differences<br><br>Are concerned about whites becoming a minority population in the US.|[NPI / RADIX](https://www.youtube.com/user/NPIAmerica), [Stefan Molyneux](https://www.youtube.com/user/stefbot)|
+|**Educational**: Channel that has significant focuses on education material rleated to politics/culture.|[TED](https://www.youtube.com/user/TEDtalksDirector/videos), [SoulPancake](https://www.youtube.com/user/soulpancake)|
+|**Late Night Talk show**: Channel with content presented humorous monologues about the day's news, guest interviews and comedy sketches.|[Last Week Tonight](https://www.youtube.com/user/LastWeekTonight), [Trevor Noah](https://www.youtube.com/channel/UCwWhs_6x42TyRM4Wstoq8HA)|
+|**Partisan Left**: Mainly focused on politics and exclusively critical of Republicans. Would agree with this statement: “GOP policies are a threat to the well-being of the country“| [The Young Turks](https://www.youtube.com/user/TheYoungTurks), [CNN](https://www.youtube.com/user/CNN)|
+|**Partisan Right**: Mainly focused on politics and exclusively critical of Democrats. Would agree with this statement: “Democratic policies threaten the nation”|[Fox News](https://www.youtube.com/user/FoxNewsChannel),[Candace Owens](https://www.youtube.com/channel/UCL0u5uz7KZ9q-pe-VC8TY-w)|
+|**Anti-theist**: Self-identified atheist who are also actively critical of religion. Also called New Atheists or Street Epistemologists. Usually combined with an interest in philosophy.|[Sam Harris](https://www.youtube.com/user/samharrisorg), [CosmicSkeptic](https://www.youtube.com/user/alexjoconnor), [Matt Dillahunty](https://www.youtube.com/user/SansDeity)
+|**Religious Conservative**: A channel with a focus on promoting Christianity or Judaism in the context of politics and culture.|[Ben Shapiro](https://www.youtube.com/channel/UCnQC_G5Xsjhp9fEJKuIcrSw), [PragerU](https://www.youtube.com/user/PragerUniversity)|
+|**Socialist** Focus on the problems of capitalism. Endorse the view that capitalism is the source of most problems in society. Critiques of aspects of capitalism that are more specific (i.e. promotion of fee healthcare or a large welfare system or public housing) don’t qualify for this tag. Promotes alternatives to capitalism. Usually some form of either  Social Anarchist  (stateless egalitarian communities) or Marxist (nationalized production and a way of viewing society though class relations and social conflict).|[BadMouseProductions](https://www.youtube.com/user/xaxie1), [NonCompete](https://www.youtube.com/channel/UCkZFKKK-0YB0FvwoS8P7nHg/videos)|
+|**Revolutionary**: Endorses the overthrow of the current political system. For example many Marxist and Ethno-nationalists are revolutionaries because they want to overthrow the current system and accept the consequences.|[Libertarian Socialist Rants](https://www.youtube.com/user/ElectricUnicycleCrew), [Jason Unruhe](https://www.youtube.com/user/MaoistRebelNews2)|
+|**Provocateur**: Enjoys offending and receiving any kind of attention (positive or negative). Takes extreme positions, or frequently breaks cultural taboos. Often it is unclear if they are joking or serious.|[StevenCrowder](https://www.youtube.com/user/StevenCrowder), [MILO](https://www.youtube.com/user/yiannopoulosm)
+|**MRA** (Men’s Rights Activist): Focus on advocating for rights for men. See men as the oppressed sex and will focus on examples where men are currently|[Karen Straughan](https://www.youtube.com/user/girlwriteswhat)|
+|**Missing Link Media**: Channels funded by companies or venture capital, but not large enough to be considered “mainstream”. They are generally accepted as more credible than independent YouTube content.|[Vox](https://www.youtube.com/user/voxdotcom) [NowThis News](https://www.youtube.com/user/nowthismedia)|
+|**State Funded**: Channels funded by a government.|[PBS NewsHour](https://www.youtube.com/user/PBSNewsHour), [Al Jazeera](https://www.youtube.com/user/AlJazeeraEnglish), [RT](https://www.youtube.com/user/RussiaToday)|
+|**Anti-Whiteness**: A subset of Social Justice that in addition to intersectional beliefs about race, have a significant portion of content that essentialises race and disparages "whites" as a group. Negative generalizations about "whites" (e.g. "White folks are unemotional, they hardly even cry at funerals"). Use of the word "whiteness" as a slur, or an evil force (e.g. "I try to be less white"). Simplistic narratives about American history where the most important story is of slavery and racism. Dilute terms like racism, or white supremacy so that they include most Americans while keeping the stigma and power of the word. Content exclusively framing current events into racial oppression. Usually in the form of police violence against blacks, x-while-black (e.g. swimming while black).|[African Diaspora News Channel](https://www.youtube.com/channel/UCKZGcrxRAhdUi58Mdr565mw)|
+
+
+To calculate the *majority view*, each soft tag is assessed independently. For each tag, the number of reviewer with that rag must tally to more than half.
+
+### Relevance
+One limitation of the original analysis was that some late night shows -- with huge viewership -- weren't as political as most channels yet overwhelm the analysis. To fix this problem, each reviewer gave a relevance score representing the portion of content relevant to US politics & cultural commentary. In the analysis,  relevant views/recommendations are adjusted according to the average reviewer relevance score.
+
+
+## Analysis
+
+
+|Calculations|Description|
+|-|-|
+|**impressions**|An estimate for the number of times a viewer was presented with recommendations. Only YouTube knows true impressions, so we use the following process crete an estimate:<br>Consider each combination of videos (e.g. *Video A* to *Video B*)<br><br>`(A to B impressions) = (recommendations from A to B) / (total recommendations from Video A) x (*A's views) x (recommendations per video=10)`<br><br>This can be aggregated to give impressions between channels, categories etc...|
+|**relevant impressions**|`(A channel's relevance %) x impressions`|
+|**channel views**|The total number of video views since *2018 Jan 1*|
+|**daily channel views**|`(channel views) * (days in the period videos have been recorded for the channel)`|
+|**relevant channel views**|`(daily channel views) * (channel relevance %)`|
+
+[Download](https://pyt-data.azureedge.net/data/results/latest/recfluence_shared_data.zip) the latest data used for the diagrams. The full raw video and recommendations data can be provided on request - either as files or shared snowflake database.
+
+
+
+### Recfluence Visualization
+
+**Channel Landscape**
+
+This gives an overview of the "landscape" of channels, clustering like channels together using a [force directed graph](https://en.wikipedia.org/wiki/Force-directed_graph_drawing). 
+Channels that have mutual recommendations are attracted un-connected channels repel. The orientation and placement on x/y don't have no specific meaning and will change each tim it is updated. 
+
+![channel relations legend](Site/static/channel_legend.svg)
+
+
+**Understanding Impression Flow**
+
+This shows the "flow" of impressions as a [sankey diagram](https://en.wikipedia.org/wiki/Sankey_diagram). When no selection have been made, it shows the impression flow between categories
+![categories flow help](Site/static/categories_flow_help.png)
+
+When a channel/category is selected/highlighted it shows the flows through it
+![selection flow help](Site/static/selection_flow_help.png)
+
+**Novel Interactivity**
+- search for channel (top right)
+- zoom and drag on the Channel Landscape 
+- hover over a channel to see its details (details at top, impression flow below/right)
+- choose different categories to color by
+- highlight or select legend items
+
+![category selection and legend highlight](Site/static/ideology_selection.png)
+
+## FAQ
 - The classification of political category is just one persons subjective opinion, how can you trust the results when it is so subjective?  There is some merit to this, you can't trust it as much as if I had manage to get all YouTubers to take a survey about their attitudes/content for example. It doesn't need to be a reason to dismiss my analysis for the following reasons:
     - I used respected sources of classification where possible (i.e. adfontesmedia.com and mediabiasfactcheck.com) which covered a large portion of the large mainstream channels.
     - The top 50 channels by video views make up 78% of all views. Download the channel data, then Go though the top 50 channels and check if you agree with the classification. If you generally accept the classifications then you can generally accept the results.
@@ -49,51 +157,9 @@ For political/cultural commentary I considered all of the following:
 - Why is the apposition to Identity Politics/Social Justice considered "right" when it is not normally considered an important part of the standard political definition for left/right?  I understand this, but I am confident this has changed. It is clear when evaluating YouTube content that this is a new and important divide. 
 - The left/right dichotomy is not a good way to classify tribal politics, why do it that way?. I agree, and forcing it into this model creates many needless problems because it is not a natural category for this data. I was forced to use left/right because I wanted to use this data to evaluate the common narratives about YouTube radicalization which was already framed with this dichotomy.
 
-### How recommended video's are retrieved
-The YouTube API is used to get all channel, video, recommendation data.
-For all seed channels, get a list of videos within the configured time range (Jan 1 2018 or later)
-For all videos, retrieve the top 10 recommended videos
+## Updates
+**25 Nov 2019**: Now hosted at [recfluence.net](https://www.recfluence.net). Large new analysis and classification of channels.
 
-
-### Download Data
-
-**CSV**
-
-Updated 20th July 2019
-
-[Channels](https://ytnetworks.blob.core.windows.net/data/results/2019-07-19/VisChannels.csv.gz)
-
-[Channel Relations](https://ytnetworks.blob.core.windows.net/data/results/2019-07-19/VisRelations.csv.gz)
-
-[Daily Video Recommendations](https://pyt.blob.core.windows.net/data/results/2019-08-04/DailyVideoRecommends.csv.gz)
-
-[Videos](https://ytnetworks.blob.core.windows.net/data/results/2019-07-19/Videos.csv.gz)
-
-**Connect Directly to Azure Storage**
-
-Example [Databricks notebook](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/5467014801025226/3416558578232351/7194280856364978/latest.html)
-connecting to azure storage (public read access)
-
-## Visualization Information
-
-**Channel Relation Graph**
-The "bubble" chart is a [force directed graph](https://en.wikipedia.org/wiki/Force-directed_graph_drawing). The area (not the radius) of each bubble corresponds to the number of views of a channels video's. The force/size of link line corresponds to the portion of recommendations between those channels.
-
-NOTE:
-- When new data is added, the orientation and the final clustering of channels changes significantly. Unlike a principal component analysis (or similar) it does not display a quantifiable statistic by the location. The chart animates the simulated forces when opening to show this process.
-
-
-**Recommendation Flow Diagram**
-The left boxes in the flow diagram show the number of views. it is broken down by split by channel (when one is selected) or political category otherwise. The right side shows the portion of those views (according to the number of times the other channels video's were in the recommended list) given to the category/channel. 
-
-
-## Implementation
-### Data Analysis
-
-[A function](App/YtFunctions/YtFunctions.cs) runs each day and updates data from the YouTube API about the seed channels, their videos and recommendations.
-- Cached in cloud storage with history
-- Collected into a snapshot data as of each day into .parquet files in azure storage
-- Analysed using a databricks notebook into csv files (as listed in download data)
-
+**14 Jan 2019**: New channels and some updates. The network diagram looks quite different at first, but that's mostly cosmetic. The rotation and location of them are somewhat different but it clusters similarly. To see the older version matching the published article use [this link](https://pyt.azureedge.net?v=2018-12-28)
 
  

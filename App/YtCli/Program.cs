@@ -6,7 +6,6 @@ using Mutuo.Etl;
 using Serilog;
 using SysExtensions.Text;
 using YtReader;
-using YtReader.Results;
 
 namespace YouTubeCli {
 

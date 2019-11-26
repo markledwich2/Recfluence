@@ -80,7 +80,7 @@ namespace SysExtensions {
 
     public static IEnumerable<T> Values<T>() where T : IConvertible => Enum.GetValues(typeof(T)).Cast<T>();
 
-    public static bool In<T>(this T value, params T[] values) where T : IConvertible => values.Contains(value);
-    public static bool NotIn<T>(this T value, params T[] values) where T : IConvertible => !value.In(values);
+    public static bool In<T>(this T value, params T[] values) where T : IComparable => values.Contains(value);
+    public static bool NotIn<T>(this T value, params T[] values) where T : IComparable => !value.In(values);
   }
 }
