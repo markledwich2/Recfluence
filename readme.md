@@ -19,7 +19,7 @@ A list of political channels is manually created, categorized and improved over 
 
 This is then analysed to provide statistics and data which is freely available for researches and media. 
 
-### Channel Selection
+### Channels Included
 Channels were included if the met the following criteria
 - 10k+ subscribers. If subscriber data is missing/lower, still include if video's average above 10k views
 - Significant focus (more than 30% of content) on US political or cultural news/commentary. I considered cultural commentary was anything from the [ISideWith social issues list](https://www.isidewith.com/en-us/polls)
@@ -106,18 +106,21 @@ To calculate the *majority view*, each soft tag is assessed independently. For e
 One limitation of the original analysis was that some late night shows -- with huge viewership -- weren't as political as most channels yet overwhelm the analysis. To fix this problem, each reviewer gave a relevance score representing the portion of content relevant to US politics & cultural commentary. In the analysis,  relevant views/recommendations are adjusted according to the average reviewer relevance score.
 
 
-## Analysis
+## Data
+### Download 
 
+[Download](https://pyt-data.azureedge.net/data/results/latest/recfluence_shared_data.zip) the latest data used for the diagrams. The full raw video and recommendations data can be provided on request - either as files or database access (at cost).
 
-|Calculations|Description|
+### Calculations and considerations
+
+|Calculation|Description|
 |-|-|
 |**impressions**|An estimate for the number of times a viewer was presented with recommendations. Only YouTube knows true impressions, so we use the following process crete an estimate:<br>Consider each combination of videos (e.g. *Video A* to *Video B*)<br><br>`(A to B impressions) = (recommendations from A to B) / (total recommendations from Video A) x (*A's views) x (recommendations per video=10)`<br><br>This can be aggregated to give impressions between channels, categories etc...|
 |**relevant impressions**|`(A channel's relevance %) x impressions`|
 |**channel views**|The total number of video views since *2018 Jan 1*|
 |**daily channel views**|`(channel views) * (days in the period videos have been recorded for the channel)`|
 |**relevant channel views**|`(daily channel views) * (channel relevance %)`|
-
-[Download](https://pyt-data.azureedge.net/data/results/latest/recfluence_shared_data.zip) the latest data used for the diagrams. The full raw video and recommendations data can be provided on request - either as files or shared snowflake database.
+|**ideology**|This is derived from the list of channel tags. We do this to create a simple category for aggregation & visualization. Each of the following `tags condition => idology` are evaluated from top to bottom<br>`WhiteIdentitarian => White Identitarian`<br>`MRA => MRA`<br>`Conspiracy => Conspiracy`<br>`Libertarian => Libertarian`<br>`AntiSJW and either Provocateur or PartisanRight => Alt-light`<br>`AntiSJW => Anti-SJW`<br>`Socialist => Socialist`<br>`ReligiousConservative => ReligiousConservative`<br>`PartisanLeft => Partisan Left`<br>`PartisanRight => PartisanRight`<br>`AntiTheist => Anti-Theist`
 
 
 
@@ -148,14 +151,25 @@ When a channel/category is selected/highlighted it shows the flows through it
 
 ![category selection and legend highlight](Site/static/ideology_selection.png)
 
-## FAQ
-- The classification of political category is just one persons subjective opinion, how can you trust the results when it is so subjective?  There is some merit to this, you can't trust it as much as if I had manage to get all YouTubers to take a survey about their attitudes/content for example. It doesn't need to be a reason to dismiss my analysis for the following reasons:
-    - I used respected sources of classification where possible (i.e. adfontesmedia.com and mediabiasfactcheck.com) which covered a large portion of the large mainstream channels.
+## Limitations
+
+**Process & Classification Q & A**
+- The classification of political category is prone to bias subjectivity, how can you trust the results?  This is indeed a limitation, but one we ahve tried to address
+    - Clear guidelines were given to 3+ reviewers who independly classified each channel 
+    - Respected sources of classification for left/right were used when possible (i.e. adfontesmedia.com and mediabiasfactcheck.com) which covered a large portion of the large mainstream channels.
     - The top 50 channels by video views make up 78% of all views. Download the channel data, then Go though the top 50 channels and check if you agree with the classification. If you generally accept the classifications then you can generally accept the results.
 
 - Why not perform a more procedural/quantifiable method for determining political category (e.g. like the process used for https://www.adfontesmedia.com)? I don't believe making this process more detailed and quantitative would give you a significantly more accurate/objective answer. .
 - Why is the apposition to Identity Politics/Social Justice considered "right" when it is not normally considered an important part of the standard political definition for left/right?  I understand this, but I am confident this has changed. It is clear when evaluating YouTube content that this is a new and important divide. 
-- The left/right dichotomy is not a good way to classify tribal politics, why do it that way?. I agree, and forcing it into this model creates many needless problems because it is not a natural category for this data. I was forced to use left/right because I wanted to use this data to evaluate the common narratives about YouTube radicalization which was already framed with this dichotomy.
+- The left/right dichotomy is not a good way to classify tribal politics, why do it that way?  I agree, and forcing it into this model creates many needless problems because it is not a natural category for this data. We have now provided a way to view channels by ideology.
+
+
+**Analysis Q & A / Notes**
+- Only recommendation's since 1st Nov 2019 is currently included in the analysis. We may provide an option to compare these historically in the future but the most relevant recommendation information is recent.
+- By only looking at political recommendation, channels who are recommended outside politics might seem like they are being disadvantaged? This indeed a limitation, you should consider the analysis of YouTube political influence only for those watching political/cultural channels and might not be representative of all types of videos.
+- Recommendations are not the only way viewers can be radicalized or influenced. Why are you so focused just on recommendations which might only have a small impact compared to the content itself and things happening outside YouTube?
+
+
 
 ## Updates
 **25 Nov 2019**: Now hosted at [recfluence.net](https://www.recfluence.net). Large new analysis and classification of channels.
