@@ -49,7 +49,7 @@ namespace YtFunctions {
 
 
       try {
-        var g = await YtContainerRunner.StartFleet(s.Log, s.Cfg);
+        var g = await YtContainerRunner.StartFleet(s.Log, s.Cfg, UpdateType.All);
         return $"Started containers: {g.Join(", ", c => c.Name)}";
       }
       catch (Exception ex) {

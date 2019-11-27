@@ -35,6 +35,8 @@ namespace SysExtensions.Collections {
       var rnd = new Random();
       return source.OrderBy(item => rnd.Next());
     }
+
+    public static bool None<T>(this IEnumerable<T> items) => !items.Any();
     
     public static IEnumerable<T> SelectMany<T>(this IEnumerable<IEnumerable<T>> items) => items.SelectMany(i => i);
     

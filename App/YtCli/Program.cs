@@ -52,8 +52,9 @@ namespace YouTubeCli {
   }
 
   [Verb("fleet")]
-  public class UpdateFleetOption : CommonOption {
+  public class UpdateFleetOption : UpdateOption {
     
+
   }
 
   [Verb("results")]
@@ -109,7 +110,7 @@ namespace YouTubeCli {
         ctx.Cfg.App.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
       
       var ytStore = ctx.Cfg.YtStore(ctx.Log);
-      var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, ctx.Option.UpdateType, ctx.Log);
+      var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, ctx.Option.UpdateType, async () => await ctx.Cfg.App.Snowflake.OpenConnection(), ctx.Log);
       await ytUpdater.UpdateData();
       return ExitCode.Success;
     }
@@ -132,7 +133,7 @@ namespace YouTubeCli {
     }
     
     static async Task<ExitCode> Fleet(TaskCtx<UpdateFleetOption> ctx) {
-      await YtContainerRunner.StartFleet(ctx.Log, ctx.Cfg);
+      await YtContainerRunner.StartFleet(ctx.Log, ctx.Cfg, ctx.Option.UpdateType);
       return ExitCode.Success;
     }
     

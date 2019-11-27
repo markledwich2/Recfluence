@@ -87,7 +87,6 @@ namespace YtReader {
     public string   FromVideoTitle { get; set; }
     public string   FromChannelId  { get; set; }
     public DateTime Updated        { get; set; }
-    public int      Rank           { get; set; }
 
     public override string ToString() => $"{FromVideoTitle} -> {ToVideoTitle}";
   }

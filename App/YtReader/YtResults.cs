@@ -29,19 +29,12 @@ namespace YtReader {
     }
 
     public async Task SaveResults() {
-      using var db = await OpenConnection();
+      using var db = await Cfg.OpenConnection();
 
       var queries = new[] {
-        ("channel_stats", @"select channel_id,
-      channel_title, channel_views, country,
-      relevance,  subs,  daily_views, relevant_daily_views, views,
-      from_date,  to_date,
-      lr, tags, ideology, media,  manoel, ain,
-      logo_url from channel_stats"),
-
-        ("channel_recs", @"
-    select from_channel_id, to_channel_id, relevant_impressions,  rec_view_channel_percent
-  from channel_recs where rec_view_channel_percent > 0.01"),
+        ("channel_stats", @"select * from vis_channel_stats"),
+        
+        ("channel_recs", @"select * from vis_channel_recs"),
 
         ("channel_classification", null),
         
@@ -114,16 +107,10 @@ channel_classification.csv: each reviewers classifications and the calculated ma
       return tempFile;
     }
 
-    async Task<SnowflakeDbConnection> OpenConnection() {
-      var conn = new SnowflakeDbConnection {ConnectionString = Cfg.ConnectionStirng(), Password = Cfg.Creds.SecureString()};
-      await conn.OpenAsync();
-      return conn;
-    }
+
   }
 
   public static class SnowflakeResultHelper {
-    public static string ConnectionStirng(this SnowflakeCfg cfg) =>
-      $"account={cfg.Account};user={cfg.Creds.Name};db={cfg.Db};schema={cfg.Schema};warehouse={cfg.Warehouse}";
 
     public static async Task WriteCsvGz(this IDataReader reader, Stream stream, string desc, ILogger log) {
       await using var zipWriter = new GZipStream(stream, CompressionLevel.Optimal);

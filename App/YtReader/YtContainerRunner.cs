@@ -16,7 +16,7 @@ using SysExtensions.Threading;
 
 namespace YtReader {
   public static class YtContainerRunner {
-    public static async Task<IReadOnlyCollection<IContainerGroup>> StartFleet(ILogger log, Cfg cfg) {
+    public static async Task<IReadOnlyCollection<IContainerGroup>> StartFleet(ILogger log, Cfg cfg, UpdateType optionUpdateType) {
       var sheets = (await ChannelSheets.MainChannels(cfg.App.Sheets, log)).ToList();
       var evenBatchSize = (int)Math.Ceiling(sheets.Count / Math.Ceiling( sheets.Count / (double)cfg.App.ChannelsPerContainer));
       
@@ -29,8 +29,10 @@ namespace YtReader {
 
       var fleet = await batches.BlockTransform(async b => {
         var (batch, fleetName) = b;
-        var args = new[] {"update", "-c", batch.Join("|", c => c.Id)};
-        var group = await ContainerGroup(cfg, azure, fleetName, args);
+        var args = new[] {"update", 
+          "-t", optionUpdateType.ToString(), 
+          "-c", batch.Join("|", c => c.Id)};
+        var group = await ContainerGroup(cfg, azure, fleetName, args.ToArray());
         return await group.CreateAsync();
       }, cfg.App.DefaultParallel);
       
@@ -87,5 +89,6 @@ namespace YtReader {
         await azure.ContainerGroups.DeleteByIdAsync(@group.Id);
       }
     }
+    
   }
 }

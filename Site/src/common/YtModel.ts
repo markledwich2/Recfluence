@@ -115,7 +115,7 @@ export class YtModel {
           { value: 'Anti-SJW', color: '#8a8acb' },
           { value: 'Partisan Right', color: '#e0393e' },
           { value: 'Alt-light', color: '#e55e5e' },
-          { value: 'Alt-right', label:'White Identitarian', color: '#c68143' },
+          { value: 'White Identitarian', color: '#c68143' },
           { value: 'MRA', color: '#ed6498' },
           { value: 'Social Justice', color: '#56b881' },
           { value: 'Socialist', color: '#6ec9e0' },

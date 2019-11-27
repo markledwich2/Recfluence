@@ -16,11 +16,9 @@ using SysExtensions.Net;
 
 namespace YtReader.Yt {
   public class YtClient {
-    public YtClient(AppCfg cfg, ILogger log) {
-      Cfg = cfg;
+    public YtClient(IEnumerable<string> keys, ILogger log) {
       Log = log;
       YtService = new YouTubeService();
-      var keys = cfg.YTApiKeys ?? throw new InvalidOperationException("configuration requires YTApiKeys");
       AvailableKeys = new ConcurrentDictionary<string, string>(keys.Select(k => new KeyValuePair<string, string>(k, null)));
       Start = DateTime.UtcNow;
     }
@@ -29,7 +27,6 @@ namespace YtReader.Yt {
 
     public DateTime Start { get; }
 
-    public AppCfg Cfg { get; }
     ILogger Log { get; }
     YouTubeService YtService { get; }
 
@@ -112,7 +109,7 @@ namespace YtReader.Yt {
       var s = YtService.Search.List("snippet");
       s.RelatedToVideoId = id;
       s.Type = "video";
-      s.MaxResults = 10;
+      s.MaxResults = 20;
 
       SearchListResponse response;
       try {

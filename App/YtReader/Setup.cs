@@ -69,7 +69,7 @@ namespace YtReader {
     public static ISimpleFileStore DataStore(this Cfg cfg, StringPath path = null) =>
       new AzureBlobFileStore(cfg.App.Storage.DataStorageCs, path ?? cfg.App.Storage.DbPath);
 
-    public static YtClient YtClient(this Cfg cfg, ILogger log) => new YtClient(cfg.App, log);
+    public static YtClient YtClient(this Cfg cfg, ILogger log) => new YtClient(cfg.App.YTApiKeys, log);
 
     public static YtStore YtStore(this Cfg cfg, ILogger log) {
       var ytStore = new YtStore(cfg.DataStore(cfg.App.Storage.DbPath), log);
@@ -114,13 +114,7 @@ namespace YtReader {
     public SnowflakeCfg Snowflake { get; set; } = new SnowflakeCfg();
   }
 
-  public class SnowflakeCfg {
-    public NameSecret Creds     { get; set; } = new NameSecret();
-    public string     Account   { get; set; } = "MUTUO";
-    public string     Warehouse { get; set; } = "YT";
-    public string     Db        { get; set; } = "YT";
-    public string     Schema    { get; set; } = "PUBLIC";
-  }
+
  
   public class ScraperCfg {
     public string     Url            { get; set; }
@@ -144,18 +138,19 @@ namespace YtReader {
     ///   This is cheap, due to video stats being returned in a video's playlist
     /// </summary>
     public TimeSpan RefreshVideosWithin { get; set; } = 120.Days();
+    
+    /// <summary>
+    ///   How old a video before we stop collecting recs
+    ///   this is fairly expensive so we keep it within
+    /// </summary>
+    public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
 
     /// <summary>
     ///   We want to keep monitoring YouTube influence even if no new videos have been created (min).
     ///   Get at least this number of recs per channel
     /// </summary>
-    public int RefreshRecsMin { get; set; } = 1;
-
-    /// <summary>
-    ///   The number of videos within RefreshRecsWithin to refresh recommendations for per channel
-    /// </summary>
-    public int RefreshRecsMax { get; set; } = 10;
-
+    public int RefreshRecsMin { get; set; } = 2;
+    
     /// <summary>
     ///   How frequently to refresh channel & video stats
     /// </summary>
