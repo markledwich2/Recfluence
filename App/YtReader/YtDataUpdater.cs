@@ -62,6 +62,7 @@ namespace YtReader {
         Log.Information("Update complete");
       }
       else {
+        using var conn = await GetConnection();
         var channelResults = await channels.Result
           .Where(c => c.Status == ChannelStatus.Alive)
           .Select((c, i) => (c, i)).BlockTransform(async item => {
@@ -70,7 +71,7 @@ namespace YtReader {
               .ForContext("ChannelId", c.ChannelId)
               .ForContext("Channel", c.ChannelTitle);
             try {
-              await UpdateAllInChannel(c, log);
+              await UpdateAllInChannel(c, conn, log);
               log.Information("{Channel} - Completed {Count}/{Total} update of videos/recs/captions in {Duration}",
                 c.ChannelTitle, i, channels.Result.Count, sw.Elapsed);
               return (c, Success: true);
@@ -136,7 +137,7 @@ namespace YtReader {
       return channels;
     }
 
-    async Task UpdateAllInChannel(ChannelStored2 c, ILogger log) {
+    async Task UpdateAllInChannel(ChannelStored2 c, DbConnection conn, ILogger log) {
       if (c.StatusMessage.HasValue()) {
         log.Information("{Channel} - Not updating videos/recs/captions because it has a status msg: {StatusMessage} ",
           c.ChannelTitle, c.StatusMessage);
@@ -165,7 +166,7 @@ namespace YtReader {
         await SaveNewCaptions(c, vids, log);
       }
       if (vids != null || UpdateType == UpdateType.AllWithMissingRecs)
-        await SaveRecs(c, vids, log);
+        await SaveRecs(c, vids, conn, log);
     }
 
     static async Task SaveVids(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AppendCollectionStore<VideoStored2> vidStore, DateTime? uploadedFrom,
@@ -245,11 +246,11 @@ namespace YtReader {
     /// <summary>
     ///   Saves recs for all of the given vids
     /// </summary>
-    async Task SaveRecs(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, ILogger log) {
+    async Task SaveRecs(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, DbConnection conn, ILogger log) {
       var recStore = Store.RecStore(c.ChannelId);
 
       var toUpdate = UpdateType == UpdateType.AllWithMissingRecs
-        ? await VideosWithNoRecs(c.ChannelId)
+        ? await VideosWithNoRecs(c, conn)
         : await VideoToUpdateRecs(vids, recStore);
 
       var recs = await toUpdate.BlockTransform(
@@ -299,20 +300,19 @@ namespace YtReader {
       Log.Information("{Channel} - Recorded {RecCount} recs: {Recs}", c.ChannelTitle, recsStored.Count, recs.Select(v => new {Id=v.fromId, v.recs.Count}).ToList());
     }
 
-    async Task<IReadOnlyCollection<(string Id, string Title)>> VideosWithNoRecs(string channelId) {
-      var connection = await GetConnection();
+    async Task<IReadOnlyCollection<(string Id, string Title)>> VideosWithNoRecs(ChannelStored2 c, DbConnection connection) {
       var cmd = connection.CreateCommand();
       cmd.CommandText = $@"select v.video_id, v.video_title
       from video_latest v
         where
-      v.channel_id = '{channelId}'
+      v.channel_id = '{c.ChannelId}'
       and not exists(select * from rec r where r.from_video_id = v.video_id)
                      group by v.video_id, v.video_title";
       var reader = await cmd.ExecuteReaderAsync();
       var ids = new List<(string, string)>();
       while (await reader.ReadAsync()) ids.Add((reader["VIDEO_ID"].ToString(), reader["VIDEO_TITLE"].ToString()));
 
-      Log.Information("{Channel} - found {Recommendations} video's missing recommendations", channelId, ids.Count);
+      Log.Information("{Channel} - found {Recommendations} video's missing recommendations", c.ChannelTitle, ids.Count);
       return ids;
     }
 

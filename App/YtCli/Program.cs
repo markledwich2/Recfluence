@@ -72,11 +72,11 @@ namespace YouTubeCli {
   class Program {
     static int Main(string[] args) {
       var res = Parser.Default.ParseArguments<UpdateOption, FixOption, SyncOption, ChannelInfoOption, UpdateFleetOption, ResultsOption>(args).MapResult(
+        (UpdateFleetOption f) => Run(f, args, Fleet),
         (UpdateOption u) => Run(u, args, Update),
         (SyncOption s) => Run(s, args, Sync),
         (ChannelInfoOption v) => Run(v, args, ChannelInfo),
         (FixOption f) => Run(f, args, Fix),
-        (UpdateFleetOption f) => Run(f, args, Fleet),
         (ResultsOption f) => Run(f, args, Results),
         errs => (int) ExitCode.UnknownError
       );
