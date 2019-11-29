@@ -12,7 +12,7 @@ if(process.env.GATSBY_PATH_PREFIX) // this is for building a beta version that y
 module.exports = {
     siteMetadata: {
       title: `Recfluence`,
-      dataUrl: process.env.RESULTS_URL || `https://pyt-data.azureedge.net/data/results/`
+      dataUrl: process.env.RESULTS_URL || `https://pyt-data.azureedge.net/data/results`
     },
     plugins: [ 
       `gatsby-plugin-typescript`,

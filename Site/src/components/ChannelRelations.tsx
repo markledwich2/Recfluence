@@ -11,6 +11,7 @@ import { YtTheme } from '../common/YtTheme'
 import Select from 'react-select'
 import { renderToString } from 'react-dom/server'
 import { classNames, delay } from '../common/Utils'
+import { range } from 'd3'
 
 interface State extends InteractiveDataState { }
 interface Props extends ChartProps<YtModel> { }
@@ -200,6 +201,28 @@ export class ChannelRelations extends React.Component<Props, State> {
     let svg = d3.select(this.svg)
     let container = this.chart.createContainer(svg, 'relations')
 
+
+
+
+    var glowFilters = (glows: { name: string, blur?:number, intensity?:number}[]) =>
+      {
+        return (<>
+          {glows.map(g => (<filter key={g.name} id={g.name} filterUnits='userSpaceOnUse'>
+            <feGaussianBlur stdDeviation={g.blur ?? 5} result='coloredBlur' />
+            <feMerge>
+              {range(g.intensity ?? 1).map(_ => (<feMergeNode in='coloredBlur' />))}
+              <feMergeNode in='SourceGraphic' />
+            </feMerge>
+          </filter>))}
+        </>)
+      }
+
+    //Container for the gradients
+    var defs = svg.append("defs")
+    defs.html(renderToString(glowFilters([
+      { name: 'glow', blur: 5 }, 
+      { name: 'glowBig', blur: 10, intensity:3 }])))
+
     let linkEnter = container
       .append('g')
       .attr('class', 'links')
@@ -222,7 +245,6 @@ export class ChannelRelations extends React.Component<Props, State> {
     let nodesCircle = nodesEnter
       .append<SVGCircleElement>('circle')
       .attr('r', lay.getNodeRadius)
-
 
     this.chart.addShapeEvents(nodesCircle, true)
 
@@ -274,7 +296,9 @@ export class ChannelRelations extends React.Component<Props, State> {
       const nodeById = _.keyBy(nodes, n => n.channelId)
       links.forEach(l => l.color = nodeById[(l.source as Node).channelId].color)
 
-      nodesCircle.attr('fill', d => d.color)
+      nodesCircle
+        .attr('fill', d => d.selected || d.highlighted ? d3.color(d.color).brighter(4).hex() : d.color)
+        .attr('filter', d => d.selected || d.highlighted ? 'url(#glowBig)' : lay.getNodeRadius(d) > 10 ? 'url(#glow)' : null) //: 
       linkEnter.attr('stroke', (l: Link) => l.color)
     }
 
@@ -310,6 +334,8 @@ export class ChannelRelations extends React.Component<Props, State> {
       })
 
       linkEnter.style('opacity', selectedOrHighlighted.length > 2 ? 0.1 : 0.3)
+
+
     }
 
     function updatePositions() {
@@ -373,26 +399,27 @@ export class ChannelRelations extends React.Component<Props, State> {
 
       updateVisibility()
       //updatePositions()
+      updateColor()
 
-      if (prevState?.selections.parameters['colorBy'] != this.state.selections.parameters['colorBy']) {
-        updateColor()
-      }
+      // if (prevState?.selections.parameters['colorBy'] != this.state.selections.parameters['colorBy']) {
+      //   updateColor()
+      // }
       console.log("state rendered")
     }
 
-    lay.force.tick()
-    this.stateRender(null, null)
+
+
 
 
     for (var i = 0; i < 100; i++) {
       lay.force.tick()
-      updatePositions()
-      await delay(1)
+      //updatePositions()
+      //await delay(1)
     }
     lay.force.stop()
 
-
+    updatePositions()
+    this.stateRender(null, null)
     updateLabels(false)
-    //updatePositions()
   }
 }

@@ -100,7 +100,7 @@ g.chart g.node .selectable {
   /* transition: all 0.2s; */
 }
 
-g.chart g.node .selectable.highlighted {
+/* g.chart g.node .selectable.highlighted {
   stroke: #eee;
   stroke-width: 3px;
   stroke-opacity: 0.5;
@@ -109,7 +109,7 @@ g.chart g.node .selectable.selected {
   stroke: #eee;
   stroke-width: 3px;
   stroke-opacity: 1;
-}
+} */
 
 g.chart g.node .selectable.dimmed {
   opacity: 0.3;
