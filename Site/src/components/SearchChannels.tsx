@@ -31,8 +31,8 @@ export class SearchChannels extends React.Component<Props, State> {
   lastSelectedOption: Option
   selectionHelper = new SelectionStateHelper<ChannelData, YtParams>(this.props.onSelection, () => this.props.selections)
 
-  get dim(): Dim<ChannelData> {
-    return this.props.model.channelDim
+  get channels(): Dim<ChannelData> {
+    return this.props.model.channels
   }
 
   shouldComponentUpdate(props: Props, nextState: State) {
@@ -61,17 +61,17 @@ export class SearchChannels extends React.Component<Props, State> {
   }
 
   private get idCol() : Col<ChannelData> {
-    return this.dim.col("channelId")
+    return this.channels.col("channelId")
   }
 
   render() {
     let channelId = this.selectionHelper.selectedSingleValue(this.idCol)
-    let options = _(this.props.model.channels)
+    let options = _(this.channels.rows)
       .map(c => ({ value: c.channelId, label: c.title } as Option))
       .orderBy(o => o.label)
       .value()
 
-    let selectedVlaue = options.find(c => c.value == channelId)
+    let selectedValue = options.find(c => c.value == channelId)
 
     return (
       // onMouseMove={this.onUserInteracted onClick={this.onUserInteracted}
@@ -83,7 +83,7 @@ export class SearchChannels extends React.Component<Props, State> {
           placeholder="Select Channel"
           styles={YtTheme.selectStyle}
           theme={YtTheme.selectTheme}
-          value={selectedVlaue ? selectedVlaue : null}
+          value={selectedValue ? selectedValue : null}
           ref={(r) => (this.ref = r)}
         />
       </div>

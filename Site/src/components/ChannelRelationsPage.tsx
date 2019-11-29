@@ -7,9 +7,10 @@ import { jsonClone } from '../common/Utils'
 import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
 import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, ActionType, Action } from '../common/Chart'
-import "react-loader-spinner/dist/loader/css/react-spinner-loader.css"
 
-interface Props { }
+interface Props {
+  dataUrl:string
+ }
 
 interface State {
   data?: YtModel
@@ -34,18 +35,10 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
     if (params.has('c'))
       this.selections.select(YtModel.channelDimStatic.col("channelId"), params.get('c'))
-    if (params.has('v'))
-      this.version = params.get('v')
-
-      this.load()
+    this.load()
   }
 
-  version: string = 'latest'
-  //resultsPath: string = `https://ytnetworks.blob.core.windows.net/data/results/${this.version}/` 
-  resultsPath: string = `https://pyt-data.azureedge.net/data/results/${this.version}/`
-
-
-  resultUrl() { return this.resultsPath }
+  resultUrl() { return `${this.props.dataUrl}/${YtModel.version}/latest/` }
 
   async load() {
     let data = await YtModel.dataSet(this.resultUrl())
@@ -63,7 +56,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
     if (action.type == ActionType.Select) {
       let channelId = this.selections.selectedSingleValue(idAttribute)
-      if(channelId) {
+      if (channelId) {
         if (params.has('c')) params.delete('c')
         if (channelId) params.append('c', channelId)
       }

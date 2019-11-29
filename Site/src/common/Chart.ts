@@ -58,7 +58,7 @@ interface SetParams {
     params: Record<string, any>
 }
 
-/** funcitoanlity to help modify selection state */
+/** functionality to help modify selection state */
 export class SelectionStateHelper<T, TParams> {
 
     onSelection: SelectionHandler
@@ -80,8 +80,8 @@ export class SelectionStateHelper<T, TParams> {
             case ActionType.Select:
                 const select = action as SelectAction
                 const bySelectionKey = _(select.select).groupBy(this.selectionKey).value()
-                const nonConfictingSelections = select.select.filter(s => !(this.selectionKey(s) in bySelectionKey))
-                const newSelect = nonConfictingSelections.concat(select.select)
+                const nonConflictingSelections = select.select.filter(s => !(this.selectionKey(s) in bySelectionKey))
+                const newSelect = nonConflictingSelections.concat(select.select)
                 return s({ selected: newSelect, highlighted: state.highlighted })
 
             case ActionType.Highlight:
@@ -141,7 +141,7 @@ export class SelectionStateHelper<T, TParams> {
 
     key = (names: string[]) => names.join("|")
 
-    //** a unique stirng of the tuples name+values e.g. 'name=Fred|type=Farmer' */
+    //** a unique string of the tuples name+values e.g. 'name=Fred|type=Farmer' */
     valueKey = (tuple: Record<string, string>) => _(tuple).entries().map(t => `${t[0]}=${t[1]}`).join("|")
 
     getHighlightedValue = (name: string): Record<string, string> => {
@@ -171,10 +171,10 @@ export class SelectionStateHelper<T, TParams> {
         return (state.selected.length == 1) ? state.selected[0] : null
     }
 
-    highlitedOrSelectedValue = (col: keyof T | Col<T>): string => {
+    highlightedOrSelectedValue = (col: keyof T | Col<T>): string => {
         const name = ColEx.isCol<T>(col) ? col.name : col
-        const highighted = this.getHighlightedValue(name)
-        if (highighted) return highighted[name]
+        const highlighted = this.getHighlightedValue(name)
+        if (highlighted) return highlighted[name]
         const selected = this.selectedSingleValue(name)
         return selected
     }
@@ -193,11 +193,11 @@ export class SelectionStateHelper<T, TParams> {
 
     selectableContains(a: SelectableCell<any>, b: Record<string, string>) {
         const keysProps = Object.assign({}, a.keys, a.props)
-        return this.supersetMatch(keysProps, b)
+        return this.superSetMatch(keysProps, b)
     }
 
-    /** **true** if a is a superset of b */
-    supersetMatch = (a: Record<string, string>, b: Record<string, string>) => {
+    /** **true** if a is a super-set of b */
+    superSetMatch = (a: Record<string, string>, b: Record<string, string>) => {
         return a && b && _.entries(b).every(bv => bv[0] in a && bv[1] == a[bv[0]])
     }
 }

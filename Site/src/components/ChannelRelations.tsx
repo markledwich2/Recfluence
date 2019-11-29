@@ -57,7 +57,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     return {
       group: ['channelId'],
       colorBy: withColor ? this.chart.selections.params().colorBy : null,
-      label: 'title'
+      labelBy: 'title'
     }
   }
 
@@ -67,7 +67,7 @@ export class ChannelRelations extends React.Component<Props, State> {
 
   private renderLegendHtml(): JSX.Element {
     let colorBy = this.chart.selections.params().colorBy
-    let legendNodes = this.props.model.channelDim.cells(this.props.model.channels, {
+    let legendNodes = this.props.model.channels.cells({
       group: [colorBy], // if the group has a color, it should be colored
       order: { col: 'dailyViews', order: 'desc' }
     }) as SelectableCell<ChannelData>[]
@@ -76,9 +76,8 @@ export class ChannelRelations extends React.Component<Props, State> {
 
     selections.updateSelectableCells(legendNodes)
 
-    let dim = this.props.model.channelDim
-    let colorBys: (keyof ChannelData)[] = ['ideology', 'lr', 'media', 'manoel', 'ain']
-    let options = colorBys.map(c => dim.col(c)).map(c => ({ value: c.name, label: c.label ?? c.name }))
+    let dim = this.props.model.channels
+    let options = YtModel.categoryCols.map(c => dim.col(c)).map(c => ({ value: c.name, label: c.label ?? c.name }))
     let selected = options.find(o => o.value == colorBy)
     return (
       <div className={'legend'}>
@@ -118,11 +117,11 @@ export class ChannelRelations extends React.Component<Props, State> {
     )
   }
 
-  // a cheap render. Set by loadChat() so that it can use a buch of context
+  // a cheap render. Set by loadChat() so that it can use a bunch of context
   stateRender: (prevProps: Props, prevState: State) => void
 
   getData() {
-    const channelCells = this.dim.rowCells(this.props.model.channels, this.channelQuery(false))
+    const channelCells = this.dim.rowCells(this.channelQuery(false))
 
     let nodes: Node[] = _(channelCells)
       .filter(c => c.row.channelVideoViews > 0)
@@ -136,15 +135,15 @@ export class ChannelRelations extends React.Component<Props, State> {
           } as Node)
       ).value()
 
-    let links = _(this.props.model.recs)
-      .filter(l => l.channelId != l.fromChannelId) //l.recommendsViewChannelPercent > 0.005 && 
+    let links = _(this.props.model.recs.rows)
+      .filter(l => l.toChannelId != l.fromChannelId) //l.recommendsViewChannelPercent > 0.005 && 
       .map(
         l =>
           ({
             source: l.fromChannelId,
-            target: l.channelId,
+            target: l.toChannelId,
             strength: l.recommendsViewChannelPercent,
-            impressions: l.relevantImpressions
+            impressions: l.relevantImpressionsDaily
           } as Link)
       )
       .filter(
@@ -154,19 +153,19 @@ export class ChannelRelations extends React.Component<Props, State> {
 
     let keyedNodes = nodes.filter(n => links.some(l => n.channelId == (l.source as string) || n.channelId == (l.target as string)))
 
-    let adjlist = new Map()
+    let recMap = new Map()
     links.forEach(d => {
-      adjlist.set(d.source + '-' + d.target, true)
-      adjlist.set(d.target + '-' + d.source, true)
+      recMap.set(d.source + '-' + d.target, true)
+      recMap.set(d.target + '-' + d.source, true)
     })
 
-    let isConnected = (a: string, b: string) => a == b || adjlist.get(a + '-' + b)
+    let isConnected = (a: string, b: string) => a == b || recMap.get(a + '-' + b)
 
     return { nodes: keyedNodes, links: links, isConnected }
   }
 
   private get dim() {
-    return this.props.model.channelDim
+    return this.props.model.channels
   }
 
   getLayout(nodes: Node[], links: Link[]) {
@@ -194,7 +193,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     return { force, getLineWidth, getNodeRadius, simSize }
   }
 
-  loadChart() {
+  async loadChart() {
     const { nodes, links, isConnected } = this.getData()
     const lay = this.getLayout(nodes, links)
 
@@ -241,12 +240,12 @@ export class ChannelRelations extends React.Component<Props, State> {
         const node = n as Node
         if (!textRatio) {
 
-          // render a label to know the size to calclate with
+          // render a label to know the size to calculate with
           let e = g[i] as Element
           let text = e.getElementsByTagName('text')[0]
           text.style.display = 'inherit'
-          let bbox = text.getBBox()
-          textRatio = [bbox.width / node.label.length, bbox.height]
+          let box = text.getBBox()
+          textRatio = [box.width / node.label.length, box.height]
           text.style.display = null
         }
 
@@ -261,7 +260,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     function updateLabels(fast: boolean) {
       if (fast) {
         labelsGroup.selectAll<SVGGElement, Node>('g.label')
-          .attr('transform', d => `translate(${d.x}, ${d.y})`)
+          .attr('transform', d => `translate(${d.x + lay.getNodeRadius(d) + 3}, ${d.y - 10})`)
       }
       else {
         labelsGroup.call(layoutLabels)
@@ -269,8 +268,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     }
 
     let updateColor = () => {
-      // this is a bit hacky, but we want to re-use color logic without re-creating the cells
-      let queryContext = this.dim.createCellContext(this.props.model.channels, this.channelQuery(true))
+      let queryContext = this.dim.queryContext(this.channelQuery(true))
       nodes.forEach(c => c.color = queryContext.getColor(c.row))
 
       const nodeById = _.keyBy(nodes, n => n.channelId)
@@ -299,7 +297,7 @@ export class ChannelRelations extends React.Component<Props, State> {
         .style('display', d => {
           let z = zoomTrans.k > 2
           let display = selectedOrHighlighted.length > 2 ?
-            (d.selected && (z || selected.length < 2)) || (d.highlighted  && (z || highlighted.length < 2)) // many selected -  only show labels when zoomed
+            (d.selected && (z || selected.length < 2)) || (d.highlighted && (z || highlighted.length < 2)) // many selected -  only show labels when zoomed
             : (d.selected || d.highlighted) || related(d) && z// few selected - show labels of selected/highlighted, and also related when zoomed
 
           return display ? 'inherit' : 'none'
@@ -317,12 +315,12 @@ export class ChannelRelations extends React.Component<Props, State> {
     function updatePositions() {
       nodesCircle.attr('cx', d => d.x).attr('cy', d => d.y) // faster than attr('transform', d => `translate(${d.x}, ${d.y})`)
 
-      let fixna = (x?: number) => (x != null && isFinite(x) ? x : 0)
+      let safeLoc = (x?: number) => (x != null && isFinite(x) ? x : 0)
       linkEnter
-        .attr('x1', d => fixna((d.source as Node).x))
-        .attr('y1', d => fixna((d.source as Node).y))
-        .attr('x2', d => fixna((d.target as Node).x))
-        .attr('y2', d => fixna((d.target as Node).y))
+        .attr('x1', d => safeLoc((d.source as Node).x))
+        .attr('y1', d => safeLoc((d.source as Node).y))
+        .attr('x2', d => safeLoc((d.target as Node).x))
+        .attr('y2', d => safeLoc((d.target as Node).y))
     }
 
 
@@ -374,7 +372,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       }
 
       updateVisibility()
-      updatePositions()
+      //updatePositions()
 
       if (prevState?.selections.parameters['colorBy'] != this.state.selections.parameters['colorBy']) {
         updateColor()
@@ -382,11 +380,19 @@ export class ChannelRelations extends React.Component<Props, State> {
       console.log("state rendered")
     }
 
-    for (var i = 0; i < 120; i++) lay.force.tick()
-    lay.force.stop()
-
+    lay.force.tick()
     this.stateRender(null, null)
 
+
+    for (var i = 0; i < 100; i++) {
+      lay.force.tick()
+      updatePositions()
+      await delay(1)
+    }
+    lay.force.stop()
+
+
     updateLabels(false)
+    //updatePositions()
   }
 }

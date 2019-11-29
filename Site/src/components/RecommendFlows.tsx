@@ -3,13 +3,13 @@ import { renderToString } from 'react-dom/server'
 import * as d3 from 'd3'
 import { sankey, sankeyLinkHorizontal, sankeyLeft, SankeyNode, SankeyLink } from 'd3-sankey'
 import '../styles/Main.css'
-import { YtModel, Graph, ChannelData } from '../common/YtModel'
+import { YtModel, Graph, ChannelData, RecEx, RecDir, RecData } from '../common/YtModel'
 import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
 import { compactInteger } from 'humanize-plus'
 import * as _ from 'lodash'
 import { ChartProps, InteractiveDataState } from '../common/Chart'
-import { SelectableCell, ColEx, Cell, CellEx } from '../common/Dim'
-import { typedKeys } from '../common/Utils'
+import { SelectableCell, ColEx, Cell, CellEx, DimQuery, Dim } from '../common/Dim'
+import { typedKeys, assign } from '../common/Utils'
 
 interface State extends InteractiveDataState { }
 interface Props extends ChartProps<YtModel> { }
@@ -18,22 +18,20 @@ interface RecommendFlowExtra {
   id: string
 }
 
-interface NodeExtra extends SelectableCell<ChannelData> {
+interface NodeExtra extends SelectableCell<RecData> {
   shapeId: string
   mode?: NodeMode
-  incomming?: number
+  incoming?: number
   outgoing?: number
 }
 
 type Node = SankeyNode<NodeExtra, RecommendFlowExtra>
 type Link = SankeyLink<NodeExtra, RecommendFlowExtra>
 
-enum NodeMode {
-  Default = 'Default',
-  From = 'From',
-  To = 'To',
-  Main = 'Main'
-}
+type NodeMode =
+  'left' | // from the center (i.e right hand side)
+  'right' | // to the center (i.e. left hand side)
+  'center'
 
 export class RecommendFlows extends React.Component<Props, State> {
   ref: SVGSVGElement
@@ -57,109 +55,144 @@ export class RecommendFlows extends React.Component<Props, State> {
     return <svg ref={(ref: SVGSVGElement) => (this.ref = ref)}>{/* SVG contents */}</svg>
   }
 
-  layoutForAll(): Graph<Node[], Link[]> {
-    const channels = this.props.model.channels
-    const channelDic = _(channels).keyBy(c => c.channelId).value()
+  betweenColorLayout(): Graph<Node[], Link[]> {
     const colorBy = this.chart.selections.params().colorBy
-    const cells = this.props.model.channelDim.cells(channels, { group: [colorBy], order: { col: 'dailyViews', order: 'desc' } })
+    const fromCol = RecEx.recCol('from', colorBy)
+    const toCol = RecEx.recCol('to', colorBy)
+    const from = (r: RecData) => r[fromCol]
+    const to = (r: RecData) => r[toCol]
 
-    let fromNodes: Node[] = cells
-      .map(c => ({
-        shapeId: `from.${CellEx.cellValue(c, colorBy)}`,
-        mode: NodeMode.From,
-        ...c
-      }))
+    const recs = this.props.model.recCats
+    const recRows = recs.rows.filter(r=> r[toCol]) // filter out null (recommends to channels outside dataset)
 
-    let toNodes = cells
-      .map(c => ({
-        shapeId: `to.${CellEx.cellValue(c, colorBy)}`,
-        mode: NodeMode.To,
-        ...c
-      }))
+    const nodes = (dir: RecDir) => {
+      const fromCell = recs.cells({
+        group: [RecEx.recCol(dir, colorBy)]
+      }, recRows)
 
-    let flows = _(this.props.model.recs)
-      .groupBy(r => `${channelDic[r.fromChannelId][colorBy]}.${channelDic[r.channelId][colorBy]}`)
+      const nodes = fromCell
+        .map(n => ({
+          shapeId: `${dir}.${n.keys[dir == 'from' ? fromCol : toCol]}`,
+          mode: dir == 'from' ? 'left' : 'right',
+          color: n.color,
+          label: n.label
+        } as Node))
+
+      return nodes
+    }
+
+    const flows = _(recRows)
+      .groupBy(r => `${from(r)}.${to(r)}`)
       .map(
-        (g, t) =>
-          ({
-            id: t,
-            source: `from.${t.split('.')[0]}`,
-            target: `to.${t.split('.')[1]}`,
-            value: _(g).sumBy(r => +r.relevantImpressions)
-          } as Link)
-      )
-      //.filter(f => f.source != f.target)
+        (g, t) => ({
+          id: t,
+          source: `from.${from(g[0])}`,
+          target: `to.${to(g[0])}`,
+          value: _.sumBy(g, r => r.relevantImpressionsDaily)
+        } as Link))
       .value()
-    return { nodes: fromNodes.concat(toNodes), links: flows }
+
+    return { nodes: nodes('from').concat(nodes('to')), links: flows }
   }
 
-  get dim() { return this.props.model.channelDim }
+  get channels() { return this.props.model.channels }
 
-  LayoutForSelection(selection: Record<keyof ChannelData, string>): Graph<Node[], Link[]> {
+  centerNodeLayout(selection: Record<keyof ChannelData, string>): Graph<Node[], Link[]> {
     const colorBy = this.chart.selections.params().colorBy
-    const cDic = _.keyBy(this.props.model.channels, c => c.channelId)
-    const groupId = (c: Cell<ChannelData> | ChannelData) =>
-      CellEx.isCell(c) ?
-        ColEx.valueString(_.values(c.keys))
-        : ColEx.valueStringCol(c, typedKeys(selection))
+    const selectionCols = typedKeys(selection)
+    const recs = selectionCols.some(c => c == 'channelId') ? this.props.model.recs : this.props.model.recCats 
 
-    const nodes = _(this.dim.cells(this.props.model.channels, { group: typedKeys(selection), colorBy }))
-      .map(n => ({ shapeId: groupId(n), ...n }))
-      .keyBy(n => n.shapeId).value()
+    /*
 
-    let links = _(this.props.model.recs)
-      .map(r => {
-        let from = cDic[r.fromChannelId]
-        let to = cDic[r.channelId]
-        return ({ ...r, from, to, groupId: `${groupId(from)}.${groupId(to)}` })
+   structure of id's ( flow form left to right) for 2 key cols A|B and X|Y
+      format: inNodeId (flowId) mainNodeId (flowId) outNodeId
+      values: left.A:X (A:X|B:Y) center|B:Y (B:Y|A:X) right.A:X
+
+    example row data for channels ABC and C is selected
+
+    from  to  val   notes
+    a     c   12    left
+    b     c   6     left
+    c     c   2     left & right
+    c     a   5     right
+    c     b   4     right
+
+
+    left nodes
+
+
+    */
+
+    const nodeCols = (dir: RecDir) => _(selectionCols).map(k => RecEx.recCol(dir, k)).value()
+    const recCol = RecEx.recCol
+    const flowPartId = (c: RecData | Cell<RecData>, dir: RecDir): string => 
+      selectionCols.map(k => CellEx.cellValue(c, RecEx.recCol(dir, k))).join(":")
+    const centerPartId = _(selection).values().join(':')
+    const recRows : RecData[] = recs.rows.filter(r => flowPartId(r, 'from') == centerPartId || flowPartId(r, 'to') == centerPartId)
+
+    const nodeCells = (mode: NodeMode) => {
+      if (mode == 'center') throw 'nodeCell only works with left or right'
+      const dir = mode == 'left' ? 'from' : 'to'
+      const modeRecs = recRows.filter(r => flowPartId(r, mode == 'left' ? 'to' : 'from') == centerPartId)
+      
+      const cells = recs.cells({
+        group: nodeCols(dir),
+        measures: ['relevantImpressionsDaily'],
+        order: { col: 'relevantImpressionsDaily', order: 'desc' },
+        labelBy: recs.col(recCol(dir, selectionCols[0])).labelCol,
+        colorBy: recCol(dir, colorBy)
+      }, modeRecs)
+
+      return cells.slice(null, 10)
+    }
+
+    const nodeId = (mode: NodeMode, r: Cell<RecData>): string => {
+      const idValue = mode == 'center' ? flowPartId(r, 'from') : flowPartId(r, mode == 'left' ? 'from' : 'to')
+      return `${mode}.${idValue}`
+    }
+
+    const makeNode = (mode: NodeMode, r: Cell<RecData>): Node => ({
+      ...r,
+      shapeId: nodeId(mode, r),
+      mode: mode,
+    })
+
+    const makeNodes = (mode: NodeMode) => nodeCells(mode).map(c => makeNode(mode, c))
+
+    const leftNodes = makeNodes('left')
+    const centerCell = leftNodes.find(c => flowPartId(c, 'from') == centerPartId)
+    if (!centerCell) return { nodes: [], links: [] }
+    const nodes = _.keyBy([makeNode('center', centerCell)].concat(leftNodes).concat(makeNodes('right')), n => n.shapeId)
+
+    const flowCells = recs.cells({
+      group: nodeCols('from').concat(nodeCols('to')),
+      measures: ['relevantImpressionsDaily'],
+      order: { col: 'relevantImpressionsDaily', order: 'desc' }
+    }, recRows)
+
+    const createFlow = (r: Cell<RecData>, mode: NodeMode) => {
+      const centerId = nodeId('center', centerCell)
+      return {
+        id: ColEx.valueString(_.values(r.keys)),
+        source: mode == 'left' ? nodeId('left', r) : centerId,
+        target: mode == 'left' ? centerId : nodeId('right', r),
+        value: r.measures['relevantImpressionsDaily']
+      }
+    }
+
+    const links = _(flowCells)
+      .flatMap(r => {
+        const toCenter = flowPartId(r, 'to') == centerPartId
+        const fromCenter = flowPartId(r, 'from') == centerPartId
+        return (toCenter && fromCenter) ?
+          [createFlow(r, 'left'), createFlow(r, 'right')] // place flows to the center on both left & right sides
+          : [createFlow(r, toCenter ? 'left' : 'right')]
       })
-      .groupBy(r => r.groupId)
-      .map((g, k) => {
-        return {
-          id: k,
-          source: groupId(g[0].from),
-          target: groupId(g[0].to),
-          value: _.sumBy(g, r => r.relevantImpressions)
-        } as Link
-      }).value()
-
-    var maxNodes = 10
-    let selectedKey = ColEx.valueString(_.values(selection))
-
-    let inLinks = links.filter(r => r.target == selectedKey)
-      .map(r => ({ ...r, source: 'in.' + r.source } as Link))
-    let outLinks = links.filter(r => r.source == selectedKey)
-      .map(r => ({ ...r, target: 'out.' + r.target } as Link))
-    let finalLinks = _(inLinks)
-      .orderBy(l => l.value, 'desc')
-      .slice(0, maxNodes)
-      .concat(
-        _(outLinks)
-          .orderBy(l => l.value, 'desc')
-          .slice(0, maxNodes)
-          .value()
-      )
       .value()
+      .filter(r => nodes[r.source] && nodes[r.target])
 
-    // sankey is not bi-directional, so clone channels with a new id to represent input channels.
-    let inChannels = _(nodes)
-      .map(c => ({ ...c, shapeId: 'in.' + groupId(c), mode: NodeMode.From } as Node))
-      .filter(c => finalLinks.some(r => r.source == c.shapeId)).value()
 
-    let outChannels = _(nodes)
-      .map(c => ({ ...c, shapeId: 'out.' + groupId(c), mode: NodeMode.To } as Node))
-      .filter(c => finalLinks.some(r => r.target == c.shapeId)).value()
-
-    let mainChannel: Node = {
-      ..._(nodes).find(c => groupId(c) == selectedKey),
-      mode: NodeMode.Main,
-      incomming: _.sum(inLinks.map(l => l.value)),
-      outgoing: _.sum(outLinks.map(l => l.value))
-    } // calculate value now as to ignore the filter
-    let channels = inChannels.concat(outChannels).concat([{ ...mainChannel, shapeId: mainChannel.shapeId } as Node])
-    this.chart.selections.updateSelectableCells(channels)
-
-    return { nodes: channels, links: finalLinks }
+    return { nodes: _(nodes).values().value(), links }
   }
 
   async createChart() {
@@ -181,7 +214,7 @@ export class RecommendFlows extends React.Component<Props, State> {
 
       this.chart.selections.highlightedOrSelected()
 
-      let { nodes, links } = highlightedOrSelected ? this.LayoutForSelection(highlightedOrSelected) : this.layoutForAll()
+      let { nodes, links } = highlightedOrSelected ? this.centerNodeLayout(highlightedOrSelected) : this.betweenColorLayout()
 
       let layout = sankey<NodeExtra, RecommendFlowExtra>()
         .nodeWidth(36)
@@ -204,7 +237,7 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('stroke', d => {
           let s = d.source as Node
           let t = d.target as Node
-          return s.mode == NodeMode.From ? s.color : t.color
+          return s.mode == 'left' ? s.color : t.color
         })
 
       updateLink.exit().remove()
@@ -242,44 +275,40 @@ export class RecommendFlows extends React.Component<Props, State> {
 
       this.chart.addShapeClasses(mergedRec)
 
-      let txtMode = new Map([
-        [
-          NodeMode.Main,
-          {
-            anchor: 'start',
-            getX: (d: Node) => d.x0,
-            getY: (d: Node) => d.y0 - 45
-          }
-        ],
-        [
-          NodeMode.From,
-          {
-            anchor: 'start',
-            getX: (d: Node) => d.x1 + 10,
-            getY: (d: Node) => (d.y1 + d.y0) / 2
-          }
-        ],
-        [
-          NodeMode.To,
-          {
-            anchor: 'end',
-            getX: (d: Node) => d.x0 - 10,
-            getY: (d: Node) => (d.y1 + d.y0) / 2
-          }
-        ]
-      ])
+      let txtMode: Record<NodeMode, { anchor: string, getX: (d: Node) => number, getY: (d: Node) => number }> =
+      {
+        center:
+        {
+          anchor: 'start',
+          getX: (d: Node) => d.x0,
+          getY: (d: Node) => d.y0 - 45
+        },
+        left:
+        {
+          anchor: 'start',
+          getX: (d: Node) => d.x1 + 10,
+          getY: (d: Node) => (d.y1 + d.y0) / 2
+        },
+        right:
+        {
+          anchor: 'end',
+          getX: (d: Node) => d.x0 - 10,
+          getY: (d: Node) => (d.y1 + d.y0) / 2
+        }
+      }
 
       let labelText = (d: Node) => {
         // sourceLInks are objects with the source set to this object (i.e. outgoing)
-        let incomming = d.incomming > 0 ? d.incomming : _.sum(d.targetLinks.map(l => l.value))
+        let incoming = d.incoming > 0 ? d.incoming : _.sum(d.targetLinks.map(l => l.value))
         let outgoing = d.outgoing > 0 ? d.outgoing : _.sum(d.sourceLinks.map(l => l.value))
+
         return (
-          <text className={'label'} textAnchor={txtMode.get(d.mode).anchor}>
+          <text className={'label'} textAnchor={txtMode[d.mode].anchor}>
             {d.label}
-            {incomming > 0 && (
+            {incoming > 0 && (
               <>
                 <tspan className={'subtitle-bold'} dy={'1.3em'} x={0}>
-                  {compactInteger(incomming, 1)}
+                  {compactInteger(incoming, 1)}
                 </tspan>
                 <tspan className={'subtitle'}> received</tspan>
               </>
@@ -289,7 +318,7 @@ export class RecommendFlows extends React.Component<Props, State> {
                 <tspan className={'subtitle-bold'} dy={'1.3em'} x={0}>
                   {compactInteger(outgoing, 1)}
                 </tspan>
-                <tspan className={'subtitle'}> impressions</tspan>
+                <tspan className={'subtitle'}> daily impressions</tspan>
               </>
             )}
           </text>
@@ -298,7 +327,7 @@ export class RecommendFlows extends React.Component<Props, State> {
 
       mergeNode
         .select('g.label')
-        .attr('transform', d => `translate(${txtMode.get(d.mode).getX(d)}, ${txtMode.get(d.mode).getY(d)})`) //translate makes g coodinates relative
+        .attr('transform', d => `translate(${txtMode[d.mode].getX(d)}, ${txtMode[d.mode].getY(d)})`) //translate makes g coordinates relative
         .html(d => renderToString(labelText(d)))
     }
 

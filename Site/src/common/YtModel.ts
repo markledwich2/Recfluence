@@ -2,6 +2,8 @@ import * as d3 from 'd3'
 import * as _ from 'lodash'
 import { Dim, Col } from './Dim'
 import { SelectionState } from './Chart'
+import { parseISO } from 'date-fns'
+import { assign, capitalCase, toDic } from '../common/Utils'
 
 export interface Graph<N, L> {
   nodes: N
@@ -18,8 +20,8 @@ export interface ChannelData {
   channelVideoViews: number
   thumbnail: string
   lr: string
-  publishedFrom: string
-  publishedTo: string
+  publishedFrom: Date
+  publishedTo: Date
   dailyViews: number
   relevantDailyViews: number
   relevance: number
@@ -31,24 +33,52 @@ export interface ChannelData {
 }
 
 export interface RecData {
-  fromChannelId: string
-  channelId: string
-  fromVideoViews: number
-  relevantImpressions: number
-  recommendsViewChannelPercent: number
+  fromChannelId?: string
+  toChannelId?: string
+  fromTitle?: string,
+  toTitle?: string,
+  fromIdeology?: string
+  toIdeology?: string
+  fromLr?: string
+  toLr?: string
+  fromMedia?: string
+  toMedia?: string
+  fromManoel?: string
+  toManoel?: string
+  fromAin?: string
+  toAin?: string
+  relevantImpressionsDaily: number
+  recommendsViewChannelPercent?: number
+}
+
+export type RecDir = 'from' | 'to'
+
+export class RecEx {
+  static recCol = (dir: RecDir, col: keyof ChannelData): keyof RecData =>
+    `${dir}${_.upperFirst(col)}` as keyof RecData
+}
+
+interface VIS_CHANNEL_REC {
+  RELEVANT_IMPRESSIONS_DAILY: string,
+  REC_VIEW_CHANNEL_PERCENT: string,
+  FROM_CHANNEL_ID: string,
+  TO_CHANNEL_ID: string
 }
 
 export class YtModel {
-
-  channels: ChannelData[]
-  recs: RecData[]
-  channelDim: Dim<ChannelData>
+  recs: Dim<RecData>
+  recCats: Dim<RecData>
+  channels: Dim<ChannelData>
   selectionState: SelectionState
 
+  static version = 'v2'
+
   static async dataSet(path: string): Promise<YtModel> {
-    const channelsCsvTask = d3.csv(path + 'channel_stats.csv.gz')
-    const relationsCsvTask = d3.csv(path + 'channel_recs.csv.gz')
-    const channels = (await channelsCsvTask).map((c: any) => {
+    const channelsTask = d3.csv(path + 'vis_channel_stats.csv.gz')
+    const recTask = d3.csv(path + 'vis_channel_recs.csv.gz')
+    const recCatTask = d3.csv(path + 'vis_category_recs.csv.gz')
+    const channels = (await channelsTask).map((c: any) => {
+
       return <ChannelData>{
         channelId: c.CHANNEL_ID,
         title: c.CHANNEL_TITLE,
@@ -57,8 +87,8 @@ export class YtModel {
         channelVideoViews: +c.VIEWS,
         thumbnail: c.LOGO_URL,
         lr: c.LR,
-        publishedFrom: c.FROM_DATE,
-        publishedTo: c.TO_DATE,
+        publishedFrom: parseISO(c.FROM_DATE),
+        publishedTo: parseISO(c.TO_DATE),
         dailyViews: +c.DAILY_VIEWS,
         relevantDailyViews: +c.RELEVANT_DAILY_VIEWS,
         views: +c.CHANNEL_VIEWS,
@@ -72,23 +102,48 @@ export class YtModel {
 
     const channelDic = _(channels).keyBy(c => c.channelId).value()
 
-    let relations = (await relationsCsvTask).map((c: any) => {
-      return <RecData>{
-        fromChannelId: c.FROM_CHANNEL_ID,
-        channelId: c.TO_CHANNEL_ID,
-        relevantImpressions: +c.RELEVANT_IMPRESSIONS,
-        recommendsViewChannelPercent: +c.REC_VIEW_CHANNEL_PERCENT
-      }
-    }).filter(r => channelDic[r.fromChannelId] && channelDic[r.channelId])
+    let recCol = (dir: RecDir, c: keyof ChannelData) => ({ recCol: RecEx.recCol(dir, c), channelCol: c, dir })
 
+
+    const createRec = (r: VIS_CHANNEL_REC): RecData => {
+      const recCols = _(YtModel.categoryCols.concat('channelId', 'title'))
+        .flatMap(c => [recCol('from', c), recCol('to', c)]).value()
+
+      let rec = assign<RecData>({
+        recommendsViewChannelPercent: +r.REC_VIEW_CHANNEL_PERCENT,
+        relevantImpressionsDaily: +r.RELEVANT_IMPRESSIONS_DAILY
+      },
+        toDic(recCols,
+          c => c.recCol,
+          c => {
+            const channel = channelDic[r[`${c.dir.toUpperCase()}_CHANNEL_ID` as keyof VIS_CHANNEL_REC]]
+            return channel ? channel[c.channelCol] : null
+          }))
+      return rec
+    }
+
+    let recs = (await recTask).map((r: any) => r as VIS_CHANNEL_REC).map(r => createRec(r))
+
+    let recCats = (await recCatTask).map(r => {
+      let recCols = _(YtModel.categoryCols)
+        .flatMap(c => [RecEx.recCol('from', c), RecEx.recCol('to', c)]).value()
+
+      let rec = assign<RecData>({
+        relevantImpressionsDaily: +r.RELEVANT_IMPRESSIONS_DAILY
+      }, toDic(recCols, c => c, c => r[capitalCase(c)]?.toString()))
+      return rec
+    })
 
     return {
-      channels: channels, 
-      recs: relations,
-      channelDim: new Dim(this.channelDimStatic.meta, channels),
+      channels: new Dim(this.channelDimStatic.meta, channels),
+      recs: new Dim(this.recDimStatic.meta, recs),
+      recCats: new Dim(this.recCatDimStatic.meta, recCats),
       selectionState: { selected: [], parameters: { colorBy: 'ideology' } },
     }
   }
+
+  static categoryCols: (keyof ChannelData)[] = ['ideology', 'lr', 'media', 'manoel', 'ain']
+
 
   static channelDimStatic = new Dim<ChannelData>({
     name: 'channel',
@@ -96,7 +151,13 @@ export class YtModel {
       {
         name: 'channelId',
         props: ['lr', 'ideology', 'media', 'manoel', 'ain'],
-        valueLabel: 'title'
+        labelCol: 'title'
+      },
+      {
+        name: 'title',
+        values: [
+          { value: 'Low Rank', label: 'Other Channels (rank > 10)' }
+        ]
       },
       {
         name: 'lr',
@@ -105,16 +166,17 @@ export class YtModel {
           { value: 'L', label: 'Left', color: '#3887be' },
           { value: 'C', label: 'Center', color: '#8a8acb' },
           { value: 'R', label: 'Right', color: '#e0393e' },
-          { value: '', label: 'Unknown', color: '#555' }
+          { value: '', label: 'Unclassified', color: '#555' }
         ]
       },
       {
         name: 'ideology',
-        label: 'Ideology - Ledwich &  Zaitsev',
+        label: 'Classification - Ledwich &  Zaitsev',
+        pallet: ['#333'],
         values: [
           { value: 'Anti-SJW', color: '#8a8acb' },
           { value: 'Partisan Right', color: '#e0393e' },
-          { value: 'Alt-light', color: '#e55e5e' },
+          { value: 'Provocative Anti-SJW', color: '#e55e5e' },
           { value: 'White Identitarian', color: '#c68143' },
           { value: 'MRA', color: '#ed6498' },
           { value: 'Social Justice', color: '#56b881' },
@@ -124,7 +186,9 @@ export class YtModel {
           { value: 'Libertarian', color: '#b7b7b7' },
           { value: 'Religious Conservative', color: '#41afa5' },
           { value: 'Conspiracy', color: '#ffc168' },
-          { value: '', label: 'Other', color: '#333' },
+          { value: 'Center/Left MSM', color: '#aa557f' },
+          { value: 'Unclassified', label: 'Unclassified' },
+          { value: '', label: 'Non-Political' },
         ]
       },
       {
@@ -132,9 +196,9 @@ export class YtModel {
         label: 'Media Type',
         values: [
           { value: '', label: 'Other', color: '#333' },
-          { value: 'Mainstream Media',  color: '#3887be' },
-          { value: 'YouTube', label:'YouTube Creator', color: '#e55e5e' },
-          { value: 'Missing Link Media',  color: '#41afa5' },
+          { value: 'Mainstream Media', color: '#3887be' },
+          { value: 'YouTube', label: 'YouTube Creator', color: '#e55e5e' },
+          { value: 'Missing Link Media', color: '#41afa5' },
         ]
       },
       {
@@ -145,18 +209,39 @@ export class YtModel {
           { value: 'IDW', color: '#8a8acb' },
           { value: 'Alt-right', color: '#c68143' },
           { value: 'Control', color: '#b7b7b7' },
-          { value: '', label: 'Other', color: '#333' },
+          { value: '', label: 'Unclassified', color: '#333' },
         ]
       },
       {
         name: 'ain',
         label: 'Alternative Influence Network',
         values: [
-          { value: '', label: 'Other', color: '#333' },
-          { value: 'AIN', color: '#41afa5'}
+          { value: '', label: 'Unclassified', color: '#333' },
+          { value: 'AIN', color: '#41afa5' }
         ]
       }
     ]
+  })
+
+  private static recCol(dir: RecDir, name: keyof ChannelData) {
+    const col = YtModel.channelDimStatic.col(name)
+    return assign(col as any as Col<RecData>, {
+      name: RecEx.recCol(dir, col.name),
+      labelCol: col.labelCol ? RecEx.recCol(dir, col.labelCol) : null,
+    })
+  }
+
+  static recDimStatic = new Dim<RecData>({
+    name: 'Recommendations',
+    cols: _(['channelId', 'title'] as (keyof ChannelData)[])
+      .concat(YtModel.categoryCols)
+      .flatMap(c => ([YtModel.recCol('from', c), YtModel.recCol('to', c)])).value()
+  })
+
+  static recCatDimStatic = new Dim<RecData>({
+    name: 'Category Recommendations',
+    cols: _(YtModel.categoryCols)
+      .flatMap(c => ([YtModel.recCol('from', c), YtModel.recCol('to', c)])).value()
   })
 }
 

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="margin: auto; background: none; display: block; shape-rendering: auto; animation-play-state: running; animation-delay: 0s;" width="68px" height="68px" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="margin: auto; background: none; display: block; shape-rendering: auto; animation-play-state: running; animation-delay: 0s;" 
+width="200px" height="200px" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
 <defs style="animation-play-state: running; animation-delay: 0s;">
   <filter id="ldio-9sn3hgizhr7-filter" x="-100%" y="-100%" width="300%" height="300%" color-interpolation-filters="sRGB" style="animation-play-state: running; animation-delay: 0s;">
     <feGaussianBlur in="SourceGraphic" stdDeviation="5.6000000000000005" style="animation-play-state: running; animation-delay: 0s;"></feGaussianBlur>

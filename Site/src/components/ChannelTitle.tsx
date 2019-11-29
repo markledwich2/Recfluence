@@ -19,13 +19,13 @@ export class ChannelTitle extends React.Component<Props, State> {
   }
 
   get dim(): Dim<ChannelData> {
-    return this.props.model.channelDim
+    return this.props.model.channels
   }
 
   channel() {
     const channelId = this.chart.selections
-      .highlitedOrSelectedValue(this.dim.col("channelId"))
-    return channelId ? this.props.model.channels.find(c => c.channelId == channelId) : null
+      .highlightedOrSelectedValue(this.dim.col("channelId"))
+    return channelId ? this.props.model.channels.rows.find(c => c.channelId == channelId) : null
   }
 
   tagAlias: Record<string, string> = {
@@ -49,11 +49,11 @@ export class ChannelTitle extends React.Component<Props, State> {
 
   render() {
     let channel = this.channel()
-    let fdate = (d: string) => d ? dateformat(new Date(d), 'd mmm yyyy') : d
+    let dateFormat = (d: Date) => d ? dateformat(d, 'd mmm yyyy') : d
 
     const renderChannel = (c: ChannelData) => {
       let tags = c.tags.length == 0 ? ['None'] : c.tags.map(t => this.tagAlias[t] ?? t).filter(t => t != '_')
-      let lrCol = this.props.model.channelDim.col('lr')
+      let lrCol = this.props.model.channels.col('lr')
       let labelFunc = ColEx.labelFunc(lrCol)
       let colorFunc = ColEx.colorFunc(lrCol)
       let lrColor = (v:string) => d3.color(colorFunc(v)).darker(2).hex()
@@ -65,8 +65,8 @@ export class ChannelTitle extends React.Component<Props, State> {
           <div><b>{c.title}</b></div>
           <div>
             {c.relevantDailyViews == c.dailyViews ? 
-            <><b>{compactInteger(c.relevantDailyViews)}</b> relevant daily views <i>{fdate(c.publishedFrom)}</i> to <i>{fdate(c.publishedTo)}</i></>
-            : <><b>{compactInteger(c.relevantDailyViews)}</b> relevant / <b>{compactInteger(c.dailyViews)}</b> daily views <i>{fdate(c.publishedFrom)}</i> to <i>{fdate(c.publishedTo)}</i></>}
+            <><b>{compactInteger(c.relevantDailyViews)}</b> relevant daily views <i>{dateFormat(c.publishedFrom)}</i> to <i>{dateFormat(c.publishedTo)}</i></>
+            : <><b>{compactInteger(c.relevantDailyViews)}</b> relevant / <b>{compactInteger(c.dailyViews)}</b> daily views <i>{dateFormat(c.publishedFrom)}</i> to <i>{dateFormat(c.publishedTo)}</i></>}
           </div>
           <div><b>{compactInteger(c.subCount)}</b> subscribers</div>
           <div><span key={c.lr} className={'tag'} style={{backgroundColor:lrColor(c.lr)}}>{labelFunc(c.lr)}</span>{tags.map(t => (<span key={t} className={'tag'}>{t}</span>))}</div>
@@ -80,7 +80,7 @@ export class ChannelTitle extends React.Component<Props, State> {
           {channel == null ? (
             <div style={{}}>
               <h2>Recfluence</h2>
-              <p>Analysis of YouTube's political inlfuence through recommendations</p>
+              <p>Analysis of YouTube's political influence through recommendations</p>
             </div>
           ) : (
               renderChannel(channel)
