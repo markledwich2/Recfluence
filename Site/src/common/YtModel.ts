@@ -3,7 +3,7 @@ import * as _ from 'lodash'
 import { Dim, Col } from './Dim'
 import { SelectionState } from './Chart'
 import { parseISO } from 'date-fns'
-import { assign, capitalCase, toDic } from '../common/Utils'
+import { merge, capitalCase, toRecord } from '../common/Utils'
 
 export interface Graph<N, L> {
   nodes: N
@@ -56,6 +56,12 @@ export type RecDir = 'from' | 'to'
 export class RecEx {
   static recCol = (dir: RecDir, col: keyof ChannelData): keyof RecData =>
     `${dir}${_.upperFirst(col)}` as keyof RecData
+
+  static channelCol = (col: keyof RecData|string): keyof ChannelData => {
+    if (col.startsWith('from')) return _.lowerFirst(col.substr(4)) as keyof ChannelData
+    if (col.startsWith('to')) return _.lowerFirst(col.substr(2)) as keyof ChannelData
+    return null
+  }
 }
 
 interface VIS_CHANNEL_REC {
@@ -109,11 +115,11 @@ export class YtModel {
       const recCols = _(YtModel.categoryCols.concat('channelId', 'title'))
         .flatMap(c => [recCol('from', c), recCol('to', c)]).value()
 
-      let rec = assign<RecData>({
+      let rec = merge<RecData>({
         recommendsViewChannelPercent: +r.REC_VIEW_CHANNEL_PERCENT,
         relevantImpressionsDaily: +r.RELEVANT_IMPRESSIONS_DAILY
       },
-        toDic(recCols,
+        toRecord(recCols,
           c => c.recCol,
           c => {
             const channel = channelDic[r[`${c.dir.toUpperCase()}_CHANNEL_ID` as keyof VIS_CHANNEL_REC]]
@@ -128,9 +134,9 @@ export class YtModel {
       let recCols = _(YtModel.categoryCols)
         .flatMap(c => [RecEx.recCol('from', c), RecEx.recCol('to', c)]).value()
 
-      let rec = assign<RecData>({
+      let rec = merge<RecData>({
         relevantImpressionsDaily: +r.RELEVANT_IMPRESSIONS_DAILY
-      }, toDic(recCols, c => c, c => r[capitalCase(c)]?.toString()))
+      }, toRecord(recCols, c => c, c => r[capitalCase(c)]?.toString()))
       return rec
     })
 
@@ -138,7 +144,7 @@ export class YtModel {
       channels: new Dim(this.channelDimStatic.meta, channels),
       recs: new Dim(this.recDimStatic.meta, recs),
       recCats: new Dim(this.recCatDimStatic.meta, recCats),
-      selectionState: { selected: [], parameters: { colorBy: 'ideology' } },
+      selectionState: { selected: [], parameters: { record: { colorBy: 'ideology' } } },
     }
   }
 
@@ -225,7 +231,7 @@ export class YtModel {
 
   private static recCol(dir: RecDir, name: keyof ChannelData) {
     const col = YtModel.channelDimStatic.col(name)
-    return assign(col as any as Col<RecData>, {
+    return merge(col as any as Col<RecData>, {
       name: RecEx.recCol(dir, col.name),
       labelCol: col.labelCol ? RecEx.recCol(dir, col.labelCol) : null,
     })

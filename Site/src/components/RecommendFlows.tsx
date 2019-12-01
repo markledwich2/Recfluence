@@ -9,7 +9,7 @@ import { compactInteger } from 'humanize-plus'
 import * as _ from 'lodash'
 import { ChartProps, InteractiveDataState } from '../common/Chart'
 import { SelectableCell, ColEx, Cell, CellEx, DimQuery, Dim } from '../common/Dim'
-import { typedKeys, assign } from '../common/Utils'
+import { typedKeys, merge, toRecord } from '../common/Utils'
 
 interface State extends InteractiveDataState { }
 interface Props extends ChartProps<YtModel> { }
@@ -36,10 +36,12 @@ type NodeMode =
 export class RecommendFlows extends React.Component<Props, State> {
   ref: SVGSVGElement
 
-  chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this)
+  chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this, RecommendFlows.source)
   state: Readonly<State> = {
     selections: this.props.model.selectionState
   }
+
+  static source = 'flow'
 
   dataRender: () => void
 
@@ -63,7 +65,7 @@ export class RecommendFlows extends React.Component<Props, State> {
     const to = (r: RecData) => r[toCol]
 
     const recs = this.props.model.recCats
-    const recRows = recs.rows.filter(r=> r[toCol]) // filter out null (recommends to channels outside dataset)
+    const recRows = recs.rows.filter(r => r[toCol]) // filter out null (recommends to channels outside dataset)
 
     const nodes = (dir: RecDir) => {
       const fromCell = recs.cells({
@@ -100,7 +102,9 @@ export class RecommendFlows extends React.Component<Props, State> {
   centerNodeLayout(selection: Record<keyof ChannelData, string>): Graph<Node[], Link[]> {
     const colorBy = this.chart.selections.params().colorBy
     const selectionCols = typedKeys(selection)
-    const recs = selectionCols.some(c => c == 'channelId') ? this.props.model.recs : this.props.model.recCats 
+
+    const selectionCol = selectionCols.find(c => c == 'channelId') ?? selectionCols.find(c => c == colorBy)
+    const recs = selectionCol == 'channelId' ? this.props.model.recs : this.props.model.recCats
 
     /*
 
@@ -123,20 +127,19 @@ export class RecommendFlows extends React.Component<Props, State> {
 
     */
 
-    const nodeCols = (dir: RecDir) => _(selectionCols).map(k => RecEx.recCol(dir, k)).value()
+    const nodeCol = (dir: RecDir) => RecEx.recCol(dir, selectionCol)
     const recCol = RecEx.recCol
-    const flowPartId = (c: RecData | Cell<RecData>, dir: RecDir): string => 
-      selectionCols.map(k => CellEx.cellValue(c, RecEx.recCol(dir, k))).join(":")
-    const centerPartId = _(selection).values().join(':')
-    const recRows : RecData[] = recs.rows.filter(r => flowPartId(r, 'from') == centerPartId || flowPartId(r, 'to') == centerPartId)
+    const flowPartId = (c: RecData | Cell<RecData>, dir: RecDir): string => CellEx.cellValue(c, RecEx.recCol(dir, selectionCol))
+    const centerPartId = selection[selectionCol]
+    const recRows: RecData[] = recs.rows.filter(r => flowPartId(r, 'from') == centerPartId || flowPartId(r, 'to') == centerPartId)
 
     const nodeCells = (mode: NodeMode) => {
       if (mode == 'center') throw 'nodeCell only works with left or right'
       const dir = mode == 'left' ? 'from' : 'to'
       const modeRecs = recRows.filter(r => flowPartId(r, mode == 'left' ? 'to' : 'from') == centerPartId)
-      
+
       const cells = recs.cells({
-        group: nodeCols(dir),
+        group: [nodeCol(dir)],
         measures: ['relevantImpressionsDaily'],
         order: { col: 'relevantImpressionsDaily', order: 'desc' },
         labelBy: recs.col(recCol(dir, selectionCols[0])).labelCol,
@@ -151,11 +154,16 @@ export class RecommendFlows extends React.Component<Props, State> {
       return `${mode}.${idValue}`
     }
 
-    const makeNode = (mode: NodeMode, r: Cell<RecData>): Node => ({
-      ...r,
-      shapeId: nodeId(mode, r),
-      mode: mode,
-    })
+    const makeNode = (mode: NodeMode, r: Cell<RecData>): Node => {
+      const channelProps = _.entries(r.props).filter(e => RecEx.channelCol(e[0])) // props that exist on channel
+      const cProps = toRecord(channelProps, e => RecEx.channelCol(e[0]), e => e[1])
+      return ({
+        ...r,
+        shapeId: nodeId(mode, r),
+        mode: mode,
+        props: merge(r.props, cProps)
+      })
+    }
 
     const makeNodes = (mode: NodeMode) => nodeCells(mode).map(c => makeNode(mode, c))
 
@@ -165,7 +173,7 @@ export class RecommendFlows extends React.Component<Props, State> {
     const nodes = _.keyBy([makeNode('center', centerCell)].concat(leftNodes).concat(makeNodes('right')), n => n.shapeId)
 
     const flowCells = recs.cells({
-      group: nodeCols('from').concat(nodeCols('to')),
+      group: [nodeCol('from'), nodeCol('to')],
       measures: ['relevantImpressionsDaily'],
       order: { col: 'relevantImpressionsDaily', order: 'desc' }
     }, recRows)
@@ -198,8 +206,8 @@ export class RecommendFlows extends React.Component<Props, State> {
   async createChart() {
     let svg = d3.select(this.ref)
     let container = this.chart.createContainer(svg, 'flows')
-    let dH = 60
-    container.attr('transform', `translate(0, ${dH})`) // move down 10 px to allow space for title
+    let padding = { top:40, bottom:10, left:10, right:10 }
+    container.attr('transform', `translate(${padding.left}, ${padding.top})`) // move down 10 px to allow space for title
     let linkG = container.append('g').attr('class', 'links')
     let nodeG = container.append('g').attr('class', 'nodes')
 
@@ -210,16 +218,22 @@ export class RecommendFlows extends React.Component<Props, State> {
       svg.attr('width', w)
       svg.attr('height', h)
 
-      let highlightedOrSelected = this.chart.selections.highlightedOrSelected()
+      let selections = this.state.selections
+      let hl = selections.highlighted
 
-      this.chart.selections.highlightedOrSelected()
+      let highlightedOrSelected = 
+        (hl && hl.source != RecommendFlows.source ? hl.record : null) // ignore highlights from this component for changing center node
+        ?? selections.selected.find(_ => true)?.record
+        
+      let { nodes, links } = highlightedOrSelected ?
+        this.centerNodeLayout(highlightedOrSelected) : this.betweenColorLayout()
 
-      let { nodes, links } = highlightedOrSelected ? this.centerNodeLayout(highlightedOrSelected) : this.betweenColorLayout()
+      this.chart.selections.updateSelectableCells(nodes)
 
       let layout = sankey<NodeExtra, RecommendFlowExtra>()
-        .nodeWidth(36)
-        .nodePadding(40)
-        .size([w, h - dH - 20])
+        .nodeWidth(10)
+        .nodePadding(32)
+        .size([w - padding.left - padding.right, h - padding.top - padding.bottom])
         .nodeAlign(sankeyLeft)
         .nodeId(d => d.shapeId)
 
@@ -253,9 +267,10 @@ export class RecommendFlows extends React.Component<Props, State> {
         .append('rect')
         .attr('width', d => d.x1 - d.x0)
         .attr('height', d => Math.max(d.y1 - d.y0, 1))
+        .attr('rx', 5)
 
       // add events for both l/r and channel nodes
-      this.chart.addShapeEvents(enterNodeRec, true, false)
+      this.chart.addShapeEvents(enterNodeRec)
 
       enterNode.append('g').attr('class', 'label')
 
@@ -269,11 +284,11 @@ export class RecommendFlows extends React.Component<Props, State> {
         .attr('y', d => d.y0)
         .attr('height', d => Math.max(d.y1 - d.y0, 1))
         .attr('width', d => d.x1 - d.x0)
-        .attr('fill', d => d.color)
+
 
       updateNode.exit().remove()
 
-      this.chart.addShapeClasses(mergedRec)
+      this.chart.updateShapeEffects(mergedRec)
 
       let txtMode: Record<NodeMode, { anchor: string, getX: (d: Node) => number, getY: (d: Node) => number }> =
       {

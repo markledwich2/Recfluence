@@ -1,6 +1,6 @@
 import _ from "lodash"
 
-export function toDic<T, V>(items: T[], getKey: (r: T) => string, getValue: (r: T) => V) {
+export function toRecord<T, V>(items: T[], getKey: (r: T) => string, getValue: (r: T) => V) : Record<string, V> {
     return _.mapValues(_.keyBy(items, getKey), getValue)
 }
 
@@ -28,4 +28,4 @@ export function capitalCase(s:string) { return _.kebabCase(s).replace('-', '_').
 //export function capitalize(s: string) { return s?.length >= 1 ? s.charAt(0).toUpperCase() + s.slice(1) : s }
 
 /** like Object.assign, but doesn't mutate a */
-export function assign<T>(a:T, b:any):T { return Object.assign({}, a, b);}
+export function merge<T>(a:T, b:any, c?:any):T { return Object.assign({}, a, b, c);}

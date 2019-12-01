@@ -179,7 +179,7 @@ div.legend {
   max-width: 250px;
   height: auto;
   /* height: 100%; */
-  background-color: rgba(37, 37, 37, 0.5);
+  background-color: rgba(0,0,0,.5);
 }
 
 div.legend > * {
@@ -195,6 +195,9 @@ g.legend text {
   fill: #eee;
 }
 
+
+/* Relations page layout */
+
 div.ChannelRelationPage svg.chart {
   position: absolute;
 }
@@ -204,11 +207,11 @@ div.ChannelRelationPage {
 }
 
 div.ChannelRelationPage > * {
-  margin: 5px;
+  padding: 5px;
 }
 
 div.MainChartContainer > * {
-  margin: 5px;
+  padding: 0px;
 }
 
 div.MainChartContainer {
@@ -225,8 +228,9 @@ div.MainChartContainer > .Relations {
 }
 
 div.MainChartContainer > .Flows {
+  position: relative;
   height: 50vh;
-  min-height: 600px;
+  min-height: 800px;
   flex: 1 100%;
 }
 
@@ -256,7 +260,6 @@ div.ChannelRelationPage > .Title > .Search {
 }
 
 div.footer {
-  margin-top:3em;
   display: flex;
   flex-flow: wrap;
   justify-content: left;
@@ -273,15 +276,27 @@ div.footer > * {
   }
 
   div.MainChartContainer > .Flows {
-    flex: 1 auto;
-    height: 100%;
+    position: absolute;
+    right: 5px;
+    width: 30%;
+    min-width: 500px;
+    height: 80vh;
+    background-color: rgba(0,0,0,.5);
   }
 
   div.ChannelRelationPage {
     position: absolute;
-    height: 100vh;
+    height: 100%;
+    margin: 0px;
+    top:0px;
     display: flex;
     flex-flow: column;
     justify-content: stretch;
+  }
+
+  div.footer {
+    position: absolute;
+    bottom:1px;
+    margin: 5px;
   }
 }

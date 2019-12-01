@@ -1,7 +1,6 @@
 import * as d3 from 'd3'
 import _ from 'lodash'
-import { useCallback } from 'react'
-import { toDic } from './Utils'
+import { toRecord } from './Utils'
 
 /** A cell with state for display and interaction in a chart */
 export interface SelectableCell<T> extends Cell<T> {
@@ -197,9 +196,9 @@ export class Dim<T> {
   }
 
   private createCell(x: QueryContext<T>, g: T[]): Cell<T> {
-    let keys = toDic(x.groupCols, c => c, c => g[0][c]?.toString())
-    let measures = toDic(x.q.measures, m => m, m => this.colValue(this.col(m), g))
-    let props = toDic(x.props, p => p, p => this.colValue(this.col(p), g))
+    let keys = toRecord(x.groupCols, c => c, c => g[0][c]?.toString())
+    let measures = toRecord(x.q.measures, m => m, m => this.colValue(this.col(m), g))
+    let props = toRecord(x.props, p => p, p => this.colValue(this.col(p), g))
     return <Cell<T>>{
       keys,
       props,

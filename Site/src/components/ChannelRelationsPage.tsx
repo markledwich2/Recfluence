@@ -25,9 +25,11 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     data: null
   }
 
+  static source = 'page'
+
   constructor(props: any) {
     super(props)
-    this.selections = new SelectionStateHelper<any, any>(this.onSelection, () => this.state.data.selectionState)
+    this.selections = new SelectionStateHelper<any, any>(this.onSelection, () => this.state.data.selectionState, ChannelRelationsPage.source)
   }
 
   componentDidMount() {
@@ -51,16 +53,18 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     const params = new URLSearchParams(location.search)
     const idAttribute = YtModel.channelDimStatic.col("channelId")
 
-    if (action.type == ActionType.Clear && params.has('c'))
+    if (action.type == ActionType.clear && params.has('c'))
       params.delete('c')
 
-    if (action.type == ActionType.Select) {
+    if (action.type == ActionType.select) {
       let channelId = this.selections.selectedSingleValue(idAttribute)
       if (channelId) {
         if (params.has('c')) params.delete('c')
         if (channelId) params.append('c', channelId)
       }
     }
+
+    console.log('onSelection', action)
 
     this.state.data.selectionState = this.selections.applyAction(action)
     this.graphComponents().forEach(g => g.setState({ selections: jsonClone(this.state.data.selectionState) }))

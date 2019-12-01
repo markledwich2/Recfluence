@@ -3,7 +3,7 @@ import * as d3 from 'd3'
 import '../styles/Main.css'
 import { layoutTextLabel, layoutGreedy, layoutLabel } from 'd3fc-label-layout'
 import { YtModel, ChannelData } from '../common/YtModel'
-import { SelectableCell, DimQuery } from '../common/Dim'
+import { SelectableCell, DimQuery, Dim } from '../common/Dim'
 import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
 import * as _ from 'lodash'
 import { ChartProps, InteractiveDataState } from '../common/Chart'
@@ -24,14 +24,21 @@ interface Link extends d3.SimulationLinkDatum<Node> {
 interface Node extends d3.SimulationNodeDatum, SelectableCell<Node> {
   channelId: string
   size: number
-  row: ChannelData
+  row: VisChannelData
+}
+
+interface VisChannelData extends ChannelData {
+  fromChannelId?:string
+  toChannelId?:string
 }
 
 export class ChannelRelations extends React.Component<Props, State> {
   svg: SVGSVGElement
   legendDiv: HTMLDivElement
 
-  chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this)
+  static source = 'relations'
+
+  chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this, ChannelRelations.source)
 
   state: Readonly<State> = {
     selections: this.props.model.selectionState
@@ -54,7 +61,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       </>)
   }
 
-  channelQuery(withColor: boolean): DimQuery<ChannelData> {
+  channelQuery(withColor: boolean): DimQuery<VisChannelData> {
     return {
       group: ['channelId'],
       colorBy: withColor ? this.chart.selections.params().colorBy : null,
@@ -63,7 +70,7 @@ export class ChannelRelations extends React.Component<Props, State> {
   }
 
   onColorBySelected = (option: { value: string }) => {
-    this.chart.selections.setParam({ colorBy: option.value })
+    this.chart.selections.setParam({ record: { colorBy: option.value } })
   }
 
   private renderLegendHtml(): JSX.Element {
@@ -71,7 +78,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     let legendNodes = this.props.model.channels.cells({
       group: [colorBy], // if the group has a color, it should be colored
       order: { col: 'dailyViews', order: 'desc' }
-    }) as SelectableCell<ChannelData>[]
+    }) as SelectableCell<VisChannelData>[]
 
     let selections = this.chart.selections
 
@@ -124,6 +131,11 @@ export class ChannelRelations extends React.Component<Props, State> {
   getData() {
     const channelCells = this.dim.rowCells(this.channelQuery(false))
 
+    channelCells.forEach(c => {
+      c.cell.props.fromChannelId = c.row.channelId,
+      c.cell.props.toChannelId = c.row.channelId
+    })
+
     let nodes: Node[] = _(channelCells)
       .filter(c => c.row.channelVideoViews > 0)
       .map(
@@ -137,7 +149,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       ).value()
 
     let links = _(this.props.model.recs.rows)
-      .filter(l => l.toChannelId != l.fromChannelId) //l.recommendsViewChannelPercent > 0.005 && 
+      .filter(l => l.toChannelId != l.fromChannelId && l.recommendsViewChannelPercent > 0.005) //l.recommendsViewChannelPercent > 0.005 && 
       .map(
         l =>
           ({
@@ -166,7 +178,7 @@ export class ChannelRelations extends React.Component<Props, State> {
   }
 
   private get dim() {
-    return this.props.model.channels
+    return this.props.model.channels as unknown as Dim<VisChannelData>
   }
 
   getLayout(nodes: Node[], links: Link[]) {
@@ -191,7 +203,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       )
       .force('collide', d3.forceCollide<Node>(getNodeRadius))
 
-    return { force, getLineWidth, getNodeRadius, simSize }
+    return { force, getLineWidth, getNodeRadius, simSize, maxSize }
   }
 
   async loadChart() {
@@ -199,29 +211,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     const lay = this.getLayout(nodes, links)
 
     let svg = d3.select(this.svg)
-    let container = this.chart.createContainer(svg, 'relations')
-
-
-
-
-    var glowFilters = (glows: { name: string, blur?:number, intensity?:number}[]) =>
-      {
-        return (<>
-          {glows.map(g => (<filter key={g.name} id={g.name} filterUnits='userSpaceOnUse'>
-            <feGaussianBlur stdDeviation={g.blur ?? 5} result='coloredBlur' />
-            <feMerge>
-              {range(g.intensity ?? 1).map(_ => (<feMergeNode in='coloredBlur' />))}
-              <feMergeNode in='SourceGraphic' />
-            </feMerge>
-          </filter>))}
-        </>)
-      }
-
-    //Container for the gradients
-    var defs = svg.append("defs")
-    defs.html(renderToString(glowFilters([
-      { name: 'glow', blur: 5 }, 
-      { name: 'glowBig', blur: 10, intensity:3 }])))
+    let container = this.chart.createContainer(svg, ChannelRelations.source)
 
     let linkEnter = container
       .append('g')
@@ -232,7 +222,6 @@ export class ChannelRelations extends React.Component<Props, State> {
       .append<SVGLineElement>('line')
       .attr('class', 'link')
       .attr('stroke-width', lay.getLineWidth)
-
 
     let nodesContainer = container.append<SVGGElement>('g').attr('class', 'node')
 
@@ -246,7 +235,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       .append<SVGCircleElement>('circle')
       .attr('r', lay.getNodeRadius)
 
-    this.chart.addShapeEvents(nodesCircle, true)
+    this.chart.addShapeEvents(nodesCircle)
 
     let labelsGroup = container
       .append<SVGGElement>('g')
@@ -296,33 +285,28 @@ export class ChannelRelations extends React.Component<Props, State> {
       const nodeById = _.keyBy(nodes, n => n.channelId)
       links.forEach(l => l.color = nodeById[(l.source as Node).channelId].color)
 
-      nodesCircle
-        .attr('fill', d => d.selected || d.highlighted ? d3.color(d.color).brighter(4).hex() : d.color)
-        .attr('filter', d => d.selected || d.highlighted ? 'url(#glowBig)' : lay.getNodeRadius(d) > 10 ? 'url(#glow)' : null) //: 
       linkEnter.attr('stroke', (l: Link) => l.color)
     }
 
     let updateVisibility = () => {
       this.chart.selections.updateSelectableCells(nodes)
 
-      const zoomTrans = d3.zoomTransform(svg.node())
       let selectedOrHighlighted = nodes.filter(n => n.highlighted || n.selected)
       let selected = nodes.filter(n => n.selected)
       let highlighted = nodes.filter(n => n.highlighted)
 
-      const related = (n: Node): boolean => selectedOrHighlighted.length <= 2 && selectedOrHighlighted.some(c => isConnected(n.channelId, c.channelId))
+      const related = (n: Node): boolean => 
+        selectedOrHighlighted.length <= 2 && selectedOrHighlighted.some(c => isConnected(n.channelId, c.channelId))
 
       nodesCircle.classed('related', related)
-      this.chart.addShapeClasses(nodesCircle)
-
 
       const labelText = labelsGroup.selectAll<SVGTextElement, Node>('text')
       labelText
         .style('display', d => {
-          let z = zoomTrans.k > 2
+          let zoomLabel = d3.zoomTransform(svg.node()).k > 2
           let display = selectedOrHighlighted.length > 2 ?
-            (d.selected && (z || selected.length < 2)) || (d.highlighted && (z || highlighted.length < 2)) // many selected -  only show labels when zoomed
-            : (d.selected || d.highlighted) || related(d) && z// few selected - show labels of selected/highlighted, and also related when zoomed
+            (d.selected && (zoomLabel || selected.length < 2)) || (d.highlighted && (zoomLabel || highlighted.length < 2)) // many selected -  only show labels when zoomed
+            : (d.selected || d.highlighted) || related(d) && zoomLabel// few selected - show labels of selected/highlighted, and also related when zoomed
 
           return display ? 'inherit' : 'none'
         })
@@ -334,8 +318,12 @@ export class ChannelRelations extends React.Component<Props, State> {
       })
 
       linkEnter.style('opacity', selectedOrHighlighted.length > 2 ? 0.1 : 0.3)
+    }
 
-
+    const chart = this.chart;
+    const updateEffects = () => {
+      let zoom = d3.zoomTransform(svg.node())
+      return chart.updateShapeEffects(nodesCircle, { unselectedGlow: d => d.size  > lay.maxSize * 0.1 * zoom.k})
     }
 
     function updatePositions() {
@@ -356,14 +344,12 @@ export class ChannelRelations extends React.Component<Props, State> {
       .on("zoom", () => {
         const t = d3.zoomTransform(svg.node())
         container.attr('transform', () => t.toString())
-
         const labelsTrans = `scale(${1 / t.k})`
         const existingTrans = labelsGroup.select('text').attr('transform')
         if (labelsTrans != existingTrans) {
           labelsGroup.selectAll<SVGTextElement, Node>('text')
             .attr('transform', () => labelsTrans) // undo the zoom on labels
           updateVisibility()
-
           updateLabels(true)
         }
       })
@@ -398,18 +384,10 @@ export class ChannelRelations extends React.Component<Props, State> {
       }
 
       updateVisibility()
-      //updatePositions()
       updateColor()
-
-      // if (prevState?.selections.parameters['colorBy'] != this.state.selections.parameters['colorBy']) {
-      //   updateColor()
-      // }
+      updateEffects()
       console.log("state rendered")
     }
-
-
-
-
 
     for (var i = 0; i < 100; i++) {
       lay.force.tick()
