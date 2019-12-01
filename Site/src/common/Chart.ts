@@ -173,7 +173,7 @@ export class SelectionStateHelper<T, TParams> {
         const state = this.getState()
         const name = ColEx.isCol<T>(col) ? col.name : col
         const selected = state.selected
-            .filter(s => name in s)
+            .filter(s => name in s.record)
             .map(s => s.record[name])
         return selected
     }

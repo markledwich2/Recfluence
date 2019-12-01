@@ -13,7 +13,7 @@ interface State extends InteractiveDataState { }
 interface Props extends InteractiveDataProps<YtModel> { }
 
 export class ChannelTitle extends React.Component<Props, State> {
-  chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this)
+  chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this, 'search')
   state: Readonly<State> = {
     selections: this.props.model.selectionState
   }

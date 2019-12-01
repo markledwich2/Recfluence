@@ -70,7 +70,7 @@ export class ChannelRelations extends React.Component<Props, State> {
   }
 
   onColorBySelected = (option: { value: string }) => {
-    this.chart.selections.setParam({ record: { colorBy: option.value } })
+    this.chart.selections.setParam({ colorBy: option.value })
   }
 
   private renderLegendHtml(): JSX.Element {

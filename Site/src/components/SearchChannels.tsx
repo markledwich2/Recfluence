@@ -32,10 +32,6 @@ export class SearchChannels extends React.Component<Props, State> {
   selectionHelper = new SelectionStateHelper<ChannelData, YtParams>(this.props.onSelection, () => this.props.selections, SearchChannels.source)
   static source = 'search'
 
-  get channels(): Dim<ChannelData> {
-    return this.props.model.channels
-  }
-
   shouldComponentUpdate(props: Props, nextState: State) {
     let sh = new SelectionStateHelper<ChannelData, YtParams>(null, () => props.selections, SearchChannels.source)
     const channelId = sh.selectedSingleValue('channelId')
@@ -52,22 +48,19 @@ export class SearchChannels extends React.Component<Props, State> {
 
       if (this.lastFocusedOption !== focusedOption && r.state.menuIsOpen) {
         this.lastFocusedOption = focusedOption
-        this.selectionHelper.select(this.idCol, focusedOption.value)
+        this.selectionHelper.select('channelId', focusedOption.value)
       }
     })
   }
 
   onSelected = (c: Option) => {
-    this.selectionHelper.select(this.idCol, c.value)
-  }
-
-  private get idCol() : Col<ChannelData> {
-    return this.channels.col("channelId")
+    this.selectionHelper.select('channelId', c.value)
   }
 
   render() {
-    let channelId = this.selectionHelper.selectedSingleValue(this.idCol)
-    let options = _(this.channels.rows)
+    const channels = this.props.model.channels
+    let channelId = this.selectionHelper.selectedSingleValue(channels.col('channelId'))
+    let options = _(channels.rows)
       .map(c => ({ value: c.channelId, label: c.title } as Option))
       .orderBy(o => o.label)
       .value()

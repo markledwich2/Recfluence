@@ -67,7 +67,10 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     console.log('onSelection', action)
 
     this.state.data.selectionState = this.selections.applyAction(action)
-    this.graphComponents().forEach(g => g.setState({ selections: jsonClone(this.state.data.selectionState) }))
+    this.graphComponents().forEach(g => {
+      const selections = this.state.data.selectionState
+      return g.setState({ selections })
+    })
   }
 
   graphComponents(): Array<React.Component<InteractiveDataProps<YtModel>, InteractiveDataState>> {
