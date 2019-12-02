@@ -75,15 +75,15 @@ export class SelectionStateHelper<T, TParams> {
     getState: () => SelectionState
     source: string
 
-    constructor(onSelection: SelectionHandler, getState: () => SelectionState, source: string) {
-        this.onSelection = onSelection
+    constructor(getState: () => SelectionState, onSelection?: SelectionHandler,  source?: string) {
         this.getState = getState
+        this.onSelection = onSelection ?? (a => Object.assign(getState(), this.applyAction(a)))
         this.source = source
     }
 
     // returns the updated state according to the given action
     applyAction = (action: Action): SelectionState => {
-        let state = this.getState()
+         let state = this.getState()
         let s = (s: any) => Object.assign({}, state, s)
         switch (action.type) {
             case ActionType.clear:

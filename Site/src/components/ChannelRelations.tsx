@@ -24,13 +24,13 @@ interface Link extends d3.SimulationLinkDatum<Node> {
 interface Node extends d3.SimulationNodeDatum, SelectableCell<Node> {
   channelId: string
   size: number
-  row: VisChannelData
+  row: ChannelData
 }
 
-interface VisChannelData extends ChannelData {
-  fromChannelId?:string
-  toChannelId?:string
-}
+// interface ChannelData extends ChannelData {
+//   fromChannelId?:string
+//   toChannelId?:string
+// }
 
 export class ChannelRelations extends React.Component<Props, State> {
   svg: SVGSVGElement
@@ -57,11 +57,10 @@ export class ChannelRelations extends React.Component<Props, State> {
       <>
         <svg ref={ref => (this.svg = ref)} />
         {this.renderLegendHtml()}
-        {/* <div className={'legend'} ref={ref => (this.legendDiv = ref)} /> */}
       </>)
   }
 
-  channelQuery(withColor: boolean): DimQuery<VisChannelData> {
+  channelQuery(withColor: boolean): DimQuery<ChannelData> {
     return {
       group: ['channelId'],
       colorBy: withColor ? this.chart.selections.params().colorBy : null,
@@ -78,7 +77,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     let legendNodes = this.props.model.channels.cells({
       group: [colorBy], // if the group has a color, it should be colored
       order: { col: 'dailyViews', order: 'desc' }
-    }) as SelectableCell<VisChannelData>[]
+    }) as SelectableCell<ChannelData>[]
 
     let selections = this.chart.selections
 
@@ -131,10 +130,10 @@ export class ChannelRelations extends React.Component<Props, State> {
   getData() {
     const channelCells = this.dim.rowCells(this.channelQuery(false))
 
-    channelCells.forEach(c => {
-      c.cell.props.fromChannelId = c.row.channelId,
-      c.cell.props.toChannelId = c.row.channelId
-    })
+    // channelCells.forEach(c => {
+    //   c.cell.props.fromChannelId = c.row.channelId,
+    //   c.cell.props.toChannelId = c.row.channelId
+    // })
 
     let nodes: Node[] = _(channelCells)
       .filter(c => c.row.channelVideoViews > 0)
@@ -178,7 +177,7 @@ export class ChannelRelations extends React.Component<Props, State> {
   }
 
   private get dim() {
-    return this.props.model.channels as unknown as Dim<VisChannelData>
+    return this.props.model.channels as unknown as Dim<ChannelData>
   }
 
   getLayout(nodes: Node[], links: Link[]) {

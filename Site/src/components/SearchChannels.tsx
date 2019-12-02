@@ -29,11 +29,11 @@ export class SearchChannels extends React.Component<Props, State> {
   ref: Select<Option>
   lastFocusedOption: Option
   lastSelectedOption: Option
-  selectionHelper = new SelectionStateHelper<ChannelData, YtParams>(this.props.onSelection, () => this.props.selections, SearchChannels.source)
+  selectionHelper = new SelectionStateHelper<ChannelData, YtParams>(() => this.props.selections, this.props.onSelection, SearchChannels.source)
   static source = 'search'
 
   shouldComponentUpdate(props: Props, nextState: State) {
-    let sh = new SelectionStateHelper<ChannelData, YtParams>(null, () => props.selections, SearchChannels.source)
+    let sh = new SelectionStateHelper<ChannelData, YtParams>(() => props.selections, null, SearchChannels.source)
     const channelId = sh.selectedSingleValue('channelId')
     let r = this.ref as any
     let selectedOption = r.select.state.selectValue.find(() => true)

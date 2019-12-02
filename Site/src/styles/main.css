@@ -112,7 +112,7 @@ g.chart g.node .selectable.selected {
 } */
 
 g.chart g.node .selectable.dimmed {
-  opacity: 0.3;
+  opacity: 0.5;
 }
 
 g.chart text.label.selected {

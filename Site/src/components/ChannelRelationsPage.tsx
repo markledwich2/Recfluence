@@ -1,42 +1,40 @@
 import * as React from 'react'
 import ContainerDimensions from 'react-container-dimensions'
-import { RecommendFlows } from './RecommendFlows'
+import { RecFlows } from './RecFlows'
 import { ChannelRelations } from './ChannelRelations'
 import { YtModel } from '../common/YtModel'
-import { jsonClone } from '../common/Utils'
 import { ChannelTitle } from './ChannelTitle'
 import '../styles/Main.css'
 import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, ActionType, Action } from '../common/Chart'
+import _ from 'lodash'
+import { toRecord } from '../common/Utils'
 
 interface Props {
-  dataUrl:string
- }
+  dataUrl: string
+}
 
 interface State {
-  data?: YtModel
+  model?: YtModel
 }
 
 export class ChannelRelationsPage extends React.Component<Props, State> {
   selections: SelectionStateHelper<any, any>
   relations: ChannelRelations
-  flows: RecommendFlows
+  flows: RecFlows
   title: ChannelTitle
   state: Readonly<State> = {
-    data: null
+    model: null
   }
 
   static source = 'page'
 
   constructor(props: any) {
     super(props)
-    this.selections = new SelectionStateHelper<any, any>(this.onSelection, () => this.state.data.selectionState, ChannelRelationsPage.source)
+    this.selections = new SelectionStateHelper<any, any>(() => this.state.model.selectionState, this.onSelection, ChannelRelationsPage.source)
   }
 
   componentDidMount() {
-    const params = new URLSearchParams(location.search)
-
-    if (params.has('c'))
-      this.selections.select(YtModel.channelDimStatic.col("channelId"), params.get('c'))
+     
     this.load()
   }
 
@@ -44,33 +42,51 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
   async load() {
     let data = await YtModel.dataSet(this.resultUrl())
+
+    const params = new URLSearchParams(location.search)
+    if (Array.from(params).length > 0) {
+      var selectRecord:Record<string, any> = {}
+      params.forEach((v,k) => selectRecord[k] = v)
+      let sh = new SelectionStateHelper(() => data.selectionState)
+      sh.select(selectRecord)
+    }
+
     try {
-      this.setState({ data })
+      this.setState({ model: data })
     } catch (e) { }
+
+
   }
 
-  onSelection(action: Action) {
+  onSelection = (action: Action) => {
     const params = new URLSearchParams(location.search)
-    const idAttribute = YtModel.channelDimStatic.col("channelId")
+    const updateUrl = () => history.replaceState({}, '', `${location.pathname}?${params}`)
 
-    if (action.type == ActionType.clear && params.has('c'))
-      params.delete('c')
+    if (action.type == ActionType.clear) {
+      // in the future, if this page use params for anything else we will need to determine which is a selection
+      params.forEach((_,k) => params.delete(k))
+      updateUrl()
+    }
 
     if (action.type == ActionType.select) {
-      let channelId = this.selections.selectedSingleValue(idAttribute)
-      if (channelId) {
-        if (params.has('c')) params.delete('c')
-        if (channelId) params.append('c', channelId)
+      params.forEach((_,k) => params.delete(k))
+      if(action.select.length == 1) {
+        const rec = action.select[0].record
+        for(let k in rec)
+          params.append(k, rec[k])
       }
+      updateUrl()
     }
 
     console.log('onSelection', action)
 
-    this.state.data.selectionState = this.selections.applyAction(action)
-    this.graphComponents().forEach(g => {
-      const selections = this.state.data.selectionState
-      return g.setState({ selections })
-    })
+    if(this.state.model) {
+      this.state.model.selectionState = this.selections.applyAction(action)
+      this.graphComponents().forEach(g => {
+        const selections = this.state.model.selectionState
+        return g.setState({ selections })
+      })
+    }
   }
 
   graphComponents(): Array<React.Component<InteractiveDataProps<YtModel>, InteractiveDataState>> {
@@ -78,12 +94,12 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   }
 
   render() {
-    if (this.state.data) {
+    if (this.state.model) {
       return (
         <div className={'ChannelRelationPage'}>
           <ChannelTitle
             ref={r => (this.title = r)}
-            model={this.state.data}
+            model={this.state.model}
             onSelection={this.onSelection.bind(this)}
           />
 
@@ -95,7 +111,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                     ref={r => (this.relations = r)}
                     height={height}
                     width={width}
-                    model={this.state.data}
+                    model={this.state.model}
                     onSelection={this.onSelection.bind(this)}
                   />
                 )}
@@ -104,11 +120,11 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
             <div className={'Flows'}>
               <ContainerDimensions>
                 {({ height, width }) => (
-                  <RecommendFlows
+                  <RecFlows
                     ref={r => (this.flows = r)}
                     height={height}
                     width={width}
-                    model={this.state.data}
+                    model={this.state.model}
                     onSelection={this.onSelection.bind(this)}
                   />
                 )}

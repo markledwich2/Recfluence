@@ -4,8 +4,8 @@ import { SelectableCell } from './Dim'
 import { ChannelData } from './YtModel'
 import React from 'react'
 import { range } from 'd3'
-import { renderToString } from 'react-dom/server'
 import { merge } from './Utils'
+import { renderToString } from 'react-dom/server'
 
 
 export interface YtParams {
@@ -26,7 +26,7 @@ export class YtInteractiveChartHelper {
 
     constructor(component: React.Component<InteractiveDataProps<any>, InteractiveDataState>, source:string) {
         this.component = component
-        this.selections = new SelectionStateHelper(component.props.onSelection, () => this.component.state.selections, source)
+        this.selections = new SelectionStateHelper(() => this.component.state.selections, component.props.onSelection, source)
     }
 
     createContainer(svg: d3.Selection<SVGSVGElement, {}, null, undefined>, chartName: string) {
@@ -40,9 +40,9 @@ export class YtInteractiveChartHelper {
             .classed('chart', true)
             .classed(chartName, true)
 
-        var glowFilters = (glows: { name: string, blur?: number, intensity?: number }[]) => {
+        var GlowFilters = (props: {glows: { name: string, blur?: number, intensity?: number }[]}) => {
             return (<>
-                {glows.map(g => (
+                {props.glows.map(g => (
                 <filter key={g.name} id={g.name} width={'800%'} height={'800%'} x={'-400%'} y={'-400%'} > 
                     <feGaussianBlur stdDeviation={g.blur ?? 5} result='coloredBlur'/>
                     <feMerge>
@@ -54,9 +54,11 @@ export class YtInteractiveChartHelper {
         }
 
         var defs = svg.append("defs")
-        defs.html(renderToString(glowFilters([
-          { name: 'glow', blur: 5 }, 
-          { name: 'glowBig', blur: 10, intensity:3 }])))
+        defs.html(renderToString(           
+            <GlowFilters glows={[
+                { name: 'glow', blur: 5 }, 
+                { name: 'glowBig', blur: 10, intensity:3 }]} />
+          ))
 
         return container
     }
