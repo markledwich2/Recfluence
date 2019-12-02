@@ -23,16 +23,17 @@ agreementPercent = (lr %>%
 
 print(agreementPercent)
 
-reviwers <- c("Ac", "os", "zY") #  filter out reviewers with only a handfull of classifications
+reviwers = c("Ac", "os", "zY") #  filter out reviewers with only a handfull of classifications
+lrCodes = c( "L" = -1, "C" = 0, "R" = 1)
+
 
 lrIcc = lr %>% 
   filter(REVIEWER %in% reviwers) %>%
-  mutate(REVIEWER_LR = switch(REVIEWER_LR, "L" = -1, "C" = 0, "R" = 1)) %>%
+  mutate(REVIEWER_LR = lrCodes[REVIEWER_LR]) %>%
   spread(REVIEWER, REVIEWER_LR, sep="_") %>%
   select(starts_with("REVIEWER"))
 
 
-# all of the different ways of calculating agreement look pretty bad
 agree(lrIcc)
 lrIcc %>% icc(model="twoway", type="agreement")
 kappam.fleiss(lrIcc)
