@@ -52,7 +52,7 @@ namespace YtReader.Yt {
         .WrapAsync(Policy
           .Handle<HttpRequestException>()
           .Or<GoogleApiException>(g => g.HttpStatusCode.IsTransient())
-          .WaitAndRetryAsync(3, i => i.ExponentialBackoff(1.Seconds())))
+          .WaitAndRetryAsync(6, i => i.ExponentialBackoff(1.Seconds())))
         .ExecuteAsync(request.ExecuteAsync);
     }
 

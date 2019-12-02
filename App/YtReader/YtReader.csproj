@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="12.1.3" />
+    <PackageReference Include="Dapper" Version="2.0.30" />
     <PackageReference Include="Google.Apis.Sheets.v4" Version="1.41.1.1743" />
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.40.2.1593" />
     <PackageReference Include="LtGt" Version="1.0.2" />

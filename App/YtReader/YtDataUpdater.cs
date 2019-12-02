@@ -262,8 +262,14 @@ namespace YtReader {
 
       if (failed.Any()) {
         var apiRecs = await failed.BlockTransform(async f => {
-          var related = await Api.GetRelatedVideos(f.fromId);
-          return (f.fromId, f.fromTitle, recs: related.Select(r => new Rec {
+          ICollection<RecommendedVideoListItem> related = new List<RecommendedVideoListItem>();
+          try {
+            related = await Api.GetRelatedVideos(f.fromId);
+          }
+          catch (Exception ex) {
+            log.Warning(ex, "Unable to get related videos for {VideoId}: {Error}", f.fromId, ex.Message);
+          }
+          return (f.fromId, f.fromTitle, recs: related.NotNull().Select(r => new Rec {
             Source = RecSource.Api,
             ToChannelTitle = r.ChannelTitle,
             ToChannelId = r.ChannelId,
