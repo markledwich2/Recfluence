@@ -124,7 +124,7 @@ One limitation of the original analysis was that some late night shows -- with h
 |**channel views**|The total number of video views since *2018 Jan 1*|
 |**daily channel views**|`(channel views) * (days in the period videos have been recorded for the channel)`|
 |**relevant channel views**|`(daily channel views) * (channel relevance %)`|
-|**ideology**|This is derived from the list of channel tags. We do this to create a simple category for aggregation & visualization. Each of the following `tags condition => idology` are evaluated from top to bottom<br>`WhiteIdentitarian => White Identitarian`<br>`MRA => MRA`<br>`Conspiracy => Conspiracy`<br>`Libertarian => Libertarian`<br>`AntiSJW and either Provocateur or PartisanRight => Alt-light`<br>`AntiSJW => Anti-SJW`<br>`Socialist => Socialist`<br>`ReligiousConservative => ReligiousConservative`<br>`PartisanLeft => Partisan Left`<br>`PartisanRight => PartisanRight`<br>`AntiTheist => Anti-Theist`
+|**Ledwich & Zaitsev classification**|This is derived from the list of channel tags. We do this to create a simple category for aggregation & visualization. Each of the following `tags condition => idology` are evaluated from top to bottom<br>`WhiteIdentitarian => White Identitarian`<br>`MRA => MRA`<br>`Conspiracy => Conspiracy`<br>`Libertarian => Libertarian`<br>`AntiSJW and either Provocateur or PartisanRight => Alt-light`<br>`AntiSJW => Anti-SJW`<br>`Socialist => Socialist`<br>`ReligiousConservative => ReligiousConservative`<br>`PartisanLeft => Partisan Left`<br>`PartisanRight => PartisanRight`<br>`AntiTheist => Anti-Theist`
 
 
 
