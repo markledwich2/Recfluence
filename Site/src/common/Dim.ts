@@ -197,15 +197,16 @@ export class Dim<T> {
 
   private createCell(x: QueryContext<T>, g: T[]): Cell<T> {
     let keys = toRecord(x.groupCols, c => c, c => g[0][c]?.toString())
-    let measures = toRecord(x.q.measures, m => m, m => this.colValue(this.col(m), g))
+    let measures = toRecord(x.q.measures, m => m, m => this.colValue(this.col(m), g) as number)
     let props = toRecord(x.props, p => p, p => this.colValue(this.col(p), g))
-    return <Cell<T>>{
+    let cell:Cell<T> = {
       keys,
       props,
       color: x.getColor(g[0]),
       label: x.getLabel(g[0]),
       measures
     }
+    return cell
   }
 
   /** get cell information for data that is pre-aggregated */

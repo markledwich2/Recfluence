@@ -1,5 +1,5 @@
 import React, { } from 'react'
-import Select from 'react-select'
+import Select, { createFilter } from 'react-select'
 import _ from 'lodash'
 import { YtInteractiveChartHelper, YtParams } from "../common/YtInteractiveChartHelper"
 import { YtModel, ChannelData } from '../common/YtModel'
@@ -78,6 +78,7 @@ export class SearchChannels extends React.Component<Props, State> {
           styles={YtTheme.selectStyle}
           theme={YtTheme.selectTheme}
           value={selectedValue ? selectedValue : null}
+          filterOption={createFilter({ ignoreAccents: false })}
           ref={(r) => (this.ref = r)}
         />
       </div>

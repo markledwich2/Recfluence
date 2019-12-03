@@ -162,7 +162,7 @@ export class YtModel {
       {
         name: 'title',
         values: [
-          { value: 'Low Rank', label: 'Other Channels (rank > 10)' }
+          { value: '', label: 'Non-Political' },
         ]
       },
       {
@@ -177,7 +177,7 @@ export class YtModel {
       },
       {
         name: 'ideology',
-        label: 'Classification - Ledwich &  Zaitsev',
+        label: 'Ledwich & Zaitsev Group',
         pallet: ['#333'],
         values: [
           { value: 'Anti-SJW', color: '#8a8acb' },

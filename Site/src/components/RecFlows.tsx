@@ -141,7 +141,11 @@ export class RecFlows extends React.Component<Props, State> {
     const recCol = RecEx.recCol
     const flowPartId = (c: RecData | Cell<RecData>, dir: RecDir): string => CellEx.cellValue(c, RecEx.recCol(dir, selectionCol))
     const centerPartId = selection[selectionCol]
-    const recRows: RecData[] = recs.rows.filter(r => flowPartId(r, 'from') == centerPartId || flowPartId(r, 'to') == centerPartId)
+    const displayToUnknown = false
+    const recRows: RecData[] = recs.rows.filter(r => 
+      (flowPartId(r, 'from') == centerPartId || flowPartId(r, 'to') == centerPartId)
+      && (displayToUnknown || flowPartId(r, 'to'))
+      )
 
     const nodeCells = (mode: NodeMode) => {
       if (mode == 'center') throw 'nodeCell only works with left or right'

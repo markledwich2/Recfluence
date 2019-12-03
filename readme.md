@@ -102,6 +102,10 @@ Enough Channels. It shouldn't be a minor niche, unless it is important for the r
 
 To calculate the *majority view*, each soft tag is assessed independently. For each tag, the number of reviewer with that rag must tally to more than half.
 
+Some tags/classifications reviewers agreed on most of the time (e.g. left/center/right, and conspiracy, anti-theist). Others there was only slightly better than random chance agreement (e.g. Educational, Provocateur). The graphic below shows a measure of how much reviewers agreed on channel classifications beyond change where 0 is purely random and 1 is always in agreement.
+
+![Reviewer Agreement](Analysis/Images/ReviewerAgreement.png)
+
 ### Relevance
 One limitation of the original analysis was that some late night shows -- with huge viewership -- weren't as political as most channels yet overwhelm the analysis. To fix this problem, each reviewer gave a relevance score representing the portion of content relevant to US politics & cultural commentary. In the analysis,  relevant views/recommendations are adjusted according to the average reviewer relevance score.
 
@@ -131,16 +135,16 @@ One limitation of the original analysis was that some late night shows -- with h
 This gives an overview of the "landscape" of channels, clustering like channels together using a [force directed graph](https://en.wikipedia.org/wiki/Force-directed_graph_drawing). 
 Channels that have mutual recommendations are attracted un-connected channels repel. The orientation and placement on x/y don't have no specific meaning and will change each tim it is updated. 
 
-![channel relations legend](Site/static/channel_legend.svg)
+![channel relations legend](Site/static/help/channel_legend.svg)
 
 
 **Understanding Impression Flow**
 
 This shows the "flow" of impressions as a [sankey diagram](https://en.wikipedia.org/wiki/Sankey_diagram). When no selection have been made, it shows the impression flow between categories
-![categories flow help](Site/static/categories_flow_help.png)
+![categories flow help](Site/static/help/categories_flow_help.png)
 
 When a channel/category is selected/highlighted it shows the flows through it
-![selection flow help](Site/static/selection_flow_help.png)
+![selection flow help](Site/static/help/selection_flow_help.png)
 
 **Novel Interactivity**
 - search for channel (top right)
@@ -149,15 +153,16 @@ When a channel/category is selected/highlighted it shows the flows through it
 - choose different categories to color by
 - highlight or select legend items
 
-![category selection and legend highlight](Site/static/ideology_selection.png)
+![category selection and legend highlight](Site/static/help/ideology_selection.png)
 
 ## Limitations
 
 **Process & Classification Q & A**
-- The classification of political category is prone to bias subjectivity, how can you trust the results?  This is indeed a limitation, but one we ahve tried to address
-    - Clear guidelines were given to 3+ reviewers who independly classified each channel 
+- The classification of political category is prone to bias subjectivity, how can you trust the results? This is indeed a limitation, but one we have tried to address
+    - Clear guidelines were given to 3+ reviewers who independently classified each channel
+    - We measured the consistency between the reviewers judgments. Left/Center/Right classifications are moderately reliable, and tags are varius degrees of reliability. Take this into consideration
     - Respected sources of classification for left/right were used when possible (i.e. adfontesmedia.com and mediabiasfactcheck.com) which covered a large portion of the large mainstream channels.
-    - The top 50 channels by video views make up 78% of all views. Download the channel data, then Go though the top 50 channels and check if you agree with the classification. If you generally accept the classifications then you can generally accept the results.
+    - The top 50 channels by video views make up the majority of all views. Download the channel data, then Go though the top 50 channels and check if you agree with the classification. If you generally accept the classifications then you can generally accept the results.
 
 - Why not perform a more procedural/quantifiable method for determining political category (e.g. like the process used for https://www.adfontesmedia.com)? I don't believe making this process more detailed and quantitative would give you a significantly more accurate/objective answer. .
 - Why is the apposition to Identity Politics/Social Justice considered "right" when it is not normally considered an important part of the standard political definition for left/right?  I understand this, but I am confident this has changed. It is clear when evaluating YouTube content that this is a new and important divide. 
