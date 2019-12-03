@@ -260,5 +260,8 @@ paket-files/
 __pycache__/
 *.pyc
 
+# Tableau
+*.twbr
+
 
 .*/
