@@ -193,7 +193,7 @@ export class YtModel {
           { value: 'Religious Conservative', color: '#41afa5' },
           { value: 'Conspiracy', color: '#ffc168' },
           { value: 'Center/Left MSM', color: '#aa557f' },
-          { value: 'Unclassified', label: 'Unclassified' },
+          { value: 'Unclassified', label: 'No Group' },
           { value: '', label: 'Non-Political' },
         ]
       },

@@ -11,16 +11,25 @@ getResult <- function(name) {
   return(read.csv(textConnection(txt), header=TRUE, quote="\""))
 }
 
-# helpfull article https://www.r-bloggers.com/k-is-for-cohens-kappa/
+# helpfull articles
+# simple explanation http://neoacademic.com/2011/11/16/computing-intraclass-correlations-icc-as-estimates-of-interrater-reliability-in-spss/
+# specific to irr https://www.r-bloggers.com/k-is-for-cohens-kappa/
+# another irr one.maybe cappa is better http://www.cookbook-r.com/Statistical_analysis/Inter-rater_reliability/
 
+results = data.frame(tag=character(), subjects=integer(), raters=integer(), 
+                     kap=numeric(), kap_p=numeric(), 
+                      icc=numeric(), icc_p=numeric(), icc_lbound=numeric(),icc_ubound=numeric(), 
+                        agreement=numeric())
 
-iccResults = data.frame(tag=character(), subjects=integer(), raters=integer(), 
-                        value=numeric(), p.value=numeric(), lbound=numeric(),ubound=numeric())
-
-addResult <- function(name, cciList) {
-  print(cciList)
-  rbind(iccResults, data.frame(name=name, subjects=cciList$subjects, raters=cciList$raters, 
-       value = cciList$value, p.value=cciList$p.value, lbound=cciList$lbound, ubound=cciList$ubound ))
+addResult <- function(name, ratings) {
+  agree = agree(ratings)
+  kap = kappam.fleiss(ratings)
+  icc = icc(ratings, model="twoway", type="agreement")
+  df = data.frame(name=name, subjects=kap$subjects, raters=kap$raters, 
+                  kap = kap$value, kap_p = kap$p.value,
+                  icc = icc$value, icc_p = icc$p.value, icc_lbound=icc$lbound, icc_ubound=icc$ubound,
+                  agreement = agree$value)
+  rbind(results, df)
 }
 
 
@@ -34,14 +43,14 @@ lr = getResult("icc_lr")
 reviwers = c("Ac", "os", "zY") #  filter out reviewers with only a handfull of classifications
 lrCodes = c( "L" = -1, "C" = 0, "R" = 1)
 
-lrIcc = lr %>% 
+lrRatings = lr %>% 
   filter(REVIEWER %in% reviwers) %>%
   mutate(REVIEWER_LR = lrCodes[REVIEWER_LR]) %>%
   spread(REVIEWER, REVIEWER_LR, sep="_") %>%
   select(starts_with("REVIEWER"))
 
 
-iccResults = addResult("Left/Center/Right", lrIcc %>% icc(model="twoway", type="agreement"))
+results = addResult("Left/Center/Right", lrRatings)
 
 
 #
@@ -51,14 +60,16 @@ tag = getResult("icc_tags")
 uniqueTags = unique(tag$TAG)
 
 for(t in uniqueTags) {
-  tagIcc = tag %>%
+  tagRatings = tag %>%
     filter(REVIEWER %in% reviwers & TAG == t) %>%
     mutate(REVIEWER_HAS_TAG = as.logical(REVIEWER_HAS_TAG)) %>%
     spread(REVIEWER, REVIEWER_HAS_TAG, sep="_") %>%
     select(starts_with("REVIEWER"))
   
-  iccResults = addResult(t, tagIcc %>% icc(model="twoway", type="agreement"))
+  results = addResult(t, tagRatings)
 }
 
-write.csv(iccResults, "reviewer_reliability.csv", row.names = FALSE, sep = ",")
+print(results)
+
+write.csv(results, "reviewer_reliability.csv", row.names = FALSE, sep = ",")
 

@@ -388,10 +388,11 @@ export class ChannelRelations extends React.Component<Props, State> {
       console.log("state rendered")
     }
 
-    for (var i = 0; i < 100; i++) {
+    this.stateRender(null, null)
+    for (var i = 0; i < 150; i++) {
       lay.force.tick()
-      //updatePositions()
-      //await delay(1)
+      updatePositions()
+      await delay(5)
     }
     lay.force.stop()
 
