@@ -148,7 +148,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       ).value()
 
     let links = _(this.props.model.recs.rows)
-      .filter(l => l.toChannelId != l.fromChannelId && l.recommendsViewChannelPercent > 0.005) //l.recommendsViewChannelPercent > 0.005 && 
+      .filter(l => l.toChannelId != l.fromChannelId && l.recommendsViewChannelPercent > 0.01)
       .map(
         l =>
           ({
