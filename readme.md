@@ -104,18 +104,21 @@ To calculate the *majority view*, each soft tag is assessed independently. For e
 
 Some tags/classifications reviewers agreed on most of the time (e.g. left/center/right, and conspiracy, anti-theist). Others there was only slightly better than random chance agreement (e.g. Educational, Provocateur). The graphic below shows a measure of how much reviewers agreed on channel classifications beyond change where 0 is purely random and 1 is always in agreement.
 
-![Reviewer Agreement](Analysis/Images/ReviewerAgreement.png)
+![Reviewer Agreement](Analysis/Images/ReviewerAgreementICC.png)
 
 ### Relevance
 One limitation of the original analysis was that some late night shows -- with huge viewership -- weren't as political as most channels yet overwhelm the analysis. To fix this problem, each reviewer gave a relevance score representing the portion of content relevant to US politics & cultural commentary. In the analysis,  relevant views/recommendations are adjusted according to the average reviewer relevance score.
 
-
 ## Data
-### Download 
+### Download
 
 [Download](https://pyt-data.azureedge.net/data/results/latest/recfluence_shared_data.zip) the latest data used for the diagrams. The full raw video and recommendations data can be provided on request - either as files or database access (at cost).
 
 ### Calculations and considerations
+All source & calculations are available to review and use for your own purposes.
+
+- [R Source](/Analysis/) Statistical calculations
+- [SQL Source](https://github.com/markledwich2/YouTubeNetworks_Dataform/tree/master/definitions) Data transformation and basic calculations (using [dataform](https://dataform.co/))
 
 |Calculation|Description|
 |-|-|
@@ -153,7 +156,7 @@ When a channel/category is selected/highlighted it shows the flows through it
 - choose different categories to color by
 - highlight or select legend items
 
-![category selection and legend highlight](Site/static/help/ideology_selection.png)
+![category selection and legend highlight](Analysis/Images/recfluence_howto.gif)
 
 ## Limitations
 
