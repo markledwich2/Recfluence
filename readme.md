@@ -122,7 +122,7 @@ All source & calculations are available to review and use for your own purposes.
 
 |Calculation|Description|
 |-|-|
-|**impressions**|An estimate for the number of times a viewer was presented with recommendations. Only YouTube knows true impressions, so we use the following process crete an estimate:<br>Consider each combination of videos (e.g. *Video A* to *Video B*)<br><br>`(A to B impressions) = (recommendations from A to B) / (total recommendations from Video A) x (*A's views) x (recommendations per video=10)`<br><br>This can be aggregated to give impressions between channels, categories etc...|
+|**impressions**|An estimate for the number of times a viewer was presented with a recommendation. I.e. we count each of the top 10 recommendations for a video as an "impression". Only YouTube knows true impressions, so we use the following process crete an estimate:<br>Consider each combination of videos (e.g. *Video A* to *Video B*)<br><br>`(A to B impressions) = (recommendations from A to B) / (total recommendations from Video A) x (*A's views) x (recommendations per video=10)`<br><br>This can be aggregated to give impressions between channels, categories etc...|
 |**relevant impressions**|`(A channel's relevance %) x impressions`|
 |**channel views**|The total number of video views since *2018 Jan 1*|
 |**daily channel views**|`(channel views) * (days in the period videos have been recorded for the channel)`|
