@@ -127,8 +127,26 @@ All source & calculations are available to review and use for your own purposes.
 |**channel views**|The total number of video views since *2018 Jan 1*|
 |**daily channel views**|`(channel views) * (days in the period videos have been recorded for the channel)`|
 |**relevant channel views**|`(daily channel views) * (channel relevance %)`|
-|**Ledwich & Zaitsev classification**|This is derived from the list of channel tags. We do this to create a simple category for aggregation & visualization. Each of the following `tags condition => idology` are evaluated from top to bottom<br>`WhiteIdentitarian => White Identitarian`<br>`MRA => MRA`<br>`Conspiracy => Conspiracy`<br>`Libertarian => Libertarian`<br>`AntiSJW and either Provocateur or PartisanRight => Alt-light`<br>`AntiSJW => Anti-SJW`<br>`Socialist => Socialist`<br>`ReligiousConservative => ReligiousConservative`<br>`PartisanLeft => Partisan Left`<br>`PartisanRight => PartisanRight`<br>`AntiTheist => Anti-Theist`
 
+
+**Ledwich & Zaitsev Group**
+Derived from the list of channel tags and left/center/right classification. We do this to create a 1:1 channel group. 
+|Condition based on tag or left/center/right<br>(evaluated top to bottom)|Ledwich & Zaitsev Group|
+|-|-|
+|White Identitarian|White Identitarian|
+|MRA|MRA|
+|Conspiracy|Conspiracy|
+|Libertarian|Libertarian|
+|AntiSJW and (Provocateur or PartisanRight)|Provocative Anti-SJW|
+|Anti-SJW|Anti-SJW|
+|Socialist|Socialist|
+|Religious Conservative|Religious Conservative|
+|SocialJustice or Anti-Whiteness|Social Justice|
+|(Left or Center) and (Mainstream News or Missing Link Media)|Center/Left MSM|
+|Partisan Left|Partisan Left|
+|Partisan Right|Partisan Right|
+|Anti-Theist|Anti-Theist|
+|(Everything Else)|Unclassified|
 
 
 ### Recfluence Visualization
