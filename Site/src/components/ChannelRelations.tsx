@@ -198,7 +198,7 @@ export class ChannelRelations extends React.Component<Props, State> {
           .forceLink<Node, Link>(links)
           .distance(1)
           .id(d => d.channelId)
-          .strength(d => (d.strength / maxStrength) * 0.3)
+          .strength(d => (d.strength / maxStrength) * 0.6)
       )
       .force('collide', d3.forceCollide<Node>(getNodeRadius))
 
@@ -354,7 +354,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       })
 
     let zoomToExpectedScale = (width: number, height: number) =>
-      zoom(width, height, new DOMRect(0, -200, 1300, 1300), 0)
+      zoom(width, height, new DOMRect(-200, -400, 2000, 2000), 0)
 
     let zoom = (width: number, height: number, bounds: DOMRect, duration: number) => {
       let midX = bounds.x + bounds.width / 2
