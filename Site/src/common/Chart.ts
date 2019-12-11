@@ -75,7 +75,7 @@ export class SelectionStateHelper<T, TParams> {
     getState: () => SelectionState
     source: string
 
-    constructor(getState: () => SelectionState, onSelection?: SelectionHandler,  source?: string) {
+    constructor(getState: () => SelectionState, onSelection?: SelectionHandler, source?: string) {
         this.getState = getState
         this.onSelection = onSelection ?? (a => Object.assign(getState(), this.applyAction(a)))
         this.source = source
@@ -83,7 +83,7 @@ export class SelectionStateHelper<T, TParams> {
 
     // returns the updated state according to the given action
     applyAction = (action: Action): SelectionState => {
-         let state = this.getState()
+        let state = this.getState()
         let s = (s: any) => Object.assign({}, state, s)
         switch (action.type) {
             case ActionType.clear:
@@ -110,10 +110,10 @@ export class SelectionStateHelper<T, TParams> {
     private getRecord = (toSelect: keyof T | Col<T> | Record<keyof T, string> | SelectableCell<T>, value: string = null) => {
         if (typeof (toSelect) == 'string')
             return { [toSelect]: value }
-        else if (ColEx.isCol(toSelect))
-            return { [toSelect.name]: value }
         else if (CellEx.isCell(toSelect))
             return toSelect.keys // merge<any>({}, , toSelect.props) // props = selection OR making granular info available
+        else if (ColEx.isCol(toSelect))
+            return { [toSelect.name]: value }
         else
             return toSelect as Record<string, string>
     }

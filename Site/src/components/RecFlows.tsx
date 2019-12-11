@@ -245,8 +245,6 @@ export class RecFlows extends React.Component<Props, State> {
       let highlightedOrSelected = 
         (hl && hl.source != RecFlows.source ? hl.record : null) // ignore highlights from this component for changing center node
         ?? selections.selected.find(_ => true)?.record
-        
-
 
       let { nodes, links } = this.centerNodeLayout(highlightedOrSelected) ?? this.betweenColorLayout()
       this.chart.selections.updateSelectableCells(nodes)

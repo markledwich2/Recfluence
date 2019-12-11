@@ -30,8 +30,8 @@ export class CellEx {
   }
 
   static isCell<T>(o: Object): o is Cell<T> {
-    const col = o as Cell<T>
-    return col && col.keys !== undefined && col.label !== undefined && col.measures != undefined
+    const cell = o as Cell<T>
+    return cell && cell.keys !== undefined && cell.label !== undefined
   }
 }
 
