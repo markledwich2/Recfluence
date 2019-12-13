@@ -13,14 +13,20 @@ using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using Troschuetz.Random;
 
 namespace YtReader {
   public static class YtContainerRunner {
+    static readonly Region[] Regions = {Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral};
+    static readonly TRandom  Rand    = new TRandom();
+
+    static Region GetRegion() => Rand.Choice(Regions);
+
     public static async Task<IReadOnlyCollection<IContainerGroup>> StartFleet(ILogger log, Cfg cfg, UpdateType optionUpdateType) {
       var sheets = (await ChannelSheets.MainChannels(cfg.App.Sheets, log)).ToList();
-      var evenBatchSize = (int)Math.Ceiling(sheets.Count / Math.Ceiling( sheets.Count / (double)cfg.App.ChannelsPerContainer));
-      
-      var batches = sheets.Randomize().Batch(evenBatchSize).Select((b, i) => (batch:b.ToList(), name: $"{cfg.App.Container.Name}-fleet-{i}")).ToList();
+      var evenBatchSize = (int) Math.Ceiling(sheets.Count / Math.Ceiling(sheets.Count / (double) cfg.App.ChannelsPerContainer));
+
+      var batches = sheets.Randomize().Batch(evenBatchSize).Select((b, i) => (batch: b.ToList(), name: $"{cfg.App.Container.Name}-fleet-{i}", i)).ToList();
 
       var azure = GetAzure(cfg);
 
@@ -28,33 +34,33 @@ namespace YtReader {
       await batches.BlockAction(async b => await EnsureNotRunning(b.name, azure, cfg.App.ResourceGroup), cfg.App.DefaultParallel);
 
       var fleet = await batches.BlockTransform(async b => {
-        var (batch, fleetName) = b;
-        var args = new[] {"update", 
-          "-t", optionUpdateType.ToString(), 
-          "-c", batch.Join("|", c => c.Id)};
-        var group = await ContainerGroup(cfg, azure, fleetName, args.ToArray());
+        var (batch, fleetName, i) = b;
+        var region = Regions[i % Regions.Length];
+        var args = new[] {
+          "update",
+          "-t", optionUpdateType.ToString(),
+          "-c", batch.Join("|", c => c.Id)
+        };
+        var group = await ContainerGroup(cfg, azure, fleetName, region, args.ToArray());
         return await group.CreateAsync();
       }, cfg.App.DefaultParallel);
-      
+
       log.Information("Started fleet containers: {Containers}", fleet.Join(", ", f => f.Name));
       return fleet;
     }
 
     public static async Task<IContainerGroup> Start(ILogger log, Cfg cfg, string[] args) {
       log.Information("starting container {Image} {Args}", cfg.App.Container.ImageName, args.Join(" "));
-      var containerGroup = await ContainerGroup(cfg, GetAzure(cfg), cfg.App.Container.Name, args);
+      var containerGroup = await ContainerGroup(cfg, GetAzure(cfg), cfg.App.Container.Name, GetRegion(), args);
       return await containerGroup.CreateAsync();
     }
 
-    static async Task<IWithCreate> ContainerGroup(Cfg cfg, IAzure azure, string groupName, string[] args) {
-      var sp = cfg.App.ServicePrincipal;
+    static async Task<IWithCreate> ContainerGroup(Cfg cfg, IAzure azure, string groupName, Region region, string[] args) {
       var container = cfg.App.Container;
-
       var rg = cfg.App.ResourceGroup;
       await EnsureNotRunning(groupName, azure, rg);
-
       var containerGroup = azure.ContainerGroups.Define(groupName)
-        .WithRegion(Region.USWest)
+        .WithRegion(region)
         .WithExistingResourceGroup(rg)
         .WithLinux()
         .WithPrivateImageRegistry(container.Registry, container.RegistryCreds.Name, container.RegistryCreds.Secret)
@@ -83,12 +89,11 @@ namespace YtReader {
 
     static async Task EnsureNotRunning(string groupName, IAzure azure, string rg) {
       var group = await azure.ContainerGroups.GetByResourceGroupAsync(rg, groupName);
-      if (@group != null) {
-        if (@group.State.HasValue() && @group.State == "Running")
+      if (group != null) {
+        if (group.State.HasValue() && group.State == "Running")
           throw new InvalidOperationException("Won't start container - it's not terminated");
-        await azure.ContainerGroups.DeleteByIdAsync(@group.Id);
+        await azure.ContainerGroups.DeleteByIdAsync(group.Id);
       }
     }
-    
   }
 }

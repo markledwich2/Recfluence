@@ -121,13 +121,6 @@ namespace YtReader {
       return lr;
     }
 
-    static V MajorityValue<T, V>(IEnumerable<T> items, Func<T, V> getValue, Func<T, double> getWeight) {
-      return items.GroupBy(getValue)
-        .Select(g => new {Wieght = g.Sum(getWeight), Value = g.Key})
-        .OrderByDescending(g => g.Wieght)
-        .Select(i => i.Value).FirstOrDefault();
-    }
-
     static SheetsService GetService(SheetsCfg sheetsCfg) {
       //var creds = new ClientSecrets {ClientId = sheetsCfg.Creds.Name, ClientSecret = sheetsCfg.Creds.Secret};
       var creds = GoogleCredential.FromJson(sheetsCfg.CredJson.ToString()).CreateScoped(SheetsService.Scope.SpreadsheetsReadonly);
