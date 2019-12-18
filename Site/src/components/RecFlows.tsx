@@ -65,7 +65,7 @@ export class RecFlows extends React.Component<Props, State> {
     const to = (r: RecData) => r[toCol]
 
     const recs = this.props.model.recCats
-    const recRows = recs.rows.filter(r => r[toCol]) // filter out null (recommends to channels outside dataset)
+    const recRows = recs.rows.filter(r => r[toCol] && r[fromCol]) // filter out null (recommends to channels outside dataset)
 
     const nodes = (dir: RecDir) => {
       const nodeCell = recs.cells({

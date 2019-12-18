@@ -81,8 +81,10 @@ namespace YtReader {
               return (c, Success: false);
             }
           }, Cfg.ParallelChannels);
-        Log.Information("Update complete: {Completed} channel videos/captions/recs, {Errors} failed in {Duration}",
-          channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed);
+
+        var requestStats = Scraper.RequestStats;
+        Log.Information("Update complete {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
+          channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed, requestStats.direct, requestStats.proxy);
       }
     }
 

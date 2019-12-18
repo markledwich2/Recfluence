@@ -112,9 +112,13 @@ namespace YtReader {
     public ScraperCfg Scraper { get; set; } = new ScraperCfg();
 
     public SnowflakeCfg Snowflake { get; set; } = new SnowflakeCfg();
+
+    public ResultsCfg Results { get; set; } = new ResultsCfg();
   }
 
-
+  public class ResultsCfg {
+    public string FileQueryUri { get; set; } = "https://raw.githubusercontent.com/markledwich2/YouTubeNetworks_Dataform/master";
+  }
  
   public class ScraperCfg {
     public string     Url            { get; set; }

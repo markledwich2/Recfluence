@@ -139,7 +139,7 @@ namespace YouTubeCli {
     
     static async Task<ExitCode> Results(TaskCtx<ResultsOption> ctx) {
       var store = ctx.Cfg.DataStore(ctx.Cfg.App.Storage.ResultsPath);
-      var result = new YtResults(ctx.Cfg.App.Snowflake, store, ctx.Log);
+      var result = new YtResults(ctx.Cfg.App.Snowflake, ctx.Cfg.App.Results, store, ctx.Log);
       await result.SaveResults();
       return ExitCode.Success;
     }

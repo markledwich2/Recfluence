@@ -66,7 +66,7 @@ export class RecEx {
 
 interface VIS_CHANNEL_REC {
   RELEVANT_IMPRESSIONS_DAILY: string,
-  REC_VIEW_CHANNEL_PERCENT: string,
+  PERCENT_OF_CHANNEL_RECS: string,
   FROM_CHANNEL_ID: string,
   TO_CHANNEL_ID: string
 }
@@ -77,7 +77,7 @@ export class YtModel {
   channels: Dim<ChannelData>
   selectionState: SelectionState
 
-  static version = 'v2'
+  static version = 'v2.1'
 
   static async dataSet(path: string): Promise<YtModel> {
     const channelsTask = d3.csv(path + 'vis_channel_stats.csv.gz')
@@ -116,7 +116,7 @@ export class YtModel {
         .flatMap(c => [recCol('from', c), recCol('to', c)]).value()
 
       let rec = merge<RecData>({
-        recommendsViewChannelPercent: +r.REC_VIEW_CHANNEL_PERCENT,
+        recommendsViewChannelPercent: +r.PERCENT_OF_CHANNEL_RECS,
         relevantImpressionsDaily: +r.RELEVANT_IMPRESSIONS_DAILY
       },
         toRecord(recCols,

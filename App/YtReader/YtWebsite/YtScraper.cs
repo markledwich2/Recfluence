@@ -48,6 +48,10 @@ namespace YtReader.YtWebsite {
 
     long         DirectHttpFailures;
     const string MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
+    long _directRequests = 0;
+    long _proxyRequests = 0;
+
+    public (long direct, long proxy) RequestStats => (-_directRequests, _proxyRequests);
 
     async Task<string> GetRaw(string url, string desc, ILogger log) {
       log.Debug("Scraping {Desc} {Url}", desc, url);
@@ -69,6 +73,7 @@ namespace YtReader.YtWebsite {
           var sw = Stopwatch.StartNew();
           directRes.EnsureSuccessStatusCode();
           var raw = await directRes.ContentAsString();
+          Interlocked.Increment(ref _directRequests);
           log.Debug("Direct scraped {Desc} {Url} in {Duration}", desc, url, sw.Elapsed);
           return raw;
         }
@@ -94,6 +99,7 @@ namespace YtReader.YtWebsite {
         return await innerRes.ContentAsString();
       }).WithDuration();
 
+      Interlocked.Increment(ref _proxyRequests);
       log.Debug("Proxy scraped {Desc} {Url} in {Duration}", desc, url, res.Duration);
       return res.Result;
     }

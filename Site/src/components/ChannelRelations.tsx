@@ -148,7 +148,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       ).value()
 
     let links = _(this.props.model.recs.rows)
-      .filter(l => l.toChannelId != l.fromChannelId && l.recommendsViewChannelPercent > 0.01)
+      .filter(l => l.toChannelId != l.fromChannelId && l.recommendsViewChannelPercent > 0.015)
       .map(
         l =>
           ({
@@ -190,7 +190,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     let centerForce = d3.forceCenter(simSize / 2, simSize / 2)
     let force = d3
       .forceSimulation<Node, Link>(nodes)
-      .force('charge', d3.forceManyBody().strength(-40))
+      .force('charge', d3.forceManyBody().strength(-60))
       .force('center', centerForce)
       .force(
         'link',
@@ -344,7 +344,8 @@ export class ChannelRelations extends React.Component<Props, State> {
         const t = d3.zoomTransform(svg.node())
         container.attr('transform', () => t.toString())
         const labelsTrans = `scale(${1 / t.k})`
-        const existingTrans = labelsGroup.select('text').attr('transform')
+        const labelSelect = labelsGroup.select('text')
+        const existingTrans = labelSelect.empty() ? null : labelSelect.attr('transform')
         if (labelsTrans != existingTrans) {
           labelsGroup.selectAll<SVGTextElement, Node>('text')
             .attr('transform', () => labelsTrans) // undo the zoom on labels
@@ -354,7 +355,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       })
 
     let zoomToExpectedScale = (width: number, height: number) =>
-      zoom(width, height, new DOMRect(-200, -400, 2000, 2000), 0)
+      zoom(width, height, new DOMRect(0, 0, 1400, 1400), 0)
 
     let zoom = (width: number, height: number, bounds: DOMRect, duration: number) => {
       let midX = bounds.x + bounds.width / 2

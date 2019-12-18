@@ -134,7 +134,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
           <div className={'footer'}>
             <a href={'https://twitter.com/mark_ledwich'}>@mark_ledwich</a>
             <a href={'mailto:mark@ledwich.com.au?Subject=Political YouTube'}>mark@ledwich.com.au</a>
-            <span> &nbsp;<a href={'https://github.com/markledwich2/YouTubeNetworks'}>GitHUb project</a> &nbsp;</span>
+            <span> &nbsp;<a href={'https://github.com/markledwich2/YouTubeNetworks'}>GitHub project</a> &nbsp;</span>
           </div>
         </div >
       )
