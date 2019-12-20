@@ -47,7 +47,7 @@ namespace YtReader {
     readonly ILogger          Log;
     readonly HttpClient       Http = new HttpClient();
 
-    const string Version = "v2.1";
+    const string Version = "v2.2";
 
     public YtResults(SnowflakeCfg snowflakeCfg, ResultsCfg resCfg, ISimpleFileStore store, ILogger log) {
       SnowflakeCfg = snowflakeCfg;
@@ -58,11 +58,18 @@ namespace YtReader {
 
     public async Task SaveResults() {
       using var db = await SnowflakeCfg.OpenConnection();
+
+      var dateRangeParams = new {@from = "2019-11-01", to = "2019-12-31"};
       var queries = new[] {
-        new ResQuery("vis_channel_stats", desc: "data combined from classifications + information (from the YouTube API)"),
-        new ResQuery("vis_category_recs", desc: "aggregate recommendations between all combinations of the categories  available on recfluence.net"),
-        new FileQuery("vis_channel_recs", "sql/vis_channel_recs.sql", "aggregated recommendations between channels (scraped form the YouTube website)",
-          new {from_month = "2019-11-01", to_month = "2019-12-31"}),
+        new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql", 
+          "data combined from classifications + information (from the YouTube API)", dateRangeParams),
+        
+        new FileQuery("vis_category_recs", "sql/vis_category_recs.sql", 
+          "aggregate recommendations between all combinations of the categories available on recfluence.net", dateRangeParams),
+        
+        new FileQuery("vis_channel_recs", "sql/vis_channel_recs.sql", 
+          "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams),
+        
         new ResQuery("channel_classification", desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)"),
         new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
         new ResQuery("icc_lr", desc: "channel classifications in a format used to calculate how consistent reviewers are when deciding left/right/center"),
@@ -127,14 +134,20 @@ namespace YtReader {
     async Task<IDataReader> ResQuery(IDbConnection db, ResQuery q) {
       var query = q.Query ?? $"select * from {q.Name}";
       if (q is FileQuery f) {
-        var req = new Uri(ResCfg.FileQueryUri + "/" + f.Path.StringValue).Get();
+        var req = new Uri(ResCfg.FileQueryUri + "/" + f.Path.StringValue).Get()
+          .AddHeader("Cache-Control", "no-cache");
+        
         var res = await Http.SendAsync(req);
         query = await res.ContentAsString();
       }
       Log.Information("Saving result {Name}: {Query}", q.Name, query);
-      //var testReader = await db.ExecuteReaderAsync("select * from channel_recs_monthly where rec_month=:month", new {month = "2019-11-01"});
-      var reader = await db.ExecuteReaderAsync(query, q.Parameters, commandType: CommandType.Text);
-      return reader;
+      try {
+        var reader = await db.ExecuteReaderAsync(query, q.Parameters, commandType: CommandType.Text);
+        return reader;
+      }
+      catch (Exception ex) {
+        throw new InvalidOperationException($"Error when executing '{q.Name}': {ex.Message}", ex);
+      }
     }
 
     async Task SaveToLatestAndDateDirs(string fileName, FPath tempFile) =>
