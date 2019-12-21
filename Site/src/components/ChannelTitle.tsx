@@ -1,13 +1,14 @@
 import * as React from 'react'
 import { InteractiveDataProps, InteractiveDataState } from '../common/Chart'
 import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
-import { YtModel, ChannelData } from '../common/YtModel'
-import { compactInteger } from 'humanize-plus'
+import { YtModel, ChannelData, ChannelEx } from '../common/YtModel'
+import { compactInteger, formatNumber } from 'humanize-plus'
 import * as _ from 'lodash'
 import { SearchChannels } from '../components/SearchChannels'
 import * as dateformat from 'dateformat'
 import { Dim, ColEx } from '../common/Dim'
 import * as d3 from 'd3'
+import { color } from 'd3'
 
 interface State extends InteractiveDataState { }
 interface Props extends InteractiveDataProps<YtModel> { }
@@ -56,7 +57,8 @@ export class ChannelTitle extends React.Component<Props, State> {
       let lrCol = this.props.model.channels.col('lr')
       let labelFunc = ColEx.labelFunc(lrCol)
       let colorFunc = ColEx.colorFunc(lrCol)
-      let lrColor = (v:string) => d3.color(colorFunc(v)).darker(2).hex()
+      let lrColor = (v: string) => d3.color(colorFunc(v)).darker(2).hex()
+      let advantage = ChannelEx.impressionAdvantagePercent(c)
       return (<>
         <a href={`https://www.youtube.com/channel/${c.channelId}`} target="blank">
           <img src={c.thumbnail} style={{ height: '7em', marginRight: '1em', clipPath: 'circle()' }} />
@@ -64,12 +66,18 @@ export class ChannelTitle extends React.Component<Props, State> {
         <div className="title-details">
           <div><b>{c.title}</b></div>
           <div>
-            {c.relevantDailyViews == c.dailyViews ? 
-            <><b>{compactInteger(c.relevantDailyViews)}</b> relevant daily views <i>{dateFormat(c.publishedFrom)}</i> to <i>{dateFormat(c.publishedTo)}</i></>
-            : <><b>{compactInteger(c.relevantDailyViews)}</b> relevant / <b>{compactInteger(c.dailyViews)}</b> daily views <i>{dateFormat(c.publishedFrom)}</i> to <i>{dateFormat(c.publishedTo)}</i></>}
+            {c.relevantDailyViews == c.dailyViews ?
+              <><b>{compactInteger(c.relevantDailyViews)}</b> relevant daily views <i>{dateFormat(c.publishedFrom)}</i> to <i>{dateFormat(c.publishedTo)}</i></>
+              : <><b>{compactInteger(c.relevantDailyViews)}</b> relevant / <b>{compactInteger(c.dailyViews)}</b> daily views <i>{dateFormat(c.publishedFrom)}</i> to <i>{dateFormat(c.publishedTo)}</i></>}
           </div>
-          <div><b>{compactInteger(c.subCount)}</b> subscribers</div>
-          <div><span key={c.lr} className={'tag'} style={{backgroundColor:lrColor(c.lr)}}>{labelFunc(c.lr)}</span>{tags.map(t => (<span key={t} className={'tag'}>{t}</span>))}</div>
+          <div>
+            <b>{compactInteger(c.subCount)}</b> subscribers
+              <span style={{ paddingLeft: 10 }}>
+              {advantage >= 0 ? <span style={{ color: '#56b881' }}>▲</span> : <span style={{ color: '#e0393e' }}>▼</span>}  {formatNumber(advantage * 100, 0)}% impression advantage
+              </span>
+          </div>
+
+          <div><span key={c.lr} className={'tag'} style={{ backgroundColor: lrColor(c.lr) }}>{labelFunc(c.lr)}</span>{tags.map(t => (<span key={t} className={'tag'}>{t}</span>))}</div>
         </div>
       </>)
     }

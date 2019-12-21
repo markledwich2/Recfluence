@@ -30,11 +30,6 @@ select option {
   background-color: rgb(26, 26, 26);
 }
 
-p,
-span {
-  color: #aaa;
-}
-
 html,
 div,
 ul {

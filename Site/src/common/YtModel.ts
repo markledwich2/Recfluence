@@ -25,11 +25,17 @@ export interface ChannelData {
   dailyViews: number
   relevantDailyViews: number
   relevance: number
+  relevantImpressionsDaily: number
+  relevantImpressionsDailyIn: number
   views: number
   ideology: string
   media: string,
   manoel: string,
   ain: string
+}
+
+export class ChannelEx {
+  static impressionAdvantagePercent = (c:ChannelData) => c.relevantImpressionsDailyIn / c.relevantImpressionsDaily - 1
 }
 
 export interface RecData {
@@ -98,6 +104,8 @@ export class YtModel {
         dailyViews: +c.DAILY_VIEWS,
         relevantDailyViews: +c.RELEVANT_DAILY_VIEWS,
         views: +c.CHANNEL_VIEWS,
+        relevantImpressionsDaily: c.RELEVANT_IMPRESSIONS_DAILY,
+        relevantImpressionsDailyIn: c.RELEVANT_IMPRESSIONS_IN_DAILY,
         ideology: c.IDEOLOGY,
         media: c.MEDIA,
         relevance: c.RELEVANCE,

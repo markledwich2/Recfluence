@@ -826,22 +826,37 @@
         <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
       </semantic-values>
     </datasource>
-    <datasource caption='Channel Recs' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)' version='18.1'>
+    <datasource caption='Channel Recs Monthly' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)' version='18.1'>
       <connection class='federated'>
         <named-connections>
-          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 3)'>
-            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' workgroup-auth-mode='as-is' />
+          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 7)'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' />
           </named-connection>
         </named-connections>
-        <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 3)' name='CHANNEL_RECS' table='[PUBLIC].[CHANNEL_RECS]' type='table' />
+        <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 7)' name='CHANNEL_RECS_MONTHLY' table='[PUBLIC].[CHANNEL_RECS_MONTHLY]' type='table' />
         <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>REC_MONTH</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[REC_MONTH]</local-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
+            <remote-alias>REC_MONTH</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>date</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_DATE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_DATE&quot;</attribute>
+            </attributes>
+          </metadata-record>
           <metadata-record class='column'>
             <remote-name>FROM_CHANNEL_ID</remote-name>
             <remote-type>129</remote-type>
             <local-name>[FROM_CHANNEL_ID]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>FROM_CHANNEL_ID</remote-alias>
-            <ordinal>1</ordinal>
+            <ordinal>2</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>16777216</width>
@@ -857,9 +872,9 @@
             <remote-name>TO_CHANNEL_ID</remote-name>
             <remote-type>129</remote-type>
             <local-name>[TO_CHANNEL_ID]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>TO_CHANNEL_ID</remote-alias>
-            <ordinal>2</ordinal>
+            <ordinal>3</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>16777216</width>
@@ -873,28 +888,27 @@
           </metadata-record>
           <metadata-record class='column'>
             <remote-name>IMPRESSIONS</remote-name>
-            <remote-type>131</remote-type>
+            <remote-type>5</remote-type>
             <local-name>[IMPRESSIONS]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>IMPRESSIONS</remote-alias>
-            <ordinal>3</ordinal>
+            <ordinal>4</ordinal>
             <local-type>real</local-type>
             <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>6</scale>
+            <precision>15</precision>
             <contains-null>true</contains-null>
             <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
             </attributes>
           </metadata-record>
           <metadata-record class='column'>
             <remote-name>RECS</remote-name>
             <remote-type>131</remote-type>
             <local-name>[RECS]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>RECS</remote-alias>
-            <ordinal>4</ordinal>
+            <ordinal>5</ordinal>
             <local-type>integer</local-type>
             <aggregation>Sum</aggregation>
             <precision>30</precision>
@@ -909,9 +923,9 @@
             <remote-name>IN_RECS</remote-name>
             <remote-type>131</remote-type>
             <local-name>[IN_RECS]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>IN_RECS</remote-alias>
-            <ordinal>5</ordinal>
+            <ordinal>6</ordinal>
             <local-type>integer</local-type>
             <aggregation>Sum</aggregation>
             <precision>30</precision>
@@ -923,111 +937,44 @@
             </attributes>
           </metadata-record>
           <metadata-record class='column'>
-            <remote-name>REC_VIEW_CHANNEL_PERCENT</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[REC_VIEW_CHANNEL_PERCENT]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
-            <remote-alias>REC_VIEW_CHANNEL_PERCENT</remote-alias>
-            <ordinal>6</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>12</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>IMPRESSIONS_PER_TO_VIEW</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[IMPRESSIONS_PER_TO_VIEW]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
-            <remote-alias>IMPRESSIONS_PER_TO_VIEW</remote-alias>
+            <remote-name>PERCENT_CHANNEL_MONTHLY_IMPRESSIONS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[PERCENT_CHANNEL_MONTHLY_IMPRESSIONS]</local-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
+            <remote-alias>PERCENT_CHANNEL_MONTHLY_IMPRESSIONS</remote-alias>
             <ordinal>7</ordinal>
             <local-type>real</local-type>
             <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>12</scale>
+            <precision>15</precision>
             <contains-null>true</contains-null>
             <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>MAX_DAY_RANGE</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[MAX_DAY_RANGE]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
-            <remote-alias>MAX_DAY_RANGE</remote-alias>
-            <ordinal>8</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>9</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
             </attributes>
           </metadata-record>
           <metadata-record class='column'>
             <remote-name>RELEVANT_IMPRESSIONS</remote-name>
             <remote-type>5</remote-type>
             <local-name>[RELEVANT_IMPRESSIONS]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>RELEVANT_IMPRESSIONS</remote-alias>
+            <ordinal>8</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>RELEVANT_IMPRESSIONS_IN</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[RELEVANT_IMPRESSIONS_IN]</local-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
+            <remote-alias>RELEVANT_IMPRESSIONS_IN</remote-alias>
             <ordinal>9</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>IN_RELEVANT_IMPRESSIONS</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[IN_RELEVANT_IMPRESSIONS]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
-            <remote-alias>IN_RELEVANT_IMPRESSIONS</remote-alias>
-            <ordinal>10</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>IN_RELEVANT_IMPRESSIONS_DAILY</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[IN_RELEVANT_IMPRESSIONS_DAILY]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
-            <remote-alias>IN_RELEVANT_IMPRESSIONS_DAILY</remote-alias>
-            <ordinal>11</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>RELEVANT_IMPRESSIONS_DAILY</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[RELEVANT_IMPRESSIONS_DAILY]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
-            <remote-alias>RELEVANT_IMPRESSIONS_DAILY</remote-alias>
-            <ordinal>12</ordinal>
             <local-type>real</local-type>
             <aggregation>Sum</aggregation>
             <precision>15</precision>
@@ -1041,9 +988,9 @@
             <remote-name>FROM_CHANNEL_TITLE</remote-name>
             <remote-type>129</remote-type>
             <local-name>[FROM_CHANNEL_TITLE]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>FROM_CHANNEL_TITLE</remote-alias>
-            <ordinal>13</ordinal>
+            <ordinal>10</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>16777216</width>
@@ -1059,9 +1006,9 @@
             <remote-name>TO_CHANNEL_TITLE</remote-name>
             <remote-type>129</remote-type>
             <local-name>[TO_CHANNEL_TITLE]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>TO_CHANNEL_TITLE</remote-alias>
-            <ordinal>14</ordinal>
+            <ordinal>11</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>16777216</width>
@@ -1077,9 +1024,9 @@
             <remote-name>FROM_MEDIA</remote-name>
             <remote-type>129</remote-type>
             <local-name>[FROM_MEDIA]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>FROM_MEDIA</remote-alias>
-            <ordinal>15</ordinal>
+            <ordinal>12</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>18</width>
@@ -1095,9 +1042,9 @@
             <remote-name>TO_MEDIA</remote-name>
             <remote-type>129</remote-type>
             <local-name>[TO_MEDIA]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>TO_MEDIA</remote-alias>
-            <ordinal>16</ordinal>
+            <ordinal>13</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>18</width>
@@ -1113,9 +1060,9 @@
             <remote-name>FROM_IDEOLOGY</remote-name>
             <remote-type>129</remote-type>
             <local-name>[FROM_IDEOLOGY]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>FROM_IDEOLOGY</remote-alias>
-            <ordinal>17</ordinal>
+            <ordinal>14</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>22</width>
@@ -1131,9 +1078,9 @@
             <remote-name>TO_IDEOLOGY</remote-name>
             <remote-type>129</remote-type>
             <local-name>[TO_IDEOLOGY]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>TO_IDEOLOGY</remote-alias>
-            <ordinal>18</ordinal>
+            <ordinal>15</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>22</width>
@@ -1149,9 +1096,9 @@
             <remote-name>FROM_MANOEL</remote-name>
             <remote-type>129</remote-type>
             <local-name>[FROM_MANOEL]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>FROM_MANOEL</remote-alias>
-            <ordinal>19</ordinal>
+            <ordinal>16</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>16777216</width>
@@ -1167,9 +1114,9 @@
             <remote-name>TO_MANOEL</remote-name>
             <remote-type>129</remote-type>
             <local-name>[TO_MANOEL]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>TO_MANOEL</remote-alias>
-            <ordinal>20</ordinal>
+            <ordinal>17</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>16777216</width>
@@ -1185,9 +1132,9 @@
             <remote-name>FROM_AIN</remote-name>
             <remote-type>129</remote-type>
             <local-name>[FROM_AIN]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>FROM_AIN</remote-alias>
-            <ordinal>21</ordinal>
+            <ordinal>18</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>16777216</width>
@@ -1203,9 +1150,9 @@
             <remote-name>TO_AIN</remote-name>
             <remote-type>129</remote-type>
             <local-name>[TO_AIN]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>TO_AIN</remote-alias>
-            <ordinal>22</ordinal>
+            <ordinal>19</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>16777216</width>
@@ -1221,9 +1168,9 @@
             <remote-name>FROM_LR</remote-name>
             <remote-type>129</remote-type>
             <local-name>[FROM_LR]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>FROM_LR</remote-alias>
-            <ordinal>23</ordinal>
+            <ordinal>20</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>16777216</width>
@@ -1239,9 +1186,9 @@
             <remote-name>TO_LR</remote-name>
             <remote-type>129</remote-type>
             <local-name>[TO_LR]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
+            <parent-name>[CHANNEL_RECS_MONTHLY]</parent-name>
             <remote-alias>TO_LR</remote-alias>
-            <ordinal>24</ordinal>
+            <ordinal>21</ordinal>
             <local-type>string</local-type>
             <aggregation>Count</aggregation>
             <width>16777216</width>
@@ -1253,41 +1200,348 @@
               <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
             </attributes>
           </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>FROM_RANK</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[FROM_RANK]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
-            <remote-alias>FROM_RANK</remote-alias>
-            <ordinal>25</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>18</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TO_RANK</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[TO_RANK]</local-name>
-            <parent-name>[CHANNEL_RECS]</parent-name>
-            <remote-alias>TO_RANK</remote-alias>
-            <ordinal>26</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>18</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
         </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column datatype='string' hidden='true' name='[CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='Flow Advantage %' datatype='real' name='[Calculation_1361776001277554688]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS_IN])/SUM([RELEVANT_IMPRESSIONS]) - 1' />
+      </column>
+      <column caption='Relevant Impressions Daily' datatype='real' name='[Calculation_1492098918401642496]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS]) / [Calculation_1572319285310451722]' />
+      </column>
+      <column caption='In Relevant Impressions Daily' datatype='real' name='[Calculation_1492098918402007041]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS_IN]) / [Calculation_1572319285310451722]' />
+      </column>
+      <column caption='Net Recommend Flow' datatype='real' name='[Calculation_1572319284992626691]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS]) - SUM([RELEVANT_IMPRESSIONS_IN])' />
+      </column>
+      <column caption='Significant Flow' datatype='string' name='[Calculation_1572319285303922694]' role='measure' type='nominal'>
+        <calculation class='tableau' formula='IIF([Calculation_1572319284992626691] &lt; -1 or [Calculation_1572319284992626691] &gt;1, &apos;Significant Flow&apos;, &apos;Insignificant Flow&apos;)' />
+      </column>
+      <column caption='Days In Range' datatype='integer' name='[Calculation_1572319285310451722]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='DATEDIFF(&quot;day&quot;, min([REC_MONTH]), &#13;&#10;    // last day of month up till now&#13;&#10;    min(NOW(), DATEADD(&quot;day&quot;,-1,DATEADD(&quot;month&quot;,1,DATETRUNC(&quot;month&quot;,max([REC_MONTH]))))))' />
+      </column>
+      <column caption='Daily Net Flow' datatype='real' name='[Calculation_1572319285310799883]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='[Calculation_1572319284992626691]/[Calculation_1572319285310451722]' />
+      </column>
+      <column caption='From Ain' datatype='string' name='[FROM_AIN]' role='dimension' type='nominal' />
+      <column caption='From Channel Id' datatype='string' name='[FROM_CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='From Channel Title' datatype='string' name='[FROM_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='From Group' datatype='string' name='[FROM_IDEOLOGY]' role='dimension' type='nominal' />
+      <column caption='From Lr' datatype='string' name='[FROM_LR]' role='dimension' type='nominal' />
+      <column caption='From Manoel' datatype='string' name='[FROM_MANOEL]' role='dimension' type='nominal' />
+      <column caption='From Media' datatype='string' name='[FROM_MEDIA]' role='dimension' type='nominal' />
+      <column caption='Impressions' datatype='real' name='[IMPRESSIONS]' role='measure' type='quantitative' />
+      <column caption='In Recs' datatype='integer' name='[IN_RECS]' role='measure' type='quantitative' />
+      <column caption='Recs' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
+        <calculation class='tableau' formula='1' />
+      </column>
+      <column caption='Percent Channel Monthly Impressions' datatype='real' name='[PERCENT_CHANNEL_MONTHLY_IMPRESSIONS]' role='measure' type='quantitative' />
+      <column caption='Recs1' datatype='integer' name='[RECS]' role='measure' type='quantitative' />
+      <column caption='Rec Month' datatype='date' name='[REC_MONTH]' role='dimension' type='ordinal' />
+      <column caption='Relevant Impressions' datatype='real' name='[RELEVANT_IMPRESSIONS]' role='measure' type='quantitative' />
+      <column caption='Relevant Impressions In' datatype='real' name='[RELEVANT_IMPRESSIONS_IN]' role='measure' type='quantitative' />
+      <column caption='To Ain' datatype='string' name='[TO_AIN]' role='dimension' type='nominal' />
+      <column caption='To Channel Id' datatype='string' name='[TO_CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='To Channel Title' datatype='string' name='[TO_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='To Group' datatype='string' name='[TO_IDEOLOGY]' role='dimension' type='nominal' />
+      <column caption='To Lr' datatype='string' name='[TO_LR]' role='dimension' type='nominal' />
+      <column caption='To Manoel' datatype='string' name='[TO_MANOEL]' role='dimension' type='nominal' />
+      <column caption='To Media' datatype='string' name='[TO_MEDIA]' role='dimension' type='nominal' />
+      <column-instance column='[FROM_IDEOLOGY]' derivation='None' name='[none:FROM_IDEOLOGY:nk]' pivot='key' type='nominal' />
+      <column-instance column='[TO_IDEOLOGY]' derivation='None' name='[none:TO_IDEOLOGY:nk]' pivot='key' type='nominal' />
+      <column-instance column='[Calculation_1361776001277554688]' derivation='User' name='[usr:Calculation_1361776001277554688:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Calculation_1492098918402007041]' derivation='User' name='[usr:Calculation_1492098918402007041:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Calculation_1572319284992626691]' derivation='User' name='[usr:Calculation_1572319284992626691:qk]' pivot='key' type='quantitative' />
+      <group caption='Action (From Group,To Group)' hidden='true' name='[Action (From Group,To Group)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[FROM_IDEOLOGY]' />
+          <groupfilter function='level-members' level='[TO_IDEOLOGY]' />
+        </groupfilter>
+      </group>
+      <group caption='Action (Ideology)' hidden='true' name='[Action (Ideology)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[IDEOLOGY]' />
+        </groupfilter>
+      </group>
+      <group caption='Action (Net impressions received from,To Group)' hidden='true' name='[Action (Net impressions received from,To Group)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[From Group (copy)]' />
+          <groupfilter function='level-members' level='[TO_IDEOLOGY]' />
+        </groupfilter>
+      </group>
+      <group caption='Action (To Channel Title)' hidden='true' name='[Action (To Channel Title)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[TO_CHANNEL_TITLE]' />
+        </groupfilter>
+      </group>
+      <group caption='Action (To Channel Title,To Ideology)' hidden='true' name='[Action (To Channel Title,To Ideology)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[TO_CHANNEL_TITLE]' />
+          <groupfilter function='level-members' level='[TO_IDEOLOGY]' />
+        </groupfilter>
+      </group>
+      <extract count='-1' enabled='false' units='records'>
+        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks/.Data/Recs copy 1 copy 1 copy 1.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='11/23/2019 05:08:57 AM' username='tableau_internal_user'>
+          <relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <refresh>
+            <refresh-event add-from-file-path='Recs' increment-value='%null%' refresh-type='create' rows-inserted='10087283' timestamp-start='2019-11-23 05:08:57.571' />
+          </refresh>
+          <metadata-records>
+            <metadata-record class='column'>
+              <remote-name>FROM_CHANNEL_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_CHANNEL_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_CHANNEL_ID</remote-alias>
+              <ordinal>0</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>938</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>FROM_VIDEO_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_VIDEO_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_VIDEO_ID</remote-alias>
+              <ordinal>1</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>1334932</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>FROM_VIDEO_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_VIDEO_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_VIDEO_TITLE</remote-alias>
+              <ordinal>2</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>1317363</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_CHANNEL_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_CHANNEL_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_CHANNEL_TITLE</remote-alias>
+              <ordinal>3</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>52853</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_VIDEO_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_VIDEO_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_VIDEO_ID</remote-alias>
+              <ordinal>4</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>455192</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_VIDEO_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_VIDEO_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_VIDEO_TITLE</remote-alias>
+              <ordinal>5</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>454885</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>UPDATED</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[UPDATED]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>UPDATED</remote-alias>
+              <ordinal>6</ordinal>
+              <family>REC</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>62386</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>UPDATED_DAY</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[UPDATED_DAY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>UPDATED_DAY</remote-alias>
+              <ordinal>7</ordinal>
+              <family>REC</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>16</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+          </metadata-records>
+        </connection>
+      </extract>
+      <layout dim-ordering='alphabetic' dim-percentage='0.514467' measure-ordering='alphabetic' measure-percentage='0.485533' show-structure='true' user-set-layout='true' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[none:FROM_IDEOLOGY:nk]' type='palette'>
+            <map to='#333333'>
+              <bucket>&quot;Unclasified&quot;</bucket>
+            </map>
+            <map to='#3887be'>
+              <bucket>&quot;Partisan Left&quot;</bucket>
+            </map>
+            <map to='#41afa5'>
+              <bucket>&quot;Religious Conservative&quot;</bucket>
+            </map>
+            <map to='#4e79a7'>
+              <bucket>%null%</bucket>
+            </map>
+            <map to='#6ec9e0'>
+              <bucket>&quot;Socialist&quot;</bucket>
+            </map>
+            <map to='#8a8acb'>
+              <bucket>&quot;Anti-SJW&quot;</bucket>
+            </map>
+            <map to='#a0cbe8'>
+              <bucket>&quot;Alt-light&quot;</bucket>
+            </map>
+            <map to='#aa557f'>
+              <bucket>&quot;Center/Left MSM&quot;</bucket>
+            </map>
+            <map to='#b7b7b7'>
+              <bucket>&quot;Libertarian&quot;</bucket>
+            </map>
+            <map to='#c68143'>
+              <bucket>&quot;White Identitarian&quot;</bucket>
+            </map>
+            <map to='#e0393e'>
+              <bucket>&quot;Partisan Right&quot;</bucket>
+            </map>
+            <map to='#e15759'>
+              <bucket>&quot;Social Justice&quot;</bucket>
+            </map>
+            <map to='#e55e5e'>
+              <bucket>&quot;Provocative Anti-SJW&quot;</bucket>
+            </map>
+            <map to='#ed6498'>
+              <bucket>&quot;MRA&quot;</bucket>
+            </map>
+            <map to='#ff9d9a'>
+              <bucket>&quot;Unclassified&quot;</bucket>
+            </map>
+            <map to='#ffbe7d'>
+              <bucket>&quot;Anti-theist&quot;</bucket>
+            </map>
+            <map to='#ffc168'>
+              <bucket>&quot;Conspiracy&quot;</bucket>
+            </map>
+          </encoding>
+          <encoding attr='color' field='[none:TO_IDEOLOGY:nk]' type='palette'>
+            <map to='#333333'>
+              <bucket>&quot;Unclasified&quot;</bucket>
+            </map>
+            <map to='#3887be'>
+              <bucket>&quot;Partisan Left&quot;</bucket>
+            </map>
+            <map to='#41afa5'>
+              <bucket>&quot;Religious Conservative&quot;</bucket>
+            </map>
+            <map to='#4e79a7'>
+              <bucket>%null%</bucket>
+            </map>
+            <map to='#6ec9e0'>
+              <bucket>&quot;Socialist&quot;</bucket>
+            </map>
+            <map to='#79706e'>
+              <bucket>&quot;Unclassified&quot;</bucket>
+            </map>
+            <map to='#86bcb6'>
+              <bucket>&quot;Social Justice&quot;</bucket>
+            </map>
+            <map to='#8a8acb'>
+              <bucket>&quot;Anti-SJW&quot;</bucket>
+            </map>
+            <map to='#a0cbe8'>
+              <bucket>&quot;Alt-light&quot;</bucket>
+            </map>
+            <map to='#aa557f'>
+              <bucket>&quot;Center/Left MSM&quot;</bucket>
+            </map>
+            <map to='#b7b7b7'>
+              <bucket>&quot;Libertarian&quot;</bucket>
+            </map>
+            <map to='#c68143'>
+              <bucket>&quot;White Identitarian&quot;</bucket>
+            </map>
+            <map to='#e0393e'>
+              <bucket>&quot;Partisan Right&quot;</bucket>
+            </map>
+            <map to='#e55e5e'>
+              <bucket>&quot;Provocative Anti-SJW&quot;</bucket>
+            </map>
+            <map to='#ed6498'>
+              <bucket>&quot;MRA&quot;</bucket>
+            </map>
+            <map to='#ffbe7d'>
+              <bucket>&quot;Anti-theist&quot;</bucket>
+            </map>
+            <map to='#ffc168'>
+              <bucket>&quot;Conspiracy&quot;</bucket>
+            </map>
+          </encoding>
+          <encoding attr='color' field='[:Measure Names]' type='palette'>
+            <map to='#bab0ac'>
+              <bucket>&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[sum:RELEVANT_IMPRESSIONS_DAILY:qk]&quot;</bucket>
+            </map>
+            <map to='#f28e2b'>
+              <bucket>&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[sum:IN_RELEVANT_IMPRESSIONS_DAILY:qk]&quot;</bucket>
+            </map>
+            <map to='#f28e2b'>
+              <bucket>&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1361776001277554688:qk]&quot;</bucket>
+            </map>
+            <map to='#f28e2b'>
+              <bucket>&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1492098918402007041:qk]&quot;</bucket>
+            </map>
+            <map to='#f28e2b'>
+              <bucket>&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1572319284992626691:qk]&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+    </datasource>
+    <datasource caption='Channel Recs' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 3)'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' workgroup-auth-mode='as-is' />
+          </named-connection>
+        </named-connections>
+        <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 3)' name='CHANNEL_RECS' table='[PUBLIC].[CHANNEL_RECS]' type='table' />
       </connection>
       <aliases enabled='yes' />
       <column caption='Flow Advantage %' datatype='real' name='[Calculation_1361776001277554688]' role='measure' type='quantitative'>
@@ -1305,7 +1559,6 @@
       <column caption='Significant Flow' datatype='string' name='[Calculation_950541058866085896]' role='measure' type='nominal'>
         <calculation class='tableau' formula='IIF([Calculation_950541058817146886] &lt; -10 or [Calculation_950541058817146886] &gt; 10, &apos;Significant Flow&apos;, &apos;Insignificant Flow&apos;)' />
       </column>
-      <column caption='From AIN' datatype='string' name='[FROM_AIN]' role='dimension' type='nominal' />
       <column datatype='string' hidden='true' name='[FROM_CHANNEL_ID]' role='dimension' type='nominal' />
       <column caption='From Channel' datatype='string' name='[FROM_CHANNEL_TITLE]' role='dimension' type='nominal' />
       <column caption='From Group' datatype='string' name='[FROM_IDEOLOGY]' role='dimension' type='nominal' />
@@ -1328,10 +1581,6 @@
       <column caption='Net impressions received from' datatype='string' name='[From Group (copy)]' role='dimension' type='nominal'>
         <calculation class='tableau' formula='[FROM_IDEOLOGY]' />
       </column>
-      <column caption='Impressions' datatype='real' name='[IMPRESSIONS]' role='measure' type='quantitative' />
-      <column caption='Impressions / To View' datatype='real' name='[IMPRESSIONS_PER_TO_VIEW]' role='measure' type='quantitative' />
-      <column caption='In Recs' datatype='integer' name='[IN_RECS]' role='measure' type='quantitative' />
-      <column caption='Received Relevant Impressions' datatype='real' name='[IN_RELEVANT_IMPRESSIONS]' role='measure' type='quantitative' />
       <column caption='Received  Relevant Impressions Daily' datatype='real' name='[IN_RELEVANT_IMPRESSIONS_DAILY]' role='measure' type='quantitative' />
       <column datatype='integer' hidden='true' name='[MAX_DAY_RANGE]' role='measure' type='quantitative' />
       <column caption='Net Impressions' datatype='real' hidden='true' name='[NET_IMPRESSIONS]' role='measure' type='quantitative' />
@@ -1340,10 +1589,7 @@
       </column>
       <column datatype='integer' hidden='true' name='[RANK]' role='measure' type='quantitative' />
       <column caption='Recs' datatype='integer' name='[RECS]' role='measure' type='quantitative' />
-      <column caption='Rec View Channel %' datatype='real' name='[REC_VIEW_CHANNEL_PERCENT]' role='measure' type='quantitative' />
-      <column caption='Relevant Impressions' datatype='real' name='[RELEVANT_IMPRESSIONS]' role='measure' type='quantitative' />
       <column caption='Relevant Impressions Daily' datatype='real' name='[RELEVANT_IMPRESSIONS_DAILY]' role='measure' type='quantitative' />
-      <column caption='To AIN' datatype='string' name='[TO_AIN]' role='dimension' type='nominal' />
       <column datatype='string' hidden='true' name='[TO_CHANNEL_ID]' role='dimension' type='nominal' />
       <column caption='To Channel' datatype='string' name='[TO_CHANNEL_TITLE]' role='dimension' type='nominal' />
       <column caption='To Group' datatype='string' name='[TO_IDEOLOGY]' role='dimension' type='nominal' />
@@ -1391,7 +1637,7 @@
           <groupfilter function='level-members' level='[TO_IDEOLOGY]' />
         </groupfilter>
       </group>
-      <extract count='-1' enabled='true' units='records'>
+      <extract count='-1' enabled='false' units='records'>
         <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks/.Data/Basics copy 1.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='12/09/2019 05:55:53 AM' username='tableau_internal_user'>
           <relation name='Extract' table='[Extract].[Extract]' type='table' />
           <refresh>
@@ -1712,7 +1958,7 @@
           </metadata-records>
         </connection>
       </extract>
-      <layout dim-ordering='alphabetic' dim-percentage='0.5' measure-ordering='alphabetic' measure-percentage='0.5' show-structure='true' />
+      <layout dim-ordering='alphabetic' dim-percentage='0.500353' measure-ordering='alphabetic' measure-percentage='0.499647' show-structure='true' />
       <style>
         <style-rule element='mark'>
           <encoding attr='color' field='[none:FROM_IDEOLOGY:nk]' type='palette'>
@@ -1838,6 +2084,556 @@
         <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
       </semantic-values>
     </datasource>
+    <datasource caption='Video Recs Monthly' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 6)'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' />
+          </named-connection>
+        </named-connections>
+        <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 6)' name='VIDEO_RECS_MONTHLY' table='[PUBLIC].[VIDEO_RECS_MONTHLY]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>FROM_VIDEO_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_VIDEO_ID]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>FROM_VIDEO_ID</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_CHANNEL_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_CHANNEL_ID]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>FROM_CHANNEL_ID</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_VIDEO_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_VIDEO_ID]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>TO_VIDEO_ID</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_VIDEO_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_VIDEO_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>TO_VIDEO_TITLE</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_CHANNEL_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_CHANNEL_ID]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>TO_CHANNEL_ID</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_CHANNEL_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>TO_CHANNEL_TITLE</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>REC_MONTH</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[REC_MONTH]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>REC_MONTH</remote-alias>
+            <ordinal>7</ordinal>
+            <local-type>date</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_DATE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_DATE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>RECS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[RECS]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>RECS</remote-alias>
+            <ordinal>8</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>18</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_VIDEO_RECS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[FROM_VIDEO_RECS]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>FROM_VIDEO_RECS</remote-alias>
+            <ordinal>9</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>30</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>REC_VIEW_PORTION</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[REC_VIEW_PORTION]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>REC_VIEW_PORTION</remote-alias>
+            <ordinal>10</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>IMPRESSIONS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[IMPRESSIONS]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>IMPRESSIONS</remote-alias>
+            <ordinal>11</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>RELEVANT_IMPRESSIONS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[RELEVANT_IMPRESSIONS]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>RELEVANT_IMPRESSIONS</remote-alias>
+            <ordinal>12</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>PERCENT_CHANNEL_MONTHLY_IMPRESSIONS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[PERCENT_CHANNEL_MONTHLY_IMPRESSIONS]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>PERCENT_CHANNEL_MONTHLY_IMPRESSIONS</remote-alias>
+            <ordinal>13</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_VIDEO_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_VIDEO_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>FROM_VIDEO_TITLE</remote-alias>
+            <ordinal>14</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_CHANNEL_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>FROM_CHANNEL_TITLE</remote-alias>
+            <ordinal>15</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_MAIN_CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_MAIN_CHANNEL_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>FROM_MAIN_CHANNEL_TITLE</remote-alias>
+            <ordinal>16</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_MAIN_CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_MAIN_CHANNEL_TITLE]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>TO_MAIN_CHANNEL_TITLE</remote-alias>
+            <ordinal>17</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_MEDIA</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_MEDIA]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>FROM_MEDIA</remote-alias>
+            <ordinal>18</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>18</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_MEDIA</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_MEDIA]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>TO_MEDIA</remote-alias>
+            <ordinal>19</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>18</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_IDEOLOGY</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FROM_IDEOLOGY]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>FROM_IDEOLOGY</remote-alias>
+            <ordinal>20</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>22</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_IDEOLOGY</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TO_IDEOLOGY]</local-name>
+            <parent-name>[VIDEO_RECS_MONTHLY]</parent-name>
+            <remote-alias>TO_IDEOLOGY</remote-alias>
+            <ordinal>21</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>22</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column datatype='string' hidden='true' name='[CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='Impressions %' datatype='real' default-format='p0.00%' name='[Calculation1]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SUM([IMPRESSIONS]) / TOTAL(SUM([IMPRESSIONS]))'>
+          <table-calc ordering-field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:TO_IDEOLOGY:nk]' ordering-type='Field' />
+        </calculation>
+      </column>
+      <column caption='First Month' datatype='date' name='[Calculation_1572319285221593093]' role='dimension' type='ordinal'>
+        <calculation class='tableau' formula='{FIXED [FROM_CHANNEL_ID]: min([REC_MONTH])}' />
+      </column>
+      <column caption='Significant Impression  %' datatype='string' name='[Calculation_1918533509198348288]' role='measure' type='nominal'>
+        <calculation class='tableau' formula='iif([Calculation1] &gt; 0.005, &quot;Significant&quot;, &quot;Not significant&quot;)'>
+          <table-calc ordering-type='Rows' />
+        </calculation>
+      </column>
+      <column caption='From Channel Id' datatype='string' name='[FROM_CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='From Channel Title' datatype='string' name='[FROM_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='From Group' datatype='string' name='[FROM_IDEOLOGY]' role='dimension' type='nominal' />
+      <column caption='From Main Channel Title' datatype='string' name='[FROM_MAIN_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='From Media' datatype='string' name='[FROM_MEDIA]' role='dimension' type='nominal' />
+      <column caption='From Video Id' datatype='string' name='[FROM_VIDEO_ID]' role='dimension' type='nominal' />
+      <column caption='From Video Recs' datatype='integer' name='[FROM_VIDEO_RECS]' role='measure' type='quantitative' />
+      <column caption='From Video Title' datatype='string' name='[FROM_VIDEO_TITLE]' role='dimension' type='nominal' />
+      <column caption='Impressions' datatype='real' name='[IMPRESSIONS]' role='measure' type='quantitative' />
+      <column caption='Recs' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
+        <calculation class='tableau' formula='1' />
+      </column>
+      <column caption='Percent Channel Monthly Impressions' datatype='real' name='[PERCENT_CHANNEL_MONTHLY_IMPRESSIONS]' role='measure' type='quantitative' />
+      <column caption='Recs1' datatype='integer' name='[RECS]' role='measure' type='quantitative' />
+      <column caption='Rec Month' datatype='date' name='[REC_MONTH]' role='dimension' type='ordinal' />
+      <column caption='Rec View Portion' datatype='real' name='[REC_VIEW_PORTION]' role='measure' type='quantitative' />
+      <column caption='Relevant Impressions' datatype='real' name='[RELEVANT_IMPRESSIONS]' role='measure' type='quantitative' />
+      <column caption='To Channel Id' datatype='string' name='[TO_CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='To Channel Title' datatype='string' name='[TO_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='To Group' datatype='string' name='[TO_IDEOLOGY]' role='dimension' type='nominal'>
+        <aliases>
+          <alias key='%null%' value='Non-Political' />
+        </aliases>
+      </column>
+      <column caption='To Main Channel Title' datatype='string' name='[TO_MAIN_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='To Media' datatype='string' name='[TO_MEDIA]' role='dimension' type='nominal' />
+      <column caption='To Video Id' datatype='string' name='[TO_VIDEO_ID]' role='dimension' type='nominal' />
+      <column caption='To Video Title' datatype='string' name='[TO_VIDEO_TITLE]' role='dimension' type='nominal' />
+      <column-instance column='[TO_IDEOLOGY]' derivation='None' name='[none:TO_IDEOLOGY:nk]' pivot='key' type='nominal' />
+      <group caption='Action (To Channel Title)' hidden='true' name='[Action (To Channel Title)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[TO_CHANNEL_TITLE]' />
+        </groupfilter>
+      </group>
+      <extract count='-1' enabled='false' units='records'>
+        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks/.Data/Recs copy 1 copy 1.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='11/23/2019 05:08:57 AM' username='tableau_internal_user'>
+          <relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <refresh>
+            <refresh-event add-from-file-path='Recs' increment-value='%null%' refresh-type='create' rows-inserted='10087283' timestamp-start='2019-11-23 05:08:57.571' />
+          </refresh>
+          <metadata-records>
+            <metadata-record class='column'>
+              <remote-name>FROM_CHANNEL_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_CHANNEL_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_CHANNEL_ID</remote-alias>
+              <ordinal>0</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>938</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>FROM_VIDEO_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_VIDEO_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_VIDEO_ID</remote-alias>
+              <ordinal>1</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>1334932</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>FROM_VIDEO_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_VIDEO_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_VIDEO_TITLE</remote-alias>
+              <ordinal>2</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>1317363</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_CHANNEL_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_CHANNEL_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_CHANNEL_TITLE</remote-alias>
+              <ordinal>3</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>52853</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_VIDEO_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_VIDEO_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_VIDEO_ID</remote-alias>
+              <ordinal>4</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>455192</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_VIDEO_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_VIDEO_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_VIDEO_TITLE</remote-alias>
+              <ordinal>5</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>454885</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>UPDATED</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[UPDATED]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>UPDATED</remote-alias>
+              <ordinal>6</ordinal>
+              <family>REC</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>62386</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>UPDATED_DAY</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[UPDATED_DAY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>UPDATED_DAY</remote-alias>
+              <ordinal>7</ordinal>
+              <family>REC</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>16</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+          </metadata-records>
+        </connection>
+      </extract>
+      <layout dim-ordering='alphabetic' dim-percentage='0.503191' measure-ordering='alphabetic' measure-percentage='0.496808' show-structure='true' user-set-layout='true' />
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+    </datasource>
   </datasources>
   <actions>
     <action caption='Filter 5 (generated)' name='[Action1]'>
@@ -1862,14 +2658,6 @@
       <command command='tsc:tsl-filter'>
         <param name='special-fields' value='all' />
         <param name='target' value='Channel' />
-      </command>
-    </action>
-    <action caption='Filter 3 (generated)' name='[Action4]'>
-      <activation auto-clear='true' type='on-select' />
-      <source dashboard='Group % Recs' type='sheet' worksheet='Group Recs %' />
-      <command command='tsc:tsl-filter'>
-        <param name='special-fields' value='all' />
-        <param name='target' value='Group % Recs' />
       </command>
     </action>
   </actions>
@@ -2077,7 +2865,7 @@
         <title>
           <formatted-text>
             <run>Recommendation Advantage&#10;</run>
-            <run fontcolor='#666666' fontname='Tableau Regular' fontsize='11'>Daily impressions and daily impresions received by group</run>
+            <run fontcolor='#666666' fontname='Tableau Regular' fontsize='11'>Daily impressions and daily impresions received by group (within channels of our dataset)</run>
             <run>Æ&#10;</run>
             <run fontcolor='#666666' fontname='Tableau Regular' fontsize='11'>Received %: the percent increase/decrease of incomming vs  outgoing recommendations</run>
           </formatted-text>
@@ -2086,50 +2874,100 @@
       <table>
         <view>
           <datasources>
-            <datasource caption='Channel Recs' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)' />
+            <datasource caption='Channel Recs Monthly' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)' />
           </datasources>
-          <datasource-dependencies datasource='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)'>
+          <datasource-dependencies datasource='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)'>
             <column caption='Flow Advantage %' datatype='real' name='[Calculation_1361776001277554688]' role='measure' type='quantitative'>
-              <calculation class='tableau' formula='SUM([IN_RELEVANT_IMPRESSIONS_DAILY])/SUM([RELEVANT_IMPRESSIONS_DAILY]) - 1' />
+              <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS_IN])/SUM([RELEVANT_IMPRESSIONS]) - 1' />
             </column>
-            <column caption='Net Recommend Flow' datatype='real' name='[Calculation_950541058817146886]' role='measure' type='quantitative'>
-              <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS_DAILY]) - SUM([IN_RELEVANT_IMPRESSIONS_DAILY])' />
+            <column caption='Relevant Impressions Daily' datatype='real' name='[Calculation_1492098918401642496]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS]) / [Calculation_1572319285310451722]' />
             </column>
+            <column caption='In Relevant Impressions Daily' datatype='real' name='[Calculation_1492098918402007041]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS_IN]) / [Calculation_1572319285310451722]' />
+            </column>
+            <column caption='Days In Range' datatype='integer' name='[Calculation_1572319285310451722]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='DATEDIFF(&quot;day&quot;, min([REC_MONTH]), &#13;&#10;    // last day of month up till now&#13;&#10;    min(NOW(), DATEADD(&quot;day&quot;,-1,DATEADD(&quot;month&quot;,1,DATETRUNC(&quot;month&quot;,max([REC_MONTH]))))))' />
+            </column>
+            <column caption='From Channel Title' datatype='string' name='[FROM_CHANNEL_TITLE]' role='dimension' type='nominal' />
             <column caption='From Group' datatype='string' name='[FROM_IDEOLOGY]' role='dimension' type='nominal' />
-            <column caption='Received  Relevant Impressions Daily' datatype='real' name='[IN_RELEVANT_IMPRESSIONS_DAILY]' role='measure' type='quantitative' />
-            <column caption='Relevant Impressions Daily' datatype='real' name='[RELEVANT_IMPRESSIONS_DAILY]' role='measure' type='quantitative' />
+            <column caption='Rec Month' datatype='date' name='[REC_MONTH]' role='dimension' type='ordinal' />
+            <column caption='Relevant Impressions' datatype='real' name='[RELEVANT_IMPRESSIONS]' role='measure' type='quantitative' />
+            <column caption='Relevant Impressions In' datatype='real' name='[RELEVANT_IMPRESSIONS_IN]' role='measure' type='quantitative' />
+            <column caption='To Group' datatype='string' name='[TO_IDEOLOGY]' role='dimension' type='nominal' />
+            <column-instance column='[REC_MONTH]' derivation='MY' name='[my:REC_MONTH:ok]' pivot='key' type='ordinal' />
+            <column-instance column='[FROM_CHANNEL_TITLE]' derivation='None' name='[none:FROM_CHANNEL_TITLE:nk]' pivot='key' type='nominal' />
             <column-instance column='[FROM_IDEOLOGY]' derivation='None' name='[none:FROM_IDEOLOGY:nk]' pivot='key' type='nominal' />
-            <column-instance column='[IN_RELEVANT_IMPRESSIONS_DAILY]' derivation='Sum' name='[sum:IN_RELEVANT_IMPRESSIONS_DAILY:qk]' pivot='key' type='quantitative' />
-            <column-instance column='[RELEVANT_IMPRESSIONS_DAILY]' derivation='Sum' name='[sum:RELEVANT_IMPRESSIONS_DAILY:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[TO_IDEOLOGY]' derivation='None' name='[none:TO_IDEOLOGY:nk]' pivot='key' type='nominal' />
+            <column-instance column='[RELEVANT_IMPRESSIONS]' derivation='Sum' name='[sum:RELEVANT_IMPRESSIONS:qk]' pivot='key' type='quantitative' />
             <column-instance column='[Calculation_1361776001277554688]' derivation='User' name='[usr:Calculation_1361776001277554688:qk]' pivot='key' type='quantitative' />
-            <column-instance column='[Calculation_950541058817146886]' derivation='User' name='[usr:Calculation_950541058817146886:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Calculation_1492098918401642496]' derivation='User' name='[usr:Calculation_1492098918401642496:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Calculation_1492098918402007041]' derivation='User' name='[usr:Calculation_1492098918402007041:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Calculation_1572319285310451722]' derivation='User' name='[usr:Calculation_1572319285310451722:qk]' pivot='key' type='quantitative' />
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:FROM_IDEOLOGY:nk]' kind='hide'>
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[my:REC_MONTH:ok]'>
+            <groupfilter function='union' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate'>
+              <groupfilter function='member' level='[my:REC_MONTH:ok]' member='201911' />
+              <groupfilter function='member' level='[my:REC_MONTH:ok]' member='201912' />
+            </groupfilter>
+          </filter>
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:FROM_CHANNEL_TITLE:nk]'>
+            <groupfilter function='level-members' level='[none:FROM_CHANNEL_TITLE:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:FROM_IDEOLOGY:nk]'>
+            <groupfilter function='union' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate'>
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Anti-SJW&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Anti-theist&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Center/Left MSM&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Conspiracy&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Libertarian&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;MRA&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Partisan Left&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Partisan Right&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Provocative Anti-SJW&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Religious Conservative&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Social Justice&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Socialist&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Unclassified&quot;' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;White Identitarian&quot;' />
+            </groupfilter>
+          </filter>
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:FROM_IDEOLOGY:nk]' kind='hide'>
             <groupfilter function='except' user:ui-domain='relevant' user:ui-enumeration='exclusive' user:ui-manual-selection='true' user:ui-manual-selection-all-when-empty='true' user:ui-marker='enumerate'>
               <groupfilter function='level-members' level='[none:FROM_IDEOLOGY:nk]' />
-              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Unclassified&quot;' />
+              <groupfilter function='union'>
+                <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='%null%' />
+                <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='&quot;Unclassified&quot;' />
+              </groupfilter>
+            </groupfilter>
+          </filter>
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:TO_IDEOLOGY:nk]'>
+            <groupfilter function='except' user:ui-domain='relevant' user:ui-enumeration='exclusive' user:ui-marker='enumerate'>
+              <groupfilter function='level-members' level='[none:TO_IDEOLOGY:nk]' />
+              <groupfilter function='member' level='[none:TO_IDEOLOGY:nk]' member='%null%' />
             </groupfilter>
           </filter>
           <shelf-sorts>
-            <shelf-sort-v2 dimension-to-sort='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:FROM_IDEOLOGY:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[sum:IN_RELEVANT_IMPRESSIONS_DAILY:qk]' shelf='rows' />
+            <shelf-sort-v2 dimension-to-sort='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:FROM_IDEOLOGY:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[sum:RELEVANT_IMPRESSIONS:qk]' shelf='rows' />
           </shelf-sorts>
+          <slices>
+            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:FROM_CHANNEL_TITLE:nk]</column>
+            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:TO_IDEOLOGY:nk]</column>
+            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[my:REC_MONTH:ok]</column>
+            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:FROM_IDEOLOGY:nk]</column>
+          </slices>
           <aggregation value='true' />
         </view>
         <style>
           <style-rule element='axis'>
-            <encoding attr='space' class='0' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[sum:IN_RELEVANT_IMPRESSIONS_DAILY:qk]' field-type='quantitative' fold='true' scope='cols' synchronized='true' type='space' />
-            <format attr='display' class='0' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[sum:IN_RELEVANT_IMPRESSIONS_DAILY:qk]' scope='cols' value='false' />
+            <encoding attr='space' class='0' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1492098918402007041:qk]' field-type='quantitative' fold='true' scope='cols' synchronized='true' type='space' />
           </style-rule>
           <style-rule element='cell'>
-            <format attr='text-format' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[usr:Calculation_1361776001277554688:qk]' value='*+#%;-#%' />
+            <format attr='text-format' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1361776001277554688:qk]' value='*+#%;-#%' />
           </style-rule>
           <style-rule element='header'>
             <format attr='border-width' data-class='total' value='0' />
             <format attr='border-style' data-class='total' value='none' />
-          </style-rule>
-          <style-rule element='mark'>
-            <encoding attr='color' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[sum:IN_RELEVANT_IMPRESSIONS_DAILY:qk]' palette='orange_blue_diverging_10_0' type='interpolated' />
-            <encoding attr='color' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[usr:Calculation_950541058817146886:qk]' palette='orange_blue_diverging_10_0' reverse='true' type='interpolated' />
           </style-rule>
           <style-rule element='pane'>
             <format attr='border-width' data-class='total' value='0' />
@@ -2143,36 +2981,20 @@
           </style-rule>
         </style>
         <panes>
-          <pane selection-relaxation-option='selection-relaxation-allow'>
-            <view>
-              <breakdown value='auto' />
-            </view>
-            <mark class='Bar' />
-          </pane>
-          <pane id='1' selection-relaxation-option='selection-relaxation-allow' x-axis-name='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[sum:RELEVANT_IMPRESSIONS_DAILY:qk]'>
-            <view>
-              <breakdown value='auto' />
-            </view>
-            <mark class='Bar' />
-            <encodings>
-              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[:Measure Names]' />
-            </encodings>
-          </pane>
-          <pane id='2' selection-relaxation-option='selection-relaxation-allow' x-axis-name='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[sum:IN_RELEVANT_IMPRESSIONS_DAILY:qk]'>
+          <pane id='2' selection-relaxation-option='selection-relaxation-allow'>
             <view>
               <breakdown value='auto' />
             </view>
             <mark class='Bar' />
             <mark-sizing mark-sizing-setting='marks-scaling-off' />
             <encodings>
-              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[usr:Calculation_950541058817146886:qk]' />
-              <text column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[usr:Calculation_1361776001277554688:qk]' />
+              <tooltip column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1572319285310451722:qk]' />
             </encodings>
             <customized-label>
               <formatted-text>
                 <run fontcolor='#666666' fontsize='10'>received</run>
                 <run fontsize='10'>Æ </run>
-                <run bold='true' fontsize='10'>&lt;[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[usr:Calculation_1361776001277554688:qk]&gt;</run>
+                <run bold='true' fontsize='10'>&lt;[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1361776001277554688:qk]&gt;</run>
               </formatted-text>
             </customized-label>
             <style>
@@ -2183,102 +3005,166 @@
               </style-rule>
             </style>
           </pane>
+          <pane id='3' selection-relaxation-option='selection-relaxation-allow' x-axis-name='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1492098918401642496:qk]'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Bar' />
+            <mark-sizing mark-sizing-setting='marks-scaling-off' />
+            <encodings>
+              <tooltip column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1572319285310451722:qk]' />
+            </encodings>
+            <customized-label>
+              <formatted-text>
+                <run fontcolor='#666666' fontsize='10'>received</run>
+                <run fontsize='10'>Æ </run>
+                <run bold='true' fontsize='10'>&lt;[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1361776001277554688:qk]&gt;</run>
+              </formatted-text>
+            </customized-label>
+            <style>
+              <style-rule element='mark'>
+                <format attr='size' value='1.3403314352035522' />
+                <format attr='mark-labels-cull' value='true' />
+                <format attr='mark-color' value='#e6e6e6' />
+                <format attr='mark-labels-show' value='false' />
+              </style-rule>
+            </style>
+          </pane>
+          <pane id='4' selection-relaxation-option='selection-relaxation-allow' x-axis-name='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1492098918402007041:qk]'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Bar' />
+            <mark-sizing mark-sizing-setting='marks-scaling-off' />
+            <encodings>
+              <text column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1361776001277554688:qk]' />
+              <lod column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1572319285310451722:qk]' />
+              <tooltip column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1572319285310451722:qk]' />
+            </encodings>
+            <customized-label>
+              <formatted-text>
+                <run fontcolor='#666666' fontsize='10'>received</run>
+                <run fontsize='10'>Æ </run>
+                <run bold='true' fontsize='10'>&lt;[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1361776001277554688:qk]&gt;</run>
+              </formatted-text>
+            </customized-label>
+            <style>
+              <style-rule element='mark'>
+                <format attr='size' value='0.55972373485565186' />
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-cull' value='true' />
+                <format attr='mark-color' value='#499894' />
+              </style-rule>
+            </style>
+          </pane>
         </panes>
-        <rows>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:FROM_IDEOLOGY:nk]</rows>
-        <cols>([federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[sum:RELEVANT_IMPRESSIONS_DAILY:qk] + [federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[sum:IN_RELEVANT_IMPRESSIONS_DAILY:qk])</cols>
+        <rows>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:FROM_IDEOLOGY:nk]</rows>
+        <cols>([federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1492098918401642496:qk] + [federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1492098918402007041:qk])</cols>
       </table>
-      <simple-id uuid='{D69771F5-6281-45D1-8BAB-E64BD43BB48B}' />
+      <simple-id uuid='{C5D06EBD-2DD6-4CF4-AA7A-7531918295BD}' />
     </worksheet>
     <worksheet name='Group Recs %'>
-      <layout-options export-scale-mode-auto='false'>
-        <title>
-          <formatted-text>
-            <run fontsize='16'>Recommendations between Groups</run>
-            <run>Æ&#10;</run>
-            <run fontcolor='#666666' fontname='Tableau Regular' fontsize='11'>The percent of total recommendations between each group</run>
-            <run>Æ&#10;</run>
-            <run fontcolor='#666666' fontname='Tableau Regular' fontsize='11'> * excludes recommendations to channels outside out dataset</run>
-            <run>Æ&#10;</run>
-            <run fontcolor='#666666' fontname='Tableau Regular' fontsize='11'> * % of total is calculated  across each row</run>
-          </formatted-text>
-        </title>
-      </layout-options>
       <table>
         <view>
           <datasources>
-            <datasource caption='Channel Recs' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)' />
+            <datasource caption='Video Recs Monthly' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)' />
           </datasources>
-          <datasource-dependencies datasource='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)'>
+          <datasource-dependencies datasource='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)'>
+            <column caption='Impressions %' datatype='real' default-format='p0.00%' name='[Calculation1]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='SUM([IMPRESSIONS]) / TOTAL(SUM([IMPRESSIONS]))'>
+                <table-calc ordering-field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:TO_IDEOLOGY:nk]' ordering-type='Field' />
+              </calculation>
+            </column>
+            <column caption='Significant Impression  %' datatype='string' name='[Calculation_1918533509198348288]' role='measure' type='nominal'>
+              <calculation class='tableau' formula='iif([Calculation1] &gt; 0.005, &quot;Significant&quot;, &quot;Not significant&quot;)'>
+                <table-calc ordering-type='Rows' />
+              </calculation>
+            </column>
+            <column caption='From Channel Title' datatype='string' name='[FROM_CHANNEL_TITLE]' role='dimension' type='nominal' />
             <column caption='From Group' datatype='string' name='[FROM_IDEOLOGY]' role='dimension' type='nominal' />
-            <column caption='Viewed' datatype='string' name='[From Group (copy 2)]' role='dimension' type='nominal'>
-              <calculation class='tableau' formula='[FROM_IDEOLOGY]' />
+            <column caption='Impressions' datatype='real' name='[IMPRESSIONS]' role='measure' type='quantitative' />
+            <column caption='Rec Month' datatype='date' name='[REC_MONTH]' role='dimension' type='ordinal' />
+            <column caption='Relevant Impressions' datatype='real' name='[RELEVANT_IMPRESSIONS]' role='measure' type='quantitative' />
+            <column caption='To Group' datatype='string' name='[TO_IDEOLOGY]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='%null%' value='Non-Political' />
+              </aliases>
             </column>
-            <column caption='Recs' datatype='integer' name='[RECS]' role='measure' type='quantitative' />
-            <column caption='To Group' datatype='string' name='[TO_IDEOLOGY]' role='dimension' type='nominal' />
-            <column caption='Recommended' datatype='string' name='[To Group (copy)]' role='dimension' type='nominal'>
-              <calculation class='tableau' formula='[TO_IDEOLOGY]' />
-            </column>
-            <column-instance column='[From Group (copy 2)]' derivation='None' name='[none:From Group (copy 2):nk]' pivot='key' type='nominal' />
-            <column-instance column='[To Group (copy)]' derivation='None' name='[none:To Group (copy):nk]' pivot='key' type='nominal' />
-            <column-instance column='[RECS]' derivation='Sum' name='[pcto:sum:RECS:qk:2]' pivot='key' type='quantitative'>
-              <table-calc ordering-field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:To Group (copy):nk]' ordering-type='Field' type='PctTotal' />
+            <column-instance column='[REC_MONTH]' derivation='MY' name='[my:REC_MONTH:ok]' pivot='key' type='ordinal' />
+            <column-instance column='[FROM_CHANNEL_TITLE]' derivation='None' name='[none:FROM_CHANNEL_TITLE:nk]' pivot='key' type='nominal' />
+            <column-instance column='[FROM_IDEOLOGY]' derivation='None' name='[none:FROM_IDEOLOGY:nk]' pivot='key' type='nominal' />
+            <column-instance column='[TO_IDEOLOGY]' derivation='None' name='[none:TO_IDEOLOGY:nk]' pivot='key' type='nominal' />
+            <column-instance column='[RELEVANT_IMPRESSIONS]' derivation='Sum' name='[sum:RELEVANT_IMPRESSIONS:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Calculation1]' derivation='User' name='[usr:Calculation1:qk]' pivot='key' type='quantitative'>
+              <table-calc ordering-field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:TO_IDEOLOGY:nk]' ordering-type='Field' />
             </column-instance>
-            <column-instance column='[RECS]' derivation='Sum' name='[pcto:sum:RECS:qk:4]' pivot='key' type='quantitative'>
-              <table-calc ordering-field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[To Group (copy)]' ordering-type='Field' type='PctTotal' />
+            <column-instance column='[Calculation_1918533509198348288]' derivation='User' name='[usr:Calculation_1918533509198348288:nk]' pivot='key' type='nominal'>
+              <table-calc ordering-type='Rows' />
+              <table-calc field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[Calculation1]' ordering-field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:TO_IDEOLOGY:nk]' ordering-type='Field' />
             </column-instance>
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:From Group (copy 2):nk]'>
-            <groupfilter function='except' user:ui-domain='relevant' user:ui-enumeration='exclusive' user:ui-marker='enumerate'>
-              <groupfilter function='level-members' level='[none:From Group (copy 2):nk]' />
-              <groupfilter function='member' level='[none:From Group (copy 2):nk]' member='&quot;Unclassified&quot;' />
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[my:REC_MONTH:ok]'>
+            <groupfilter function='union' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate'>
+              <groupfilter function='member' level='[my:REC_MONTH:ok]' member='201911' />
+              <groupfilter function='member' level='[my:REC_MONTH:ok]' member='201912' />
             </groupfilter>
           </filter>
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:FROM_CHANNEL_TITLE:nk]'>
+            <groupfilter function='level-members' level='[none:FROM_CHANNEL_TITLE:nk]' user:ui-enumeration='all' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:FROM_IDEOLOGY:nk]' kind='hide'>
+            <groupfilter function='except' user:ui-domain='relevant' user:ui-enumeration='exclusive' user:ui-manual-selection='true' user:ui-manual-selection-all-when-empty='true' user:ui-marker='enumerate'>
+              <groupfilter function='level-members' level='[none:FROM_IDEOLOGY:nk]' />
+              <groupfilter function='member' level='[none:FROM_IDEOLOGY:nk]' member='%null%' />
+            </groupfilter>
+          </filter>
+          <computed-sort column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:FROM_IDEOLOGY:nk]' direction='DESC' using='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[sum:RELEVANT_IMPRESSIONS:qk]' />
+          <manual-sort column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:TO_IDEOLOGY:nk]' direction='ASC'>
+            <dictionary>
+              <bucket>&quot;Center/Left MSM&quot;</bucket>
+              <bucket>&quot;Partisan Left&quot;</bucket>
+              <bucket>&quot;Partisan Right&quot;</bucket>
+              <bucket>&quot;Anti-SJW&quot;</bucket>
+              <bucket>&quot;Social Justice&quot;</bucket>
+              <bucket>&quot;Provocative Anti-SJW&quot;</bucket>
+              <bucket>&quot;Conspiracy&quot;</bucket>
+              <bucket>&quot;Unclassified&quot;</bucket>
+              <bucket>&quot;Religious Conservative&quot;</bucket>
+              <bucket>&quot;Libertarian&quot;</bucket>
+              <bucket>&quot;Socialist&quot;</bucket>
+              <bucket>&quot;Anti-theist&quot;</bucket>
+              <bucket>&quot;White Identitarian&quot;</bucket>
+              <bucket>&quot;MRA&quot;</bucket>
+              <bucket>%null%</bucket>
+            </dictionary>
+          </manual-sort>
+          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation_1918533509198348288:nk]'>
+            <groupfilter function='member' level='[usr:Calculation_1918533509198348288:nk]' member='&quot;Significant&quot;' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          </filter>
           <slices>
-            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:From Group (copy 2):nk]</column>
+            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:FROM_CHANNEL_TITLE:nk]</column>
+            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[my:REC_MONTH:ok]</column>
+            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation_1918533509198348288:nk]</column>
           </slices>
           <aggregation value='true' />
         </view>
         <style>
           <style-rule element='cell'>
-            <format attr='text-align' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:2]' value='center' />
-            <format attr='font-weight' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:2]' value='bold' />
-            <format attr='font-size' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:2]' value='12' />
-            <format attr='text-format' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:2]' value='p0.0%' />
-            <format attr='text-align' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:4]' value='center' />
-            <format attr='font-weight' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:4]' value='bold' />
-            <format attr='font-size' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:4]' value='12' />
-            <format attr='text-format' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:4]' value='p0.0%' />
+            <format attr='text-format' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation1:qk]' value='p0%' />
+            <format attr='font-weight' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation1:qk]' value='bold' />
+            <format attr='font-size' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation1:qk]' value='12' />
+            <format attr='text-align' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation1:qk]' value='center' />
+            <format attr='vertical-align' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation1:qk]' value='center' />
           </style-rule>
           <style-rule element='header'>
-            <format attr='height' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:To Group (copy):nk]' value='100' />
-            <format attr='total-label' data-class='total' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:From Group (copy 2):nk]' value='Total' />
-            <format attr='border-width' data-class='total' value='0' />
-            <format attr='border-style' data-class='total' value='none' />
-            <format attr='border-width' data-class='subtotal' value='0' />
-            <format attr='border-style' data-class='subtotal' value='none' />
+            <format attr='height' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:TO_IDEOLOGY:nk]' value='116' />
           </style-rule>
           <style-rule element='label'>
-            <format attr='text-orientation' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:To Group (copy):nk]' value='-90' />
+            <format attr='text-orientation' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:TO_IDEOLOGY:nk]' value='-90' />
           </style-rule>
           <style-rule element='mark'>
-            <encoding attr='size-bar' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:2]' field-type='quantitative' max-size='1' min-size='0.005' type='centersize' />
-            <encoding attr='color' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:2]' type='custom-interpolated'>
-              <color-palette custom='true' name='' type='ordered-sequential'>
-                <color>#f1f1f1</color>
-                <color>#cedddf</color>
-                <color>#aec9ce</color>
-                <color>#90b6bd</color>
-                <color>#76a3ac</color>
-                <color>#5e919b</color>
-                <color>#497f8a</color>
-                <color>#366e79</color>
-                <color>#265d68</color>
-                <color>#194d57</color>
-                <color>#0f3d46</color>
-              </color-palette>
-            </encoding>
-            <encoding attr='size-bar' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:4]' field-type='quantitative' max-size='1' min-size='0.005' type='centersize' />
-            <encoding attr='color' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:4]' type='custom-interpolated'>
+            <encoding attr='size-bar' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation1:qk]' field-type='quantitative' max-size='1' min-size='0.005' type='centersize' />
+            <encoding attr='color' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation1:qk]' type='custom-interpolated'>
               <color-palette custom='true' name='' type='ordered-sequential'>
                 <color>#f1f1f1</color>
                 <color>#cedddf</color>
@@ -2294,15 +3180,8 @@
               </color-palette>
             </encoding>
           </style-rule>
-          <style-rule element='pane'>
-            <format attr='border-width' data-class='total' value='0' />
-            <format attr='border-style' data-class='total' value='none' />
-            <format attr='border-width' data-class='subtotal' value='0' />
-            <format attr='border-style' data-class='subtotal' value='none' />
-          </style-rule>
-          <style-rule element='table-div'>
-            <format attr='stroke-size' scope='rows' value='0' />
-            <format attr='line-visibility' scope='rows' value='off' />
+          <style-rule element='worksheet'>
+            <format attr='display-field-labels' scope='cols' value='false' />
           </style-rule>
         </style>
         <panes>
@@ -2312,12 +3191,11 @@
             </view>
             <mark class='Square' />
             <encodings>
-              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:2]' />
-              <text column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:4]' />
+              <color column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation1:qk]' />
+              <text column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation1:qk]' />
             </encodings>
             <style>
               <style-rule element='mark'>
-                <format attr='mark-labels-show' value='true' />
                 <format attr='mark-labels-cull' value='true' />
                 <format attr='mark-labels-line-first' value='true' />
                 <format attr='mark-labels-line-last' value='true' />
@@ -2327,14 +3205,15 @@
                 <format attr='mark-labels-range-scope' value='pane' />
                 <format attr='mark-labels-range-field' value='' />
                 <format attr='has-stroke' value='false' />
+                <format attr='mark-labels-show' value='true' />
               </style-rule>
             </style>
           </pane>
         </panes>
-        <rows total='true'>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:From Group (copy 2):nk]</rows>
-        <cols>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:To Group (copy):nk]</cols>
+        <rows>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:FROM_IDEOLOGY:nk]</rows>
+        <cols>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:TO_IDEOLOGY:nk]</cols>
       </table>
-      <simple-id uuid='{D272DCAC-BEC4-491C-926D-3F734CAF0F40}' />
+      <simple-id uuid='{A19D50B5-E795-47F8-958E-136C5F1C4E64}' />
     </worksheet>
     <worksheet name='L/C/R Advantage'>
       <layout-options>
@@ -2374,9 +3253,6 @@
             <column-instance column='[Calculation_1361776001277554688]' derivation='User' name='[usr:Calculation_1361776001277554688:qk]' pivot='key' type='quantitative' />
             <column-instance column='[Calculation_950541058817146886]' derivation='User' name='[usr:Calculation_950541058817146886:qk]' pivot='key' type='quantitative' />
           </datasource-dependencies>
-          <shelf-sorts>
-            <shelf-sort-v2 dimension-to-sort='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:FROM_LR:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[sum:IN_RELEVANT_IMPRESSIONS_DAILY:qk]' shelf='rows' />
-          </shelf-sorts>
           <aggregation value='true' />
         </view>
         <style>
@@ -2579,9 +3455,6 @@
             <column-instance column='[Calculation_1361776001277554688]' derivation='User' name='[usr:Calculation_1361776001277554688:qk]' pivot='key' type='quantitative' />
             <column-instance column='[Calculation_950541058817146886]' derivation='User' name='[usr:Calculation_950541058817146886:qk]' pivot='key' type='quantitative' />
           </datasource-dependencies>
-          <shelf-sorts>
-            <shelf-sort-v2 dimension-to-sort='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:FROM_MEDIA:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[sum:RELEVANT_IMPRESSIONS_DAILY:qk]' shelf='rows' />
-          </shelf-sorts>
           <aggregation value='true' />
         </view>
         <style>
@@ -3472,8 +4345,8 @@
         <devicelayout auto-generated='true' name='Phone'>
           <size maxheight='800' minheight='800' sizing-mode='vscroll' />
           <zones>
-            <zone h='100000' id='58' type='layout-basic' w='100000' x='0' y='0'>
-              <zone h='99192' id='59' param='vert' type='layout-flow' w='98874' x='563' y='404'>
+            <zone h='100000' id='60' type='layout-basic' w='100000' x='0' y='0'>
+              <zone h='84000' id='61' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
                 <zone fixed-size='280' h='72036' id='3' is-fixed='true' name='Classification' w='49429' x='563' y='404'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -3514,76 +4387,6 @@
       </devicelayouts>
       <simple-id uuid='{1EDA32B0-AB09-4DA2-B696-BD1098819925}' />
     </dashboard>
-    <dashboard name='Group % Recs'>
-      <style />
-      <size sizing-mode='automatic' />
-      <zones>
-        <zone h='100000' id='4' type='layout-basic' w='100000' x='0' y='0'>
-          <zone h='98572' id='7' param='horz' type='layout-flow' w='98804' x='598' y='714'>
-            <zone h='98572' id='5' type='layout-basic' w='98804' x='598' y='714'>
-              <zone h='58639' id='3' name='Group Recs %' w='98804' x='598' y='714'>
-                <zone-style>
-                  <format attr='border-color' value='#000000' />
-                  <format attr='border-style' value='none' />
-                  <format attr='border-width' value='0' />
-                  <format attr='margin' value='4' />
-                </zone-style>
-              </zone>
-              <zone h='39933' id='10' name='Rec Channel List' show-title='false' w='98804' x='598' y='59353'>
-                <zone-style>
-                  <format attr='border-color' value='#000000' />
-                  <format attr='border-style' value='none' />
-                  <format attr='border-width' value='0' />
-                  <format attr='margin' value='4' />
-                </zone-style>
-              </zone>
-            </zone>
-          </zone>
-          <zone-style>
-            <format attr='border-color' value='#000000' />
-            <format attr='border-style' value='none' />
-            <format attr='border-width' value='0' />
-            <format attr='margin' value='8' />
-          </zone-style>
-        </zone>
-      </zones>
-      <devicelayouts>
-        <devicelayout auto-generated='true' name='Phone'>
-          <size maxheight='700' minheight='700' sizing-mode='vscroll' />
-          <zones>
-            <zone h='100000' id='23' type='layout-basic' w='100000' x='0' y='0'>
-              <zone h='84000' id='24' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
-                <zone fixed-size='280' h='58639' id='3' is-fixed='true' name='Group Recs %' w='98804' x='598' y='714'>
-                  <zone-style>
-                    <format attr='border-color' value='#000000' />
-                    <format attr='border-style' value='none' />
-                    <format attr='border-width' value='0' />
-                    <format attr='margin' value='4' />
-                    <format attr='padding' value='0' />
-                  </zone-style>
-                </zone>
-                <zone fixed-size='280' h='39933' id='10' is-fixed='true' name='Rec Channel List' show-title='false' w='98804' x='598' y='59353'>
-                  <zone-style>
-                    <format attr='border-color' value='#000000' />
-                    <format attr='border-style' value='none' />
-                    <format attr='border-width' value='0' />
-                    <format attr='margin' value='4' />
-                    <format attr='padding' value='0' />
-                  </zone-style>
-                </zone>
-              </zone>
-              <zone-style>
-                <format attr='border-color' value='#000000' />
-                <format attr='border-style' value='none' />
-                <format attr='border-width' value='0' />
-                <format attr='margin' value='8' />
-              </zone-style>
-            </zone>
-          </zones>
-        </devicelayout>
-      </devicelayouts>
-      <simple-id uuid='{6C4EA37B-81D4-46EE-875D-EA7D75FA6197}' />
-    </dashboard>
     <dashboard name='Group Net Recs'>
       <style />
       <size sizing-mode='automatic' />
@@ -3621,8 +4424,8 @@
         <devicelayout auto-generated='true' name='Phone'>
           <size maxheight='700' minheight='700' sizing-mode='vscroll' />
           <zones>
-            <zone h='100000' id='28' type='layout-basic' w='100000' x='0' y='0'>
-              <zone h='99192' id='29' param='vert' type='layout-flow' w='98874' x='563' y='404'>
+            <zone h='100000' id='30' type='layout-basic' w='100000' x='0' y='0'>
+              <zone h='84000' id='31' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
                 <zone fixed-size='280' h='71158' id='3' is-fixed='true' name='Net Flow - Group' w='98874' x='563' y='404'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -3655,7 +4458,7 @@
       <simple-id uuid='{D92CEE80-C252-4BED-8EF6-A10E777A0DD1}' />
     </dashboard>
   </dashboards>
-  <windows saved-dpi-scale-factor='1.25' source-height='63'>
+  <windows saved-dpi-scale-factor='1.25' source-height='115'>
     <window class='dashboard' name='Channel'>
       <viewpoints>
         <viewpoint name='Channels' />
@@ -3704,7 +4507,7 @@
           <zoom type='entire-view' />
         </viewpoint>
       </viewpoints>
-      <active id='3' />
+      <active id='-1' />
       <simple-id uuid='{F014DAFC-8315-463E-8CDE-058AC76BAE8F}' />
     </window>
     <window class='worksheet' name='Net Flow - Group'>
@@ -3811,48 +4614,7 @@
       </viewpoint>
       <simple-id uuid='{4A409D0E-1A40-4A29-9C26-56C28DA4C7A0}' />
     </window>
-    <window class='dashboard' name='Group % Recs'>
-      <viewpoints>
-        <viewpoint name='Group Recs %'>
-          <zoom type='entire-view' />
-        </viewpoint>
-        <viewpoint name='Rec Channel List'>
-          <zoom type='entire-view' />
-        </viewpoint>
-      </viewpoints>
-      <active id='-1' />
-      <simple-id uuid='{B9A40E98-0DFC-4B70-93C2-D2C2B39027F8}' />
-    </window>
-    <window class='worksheet' name='Group Recs %'>
-      <cards>
-        <edge name='left'>
-          <strip size='160'>
-            <card type='pages' />
-            <card type='filters' />
-            <card type='marks' />
-          </strip>
-        </edge>
-        <edge name='top'>
-          <strip size='2147483647'>
-            <card type='columns' />
-          </strip>
-          <strip size='2147483647'>
-            <card type='rows' />
-          </strip>
-          <strip size='2147483647'>
-            <card pane-specification-id='0' param='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[pcto:sum:RECS:qk:2]' type='color' />
-          </strip>
-          <strip size='2147483647'>
-            <card type='title' />
-          </strip>
-        </edge>
-      </cards>
-      <viewpoint>
-        <zoom type='entire-view' />
-      </viewpoint>
-      <simple-id uuid='{D1EC3A58-5897-4D33-8933-604EC870944A}' />
-    </window>
-    <window class='worksheet' maximized='true' name='Group Advantage'>
+    <window class='worksheet' maximized='true' name='Group Recs %'>
       <cards>
         <edge name='left'>
           <strip size='160'>
@@ -3873,16 +4635,64 @@
           </strip>
         </edge>
         <edge name='right'>
-          <strip size='300'>
-            <card pane-specification-id='1' param='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[:Measure Names]' type='color' />
-            <card pane-specification-id='2' param='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[usr:Calculation_950541058817146886:qk]' type='color' />
+          <strip size='160'>
+            <card mode='checkdropdown' param='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:FROM_CHANNEL_TITLE:nk]' type='filter' />
           </strip>
         </edge>
       </cards>
       <viewpoint>
         <zoom type='entire-view' />
+        <highlight>
+          <color-one-way>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[my:REC_MONTH:ok]</field>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:Calculation_1918533509198348288:nk]</field>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:FROM_IDEOLOGY:nk]</field>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[none:TO_IDEOLOGY:nk]</field>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[tmn:REC_MONTH:qk]</field>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation1:qk]</field>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 6)].[usr:Calculation_1918533509198348288:nk]</field>
+          </color-one-way>
+        </highlight>
       </viewpoint>
-      <simple-id uuid='{3A3BF0A6-2E4F-4E47-8824-7B6BF709D028}' />
+      <simple-id uuid='{295F216E-07BC-463D-BF49-082FA8358633}' />
+    </window>
+    <window class='worksheet' name='Group Advantage'>
+      <cards>
+        <edge name='left'>
+          <strip size='180'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='title' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card mode='checkdropdown' param='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:FROM_CHANNEL_TITLE:nk]' type='filter' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+        <highlight>
+          <color-one-way>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[my:REC_MONTH:ok]</field>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[none:TO_IDEOLOGY:nk]</field>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)].[usr:Calculation_1361776001277554688:qk]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{44236E50-6E48-4518-ABC5-656AE9A6B972}' />
     </window>
     <window class='worksheet' name='Media Advantage'>
       <cards>
@@ -4269,116 +5079,119 @@
     </thumbnail>
     <thumbnail height='192' name='Group Advantage' width='192'>
       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
-      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
+      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
     </thumbnail>
     <thumbnail height='192' name='Group Net Recs' width='192'>
       iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAABJ0AAASdAHeZh94
@@ -4657,44 +5470,389 @@
       UADHVY1aF+yzWUmPk1q1cmyXJZPpOrasE+Xy8c0xQNAFCjjhBAIIONEEAgg40QQCCDjRBAII
       ONEEAgg40QQCCDjR/P+pQWvo130KIwAAAABJRU5ErkJggg==
     </thumbnail>
+    <thumbnail height='192' name='Group Recs %' width='192'>
+      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
+      Tl9AY113rSIAAAAASUVORK5CYII=
+    </thumbnail>
     <thumbnail height='192' name='Media Advantage' width='192'>
       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
-      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
+      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
+      iobDoRqNhoste+vE3ww37rf0n81NTc/Oa3P9G5UqC8oEgRSPtbh4Whs7XbWbdRXzae3uVFXv
+      j/XDc8uqba1rdmFZxZPe0Guo3ekqjEJJgWLFKuQn1Op0VJ4qqtXuqDI7o1EYKgyjZytidXoH
+      mp+bVbXe0Gg0UnGyIEna2a1qeWlJf/3wH/rD73+njz7+RFtbW5Kk9fV1Xbt2LZkX6YkT/wlQ
+      mjujfu9Ac4VImphTvbqlvVpdT59uPn9Mrban/b0tdYeBlpfP6smj+1qvtlWr1U96O6+lVqej
+      6VJJozDURC6nVqej05U5tbs9zVfmNBiOdNAfqNPrqdc/UPegr7mZaVXrDc2US8rncs+/VhiF
+      +uzzL/TutZ/r/ldf6dKlS7p69ap6vZ5WV1d148YNhWGY4KtN1sm/HToIdPHij5QrFDSV2VDp
+      wlvqNnYVnDqldG5SZxbyCqKiqo22zp2b0c7unn7y08vaebqmUuW0NOqd+JZeNzPlslKplDLp
+      tHr9gcpTRVVrDU0VC9qrN1QuTWmyMKF4HCuTSSsMIzWaLc2Wy6o3my8E0Gy1NV0uqdfrKYql
+      69evKwgCXblyRTMzM1pZWVE6nVYURYfs6M0VxHEcJ72J7xo0G/rLby8nvY3ETP7xzwqyuZc/
+      8BgO+0fZYRgqkzna90NXa8bjb39RTKWONrD8P8/FX4FgGgHANAKAaQQA0wgAphEATCMAmEYA
+      MI0AYBoBwDQCgGne3Rs0yGSVvfzrpLeRnBT3BXXJuwCUySp3+TdJ7wJGMALBNAKAaQQA0wgA
+      phEATCMAmEYAMI0AYBoBwDQCgGkEANMIAKb9FwJt8I9JTcA3AAAAAElFTkSuQmCC
     </thumbnail>
     <thumbnail height='192' name='Net Flow - Group' width='192'>
       iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAABJ0AAASdAHeZh94
