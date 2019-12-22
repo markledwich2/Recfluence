@@ -113,7 +113,7 @@ One limitation of the original analysis was that some late night shows -- with h
 ## Data
 ### Download
 
-[Download](https://pyt-data.azureedge.net/data/results/latest/recfluence_shared_data.zip) the latest data used for the diagrams. The full raw video and recommendations data can be provided on request - either as files or database access (at cost).
+[Download](https://pyt-data.azureedge.net/data/results/v2.2/latest/recfluence_shared_data.zip) the latest data used for the diagrams. The full raw video and recommendations data can be provided on request - either as files or database access (at cost).
 
 ### Calculations and considerations
 All source & calculations are available to review and use for your own purposes.
