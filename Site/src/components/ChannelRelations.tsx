@@ -136,12 +136,12 @@ export class ChannelRelations extends React.Component<Props, State> {
     // })
 
     let nodes: Node[] = _(channelCells)
-      .filter(c => c.row.channelVideoViews > 0)
+      .filter(c => c.row.relevantDailyViews > 0)
       .map(
         c =>
           ({
             channelId: c.row.channelId,
-            size: c.row.channelVideoViews,
+            size: c.row.relevantDailyViews,
             row: c.row,
             ...c.cell
           } as Node)

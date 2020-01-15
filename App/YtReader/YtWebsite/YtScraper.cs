@@ -51,7 +51,7 @@ namespace YtReader.YtWebsite {
     long _directRequests = 0;
     long _proxyRequests = 0;
 
-    public (long direct, long proxy) RequestStats => (-_directRequests, _proxyRequests);
+    public (long direct, long proxy) RequestStats => (_directRequests, _proxyRequests);
 
     async Task<string> GetRaw(string url, string desc, ILogger log) {
       log.Debug("Scraping {Desc} {Url}", desc, url);

@@ -59,7 +59,7 @@ namespace YtReader {
     public async Task SaveResults() {
       using var db = await SnowflakeCfg.OpenConnection();
 
-      var dateRangeParams = new {@from = "2019-11-01", to = "2019-12-31"};
+      var dateRangeParams = new {@from = "2019-11-01", to = "2020-01-14"};
       var queries = new[] {
         new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql", 
           "data combined from classifications + information (from the YouTube API)", dateRangeParams),
@@ -153,7 +153,8 @@ namespace YtReader {
     async Task SaveToLatestAndDateDirs(string fileName, FPath tempFile) =>
       await Task.WhenAll(
         Store.Save(StringPath.Relative(Version, DateTime.UtcNow.ToString("yyyy-MM-dd")).Add(fileName), tempFile),
-        Store.Save(StringPath.Relative(Version, "latest").Add(fileName), tempFile)
+        Store.Save(StringPath.Relative(Version, "latest").Add(fileName), tempFile),
+        Store.Save(StringPath.Relative("latest").Add(fileName), tempFile)
       );
   }
 
