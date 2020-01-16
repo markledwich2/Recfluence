@@ -47,7 +47,7 @@ namespace YtReader {
     readonly ILogger          Log;
     readonly HttpClient       Http = new HttpClient();
 
-    const string Version = "v2.2";
+    const string Version = "v2.3";
 
     public YtResults(SnowflakeCfg snowflakeCfg, ResultsCfg resCfg, ISimpleFileStore store, ILogger log) {
       SnowflakeCfg = snowflakeCfg;

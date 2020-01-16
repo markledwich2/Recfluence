@@ -83,7 +83,7 @@ export class YtModel {
   channels: Dim<ChannelData>
   selectionState: SelectionState
 
-  static version = 'v2.2'
+  static version = 'v2.3'
 
   static async dataSet(path: string): Promise<YtModel> {
     const channelsTask = d3.csv(path + 'vis_channel_stats.csv.gz')

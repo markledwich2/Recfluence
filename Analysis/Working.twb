@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8' ?>
 
-<!-- build 20192.19.1110.1721                               -->
-<workbook original-version='18.1' source-build='2019.2.6 (20192.19.1110.1721)' source-platform='win' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+<!-- build 20192.19.1210.2209                               -->
+<workbook original-version='18.1' source-build='2019.2.7 (20192.19.1210.2209)' source-platform='win' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
   <document-format-change-manifest>
     <AutoCreateAndUpdateDSDPhoneLayouts ignorable='true' predowngraded='true' />
     <IntuitiveSorting />
@@ -5194,322 +5194,6 @@
         <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
       </semantic-values>
     </datasource>
-    <datasource caption='Video' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)' version='18.1'>
-      <connection class='federated'>
-        <named-connections>
-          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 4)'>
-            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' />
-          </named-connection>
-        </named-connections>
-        <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 4)' name='VIDEO' table='[PUBLIC].[VIDEO]' type='table' />
-        <metadata-records>
-          <metadata-record class='column'>
-            <remote-name>VIDEO_ID</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[VIDEO_ID]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>VIDEO_ID</remote-alias>
-            <ordinal>1</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>VIDEO_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[VIDEO_TITLE]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>VIDEO_TITLE</remote-alias>
-            <ordinal>2</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>CHANNEL_ID</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[CHANNEL_ID]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>CHANNEL_ID</remote-alias>
-            <ordinal>3</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>CHANNEL_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[CHANNEL_TITLE]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>CHANNEL_TITLE</remote-alias>
-            <ordinal>4</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>UPLOAD_DATE</remote-name>
-            <remote-type>7</remote-type>
-            <local-name>[UPLOAD_DATE]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>UPLOAD_DATE</remote-alias>
-            <ordinal>5</ordinal>
-            <local-type>datetime</local-type>
-            <aggregation>Year</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>VIEWS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[VIEWS]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>VIEWS</remote-alias>
-            <ordinal>6</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>AVG_RATING</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[AVG_RATING]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>AVG_RATING</remote-alias>
-            <ordinal>7</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>LIKES</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[LIKES]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>LIKES</remote-alias>
-            <ordinal>8</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>DISLIKES</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[DISLIKES]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>DISLIKES</remote-alias>
-            <ordinal>9</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>DESCRIPTION</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[DESCRIPTION]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>DESCRIPTION</remote-alias>
-            <ordinal>10</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>DURATION</remote-name>
-            <remote-type>134</remote-type>
-            <local-name>[DURATION]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>DURATION</remote-alias>
-            <ordinal>11</ordinal>
-            <local-type>datetime</local-type>
-            <aggregation>Hour</aggregation>
-            <precision>9</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIME&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIME&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>KEYWORDS</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[KEYWORDS]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>KEYWORDS</remote-alias>
-            <ordinal>12</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>THUMB_HIGH</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[THUMB_HIGH]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>THUMB_HIGH</remote-alias>
-            <ordinal>13</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>THUMB_STANDARD</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[THUMB_STANDARD]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>THUMB_STANDARD</remote-alias>
-            <ordinal>14</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>THUMB_LOW</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[THUMB_LOW]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>THUMB_LOW</remote-alias>
-            <ordinal>15</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>UPDATED</remote-name>
-            <remote-type>7</remote-type>
-            <local-name>[UPDATED]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>UPDATED</remote-alias>
-            <ordinal>16</ordinal>
-            <local-type>datetime</local-type>
-            <aggregation>Year</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>COLLECTION_VERSION</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[COLLECTION_VERSION]</local-name>
-            <parent-name>[VIDEO]</parent-name>
-            <remote-alias>COLLECTION_VERSION</remote-alias>
-            <ordinal>17</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-        </metadata-records>
-      </connection>
-      <aliases enabled='yes' />
-      <column caption='Age' datatype='integer' name='[Calculation_1337006206484705280]' role='measure' type='quantitative'>
-        <calculation class='tableau' formula='DATEDIFF(&apos;day&apos;, [UPLOAD_DATE], [UPDATED])' />
-      </column>
-      <column aggregation='Hour' datatype='datetime' name='[DURATION]' role='dimension' type='ordinal' />
-      <column caption='Videos' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
-        <calculation class='tableau' formula='1' />
-      </column>
-      <layout dim-ordering='alphabetic' dim-percentage='0.69163' measure-ordering='alphabetic' measure-percentage='0.30837' show-structure='true' user-set-layout='true' />
-      <semantic-values>
-        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
-      </semantic-values>
-    </datasource>
     <datasource caption='Recs' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 2)' version='18.1'>
       <connection class='federated'>
         <named-connections>
@@ -5873,6 +5557,322 @@
         <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
       </semantic-values>
     </datasource>
+    <datasource caption='Video' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 4)'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' />
+          </named-connection>
+        </named-connections>
+        <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 4)' name='VIDEO' table='[PUBLIC].[VIDEO]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>VIDEO_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[VIDEO_ID]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>VIDEO_ID</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>VIDEO_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[VIDEO_TITLE]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>VIDEO_TITLE</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_ID]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>CHANNEL_ID</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_TITLE]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>CHANNEL_TITLE</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>UPLOAD_DATE</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[UPLOAD_DATE]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>UPLOAD_DATE</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>datetime</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[VIEWS]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>VIEWS</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>AVG_RATING</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[AVG_RATING]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>AVG_RATING</remote-alias>
+            <ordinal>7</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>LIKES</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[LIKES]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>LIKES</remote-alias>
+            <ordinal>8</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>DISLIKES</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[DISLIKES]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>DISLIKES</remote-alias>
+            <ordinal>9</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>DESCRIPTION</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[DESCRIPTION]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>DESCRIPTION</remote-alias>
+            <ordinal>10</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>DURATION</remote-name>
+            <remote-type>134</remote-type>
+            <local-name>[DURATION]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>DURATION</remote-alias>
+            <ordinal>11</ordinal>
+            <local-type>datetime</local-type>
+            <aggregation>Hour</aggregation>
+            <precision>9</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIME&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIME&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>KEYWORDS</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[KEYWORDS]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>KEYWORDS</remote-alias>
+            <ordinal>12</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>THUMB_HIGH</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[THUMB_HIGH]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>THUMB_HIGH</remote-alias>
+            <ordinal>13</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>THUMB_STANDARD</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[THUMB_STANDARD]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>THUMB_STANDARD</remote-alias>
+            <ordinal>14</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>THUMB_LOW</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[THUMB_LOW]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>THUMB_LOW</remote-alias>
+            <ordinal>15</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>UPDATED</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[UPDATED]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>UPDATED</remote-alias>
+            <ordinal>16</ordinal>
+            <local-type>datetime</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>COLLECTION_VERSION</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[COLLECTION_VERSION]</local-name>
+            <parent-name>[VIDEO]</parent-name>
+            <remote-alias>COLLECTION_VERSION</remote-alias>
+            <ordinal>17</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='Age' datatype='integer' name='[Calculation_1337006206484705280]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='DATEDIFF(&apos;day&apos;, [UPLOAD_DATE], [UPDATED])' />
+      </column>
+      <column aggregation='Hour' datatype='datetime' name='[DURATION]' role='dimension' type='ordinal' />
+      <column caption='Videos' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
+        <calculation class='tableau' formula='1' />
+      </column>
+      <layout dim-ordering='alphabetic' dim-percentage='0.601111' measure-ordering='alphabetic' measure-percentage='0.398889' show-structure='true' user-set-layout='true' />
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+    </datasource>
   </datasources>
   <actions>
     <action caption='Filter 3 (generated)' name='[Action3]'>
@@ -6172,45 +6172,31 @@
             <datasource caption='Video' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)' />
           </datasources>
           <datasource-dependencies datasource='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)'>
-            <column datatype='string' name='[CHANNEL_TITLE]' role='dimension' type='nominal' />
             <column datatype='string' name='[COLLECTION_VERSION]' role='dimension' type='nominal' />
             <column caption='Videos' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
               <calculation class='tableau' formula='1' />
             </column>
             <column datatype='datetime' name='[UPDATED]' role='dimension' type='ordinal' />
-            <column-instance column='[CHANNEL_TITLE]' derivation='None' name='[none:CHANNEL_TITLE:nk]' pivot='key' type='nominal' />
             <column-instance column='[COLLECTION_VERSION]' derivation='None' name='[none:COLLECTION_VERSION:nk]' pivot='key' type='nominal' />
             <column-instance column='[UPDATED]' derivation='None' name='[none:UPDATED:qk]' pivot='key' type='quantitative' />
             <column-instance column='[Number of Records]' derivation='Sum' name='[sum:Number of Records:qk]' pivot='key' type='quantitative' />
             <column-instance column='[UPDATED]' derivation='Day-Trunc' name='[tdy:UPDATED:qk]' pivot='key' type='quantitative' />
           </datasource-dependencies>
-          <filter class='categorical' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[none:CHANNEL_TITLE:nk]'>
-            <groupfilter function='union' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate'>
-              <groupfilter function='member' level='[none:CHANNEL_TITLE:nk]' member='&quot;James Allsup&quot;' />
-              <groupfilter function='member' level='[none:CHANNEL_TITLE:nk]' member='&quot;Red Ice TV&quot;' />
-              <groupfilter function='member' level='[none:CHANNEL_TITLE:nk]' member='&quot;The Golden One&quot;' />
-            </groupfilter>
-          </filter>
           <filter class='quantitative' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[none:UPDATED:qk]' included-values='in-range'>
             <min>#2018-11-14 02:18:31.551#</min>
-            <max>#2019-12-21 21:39:29.406#</max>
+            <max>#2020-01-14 21:35:59.003#</max>
           </filter>
           <slices>
             <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[none:UPDATED:qk]</column>
-            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[none:CHANNEL_TITLE:nk]</column>
           </slices>
           <aggregation value='true' />
         </view>
         <style>
           <style-rule element='axis'>
             <format attr='width' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[sum:Number of Records:qk]' value='64' />
-            <encoding attr='space' class='0' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[sum:Number of Records:qk]' field-type='quantitative' max='100' min='0' range-type='fixed' scope='rows' type='space' />
           </style-rule>
           <style-rule element='cell'>
             <format attr='width' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[tdy:UPDATED:qk]' value='227' />
-          </style-rule>
-          <style-rule element='header'>
-            <format attr='width' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[none:CHANNEL_TITLE:nk]' value='180' />
           </style-rule>
         </style>
         <panes>
@@ -6236,7 +6222,7 @@
             </style>
           </pane>
         </panes>
-        <rows>([federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[none:CHANNEL_TITLE:nk] * [federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[sum:Number of Records:qk])</rows>
+        <rows>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[sum:Number of Records:qk]</rows>
         <cols>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 4)].[tdy:UPDATED:qk]</cols>
       </table>
       <simple-id uuid='{910187F4-941D-4B81-A853-388BD9B8EFED}' />
@@ -6920,8 +6906,8 @@
         <devicelayout auto-generated='true' name='Phone'>
           <size maxheight='850' minheight='850' sizing-mode='vscroll' />
           <zones>
-            <zone h='100000' id='80' type='layout-basic' w='100000' x='0' y='0'>
-              <zone h='84000' id='81' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
+            <zone h='100000' id='82' type='layout-basic' w='100000' x='0' y='0'>
+              <zone h='84000' id='83' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
                 <zone h='6788' id='8' mode='dropdown' name='Recs From' param='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)].[none:FROM_CHANNEL_TITLE:nk]' type='filter' w='42726' x='661' y='589'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -7940,204 +7926,62 @@
     </thumbnail>
     <thumbnail height='192' name='Raw Video Updates' width='192'>
       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
-      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
+      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
     </thumbnail>
     <thumbnail height='192' name='Recs' width='192'>
       iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAABJ0AAASdAHeZh94
