@@ -1,5 +1,5 @@
 # Recfluence
-[![Build Status](https://dev.azure.com/mledwich/ytnetworks/_apis/build/status/markledwich2.YouTubeNetworks?branchName=master)](https://dev.azure.com/mledwich/ytnetworks/_build/latest?definitionId=1&branchName=master)
+[![Build Status](https://dev.azure.com/mledwich/recfluence/_apis/build/status/markledwich2.Recfluence?branchName=master)](https://dev.azure.com/mledwich/recfluence/_build/latest?definitionId=3&branchName=master)
 
 [Recfluence](https://www.recfluence.net) is an analysis of YouTube's political influence through recommendations. This is important, because the algorithm that determines suggested videos has become an influential but underappreciated part of politics. A [Pew survey](https://www.journalism.org/2017/09/07/news-use-across-social-media-platforms-2017/) found that 18% of US adults consume news through YouTube, and — according to YouTube Chief Product Officer [Neal Mohan](https://www.cnet.com/news/youtube-ces-2018-neal-mohan/) — 70% of the watch time is from YouTube’s suggested videos.
 
