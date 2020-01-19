@@ -64,7 +64,7 @@ namespace YtReader {
       var mainChannels = await MainChannels(sheetsCfg, service, log);
       var channels = mainChannels
         .Select(mc => {
-            var ucs = userChannelsById[mc.Id]
+            var ucs = userChannelsById[mc.Id].NotNull()
               .Where(uc => uc.Channel.Complete == "TRUE").ToList();
 
             var classifications = ucs.Select(uc =>
@@ -85,7 +85,7 @@ namespace YtReader {
             var res = new ChannelSheet {
               Id = mc.Id,
               Title = mc.Title,
-              LR = AverageLR(ucs.Select(c => c.Channel.LR)),
+              LR = AverageLR(ucs.Select(c => c.Channel.LR).ToList()),
               MainChannelId = mc.MainChannelId,
               HardTags = new[] {mc.HardTag1, mc.HardTag2, mc.HardTag3}.Where(t => t.HasValue()).OrderBy(t => t).ToList(),
               SoftTags = softTags,
@@ -103,13 +103,15 @@ namespace YtReader {
       new[] {sheet.SoftTag1, sheet.SoftTag2, sheet.SoftTag3, sheet.SoftTag4}
         .Where(t => t.HasValue()).ToList();
 
-    static string AverageLR(IEnumerable<string> lrs) {
+    static string AverageLR(IReadOnlyCollection<string> lrs) {
       double? LrNum(string lr) => lr switch {
         "L" => -1,
         "R" => 1,
         "C" => 0,
         _ => (double?)null
       };
+
+      if (!lrs.Any()) return null;
 
       var vg = Math.Round(lrs.Select(LrNum).NotNull().Select(v => v.Value).Average(), 0);
       var lr = vg switch {
