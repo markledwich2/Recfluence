@@ -114,7 +114,7 @@ namespace Mutuo.Etl {
 
         var items = res.Results.OfType<ICloudBlob>().Select(r =>
           new FileListItem {
-            Path = new StringPath(r.Uri.AbsolutePath).RelativePath(BasePath),
+            Path = new StringPath(r.Uri.LocalPath).RelativePath(BasePath),
             Modified = r.Properties.LastModified
           });
 

@@ -165,6 +165,7 @@ namespace YtReader {
     public string DataStorageCs { get; set; }
     public string DbPath        { get; set; } = "data/db";
     public string ResultsPath  { get; set; } = "data/results";
+    public string PrivatePath { get; set; } = "private";
   }
 
   public class ContainerCfg {

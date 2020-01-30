@@ -119,7 +119,9 @@ namespace SysExtensions.Text {
       var format = NumberFormatInfo.InvariantInfo;
       return long.Parse(s, styles, format);
     }
-    
+
+    public static DateTime ParseDate(this string s) => DateTime.Parse(s);
+
     public static decimal ParseDecimal(this string s) => decimal.Parse(s, NumberFormatInfo.InvariantInfo);
     
     public static DateTimeOffset ParseDateTimeOffset(this string s, string format) =>

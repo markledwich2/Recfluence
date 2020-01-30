@@ -28,7 +28,7 @@ namespace YtReader.Yt {
     public DateTime Start { get; }
 
     ILogger Log { get; }
-    YouTubeService YtService { get; }
+    public YouTubeService YtService { get; }
 
     async Task<T> GetResponse<T>(YouTubeBaseServiceRequest<T> request) {
       void SetRequestKey() {

@@ -4,7 +4,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.VisualBasic.CompilerServices;
 using Serilog;
+using Serilog.Core;
 using SysExtensions;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
@@ -41,14 +43,15 @@ namespace Mutuo.Etl {
     readonly StringPath Path;
     readonly Func<T, string> GetTs;
     readonly string Version;
+    
     readonly ILogger Log;
 
-    public AppendCollectionStore(ISimpleFileStore store, StringPath path, Func<T, string> getTs, string version, ILogger log) {
+    public AppendCollectionStore(ISimpleFileStore store, StringPath path, Func<T, string> getTs, ILogger log , string version = "") {
       Store = store;
       Path = path;
       GetTs = getTs;
-      Version = version;
       Log = log;
+      Version = version;
     }
 
     /// <summary>
@@ -78,7 +81,7 @@ namespace Mutuo.Etl {
 
       await using var memStream = items.ToJsonlGzStream();
       var res = await Store.Save(path, memStream).WithDuration();
-      Log.Debug("Store - Saved '{Path}' in {Duration}", path, res);
+      Log?.Debug("Store - Saved '{Path}' in {Duration}", path, res);
     }
 
     async Task<IReadOnlyCollection<T>> LoadJsonl(StringPath path) {
@@ -93,7 +96,7 @@ namespace Mutuo.Etl {
     public DateTime Modified { get; }
     public string Version { get; }
 
-    public StoreFileMd(StringPath path, string ts, DateTime modified, string version) {
+    public StoreFileMd(StringPath path, string ts, DateTime modified, string version = "0") {
       Path = path;
       Ts = ts;
       Modified = modified;

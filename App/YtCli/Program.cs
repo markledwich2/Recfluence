@@ -8,12 +8,11 @@ using SysExtensions.Text;
 using YtReader;
 
 namespace YouTubeCli {
-
   [Verb("update", HelpText = "refresh new data from YouTube and collects it into results")]
   public class UpdateOption : CommonOption {
     [Option('c', "channels", HelpText = "optional '|' separated list of channels to process")]
     public string ChannelIds { get; set; }
-    
+
     [Option('t', "type", HelpText = "Control what parts of the update process to run")]
     public UpdateType UpdateType { get; set; }
   }
@@ -36,14 +35,13 @@ namespace YouTubeCli {
     public string PathB { get; set; }
   }
 
-  [Verb(name: "ChannelInfo", HelpText = "Show channel information (ID,Name) given a video ID")]
+  [Verb("ChannelInfo", HelpText = "Show channel information (ID,Name) given a video ID")]
   public class ChannelInfoOption : CommonOption {
     [Option('v', Required = true, HelpText = "the ID of a video")]
     public string VideoId { get; set; }
   }
 
   public abstract class CommonOption {
-    
     [Option('p', "parallelism", HelpText = "The number of operations to run at once")]
     public int? Parallel { get; set; }
 
@@ -51,33 +49,30 @@ namespace YouTubeCli {
     public bool LaunchContainer { get; set; }
   }
 
-  [Verb("fleet")]
-  public class UpdateFleetOption : UpdateOption {
-    
+  [Verb("fleet")] public class UpdateFleetOption : UpdateOption { }
 
-  }
-
-  [Verb("results")]
-  public class ResultsOption : CommonOption {
-    
-  }
+  [Verb("results")] public class ResultsOption : CommonOption { }
+  
+  [Verb("traffic", HelpText = "Process source traffic data for comparison")] 
+  public class TrafficOption : CommonOption { }
 
   public class TaskCtx<TOption> {
-    public Cfg Cfg { get; set; }
-    public ILogger Log { get; set; }
-    public TOption Option { get; set; }
+    public Cfg      Cfg          { get; set; }
+    public ILogger  Log          { get; set; }
+    public TOption  Option       { get; set; }
     public string[] OriginalArgs { get; set; }
   }
 
   class Program {
     static int Main(string[] args) {
-      var res = Parser.Default.ParseArguments<UpdateOption, FixOption, SyncOption, ChannelInfoOption, UpdateFleetOption, ResultsOption>(args).MapResult(
+      var res = Parser.Default.ParseArguments<UpdateOption, FixOption, SyncOption, ChannelInfoOption, UpdateFleetOption, ResultsOption, TrafficOption>(args).MapResult(
         (UpdateFleetOption f) => Run(f, args, Fleet),
         (UpdateOption u) => Run(u, args, Update),
         (SyncOption s) => Run(s, args, Sync),
         (ChannelInfoOption v) => Run(v, args, ChannelInfo),
         (FixOption f) => Run(f, args, Fix),
         (ResultsOption f) => Run(f, args, Results),
+        (TrafficOption t) => Run(t, args, Traffic),
         errs => (int) ExitCode.UnknownError
       );
       return res;
@@ -85,7 +80,7 @@ namespace YouTubeCli {
 
     static int Run<TOption>(TOption option, string[] args, Func<TaskCtx<TOption>, Task<ExitCode>> task) where TOption : CommonOption {
       var cfg = Setup.LoadCfg().Result;
-      
+
       if (option.Parallel.HasValue)
         cfg.App.DefaultParallel = cfg.App.ParallelChannels = option.Parallel.Value;
 
@@ -94,12 +89,12 @@ namespace YouTubeCli {
       try {
         if (option.LaunchContainer) {
           YtContainerRunner.Start(envLog, cfg, args.Where(a => a != "-z").ToArray()).Wait();
-          return (int)ExitCode.Success;
+          return (int) ExitCode.Success;
         }
         return (int) task(new TaskCtx<TOption> {Cfg = cfg, Log = envLog, Option = option, OriginalArgs = args}).Result;
       }
       catch (Exception ex) {
-        var flatEx = ex switch { AggregateException a => a.Flatten(), _ => ex };
+        var flatEx = ex switch {AggregateException a => a.Flatten(), _ => ex};
         envLog.Error(flatEx, "Unhandled error: {Error}", flatEx.Message);
         return (int) ExitCode.UnknownError;
       }
@@ -108,7 +103,7 @@ namespace YouTubeCli {
     static async Task<ExitCode> Update(TaskCtx<UpdateOption> ctx) {
       if (ctx.Option.ChannelIds.HasValue())
         ctx.Cfg.App.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
-      
+
       var ytStore = ctx.Cfg.YtStore(ctx.Log);
       var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, ctx.Option.UpdateType, async () => await ctx.Cfg.App.Snowflake.OpenConnection(), ctx.Log);
       await ytUpdater.UpdateData();
@@ -126,29 +121,35 @@ namespace YouTubeCli {
       ctx.Log.Information("{ChannelId},{ChannelTitle}", v.ChannelId, v.ChannelTitle);
       return ExitCode.Success;
     }
-    
+
     static async Task<ExitCode> Fix(TaskCtx<FixOption> ctx) {
       await new StoreUpgrader(ctx.Cfg.App, ctx.Cfg.DataStore(), ctx.Log).UpgradeStore();
       return ExitCode.Success;
     }
-    
+
     static async Task<ExitCode> Fleet(TaskCtx<UpdateFleetOption> ctx) {
       await YtContainerRunner.StartFleet(ctx.Log, ctx.Cfg, ctx.Option.UpdateType);
       return ExitCode.Success;
     }
-    
+
     static async Task<ExitCode> Results(TaskCtx<ResultsOption> ctx) {
       var store = ctx.Cfg.DataStore(ctx.Cfg.App.Storage.ResultsPath);
       var result = new YtResults(ctx.Cfg.App.Snowflake, ctx.Cfg.App.Results, store, ctx.Log);
       await result.SaveResults();
       return ExitCode.Success;
     }
+
+    static async Task<ExitCode> Traffic(TaskCtx<TrafficOption> ctx) {
+      var store = ctx.Cfg.DataStore(ctx.Cfg.App.Storage.PrivatePath);
+      await TrafficSourceExports.Process(store, ctx.Cfg.App, ctx.Cfg.YtClient(ctx.Log), ctx.Log);
+      return ExitCode.Success;
+    }
   }
 
   enum ExitCode {
-    Success = 0,
-    InvalidLogin = 1,
+    Success         = 0,
+    InvalidLogin    = 1,
     InvalidFilename = 2,
-    UnknownError = 10
+    UnknownError    = 10
   }
 }
