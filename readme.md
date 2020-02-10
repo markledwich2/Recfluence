@@ -128,7 +128,7 @@ All source & calculations are available to review and use for your own purposes.
 |**channel views**|The total number of video views since *2018 Jan 1*|
 |**daily channel views**|`(channel views) * (days in the period videos have been recorded for the channel)`|
 |**relevant channel views**|`(daily channel views) * (channel relevance %)`|
-
+|**impression advantage**|The ratio of impressions sent compared to received. ![impression advantage](Site/static/help/impression_advantage.svg)|
 
 **Ledwich & Zaitsev Group**
 Derived from the list of channel tags and left/center/right classification.
