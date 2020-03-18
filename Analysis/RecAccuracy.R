@@ -28,7 +28,6 @@ data.channel = data.raw  %>%
 ggplot(data.channel %>% filter(actual > 0), aes(x=error_rank, y=error_pct)) + geom_point()
 ggplot(data.channel %>% filter(actual > 0 & error_pct < 300 & error_pct != 100), aes(x=error_pct)) + geom_histogram()
 
-
 # granularity: to_channel + month 
 data.to_channel = data.channel  %>%
   group_by(month, to_channel) %>% summarize(estimate=sum(estimate), actual=sum(actual))
@@ -37,7 +36,7 @@ data.to_channel = data.channel  %>%
 # Error metrics calculate at this level, because this is the level we publish analysis at.
 # error_pct_togroup_month_avg is a the median error as a % of the average actual for that to_group.
 # Not happy with this, or anything other ways I ahve tried to summarize the error
-  group_by(to_group, month) %>% 
+data.group =  data.channel %>% group_by(to_group, month) %>% 
   mutate(actual_togroup_month_total=sum(actual), actual_togroup_month_avg=mean(actual)) %>% ungroup %>%
   group_by(from_group, to_group, month) %>%
   summarise(estimate=sum(estimate), actual=sum(actual), 
