@@ -49,12 +49,15 @@ namespace YtReader.YtWebsite {
     ///   Statistics of this video.
     /// </summary>
     public Statistics Statistics { get; }
+    
+    public string ChannelId { get; }
+    public string ChannelTitle { get; }
 
     /// <summary>
     ///   Initializes an instance of <see cref="Video" />.
     /// </summary>
     public VideoItem(string id, string author, DateTimeOffset uploadDate, string title, string description,
-      ThumbnailSet thumbnails, TimeSpan duration, IReadOnlyList<string> keywords, Statistics statistics) {
+      ThumbnailSet thumbnails, TimeSpan duration, IReadOnlyList<string> keywords, Statistics statistics, string channelId, string channelTitle) {
       Id = id;
       Author = author;
       UploadDate = uploadDate;
@@ -64,6 +67,8 @@ namespace YtReader.YtWebsite {
       Duration = duration;
       Keywords = keywords;
       Statistics = statistics;
+      ChannelId = channelId;
+      ChannelTitle = channelTitle;
     }
 
     /// <inheritdoc />

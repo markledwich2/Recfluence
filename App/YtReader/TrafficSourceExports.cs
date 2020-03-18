@@ -14,11 +14,11 @@ using SysExtensions.Collections;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using SysExtensions.Threading;
-using YtReader.Yt;
+using YtReader.YtWebsite;
 
 namespace YtReader {
   public static class TrafficSourceExports {
-    public static async Task Process(ISimpleFileStore store, AppCfg cfg, YtClient yt, ILogger log) {
+    public static async Task Process(ISimpleFileStore store, AppCfg cfg, YtScraper yt, ILogger log) {
       var blobs = await store.List("rec_exports").SelectManyList();
       //blobs = blobs.Where(b => b.Path == "rec_exports/Traffic source 2019-07-01_2019-08-01 David Pakman Show.zip").ToList();
 
@@ -67,7 +67,7 @@ namespace YtReader {
           if (source.Length != 2 || source[0] != "YT_RELATED")
             return null; // total at the top or otherwise. not interested
           var videoId = source[1];
-          var fromVideo = await yt.VideoData(videoId);
+          var fromVideo = await yt.GetVideoAsync(videoId, log);
 
           return new TrafficSourceRow {
             ToChannelTitle = exportInfo.Channel,
@@ -80,8 +80,8 @@ namespace YtReader {
             SourceType = row.SourceType,
             FromChannelId = fromVideo?.ChannelId,
             FromChannelTitle = fromVideo?.ChannelTitle,
-            FromVideoId = fromVideo?.VideoId,
-            FromVideoTitle = fromVideo?.VideoTitle,
+            FromVideoId = fromVideo?.Id,
+            FromVideoTitle = fromVideo?.Title,
             ImpressionClickThrough = row.ImpressionClickThrough,
             WatchTimeHrsTotal = row.WatchTimeHrsTotal,
             FileUpdated = b.Modified?.UtcDateTime ?? DateTime.MinValue

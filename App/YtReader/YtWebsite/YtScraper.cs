@@ -289,7 +289,7 @@ namespace YtReader.YtWebsite {
           // Add video to the list if it's not already there
           if (videoIds.Add(videoId)) {
             var video = new VideoItem(videoId, videoAuthor, videoUploadDate, videoTitle, videoDescription,
-              videoThumbnails, videoDuration, videoKeywords, videoStatistics);
+              videoThumbnails, videoDuration, videoKeywords, videoStatistics, null, null); // TODO: is channelId in the playlist?
             newVideos.Add(video);
           }
         }
@@ -384,20 +384,26 @@ namespace YtReader.YtWebsite {
       var videoWatchPageTask = GetVideoWatchPageHtmlAsync(videoId, log);
 
       var videoInfoDic = await videoInfoDicTask;
-      var playerResponseJson = JToken.Parse(videoInfoDic["player_response"]);
+      var responseJson = JToken.Parse(videoInfoDic["player_response"]);
 
-      if (string.Equals(playerResponseJson.SelectToken("playabilityStatus.status")?.Value<string>(), "error",
+      if (string.Equals(responseJson.SelectToken("playabilityStatus.status")?.Value<string>(), "error",
         StringComparison.OrdinalIgnoreCase))
         return null;
 
-      var videoAuthor = playerResponseJson.SelectToken("videoDetails.author").Value<string>();
-      var videoTitle = playerResponseJson.SelectToken("videoDetails.title").Value<string>();
-      var videoDuration = TimeSpan.FromSeconds(playerResponseJson.SelectToken("videoDetails.lengthSeconds").Value<double>());
-      var videoKeywords = playerResponseJson.SelectToken("videoDetails.keywords").NotNull().Values<string>().ToArray();
-      var videoDescription = playerResponseJson.SelectToken("videoDetails.shortDescription").Value<string>();
-      var videoViewCount = playerResponseJson.SelectToken("videoDetails.viewCount")?.Value<long>() ?? 0; // some videos have no views
+      T VideoValue<T>(string propName) {
+        var token = responseJson.SelectToken($"videoDetails.{propName}");
+        return token == null ? default : token.Value<T>();
+      }
 
-
+      var videoAuthor = VideoValue<string>("author");
+      var videoTitle = VideoValue<string>("title");
+      var videoDuration = TimeSpan.FromSeconds(VideoValue<double>("videoDetails.lengthSeconds"));
+      var videoKeywords = responseJson.SelectToken("videoDetails.keywords").NotNull().Values<string>().ToArray();
+      var videoDescription = VideoValue<string>("shortDescription");
+      var videoViewCount = VideoValue<long>("viewCount"); // some videos have no views
+      var channelId = VideoValue<string>("channelId");
+      var channelTitle = VideoValue<string>("author");
+      
       var (videoWatchPageHtml, url ) = await videoWatchPageTask;
       var videoUploadDate = videoWatchPageHtml.GetElementsBySelector("meta[itemprop=\"datePublished\"]")
                               .FirstOrDefault()?.GetAttribute("content").Value.ParseDateTimeOffset("yyyy-MM-dd") ??
@@ -413,7 +419,7 @@ namespace YtReader.YtWebsite {
       var thumbnails = new ThumbnailSet(videoId);
 
       return new VideoItem(videoId, videoAuthor, videoUploadDate, videoTitle, videoDescription,
-        thumbnails, videoDuration, videoKeywords, statistics);
+        thumbnails, videoDuration, videoKeywords, statistics, channelId, channelTitle);
     }
 
     IReadOnlyCollection<Rec> GetRecs(HtmlDocument html, string url, ILogger log) {

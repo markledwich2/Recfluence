@@ -56,43 +56,53 @@ namespace YtReader {
       Log = log;
     }
 
-    public async Task SaveResults() {
+    public async Task SaveResults(IReadOnlyCollection<string> queryNames) {
       using var db = await SnowflakeCfg.OpenConnection();
 
-      var dateRangeParams = new {@from = "2019-11-01", to = "2020-01-14"};
+      var now = DateTime.Now;
+      var dateRangeParams = new {from = "2019-11-01", to = $"{now.Year}-{now.Month-1}-1"};
       var queries = new[] {
-        new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql", 
-          "data combined from classifications + information (from the YouTube API)", dateRangeParams),
-        
-        new FileQuery("vis_category_recs", "sql/vis_category_recs.sql", 
-          "aggregate recommendations between all combinations of the categories available on recfluence.net", dateRangeParams),
-        
-        new FileQuery("vis_channel_recs", "sql/vis_channel_recs.sql", 
-          "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams),
-        
-        new ResQuery("channel_classification", desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)"),
-        new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
-        new ResQuery("icc_lr", desc: "channel classifications in a format used to calculate how consistent reviewers are when deciding left/right/center"),
+          new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
+            "data combined from classifications + information (from the YouTube API)", dateRangeParams),
 
-        // videos & recs are too large to share in a file. Use snowflake directly to share this data at-cost.
-        /*("video_latest", @"select video_id, video_title, channel_id, channel_title,
-         upload_date, avg_rating, likes, dislikes, views, thumb_standard from video_latest")*/
-      };
+          new FileQuery("vis_category_recs", "sql/vis_category_recs.sql",
+            "aggregate recommendations between all combinations of the categories available on recfluence.net", dateRangeParams),
+
+          new FileQuery("vis_channel_recs", "sql/vis_channel_recs.sql",
+            "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams),
+
+          new ResQuery("channel_classification",
+            desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)"),
+          new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
+          new ResQuery("icc_lr", desc: "channel classifications in a format used to calculate how consistent reviewers are when deciding left/right/center"),
+
+          new FileQuery("rec_accuracy", "sql/rec_accuracy.sql", "Calculates the accuracy of our estimates vs exported recommendations")
+
+          // videos & recs are too large to share in a file. Use snowflake directly to share this data at-cost.
+          /*("video_latest", @"select video_id, video_title, channel_id, channel_title,
+           upload_date, avg_rating, likes, dislikes, views, thumb_standard from video_latest")*/
+        }
+        .Where(q => !queryNames.Any() || queryNames.Contains(q.Name))
+        .ToList();
 
       var tmpDir = TempDir();
 
-      var results = await queries.BlockTransform(async q => new {File = await SaveResult(db, tmpDir, q), Query = q}, 4);
+      var results = await queries.BlockTransform(async q => (file: await SaveResult(db, tmpDir, q), query: q), 4);
 
+      if (!queryNames.Any()) await SaveResultsZip(results);
+    }
+
+    async Task SaveResultsZip(IReadOnlyCollection<(FPath file, ResQuery query)> results) {
       var sw = Stopwatch.StartNew();
-      var zipPath = results.First().File.Parent().Combine("recfluence_shared_data.zip");
+      var zipPath = results.First().file.Parent().Combine("recfluence_shared_data.zip");
       using (var zipFile = ZipFile.Open(zipPath.FullPath, ZipArchiveMode.Create)) {
         var readmeFile = TempDir().CreateFile("readme.txt", $@"Recfluence data generated {DateTime.UtcNow.ToString("yyyy-MM-dd")}
 
-{results.Join("\n\n", r => $"*{r.Query.Name}*\n  {r.Query.Desc}")}
+{results.Join("\n\n", r => $"*{r.query.Name}*\n  {r.query.Desc}")}
         ");
         zipFile.CreateEntryFromFile(readmeFile.FullPath, readmeFile.FileName);
 
-        foreach (var f in results.Select(r => r.File)) {
+        foreach (var f in results.Select(r => r.file)) {
           var name = f.FileNameWithoutExtension;
           var e = zipFile.CreateEntry(name);
           using var ew = e.Open();
@@ -136,7 +146,7 @@ namespace YtReader {
       if (q is FileQuery f) {
         var req = new Uri(ResCfg.FileQueryUri + "/" + f.Path.StringValue).Get()
           .AddHeader("Cache-Control", "no-cache");
-        
+
         var res = await Http.SendAsync(req);
         query = await res.ContentAsString();
       }

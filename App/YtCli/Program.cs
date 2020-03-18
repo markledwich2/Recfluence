@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
 using Mutuo.Etl;
 using Serilog;
+using SysExtensions.Collections;
 using SysExtensions.Text;
 using YtReader;
+using YtReader.YtWebsite;
 
 namespace YouTubeCli {
   [Verb("update", HelpText = "refresh new data from YouTube and collects it into results")]
@@ -51,7 +54,11 @@ namespace YouTubeCli {
 
   [Verb("fleet")] public class UpdateFleetOption : UpdateOption { }
 
-  [Verb("results")] public class ResultsOption : CommonOption { }
+  [Verb("results")]
+  public class ResultsOption : CommonOption {
+    [Option('q', HelpText = "list of query names to run. All if empty")]
+    public IEnumerable<string> QueryNames { get; set; }
+  }
   
   [Verb("traffic", HelpText = "Process source traffic data for comparison")] 
   public class TrafficOption : CommonOption { }
@@ -135,13 +142,13 @@ namespace YouTubeCli {
     static async Task<ExitCode> Results(TaskCtx<ResultsOption> ctx) {
       var store = ctx.Cfg.DataStore(ctx.Cfg.App.Storage.ResultsPath);
       var result = new YtResults(ctx.Cfg.App.Snowflake, ctx.Cfg.App.Results, store, ctx.Log);
-      await result.SaveResults();
+      await result.SaveResults(ctx.Option.QueryNames.NotNull().ToList());
       return ExitCode.Success;
     }
 
     static async Task<ExitCode> Traffic(TaskCtx<TrafficOption> ctx) {
       var store = ctx.Cfg.DataStore(ctx.Cfg.App.Storage.PrivatePath);
-      await TrafficSourceExports.Process(store, ctx.Cfg.App, ctx.Cfg.YtClient(ctx.Log), ctx.Log);
+      await TrafficSourceExports.Process(store, ctx.Cfg.App, new YtScraper(ctx.Cfg.App.Scraper), ctx.Log);
       return ExitCode.Success;
     }
   }
