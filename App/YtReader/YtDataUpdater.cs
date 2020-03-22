@@ -4,7 +4,6 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using AngleSharp.Common;
 using Mutuo.Etl;
 using Serilog;
 using SysExtensions;
@@ -23,7 +22,7 @@ namespace YtReader {
     // go back and populate recommendations for videos that are missing any recorded recs
     AllWithMissingRecs
   }
-  
+
   public static class RefreshHelper {
     public static bool IsOlderThan(this DateTime updated, TimeSpan age, DateTime? now = null) => (now ?? DateTime.UtcNow) - updated > age;
     public static bool IsYoungerThan(this DateTime updated, TimeSpan age, DateTime? now = null) => !updated.IsOlderThan(age, now);
@@ -83,7 +82,8 @@ namespace YtReader {
           }, Cfg.ParallelChannels);
 
         var requestStats = Scraper.RequestStats;
-        Log.Information("Update complete {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
+        Log.Information(
+          "Update complete {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
           channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed, requestStats.direct, requestStats.proxy);
       }
     }
@@ -163,12 +163,13 @@ namespace YtReader {
         log.Information("{Channel} - skipping update, video stats have been updated recently {LastModified}", c.ChannelTitle, lastModified);
 
       var vids = recentlyUpdated ? null : await ChannelVidItems(c, uploadedFrom, log).ToListAsync();
-      if (vids != null) {
+      
+      if (vids != null)
         await SaveVids(c, vids, vidStore, lastUpload, log);
-        await SaveNewCaptions(c, vids, log);
-      }
       if (vids != null || UpdateType == UpdateType.AllWithMissingRecs)
-        await SaveRecs(c, vids, conn, log);
+        await SaveRecsAndExtra(c, vids, conn, log);
+      if (vids != null)
+        await SaveNewCaptions(c, vids, log);
     }
 
     static async Task SaveVids(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AppendCollectionStore<VideoStored2> vidStore, DateTime? uploadedFrom,
@@ -248,19 +249,21 @@ namespace YtReader {
     /// <summary>
     ///   Saves recs for all of the given vids
     /// </summary>
-    async Task SaveRecs(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, DbConnection conn, ILogger log) {
+    async Task SaveRecsAndExtra(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, DbConnection conn, ILogger log) {
       var recStore = Store.RecStore(c.ChannelId);
+      var videoExStore = Store.VideoExtraStore(c.ChannelId);
 
-      var toUpdate = UpdateType == UpdateType.AllWithMissingRecs
-        ? await VideosWithNoRecs(c, conn)
-        : await VideoToUpdateRecs(vids, recStore);
+      var toUpdate = UpdateType switch {
+        UpdateType.AllWithMissingRecs => await VideosWithNoRecs(c, conn),
+        _ => await VideoToUpdateRecs(vids, recStore)
+      };
 
       var recs = await toUpdate.BlockTransform(
-        async v => (fromId:v.Id, fromTitle:v.Title, recs: await Scraper.GetRecs(v.Id, log)),
+        async v => (fromId: v.Id, fromTitle: v.Title, recs: await Scraper.GetRecsAndExtra(v.Id, log)),
         Cfg.DefaultParallel);
 
       // read failed recs from the API (either because of an error, or because the video is 18+ restricted)
-      var failed = recs.Where(v => v.recs.None()).ToList();
+      var failed = recs.Where(v => v.recs.recs.None()).ToList();
 
       if (failed.Any()) {
         var apiRecs = await failed.BlockTransform(async f => {
@@ -271,25 +274,25 @@ namespace YtReader {
           catch (Exception ex) {
             log.Warning(ex, "Unable to get related videos for {VideoId}: {Error}", f.fromId, ex.Message);
           }
-          return (f.fromId, f.fromTitle, recs: related.NotNull().Select(r => new Rec {
+          return (f.fromId, f.fromTitle, recs: (related.NotNull().Select(r => new Rec {
             Source = RecSource.Api,
             ToChannelTitle = r.ChannelTitle,
             ToChannelId = r.ChannelId,
             ToVideoId = r.VideoId,
             ToVideoTitle = r.VideoTitle,
             Rank = r.Rank
-          }).ToReadOnly());
+          }).ToReadOnly(), (VideoExtraStored2) null));
         });
 
         recs = recs.Concat(apiRecs).ToList();
-        
+
         log.Information("{Channel} - {Videos} videos recommendations fell back to using the API: {VideoList}",
           c.ChannelTitle, failed.Count, apiRecs.Select(r => r.fromId));
       }
 
       var updated = DateTime.UtcNow;
       var recsStored = recs
-        .SelectMany(v => v.recs.Select((r, i) => new RecStored2 {
+        .SelectMany(v => v.recs.recs.Select((r, i) => new RecStored2 {
           FromChannelId = c.ChannelId,
           FromVideoId = v.fromId,
           FromVideoTitle = v.fromTitle,
@@ -305,7 +308,15 @@ namespace YtReader {
       if (recsStored.Any())
         await recStore.Append(recsStored);
 
-      Log.Information("{Channel} - Recorded {RecCount} recs: {Recs}", c.ChannelTitle, recsStored.Count, recs.Select(v => new {Id=v.fromId, v.recs.Count}).ToList());
+      var extraStored = recs.Select(r => r.recs.extra).NotNull().ToArray();
+      if (extraStored.Any())
+        await videoExStore.Append(extraStored);
+
+      log.Information("{Channel} - Recorded {RecCount} recs: {Recs}",
+        c.ChannelTitle, recsStored.Count, recs.Select(v => new {Id = v.fromId, v.recs.recs.Count}).ToList());
+
+      log.Information("{Channel} - Recorded {VideoExtra} extra info on video's",
+        c.ChannelTitle, extraStored.Length);
     }
 
     async Task<IReadOnlyCollection<(string Id, string Title)>> VideosWithNoRecs(ChannelStored2 c, DbConnection connection) {
@@ -328,11 +339,12 @@ namespace YtReader {
       var prevUpdateMeta = await recStore.LatestFileMetadata();
       var prevUpdate = prevUpdateMeta?.Ts.ParseFileSafeTimestamp();
       var vidsDesc = vids.OrderByDescending(v => v.UploadDate).ToList();
-     
-      var toUpdate = prevUpdate == null ? 
-        vidsDesc : //  all videos if this is the first time for this channel
+
+      var toUpdate = prevUpdate == null
+        ? vidsDesc
+        : //  all videos if this is the first time for this channel
         // new vids since the last rec update, or the vid was created in the last RefreshRecsWithin (e.g. 30d)
-        vidsDesc.Where(v =>v.UploadDate > prevUpdate || v.UploadDate.UtcDateTime.IsYoungerThan(RCfg.RefreshRecsWithin)).ToList();  
+        vidsDesc.Where(v => v.UploadDate > prevUpdate || v.UploadDate.UtcDateTime.IsYoungerThan(RCfg.RefreshRecsWithin)).ToList();
       var deficit = RCfg.RefreshRecsMin - toUpdate.Count;
       if (deficit > 0)
         toUpdate.AddRange(vidsDesc.Where(v => toUpdate.All(u => u.Id != v.Id))

@@ -358,14 +358,48 @@ namespace YtReader.YtWebsite {
 
     #region Videos
 
-    async Task<(HtmlDocument html, string url)> GetVideoWatchPageHtmlAsync(string videoId, ILogger log) {
+    async Task<(HtmlDocument html, string raw, string url)> GetVideoWatchPageHtmlAsync(string videoId, ILogger log) {
       var url = $"https://youtube.com/watch?v={videoId}&disable_polymer=true&bpctr=9999999999&hl=en-us";
-      return (await GetHtml(url, "video watch", log), url);
+      var raw = await GetRaw(url, "video watch", log);
+      return (HtmlParser.Default.ParseDocument(raw), raw, url);
     }
 
-    public async Task<IReadOnlyCollection<Rec>> GetRecs(string videoId, ILogger log) {
-      var (html, url ) = await GetVideoWatchPageHtmlAsync(videoId, log);
+    static Regex _ytAdRegex = new Regex(@"""yt_ad"":""??([0-1])""?", RegexOptions.Compiled);
+    //ytInitialPlayerResponse.responseContext.serviceTrackingParams.filter(p => p.service == "CSI")[0].params
+    public async Task<(IReadOnlyCollection<Rec> recs, VideoExtraStored2 extra)> GetRecsAndExtra(string videoId, ILogger log) {
+      var (html, raw, url) = await GetVideoWatchPageHtmlAsync(videoId, log);
       var recs = GetRecs(html, url, log);
+      var match = _ytAdRegex.Match(raw);
+      var hasAds = match.Success && match.Groups[1].Value == "1";
+      var extra = new VideoExtraStored2 {
+        Id = videoId,
+        Updated = DateTime.UtcNow,
+        HasAd = hasAds
+      };
+      return (recs, extra);
+    }
+    
+    IReadOnlyCollection<Rec> GetRecs(HtmlDocument html, string url, ILogger log) {
+      var content = html.GetElementsBySelector("head > meta[property=\"og:restrictions:age\"]").FirstOrDefault()?.GetAttribute("content");
+      var restrictedMode = content?.Value == "18+";
+      var recs = (from d in html.GetElementsBySelector("li.video-list-item.related-list-item").Select((e,i) => (e,i))
+        let titleSpan = d.e.GetElementsBySelector("span.title").FirstOrDefault()
+        let channelSpan = d.e.GetElementsBySelector("span.stat.attribution > span").FirstOrDefault()
+        let videoA = d.e.GetElementsBySelector("a.content-link").FirstOrDefault()
+        where videoA != null && channelSpan != null && videoA != null
+        select new Rec {
+          ToVideoId = ParseVideoId($"https://youtube.com/{videoA.GetAttribute("href").Value}"),
+          ToVideoTitle = titleSpan.GetInnerText(),
+          ToChannelTitle = channelSpan.GetInnerText(),
+          Rank = d.i + 1
+        }).ToList();
+
+      if (recs.Any()) return recs;
+      if (restrictedMode) {
+        log.Debug("Unable to find recommended video because it is age restricted and requires to log in: {Url}", url);
+      }
+      else
+        log.Warning("Unable to find recommended videos: {Url}", url);
       return recs;
     }
 
@@ -404,7 +438,7 @@ namespace YtReader.YtWebsite {
       var channelId = VideoValue<string>("channelId");
       var channelTitle = VideoValue<string>("author");
       
-      var (videoWatchPageHtml, url ) = await videoWatchPageTask;
+      var (videoWatchPageHtml, _, _) = await videoWatchPageTask;
       var videoUploadDate = videoWatchPageHtml.GetElementsBySelector("meta[itemprop=\"datePublished\"]")
                               .FirstOrDefault()?.GetAttribute("content").Value.ParseDateTimeOffset("yyyy-MM-dd") ??
                             throw new InvalidOperationException("No upload date found in page");
@@ -420,30 +454,6 @@ namespace YtReader.YtWebsite {
 
       return new VideoItem(videoId, videoAuthor, videoUploadDate, videoTitle, videoDescription,
         thumbnails, videoDuration, videoKeywords, statistics, channelId, channelTitle);
-    }
-
-    IReadOnlyCollection<Rec> GetRecs(HtmlDocument html, string url, ILogger log) {
-      var content = html.GetElementsBySelector("head > meta[property=\"og:restrictions:age\"]").FirstOrDefault()?.GetAttribute("content");
-      var restrictedMode = content?.Value == "18+";
-      var recs = (from d in html.GetElementsBySelector("li.video-list-item.related-list-item").Select((e,i) => (e,i))
-        let titleSpan = d.e.GetElementsBySelector("span.title").FirstOrDefault()
-        let channelSpan = d.e.GetElementsBySelector("span.stat.attribution > span").FirstOrDefault()
-        let videoA = d.e.GetElementsBySelector("a.content-link").FirstOrDefault()
-        where videoA != null && channelSpan != null && videoA != null
-        select new Rec {
-          ToVideoId = ParseVideoId($"https://youtube.com/{videoA.GetAttribute("href").Value}"),
-          ToVideoTitle = titleSpan.GetInnerText(),
-          ToChannelTitle = channelSpan.GetInnerText(),
-          Rank = d.i + 1
-        }).ToList();
-
-      if (recs.Any()) return recs;
-      if (restrictedMode) {
-        log.Debug("Unable to find recommended video because it is age restricted and requires to log in: {Url}", url);
-      }
-      else
-        log.Warning("Unable to find recommended videos: {Url}", url);
-      return recs;
     }
 
     static IReadOnlyCollection<ClosedCaptionTrackInfo> GetCaptions(JToken playerResponseJson) =>
