@@ -351,5 +351,38 @@ namespace YtReader {
           .Take(deficit)); // if we don't have new videos, refresh the min amount by adding videos 
       return toUpdate.Select(v => (v.Id, v.Title)).ToList();
     }
+
+    /// <summary>
+    /// A once off command to populate existing uploaded videos evenly with checks for ads.
+    /// </summary>
+    /// <returns></returns>
+    public async Task BackfillVideoExtra() {
+      using var conn = await GetConnection();
+      var cmd = conn.CreateCommand();
+      // get latest 50 of each channel that doesn't have an ad check
+      cmd.CommandText = $@"select *
+from (select video_id, channel_id, channel_title
+           , upload_date
+           , row_number() over (partition by channel_id order by upload_date desc) as num
+           , ad_checks
+      from video_latest
+     )
+where num < 50 and ad_checks is null";
+      var reader = await cmd.ExecuteReaderAsync();
+      var videoIds = new List<(string videoId, string channelId, string channelTitle)>();
+      while (await reader.ReadAsync()) videoIds.Add(
+        (reader["VIDEO_ID"].ToString(), reader["CHANNEL_ID"].ToString(), reader["CHANNEL_TITLE"].ToString()));
+
+      await videoIds.GroupBy(v => v.channelId).BlockAction(async c => {
+        var f = c.First();
+        var log = Log.ForContext("Channel", f.channelTitle).ForContext("ChannelId", f.channelId);
+        var recsAndExtra = await c.BlockTransform(async v => await Scraper.GetRecsAndExtra(v.videoId, Log), Cfg.DefaultParallel);
+        var extra = recsAndExtra.Select(r => r.extra).ToArray();
+        var store = Store.VideoExtraStore(f.channelId);
+        await store.Append(extra);
+        log.Information("{Channel} - Recorded {VideoExtra} extra info on video's",
+          f.channelTitle, extra.Length);
+      },  Cfg.ParallelChannels);
+    }
   }
 }

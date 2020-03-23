@@ -59,9 +59,12 @@ namespace YouTubeCli {
     [Option('q', HelpText = "list of query names to run. All if empty")]
     public IEnumerable<string> QueryNames { get; set; }
   }
-  
-  [Verb("traffic", HelpText = "Process source traffic data for comparison")] 
+
+  [Verb("traffic", HelpText = "Process source traffic data for comparison")]
   public class TrafficOption : CommonOption { }
+
+  [Verb("backfill_video_extra", HelpText = "Process source traffic data for comparison")]
+  public class BackfillVideoExtra : CommonOption { }
 
   public class TaskCtx<TOption> {
     public Cfg      Cfg          { get; set; }
@@ -72,16 +75,19 @@ namespace YouTubeCli {
 
   class Program {
     static int Main(string[] args) {
-      var res = Parser.Default.ParseArguments<UpdateOption, FixOption, SyncOption, ChannelInfoOption, UpdateFleetOption, ResultsOption, TrafficOption>(args).MapResult(
-        (UpdateFleetOption f) => Run(f, args, Fleet),
-        (UpdateOption u) => Run(u, args, Update),
-        (SyncOption s) => Run(s, args, Sync),
-        (ChannelInfoOption v) => Run(v, args, ChannelInfo),
-        (FixOption f) => Run(f, args, Fix),
-        (ResultsOption f) => Run(f, args, Results),
-        (TrafficOption t) => Run(t, args, Traffic),
-        errs => (int) ExitCode.UnknownError
-      );
+      var res = Parser.Default
+        .ParseArguments<UpdateOption, FixOption, SyncOption, ChannelInfoOption, UpdateFleetOption, ResultsOption, TrafficOption, BackfillVideoExtra>(args)
+        .MapResult(
+          (UpdateFleetOption f) => Run(f, args, Fleet),
+          (UpdateOption u) => Run(u, args, Update),
+          (SyncOption s) => Run(s, args, Sync),
+          (ChannelInfoOption v) => Run(v, args, ChannelInfo),
+          (FixOption f) => Run(f, args, Fix),
+          (ResultsOption f) => Run(f, args, Results),
+          (TrafficOption t) => Run(t, args, Traffic),
+          (BackfillVideoExtra b) => Run(b, args, BackfillVideoExtra),
+          errs => (int) ExitCode.UnknownError
+        );
       return res;
     }
 
@@ -114,6 +120,13 @@ namespace YouTubeCli {
       var ytStore = ctx.Cfg.YtStore(ctx.Log);
       var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, ctx.Option.UpdateType, async () => await ctx.Cfg.App.Snowflake.OpenConnection(), ctx.Log);
       await ytUpdater.UpdateData();
+      return ExitCode.Success;
+    }
+
+    static async Task<ExitCode> BackfillVideoExtra(TaskCtx<BackfillVideoExtra> ctx) {
+      var ytStore = ctx.Cfg.YtStore(ctx.Log);
+      var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, UpdateType.All, async () => await ctx.Cfg.App.Snowflake.OpenConnection(), ctx.Log);
+      await ytUpdater.BackfillVideoExtra();
       return ExitCode.Success;
     }
 
