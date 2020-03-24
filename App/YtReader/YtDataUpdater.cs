@@ -362,13 +362,14 @@ namespace YtReader {
 
         var toUpdate = await conn.QueryAsync<(string videoId, string channelId, string channelTitle)>(@"
 select video_id, channel_id, channel_title
- from (select video_id, channel_id, channel_title
+from (select video_id, channel_id, channel_title
            , upload_date
            , row_number() over (partition by channel_id order by upload_date desc) as num
            , ad_checks
-      from video_latest
+      from video_latest l
+    where ad_checks > 0 and no_ads = ad_checks -- TODO: temporarily look at no_ads in-case they were actually errors
      )
-where num < 50 and ad_checks = false");
+where num < 50;");
         
         await toUpdate.GroupBy(v => v.channelId).BlockAction(async c => {
           var f = c.First();
