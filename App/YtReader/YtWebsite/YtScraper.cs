@@ -19,7 +19,6 @@ using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
-using YtReader.Yt;
 
 //// a modified version of https://github.com/Tyrrrz/YoutubeExplode
 
@@ -29,7 +28,7 @@ namespace YtReader.YtWebsite {
 
     readonly HttpClient DirectHttp;
     readonly HttpClient ProxyHttp;
-    
+
     public YtScraper(ScraperCfg scraperCfg) {
       Cfg = scraperCfg;
       DirectHttp = CreateHttpClient(false);
@@ -48,8 +47,8 @@ namespace YtReader.YtWebsite {
 
     long         DirectHttpFailures;
     const string MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
-    long _directRequests = 0;
-    long _proxyRequests = 0;
+    long         _directRequests;
+    long         _proxyRequests;
 
     public (long direct, long proxy) RequestStats => (_directRequests, _proxyRequests);
 
@@ -364,25 +363,56 @@ namespace YtReader.YtWebsite {
       return (HtmlParser.Default.ParseDocument(raw), raw, url);
     }
 
-    static Regex _ytAdRegex = new Regex(@"""yt_ad"":""??([0-1])""?", RegexOptions.Compiled);
+    static readonly Regex _ytAdRegex = new Regex(@"""yt_ad"":""??([0-1])""?", RegexOptions.Compiled);
+
+    public const string RestrictedVideoError = "Restricted";
+    
     //ytInitialPlayerResponse.responseContext.serviceTrackingParams.filter(p => p.service == "CSI")[0].params
     public async Task<(IReadOnlyCollection<Rec> recs, VideoExtraStored2 extra)> GetRecsAndExtra(string videoId, ILogger log) {
       var (html, raw, url) = await GetVideoWatchPageHtmlAsync(videoId, log);
-      var recs = GetRecs(html, url, log);
-      var match = _ytAdRegex.Match(raw);
-      var hasAds = match.Success && match.Groups[1].Value == "1";
+
+      var channel = ChannelInfoFromWatchPage(html);
       var extra = new VideoExtraStored2 {
         Id = videoId,
         Updated = DateTime.UtcNow,
-        HasAd = hasAds
+        ChannelId = channel.channelId,
+        ChannelTitle = channel.channelTitle
       };
+
+      var restrictedMode = html.GetElementsBySelector("head > meta[property=\"og:restrictions:age\"]").FirstOrDefault()?.GetAttribute("content")?.Value == "18+";
+      if (restrictedMode) {
+        extra.Error = RestrictedVideoError;
+        extra.SubError = "Unable to find recommended video because it is age restricted and requires to log in";
+      } else {
+          extra.Error = html.GetElementsBySelector("#unavailable-message").FirstOrDefault()?.GetInnerText();
+          extra.SubError = html.GetElementsBySelector("#unavailable-submessage").FirstOrDefault()?.GetInnerText();
+      }
+      if (extra.Error != null) return (new Rec[] { }, extra);
+
+      var recs = GetRecs(html, url, log);
+      if (!recs.Any())
+        log.Warning("No error, but unable to find recommended videos: {Url}", url);
+
+      var match = _ytAdRegex.Match(raw);
+      extra.HasAd = match.Success && match.Groups[1].Value == "1";
+
       return (recs, extra);
     }
     
+    
+    static (string channelTitle, string channelId) ChannelInfoFromWatchPage(HtmlDocument html) {
+      var userInfo = html.GetElementsBySelector("div.yt-user-info > a").FirstOrDefault();
+      if (userInfo == null) return (null, null);
+
+      var title = userInfo.GetInnerText();
+      var url = userInfo.GetAttribute("href")?.Value;
+      var id = url?.Split('/').Last();
+      
+      return (title, id);
+    }
+
     IReadOnlyCollection<Rec> GetRecs(HtmlDocument html, string url, ILogger log) {
-      var content = html.GetElementsBySelector("head > meta[property=\"og:restrictions:age\"]").FirstOrDefault()?.GetAttribute("content");
-      var restrictedMode = content?.Value == "18+";
-      var recs = (from d in html.GetElementsBySelector("li.video-list-item.related-list-item").Select((e,i) => (e,i))
+      var recs = (from d in html.GetElementsBySelector("li.video-list-item.related-list-item").Select((e, i) => (e, i))
         let titleSpan = d.e.GetElementsBySelector("span.title").FirstOrDefault()
         let channelSpan = d.e.GetElementsBySelector("span.stat.attribution > span").FirstOrDefault()
         let videoA = d.e.GetElementsBySelector("a.content-link").FirstOrDefault()
@@ -394,14 +424,9 @@ namespace YtReader.YtWebsite {
           Rank = d.i + 1
         }).ToList();
 
-      if (recs.Any()) return recs;
-      if (restrictedMode) {
-        log.Debug("Unable to find recommended video because it is age restricted and requires to log in: {Url}", url);
-      }
-      else
-        log.Warning("Unable to find recommended videos: {Url}", url);
       return recs;
     }
+
 
     public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptions(string videoId, ILogger log) {
       var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
@@ -437,7 +462,7 @@ namespace YtReader.YtWebsite {
       var videoViewCount = VideoValue<long>("viewCount"); // some videos have no views
       var channelId = VideoValue<string>("channelId");
       var channelTitle = VideoValue<string>("author");
-      
+
       var (videoWatchPageHtml, _, _) = await videoWatchPageTask;
       var videoUploadDate = videoWatchPageHtml.GetElementsBySelector("meta[itemprop=\"datePublished\"]")
                               .FirstOrDefault()?.GetAttribute("content").Value.ParseDateTimeOffset("yyyy-MM-dd") ??
@@ -531,14 +556,16 @@ namespace YtReader.YtWebsite {
     public long?  Subs          { get; set; }
     public string StatusMessage { get; set; }
   }
+  
+  
 
   public class Rec {
-    public string ToVideoId      { get; set; }
-    public string ToVideoTitle   { get; set; }
-    public string ToChannelTitle { get; set; }
-    public string ToChannelId { get; set; } // only known if from the API
-    public RecSource Source { get; set; }
-    public int Rank { get; set; }
+    public string    ToVideoId      { get; set; }
+    public string    ToVideoTitle   { get; set; }
+    public string    ToChannelTitle { get; set; }
+    public string    ToChannelId    { get; set; } // only known if from the API
+    public RecSource Source         { get; set; }
+    public int       Rank           { get; set; }
   }
 
   public enum RecSource {

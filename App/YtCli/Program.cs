@@ -64,7 +64,10 @@ namespace YouTubeCli {
   public class TrafficOption : CommonOption { }
 
   [Verb("backfill_video_extra", HelpText = "Process source traffic data for comparison")]
-  public class BackfillVideoExtra : CommonOption { }
+  public class BackfillVideoExtra : CommonOption {
+    [Option('v', HelpText = "List of videos to restrict updates to. Separeted by |")]
+    public string VideoIds { get; set; }
+  }
 
   public class TaskCtx<TOption> {
     public Cfg      Cfg          { get; set; }
@@ -126,7 +129,8 @@ namespace YouTubeCli {
     static async Task<ExitCode> BackfillVideoExtra(TaskCtx<BackfillVideoExtra> ctx) {
       var ytStore = ctx.Cfg.YtStore(ctx.Log);
       var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, UpdateType.All, async () => await ctx.Cfg.App.Snowflake.OpenConnection(), ctx.Log);
-      await ytUpdater.BackfillVideoExtra();
+      var videoIds = ctx.Option.VideoIds?.Split("|") ??new string[] { };
+      await ytUpdater.BackfillVideoExtra(videoIds);
       return ExitCode.Success;
     }
 

@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using Mutuo.Etl;
 using Serilog;
 using SysExtensions;
@@ -163,7 +164,7 @@ namespace YtReader {
         log.Information("{Channel} - skipping update, video stats have been updated recently {LastModified}", c.ChannelTitle, lastModified);
 
       var vids = recentlyUpdated ? null : await ChannelVidItems(c, uploadedFrom, log).ToListAsync();
-      
+
       if (vids != null)
         await SaveVids(c, vids, vidStore, lastUpload, log);
       if (vids != null || UpdateType == UpdateType.AllWithMissingRecs)
@@ -263,10 +264,10 @@ namespace YtReader {
         Cfg.DefaultParallel);
 
       // read failed recs from the API (either because of an error, or because the video is 18+ restricted)
-      var failed = recs.Where(v => v.recs.recs.None()).ToList();
+      var restricted = recs.Where(v => v.recs.extra.Error == YtScraper.RestrictedVideoError).ToList();
 
-      if (failed.Any()) {
-        var apiRecs = await failed.BlockTransform(async f => {
+      if (restricted.Any()) {
+        var apiRecs = await restricted.BlockTransform(async f => {
           ICollection<RecommendedVideoListItem> related = new List<RecommendedVideoListItem>();
           try {
             related = await Api.GetRelatedVideos(f.fromId);
@@ -287,7 +288,7 @@ namespace YtReader {
         recs = recs.Concat(apiRecs).ToList();
 
         log.Information("{Channel} - {Videos} videos recommendations fell back to using the API: {VideoList}",
-          c.ChannelTitle, failed.Count, apiRecs.Select(r => r.fromId));
+          c.ChannelTitle, restricted.Count, apiRecs.Select(r => r.fromId));
       }
 
       var updated = DateTime.UtcNow;
@@ -353,36 +354,40 @@ namespace YtReader {
     }
 
     /// <summary>
-    /// A once off command to populate existing uploaded videos evenly with checks for ads.
+    ///   A once off command to populate existing uploaded videos evenly with checks for ads.
     /// </summary>
-    /// <returns></returns>
-    public async Task BackfillVideoExtra() {
-      using var conn = await GetConnection();
-      var cmd = conn.CreateCommand();
-      // get latest 50 of each channel that doesn't have an ad check
-      cmd.CommandText = $@"select *
-from (select video_id, channel_id, channel_title
+    public async Task BackfillVideoExtra(IReadOnlyCollection<string> videoIds) {
+      if (!videoIds.Any()) {
+        using var conn = await GetConnection();
+
+        var toUpdate = await conn.QueryAsync<(string videoId, string channelId, string channelTitle)>(@"
+select video_id, channel_id, channel_title
+ from (select video_id, channel_id, channel_title
            , upload_date
            , row_number() over (partition by channel_id order by upload_date desc) as num
            , ad_checks
       from video_latest
      )
-where num < 50 and ad_checks is null";
-      var reader = await cmd.ExecuteReaderAsync();
-      var videoIds = new List<(string videoId, string channelId, string channelTitle)>();
-      while (await reader.ReadAsync()) videoIds.Add(
-        (reader["VIDEO_ID"].ToString(), reader["CHANNEL_ID"].ToString(), reader["CHANNEL_TITLE"].ToString()));
-
-      await videoIds.GroupBy(v => v.channelId).BlockAction(async c => {
-        var f = c.First();
-        var log = Log.ForContext("Channel", f.channelTitle).ForContext("ChannelId", f.channelId);
-        var recsAndExtra = await c.BlockTransform(async v => await Scraper.GetRecsAndExtra(v.videoId, Log), Cfg.DefaultParallel);
-        var extra = recsAndExtra.Select(r => r.extra).ToArray();
-        var store = Store.VideoExtraStore(f.channelId);
-        await store.Append(extra);
-        log.Information("{Channel} - Recorded {VideoExtra} extra info on video's",
-          f.channelTitle, extra.Length);
-      },  Cfg.ParallelChannels);
+where num < 50 and ad_checks = false");
+        
+        await toUpdate.GroupBy(v => v.channelId).BlockAction(async c => {
+          var f = c.First();
+          var log = Log.ForContext("Channel", f.channelTitle).ForContext("ChannelId", f.channelId);
+          var recsAndExtra = await c.BlockTransform(async v => await Scraper.GetRecsAndExtra(v.videoId, Log), Cfg.DefaultParallel);
+          var extra = recsAndExtra.Select(r => r.extra).ToArray();
+          var store = Store.VideoExtraStore(f.channelId);
+          await store.Append(extra);
+          log.Information("{Channel} - Recorded {VideoExtra} extra info on video's",
+            f.channelTitle, extra.Length);
+        }, Cfg.ParallelChannels);
+      }
+      else {
+        var recsAndExtra = await videoIds.BlockTransform(async v => await Scraper.GetRecsAndExtra(v, Log), Cfg.DefaultParallel);
+        await recsAndExtra.GroupBy(v => v.extra.ChannelId).BlockAction(async g => {
+          var store = Store.VideoExtraStore(g.Key);
+          await store.Append(g.Select(c => c.extra).ToArray());
+        });
+      }
     }
   }
 }

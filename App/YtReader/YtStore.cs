@@ -25,7 +25,7 @@ namespace YtReader {
     public AppendCollectionStore<VideoStored2> VideoStore(string channelId) =>
       new AppendCollectionStore<VideoStored2>(Store, StringPath.Relative("videos", channelId), v => v.UploadDate.FileSafeTimestamp(),
         Log, StoreVersion.ToString());
-    
+
     public AppendCollectionStore<VideoExtraStored2> VideoExtraStore(string channelId) =>
       new AppendCollectionStore<VideoExtraStored2>(Store, StringPath.Relative("video_extra", channelId), v => v.Updated.FileSafeTimestamp(),
         Log, StoreVersion.ToString());
@@ -101,11 +101,15 @@ namespace YtReader {
     public ClosedCaptionTrackInfo             Info       { get; set; }
     public IReadOnlyCollection<ClosedCaption> Captions   { get; set; } = new List<ClosedCaption>();
   }
-  
+
   public class VideoExtraStored2 {
-    public string   Id      { get; set; }
-    public bool     HasAd   { get; set; }
-    public DateTime Updated { get; set; }
+    public string   Id           { get; set; }
+    public string   ChannelId    { get; set; }
+    public string   ChannelTitle { get; set; }
+    public bool?    HasAd        { get; set; }
+    public string   Error        { get; set; }
+    public string   SubError     { get; set; }
+    public DateTime Updated      { get; set; }
   }
 
   public abstract class StoredItem {
