@@ -20,7 +20,7 @@ using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 
-namespace Mutuo.Etl {
+namespace Mutuo.Etl.Blob {
   public class S3Store : ISimpleFileStore {
     readonly AmazonS3Client S3;
     readonly AsyncRetryPolicy S3Policy = Policy.Handle<HttpRequestException>()

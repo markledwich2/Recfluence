@@ -9,7 +9,7 @@ using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
-namespace Mutuo.Etl {
+namespace Mutuo.Etl.Blob {
   public static class SyncBlobs {
     public static async Task Sync(string csA, string csB, StringPath pathA, StringPath pathB, int parallel, ILogger log) {
       pathB = pathB ?? pathA;

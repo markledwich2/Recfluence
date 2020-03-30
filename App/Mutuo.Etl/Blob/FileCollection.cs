@@ -1,18 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.VisualBasic.CompilerServices;
 using Serilog;
-using Serilog.Core;
 using SysExtensions;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
-namespace Mutuo.Etl {
+namespace Mutuo.Etl.Blob {
   /// <summary>
   ///   Ready/write to storage for a keyed collection of items
   /// </summary>

@@ -5,7 +5,9 @@ using Humanizer;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
-using Mutuo.Etl;
+using Microsoft.Extensions.Configuration;
+using Mutuo.Etl.Blob;
+using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Core;
@@ -31,7 +33,7 @@ namespace YtReader {
         .WriteTo.Seq("http://localhost:5341")
         .CreateLogger();
 
-    public static Logger CreateLogger(AppCfg cfg = null) {
+    public static Logger CreateLogger(string env, AppCfg cfg = null) {
       var c = new LoggerConfiguration()
         .WriteTo.Console(LogEventLevel.Information);
 
@@ -42,12 +44,27 @@ namespace YtReader {
         c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces, LogEventLevel.Debug);
 
       c.MinimumLevel.Debug();
+      c.Enrich.WithProperty("Env", env);
       return c.CreateLogger();
     }
+
+    static        string _env;
+    public static string Env => _env ??= GetEnv("Env") ?? "Dev";
 
     static string GetEnv(string name) =>
       Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
       ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
+
+    public static AppCfg LoadCfg2() {
+      var builder = new ConfigurationBuilder()
+        .AddJsonFile("default.appcfg.json")
+        .AddJsonFile($"{Env}.appcfg.json", true)
+        .AddJsonFile("local.appcfg.json", true)
+        .AddEnvironmentVariables();
+
+      var cfgRoot = builder.Build();
+      return cfgRoot.Get<AppCfg>();
+    }
 
     public static async Task<Cfg> LoadCfg(ILogger log = null) {
       var rootCfg = new RootCfg();
@@ -66,13 +83,13 @@ namespace YtReader {
   }
 
   public static class ChannelConfigExtensions {
-    public static ISimpleFileStore DataStore(this Cfg cfg, StringPath path = null) =>
-      new AzureBlobFileStore(cfg.App.Storage.DataStorageCs, path ?? cfg.App.Storage.DbPath);
+    public static ISimpleFileStore DataStore(this AppCfg cfg, StringPath path = null) =>
+      new AzureBlobFileStore(cfg.Storage.DataStorageCs, path ?? cfg.Storage.DbPath);
 
-    public static YtClient YtClient(this Cfg cfg, ILogger log) => new YtClient(cfg.App.YTApiKeys, log);
+    public static YtClient YtClient(this AppCfg cfg, ILogger log) => new YtClient(cfg.YTApiKeys, log);
 
-    public static YtStore YtStore(this Cfg cfg, ILogger log) {
-      var ytStore = new YtStore(cfg.DataStore(cfg.App.Storage.DbPath), log);
+    public static YtStore YtStore(this AppCfg cfg, ILogger log) {
+      var ytStore = new YtStore(cfg.DataStore(cfg.Storage.DbPath), log);
       return ytStore;
     }
   }
@@ -91,35 +108,30 @@ namespace YtReader {
   }
 
   public class AppCfg {
-    public string AppInsightsKey       { get; set; }
-    public int    ParallelChannels     { get; set; } = 4;
-    public int    DefaultParallel         { get; set; } = 8;
-    public int    ChannelsPerContainer { get; set; } = 150;
-
+    public string              AppInsightsKey        { get; set; }
+    public int                 ParallelChannels      { get; set; } = 4;
+    public int                 DefaultParallel       { get; set; } = 8;
+    public int                 ChannelsPerContainer  { get; set; } = 150;
     public string              ResourceGroup         { get; set; } = "ytnetworks";
     public YtReaderCfg         YtReader              { get; set; } = new YtReaderCfg();
     public StorageCfg          Storage               { get; set; } = new StorageCfg();
     public ICollection<string> YTApiKeys             { get; set; }
     public HashSet<string>     LimitedToSeedChannels { get; set; }
-
-    public string              SubscriptionId   { get; set; }
-    public ServicePrincipalCfg ServicePrincipal { get; set; } = new ServicePrincipalCfg();
-    public ContainerCfg        Container        { get; set; } = new ContainerCfg();
-    public string              SeqUrl           { get; set; }
-
-    public SheetsCfg Sheets { get; set; }
-
-    public ScraperCfg Scraper { get; set; } = new ScraperCfg();
-
-    public SnowflakeCfg Snowflake { get; set; } = new SnowflakeCfg();
-
-    public ResultsCfg Results { get; set; } = new ResultsCfg();
+    public string              SubscriptionId        { get; set; }
+    public ServicePrincipalCfg ServicePrincipal      { get; set; } = new ServicePrincipalCfg();
+    public ContainerCfg        Container             { get; set; } = new ContainerCfg();
+    public string              SeqUrl                { get; set; }
+    public SheetsCfg           Sheets                { get; set; }
+    public ScraperCfg          Scraper               { get; set; } = new ScraperCfg();
+    public SnowflakeCfg        Snowflake             { get; set; } = new SnowflakeCfg();
+    public ResultsCfg          Results               { get; set; } = new ResultsCfg();
+    public PipeAppCfg          Pipe                  { get; set; } = new PipeAppCfg();
   }
 
   public class ResultsCfg {
     public string FileQueryUri { get; set; } = "https://raw.githubusercontent.com/markledwich2/YouTubeNetworks_Dataform/master";
   }
- 
+
   public class ScraperCfg {
     public string     Url            { get; set; }
     public NameSecret Creds          { get; set; }
@@ -142,7 +154,7 @@ namespace YtReader {
     ///   This is cheap, due to video stats being returned in a video's playlist
     /// </summary>
     public TimeSpan RefreshVideosWithin { get; set; } = 120.Days();
-    
+
     /// <summary>
     ///   How old a video before we stop collecting recs
     ///   this is fairly expensive so we keep it within
@@ -154,7 +166,7 @@ namespace YtReader {
     ///   Get at least this number of recs per channel
     /// </summary>
     public int RefreshRecsMin { get; set; } = 2;
-    
+
     /// <summary>
     ///   How frequently to refresh channel & video stats
     /// </summary>
@@ -164,22 +176,8 @@ namespace YtReader {
   public class StorageCfg {
     public string DataStorageCs { get; set; }
     public string DbPath        { get; set; } = "data/db";
-    public string ResultsPath  { get; set; } = "data/results";
-    public string PrivatePath { get; set; } = "private";
-  }
-
-  public class ContainerCfg {
-    public string     Registry      { get; set; } = "ytnetworks.azurecr.io";
-    public string     Name          { get; set; } = "ytnetworks";
-    public string     ImageName     { get; set; } = "ytnetworks";
-    public int        Cores         { get; set; } = 2;
-    public double     Mem           { get; set; } = 4;
-    public NameSecret RegistryCreds { get; set; }
-  }
-
-  public class ServicePrincipalCfg {
-    public string ClientId  { get; set; }
-    public string Secret    { get; set; }
-    public string TennantId { get; set; }
+    public string ResultsPath   { get; set; } = "data/results";
+    public string PrivatePath   { get; set; } = "private";
+    public string PipePath      { get; set; } = "pipe";
   }
 }

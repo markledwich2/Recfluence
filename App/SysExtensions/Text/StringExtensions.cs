@@ -112,7 +112,7 @@ namespace SysExtensions.Text {
 
     public static string StripNonDigit(this string s) => Regex.Replace(s, "\\D", "");
 
-    public static long ParseInt(this string s) => int.Parse(s);
+    public static int ParseInt(this string s) => int.Parse(s);
 
     public static long ParseLong(this string s) {
       const NumberStyles styles = NumberStyles.AllowThousands;

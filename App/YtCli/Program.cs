@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
+using Autofac;
 using CommandLine;
-using Mutuo.Etl;
+using Mutuo.Etl.Blob;
+using Mutuo.Etl.Pipe;
 using Serilog;
+using Serilog.Core;
 using SysExtensions.Collections;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader;
 using YtReader.YtWebsite;
@@ -44,10 +49,11 @@ namespace YouTubeCli {
     public string VideoId { get; set; }
   }
 
-  public abstract class CommonOption {
-    [Option('p', "parallelism", HelpText = "The number of operations to run at once")]
-    public int? Parallel { get; set; }
+  public interface ICommonOption {
+    bool LaunchContainer { get; set; }
+  }
 
+  public abstract class CommonOption : ICommonOption {
     [Option('z', "cloudinstance", HelpText = "run this command in a container instance")]
     public bool LaunchContainer { get; set; }
   }
@@ -63,24 +69,38 @@ namespace YouTubeCli {
   [Verb("traffic", HelpText = "Process source traffic data for comparison")]
   public class TrafficOption : CommonOption { }
 
-  [Verb("backfill_video_extra", HelpText = "Process source traffic data for comparison")]
-  public class BackfillVideoExtra : CommonOption {
-    [Option('v', HelpText = "List of videos to restrict updates to. Separeted by |")]
-    public string VideoIds { get; set; }
+  public class PipeOption : PipeArgs {
+    [Option('z', "cloudinstance", HelpText = "run this command in a container instance")]
+    public bool LaunchContainer { get; set; }
   }
 
-  public class TaskCtx<TOption> {
-    public Cfg      Cfg          { get; set; }
-    public ILogger  Log          { get; set; }
-    public TOption  Option       { get; set; }
-    public string[] OriginalArgs { get; set; }
+  public class TaskCtx<TOption> : IDisposable {
+    public TaskCtx(AppCfg cfg, Logger log, TOption option, ILifetimeScope scope, string[] originalArgs) {
+      Cfg = cfg;
+      Log = log;
+      Option = option;
+      Scope = scope;
+      OriginalArgs = originalArgs;
+    }
+
+    public AppCfg         Cfg          { get; }
+    public ILogger        Log          { get; }
+    public TOption        Option       { get; }
+    public ILifetimeScope Scope        { get; }
+    public string[]       OriginalArgs { get; }
+
+    public void Dispose() {
+      (Log as Logger)?.Dispose();
+      Scope?.Dispose();
+    }
   }
 
   class Program {
-    static int Main(string[] args) {
+    static async Task<int> Main(string[] args) {
       var res = Parser.Default
-        .ParseArguments<UpdateOption, FixOption, SyncOption, ChannelInfoOption, UpdateFleetOption, ResultsOption, TrafficOption, BackfillVideoExtra>(args)
+        .ParseArguments<PipeOption, UpdateFleetOption, UpdateOption, SyncOption, ChannelInfoOption, FixOption, ResultsOption, TrafficOption>(args)
         .MapResult(
+          (PipeOption p) => RunPipe(p, args),
           (UpdateFleetOption f) => Run(f, args, Fleet),
           (UpdateOption u) => Run(u, args, Update),
           (SyncOption s) => Run(s, args, Sync),
@@ -88,54 +108,90 @@ namespace YouTubeCli {
           (FixOption f) => Run(f, args, Fix),
           (ResultsOption f) => Run(f, args, Results),
           (TrafficOption t) => Run(t, args, Traffic),
-          (BackfillVideoExtra b) => Run(b, args, BackfillVideoExtra),
-          errs => (int) ExitCode.UnknownError
+          errs => Task.FromResult(ExitCode.Error)
         );
-      return res;
+      return (int) await res;
     }
 
-    static int Run<TOption>(TOption option, string[] args, Func<TaskCtx<TOption>, Task<ExitCode>> task) where TOption : CommonOption {
-      var cfg = Setup.LoadCfg().Result;
+    static IPipeCtxScoped PipeCtx(object option, AppCfg cfg, IComponentContext scope, ILogger log) {
+      var pipe = cfg.Pipe.JsonClone();
+      pipe.Container ??= cfg.Container;
+      pipe.Store ??= new PipeAppStorageCfg {
+        Cs = cfg.Storage.DataStorageCs,
+        Path = cfg.Storage.PipePath
+      };
+      pipe.Azure ??= new PipeAzureCfg {
+        ResourceGroup = cfg.ResourceGroup,
+        ServicePrincipal = cfg.ServicePrincipal,
+        SubscriptionId = cfg.SubscriptionId
+      };
+      
+      var runId = option switch {
+        PipeOption p => p.RunId.HasValue() ? PipeRunId.FromString(p.RunId) : PipeRunId.Create(p.Pipe),
+        _ => null
+      };
 
-      if (option.Parallel.HasValue)
-        cfg.App.DefaultParallel = cfg.App.ParallelChannels = option.Parallel.Value;
+      var pipeCtx = Pipes.CreatePipeCtx(pipe, runId, log, scope, new[] {typeof(YtDataUpdater).Assembly});
+      return pipeCtx;
+    }
 
-      using var log = Setup.CreateLogger(cfg.App);
-      var envLog = log.ForContext("Env", cfg.Root.Env);
+    static TaskCtx<TOption> TaskCtx<TOption>(TOption option, string[] args) {
+      var cfg = Setup.LoadCfg2();
+      var log = Setup.CreateLogger(Setup.Env, cfg);
+      return new TaskCtx<TOption>(cfg, log, option, BaseScope(cfg, option, log), args);
+    }
+
+    class ScopeHolder {
+      public IComponentContext Scope { get; set; }
+    }
+    
+    static ILifetimeScope BaseScope(AppCfg cfg, object option, ILogger log) {
+      var scopeHolder = new ScopeHolder();
+      var b = new ContainerBuilder();
+      b.Register(_ => log).SingleInstance();
+      b.Register(_ => cfg).SingleInstance();
+      b.Register(_ => cfg).SingleInstance();
+      b.Register(_ => cfg.YtStore(log)).SingleInstance();
+      b.Register<Func<Task<DbConnection>>>(_ => async () => (DbConnection) await cfg.Snowflake.OpenConnection());
+      b.Register<Func<IPipeCtxScoped>>(c => () => PipeCtx(option, cfg, scopeHolder.Scope, log));
+      b.RegisterType<YtDataUpdater>(); // this will resolve IPipeCtx
+      var scope = b.Build().BeginLifetimeScope();
+      scopeHolder.Scope = scope;
+      return scope;
+    }
+
+    static async Task<ExitCode> RunPipe(PipeOption option, string[] args) {
+      using var ctx = TaskCtx(option, args);
+      var pipeCtx = ctx.Scope.Resolve<Func<IPipeCtxScoped>>()();
+      return await pipeCtx.RunPipe();
+    }
+
+    static async Task<ExitCode> Run<TOption>(TOption option, string[] args, Func<TaskCtx<TOption>, Task<ExitCode>> task) {
+      using var ctx = TaskCtx(option, args);
+
       try {
-        if (option.LaunchContainer) {
-          YtContainerRunner.Start(envLog, cfg, args.Where(a => a != "-z").ToArray()).Wait();
-          return (int) ExitCode.Success;
+        if ((option as ICommonOption)?.LaunchContainer == true) {
+          await YtContainerRunner.Start(ctx.Log, ctx.Cfg, args.Where(a => a != "-z").ToArray());
+          return ExitCode.Success;
         }
-        return (int) task(new TaskCtx<TOption> {Cfg = cfg, Log = envLog, Option = option, OriginalArgs = args}).Result;
+        return await task(ctx);
       }
       catch (Exception ex) {
         var flatEx = ex switch {AggregateException a => a.Flatten(), _ => ex};
-        envLog.Error(flatEx, "Unhandled error: {Error}", flatEx.Message);
-        return (int) ExitCode.UnknownError;
+        ctx.Log.Error(flatEx, "Unhandled error: {Error}", flatEx.Message);
+        return ExitCode.Error;
       }
     }
 
     static async Task<ExitCode> Update(TaskCtx<UpdateOption> ctx) {
       if (ctx.Option.ChannelIds.HasValue())
-        ctx.Cfg.App.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
-
-      var ytStore = ctx.Cfg.YtStore(ctx.Log);
-      var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, ctx.Option.UpdateType, async () => await ctx.Cfg.App.Snowflake.OpenConnection(), ctx.Log);
-      await ytUpdater.UpdateData();
-      return ExitCode.Success;
-    }
-
-    static async Task<ExitCode> BackfillVideoExtra(TaskCtx<BackfillVideoExtra> ctx) {
-      var ytStore = ctx.Cfg.YtStore(ctx.Log);
-      var ytUpdater = new YtDataUpdater(ytStore, ctx.Cfg.App, UpdateType.All, async () => await ctx.Cfg.App.Snowflake.OpenConnection(), ctx.Log);
-      var videoIds = ctx.Option.VideoIds?.Split("|") ??new string[] { };
-      await ytUpdater.BackfillVideoExtra(videoIds);
+        ctx.Cfg.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
+      await ctx.Scope.Resolve<YtDataUpdater>().UpdateData(ctx.Option.UpdateType);
       return ExitCode.Success;
     }
 
     static async Task<ExitCode> Sync(TaskCtx<SyncOption> ctx) {
-      await SyncBlobs.Sync(ctx.Option.CsA, ctx.Option.CsB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.App.DefaultParallel, ctx.Log);
+      await SyncBlobs.Sync(ctx.Option.CsA, ctx.Option.CsB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.DefaultParallel, ctx.Log);
       return ExitCode.Success;
     }
 
@@ -147,7 +203,7 @@ namespace YouTubeCli {
     }
 
     static async Task<ExitCode> Fix(TaskCtx<FixOption> ctx) {
-      await new StoreUpgrader(ctx.Cfg.App, ctx.Cfg.DataStore(), ctx.Log).UpgradeStore();
+      await new StoreUpgrader(ctx.Cfg, ctx.Cfg.DataStore(), ctx.Log).UpgradeStore();
       return ExitCode.Success;
     }
 
@@ -157,23 +213,16 @@ namespace YouTubeCli {
     }
 
     static async Task<ExitCode> Results(TaskCtx<ResultsOption> ctx) {
-      var store = ctx.Cfg.DataStore(ctx.Cfg.App.Storage.ResultsPath);
-      var result = new YtResults(ctx.Cfg.App.Snowflake, ctx.Cfg.App.Results, store, ctx.Log);
+      var store = ctx.Cfg.DataStore(ctx.Cfg.Storage.ResultsPath);
+      var result = new YtResults(ctx.Cfg.Snowflake, ctx.Cfg.Results, store, ctx.Log);
       await result.SaveResults(ctx.Option.QueryNames.NotNull().ToList());
       return ExitCode.Success;
     }
 
     static async Task<ExitCode> Traffic(TaskCtx<TrafficOption> ctx) {
-      var store = ctx.Cfg.DataStore(ctx.Cfg.App.Storage.PrivatePath);
-      await TrafficSourceExports.Process(store, ctx.Cfg.App, new YtScraper(ctx.Cfg.App.Scraper), ctx.Log);
+      var store = ctx.Cfg.DataStore(ctx.Cfg.Storage.PrivatePath);
+      await TrafficSourceExports.Process(store, ctx.Cfg, new YtScraper(ctx.Cfg.Scraper), ctx.Log);
       return ExitCode.Success;
     }
-  }
-
-  enum ExitCode {
-    Success         = 0,
-    InvalidLogin    = 1,
-    InvalidFilename = 2,
-    UnknownError    = 10
   }
 }

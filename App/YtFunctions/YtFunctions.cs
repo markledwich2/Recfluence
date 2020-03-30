@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Serilog;
@@ -28,9 +27,9 @@ namespace YtFunctions {
         .CreateLogger();
     }
 
-    static async Task<(Cfg Cfg, ILogger Log, TelemetryClient Telem)> Init(IMSLogger funcLogger) {
-      var cfg = await Setup.LoadCfg();
-      var telem = new TelemetryClient {InstrumentationKey = cfg.App.AppInsightsKey};
+    static (AppCfg Cfg, ILogger Log, TelemetryClient Telem) Init(IMSLogger funcLogger) {
+      var cfg = Setup.LoadCfg2();
+      var telem = new TelemetryClient {InstrumentationKey = cfg.AppInsightsKey};
       var log = Logger(telem, funcLogger);
       return (cfg, log, telem);
     }
@@ -38,13 +37,13 @@ namespace YtFunctions {
     [FunctionName("Update_Timer")]
     public static async Task Update_Timer([TimerTrigger("0 0 21 * * *")] TimerInfo myTimer, IMSLogger log) =>
       await YtCli(log);
-    
+
     [FunctionName("Update")]
     public static async Task<HttpResponseMessage> Update([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
       HttpRequestMessage req, IMSLogger funcLogger) => req.CreateResponse(await YtCli(funcLogger));
 
     static async Task<string> YtCli(IMSLogger funcLogger) {
-      var s = await Init(funcLogger);
+      var s = Init(funcLogger);
       s.Log.Information("Function Update started");
 
 

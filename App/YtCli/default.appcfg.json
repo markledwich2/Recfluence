@@ -1,0 +1,46 @@
+﻿{
+    "parallelChannels": 4,
+    "defaultParallel": 8,
+    "channelsPerContainer": 300,
+    "resourceGroup": "ytnetworks",
+    "storage": {
+        "dbPath": "testdata/db2",
+        "resultsPath": "testdata/results"
+    },
+    //"LimitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCfrlXVXz-pT9AmmDELhpyOw"],
+    "subscriptionId": "93ef8661-3e11-4fcc-92ae-d0383e7e4ad3",
+    "servicePrincipal": {
+        "clientId": "664f7796-ecbf-4244-ba6b-b4d76e1c1037",
+        "tennantId": "6084d3dc-3b42-4303-8568-314a3db26017"
+    },
+    "container": {
+        "registry": "ytnetworks.azurecr.io",
+        "name": "ytnetworks",
+        "imageName": "ytnetworks",
+        "cores": 2,
+        "mem": 4,
+        "entryAssemblyPath": "app/ytnetworks.dll",
+        "forwardEnvironmentVariables": [
+            "Env"
+        ],
+        "tag": "latest"
+    },
+    "sheets": {
+        "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",
+        "userChannelSheetIds": [
+            "1S1nYJXSRTKXmAQnCur7hKK4aFdDTMHV70L2UUUAs0os",
+            "1lGDF1YAGRza336C_hg6KJfzIuChIuDF2IzGg8LjEcAc",
+            "1FclpJwIYGo4u4fQdgwBiV1LC72NRHwXyF7y90yV7wzY",
+            "12OUpAzlrUPxWi0TJNQYVwu5FB5Q0ughLLPgakGWEGf8"
+        ]
+    },
+    "scraper": {
+        "url": "us.smartproxy.com:1000"
+    },
+    "snowflake": {
+        "Account": "MUTUO",
+        "Warehouse": "YT",
+        "Db": "YT",
+        "Schema": "PUBLIC"
+    }
+}

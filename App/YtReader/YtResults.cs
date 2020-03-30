@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using CsvHelper;
 using Dapper;
 using Mutuo.Etl;
+using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Fluent.IO;
@@ -172,7 +174,7 @@ namespace YtReader {
     public static async Task WriteCsvGz(this IDataReader reader, Stream stream, string desc, ILogger log) {
       await using var zipWriter = new GZipStream(stream, CompressionLevel.Optimal);
       await using var streamWriter = new StreamWriter(zipWriter);
-      using var csvWriter = new CsvWriter(streamWriter);
+      using var csvWriter = new CsvWriter(streamWriter, CultureInfo.InvariantCulture);
 
       foreach (var col in reader.FieldRange().Select(reader.GetName)) csvWriter.WriteField(col);
       csvWriter.NextRecord();

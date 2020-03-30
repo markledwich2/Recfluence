@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <!-- <PackAsTool>true</PackAsTool>
     <PackageOutputPath>./publish</PackageOutputPath> -->
     <AssemblyName>ytnetworks</AssemblyName>
@@ -11,15 +11,29 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="2.5.0" />
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.10.0" />
+    <PackageReference Include="AutoMapper" Version="9.0.0" />
+    <PackageReference Include="CommandLineParser" Version="2.7.82" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.13.1" />
     <PackageReference Include="Microsoft.Packaging.Tools.Trimming" Version="1.1.0-preview1-26619-01" />
-    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.0.3" />
-    <PackageReference Include="YoutubeExplode" Version="4.7.10" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0" />
+    <PackageReference Include="YoutubeExplode" Version="4.7.16" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
     <ProjectReference Include="..\YtReader\YtReader.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="default.appcfg.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="dev.appcfg.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="local.appcfg.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

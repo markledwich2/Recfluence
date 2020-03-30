@@ -45,6 +45,11 @@ namespace SysExtensions.Collections {
       while (enumerator.MoveNext())
         yield return TakeIEnumerator(enumerator, size);
     }
+    
+    public static IEnumerable<IEnumerable<T>> Batch<T>(this IEnumerable<T> source, int size, int maxBatches) {
+      var items = source as IReadOnlyCollection<T> ?? source.ToArray();
+      return items.Batch(Math.Max(items.Count / maxBatches, size));
+    }
 
     static IEnumerable<T> TakeIEnumerator<T>(IEnumerator<T> source, int size) {
       var i = 0;

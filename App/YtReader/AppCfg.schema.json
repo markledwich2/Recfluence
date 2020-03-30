@@ -1,0 +1,269 @@
+{
+  "definitions": {
+    "ContainerCfg": {
+      "type": "object",
+      "properties": {
+        "registry": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "imageName": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "cores": {
+          "type": "integer"
+        },
+        "mem": {
+          "type": "number"
+        },
+        "registryCreds": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "entryAssemblyPath": {
+          "type": "string"
+        },
+        "forwardEnvironmentVariables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "PipeAppCfg": {
+      "type": "object",
+      "properties": {
+        "store": {
+          "$ref": "#/definitions/PipeAppStorageCfg"
+        },
+        "azure": {
+          "$ref": "#/definitions/PipeAzureCfg"
+        },
+        "container": {
+          "$ref": "#/definitions/ContainerCfg"
+        },
+        "runLocal": {
+          "type": "boolean"
+        },
+        "localParallel": {
+          "type": "integer"
+        }
+      }
+    },
+    "PipeAppStorageCfg": {
+      "type": "object",
+      "properties": {
+        "cs": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    },
+    "PipeAzureCfg": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "servicePrincipal": {
+          "$ref": "#/definitions/ServicePrincipalCfg"
+        },
+        "resourceGroup": {
+          "type": "string"
+        }
+      }
+    },
+    "ResultsCfg": {
+      "type": "object",
+      "properties": {
+        "fileQueryUri": {
+          "type": "string"
+        }
+      }
+    },
+    "ScraperCfg": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "creds": {
+          "type": "string"
+        },
+        "timeoutSeconds": {
+          "type": "integer"
+        },
+        "retry": {
+          "type": "integer"
+        }
+      }
+    },
+    "ServicePrincipalCfg": {
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string"
+        },
+        "secret": {
+          "type": "string"
+        },
+        "tennantId": {
+          "type": "string"
+        }
+      }
+    },
+    "SheetsCfg": {
+      "type": "object",
+      "properties": {
+        "credJson": {},
+        "mainChannelSheetId": {
+          "type": "string"
+        },
+        "userChannelSheetIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "SnowflakeCfg": {
+      "type": "object",
+      "properties": {
+        "creds": {
+          "type": "string"
+        },
+        "account": {
+          "type": "string"
+        },
+        "warehouse": {
+          "type": "string"
+        },
+        "db": {
+          "type": "string"
+        },
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "StorageCfg": {
+      "type": "object",
+      "properties": {
+        "dataStorageCs": {
+          "type": "string"
+        },
+        "dbPath": {
+          "type": "string"
+        },
+        "resultsPath": {
+          "type": "string"
+        },
+        "privatePath": {
+          "type": "string"
+        },
+        "pipePath": {
+          "type": "string"
+        }
+      }
+    },
+    "YtReaderCfg": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "to": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "refreshVideosWithin": {
+          "type": "string"
+        },
+        "refreshRecsWithin": {
+          "type": "string"
+        },
+        "refreshRecsMin": {
+          "type": "integer"
+        },
+        "refreshAllAfter": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "appInsightsKey": {
+      "type": "string"
+    },
+    "parallelChannels": {
+      "type": "integer"
+    },
+    "defaultParallel": {
+      "type": "integer"
+    },
+    "channelsPerContainer": {
+      "type": "integer"
+    },
+    "resourceGroup": {
+      "type": "string"
+    },
+    "ytReader": {
+      "$ref": "#/definitions/YtReaderCfg"
+    },
+    "storage": {
+      "$ref": "#/definitions/StorageCfg"
+    },
+    "ytApiKeys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitedToSeedChannels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "subscriptionId": {
+      "type": "string"
+    },
+    "servicePrincipal": {
+      "$ref": "#/definitions/ServicePrincipalCfg"
+    },
+    "container": {
+      "$ref": "#/definitions/ContainerCfg"
+    },
+    "seqUrl": {
+      "type": "string"
+    },
+    "sheets": {
+      "$ref": "#/definitions/SheetsCfg"
+    },
+    "scraper": {
+      "$ref": "#/definitions/ScraperCfg"
+    },
+    "snowflake": {
+      "$ref": "#/definitions/SnowflakeCfg"
+    },
+    "results": {
+      "$ref": "#/definitions/ResultsCfg"
+    },
+    "pipe": {
+      "$ref": "#/definitions/PipeAppCfg"
+    }
+  }
+}

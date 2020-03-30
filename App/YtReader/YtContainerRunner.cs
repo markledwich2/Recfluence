@@ -22,16 +22,17 @@ namespace YtReader {
 
     static Region GetRegion() => Rand.Choice(Regions);
 
-    public static async Task<IReadOnlyCollection<IContainerGroup>> StartFleet(ILogger log, Cfg cfg, UpdateType optionUpdateType) {
-      var sheets = (await ChannelSheets.MainChannels(cfg.App.Sheets, log)).ToList();
-      var evenBatchSize = (int) Math.Ceiling(sheets.Count / Math.Ceiling(sheets.Count / (double) cfg.App.ChannelsPerContainer));
+    public static async Task<IReadOnlyCollection<IContainerGroup>> StartFleet(ILogger log, AppCfg cfg, UpdateType optionUpdateType) {
+      var sheets = (await ChannelSheets.MainChannels(cfg.Sheets, log)).ToList();
+      var evenBatchSize = (int) Math.Ceiling(sheets.Count / Math.Ceiling(sheets.Count / (double) cfg.ChannelsPerContainer));
 
-      var batches = sheets.Randomize().Batch(evenBatchSize).Select((b, i) => (batch: b.ToList(), name: $"{cfg.App.Container.Name}-fleet-{i}", i)).ToList();
+      var batches = sheets.Randomize().Batch(evenBatchSize).Select((b, i)
+        => (batch: b.ToList(), name: $"{cfg.Container.Name}-fleet-{i}", i)).ToList();
 
       var azure = GetAzure(cfg);
 
       // before starting feel. Ensure they are all not already running
-      await batches.BlockAction(async b => await EnsureNotRunning(b.name, azure, cfg.App.ResourceGroup), cfg.App.DefaultParallel);
+      await batches.BlockAction(async b => await EnsureNotRunning(b.name, azure, cfg.ResourceGroup), cfg.DefaultParallel);
 
       var fleet = await batches.BlockTransform(async b => {
         var (batch, fleetName, i) = b;
@@ -43,21 +44,21 @@ namespace YtReader {
         };
         var group = await ContainerGroup(cfg, azure, fleetName, region, args.ToArray());
         return await group.CreateAsync();
-      }, cfg.App.DefaultParallel);
+      }, cfg.DefaultParallel);
 
       log.Information("Started fleet containers: {Containers}", fleet.Join(", ", f => f.Name));
       return fleet;
     }
 
-    public static async Task<IContainerGroup> Start(ILogger log, Cfg cfg, string[] args) {
-      log.Information("starting container {Image} {Args}", cfg.App.Container.ImageName, args.Join(" "));
-      var containerGroup = await ContainerGroup(cfg, GetAzure(cfg), cfg.App.Container.Name, GetRegion(), args);
+    public static async Task<IContainerGroup> Start(ILogger log, AppCfg cfg, string[] args) {
+      log.Information("starting container {Image} {Args}", cfg.Container.ImageName, args.Join(" "));
+      var containerGroup = await ContainerGroup(cfg, GetAzure(cfg), cfg.Container.Name, GetRegion(), args);
       return await containerGroup.CreateAsync();
     }
 
-    static async Task<IWithCreate> ContainerGroup(Cfg cfg, IAzure azure, string groupName, Region region, string[] args) {
-      var container = cfg.App.Container;
-      var rg = cfg.App.ResourceGroup;
+    static async Task<IWithCreate> ContainerGroup(AppCfg cfg, IAzure azure, string groupName, Region region, string[] args) {
+      var container = cfg.Container;
+      var rg = cfg.ResourceGroup;
       await EnsureNotRunning(groupName, azure, rg);
       var containerGroup = azure.ContainerGroups.Define(groupName)
         .WithRegion(region)
@@ -71,8 +72,7 @@ namespace YtReader {
         .WithCpuCoreCount(container.Cores)
         .WithMemorySizeInGB(container.Mem)
         .WithEnvironmentVariables(new Dictionary<string, string> {
-          {$"YtNetworks_{nameof(RootCfg.AzureStorageCs)}", cfg.Root.AzureStorageCs},
-          {$"YtNetworks_{nameof(RootCfg.Env)}", cfg.Root.Env}
+          {"Env", Setup.Env}
         })
         .WithStartingCommandLine("dotnet", new[] {"/app/ytnetworks.dll"}.Concat(args).ToArray())
         .Attach()
@@ -80,10 +80,10 @@ namespace YtReader {
       return containerGroup;
     }
 
-    static IAzure GetAzure(Cfg cfg) {
-      var sp = cfg.App.ServicePrincipal;
+    static IAzure GetAzure(AppCfg cfg) {
+      var sp = cfg.ServicePrincipal;
       var creds = new AzureCredentialsFactory().FromServicePrincipal(sp.ClientId, sp.Secret, sp.TennantId, AzureEnvironment.AzureGlobalCloud);
-      var azure = Azure.Authenticate(creds).WithSubscription(cfg.App.SubscriptionId);
+      var azure = Azure.Authenticate(creds).WithSubscription(cfg.SubscriptionId);
       return azure;
     }
 

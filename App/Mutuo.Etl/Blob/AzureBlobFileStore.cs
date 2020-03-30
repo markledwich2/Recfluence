@@ -17,7 +17,7 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 
-namespace Mutuo.Etl {
+namespace Mutuo.Etl.Blob {
   public class AzureBlobFileStore : ISimpleFileStore {
     public AzureBlobFileStore(string cs, StringPath path) {
       ContainerName = path.Tokens.FirstOrDefault() ?? throw new InvalidOperationException("path needs to at least have a container");

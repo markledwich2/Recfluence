@@ -28,7 +28,7 @@ namespace SysExtensions.Serialization {
         yield return JsonConvert.DeserializeObject<T>(line);
       }
     }
-    
+
     public static IReadOnlyCollection<T> LoadJsonlGz<T>(this Stream stream) {
       using var zr = new GZipStream(stream, CompressionMode.Decompress);
       using var tr = new StreamReader(zr);

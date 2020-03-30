@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Mutuo.Etl;
+using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;

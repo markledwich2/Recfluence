@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Text;
 
-namespace Mutuo.Etl {
+namespace Mutuo.Etl.Blob {
   public interface ISimpleFileStore {
     Task<T> Get<T>(StringPath path) where T : class;
     Task Set<T>(StringPath path, T item);

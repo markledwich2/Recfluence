@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Mutuo.Etl;
+using Mutuo.Etl.Blob;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions;

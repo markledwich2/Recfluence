@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -134,7 +135,7 @@ namespace YtReader {
       if (range.Count == 0) return new T[] { };
       var csvText = range.Join("\n", l => l.Join(",", o => Quote(o?.ToString() ?? "")));
       using var reader = new StringReader(csvText);
-      using var csv = new CsvReader(reader);
+      using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
       csv.Configuration.HasHeaderRecord = true;
       csv.Configuration.MissingFieldFound = null;
       csv.Configuration.Escape = '\\';
