@@ -27,7 +27,6 @@ namespace Mutuo.Etl.Pipe {
     ISimpleFileStore Store          { get; }
     PipeAppCfg       Cfg            { get; }
     Assembly[]       PipeAssemblies { get; }
-    bool             RunLocal       { get; set; }
   }
 
   public interface IPipeCtxScoped : IPipeCtx {
@@ -43,7 +42,6 @@ namespace Mutuo.Etl.Pipe {
       Cfg = ctx.Cfg;
       Id = id;
       PipeAssemblies = ctx.PipeAssemblies;
-      RunLocal = ctx.RunLocal;
       Scope = (ctx as IPipeCtxScoped)?.Scope;
     }
 
@@ -52,7 +50,6 @@ namespace Mutuo.Etl.Pipe {
     public PipeAppCfg        Cfg            { get; set; }
     public PipeRunId         Id             { get; set; }
     public Assembly[]        PipeAssemblies { get; set; } = { };
-    public bool              RunLocal       { get; set; }
     public IComponentContext Scope          { get; set; }
   }
 
@@ -197,7 +194,9 @@ namespace Mutuo.Etl.Pipe {
         var argAttribute = p.GetCustomAttribute<PipeArgAttribute>();
         if (argAttribute == null) {
           using var inSr = await ctx.LoadInState();
-          var deserializeMethod = typeof(JsonlExtensions).GetMethod("LoadJsonlGz", new[] {typeof(Stream)})?.MakeGenericMethod(p.ParameterType)
+          var genericType = p.ParameterType.GenericTypeArguments.FirstOrDefault() ?? 
+                            throw new InvalidOperationException($"Expecting arg method {pipeType.Type}.{method.Name} parameter {p.Name} to be IEnumerable<Type>");
+          var deserializeMethod = typeof(JsonlExtensions).GetMethod("LoadJsonlGz", new[] {typeof(Stream)})?.MakeGenericMethod(genericType)
                                   ?? throw new InvalidOperationException("LoadJsonlGz method not found ");
           return deserializeMethod.Invoke(null, new object[] {inSr});
         }
@@ -213,13 +212,13 @@ namespace Mutuo.Etl.Pipe {
       });
 
       try {
-        var task = method.Invoke(pipeInstance, pipeParams.ToArray()) ??
+        dynamic task = method.Invoke(pipeInstance, pipeParams.ToArray()) ??
                    throw new InvalidOperationException($"Method '{method.Name}' returned null, should be Task");
         if (method.ReturnType == typeof(Task)) {
-          await (Task) task;
+          await task;
         }
         else {
-          var pipeResult = await (Task<object>) task;
+          var pipeResult = await task;
           var listResult = (IEnumerable<object>) pipeResult;
           using var outStream = listResult.ToJsonlGzStream();
           await ctx.Store.Save(ctx.OutStatePath(), outStream);
@@ -232,7 +231,7 @@ namespace Mutuo.Etl.Pipe {
       return ExitCode.Success;
     }
 
-    static string OutStatePath(this PipeRunId id) => $"{id}/OutState.json";
+    static string OutStatePath(this PipeRunId id) => $"{id}/OutState.jsonl.gz";
     static string OutStatePath(this IPipeCtx ctx) => ctx.Id.OutStatePath();
 
     static async Task<IReadOnlyCollection<TOut>> GetOutState<TOut>(IPipeCtx ctx, PipeRunId id) {
@@ -240,7 +239,7 @@ namespace Mutuo.Etl.Pipe {
       return stream.LoadJsonlGz<TOut>();
     }
 
-    public static string InStatePath(this PipeRunId id) => $"{id}/InState.json";
+    public static string InStatePath(this PipeRunId id) => $"{id}/InState.jsonl.gz";
     public static string InStatePath(this IPipeCtx ctx) => ctx.Id.InStatePath();
     public static Task<Stream> LoadInState(this IPipeCtx ctx) => ctx.Store.Load(ctx.InStatePath());
   }

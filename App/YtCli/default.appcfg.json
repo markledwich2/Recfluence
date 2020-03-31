@@ -5,7 +5,8 @@
     "resourceGroup": "ytnetworks",
     "storage": {
         "dbPath": "testdata/db2",
-        "resultsPath": "testdata/results"
+        "resultsPath": "testdata/results",
+        "pipePath": "testdata/pipe"
     },
     //"LimitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCfrlXVXz-pT9AmmDELhpyOw"],
     "subscriptionId": "93ef8661-3e11-4fcc-92ae-d0383e7e4ad3",
