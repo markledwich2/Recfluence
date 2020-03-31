@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
@@ -8,8 +7,10 @@
     <AssemblyName>ytnetworks</AssemblyName>
     <TrimUnusedDependencies>true</TrimUnusedDependencies>
     <LangVersion>8</LangVersion>
+    <AssemblyVersion>0.3.0</AssemblyVersion>
+    <PackageVersion>0.3.0-pipe</PackageVersion>
+    <InformationalVersion>0.3.0-pipe</InformationalVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="9.0.0" />
     <PackageReference Include="CommandLineParser" Version="2.7.82" />
@@ -18,12 +19,11 @@
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0" />
     <PackageReference Include="YoutubeExplode" Version="4.7.16" />
   </ItemGroup>
-
   <ItemGroup>
+    <ProjectReference Include="..\Mutuo.Tools\Mutuo.Tools.csproj" />
     <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
     <ProjectReference Include="..\YtReader\YtReader.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <None Update="default.appcfg.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -35,5 +35,4 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
 </Project>

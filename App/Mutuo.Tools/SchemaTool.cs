@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.ComponentModel;
+using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -13,6 +14,7 @@ namespace Mutuo.Tools {
     /// <summary>
     ///   Save a schema file for a type
     /// </summary>
+    [DisplayName("schema")]
     public static async Task GenerateSchema(FileInfo assembly, string type, DirectoryInfo dir) {
       var a = Assembly.LoadFrom(assembly.FullName);
       var t = a.GetType(type);

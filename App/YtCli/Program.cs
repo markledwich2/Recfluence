@@ -1,15 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
 using CommandLine;
+using Medallion.Shell;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
+using Mutuo.Tools;
 using Serilog;
 using Serilog.Core;
 using SysExtensions.Collections;
+using SysExtensions.Fluent.IO;
+using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader;
@@ -74,6 +79,8 @@ namespace YouTubeCli {
     public bool LaunchContainer { get; set; }
   }
 
+  [Verb("publish-container")] public class PublishContainerOption { }
+
   public class TaskCtx<TOption> : IDisposable {
     public TaskCtx(AppCfg cfg, Logger log, TOption option, ILifetimeScope scope, string[] originalArgs) {
       Cfg = cfg;
@@ -98,7 +105,8 @@ namespace YouTubeCli {
   class Program {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
-        .ParseArguments<PipeOption, UpdateFleetOption, UpdateOption, SyncOption, ChannelInfoOption, FixOption, ResultsOption, TrafficOption>(args)
+        .ParseArguments<PipeOption, UpdateFleetOption, UpdateOption, SyncOption, ChannelInfoOption, FixOption, ResultsOption, TrafficOption,
+          PublishContainerOption>(args)
         .MapResult(
           (PipeOption p) => RunPipe(p, args),
           (UpdateFleetOption f) => Run(f, args, Fleet),
@@ -108,14 +116,46 @@ namespace YouTubeCli {
           (FixOption f) => Run(f, args, Fix),
           (ResultsOption f) => Run(f, args, Results),
           (TrafficOption t) => Run(t, args, Traffic),
+          (PublishContainerOption p) => Run(p, args, PublishContainer),
           errs => Task.FromResult(ExitCode.Error)
         );
       return (int) await res;
     }
 
+    static async Task<ExitCode> PublishContainer(TaskCtx<PublishContainerOption> ctx) {
+      //var buildTools = new BuildTools(ctx.Log);
+      //await buildTools.GitVersionUpdate();
+      var v = await GitVersionInfo.Discover(ctx.Log);
+      var container = ctx.Cfg.Container;
+      var sln = FPath.Current.ParentWithFile("YtNetworks.sln", true);
+      if (!sln.Exists) throw new InvalidOperationException("Can't find YtNetworks.sln file to organize build");
+      var image = $"{container.Registry}/{container.ImageName}:{v.SemVer}";
+
+      var shell = new Shell(o => o.WorkingDirectory(sln.Parent().FullPath));
+      await RunShell(shell, ctx.Log, "docker", "build", "-t", image, "-f", "App/Dockerfile", ".");
+      await RunShell(shell, ctx.Log, "docker", "push", image);
+
+      return ExitCode.Success;
+    }
+
+    static async Task<Command> RunShell(Shell shell, ILogger log, string cmd, params object[] args) {
+      var process = shell.Run(cmd, args);
+      await process.StandardOutput.PipeToAsync(Console.Out);
+      var res = await process.Task;
+      if (!res.Success) {
+        Console.Error.WriteLine($"command failed with exit code {res.ExitCode}: {res.StandardError}");
+        throw new InvalidOperationException($"command ({cmd}) failed");
+      }
+      return process;
+    }
+
     static IPipeCtxScoped PipeCtx(object option, AppCfg cfg, IComponentContext scope, ILogger log) {
+      var semver = GitVersionInfo.Semver(typeof(Program));
+      
       var pipe = cfg.Pipe.JsonClone();
-      pipe.Container ??= cfg.Container;
+      pipe.Container ??= cfg.Container.JsonClone();
+      pipe.Container.Tag ??= semver;
+      
       pipe.Store ??= new PipeAppStorageCfg {
         Cs = cfg.Storage.DataStorageCs,
         Path = cfg.Storage.PipePath
@@ -144,7 +184,7 @@ namespace YouTubeCli {
     class ScopeHolder {
       public IComponentContext Scope { get; set; }
     }
-    
+
     static ILifetimeScope BaseScope(AppCfg cfg, object option, ILogger log) {
       var scopeHolder = new ScopeHolder();
       var b = new ContainerBuilder();

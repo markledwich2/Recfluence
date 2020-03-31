@@ -79,7 +79,7 @@ namespace SysExtensions.Serialization {
       return JsonConvert.SerializeObject(o, settings);
     }
 
-    public static void ToJsonFile(this object o, FPath filePath, JsonSerializerSettings settings = null)
+    public static void WriteJson(this FPath filePath, object o, JsonSerializerSettings settings = null)
       => o.ToJsonFile(filePath.FullPath, settings);
 
     public static void ToJsonFile(this object o, string filePath, JsonSerializerSettings settings = null) {

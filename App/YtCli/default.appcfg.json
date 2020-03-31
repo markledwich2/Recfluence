@@ -22,8 +22,7 @@
         "entryAssemblyPath": "app/ytnetworks.dll",
         "forwardEnvironmentVariables": [
             "Env"
-        ],
-        "tag": "latest"
+        ]
     },
     "sheets": {
         "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",

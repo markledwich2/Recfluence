@@ -1,9 +1,8 @@
-node_modules
+*/node_modules
 npm-debug.log
-Dockerfile*
+*/Dockerfile
 docker-compose*
 .dockerignore
-.git
 .gitignore
 .env
 */bin
@@ -11,4 +10,7 @@ docker-compose*
 */publish
 README.md
 LICENSE
-.vscode
+
+# any dir starting with. (except git)
+*/.*/
+!.git
