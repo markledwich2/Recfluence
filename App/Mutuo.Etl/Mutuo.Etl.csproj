@@ -4,8 +4,8 @@
     <LangVersion>8</LangVersion>
     <Nullable>warnings</Nullable>
     <AssemblyVersion>0.3.0</AssemblyVersion>
-    <InformationalVersion>0.3.0-pipe</InformationalVersion>
-    <PackageVersion>0.3.0-pipe</PackageVersion>
+    <InformationalVersion>0.3.0-pipe.1</InformationalVersion>
+    <PackageVersion>0.3.0-pipe.1</PackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
@@ -15,10 +15,10 @@
     <PackageReference Include="AWSSDK.S3" Version="3.3.110.40" />
     <PackageReference Include="CommandLineParser" Version="2.7.82" />
     <PackageReference Include="CsvHelper" Version="15.0.3" />
+    <PackageReference Include="MedallionShell" Version="1.6.1" />
     <PackageReference Include="Microsoft.Azure.Management.ContainerInstance.Fluent" Version="1.32.0" />
     <PackageReference Include="Microsoft.Azure.Management.Fluent" Version="1.32.0" />
     <PackageReference Include="Microsoft.Azure.Storage.Blob" Version="11.1.3" />
-    <PackageReference Include="Semver" Version="2.0.6" />
     <PackageReference Include="System.Linq.Async" Version="4.0.0" />
     <PackageReference Include="UriBuilder.Fluent" Version="1.5.2" />
   </ItemGroup>

@@ -8,8 +8,8 @@
     <TrimUnusedDependencies>true</TrimUnusedDependencies>
     <LangVersion>8</LangVersion>
     <AssemblyVersion>0.3.0</AssemblyVersion>
-    <PackageVersion>0.3.0-pipe</PackageVersion>
-    <InformationalVersion>0.3.0-pipe</InformationalVersion>
+    <PackageVersion>0.3.0-pipe.1</PackageVersion>
+    <InformationalVersion>0.3.0-pipe.1</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="9.0.0" />

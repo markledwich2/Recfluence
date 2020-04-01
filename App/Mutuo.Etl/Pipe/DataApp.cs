@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Autofac;
 using Autofac.Util;
 using CommandLine;
+using Microsoft.Azure.Management.Fluent;
 using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
@@ -54,44 +55,55 @@ namespace Mutuo.Etl.Pipe {
   }
 
   /// <summary>
-  ///   A unique string for a pipe run. HUman readable and easily passable though commands
+  ///   A unique string for a pipe run. HUman readable and easily passable though commands.
   /// </summary>
   public class PipeRunId {
-    public PipeRunId(string name, string runId, int num) {
+    public PipeRunId(string name, string groupId, int num) {
       Name = name;
-      RunId = runId;
+      GroupId = groupId;
       Num = num;
     }
 
     public PipeRunId() { }
 
-    public string Name  { get; set; }
-    public string RunId { get; set; }
-    public int    Num   { get; set; }
+    public string Name { get; set; }
 
-    public override string ToString() => $"{Name}|{RunId}|{Num}";
+    /// <summary>
+    ///   A unique string for a batch of pipe run's that are part of the same operation
+    /// </summary>
+    public string GroupId { get; set; }
+    public int Num { get;        set; }
 
-    public static PipeRunId Create(string name, int num = 0) => new PipeRunId(name, NewRunId(), num);
+    public override string ToString() => $"{Name}|{GroupId}|{Num}";
 
-    public static string NewRunId() => $"{DateTime.UtcNow.FileSafeTimestamp()}_{Guid.NewGuid().ToShortString()}";
+    public static PipeRunId Create(string name, int num = 0) => new PipeRunId(name, NewBatchId(), num);
+
+    public static string NewBatchId() => $"{DateTime.UtcNow.FileSafeTimestamp()}_{Guid.NewGuid().ToShortString(4)}";
 
     public static PipeRunId FromString(string path) {
-      var split = path.Split("/");
+      var split = path.Split("|");
       if (split.Length < 3) throw new InvalidOperationException($"{path} doesn't have 3 components");
       return new PipeRunId {
         Name = split[0],
-        RunId = split[1],
+        GroupId = split[1],
         Num = split[2].ParseInt()
       };
     }
+  }
+
+  public enum PipeRunLocation {
+    Container,
+    LocalContainer,
+    LocalThread
   }
 
   public class PipeAppCfg {
     public PipeAppStorageCfg Store         { get; set; }
     public PipeAzureCfg      Azure         { get; set; }
     public ContainerCfg      Container     { get; set; }
-    public bool              RunLocal      { get; set; }
+    public PipeRunLocation   Location      { get; set; }
     public int               LocalParallel { get; set; } = 2;
+    public Uri               DockerUri     { get; set; } = new Uri("npipe://./pipe/docker_engine");
   }
 
   public class PipeAzureCfg {
@@ -115,7 +127,6 @@ namespace Mutuo.Etl.Pipe {
     public double     Mem                         { get; set; }
     public NameSecret RegistryCreds               { get; set; }
     public string     Region                      { get; set; } = Microsoft.Azure.Management.ResourceManager.Fluent.Core.Region.USWest2.Name;
-    public string     EntryAssemblyPath           { get; set; }
     public string[]   ForwardEnvironmentVariables { get; set; }
   }
 
@@ -155,17 +166,17 @@ namespace Mutuo.Etl.Pipe {
           return (b.Id, inStatePath: b.Id.InStatePath());
         });
 
+      IContainerRunner containerRunner = ctx.Cfg.Location switch {
+        PipeRunLocation.Container => new AzureContainerRunner(),
+        PipeRunLocation.LocalContainer => new LocalContainerRunner(),
+        PipeRunLocation.LocalThread => new ThreadContainerRunner(),
+        _ => throw new NotImplementedException($"{ctx.Cfg.Location}")
+      };
 
-      if (ctx.Cfg.RunLocal) {
-        var res = await batches
-          .BlockTransform(async b => await RunPipe(new PipeCtx(ctx, b.Id)), ctx.Cfg.LocalParallel);
-      }
-      else {
-        await AzureContainerRunner.RunBatch(ctx, batches.Select(b => b.Id), log);
-      }
-
+      await containerRunner.RunBatch(ctx, batches.Select(b => b.Id).ToArray(), log);
+      
       var outState = await batches
-        .BlockTransform(async b => { return await GetOutState<TOut>(ctx, b.Id); });
+        .BlockTransform(async b => await GetOutState<TOut>(ctx, b.Id));
 
       return outState.SelectMany(m => m).ToReadOnly();
     }
@@ -194,8 +205,9 @@ namespace Mutuo.Etl.Pipe {
         var argAttribute = p.GetCustomAttribute<PipeArgAttribute>();
         if (argAttribute == null) {
           using var inSr = await ctx.LoadInState();
-          var genericType = p.ParameterType.GenericTypeArguments.FirstOrDefault() ?? 
-                            throw new InvalidOperationException($"Expecting arg method {pipeType.Type}.{method.Name} parameter {p.Name} to be IEnumerable<Type>");
+          var genericType = p.ParameterType.GenericTypeArguments.FirstOrDefault() ??
+                            throw new InvalidOperationException(
+                              $"Expecting arg method {pipeType.Type}.{method.Name} parameter {p.Name} to be IEnumerable<Type>");
           var deserializeMethod = typeof(JsonlExtensions).GetMethod("LoadJsonlGz", new[] {typeof(Stream)})?.MakeGenericMethod(genericType)
                                   ?? throw new InvalidOperationException("LoadJsonlGz method not found ");
           return deserializeMethod.Invoke(null, new object[] {inSr});
@@ -207,13 +219,13 @@ namespace Mutuo.Etl.Pipe {
           ctx.Log.Debug($"Unable to find pipe arg in environment variable '{variableName}'");
           return p.ParameterType.DefaultForType();
         }
-        var value = Convert.ChangeType(stringValue, p.ParameterType);
+        var value = ChangeType(stringValue, p.ParameterType);
         return value;
       });
 
       try {
         dynamic task = method.Invoke(pipeInstance, pipeParams.ToArray()) ??
-                   throw new InvalidOperationException($"Method '{method.Name}' returned null, should be Task");
+                       throw new InvalidOperationException($"Method '{method.Name}' returned null, should be Task");
         if (method.ReturnType == typeof(Task)) {
           await task;
         }
@@ -229,6 +241,20 @@ namespace Mutuo.Etl.Pipe {
         return ExitCode.Error;
       }
       return ExitCode.Success;
+    }
+
+    static object ChangeType(string stringValue, Type t) {
+      if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+        if (stringValue.HasValue()) {
+          var typeArgument = t.GetGenericArguments()[0];
+          var value = Convert.ChangeType(stringValue, typeArgument);
+          // get the Nullable<T>(T) constructor
+          var ctor = t.GetConstructor(new[] {typeArgument}) ?? throw new InvalidOperationException($"Expected constructor for type '{typeArgument}'");
+          return ctor.Invoke(new[] {value});
+        }
+        return t.DefaultForType();
+      }
+      return Convert.ChangeType(stringValue, t);
     }
 
     static string OutStatePath(this PipeRunId id) => $"{id}/OutState.jsonl.gz";
@@ -256,9 +282,10 @@ namespace Mutuo.Etl.Pipe {
   /// </summary>
   [Verb("pipe")]
   public class PipeArgs {
-    [Option('p', HelpText = "Name of the pipe to run", Required = true)]
+    [Option('p', HelpText = "Name of the pipe to run")]
     public string Pipe { get; set; }
-    [Option('r', HelpText = "The run id in the format Pipe/RunId/Num. No need to supply this if you are running this standalone.")]
+    
+    [Option('r', HelpText = "The run id in the format Pipe/Group/Num. No need to supply this if you are running this standalone.")]
     public string RunId { get; set; }
   }
 
@@ -271,7 +298,7 @@ namespace Mutuo.Etl.Pipe {
   public class PipeAttribute : Attribute { }
 
   /// <summary>
-  ///   Decorate a parameter that should come form the command line
+  ///   Decorate a parameter that will come from environent variables in for format PipeName:ArgName
   /// </summary>
   [AttributeUsage(AttributeTargets.Parameter)]
   public class PipeArgAttribute : Attribute { }

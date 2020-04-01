@@ -25,7 +25,7 @@ namespace SysExtensions.Text {
     ///   Is not null or emtpy
     /// </summary>
     public static bool HasValue(this string value) => !value.NullOrEmpty();
-    
+
     public static string EmptyIfNull(this string s) => s ?? string.Empty;
 
     /// <summary>
@@ -123,10 +123,13 @@ namespace SysExtensions.Text {
     public static DateTime ParseDate(this string s) => DateTime.Parse(s);
 
     public static decimal ParseDecimal(this string s) => decimal.Parse(s, NumberFormatInfo.InvariantInfo);
-    
+
     public static DateTimeOffset ParseDateTimeOffset(this string s, string format) =>
       DateTimeOffset.ParseExact(s, format, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
-    
+
     public static bool IsNullOrWhiteSpace(this string s) => string.IsNullOrWhiteSpace(s);
+
+    public static string Right(this string source, int length) => 
+      length >= source.Length ? source : source.Substring(source.Length - length);
   }
 }

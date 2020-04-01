@@ -79,7 +79,7 @@ namespace YouTubeCli {
     public bool LaunchContainer { get; set; }
   }
 
-  [Verb("publish-container")] public class PublishContainerOption { }
+
 
   public class TaskCtx<TOption> : IDisposable {
     public TaskCtx(AppCfg cfg, Logger log, TOption option, ILifetimeScope scope, string[] originalArgs) {
@@ -122,6 +122,12 @@ namespace YouTubeCli {
       return (int) await res;
     }
 
+    [Verb("publish-container")]
+    public class PublishContainerOption {
+      [Option('p', HelpText = "Publish to registry, otherwise a local build only")]
+      public bool PublishToRegistry { get; set; }
+    }
+
     static async Task<ExitCode> PublishContainer(TaskCtx<PublishContainerOption> ctx) {
       //var buildTools = new BuildTools(ctx.Log);
       //await buildTools.GitVersionUpdate();
@@ -130,15 +136,20 @@ namespace YouTubeCli {
       var sln = FPath.Current.ParentWithFile("YtNetworks.sln", true);
       if (!sln.Exists) throw new InvalidOperationException("Can't find YtNetworks.sln file to organize build");
       var image = $"{container.Registry}/{container.ImageName}:{v.SemVer}";
+      
+      ctx.Log.Information("Building & publishing container {Image}", image);
 
       var shell = new Shell(o => o.WorkingDirectory(sln.Parent().FullPath));
       await RunShell(shell, ctx.Log, "docker", "build", "-t", image, "-f", "App/Dockerfile", ".");
-      await RunShell(shell, ctx.Log, "docker", "push", image);
+      
+      if(ctx.Option.PublishToRegistry)
+        await RunShell(shell, ctx.Log, "docker", "push", image);
 
       return ExitCode.Success;
     }
 
     static async Task<Command> RunShell(Shell shell, ILogger log, string cmd, params object[] args) {
+      log.Information($"Running command: {cmd} {args.Select(a => a.ToString()).Join(" ")}");
       var process = shell.Run(cmd, args);
       await process.StandardOutput.PipeToAsync(Console.Out);
       var res = await process.Task;

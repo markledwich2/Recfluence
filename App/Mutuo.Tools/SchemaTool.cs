@@ -19,10 +19,12 @@ namespace Mutuo.Tools {
       var a = Assembly.LoadFrom(assembly.FullName);
       var t = a.GetType(type);
       var g = new JSchemaGenerator {
-        DefaultRequired = Required.DisallowNull, ContractResolver =
+        DefaultRequired = Required.DisallowNull,
+        ContractResolver =
           new DefaultContractResolver {
             NamingStrategy = new CamelCaseNamingStrategy()
-          }
+          },
+        GenerationProviders = {new StringEnumGenerationProvider()}
       };
       var schema = g.Generate(t);
       await File.WriteAllTextAsync($"{dir.FullName}/{t.Name}.schema.json", schema.ToString());

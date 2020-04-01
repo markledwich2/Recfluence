@@ -14,7 +14,6 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Yt;
 using YtReader.YtWebsite;
-using TaskExtensions = SysExtensions.Threading.TaskExtensions;
 using VideoItem = YtReader.YtWebsite.VideoItem;
 
 namespace YtReader {
@@ -359,11 +358,12 @@ namespace YtReader {
     ///   A once off command to populate existing uploaded videos evenly with checks for ads.
     /// </summary>
     [Pipe]
-    public async Task BackfillVideoExtra([PipeArg] string videoIds = null) {
+    public async Task BackfillVideoExtra([PipeArg] string videoIds = null, [PipeArg] int? limit = null) {
       if (videoIds == null) {
         using var conn = await GetConnection();
 
-        var toUpdate = (await conn.QueryAsync<ChannelVideoItem>(@"
+        var limitString = limit == null ? "" : $"limit {limit}";
+        var toUpdate = (await conn.QueryAsync<ChannelVideoItem>(@$"
 select video_id as VideoId, channel_id as ChannelId, channel_title as ChannelTitle
 from (select video_id, channel_id, channel_title
            , upload_date
@@ -372,21 +372,32 @@ from (select video_id, channel_id, channel_title
       from video_latest l
     where ad_checks > 0 and no_ads = ad_checks -- TODO: temporarily look at no_ads in-case they were actually errors
      )
-where num < 50;")).ToArray();
+where num < 50 
+{limitString}")).ToArray();
 
-        var res = await TaskExtensions.WithDuration<IReadOnlyCollection<ProcessVideoExtraOut>>(toUpdate.GroupBy(v => v.ChannelId)
+        var res = await toUpdate.GroupBy(v => v.ChannelId)
           .Select(g => new ProcessVideoExtraIn {ChannelId = g.Key, Videos = g.ToArray()})
-          .RunPipe(ProcessVideoExtra, PipeCtx(), 200, 4, Log));
+          .RunPipe(ProcessVideoExtra, PipeCtx(), 200, 4, Log)
+          .WithDuration();
 
         Log.Information("Finished BackfillVideoExtra of {Channels) channels, {Videos} videos in {Duration}");
       }
       else {
-        var recsAndExtra = await videoIds.Split("|")
+        var chId = "123TestChannel";
+        var toUpdate = new ProcessVideoExtraIn {
+          ChannelId = chId, Videos = videoIds.Split("|")
+            .Select(v => new ChannelVideoItem { ChannelId = chId, ChannelTitle = chId, VideoId = v}).ToArray()
+        }.AsEnumerable().ToArray();
+
+        var res = await toUpdate.RunPipe(ProcessVideoExtra, PipeCtx(), 200, 2, Log);
+
+        /*var recsAndExtra = await videoIds.Split("|")
           .BlockTransform(async v => await Scraper.GetRecsAndExtra(v, Log), Cfg.DefaultParallel);
+        
         await recsAndExtra.GroupBy(v => v.extra.ChannelId).BlockAction(async g => {
           var store = Store.VideoExtraStore(g.Key);
           await store.Append(g.Select(c => c.extra).ToArray());
-        });
+      });*/
       }
     }
 

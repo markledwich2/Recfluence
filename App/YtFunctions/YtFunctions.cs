@@ -10,6 +10,7 @@ using Serilog.Sinks.ILogger;
 using SysExtensions.Text;
 using YtReader;
 using IMSLogger = Microsoft.Extensions.Logging.ILogger;
+#pragma warning disable 618
 
 namespace YtFunctions {
   public static class YtFunctions {

@@ -50,11 +50,20 @@
         "container": {
           "$ref": "#/definitions/ContainerCfg"
         },
-        "runLocal": {
-          "type": "boolean"
+        "location": {
+          "type": "string",
+          "enum": [
+            "Container",
+            "LocalContainer",
+            "LocalThread"
+          ]
         },
         "localParallel": {
           "type": "integer"
+        },
+        "dockerUri": {
+          "type": "string",
+          "format": "uri"
         }
       }
     },

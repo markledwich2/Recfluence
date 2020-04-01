@@ -4,8 +4,8 @@
     <AzureFunctionsVersion>v3-preview</AzureFunctionsVersion>
     <LangVersion>8</LangVersion>
     <AssemblyVersion>0.3.0</AssemblyVersion>
-    <InformationalVersion>0.3.0-pipe</InformationalVersion>
-    <PackageVersion>0.3.0-pipe</PackageVersion>
+    <InformationalVersion>0.3.0-pipe.1</InformationalVersion>
+    <PackageVersion>0.3.0-pipe.1</PackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.13.1" />
