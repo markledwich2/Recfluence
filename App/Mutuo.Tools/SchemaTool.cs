@@ -3,20 +3,15 @@ using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
-using Medallion.Shell;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema.Generation;
 using Newtonsoft.Json.Serialization;
 using SysExtensions.Threading;
 
 namespace Mutuo.Tools {
-  /// <summary>
-  ///   Tool for generating json schemas
-  /// </summary>
+  /// <summary>Tool for generating json schemas</summary>
   public static class SchemaTool {
-    /// <summary>
-    ///   Save a schema file for a type
-    /// </summary>
+    /// <summary>Save a schema file for a type</summary>
     [DisplayName("schema")]
     public static async Task GenerateSchema(FileInfo assembly, string types, DirectoryInfo dir) {
       var a = Assembly.LoadFrom(assembly.FullName);

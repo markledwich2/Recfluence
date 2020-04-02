@@ -9,9 +9,7 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Blob {
-  /// <summary>
-  ///   Ready/write to storage for a keyed collection of items
-  /// </summary>
+  /// <summary>Ready/write to storage for a keyed collection of items</summary>
   /// <typeparam name="T"></typeparam>
   public class KeyedCollectionStore<T> where T : class {
     public KeyedCollectionStore(ISimpleFileStore store, Func<T, string> getId, StringPath path) {
@@ -28,10 +26,8 @@ namespace Mutuo.Etl.Blob {
     public async Task Set(T item) => await Store.Set(Path.Add(GetId(item)), item);
   }
 
-  /// <summary>
-  ///   Read/write to storage for an append-only immutable collection of items sored as jsonl.
-  ///   Support arbitraty metadata about the collection to allow efficient access?
-  /// </summary>
+  /// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl. Support arbitraty
+  ///   metadata about the collection to allow efficient access?</summary>
   public class AppendCollectionStore<T> {
     readonly ISimpleFileStore Store;
     readonly StringPath       Path;
@@ -48,9 +44,7 @@ namespace Mutuo.Etl.Blob {
       Version = version;
     }
 
-    /// <summary>
-    ///   Returns the most recent appended collection
-    /// </summary>
+    /// <summary>Returns the most recent appended collection</summary>
     async Task<FileListItem> LatestFile() {
       var files = (await Store.List(Path).SelectManyList()).Where(p => !p.Path.Name.StartsWith("_"));
       var latest = files.OrderByDescending(f => StoreFileMd.GetTs(f.Path)).FirstOrDefault();

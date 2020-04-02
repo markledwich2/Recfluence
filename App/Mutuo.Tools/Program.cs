@@ -2,11 +2,9 @@
 using System.CommandLine;
 using System.CommandLine.DragonFruit;
 using System.ComponentModel;
-using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Serilog;
-using Serilog.Core;
 using Serilog.Events;
 
 namespace Mutuo.Tools {
@@ -22,13 +20,9 @@ namespace Mutuo.Tools {
     }
   }
 
-  /// <summary>
-  /// Utils for working with Commands
-  /// </summary>
+  /// <summary>Utils for working with Commands</summary>
   public static class CommandHelper {
-    /// <summary>
-    /// Adds a command to the root based on a method signature and attributes
-    /// </summary>
+    /// <summary>Adds a command to the root based on a method signature and attributes</summary>
     public static void AddCommand(this RootCommand root, object instanceOrType, string method) {
       var type = instanceOrType is Type t ? t : instanceOrType.GetType();
       var m = type.GetMethod(method);

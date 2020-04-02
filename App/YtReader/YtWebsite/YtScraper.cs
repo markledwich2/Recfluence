@@ -111,9 +111,7 @@ namespace YtReader.YtWebsite {
 
     #region Public Static
 
-    /// <summary>
-    ///   Verifies that the given string is syntactically a valid YouTube channel ID.
-    /// </summary>
+    /// <summary>Verifies that the given string is syntactically a valid YouTube channel ID.</summary>
     public static bool ValidateChannelId(string channelId) {
       if (channelId.IsNullOrWhiteSpace())
         return false;
@@ -140,9 +138,7 @@ namespace YtReader.YtWebsite {
       return !Regex.IsMatch(videoId, @"[^0-9a-zA-Z_\-]");
     }
 
-    /// <summary>
-    ///   Verifies that the given string is syntactically a valid YouTube playlist ID.
-    /// </summary>
+    /// <summary>Verifies that the given string is syntactically a valid YouTube playlist ID.</summary>
     public static bool ValidatePlaylistId(string playlistId) {
       if (playlistId.IsNullOrWhiteSpace())
         return false;
@@ -173,17 +169,13 @@ namespace YtReader.YtWebsite {
       return !Regex.IsMatch(playlistId, @"[^0-9a-zA-Z_\-]");
     }
 
-    /// <summary>
-    ///   Parses video ID from a YouTube video URL.
-    /// </summary>
+    /// <summary>Parses video ID from a YouTube video URL.</summary>
     public static string ParseVideoId(string videoUrl) =>
       TryParseVideoId(videoUrl, out var result)
         ? result
         : throw new FormatException($"Could not parse video ID from given string [{videoUrl}].");
 
-    /// <summary>
-    ///   Tries to parse video ID from a YouTube video URL.
-    /// </summary>
+    /// <summary>Tries to parse video ID from a YouTube video URL.</summary>
     public static bool TryParseVideoId(string videoUrl, out string videoId) {
       videoId = default;
 

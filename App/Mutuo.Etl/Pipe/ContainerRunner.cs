@@ -7,21 +7,18 @@ using Medallion.Shell;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.ContainerGroup.Definition;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
-using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
-using SysExtensions.Threading;
+using SysExtensions.Threading; //using Microsoft.Azure.Management.Fluent;
 
 namespace Mutuo.Etl.Pipe {
   public interface IContainerRunner {
-    /// <summary>
-    ///   Run a batch of containers. Must have already created state for them.
-    ///   Waits till the batch is complete and returns the status.
-    /// </summary>
+    /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
+    ///   returns the status.</summary>
     Task<IReadOnlyCollection<PipeRunMetadata>> RunBatch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log);
   }
 
@@ -85,10 +82,8 @@ namespace Mutuo.Etl.Pipe {
       return azure;
     }
 
-    /// <summary>
-    ///   Run a batch of containers. Must have already created state for them.
-    ///   Waits till the batch is complete and returns the status.
-    /// </summary>
+    /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
+    ///   returns the status.</summary>
     public async Task<IReadOnlyCollection<PipeRunMetadata>> RunBatch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) {
       var azure = GetAzure(ctx.Cfg);
 
@@ -166,7 +161,7 @@ namespace Mutuo.Etl.Pipe {
         .WithCpuCoreCount(container.Cores)
         .WithMemorySizeInGB(container.Mem)
         .WithEnvironmentVariables(envVars)
-        .WithStartingCommandLine(args.First(), id.PipeArgs().Skip(1).Join(" "))
+        .WithStartingCommandLine(args.First(), id.PipeArgs())
         .Attach().WithRestartPolicy(ContainerGroupRestartPolicy.Never);
 
       return group;

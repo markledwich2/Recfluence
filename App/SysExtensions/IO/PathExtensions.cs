@@ -43,9 +43,7 @@ namespace SysExtensions.IO {
       SystemIO.FileAccess access = SystemIO.FileAccess.ReadWrite, SystemIO.FileShare share = SystemIO.FileShare.None) =>
       SystemIO.File.Open(path.ToString(), mode, access, share);
 
-    /// <summary>
-    ///   Finds the first parent with the given directory name
-    /// </summary>
+    /// <summary>Finds the first parent with the given directory name</summary>
     public static FPath Parent(this FPath path, string directoryName) =>
       path.Parent(p => p.Tokens.Last() == directoryName);
 
@@ -55,20 +53,15 @@ namespace SysExtensions.IO {
     public static FPath DirOfParent(this FPath path, string searchPattern, bool includeIfDir = false) =>
       path.EnumerateParents(includeIfDir).Select(p => p.Directories(searchPattern, false)).FirstOrDefault(d => !d.IsEmtpy());
 
-    public static FPath ParentWithFile(this FPath path, string filePattern, bool includeIfDir = false) {
-      return path.EnumerateParents(includeIfDir).FirstOrDefault(p => p.Files(filePattern, false).HasValue());
-    }
+    public static FPath ParentWithFile(this FPath path, string filePattern, bool includeIfDir = false) =>
+      path.EnumerateParents(includeIfDir).FirstOrDefault(p => p.Files(filePattern, false).HasValue());
 
-    /// <summary>
-    ///   Finds the first parent that satisfies the predicate
-    /// </summary>
+    /// <summary>Finds the first parent that satisfies the predicate</summary>
     public static FPath Parent(this FPath path, Predicate<FPath> predicate) =>
       path.EnumerateParents(false).FirstOrDefault(p => predicate(p));
 
-    /// <summary>
-    ///   Finds the child directory of the given name within any of the parent directories (e.g. like node_modules
-    ///   resolution)
-    /// </summary>
+    /// <summary>Finds the child directory of the given name within any of the parent directories (e.g. like node_modules
+    ///   resolution)</summary>
     public static IEnumerable<FPath> SubDirectoriesOfParent(this FPath path, string directoryName, bool includeIfDir) =>
       path.EnumerateParents(includeIfDir).Select(p => p.Directories(directoryName)).Where(p => !p.IsEmtpy());
 
@@ -88,9 +81,7 @@ namespace SysExtensions.IO {
       return result;
     }
 
-    /// <summary>
-    ///   Returns an absolute path with the given one inside the app data folder with the given app name
-    /// </summary>
+    /// <summary>Returns an absolute path with the given one inside the app data folder with the given app name</summary>
     /// <param name="relativePath"></param>
     /// <param name="appName"></param>
     /// <returns></returns>

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Autofac;
 using Autofac.Util;
 using CommandLine;
-using Microsoft.Azure.Management.Fluent;
 using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
@@ -19,20 +18,16 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Pipe {
-  /// <summary>
-  ///   Context & Cfg for running a pipe command
-  /// </summary>
+  /// <summary>Context & Cfg for running a pipe command</summary>
   public interface IPipeCtx {
-    PipeRunId        Id             { get; }
-    ILogger          Log            { get; }
-    ISimpleFileStore Store          { get; }
-    PipeAppCfg       Cfg            { get; }
-    Assembly[]       PipeAssemblies { get; }
-    IComponentContext Scope { get; set; }
-    
-    /// <summary>
-    /// Environment variables to forward
-    /// </summary>
+    PipeRunId         Id             { get; }
+    ILogger           Log            { get; }
+    ISimpleFileStore  Store          { get; }
+    PipeAppCfg        Cfg            { get; }
+    Assembly[]        PipeAssemblies { get; }
+    IComponentContext Scope          { get; set; }
+
+    /// <summary>Environment variables to forward</summary>
     IDictionary<string, string> EnvVars { get; }
   }
 
@@ -48,18 +43,16 @@ namespace Mutuo.Etl.Pipe {
       Scope = ctx.Scope;
     }
 
-    public ILogger           Log            { get; set; }
-    public ISimpleFileStore  Store          { get; set; }
-    public PipeAppCfg        Cfg            { get; set; }
-    public PipeRunId         Id             { get; set; }
-    public Assembly[]        PipeAssemblies { get; set; } = { };
-    public IComponentContext Scope          { get; set; }
-    public IDictionary<string, string> EnvVars { get; set; } = new Dictionary<string, string>();
+    public ILogger                     Log            { get; set; }
+    public ISimpleFileStore            Store          { get; set; }
+    public PipeAppCfg                  Cfg            { get; set; }
+    public PipeRunId                   Id             { get; set; }
+    public Assembly[]                  PipeAssemblies { get; set; } = { };
+    public IComponentContext           Scope          { get; set; }
+    public IDictionary<string, string> EnvVars        { get; set; } = new Dictionary<string, string>();
   }
 
-  /// <summary>
-  ///   A unique string for a pipe run. Human readable and easily passable though commands.
-  /// </summary>
+  /// <summary>A unique string for a pipe run. Human readable and easily passable though commands.</summary>
   public class PipeRunId {
     public PipeRunId(string name, string groupId, int num) {
       Name = name;
@@ -71,9 +64,7 @@ namespace Mutuo.Etl.Pipe {
 
     public string Name { get; set; }
 
-    /// <summary>
-    ///   A unique string for a batch of pipe run's that are part of the same operation
-    /// </summary>
+    /// <summary>A unique string for a batch of pipe run's that are part of the same operation</summary>
     public string GroupId { get; set; }
     public int Num { get;        set; }
 
@@ -122,14 +113,14 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class ContainerCfg {
-    public string     Registry                    { get; set; }
-    public string     Name                        { get; set; }
-    public string     ImageName                   { get; set; }
-    public string     Tag                         { get; set; }
-    public int        Cores                       { get; set; }
-    public double     Mem                         { get; set; }
-    public NameSecret RegistryCreds               { get; set; }
-    public string     Region                      { get; set; } = Microsoft.Azure.Management.ResourceManager.Fluent.Core.Region.USWest2.Name;
+    public string     Registry      { get; set; }
+    public string     Name          { get; set; }
+    public string     ImageName     { get; set; }
+    public string     Tag           { get; set; }
+    public int        Cores         { get; set; }
+    public double     Mem           { get; set; }
+    public NameSecret RegistryCreds { get; set; }
+    public string     Region        { get; set; } = Microsoft.Azure.Management.ResourceManager.Fluent.Core.Region.USWest2.Name;
   }
 
   public class PipeAppStorageCfg {
@@ -150,10 +141,8 @@ namespace Mutuo.Etl.Pipe {
         EnvVars = new Dictionary<string, string>(environmentVars ?? new List<KeyValuePair<string, string>>())
       };
 
-    /// <summary>
-    ///   Runs a pipeline to process a list of work in batches on multiple containers.
-    ///   The transform is used to provide strong typing, but may not actually be run locally.
-    /// </summary>
+    /// <summary>Runs a pipeline to process a list of work in batches on multiple containers. The transform is used to provide
+    ///   strong typing, but may not actually be run locally.</summary>
     public static async Task<IReadOnlyCollection<TOut>> RunPipe<TIn, TOut>(
       this IEnumerable<TIn> items, Func<IEnumerable<TIn>, Task<IEnumerable<TOut>>> transform, IPipeCtx ctx, int minBatch, int parallel, ILogger log) {
       var isPipe = transform.Method.GetCustomAttribute<PipeAttribute>() != null;
@@ -177,7 +166,7 @@ namespace Mutuo.Etl.Pipe {
       };
 
       await containerRunner.RunBatch(ctx, batches.Select(b => b.Id).ToArray(), log);
-      
+
       var outState = await batches
         .BlockTransform(async b => await GetOutState<TOut>(ctx, b.Id));
 
@@ -186,9 +175,7 @@ namespace Mutuo.Etl.Pipe {
 
     static IEnumerable<Assembly> PipeAssemblies(this IPipeCtx ctx) => Assembly.GetExecutingAssembly().AsEnumerable().Concat(ctx.PipeAssemblies);
 
-    /// <summary>
-    ///   Executes a pipe in this process
-    /// </summary>
+    /// <summary>Executes a pipe in this process</summary>
     public static async Task<ExitCode> RunPipe(this IPipeCtx ctx) {
       var pipeMethods = ctx.PipeAssemblies().SelectMany(a => a.GetLoadableTypes())
         .SelectMany(t => t.GetRuntimeMethods().Where(m => m.GetCustomAttribute<PipeAttribute>() != null).Select(m => (Type: t, Method: m)))
@@ -278,31 +265,23 @@ namespace Mutuo.Etl.Pipe {
     Error   = 10
   }
 
-  /// <summary>
-  ///   The application entrypoint for inner pipe dependencies and parallel tasks. Add this to your CLI as a verb
-  ///   Not intended to be called by user. Seperately provide your own high level entrypoints with explicit parameters and
-  ///   help.
-  /// </summary>
+  /// <summary>The application entrypoint for inner pipe dependencies and parallel tasks. Add this to your CLI as a verb Not
+  ///   intended to be called by user. Seperately provide your own high level entrypoints with explicit parameters and help.</summary>
   [Verb("pipe")]
   public class PipeArgs {
     [Option('p', HelpText = "Name of the pipe to run")]
     public string Pipe { get; set; }
-    
+
     [Option('r', HelpText = "The run id in the format Pipe/Group/Num. No need to supply this if you are running this standalone.")]
     public string RunId { get; set; }
   }
 
-  /// <summary>
-  ///   Decorate any types that contain pipe functions.
-  ///   The parameters will be populated from either the InState deserialized form blob storage, or from command line
-  ///   parameters, or from ILifetimeScope
-  /// </summary>
+  /// <summary>Decorate any types that contain pipe functions. The parameters will be populated from either the InState
+  ///   deserialized form blob storage, or from command line parameters, or from ILifetimeScope</summary>
   [AttributeUsage(AttributeTargets.Method)]
   public class PipeAttribute : Attribute { }
 
-  /// <summary>
-  ///   Decorate a parameter that will come from environent variables in for format PipeName:ArgName
-  /// </summary>
+  /// <summary>Decorate a parameter that will come from environent variables in for format PipeName:ArgName</summary>
   [AttributeUsage(AttributeTargets.Parameter)]
   public class PipeArgAttribute : Attribute { }
 }

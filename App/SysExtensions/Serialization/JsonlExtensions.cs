@@ -2,7 +2,6 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using Newtonsoft.Json;
 
 namespace SysExtensions.Serialization {
@@ -34,7 +33,7 @@ namespace SysExtensions.Serialization {
       using var tr = new StreamReader(zr);
       return tr.LoadJsonlGz<T>().ToList();
     }
-    
+
     public static Stream ToJsonlGzStream<T>(this IEnumerable<T> items) {
       var memStream = new MemoryStream();
       using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true)) {

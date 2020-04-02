@@ -153,16 +153,12 @@ namespace SysExtensions.Net {
       //return JsonSerializer.Create(settings).Deserialize<T>(reader);
     }
 
-    /// <summary>
-    ///   Reads the content as a string (and unzip if required)
-    /// </summary>
+    /// <summary>Reads the content as a string (and unzip if required)</summary>
     public static async Task<string> ContentAsString(this HttpResponseMessage response) {
       using (var stream = await response.ContentAsStream()) return stream.ReadToEnd();
     }
 
-    /// <summary>
-    ///   Reads the content as a text stream (and unzip if required)
-    /// </summary>
+    /// <summary>Reads the content as a text stream (and unzip if required)</summary>
     public static async Task<StreamReader> ContentAsStream(this HttpResponseMessage response) {
       var stream = await response.Content.ReadAsStreamAsync();
       if (response.Content.Headers.ContentEncoding.Contains("gzip"))
@@ -170,9 +166,7 @@ namespace SysExtensions.Net {
       return new StreamReader(stream);
     }
 
-    /// <summary>
-    ///   Reads the content as Json (and unzip if required)
-    /// </summary>
+    /// <summary>Reads the content as Json (and unzip if required)</summary>
     public static async Task<JsonReader> ContentAsJsonReader(this HttpResponseMessage response) =>
       new JsonTextReader(await response.ContentAsStream()) {CloseInput = true};
 

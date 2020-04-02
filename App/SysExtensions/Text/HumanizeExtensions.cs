@@ -26,9 +26,9 @@ namespace SysExtensions.Text {
   }
 
   public class Speed {
-    public string Unit { get; set; }
+    public string   Unit     { get; set; }
     public TimeSpan Duration { get; set; }
-    public double Amount { get; set; }
+    public double   Amount   { get; set; }
 
     public double AmountPerSecond => Amount / Duration.TotalSeconds;
     public double AmountPerMinute => Amount / Duration.TotalMinutes;

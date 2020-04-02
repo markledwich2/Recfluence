@@ -4,19 +4,18 @@ using System.Threading.Tasks;
 using CommandLine;
 using Medallion.Shell;
 using Mutuo.Etl.Pipe;
-using Mutuo.Tools;
 using Serilog;
+using SysExtensions.Build;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 
 namespace YtCli {
-
   [Verb("publish-container")]
   public class PublishContainerCmd {
     [Option('p', HelpText = "Publish to registry, otherwise a local build only")]
     public bool PublishToRegistry { get; set; }
-    
+
     public static async Task<ExitCode> PublishContainer(CmdCtx<PublishContainerCmd> ctx) {
       //var buildTools = new BuildTools(ctx.Log);
       //await buildTools.GitVersionUpdate();
@@ -36,7 +35,7 @@ namespace YtCli {
 
       return ExitCode.Success;
     }
-    
+
     static async Task<Command> RunShell(Shell shell, ILogger log, string cmd, params object[] args) {
       log.Information($"Running command: {cmd} {args.Select(a => a.ToString()).Join(" ")}");
       var process = shell.Run(cmd, args);
@@ -49,7 +48,4 @@ namespace YtCli {
       return process;
     }
   }
-  
-  
-  
 }

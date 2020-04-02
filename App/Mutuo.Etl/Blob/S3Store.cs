@@ -64,8 +64,7 @@ namespace Mutuo.Etl.Blob {
           return JsonExtensions.DefaultSerializer.Deserialize<T>(tr);
       }
       using (var tr = new StreamReader(response.ResponseStream, Encoding.UTF8))
-          return JsonExtensions.DefaultSerializer.Deserialize<T>(tr);
-        
+        return JsonExtensions.DefaultSerializer.Deserialize<T>(tr);
     }
 
     public async Task Set<T>(StringPath path, T item, bool zip) {

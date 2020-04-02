@@ -15,8 +15,6 @@ using YtReader;
 using YtReader.YtWebsite;
 
 namespace YtCli {
-
-
   class Program {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
@@ -79,15 +77,15 @@ namespace YtCli {
       }
     }
   }
-  
-    [Verb("update", HelpText = "refresh new data from YouTube and collects it into results")]
+
+  [Verb("update", HelpText = "refresh new data from YouTube and collects it into results")]
   public class UpdateCmd : CommonCmd {
     [Option('c', "channels", HelpText = "optional '|' separated list of channels to process")]
     public string ChannelIds { get; set; }
 
     [Option('t', "type", HelpText = "Control what parts of the update process to run")]
     public UpdateType UpdateType { get; set; }
-    
+
     public static async Task<ExitCode> Update(CmdCtx<UpdateCmd> ctx) {
       if (ctx.Option.ChannelIds.HasValue())
         ctx.Cfg.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
@@ -117,7 +115,7 @@ namespace YtCli {
 
     [Option(Required = false, HelpText = "The path in the form container/dir1/dir2 for b (if different to a)")]
     public string PathB { get; set; }
-    
+
     public static async Task<ExitCode> Sync(CmdCtx<SyncCmd> ctx) {
       await SyncBlobs.Sync(ctx.Option.SasA, ctx.Option.SasB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.DefaultParallel, ctx.Log);
       return ExitCode.Success;
@@ -128,7 +126,7 @@ namespace YtCli {
   public class ChannelInfoOption : CommonCmd {
     [Option('v', Required = true, HelpText = "the ID of a video")]
     public string VideoId { get; set; }
-    
+
     public static async Task<ExitCode> ChannelInfo(CmdCtx<ChannelInfoOption> ctx) {
       var yt = ctx.Cfg.YtClient(ctx.Log);
       var v = await yt.VideoData(ctx.Option.VideoId);
@@ -158,7 +156,7 @@ namespace YtCli {
   public class ResultsCmd : CommonCmd {
     [Option('q', HelpText = "list of query names to run. All if empty")]
     public IEnumerable<string> QueryNames { get; set; }
-    
+
     public static async Task<ExitCode> Results(CmdCtx<ResultsCmd> ctx) {
       var store = ctx.Cfg.DataStore(ctx.Cfg.Storage.ResultsPath);
       var result = new YtResults(ctx.Cfg.Snowflake, ctx.Cfg.Results, store, ctx.Log);

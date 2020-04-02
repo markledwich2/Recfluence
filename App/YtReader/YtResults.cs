@@ -10,7 +10,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using CsvHelper;
 using Dapper;
-using Mutuo.Etl;
 using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
@@ -62,7 +61,7 @@ namespace YtReader {
       using var db = await SnowflakeCfg.OpenConnection();
 
       var now = DateTime.Now;
-      var dateRangeParams = new {from = "2019-11-01", to = $"{now.Year}-{now.Month-1}-1"};
+      var dateRangeParams = new {from = "2019-11-01", to = $"{now.Year}-{now.Month - 1}-1"};
       var queries = new[] {
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams),
@@ -125,9 +124,7 @@ namespace YtReader {
       return path;
     }
 
-    /// <summary>
-    ///   Saves the result for the given query to Storage and a local tmp file
-    /// </summary>
+    /// <summary>Saves the result for the given query to Storage and a local tmp file</summary>
     async Task<FPath> SaveResult(IDbConnection db, FPath tempDir, ResQuery q) {
       var sw = Stopwatch.StartNew();
       var reader = await ResQuery(db, q);

@@ -16,10 +16,10 @@ namespace Mutuo.Etl.Blob {
     Task<bool> Delete(StringPath path);
     Task<Stream> OpenForWrite(StringPath path);
   }
-  
+
   public static class SimpleStoreExtensions {
     public static string WithJsonExtention(this StringPath path, bool zip = true) => path.WithExtension(zip ? ".json.gz" : ".json");
-    
+
     public static async Task<T> GetOrCreate<T>(this ISimpleFileStore store, StringPath path, Func<T> create = null) where T : class, new() {
       var o = await store.Get<T>(path);
       if (o == null) {

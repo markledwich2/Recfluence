@@ -32,11 +32,8 @@ namespace SysExtensions {
     static EnumMemberAttribute EnumMemberAttribute(Enum value, Type t) =>
       (EnumMemberAttribute) t.GetField(value.ToString()).GetCustomAttribute(typeof(EnumMemberAttribute), false);
 
-    /// <summary>
-    ///   Converts the enum value to a string, taking into account the EnumMember attribute.
-    ///   Uses convertible because that is the closes type that can be used to Enum and don't want too many extensions on
-    ///   object
-    /// </summary>
+    /// <summary>Converts the enum value to a string, taking into account the EnumMember attribute. Uses convertible because
+    ///   that is the closes type that can be used to Enum and don't want too many extensions on object</summary>
     public static string EnumString(this Enum value) =>
       value.EnumExplicitName() ?? value.ToString();
 
@@ -45,16 +42,14 @@ namespace SysExtensions {
     public static bool TryToEnum<T>(this string s, out T value) where T : IConvertible {
       var enumValue = ToEnum(s, typeof(T));
       if (enumValue == null)
-        value = default(T);
+        value = default;
       else
         value = (T) (IConvertible) enumValue;
 
       return enumValue != null;
     }
 
-    /// <summary>
-    ///   Converts a string to an enum value. using the EnumMember attribute if it exists
-    /// </summary>
+    /// <summary>Converts a string to an enum value. using the EnumMember attribute if it exists</summary>
     public static T ToEnum<T>(this string s) where T : IConvertible {
       var t = typeof(T);
       var enumValue = (IConvertible) ToEnum(s, t);

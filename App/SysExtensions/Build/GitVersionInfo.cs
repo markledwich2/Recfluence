@@ -5,12 +5,9 @@ using System.Threading.Tasks;
 using Medallion.Shell;
 using Newtonsoft.Json.Linq;
 using Serilog;
-using SysExtensions.Fluent.IO;
-using SysExtensions.IO;
-using SysExtensions.Serialization;
 using SysExtensions.Text;
 
-namespace Mutuo.Tools {
+namespace SysExtensions.Build {
   public class GitVersionInfo {
     public string SemVer          { get; set; }
     public string BranchName      { get; set; }
@@ -23,9 +20,7 @@ namespace Mutuo.Tools {
 
     public const string VersionFileName = "gitVersion.json";
 
-    /// <summary>
-    ///   Use github to work out the current version
-    /// </summary>
+    /// <summary>Use github to work out the current version</summary>
     public static async Task<GitVersionInfo> Discover(ILogger log) {
       var outputLines = new List<string>();
       var process = Command.Run("dotnet", "gitversion");
@@ -40,7 +35,7 @@ namespace Mutuo.Tools {
       }
     }
 
-    public static string Semver(Type type) => 
+    public static string Semver(Type type) =>
       type.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
   }
 }

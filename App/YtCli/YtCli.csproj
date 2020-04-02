@@ -6,6 +6,9 @@
     <PackageOutputPath>./publish</PackageOutputPath> -->
     <AssemblyName>ytnetworks</AssemblyName>
     <TrimUnusedDependencies>true</TrimUnusedDependencies>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <CrossGenDuringPublish>false</CrossGenDuringPublish>
     <LangVersion>8</LangVersion>
     <AssemblyVersion>0.3.0</AssemblyVersion>
     <PackageVersion>0.3.0-pipe.1</PackageVersion>
@@ -20,7 +23,6 @@
     <PackageReference Include="YoutubeExplode" Version="4.7.16" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Mutuo.Tools\Mutuo.Tools.csproj" />
     <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
     <ProjectReference Include="..\YtReader\YtReader.csproj" />
   </ItemGroup>

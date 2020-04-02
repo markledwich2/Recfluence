@@ -4,8 +4,8 @@ using System.Threading.Tasks;
 using Autofac;
 using CommandLine;
 using Mutuo.Etl.Pipe;
-using Mutuo.Tools;
 using Serilog;
+using SysExtensions.Build;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader;
@@ -14,16 +14,16 @@ namespace YtCli {
   public class PipeCmd : PipeArgs {
     [Option('z', "cloudinstance", HelpText = "run this command in a container instance")]
     public bool LaunchContainer { get; set; }
-    
+
     public static async Task<ExitCode> RunPipe(CmdCtx<PipeCmd> ctx) {
       var option = ctx.Option;
       ctx.Log.Information("Starting pipe run {RunId} for {Env} environment", option.RunId ?? option.Pipe);
       var pipeCtx = ctx.Scope.Resolve<Func<IPipeCtx>>()();
-      if(option.RunId.HasValue() && pipeCtx.Id.ToString() != option.RunId)
+      if (option.RunId.HasValue() && pipeCtx.Id.ToString() != option.RunId)
         throw new InvalidOperationException($"The pipe runId {option.RunId} was supplied but a new one was created that doesn't match {pipeCtx.Id}");
       return await pipeCtx.RunPipe();
     }
-    
+
     public static IPipeCtx PipeCtx(object option, RootCfg rootCfg, AppCfg cfg, IComponentContext scope, ILogger log) {
       var semver = GitVersionInfo.Semver(typeof(Program));
 

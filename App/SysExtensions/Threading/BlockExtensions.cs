@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -18,13 +17,10 @@ namespace SysExtensions.Threading {
       await block.Completion;
     }
 
-    /// <summary>
-    ///   Simplified method for async operations that don't need to be chained, and when the result can fit in memory
-    /// </summary>
+    /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
     public static async Task<IReadOnlyCollection<R>> BlockTransform<T, R>(this IEnumerable<T> source,
       Func<T, Task<R>> transform, int parallelism = 1, int? capacity = null,
       Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default) {
-      
       progressPeriod = progressPeriod == default ? 60.Seconds() : progressPeriod;
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
@@ -62,11 +58,11 @@ namespace SysExtensions.Threading {
 
       return result;
     }
-    
+
     static async Task ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block) {
       foreach (var item in source) {
         var res = await block.SendAsync(item);
-        if(!res)
+        if (!res)
           throw new InvalidOperationException("Unable to send item to target block");
       }
       block.Complete();
@@ -74,9 +70,9 @@ namespace SysExtensions.Threading {
   }
 
   public class BulkProgressInfo {
-    public int Completed { get; }
-    public int CompletedTotal { get; }
-    public TimeSpan Elapsed { get; }
+    public int      Completed      { get; }
+    public int      CompletedTotal { get; }
+    public TimeSpan Elapsed        { get; }
 
     public BulkProgressInfo(int completed, int completedTotal, TimeSpan elapsed) {
       Completed = completed;

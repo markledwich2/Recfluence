@@ -10,7 +10,6 @@ using Humanizer;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
@@ -19,11 +18,8 @@ using SysExtensions.Text;
 
 namespace Mutuo.Etl.Blob {
   public class AzureBlobFileStore : ISimpleFileStore {
+    public AzureBlobFileStore(Uri sas, StringPath pathSansContainer = null) : this(pathSansContainer) => Container = new CloudBlobContainer(sas);
 
-    public AzureBlobFileStore(Uri sas, StringPath pathSansContainer = null): this(pathSansContainer) {
-      Container = new CloudBlobContainer(sas);
-    }
-    
     public AzureBlobFileStore(string cs, StringPath path) : this(path) {
       var storage = CloudStorageAccount.Parse(cs);
       var client = new CloudBlobClient(storage.BlobEndpoint, storage.Credentials);
@@ -38,17 +34,15 @@ namespace Mutuo.Etl.Blob {
       BasePath = path ?? StringPath.Emtpy;
     }
 
-    CloudBlobContainer Container     { get; }
-    
-    /// <summary>
-    /// the Working directory of this storage wrapper. The first part of the bath is the container
-    /// </summary>
+    CloudBlobContainer Container { get; }
+
+    /// <summary>the Working directory of this storage wrapper. The first part of the bath is the container</summary>
     public StringPath BasePath { get; }
-    
+
     StringPath BasePathSansContainer => new StringPath(BasePath.Tokens.Skip(1));
 
     //public CloudStorageAccount Storage { get; }
-    HttpClient                 H       { get; }
+    HttpClient H { get; }
 
     public async Task<Stream> Load(StringPath path) {
       try {
@@ -77,7 +71,7 @@ namespace Mutuo.Etl.Blob {
         throw;
       }
       mem.Position = 0;
-      
+
       Stream stream = mem;
       if (zip) {
         await using var zr = new GZipStream(mem, CompressionMode.Decompress);
@@ -89,9 +83,7 @@ namespace Mutuo.Etl.Blob {
 
     public CloudBlockBlob BlobRef(StringPath path) => Container.GetBlockBlobReference(BasePathSansContainer.Add(path));
 
-    /// <summary>
-    /// Serializes item into the object store
-    /// </summary>
+    /// <summary>Serializes item into the object store</summary>
     /// <param name="path">The path to the object (no extensions)</param>
     /// <param name="item"></param>
     /// <param name="zip"></param>
@@ -102,9 +94,7 @@ namespace Mutuo.Etl.Blob {
         await using var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true);
         writer = zipWriter;
       }
-      await using (var tw = new StreamWriter(writer, Encoding.UTF8)) {
-        JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
-      }
+      await using (var tw = new StreamWriter(writer, Encoding.UTF8)) JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
 
       var fullPath = path.WithJsonExtention(zip);
       memStream.Seek(0, SeekOrigin.Begin);
@@ -151,10 +141,8 @@ namespace Mutuo.Etl.Blob {
       } while (token != null);
     }
 
-    /// <summary>
-    ///   autoamtically work set the blob properties based on the extenions.
-    ///   Assumes the format ContentType[.Encoding] (e.g. csv.gz or csv)
-    /// </summary>
+    /// <summary>autoamtically work set the blob properties based on the extenions. Assumes the format ContentType[.Encoding]
+    ///   (e.g. csv.gz or csv)</summary>
     static void AutoPopulateProps(StringPath path, CloudBlockBlob blob) {
       var ext = new Stack<string>(path.Extensions);
 

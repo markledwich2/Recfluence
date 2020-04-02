@@ -27,7 +27,7 @@ namespace YtReader.Yt {
 
     public DateTime Start { get; }
 
-    ILogger Log { get; }
+    ILogger               Log       { get; }
     public YouTubeService YtService { get; }
 
     async Task<T> GetResponse<T>(YouTubeBaseServiceRequest<T> request) {
@@ -141,9 +141,7 @@ namespace YtReader.Yt {
 
     #region Channels
 
-    /// <summary>
-    ///   The most popular in that channel. Video's do not include related data.
-    /// </summary>
+    /// <summary>The most popular in that channel. Video's do not include related data.</summary>
     public async Task<ICollection<ChannelVideoListItem>> VideosInChannel(ChannelData c, DateTime publishedAfter,
       DateTime? publishBefore = null) {
       var s = YtService.Search.List("snippet");
@@ -203,35 +201,35 @@ namespace YtReader.Yt {
     Alive,
     Dead
   }
-  
+
   public class ChannelData {
-    public string Id { get; set; }
-    public string Title { get; set; }
-    public ChannelStatus Status { get; set; }
-    public string Country { get; set; }
-    public string Description { get; set; }
-    public ThumbnailDetails Thumbnails { get; set; }
-    public ChannelStats Stats { get; set; }
+    public string           Id          { get; set; }
+    public string           Title       { get; set; }
+    public ChannelStatus    Status      { get; set; }
+    public string           Country     { get; set; }
+    public string           Description { get; set; }
+    public ThumbnailDetails Thumbnails  { get; set; }
+    public ChannelStats     Stats       { get; set; }
 
     public override string ToString() => Title;
   }
 
   public class ChannelStats {
-    public ulong? ViewCount { get; set; }
-    public ulong? SubCount { get; set; }
-    public DateTime Updated { get; set; }
+    public ulong?   ViewCount { get; set; }
+    public ulong?   SubCount  { get; set; }
+    public DateTime Updated   { get; set; }
   }
 
   public class VideoData : ChannelVideoListItem {
-    public string Description { get; set; }
+    public string Description  { get; set; }
     public string ChannelTitle { get; set; }
-    public string ChannelId { get; set; }
-    public string Language { get; set; }
+    public string ChannelId    { get; set; }
+    public string Language     { get; set; }
 
     public string CategoryId { get; set; }
 
     public ICollection<string> Topics { get; } = new List<string>();
-    public ICollection<string> Tags { get; } = new List<string>();
+    public ICollection<string> Tags   { get; } = new List<string>();
 
     public VideoStats Stats { get; set; } = new VideoStats();
 
@@ -239,14 +237,14 @@ namespace YtReader.Yt {
   }
 
   public class VideoStats {
-    public ulong? Views { get; set; }
-    public ulong? Likes { get; set; }
-    public ulong? Dislikes { get; set; }
-    public DateTime Updated { get; set; }
+    public ulong?   Views    { get; set; }
+    public ulong?   Likes    { get; set; }
+    public ulong?   Dislikes { get; set; }
+    public DateTime Updated  { get; set; }
   }
 
   public class VideoItem {
-    public string VideoId { get; set; }
+    public string VideoId    { get; set; }
     public string VideoTitle { get; set; }
 
     public override string ToString() => VideoTitle;
@@ -254,14 +252,14 @@ namespace YtReader.Yt {
 
   public class RecommendedVideoListItem : VideoItem {
     public string ChannelTitle { get; set; }
-    public string ChannelId { get; set; }
-    public int Rank { get; set; }
+    public string ChannelId    { get; set; }
+    public int    Rank         { get; set; }
 
     public override string ToString() => $"{Rank}. {ChannelTitle}: {VideoTitle}";
   }
 
   public class ChannelVideoListItem : VideoItem {
     public DateTime PublishedAt { get; set; }
-    public DateTime Updated { get; set; }
+    public DateTime Updated     { get; set; }
   }
 }

@@ -60,14 +60,14 @@ namespace YtReader {
         .AddEnvironmentVariables()
         .AddJsonFile("local.rootcfg.json", true)
         .Build().Get<RootCfg>();
-      
-      if(cfgRoot.AppCfgSas == null)
+
+      if (cfgRoot.AppCfgSas == null)
         throw new InvalidOperationException("AppCfgSas not provided in local.appcfg.json or environment variables");
 
       var envLower = cfgRoot.Env.ToLowerInvariant();
       var blob = new AzureBlobFileStore(cfgRoot.AppCfgSas);
       var secrets = await blob.Load($"{envLower}.appcfg.json");
-      
+
       var cfg = new ConfigurationBuilder()
         .AddJsonFile("default.appcfg.json")
         .AddJsonFile($"{Env}.appcfg.json", true)
@@ -106,12 +106,9 @@ namespace YtReader {
   }
 
   public class RootCfg {
-    
-    /// <summary>
-    /// The azure blobl SAS Uri to the blob container hosting secrets.rootCfg.json
-    /// </summary>
+    /// <summary>The azure blobl SAS Uri to the blob container hosting secrets.rootCfg.json</summary>
     public Uri AppCfgSas { get; set; }
-    
+
     // connection string to the configuration directory
     public string AzureStorageCs { get; set; }
 
@@ -166,27 +163,18 @@ namespace YtReader {
     public DateTime  From { get; set; }
     public DateTime? To   { get; set; }
 
-    /// <summary>
-    ///   How old a video before we stop collecting video stats.
-    ///   This is cheap, due to video stats being returned in a video's playlist
-    /// </summary>
+    /// <summary>How old a video before we stop collecting video stats. This is cheap, due to video stats being returned in a
+    ///   video's playlist</summary>
     public TimeSpan RefreshVideosWithin { get; set; } = 120.Days();
 
-    /// <summary>
-    ///   How old a video before we stop collecting recs
-    ///   this is fairly expensive so we keep it within
-    /// </summary>
+    /// <summary>How old a video before we stop collecting recs this is fairly expensive so we keep it within</summary>
     public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
 
-    /// <summary>
-    ///   We want to keep monitoring YouTube influence even if no new videos have been created (min).
-    ///   Get at least this number of recs per channel
-    /// </summary>
+    /// <summary>We want to keep monitoring YouTube influence even if no new videos have been created (min). Get at least this
+    ///   number of recs per channel</summary>
     public int RefreshRecsMin { get; set; } = 2;
 
-    /// <summary>
-    ///   How frequently to refresh channel & video stats
-    /// </summary>
+    /// <summary>How frequently to refresh channel & video stats</summary>
     public TimeSpan RefreshAllAfter { get; set; } = 23.Hours();
   }
 

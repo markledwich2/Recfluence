@@ -18,32 +18,36 @@ COPY App/YtNetworks.sln YtNetworks.sln
 COPY App/YtCli/YtCli.csproj YtCli/YtCli.csproj
 COPY App/YtReader/YtReader.csproj YtReader/YtReader.csproj
 COPY App/SysExtensions/SysExtensions.csproj SysExtensions/SysExtensions.csproj
-COPY App/Tests/Tests.csproj Tests/Tests.csproj
 COPY App/Mutuo.Etl/Mutuo.Etl.csproj Mutuo.Etl/Mutuo.Etl.csproj
 COPY App/Mutuo.Tools/Mutuo.Tools.csproj Mutuo.Tools/Mutuo.Tools.csproj
-COPY App/YtFunctions/YtFunctions.csproj YtFunctions/YtFunctions.csproj
-RUN dotnet restore
+RUN dotnet restore SysExtensions
+RUN dotnet restore Mutuo.Tools
+RUN dotnet restore Mutuo.Etl
+RUN dotnet restore YtCli
+RUN dotnet restore YtReader
 
-# copy everything in App and build
+# copy git to be able to use GitVersion
 WORKDIR /YtNetworks
 COPY .git .git
-COPY App App
-RUN ls -la
-
 
 WORKDIR /YtNetworks/App
-RUN ls -la
+COPY App/YtCli YtCli/
+COPY App/YtReader YtReader/
+COPY App/SysExtensions SysExtensions/
+COPY App/Mutuo.Etl Mutuo.Etl/
+COPY App/Mutuo.Tools Mutuo.Tools/
 
 WORKDIR /YtNetworks/App/Mutuo.Tools
-RUN dotnet run -- gitversion
+RUN dotnet run gitversion 
 
 # publish YtCli
 WORKDIR /YtNetworks/App/YtCli
-RUN dotnet publish -c Release -o publish
+RUN dotnet publish -r linux-musl-x64 --self-contained -c Release -o publish /p:PublishSingleFile=true
 
 # build runtime image
-FROM mcr.microsoft.com/dotnet/core/runtime:3.1-alpine
+FROM alpine:3.11
 WORKDIR /app
 COPY --from=build-env YtNetworks/App/YtCli/publish  ./
 
-ENTRYPOINT ["dotnet", "ytnetworks.dll"]
+# it is more flexible to work without the entrypoint. And azure doesn't allow args when entrypoint is used.
+#ENTRYPOINT ["dotnet", "ytnetworks.dll"]

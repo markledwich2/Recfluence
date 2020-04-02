@@ -5,10 +5,8 @@ using Newtonsoft.Json;
 using SysExtensions.Reflection;
 
 namespace SysExtensions.Serialization {
-    /// <summary>
-    ///   An alternative string enum converter that ignores explicitly named enums and allows different types of casing
-    /// </summary>
-    public class StringEnumConverterExtended : JsonConverter {
+  /// <summary>An alternative string enum converter that ignores explicitly named enums and allows different types of casing</summary>
+  public class StringEnumConverterExtended : JsonConverter {
     public EnumCasing? Casing { get; set; }
 
     public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {

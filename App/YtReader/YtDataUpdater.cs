@@ -34,7 +34,7 @@ namespace YtReader {
     readonly Func<Task<DbConnection>> GetConnection;
     YtStore                           Store   { get; }
     AppCfg                            Cfg     { get; }
-    Func<IPipeCtx>              PipeCtx { get; }
+    Func<IPipeCtx>                    PipeCtx { get; }
     ILogger                           Log     { get; }
     readonly YtScraper                Scraper;
     readonly YtClient                 Api;
@@ -207,9 +207,7 @@ namespace YtReader {
         else yield break; // break on the first video older than updateFrom.
     }
 
-    /// <summary>
-    ///   Saves captions for all new videos from the vids list
-    /// </summary>
+    /// <summary>Saves captions for all new videos from the vids list</summary>
     async Task SaveNewCaptions(ChannelStored2 channel, IEnumerable<VideoItem> vids, ILogger log) {
       var store = Store.CaptionStore(channel.ChannelId);
       var lastUpload = (await store.LatestFileMetadata())?.Ts.ParseFileSafeTimestamp(); // last video upload we have captions for
@@ -248,9 +246,7 @@ namespace YtReader {
       log.Information("{Channel} - Saved {Captions} captions", channel.ChannelTitle, captionsToStore.Count);
     }
 
-    /// <summary>
-    ///   Saves recs for all of the given vids
-    /// </summary>
+    /// <summary>Saves recs for all of the given vids</summary>
     async Task SaveRecsAndExtra(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, DbConnection conn, UpdateType updateType, ILogger log) {
       var recStore = Store.RecStore(c.ChannelId);
       var videoExStore = Store.VideoExtraStore(c.ChannelId);
@@ -354,9 +350,7 @@ namespace YtReader {
       return toUpdate.Select(v => (v.Id, v.Title)).ToList();
     }
 
-    /// <summary>
-    ///   A once off command to populate existing uploaded videos evenly with checks for ads.
-    /// </summary>
+    /// <summary>A once off command to populate existing uploaded videos evenly with checks for ads.</summary>
     [Pipe]
     public async Task BackfillVideoExtra([PipeArg] string videoIds = null, [PipeArg] int? limit = null) {
       if (videoIds == null) {
@@ -386,7 +380,7 @@ where num < 50
         var chId = "123TestChannel";
         var toUpdate = new ProcessVideoExtraIn {
           ChannelId = chId, Videos = videoIds.Split("|")
-            .Select(v => new ChannelVideoItem { ChannelId = chId, ChannelTitle = chId, VideoId = v}).ToArray()
+            .Select(v => new ChannelVideoItem {ChannelId = chId, ChannelTitle = chId, VideoId = v}).ToArray()
         }.AsEnumerable().ToArray();
 
         var res = await toUpdate.RunPipe(ProcessVideoExtra, PipeCtx(), 200, 2, Log);

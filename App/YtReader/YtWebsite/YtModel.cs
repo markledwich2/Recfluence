@@ -5,57 +5,37 @@ using System.Collections.Generic;
 
 namespace YtReader.YtWebsite {
   public class VideoItem {
-    /// <summary>
-    ///   ID of this video.
-    /// </summary>
+    /// <summary>ID of this video.</summary>
     public string Id { get; }
 
-    /// <summary>
-    ///   Author of this video.
-    /// </summary>
+    /// <summary>Author of this video.</summary>
     public string Author { get; }
 
-    /// <summary>
-    ///   Upload date of this video.
-    /// </summary>
+    /// <summary>Upload date of this video.</summary>
     public DateTimeOffset UploadDate { get; }
 
-    /// <summary>
-    ///   Title of this video.
-    /// </summary>
+    /// <summary>Title of this video.</summary>
     public string Title { get; }
 
-    /// <summary>
-    ///   Description of this video.
-    /// </summary>
+    /// <summary>Description of this video.</summary>
     public string Description { get; }
 
-    /// <summary>
-    ///   Thumbnails of this video.
-    /// </summary>
+    /// <summary>Thumbnails of this video.</summary>
     public ThumbnailSet Thumbnails { get; }
 
-    /// <summary>
-    ///   Duration of this video.
-    /// </summary>
+    /// <summary>Duration of this video.</summary>
     public TimeSpan Duration { get; }
 
-    /// <summary>
-    ///   Search keywords of this video.
-    /// </summary>
+    /// <summary>Search keywords of this video.</summary>
     public IReadOnlyList<string> Keywords { get; }
 
-    /// <summary>
-    ///   Statistics of this video.
-    /// </summary>
+    /// <summary>Statistics of this video.</summary>
     public Statistics Statistics { get; }
-    
-    public string ChannelId { get; }
+
+    public string ChannelId    { get; }
     public string ChannelTitle { get; }
 
-    /// <summary>
-    ///   Initializes an instance of <see cref="Video" />.
-    /// </summary>
+    /// <summary>Initializes an instance of <see cref="Video" />.</summary>
     public VideoItem(string id, string author, DateTimeOffset uploadDate, string title, string description,
       ThumbnailSet thumbnails, TimeSpan duration, IReadOnlyList<string> keywords, Statistics statistics, string channelId, string channelTitle) {
       Id = id;
@@ -75,28 +55,18 @@ namespace YtReader.YtWebsite {
     public override string ToString() => Title;
   }
 
-  /// <summary>
-  ///   User activity statistics.
-  /// </summary>
+  /// <summary>User activity statistics.</summary>
   public class Statistics {
-    /// <summary>
-    ///   View count.
-    /// </summary>
+    /// <summary>View count.</summary>
     public long ViewCount { get; }
 
-    /// <summary>
-    ///   Like count.
-    /// </summary>
+    /// <summary>Like count.</summary>
     public long LikeCount { get; }
 
-    /// <summary>
-    ///   Dislike count.
-    /// </summary>
+    /// <summary>Dislike count.</summary>
     public long DislikeCount { get; }
 
-    /// <summary>
-    ///   Average user rating in stars (1 star to 5 stars).
-    /// </summary>
+    /// <summary>Average user rating in stars (1 star to 5 stars).</summary>
     public double AverageRating {
       get {
         if (LikeCount + DislikeCount == 0) return 0;
@@ -104,9 +74,7 @@ namespace YtReader.YtWebsite {
       }
     }
 
-    /// <summary>
-    ///   Initializes an instance of <see cref="Statistics" />.
-    /// </summary>
+    /// <summary>Initializes an instance of <see cref="Statistics" />.</summary>
     public Statistics(long viewCount, long likeCount, long dislikeCount) {
       ViewCount = viewCount;
       LikeCount = likeCount;
@@ -114,84 +82,52 @@ namespace YtReader.YtWebsite {
     }
   }
 
-  /// <summary>
-  ///   Set of thumbnails for a video.
-  /// </summary>
+  /// <summary>Set of thumbnails for a video.</summary>
   public class ThumbnailSet {
     readonly string _videoId;
 
-    /// <summary>
-    ///   Low resolution thumbnail URL.
-    /// </summary>
+    /// <summary>Low resolution thumbnail URL.</summary>
     public string LowResUrl => $"https://img.youtube.com/vi/{_videoId}/default.jpg";
 
-    /// <summary>
-    ///   Medium resolution thumbnail URL.
-    /// </summary>
+    /// <summary>Medium resolution thumbnail URL.</summary>
     public string MediumResUrl => $"https://img.youtube.com/vi/{_videoId}/mqdefault.jpg";
 
-    /// <summary>
-    ///   High resolution thumbnail URL.
-    /// </summary>
+    /// <summary>High resolution thumbnail URL.</summary>
     public string HighResUrl => $"https://img.youtube.com/vi/{_videoId}/hqdefault.jpg";
 
-    /// <summary>
-    ///   Standard resolution thumbnail URL.
-    ///   Not always available.
-    /// </summary>
+    /// <summary>Standard resolution thumbnail URL. Not always available.</summary>
     public string StandardResUrl => $"https://img.youtube.com/vi/{_videoId}/sddefault.jpg";
 
-    /// <summary>
-    ///   Max resolution thumbnail URL.
-    ///   Not always available.
-    /// </summary>
+    /// <summary>Max resolution thumbnail URL. Not always available.</summary>
     public string MaxResUrl => $"https://img.youtube.com/vi/{_videoId}/maxresdefault.jpg";
 
-    /// <summary>
-    ///   Initializes an instance of <see cref="ThumbnailSet" />.
-    /// </summary>
+    /// <summary>Initializes an instance of <see cref="ThumbnailSet" />.</summary>
     public ThumbnailSet(string videoId) => _videoId = videoId;
   }
 
   public partial class Playlist {
-    /// <summary>
-    ///   ID of this playlist.
-    /// </summary>
+    /// <summary>ID of this playlist.</summary>
     public string Id { get; }
 
-    /// <summary>
-    ///   Type of this playlist.
-    /// </summary>
+    /// <summary>Type of this playlist.</summary>
     public PlaylistType Type { get; }
 
-    /// <summary>
-    ///   Author of this playlist.
-    /// </summary>
+    /// <summary>Author of this playlist.</summary>
     public string Author { get; }
 
-    /// <summary>
-    ///   Title of this playlist.
-    /// </summary>
+    /// <summary>Title of this playlist.</summary>
     public string Title { get; }
 
-    /// <summary>
-    ///   Description of this playlist.
-    /// </summary>
+    /// <summary>Description of this playlist.</summary>
     public string Description { get; }
 
-    /// <summary>
-    ///   Statistics of this playlist.
-    /// </summary>
+    /// <summary>Statistics of this playlist.</summary>
     public Statistics Statistics { get; }
 
-    /// <summary>
-    ///   Collection of videos contained in this playlist.
-    /// </summary>
+    /// <summary>Collection of videos contained in this playlist.</summary>
     public IAsyncEnumerable<IReadOnlyCollection<VideoItem>> Videos { get; }
 
-    /// <summary>
-    ///   Initializes an instance of <see cref="Playlist" />.
-    /// </summary>
+    /// <summary>Initializes an instance of <see cref="Playlist" />.</summary>
     public Playlist(string id, string author, string title, string description, Statistics statistics,
       IAsyncEnumerable<IReadOnlyCollection<VideoItem>> videos) {
       Id = id;
@@ -208,9 +144,7 @@ namespace YtReader.YtWebsite {
   }
 
   public partial class Playlist {
-    /// <summary>
-    ///   Get playlist type by ID.
-    /// </summary>
+    /// <summary>Get playlist type by ID.</summary>
     protected static PlaylistType GetPlaylistType(string id) {
       if (id.StartsWith("PL", StringComparison.Ordinal))
         return PlaylistType.Normal;
@@ -242,80 +176,50 @@ namespace YtReader.YtWebsite {
       throw new ArgumentOutOfRangeException(nameof(id), $"Unexpected playlist ID [{id}].");
     }
   }
-  
-  /// <summary>
-  /// Playlist type.
-  /// </summary>
-  public enum PlaylistType
-  {
-    /// <summary>
-    /// Regular playlist created by a user.
-    /// </summary>
+
+  /// <summary>Playlist type.</summary>
+  public enum PlaylistType {
+    /// <summary>Regular playlist created by a user.</summary>
     Normal,
 
-    /// <summary>
-    /// Mix playlist generated to group similar videos.
-    /// </summary>
+    /// <summary>Mix playlist generated to group similar videos.</summary>
     VideoMix,
 
-    /// <summary>
-    /// Mix playlist generated to group similar videos uploaded by the same channel.
-    /// </summary>
+    /// <summary>Mix playlist generated to group similar videos uploaded by the same channel.</summary>
     ChannelVideoMix,
 
-    /// <summary>
-    /// Playlist generated from channel uploads.
-    /// </summary>
+    /// <summary>Playlist generated from channel uploads.</summary>
     ChannelVideos,
 
-    /// <summary>
-    /// Playlist generated from popular channel uploads.
-    /// </summary>
+    /// <summary>Playlist generated from popular channel uploads.</summary>
     PopularChannelVideos,
 
-    /// <summary>
-    /// Playlist generated from automated music videos.
-    /// </summary>
+    /// <summary>Playlist generated from automated music videos.</summary>
     MusicAlbum,
 
-    /// <summary>
-    /// System playlist for videos liked by a user.
-    /// </summary>
+    /// <summary>System playlist for videos liked by a user.</summary>
     LikedVideos,
 
-    /// <summary>
-    /// System playlist for videos favorited by a user.
-    /// </summary>
+    /// <summary>System playlist for videos favorited by a user.</summary>
     Favorites,
 
-    /// <summary>
-    /// System playlist for videos user added to watch later.
-    /// </summary>
+    /// <summary>System playlist for videos user added to watch later.</summary>
     WatchLater
   }
 
-  /// <summary>
-  ///   Text that gets displayed at specific time during video playback, as part of a <see cref="ClosedCaptionTrack" />.
-  /// </summary>
+  /// <summary>Text that gets displayed at specific time during video playback, as part of a
+  ///   <see cref="ClosedCaptionTrack" />.</summary>
   public class ClosedCaption {
-    /// <summary>
-    ///   Text displayed by this caption.
-    /// </summary>
+    /// <summary>Text displayed by this caption.</summary>
     public string Text { get; }
 
-    /// <summary>
-    ///   Time at which this caption starts being displayed.
-    /// </summary>
+    /// <summary>Time at which this caption starts being displayed.</summary>
     public TimeSpan? Offset { get; }
 
-    /// <summary>
-    ///   Duration this caption is displayed.
-    /// </summary>
+    /// <summary>Duration this caption is displayed.</summary>
     public TimeSpan? Duration { get; }
 
-    /// <summary>
-    ///   Initializes an instance of <see cref="ClosedCaption" />.
-    /// </summary>
+    /// <summary>Initializes an instance of <see cref="ClosedCaption" />.</summary>
     public ClosedCaption(string text, TimeSpan? offset, TimeSpan? duration) {
       Text = text;
       Offset = offset;
@@ -325,51 +229,33 @@ namespace YtReader.YtWebsite {
     public override string ToString() => Text;
   }
 
-  /// <summary>
-  ///   Set of captions that get displayed during video playback.
-  /// </summary>
+  /// <summary>Set of captions that get displayed during video playback.</summary>
   public class ClosedCaptionTrack {
-    /// <summary>
-    ///   Metadata associated with this track.
-    /// </summary>
+    /// <summary>Metadata associated with this track.</summary>
     public ClosedCaptionTrackInfo Info { get; }
 
-    /// <summary>
-    ///   Collection of closed captions that belong to this track.
-    /// </summary>
+    /// <summary>Collection of closed captions that belong to this track.</summary>
     public IReadOnlyList<ClosedCaption> Captions { get; }
 
-    /// <summary>
-    ///   Initializes an instance of <see cref="ClosedCaptionTrack" />.
-    /// </summary>
+    /// <summary>Initializes an instance of <see cref="ClosedCaptionTrack" />.</summary>
     public ClosedCaptionTrack(ClosedCaptionTrackInfo info, IReadOnlyList<ClosedCaption> captions) {
       Info = info;
       Captions = captions;
     }
   }
 
-  /// <summary>
-  ///   Metadata associated with a certain <see cref="ClosedCaptionTrack" />.
-  /// </summary>
+  /// <summary>Metadata associated with a certain <see cref="ClosedCaptionTrack" />.</summary>
   public class ClosedCaptionTrackInfo {
-    /// <summary>
-    ///   Manifest URL of the associated track.
-    /// </summary>
+    /// <summary>Manifest URL of the associated track.</summary>
     public string Url { get; }
 
-    /// <summary>
-    ///   Language of the associated track.
-    /// </summary>
+    /// <summary>Language of the associated track.</summary>
     public Language Language { get; }
 
-    /// <summary>
-    ///   Whether the associated track was automatically generated.
-    /// </summary>
+    /// <summary>Whether the associated track was automatically generated.</summary>
     public bool IsAutoGenerated { get; }
 
-    /// <summary>
-    ///   Initializes an instance of <see cref="ClosedCaptionTrackInfo" />.
-    /// </summary>
+    /// <summary>Initializes an instance of <see cref="ClosedCaptionTrackInfo" />.</summary>
     public ClosedCaptionTrackInfo(string url, Language language, bool isAutoGenerated) {
       Url = url;
       Language = language;
@@ -380,23 +266,15 @@ namespace YtReader.YtWebsite {
     public override string ToString() => $"{Language}";
   }
 
-  /// <summary>
-  ///   Language information.
-  /// </summary>
+  /// <summary>Language information.</summary>
   public class Language {
-    /// <summary>
-    ///   ISO 639-1 code of this language.
-    /// </summary>
+    /// <summary>ISO 639-1 code of this language.</summary>
     public string Code { get; }
 
-    /// <summary>
-    ///   Full English name of this language.
-    /// </summary>
+    /// <summary>Full English name of this language.</summary>
     public string Name { get; }
 
-    /// <summary>
-    ///   Initializes an instance of <see cref="Language" />.
-    /// </summary>
+    /// <summary>Initializes an instance of <see cref="Language" />.</summary>
     public Language(string code, string name) {
       Code = code;
       Name = name;
