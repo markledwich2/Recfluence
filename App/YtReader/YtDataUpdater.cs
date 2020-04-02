@@ -34,12 +34,12 @@ namespace YtReader {
     readonly Func<Task<DbConnection>> GetConnection;
     YtStore                           Store   { get; }
     AppCfg                            Cfg     { get; }
-    Func<IPipeCtxScoped>              PipeCtx { get; }
+    Func<IPipeCtx>              PipeCtx { get; }
     ILogger                           Log     { get; }
     readonly YtScraper                Scraper;
     readonly YtClient                 Api;
 
-    public YtDataUpdater(YtStore store, AppCfg cfg, Func<Task<DbConnection>> getConnection, Func<IPipeCtxScoped> pipeCtx, ILogger log) {
+    public YtDataUpdater(YtStore store, AppCfg cfg, Func<Task<DbConnection>> getConnection, Func<IPipeCtx> pipeCtx, ILogger log) {
       GetConnection = getConnection;
       Store = store;
       Cfg = cfg;

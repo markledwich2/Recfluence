@@ -7,8 +7,8 @@ using SysExtensions.Text;
 
 namespace Mutuo.Etl.Blob {
   public interface ISimpleFileStore {
-    Task<T> Get<T>(StringPath path) where T : class;
-    Task Set<T>(StringPath path, T item);
+    Task<T> Get<T>(StringPath path, bool zip = true) where T : class;
+    Task Set<T>(StringPath path, T item, bool zip = true);
     Task Save(StringPath path, FPath file);
     Task Save(StringPath path, Stream contents);
     Task<Stream> Load(StringPath path);
@@ -18,6 +18,8 @@ namespace Mutuo.Etl.Blob {
   }
   
   public static class SimpleStoreExtensions {
+    public static string WithJsonExtention(this StringPath path, bool zip = true) => path.WithExtension(zip ? ".json.gz" : ".json");
+    
     public static async Task<T> GetOrCreate<T>(this ISimpleFileStore store, StringPath path, Func<T> create = null) where T : class, new() {
       var o = await store.Get<T>(path);
       if (o == null) {

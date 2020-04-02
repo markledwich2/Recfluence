@@ -55,15 +55,26 @@ namespace YtReader {
       Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
       ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
 
-    public static AppCfg LoadCfg2() {
-      var builder = new ConfigurationBuilder()
+    public static async Task<(AppCfg App, RootCfg Root)> LoadCfg2() {
+      var cfgRoot = new ConfigurationBuilder()
+        .AddEnvironmentVariables()
+        .AddJsonFile("local.rootcfg.json", true)
+        .Build().Get<RootCfg>();
+      
+      if(cfgRoot.AppCfgSas == null)
+        throw new InvalidOperationException("AppCfgSas not provided in local.appcfg.json or environment variables");
+
+      var envLower = cfgRoot.Env.ToLowerInvariant();
+      var blob = new AzureBlobFileStore(cfgRoot.AppCfgSas);
+      var secrets = await blob.Load($"{envLower}.appcfg.json");
+      
+      var cfg = new ConfigurationBuilder()
         .AddJsonFile("default.appcfg.json")
         .AddJsonFile($"{Env}.appcfg.json", true)
+        .AddJsonStream(secrets)
         .AddJsonFile("local.appcfg.json", true)
-        .AddEnvironmentVariables();
-
-      var cfgRoot = builder.Build();
-      return cfgRoot.Get<AppCfg>();
+        .AddEnvironmentVariables().Build();
+      return (cfg.Get<AppCfg>(), cfgRoot);
     }
 
     public static async Task<Cfg> LoadCfg(ILogger log = null) {
@@ -95,6 +106,12 @@ namespace YtReader {
   }
 
   public class RootCfg {
+    
+    /// <summary>
+    /// The azure blobl SAS Uri to the blob container hosting secrets.rootCfg.json
+    /// </summary>
+    public Uri AppCfgSas { get; set; }
+    
     // connection string to the configuration directory
     public string AzureStorageCs { get; set; }
 

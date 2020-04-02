@@ -28,11 +28,11 @@ namespace YtFunctions {
         .CreateLogger();
     }
 
-    static (AppCfg Cfg, ILogger Log, TelemetryClient Telem) Init(IMSLogger funcLogger) {
-      var cfg = Setup.LoadCfg2();
-      var telem = new TelemetryClient {InstrumentationKey = cfg.AppInsightsKey};
+    static async Task<(AppCfg Cfg, ILogger Log, TelemetryClient Telem)> Init(IMSLogger funcLogger) {
+      var (app, _) = await Setup.LoadCfg2();
+      var telem = new TelemetryClient {InstrumentationKey = app.AppInsightsKey};
       var log = Logger(telem, funcLogger);
-      return (cfg, log, telem);
+      return (app, log, telem);
     }
 
     [FunctionName("Update_Timer")]
@@ -44,7 +44,7 @@ namespace YtFunctions {
       HttpRequestMessage req, IMSLogger funcLogger) => req.CreateResponse(await YtCli(funcLogger));
 
     static async Task<string> YtCli(IMSLogger funcLogger) {
-      var s = Init(funcLogger);
+      var s = await Init(funcLogger);
       s.Log.Information("Function Update started");
 
 

@@ -14,8 +14,6 @@ namespace Mutuo.Etl.Blob {
   /// </summary>
   /// <typeparam name="T"></typeparam>
   public class KeyedCollectionStore<T> where T : class {
-    const string Extension = ".json.gz";
-
     public KeyedCollectionStore(ISimpleFileStore store, Func<T, string> getId, StringPath path) {
       Store = store;
       GetId = getId;
@@ -23,11 +21,11 @@ namespace Mutuo.Etl.Blob {
     }
 
     ISimpleFileStore Store { get; }
-    Func<T, string> GetId { get; }
-    StringPath Path { get; }
+    Func<T, string>  GetId { get; }
+    StringPath       Path  { get; }
 
-    public async Task<T> Get(string id) => await Store.Get<T>(Path.Add(id).WithExtension(Extension));
-    public async Task Set(T item) => await Store.Set(Path.Add(GetId(item)).WithExtension(Extension), item);
+    public async Task<T> Get(string id) => await Store.Get<T>(Path.Add(id));
+    public async Task Set(T item) => await Store.Set(Path.Add(GetId(item)), item);
   }
 
   /// <summary>
@@ -36,13 +34,13 @@ namespace Mutuo.Etl.Blob {
   /// </summary>
   public class AppendCollectionStore<T> {
     readonly ISimpleFileStore Store;
-    readonly StringPath Path;
-    readonly Func<T, string> GetTs;
-    readonly string Version;
-    
+    readonly StringPath       Path;
+    readonly Func<T, string>  GetTs;
+    readonly string           Version;
+
     readonly ILogger Log;
 
-    public AppendCollectionStore(ISimpleFileStore store, StringPath path, Func<T, string> getTs, ILogger log , string version = "") {
+    public AppendCollectionStore(ISimpleFileStore store, StringPath path, Func<T, string> getTs, ILogger log, string version = "") {
       Store = store;
       Path = path;
       GetTs = getTs;
@@ -87,10 +85,10 @@ namespace Mutuo.Etl.Blob {
   }
 
   public class StoreFileMd {
-    public StringPath Path { get; }
-    public string Ts { get; }
-    public DateTime Modified { get; }
-    public string Version { get; }
+    public StringPath Path     { get; }
+    public string     Ts       { get; }
+    public DateTime   Modified { get; }
+    public string     Version  { get; }
 
     public StoreFileMd(StringPath path, string ts, DateTime modified, string version = "0") {
       Path = path;
@@ -109,7 +107,7 @@ namespace Mutuo.Etl.Blob {
     public static StringPath FilePath(StringPath path, string ts, string version) =>
       path.Add(FileName(ts, version));
 
-    public static string FileName(string ts, string version) => 
+    public static string FileName(string ts, string version) =>
       $"{ts}.{version}.{GuidExtensions.NewShort()}.jsonl.gz";
 
     public static string GetTs(StringPath path) => path.Name.Split(".").FirstOrDefault();

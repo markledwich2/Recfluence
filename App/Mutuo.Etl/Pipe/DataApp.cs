@@ -28,13 +28,15 @@ namespace Mutuo.Etl.Pipe {
     ISimpleFileStore Store          { get; }
     PipeAppCfg       Cfg            { get; }
     Assembly[]       PipeAssemblies { get; }
-  }
-
-  public interface IPipeCtxScoped : IPipeCtx {
     IComponentContext Scope { get; set; }
+    
+    /// <summary>
+    /// Environment variables to forward
+    /// </summary>
+    IDictionary<string, string> EnvVars { get; }
   }
 
-  class PipeCtx : IPipeCtxScoped {
+  class PipeCtx : IPipeCtx {
     public PipeCtx() { }
 
     public PipeCtx(IPipeCtx ctx, PipeRunId id) {
@@ -43,7 +45,7 @@ namespace Mutuo.Etl.Pipe {
       Cfg = ctx.Cfg;
       Id = id;
       PipeAssemblies = ctx.PipeAssemblies;
-      Scope = (ctx as IPipeCtxScoped)?.Scope;
+      Scope = ctx.Scope;
     }
 
     public ILogger           Log            { get; set; }
@@ -52,10 +54,11 @@ namespace Mutuo.Etl.Pipe {
     public PipeRunId         Id             { get; set; }
     public Assembly[]        PipeAssemblies { get; set; } = { };
     public IComponentContext Scope          { get; set; }
+    public IDictionary<string, string> EnvVars { get; set; } = new Dictionary<string, string>();
   }
 
   /// <summary>
-  ///   A unique string for a pipe run. HUman readable and easily passable though commands.
+  ///   A unique string for a pipe run. Human readable and easily passable though commands.
   /// </summary>
   public class PipeRunId {
     public PipeRunId(string name, string groupId, int num) {
@@ -74,11 +77,11 @@ namespace Mutuo.Etl.Pipe {
     public string GroupId { get; set; }
     public int Num { get;        set; }
 
+    public static PipeRunId Create(string name, int num = 0) => new PipeRunId(name, NewGroupId(), num);
+
+    public static string NewGroupId() => $"{DateTime.UtcNow.ToString("yyyy-MM-dd-hh-mm-ss")}-{Guid.NewGuid().ToShortString(4)}";
+
     public override string ToString() => $"{Name}|{GroupId}|{Num}";
-
-    public static PipeRunId Create(string name, int num = 0) => new PipeRunId(name, NewBatchId(), num);
-
-    public static string NewBatchId() => $"{DateTime.UtcNow.FileSafeTimestamp()}_{Guid.NewGuid().ToShortString(4)}";
 
     public static PipeRunId FromString(string path) {
       var split = path.Split("|");
@@ -127,7 +130,6 @@ namespace Mutuo.Etl.Pipe {
     public double     Mem                         { get; set; }
     public NameSecret RegistryCreds               { get; set; }
     public string     Region                      { get; set; } = Microsoft.Azure.Management.ResourceManager.Fluent.Core.Region.USWest2.Name;
-    public string[]   ForwardEnvironmentVariables { get; set; }
   }
 
   public class PipeAppStorageCfg {
@@ -136,15 +138,16 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public static class Pipes {
-    public static IPipeCtxScoped CreatePipeCtx(PipeAppCfg cfg, PipeRunId runId, ILogger log, IComponentContext getScope,
-      IEnumerable<Assembly> pipeAssemblies = null) =>
+    public static IPipeCtx CreatePipeCtx(PipeAppCfg cfg, PipeRunId runId, ILogger log, IComponentContext getScope,
+      IEnumerable<Assembly> pipeAssemblies = null, IEnumerable<KeyValuePair<string, string>> environmentVars = null) =>
       new PipeCtx {
         Cfg = cfg,
         Store = new AzureBlobFileStore(cfg.Store.Cs, cfg.Store.Path),
         Id = runId,
         PipeAssemblies = pipeAssemblies?.ToArray() ?? new Assembly[] { },
         Log = log,
-        Scope = getScope
+        Scope = getScope,
+        EnvVars = new Dictionary<string, string>(environmentVars ?? new List<KeyValuePair<string, string>>())
       };
 
     /// <summary>
@@ -186,7 +189,7 @@ namespace Mutuo.Etl.Pipe {
     /// <summary>
     ///   Executes a pipe in this process
     /// </summary>
-    public static async Task<ExitCode> RunPipe(this IPipeCtxScoped ctx) {
+    public static async Task<ExitCode> RunPipe(this IPipeCtx ctx) {
       var pipeMethods = ctx.PipeAssemblies().SelectMany(a => a.GetLoadableTypes())
         .SelectMany(t => t.GetRuntimeMethods().Where(m => m.GetCustomAttribute<PipeAttribute>() != null).Select(m => (Type: t, Method: m)))
         .ToKeyedCollection(m => m.Method.Name);
@@ -233,7 +236,7 @@ namespace Mutuo.Etl.Pipe {
           var pipeResult = await task;
           var listResult = (IEnumerable<object>) pipeResult;
           using var outStream = listResult.ToJsonlGzStream();
-          await ctx.Store.Save(ctx.OutStatePath(), outStream);
+          await ctx.Store.Save(ctx.Id.OutStatePath(), outStream);
         }
       }
       catch (Exception ex) {
@@ -257,15 +260,15 @@ namespace Mutuo.Etl.Pipe {
       return Convert.ChangeType(stringValue, t);
     }
 
-    static string OutStatePath(this PipeRunId id) => $"{id}/OutState.jsonl.gz";
-    static string OutStatePath(this IPipeCtx ctx) => ctx.Id.OutStatePath();
+    public static string StatePath(this PipeRunId id) => $"{id.Name}/{id.GroupId}/{id.Num}";
+    static string OutStatePath(this PipeRunId id) => $"{id.StatePath()}.OutState.jsonl.gz";
+    public static string InStatePath(this PipeRunId id) => $"{id.StatePath()}.InState.jsonl.gz";
 
     static async Task<IReadOnlyCollection<TOut>> GetOutState<TOut>(IPipeCtx ctx, PipeRunId id) {
       using var stream = await ctx.Store.Load(id.OutStatePath());
       return stream.LoadJsonlGz<TOut>();
     }
 
-    public static string InStatePath(this PipeRunId id) => $"{id}/InState.jsonl.gz";
     public static string InStatePath(this IPipeCtx ctx) => ctx.Id.InStatePath();
     public static Task<Stream> LoadInState(this IPipeCtx ctx) => ctx.Store.Load(ctx.InStatePath());
   }

@@ -20,10 +20,7 @@
         "imageName": "ytnetworks",
         "cores": 2,
         "mem": 4,
-        "entryAssemblyPath": "app/ytnetworks.dll",
-        "forwardEnvironmentVariables": [
-            "Env"
-        ]
+        "entryAssemblyPath": "app/ytnetworks.dll"
     },
     "sheets": {
         "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",

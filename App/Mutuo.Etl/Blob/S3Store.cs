@@ -12,7 +12,6 @@ using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Humanizer;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Polly;
 using Polly.Retry;
 using SysExtensions.Fluent.IO;
@@ -42,15 +41,16 @@ namespace Mutuo.Etl.Blob {
       );
     }
 
-    S3Cfg Cfg { get; }
+    S3Cfg      Cfg      { get; }
     StringPath BasePath { get; }
 
     [DebuggerHidden]
-    public async Task<T> Get<T>(StringPath path) where T : class {
+    public async Task<T> Get<T>(StringPath path, bool zip) where T : class {
+      var fullPath = path.WithJsonExtention(zip);
       GetObjectResponse response = null;
       try {
         response = await S3Policy.ExecuteAsync(() =>
-          S3.GetObjectAsync(new GetObjectRequest {BucketName = Cfg.Bucket, Key = FilePath(path)}));
+          S3.GetObjectAsync(new GetObjectRequest {BucketName = Cfg.Bucket, Key = FilePath(fullPath)}));
       }
       catch (AmazonS3Exception e) {
         if (e.ErrorCode == "NoSuchBucket" || e.ErrorCode == "NotFound" || e.ErrorCode == "NoSuchKey")
@@ -58,26 +58,35 @@ namespace Mutuo.Etl.Blob {
         throw;
       }
 
-      using (var zr = new GZipStream(response.ResponseStream, CompressionMode.Decompress))
-      using (var tr = new StreamReader(zr, Encoding.UTF8)) {
-        var jObject = await JObject.LoadAsync(new JsonTextReader(tr));
-        var r = jObject.ToObject<T>(JsonExtensions.DefaultSerializer);
-        return r;
+      if (zip) {
+        using var zr = new GZipStream(response.ResponseStream, CompressionMode.Decompress);
+        using (var tr = new StreamReader(zr, Encoding.UTF8))
+          return JsonExtensions.DefaultSerializer.Deserialize<T>(tr);
       }
+      using (var tr = new StreamReader(response.ResponseStream, Encoding.UTF8))
+          return JsonExtensions.DefaultSerializer.Deserialize<T>(tr);
+        
     }
 
-    public async Task Set<T>(StringPath path, T item) {
-      using (var memStream = new MemoryStream()) {
-        using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true))
+    public async Task Set<T>(StringPath path, T item, bool zip) {
+      var fullPath = path.WithJsonExtention(zip);
+      using var memStream = new MemoryStream();
+
+      if (zip) {
+        using var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true);
         using (var tw = new StreamWriter(zipWriter, Encoding.UTF8))
           JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
-
-        var res = await S3Policy.ExecuteAsync(() => S3.PutObjectAsync(new PutObjectRequest {
-          BucketName = Cfg.Bucket,
-          Key = FilePath(path),
-          InputStream = memStream, AutoCloseStream = false, ContentType = "application/x-gzip"
-        }));
       }
+      else {
+        using (var tw = new StreamWriter(memStream, Encoding.UTF8))
+          JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
+      }
+
+      await S3Policy.ExecuteAsync(() => S3.PutObjectAsync(new PutObjectRequest {
+        BucketName = Cfg.Bucket,
+        Key = FilePath(fullPath),
+        InputStream = memStream, AutoCloseStream = false, ContentType = "application/x-gzip"
+      }));
     }
 
     public async Task Save(StringPath path, FPath file) {
@@ -114,8 +123,8 @@ namespace Mutuo.Etl.Blob {
   }
 
   public sealed class S3Cfg {
-    public string Bucket { get; set; }
-    public string Region { get; set; }
+    public string     Bucket      { get; set; }
+    public string     Region      { get; set; }
     public NameSecret Credentials { get; set; }
   }
 }

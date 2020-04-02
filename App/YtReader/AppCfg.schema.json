@@ -27,9 +27,6 @@
         "region": {
           "type": "string"
         },
-        "entryAssemblyPath": {
-          "type": "string"
-        },
         "forwardEnvironmentVariables": {
           "type": "array",
           "items": {
