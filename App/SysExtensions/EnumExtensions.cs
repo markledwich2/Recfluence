@@ -50,9 +50,9 @@ namespace SysExtensions {
     }
 
     /// <summary>Converts a string to an enum value. using the EnumMember attribute if it exists</summary>
-    public static T ToEnum<T>(this string s) where T : IConvertible {
+    public static T ToEnum<T>(this string s, bool ensureFound = true) where T : Enum {
       var t = typeof(T);
-      var enumValue = (IConvertible) ToEnum(s, t);
+      var enumValue = (IConvertible) ToEnum(s, t, ensureFound: ensureFound);
       return (T) enumValue;
     }
 

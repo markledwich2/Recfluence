@@ -17,7 +17,7 @@ namespace YtCli {
 
     public static async Task<ExitCode> RunPipe(CmdCtx<PipeCmd> ctx) {
       var option = ctx.Option;
-      ctx.Log.Information("Starting pipe run {RunId} for {Env} environment", option.RunId ?? option.Pipe);
+      ctx.Log.Information("Pipe Run {RunId} - launched", option.RunId ?? option.Pipe);
       var pipeCtx = ctx.Scope.Resolve<Func<IPipeCtx>>()();
       if (option.RunId.HasValue() && pipeCtx.Id.ToString() != option.RunId)
         throw new InvalidOperationException($"The pipe runId {option.RunId} was supplied but a new one was created that doesn't match {pipeCtx.Id}");
@@ -42,7 +42,7 @@ namespace YtCli {
       };
 
       var runId = option switch {
-        PipeCmd p => p.RunId.HasValue() ? PipeRunId.FromString(p.RunId) : PipeRunId.Create(p.Pipe),
+        PipeCmd p => p.RunId.HasValue() ? PipeRunId.FromString(p.RunId) : PipeRunId.FromName(p.Pipe),
         _ => null
       };
 

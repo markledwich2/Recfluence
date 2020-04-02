@@ -3,9 +3,9 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <IsPackable>false</IsPackable>
     <LangVersion>8</LangVersion>
-    <AssemblyVersion>0.3.0</AssemblyVersion>
-    <InformationalVersion>0.3.0-pipe.1</InformationalVersion>
-    <PackageVersion>0.3.0-pipe.1</PackageVersion>
+    <AssemblyVersion>0.4.1</AssemblyVersion>
+    <InformationalVersion>0.4.1-pipe.1</InformationalVersion>
+    <PackageVersion>0.4.1-pipe.1</PackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FluentAssertions" Version="5.10.3" />

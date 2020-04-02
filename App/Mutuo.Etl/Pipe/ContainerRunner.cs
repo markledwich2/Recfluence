@@ -9,11 +9,15 @@ using Microsoft.Azure.Management.ContainerInstance.Fluent.ContainerGroup.Definit
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
+using Microsoft.Azure.Management.Storage.Fluent.Models;
+using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
-using SysExtensions.Threading; //using Microsoft.Azure.Management.Fluent;
+using SysExtensions.Threading;
+
+//using Microsoft.Azure.Management.Fluent;
 
 namespace Mutuo.Etl.Pipe {
   public interface IContainerRunner {
@@ -21,12 +25,23 @@ namespace Mutuo.Etl.Pipe {
     ///   returns the status.</summary>
     Task<IReadOnlyCollection<PipeRunMetadata>> RunBatch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log);
   }
+  
+  public enum ContainerState {
+    Unknown,
+    Running,
+    Succeeded,
+    Failed
+  }
 
   public static class ContainerRunnerEx {
     public static string ContainerName(this PipeRunId runId) => runId.Name.ToLowerInvariant();
     public static string ContainerGroupName(this PipeRunId runid) => $"{runid.Name}-{runid.GroupId}-{runid.Num}".ToLowerInvariant();
     public static string ContainerImageName(this ContainerCfg cfg) => $"{cfg.Registry}/{cfg.ImageName}:{cfg.Tag}";
     public static string[] PipeArgs(this PipeRunId runId) => new[] {"pipe", "-r", runId.ToString()};
+    public static async Task Save(this PipeRunMetadata md, ISimpleFileStore store) =>
+      await store.Set($"{md.Id.StatePath()}.RunMetadata", md, false);
+    public static ContainerState State(this IContainerGroup group) => group.State.ToEnum<ContainerState>(false);
+    public static bool IsCompletedState(this ContainerState state) => state.In(ContainerState.Succeeded, ContainerState.Failed);
   }
 
   public class LocalContainerRunner : IContainerRunner {
@@ -40,29 +55,34 @@ namespace Mutuo.Etl.Pipe {
           .ToArray<object>();
         var cmd = Command.Run("docker", args).RedirectTo(Console.Out);
         var res = await cmd.Task;
-        if (res.Success)
-          return new PipeRunMetadata {
+        var md = res.Success
+          ? new PipeRunMetadata {
             Id = id,
             Success = true
+          }
+          : new PipeRunMetadata {
+            Id = id,
+            Success = false,
+            ErrorMessage = await cmd.StandardError.ReadToEndAsync()
           };
-        var error = await cmd.StandardError.ReadToEndAsync();
-        return new PipeRunMetadata {
-          Id = id,
-          Success = false,
-          ErrorMessage = error
-        };
+        await md.Save(ctx.Store);
+        return md;
       });
   }
 
   public class ThreadContainerRunner : IContainerRunner {
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunBatch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) =>
-      await ids.BlockTransform(async b => {
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunBatch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) {
+      var res = await ids.BlockTransform(async b => {
         await new PipeCtx(ctx, b).RunPipe();
-        return new PipeRunMetadata {
-          Id = ctx.Id,
+        var md = new PipeRunMetadata {
+          Id = b,
           Success = true
         };
+        await md.Save(ctx.Store);
+        return md;
       }, ctx.Cfg.LocalParallel);
+      return res;
+    }
   }
 
   public class PipeRunMetadata {
@@ -70,7 +90,7 @@ namespace Mutuo.Etl.Pipe {
     public PipeRunId    Id           { get; set; }
     public string       FinalState   { get; set; }
     public TimeSpan     Duration     { get; set; }
-    public EventModel[] Events       { get; set; }
+    public Container[] Containers { get; set; }
     public string       ErrorMessage { get; set; }
   }
 
@@ -86,37 +106,45 @@ namespace Mutuo.Etl.Pipe {
     ///   returns the status.</summary>
     public async Task<IReadOnlyCollection<PipeRunMetadata>> RunBatch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) {
       var azure = GetAzure(ctx.Cfg);
-
-
       var res = await ids.BlockTransform(async runId => {
         var groupName = runId.ContainerGroupName();
         await EnsureNotRunning(groupName, azure, ctx.Cfg.Azure.ResourceGroup);
         var groupDef = await ContainerGroup(ctx.Cfg, azure, runId, ctx.EnvVars);
-        log.Information("Launching pipe {Pipe} ({RunId})", runId.Name, runId.ToString());
+        var imageName = ctx.Cfg.Container.ContainerImageName();
+        var pipeLog = log.ForContext("Image", imageName).ForContext("Pipe", runId.Name);
+        pipeLog.Information("{RunId} - launching  {Image}", runId.ToString(), imageName);
         var sw = Stopwatch.StartNew();
+        bool running = false;
         var group = await groupDef.CreateAsync();
         while (true) {
           group = await group.RefreshAsync();
-          if (!IsCompletedState(group)) {
+          var state = group.State();
+
+          if (!running && state != ContainerState.Running) {
+            pipeLog.Information("{RunId} - container started in {Duration}", runId.ToString(), sw.Elapsed);
+            running = true;
+          }
+          if (!state.IsCompletedState()) {
             await Task.Delay(500);
             continue;
           }
 
+          pipeLog.Information("{RunId} - completed ({Status}) in {Duration}", runId.ToString(), group.State, sw.Elapsed);
 
-          log.Information("Completed ({Status}) {Container} {Pipe}", group.State, groupName, runId.Name);
-
+          var logTxt = await group.GetLogContentAsync(runId.ContainerName());
           var md = new PipeRunMetadata {
             Id = runId,
             Duration = sw.Elapsed,
-            Events = group.Events.ToArray(),
-            FinalState = group.State
+            Containers = group.Containers.Select(c => c.Value).ToArray(),
+            FinalState = group.State,
+            Success = state == ContainerState.Succeeded
           };
-          await ctx.Store.Set($"{ctx.Id.StatePath()}.RunMetadata", md, false);
-          var logTxt = await group.GetLogContentAsync(runId.ContainerName());
-          await ctx.Store.Save($"{ctx.Id.StatePath()}.log.txt", logTxt.AsStream());
+          await md.Save(ctx.Store);
+          
+          await ctx.Store.Save($"{runId.StatePath()}.log.txt", logTxt.AsStream());
 
-          if (group.State != "Succeeded")
-            log.Error("Pipe container failed. {Pipe}, {RunId}", runId.Name, runId.ToString());
+          if (state != ContainerState.Succeeded)
+            log.Error("{RunId} - failed: {Log}", runId.ToString(), logTxt);
 
           return md;
         }
@@ -130,8 +158,6 @@ namespace Mutuo.Etl.Pipe {
 
       return res;
     }
-
-    static bool IsCompletedState(IContainerGroup group) => group.State.In("Succeeded", "Failed");
 
     static async Task EnsureNotRunning(string groupName, IAzure azure, string rg) {
       var group = await azure.ContainerGroups.GetByResourceGroupAsync(rg, groupName);
@@ -156,12 +182,12 @@ namespace Mutuo.Etl.Pipe {
         .WithPrivateImageRegistry(container.Registry, container.RegistryCreds.Name, container.RegistryCreds.Secret)
         .WithoutVolume()
         .DefineContainerInstance(id.ContainerName())
-        .WithImage($"{container.Registry}/{container.ImageName}:{container.Tag}")
+        .WithImage(cfg.Container.ContainerImageName())
         .WithoutPorts()
         .WithCpuCoreCount(container.Cores)
         .WithMemorySizeInGB(container.Mem)
         .WithEnvironmentVariables(envVars)
-        .WithStartingCommandLine(args.First(), id.PipeArgs())
+        .WithStartingCommandLine(cfg.Container.Exe, id.PipeArgs())
         .Attach().WithRestartPolicy(ContainerGroupRestartPolicy.Never);
 
       return group;

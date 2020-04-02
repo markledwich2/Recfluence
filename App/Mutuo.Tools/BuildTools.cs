@@ -23,6 +23,8 @@ namespace Mutuo.Tools {
         ? FPath.Current.ParentWithFile("*.sln", true) ?? throw new InvalidOperationException("Can't find .sln file in parent folder")
         : new FPath(dir.FullName);
       var versionInfo = await GitVersionInfo.Discover(Log);
+      
+      Log.Information("Updating project versions to {Version}", versionInfo.NuGetVersionV2);
 
       var projFiles = rootDir.Files("*.csproj", true);
       foreach (var f in dry ? projFiles.First() : projFiles)

@@ -18,7 +18,8 @@ namespace Mutuo.Etl.Blob {
   }
 
   public static class SimpleStoreExtensions {
-    public static string WithJsonExtention(this StringPath path, bool zip = true) => path.WithExtension(zip ? ".json.gz" : ".json");
+    public static StringPath AddJsonExtention(this StringPath path, bool zip = true) => 
+      new StringPath(path + (zip ? ".json.gz" : ".json"));
 
     public static async Task<T> GetOrCreate<T>(this ISimpleFileStore store, StringPath path, Func<T> create = null) where T : class, new() {
       var o = await store.Get<T>(path);

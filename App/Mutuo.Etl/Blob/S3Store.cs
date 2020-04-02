@@ -46,7 +46,7 @@ namespace Mutuo.Etl.Blob {
 
     [DebuggerHidden]
     public async Task<T> Get<T>(StringPath path, bool zip) where T : class {
-      var fullPath = path.WithJsonExtention(zip);
+      var fullPath = path.AddJsonExtention(zip);
       GetObjectResponse response = null;
       try {
         response = await S3Policy.ExecuteAsync(() =>
@@ -68,7 +68,7 @@ namespace Mutuo.Etl.Blob {
     }
 
     public async Task Set<T>(StringPath path, T item, bool zip) {
-      var fullPath = path.WithJsonExtention(zip);
+      var fullPath = path.AddJsonExtention(zip);
       using var memStream = new MemoryStream();
 
       if (zip) {

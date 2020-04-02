@@ -18,7 +18,8 @@ using SysExtensions.Text;
 
 namespace Mutuo.Etl.Blob {
   public class AzureBlobFileStore : ISimpleFileStore {
-    public AzureBlobFileStore(Uri sas, StringPath pathSansContainer = null) : this(pathSansContainer) => Container = new CloudBlobContainer(sas);
+    public AzureBlobFileStore(Uri sas, StringPath pathSansContainer = null) 
+      : this(pathSansContainer) => Container = new CloudBlobContainer(sas);
 
     public AzureBlobFileStore(string cs, StringPath path) : this(path) {
       var storage = CloudStorageAccount.Parse(cs);
@@ -58,7 +59,7 @@ namespace Mutuo.Etl.Blob {
     }
 
     public async Task<T> Get<T>(StringPath path, bool zip = true) where T : class {
-      var fullPath = path.WithJsonExtention(zip);
+      var fullPath = path.AddJsonExtention(zip);
       var blob = BlobRef(fullPath);
 
       await using var mem = new MemoryStream();
@@ -89,18 +90,26 @@ namespace Mutuo.Etl.Blob {
     /// <param name="zip"></param>
     public async Task Set<T>(StringPath path, T item, bool zip) {
       await using var memStream = new MemoryStream();
-      Stream writer = memStream;
+      
       if (zip) {
-        await using var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true);
-        writer = zipWriter;
+        await using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, leaveOpen:true)) {
+          await using var tw = new StreamWriter(zipWriter, Encoding.UTF8);
+          JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
+        }
       }
-      await using (var tw = new StreamWriter(writer, Encoding.UTF8)) JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
-
-      var fullPath = path.WithJsonExtention(zip);
+      else {
+        await using (var tw = new StreamWriter(memStream, Encoding.UTF8, leaveOpen: true)) {
+          JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
+        }
+      }
+      
+      var fullPath = path.AddJsonExtention(zip);
       memStream.Seek(0, SeekOrigin.Begin);
       var blob = BlobRef(fullPath);
       AutoPopulateProps(fullPath, blob);
       await blob.UploadFromStreamAsync(memStream);
+      
+      
     }
 
     public async Task Save(StringPath path, FPath file) {

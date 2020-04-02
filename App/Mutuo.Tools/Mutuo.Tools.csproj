@@ -2,9 +2,9 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <AssemblyVersion>0.3.0</AssemblyVersion>
-    <InformationalVersion>0.3.0-pipe.1</InformationalVersion>
-    <PackageVersion>0.3.0-pipe.1</PackageVersion>
+    <AssemblyVersion>0.4.1</AssemblyVersion>
+    <InformationalVersion>0.4.1-pipe.1</InformationalVersion>
+    <PackageVersion>0.4.1-pipe.1</PackageVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DocumentationFile />

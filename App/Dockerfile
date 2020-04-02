@@ -15,16 +15,16 @@ WORKDIR /YtNetworks/App
 COPY App/.config/dotnet-tools.json /.config/dotnet-tools.json
 RUN dotnet tool restore
 COPY App/YtNetworks.sln YtNetworks.sln
-# COPY App/YtCli/YtCli.csproj YtCli/YtCli.csproj
-# COPY App/YtReader/YtReader.csproj YtReader/YtReader.csproj
-# COPY App/SysExtensions/SysExtensions.csproj SysExtensions/SysExtensions.csproj
-# COPY App/Mutuo.Etl/Mutuo.Etl.csproj Mutuo.Etl/Mutuo.Etl.csproj
-# COPY App/Mutuo.Tools/Mutuo.Tools.csproj Mutuo.Tools/Mutuo.Tools.csproj
-# RUN dotnet restore SysExtensions
-# RUN dotnet restore Mutuo.Tools
-# RUN dotnet restore Mutuo.Etl
-# RUN dotnet restore YtCli
-# RUN dotnet restore YtReader
+COPY App/YtCli/YtCli.csproj YtCli/YtCli.csproj
+COPY App/YtReader/YtReader.csproj YtReader/YtReader.csproj
+COPY App/SysExtensions/SysExtensions.csproj SysExtensions/SysExtensions.csproj
+COPY App/Mutuo.Etl/Mutuo.Etl.csproj Mutuo.Etl/Mutuo.Etl.csproj
+COPY App/Mutuo.Tools/Mutuo.Tools.csproj Mutuo.Tools/Mutuo.Tools.csproj
+RUN dotnet restore SysExtensions
+RUN dotnet restore Mutuo.Tools
+RUN dotnet restore Mutuo.Etl
+RUN dotnet restore YtCli
+RUN dotnet restore YtReader
 
 # copy git to be able to use GitVersion
 WORKDIR /YtNetworks

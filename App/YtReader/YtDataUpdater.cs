@@ -373,8 +373,10 @@ where num < 50
           .Select(g => new ProcessVideoExtraIn {ChannelId = g.Key, Videos = g.ToArray()})
           .RunPipe(ProcessVideoExtra, PipeCtx(), 200, 4, Log)
           .WithDuration();
-
-        Log.Information("Finished BackfillVideoExtra of {Channels) channels, {Videos} videos in {Duration}");
+        
+        var videos = res.Result.Where(r => r.Metadata.Success).SelectMany(r => r.OutState).Sum(o => o.Updated);
+        Log.Information("Finished {Pipe} of {Channels} channels, {Videos} videos in {Duration}", 
+          nameof(BackfillVideoExtra), res.Result.Count, videos, res.Duration);
       }
       else {
         var chId = "123TestChannel";

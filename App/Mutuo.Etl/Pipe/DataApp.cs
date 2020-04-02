@@ -68,7 +68,7 @@ namespace Mutuo.Etl.Pipe {
     public string GroupId { get; set; }
     public int Num { get;        set; }
 
-    public static PipeRunId Create(string name, int num = 0) => new PipeRunId(name, NewGroupId(), num);
+    public static PipeRunId FromName(string name) => new PipeRunId(name, NewGroupId(), 0);
 
     public static string NewGroupId() => $"{DateTime.UtcNow.ToString("yyyy-MM-dd-hh-mm-ss")}-{Guid.NewGuid().ToShortString(4)}";
 
@@ -121,6 +121,7 @@ namespace Mutuo.Etl.Pipe {
     public double     Mem           { get; set; }
     public NameSecret RegistryCreds { get; set; }
     public string     Region        { get; set; } = Microsoft.Azure.Management.ResourceManager.Fluent.Core.Region.USWest2.Name;
+    public string     Exe           { get; set; }
   }
 
   public class PipeAppStorageCfg {
@@ -143,15 +144,17 @@ namespace Mutuo.Etl.Pipe {
 
     /// <summary>Runs a pipeline to process a list of work in batches on multiple containers. The transform is used to provide
     ///   strong typing, but may not actually be run locally.</summary>
-    public static async Task<IReadOnlyCollection<TOut>> RunPipe<TIn, TOut>(
+    public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, IReadOnlyCollection<TOut> OutState)>> RunPipe<TIn, TOut>(
       this IEnumerable<TIn> items, Func<IEnumerable<TIn>, Task<IEnumerable<TOut>>> transform, IPipeCtx ctx, int minBatch, int parallel, ILogger log) {
       var isPipe = transform.Method.GetCustomAttribute<PipeAttribute>() != null;
       if (!isPipe) throw new InvalidOperationException($"given transform '{transform.Method.Name}' must be a pipe");
       var pipeNme = transform.Method.Name;
 
       // batch and create state for containers to read
+      var group = PipeRunId.NewGroupId();
+
       var batches = await items.Batch(minBatch, parallel)
-        .Select((g, i) => (Id: PipeRunId.Create(pipeNme, i), In: g.ToArray()))
+        .Select((g, i) => (Id: new PipeRunId(pipeNme, group, i), In: g.ToArray()))
         .BlockTransform(async b => {
           using var inStream = b.In.ToJsonlGzStream();
           await ctx.Store.Save(b.Id.InStatePath(), inStream);
@@ -165,12 +168,20 @@ namespace Mutuo.Etl.Pipe {
         _ => throw new NotImplementedException($"{ctx.Cfg.Location}")
       };
 
-      await containerRunner.RunBatch(ctx, batches.Select(b => b.Id).ToArray(), log);
+      var res = await containerRunner.RunBatch(ctx, batches.Select(b => b.Id).ToArray(), log);
 
-      var outState = await batches
-        .BlockTransform(async b => await GetOutState<TOut>(ctx, b.Id));
+      var outState = await res
+        .BlockTransform(async b => (Metadata: b, OutState: b.Success ? await GetOutState<TOut>(ctx, b.Id) : null));
 
-      return outState.SelectMany(m => m).ToReadOnly();
+      var batchId = $"{pipeNme}|{group}";
+      log.Information("{BatchId} - Batches {Succeded}/{Total} succeeded/total",
+        batchId,  res.Count(r => r.Success), res.Count);
+
+      var failed = outState.Where(o => !o.Metadata.Success).ToArray();
+      log.Error("{BatchId} - {Batches} batches failed. Ids:{Ids}",
+        batchId, failed.Length, failed.Select(f => f.Metadata.Id));
+
+      return outState;
     }
 
     static IEnumerable<Assembly> PipeAssemblies(this IPipeCtx ctx) => Assembly.GetExecutingAssembly().AsEnumerable().Concat(ctx.PipeAssemblies);
