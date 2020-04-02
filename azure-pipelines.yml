@@ -17,7 +17,7 @@ jobs:
       script: |
         echo GitVersion
         dotnet tool restore
-        dotnet dotnet-gitversion
+        dotnet dotnet-gitversion /output buildserver /nofetch
       failOnStderr: true
       workingDirectory: ./App
 
