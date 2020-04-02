@@ -3,6 +3,9 @@ variables:
   image: ytnetworks
   env: prod
 
+trigger:
+  - master
+
 jobs:
 
 
