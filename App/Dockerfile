@@ -8,8 +8,7 @@ WORKDIR /YtNetworks
 
 RUN apk update
 RUN apk add git libgit2
-RUN dotnet new tool-manifest
-RUN dotnet tool install GitVersion.Tool
+RUN dotnet tool restore
 
 
 # try get get a cache of the nuget restore
