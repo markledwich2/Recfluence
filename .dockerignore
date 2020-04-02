@@ -12,5 +12,6 @@ README.md
 LICENSE
 
 # any dir starting with. (except git)
-*/.*/
-!.git
+*/.idea
+*/.vscode
+*/.Data

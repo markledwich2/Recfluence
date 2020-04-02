@@ -8,12 +8,12 @@ WORKDIR /YtNetworks
 
 RUN apk update
 RUN apk add git libgit2
-RUN dotnet tool restore
-
 
 # try get get a cache of the nuget restore
 # https://andrewlock.net/optimising-asp-net-core-apps-in-docker-avoiding-manually-copying-csproj-files/
 WORKDIR /YtNetworks/App
+COPY App/.config/dotnet-tools.json /.config/dotnet-tools.json
+RUN dotnet tool restore
 COPY App/YtNetworks.sln YtNetworks.sln
 # COPY App/YtCli/YtCli.csproj YtCli/YtCli.csproj
 # COPY App/YtReader/YtReader.csproj YtReader/YtReader.csproj
