@@ -16,6 +16,7 @@ jobs:
     inputs:
       script: |
         echo Installing gitversion
+        dotnet new tool-manifest
         dotnet tool install GitVersion.Tool
         dotnet run gitversion /output buildserver /nofetch
       failOnStderr: true
