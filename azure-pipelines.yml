@@ -3,9 +3,6 @@ variables:
   image: ytnetworks
   env: prod
 
-trigger:
-  - master
-
 jobs:
 
 
@@ -14,6 +11,15 @@ jobs:
     vmImage: ubuntu-latest
 
   steps:
+
+  - task: CmdLine@2
+    inputs:
+      script: |
+        echo Installing gitversion
+        dotnet tool install GitVersion.Tool
+        dotnet run gitversion /output buildserver /nofetch
+      failOnStderr: true
+
   - task: Docker@1
     displayName: Login
     inputs:
@@ -25,20 +31,20 @@ jobs:
     displayName: Build YtCli
     inputs:
       command: Build an image
-      imageName: $(acr)/$(image):latest
+      imageName: $(acr)/$(image):$(GitVersion.NuGetVersion)
 
   - task: Docker@1
     displayName: Push YtCli
     inputs:
       command: Push an image
-      imageName: $(acr)/$(image):latest
+      imageName: $(acr)/$(image):$(GitVersion.NuGetVersion)
 
 - job: App
   pool:
     vmImage: windows-latest
 
   steps:
-  - script: dotnet publish -c Release --output $(Build.ArtifactStagingDirectory)/YtFunctions
+  - script: dotnet publish -c Release  --output $(Build.ArtifactStagingDirectory)/YtFunctions /p:Version='$(GitVersion.NuGetVersion)'
     workingDirectory: ./App/YtFunctions
     displayName: Publish YtFunctions
 
