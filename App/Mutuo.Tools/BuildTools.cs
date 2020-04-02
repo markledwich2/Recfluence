@@ -19,7 +19,9 @@ namespace Mutuo.Tools {
     /// <summary>Updates projects with git versions</summary>
     [DisplayName("gitversion")]
     public async Task GitVersionUpdate(DirectoryInfo dir = null, bool dry = false) {
-      var rootDir = dir == null ? FPath.Current.ParentWithFile("*.sln", true) : new FPath(dir.FullName);
+      var rootDir = dir == null
+        ? FPath.Current.ParentWithFile("*.sln", true) ?? throw new InvalidOperationException("Can't find .sln file in parent folder")
+        : new FPath(dir.FullName);
       var versionInfo = await GitVersionInfo.Discover(Log);
 
       var projFiles = rootDir.Files("*.csproj", true);
