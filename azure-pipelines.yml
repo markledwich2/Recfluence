@@ -28,17 +28,16 @@ jobs:
       azureContainerRegistry: $(acr)
       command: login
 
-  - task: Docker@1
-    displayName: Build YtCli
+  - task: Docker@2
+    displayName: Build and Push App
     inputs:
-      command: Build an image
-      imageName: $(acr)/$(image):$(GitVersion.NuGetVersion)
+      command: buildAndPush
+      containerRegistry: $(acr)
+      repository: $(image)
+      tags: $(GitVersion.NuGetVersion)
+      buildContext: .
+      dockerFile: App/Dockerfile
 
-  - task: Docker@1
-    displayName: Push YtCli
-    inputs:
-      command: Push an image
-      imageName: $(acr)/$(image):$(GitVersion.NuGetVersion)
 
 - job: App
   pool:
