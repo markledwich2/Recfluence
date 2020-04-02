@@ -16,9 +16,8 @@ jobs:
     inputs:
       script: |
         echo Installing gitversion
-        dotnet new tool-manifest
-        dotnet tool install GitVersion.Tool
-        dotnet run gitversion /output buildserver /nofetch
+        dotnet tool restore
+        dotnet dotnet-gitversion
       failOnStderr: true
       workingDirectory: $(Build.Repository.LocalPath)
 
