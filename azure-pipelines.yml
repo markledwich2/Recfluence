@@ -21,18 +21,11 @@ jobs:
       failOnStderr: true
       workingDirectory: ./App
 
-  - task: Docker@1
-    displayName: Login
-    inputs:
-      azureSubscriptionEndpoint: Mark Ledwich ARM
-      azureContainerRegistry: $(acr)
-      command: login
-
   - task: Docker@2
     displayName: Build and Push App
     inputs:
       command: buildAndPush
-      containerRegistry: $(acr)
+      containerRegistry: ytnetworks
       repository: $(image)
       tags: $(GitVersion.NuGetVersion)
       buildContext: .
