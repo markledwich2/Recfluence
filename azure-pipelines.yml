@@ -15,11 +15,11 @@ jobs:
   - task: CmdLine@2
     inputs:
       script: |
-        echo Installing gitversion
+        echo GitVersion
         dotnet tool restore
         dotnet dotnet-gitversion
       failOnStderr: true
-      workingDirectory: $(Build.Repository.LocalPath)
+      workingDirectory: ./App
 
   - task: Docker@1
     displayName: Login
