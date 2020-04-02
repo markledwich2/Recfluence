@@ -15,31 +15,22 @@ jobs:
   - task: CmdLine@2
     inputs:
       script: |
-        echo Installing gitversion
-        dotnet new tool-manifest
-        dotnet tool install GitVersion.Tool
-        dotnet run gitversion /output buildserver /nofetch
+        echo GitVersion
+        dotnet tool restore
+        dotnet dotnet-gitversion /output buildserver /nofetch
       failOnStderr: true
-      workingDirectory: $(Build.Repository.LocalPath)
+      workingDirectory: ./App
 
-  - task: Docker@1
-    displayName: Login
+  - task: Docker@2
+    displayName: Build and Push App
     inputs:
-      azureSubscriptionEndpoint: Mark Ledwich ARM
-      azureContainerRegistry: $(acr)
-      command: login
+      command: buildAndPush
+      containerRegistry: ytnetworks
+      repository: $(image)
+      tags: $(GitVersion.NuGetVersion)
+      buildContext: .
+      dockerFile: App/Dockerfile
 
-  - task: Docker@1
-    displayName: Build YtCli
-    inputs:
-      command: Build an image
-      imageName: $(acr)/$(image):$(GitVersion.NuGetVersion)
-
-  - task: Docker@1
-    displayName: Push YtCli
-    inputs:
-      command: Push an image
-      imageName: $(acr)/$(image):$(GitVersion.NuGetVersion)
 
 - job: App
   pool:
