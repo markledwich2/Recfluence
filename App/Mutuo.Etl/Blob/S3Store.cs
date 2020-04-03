@@ -44,50 +44,6 @@ namespace Mutuo.Etl.Blob {
     S3Cfg      Cfg      { get; }
     StringPath BasePath { get; }
 
-    [DebuggerHidden]
-    public async Task<T> Get<T>(StringPath path, bool zip) where T : class {
-      var fullPath = path.AddJsonExtention(zip);
-      GetObjectResponse response = null;
-      try {
-        response = await S3Policy.ExecuteAsync(() =>
-          S3.GetObjectAsync(new GetObjectRequest {BucketName = Cfg.Bucket, Key = FilePath(fullPath)}));
-      }
-      catch (AmazonS3Exception e) {
-        if (e.ErrorCode == "NoSuchBucket" || e.ErrorCode == "NotFound" || e.ErrorCode == "NoSuchKey")
-          return null;
-        throw;
-      }
-
-      if (zip) {
-        using var zr = new GZipStream(response.ResponseStream, CompressionMode.Decompress);
-        using (var tr = new StreamReader(zr, Encoding.UTF8))
-          return JsonExtensions.DefaultSerializer.Deserialize<T>(tr);
-      }
-      using (var tr = new StreamReader(response.ResponseStream, Encoding.UTF8))
-        return JsonExtensions.DefaultSerializer.Deserialize<T>(tr);
-    }
-
-    public async Task Set<T>(StringPath path, T item, bool zip) {
-      var fullPath = path.AddJsonExtention(zip);
-      using var memStream = new MemoryStream();
-
-      if (zip) {
-        using var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true);
-        using (var tw = new StreamWriter(zipWriter, Encoding.UTF8))
-          JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
-      }
-      else {
-        using (var tw = new StreamWriter(memStream, Encoding.UTF8))
-          JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
-      }
-
-      await S3Policy.ExecuteAsync(() => S3.PutObjectAsync(new PutObjectRequest {
-        BucketName = Cfg.Bucket,
-        Key = FilePath(fullPath),
-        InputStream = memStream, AutoCloseStream = false, ContentType = "application/x-gzip"
-      }));
-    }
-
     public async Task Save(StringPath path, FPath file) {
       var tu = new TransferUtility(S3);
       await tu.UploadAsync(file.FullPath, Cfg.Bucket, BasePath.Add(path));

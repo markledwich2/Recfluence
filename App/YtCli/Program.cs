@@ -97,7 +97,7 @@ namespace YtCli {
   [Verb("fix", HelpText = "try to fix missing/inconsistent data")]
   public class FixCmd : CommonCmd {
     public static async Task<ExitCode> Fix(CmdCtx<FixCmd> ctx) {
-      await new StoreUpgrader(ctx.Cfg, ctx.Cfg.DataStore(), ctx.Log).UpgradeStore();
+      await new StoreUpgrader(ctx.Cfg, ctx.Cfg.DataStore(ctx.Log), ctx.Log).UpgradeStore();
       return ExitCode.Success;
     }
   }
@@ -158,7 +158,7 @@ namespace YtCli {
     public IEnumerable<string> QueryNames { get; set; }
 
     public static async Task<ExitCode> Results(CmdCtx<ResultsCmd> ctx) {
-      var store = ctx.Cfg.DataStore(ctx.Cfg.Storage.ResultsPath);
+      var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.ResultsPath);
       var result = new YtResults(ctx.Cfg.Snowflake, ctx.Cfg.Results, store, ctx.Log);
       await result.SaveResults(ctx.Option.QueryNames.NotNull().ToList());
       return ExitCode.Success;
@@ -168,7 +168,7 @@ namespace YtCli {
   [Verb("traffic", HelpText = "Process source traffic data for comparison")]
   public class TrafficCmd : CommonCmd {
     public static async Task<ExitCode> Traffic(CmdCtx<TrafficCmd> ctx) {
-      var store = ctx.Cfg.DataStore(ctx.Cfg.Storage.PrivatePath);
+      var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.PrivatePath);
       await TrafficSourceExports.Process(store, ctx.Cfg, new YtScraper(ctx.Cfg.Scraper), ctx.Log);
       return ExitCode.Success;
     }

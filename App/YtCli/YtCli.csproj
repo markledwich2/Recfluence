@@ -5,10 +5,6 @@
     <!-- <PackAsTool>true</PackAsTool>
     <PackageOutputPath>./publish</PackageOutputPath> -->
     <AssemblyName>ytnetworks</AssemblyName>
-    <TrimUnusedDependencies>true</TrimUnusedDependencies>
-    <PublishTrimmed>true</PublishTrimmed>
-    <PublishReadyToRun>true</PublishReadyToRun>
-    <CrossGenDuringPublish>false</CrossGenDuringPublish>
     <LangVersion>8</LangVersion>
     <AssemblyVersion>0.4.1</AssemblyVersion>
     <PackageVersion>0.4.1-pipe.1</PackageVersion>

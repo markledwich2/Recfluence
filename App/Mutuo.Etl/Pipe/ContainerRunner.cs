@@ -51,6 +51,7 @@ namespace Mutuo.Etl.Pipe {
         var args = new[] {"run"}
           .Concat(ctx.EnvVars.SelectMany(e => new[] {"--env", $"{e.Key}={e.Value}"}))
           .Concat("--rm", "-i", image)
+          .Concat(ctx.Cfg.Container.Exe)
           .Concat(id.PipeArgs())
           .ToArray<object>();
         var cmd = Command.Run("docker", args).RedirectTo(Console.Out);
@@ -73,6 +74,7 @@ namespace Mutuo.Etl.Pipe {
   public class ThreadContainerRunner : IContainerRunner {
     public async Task<IReadOnlyCollection<PipeRunMetadata>> RunBatch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) {
       var res = await ids.BlockTransform(async b => {
+        
         await new PipeCtx(ctx, b).RunPipe();
         var md = new PipeRunMetadata {
           Id = b,
@@ -173,8 +175,7 @@ namespace Mutuo.Etl.Pipe {
       var rg = cfg.Azure.ResourceGroup;
       var groupName = id.ContainerGroupName();
       await EnsureNotRunning(groupName, azure, rg);
-
-      var args = id.PipeArgs();
+      
       var group = azure.ContainerGroups.Define(groupName)
         .WithRegion(cfg.Container.Region)
         .WithExistingResourceGroup(rg)

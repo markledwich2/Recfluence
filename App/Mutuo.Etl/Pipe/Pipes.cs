@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -9,132 +8,19 @@ using Autofac.Util;
 using CommandLine;
 using Mutuo.Etl.Blob;
 using Serilog;
-using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Reflection;
-using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Pipe {
-  /// <summary>Context & Cfg for running a pipe command</summary>
-  public interface IPipeCtx {
-    PipeRunId         Id             { get; }
-    ILogger           Log            { get; }
-    ISimpleFileStore  Store          { get; }
-    PipeAppCfg        Cfg            { get; }
-    Assembly[]        PipeAssemblies { get; }
-    IComponentContext Scope          { get; set; }
-
-    /// <summary>Environment variables to forward</summary>
-    IDictionary<string, string> EnvVars { get; }
-  }
-
-  class PipeCtx : IPipeCtx {
-    public PipeCtx() { }
-
-    public PipeCtx(IPipeCtx ctx, PipeRunId id) {
-      Log = ctx.Log;
-      Store = ctx.Store;
-      Cfg = ctx.Cfg;
-      Id = id;
-      PipeAssemblies = ctx.PipeAssemblies;
-      Scope = ctx.Scope;
-    }
-
-    public ILogger                     Log            { get; set; }
-    public ISimpleFileStore            Store          { get; set; }
-    public PipeAppCfg                  Cfg            { get; set; }
-    public PipeRunId                   Id             { get; set; }
-    public Assembly[]                  PipeAssemblies { get; set; } = { };
-    public IComponentContext           Scope          { get; set; }
-    public IDictionary<string, string> EnvVars        { get; set; } = new Dictionary<string, string>();
-  }
-
-  /// <summary>A unique string for a pipe run. Human readable and easily passable though commands.</summary>
-  public class PipeRunId {
-    public PipeRunId(string name, string groupId, int num) {
-      Name = name;
-      GroupId = groupId;
-      Num = num;
-    }
-
-    public PipeRunId() { }
-
-    public string Name { get; set; }
-
-    /// <summary>A unique string for a batch of pipe run's that are part of the same operation</summary>
-    public string GroupId { get; set; }
-    public int Num { get;        set; }
-
-    public static PipeRunId FromName(string name) => new PipeRunId(name, NewGroupId(), 0);
-
-    public static string NewGroupId() => $"{DateTime.UtcNow.ToString("yyyy-MM-dd-hh-mm-ss")}-{Guid.NewGuid().ToShortString(4)}";
-
-    public override string ToString() => $"{Name}|{GroupId}|{Num}";
-
-    public static PipeRunId FromString(string path) {
-      var split = path.Split("|");
-      if (split.Length < 3) throw new InvalidOperationException($"{path} doesn't have 3 components");
-      return new PipeRunId {
-        Name = split[0],
-        GroupId = split[1],
-        Num = split[2].ParseInt()
-      };
-    }
-  }
-
-  public enum PipeRunLocation {
-    Container,
-    LocalContainer,
-    LocalThread
-  }
-
-  public class PipeAppCfg {
-    public PipeAppStorageCfg Store         { get; set; }
-    public PipeAzureCfg      Azure         { get; set; }
-    public ContainerCfg      Container     { get; set; }
-    public PipeRunLocation   Location      { get; set; }
-    public int               LocalParallel { get; set; } = 2;
-    public Uri               DockerUri     { get; set; } = new Uri("npipe://./pipe/docker_engine");
-  }
-
-  public class PipeAzureCfg {
-    public string              SubscriptionId   { get; set; }
-    public ServicePrincipalCfg ServicePrincipal { get; set; }
-    public string              ResourceGroup    { get; set; }
-  }
-
-  public class ServicePrincipalCfg {
-    public string ClientId  { get; set; }
-    public string Secret    { get; set; }
-    public string TennantId { get; set; }
-  }
-
-  public class ContainerCfg {
-    public string     Registry      { get; set; }
-    public string     Name          { get; set; }
-    public string     ImageName     { get; set; }
-    public string     Tag           { get; set; }
-    public int        Cores         { get; set; }
-    public double     Mem           { get; set; }
-    public NameSecret RegistryCreds { get; set; }
-    public string     Region        { get; set; } = Microsoft.Azure.Management.ResourceManager.Fluent.Core.Region.USWest2.Name;
-    public string     Exe           { get; set; }
-  }
-
-  public class PipeAppStorageCfg {
-    public string     Cs   { get; set; }
-    public StringPath Path { get; set; }
-  }
-
   public static class Pipes {
     public static IPipeCtx CreatePipeCtx(PipeAppCfg cfg, PipeRunId runId, ILogger log, IComponentContext getScope,
       IEnumerable<Assembly> pipeAssemblies = null, IEnumerable<KeyValuePair<string, string>> environmentVars = null) =>
       new PipeCtx {
         Cfg = cfg,
-        Store = new AzureBlobFileStore(cfg.Store.Cs, cfg.Store.Path),
+        Store = new AzureBlobFileStore(cfg.Store.Cs, cfg.Store.Path, log),
         Id = runId,
         PipeAssemblies = pipeAssemblies?.ToArray() ?? new Assembly[] { },
         Log = log,
@@ -144,8 +30,8 @@ namespace Mutuo.Etl.Pipe {
 
     /// <summary>Runs a pipeline to process a list of work in batches on multiple containers. The transform is used to provide
     ///   strong typing, but may not actually be run locally.</summary>
-    public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, IReadOnlyCollection<TOut> OutState)>> RunPipe<TIn, TOut>(
-      this IEnumerable<TIn> items, Func<IEnumerable<TIn>, Task<IEnumerable<TOut>>> transform, IPipeCtx ctx, int minBatch, int parallel, ILogger log) {
+    public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> RunPipe<TIn, TOut>(
+      this IEnumerable<TIn> items, Func<IEnumerable<TIn>, Task<TOut>> transform, IPipeCtx ctx, int minBatch, int parallel, ILogger log) where TOut : class {
       var isPipe = transform.Method.GetCustomAttribute<PipeAttribute>() != null;
       if (!isPipe) throw new InvalidOperationException($"given transform '{transform.Method.Name}' must be a pipe");
       var pipeNme = transform.Method.Name;
@@ -156,9 +42,8 @@ namespace Mutuo.Etl.Pipe {
       var batches = await items.Batch(minBatch, parallel)
         .Select((g, i) => (Id: new PipeRunId(pipeNme, group, i), In: g.ToArray()))
         .BlockTransform(async b => {
-          using var inStream = b.In.ToJsonlGzStream();
-          await ctx.Store.Save(b.Id.InStatePath(), inStream);
-          return (b.Id, inStatePath: b.Id.InStatePath());
+          await ctx.SaveInState(b.In, b.Id);
+          return b.Id;
         });
 
       IContainerRunner containerRunner = ctx.Cfg.Location switch {
@@ -168,18 +53,18 @@ namespace Mutuo.Etl.Pipe {
         _ => throw new NotImplementedException($"{ctx.Cfg.Location}")
       };
 
-      var res = await containerRunner.RunBatch(ctx, batches.Select(b => b.Id).ToArray(), log);
-
+      var res = await containerRunner.RunBatch(ctx, batches.ToArray(), log);
       var outState = await res
         .BlockTransform(async b => (Metadata: b, OutState: b.Success ? await GetOutState<TOut>(ctx, b.Id) : null));
 
       var batchId = $"{pipeNme}|{group}";
       log.Information("{BatchId} - Batches {Succeded}/{Total} succeeded/total",
-        batchId,  res.Count(r => r.Success), res.Count);
+        batchId, res.Count(r => r.Success), res.Count);
 
       var failed = outState.Where(o => !o.Metadata.Success).ToArray();
-      log.Error("{BatchId} - {Batches} batches failed. Ids:{Ids}",
-        batchId, failed.Length, failed.Select(f => f.Metadata.Id));
+      if (failed.Any())
+        log.Error("{BatchId} - {Batches} batches failed. Ids:{Ids}",
+          batchId, failed.Length, failed.Select(f => f.Metadata.Id));
 
       return outState;
     }
@@ -205,13 +90,18 @@ namespace Mutuo.Etl.Pipe {
       var pipeParams = await method.GetParameters().BlockTransform(async p => {
         var argAttribute = p.GetCustomAttribute<PipeArgAttribute>();
         if (argAttribute == null) {
-          using var inSr = await ctx.LoadInState();
           var genericType = p.ParameterType.GenericTypeArguments.FirstOrDefault() ??
                             throw new InvalidOperationException(
                               $"Expecting arg method {pipeType.Type}.{method.Name} parameter {p.Name} to be IEnumerable<Type>");
-          var deserializeMethod = typeof(JsonlExtensions).GetMethod("LoadJsonlGz", new[] {typeof(Stream)})?.MakeGenericMethod(genericType)
+          var loadInStateMethod = typeof(Pipes).GetMethod("LoadInState", new[] {typeof(IPipeCtx)})?.MakeGenericMethod(genericType)
                                   ?? throw new InvalidOperationException("LoadJsonlGz method not found ");
-          return deserializeMethod.Invoke(null, new object[] {inSr});
+          try {
+            dynamic task = loadInStateMethod.Invoke(null, new object[] {ctx});
+            return (object) await task;
+          }
+          catch (Exception ex) {
+            throw new InvalidOperationException("Unable to load in state for pipe", ex);
+          }
         }
 
         var variableName = $"{pipeName}:{p.Name}";
@@ -231,10 +121,8 @@ namespace Mutuo.Etl.Pipe {
           await task;
         }
         else {
-          var pipeResult = await task;
-          var listResult = (IEnumerable<object>) pipeResult;
-          using var outStream = listResult.ToJsonlGzStream();
-          await ctx.Store.Save(ctx.Id.OutStatePath(), outStream);
+          object pipeResult = await task;
+          await ctx.SetOutState(pipeResult);
         }
       }
       catch (Exception ex) {
@@ -259,16 +147,26 @@ namespace Mutuo.Etl.Pipe {
     }
 
     public static string StatePath(this PipeRunId id) => $"{id.Name}/{id.GroupId}/{id.Num}";
-    static string OutStatePath(this PipeRunId id) => $"{id.StatePath()}.OutState.jsonl.gz";
-    public static string InStatePath(this PipeRunId id) => $"{id.StatePath()}.InState.jsonl.gz";
 
-    static async Task<IReadOnlyCollection<TOut>> GetOutState<TOut>(IPipeCtx ctx, PipeRunId id) {
-      using var stream = await ctx.Store.Load(id.OutStatePath());
-      return stream.LoadJsonlGz<TOut>();
+    static string OutStatePath(this PipeRunId id) => $"{id.StatePath()}.OutState";
+    static string InStatePath(this PipeRunId id) => $"{id.StatePath()}.InState";
+
+    public static async Task<T> GetOutState<T>(this IPipeCtx ctx, PipeRunId id = null) where T : class =>
+      await ctx.Store.Get<T>((id ?? ctx.Id).OutStatePath());
+
+    public static async Task SetOutState<T>(this IPipeCtx ctx, T state, PipeRunId id = null) where T : class =>
+      await ctx.Store.Set((id ?? ctx.Id).OutStatePath(), state);
+
+    public static async Task SaveInState<T>(this IPipeCtx ctx, IEnumerable<T> state, PipeRunId id = null) {
+      using var s = state.ToJsonlGzStream();
+      var path = $"{(id ?? ctx.Id).InStatePath()}.jsonl.gz";
+      await ctx.Store.Save(path, s);
     }
 
-    public static string InStatePath(this IPipeCtx ctx) => ctx.Id.InStatePath();
-    public static Task<Stream> LoadInState(this IPipeCtx ctx) => ctx.Store.Load(ctx.InStatePath());
+    public static async Task<IReadOnlyCollection<T>> LoadInState<T>(this IPipeCtx ctx) {
+      using var s = await ctx.Store.Load($"{ctx.Id.InStatePath()}.jsonl.gz");
+      return s.LoadJsonlGz<T>();
+    }
   }
 
   public enum ExitCode {

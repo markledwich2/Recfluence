@@ -65,7 +65,7 @@ namespace YtReader {
         throw new InvalidOperationException("AppCfgSas not provided in local.appcfg.json or environment variables");
 
       var envLower = cfgRoot.Env.ToLowerInvariant();
-      var blob = new AzureBlobFileStore(cfgRoot.AppCfgSas);
+      var blob = new AzureBlobFileStore(cfgRoot.AppCfgSas, Logger.None);
       var secrets = await blob.Load($"{envLower}.appcfg.json");
 
       var cfg = new ConfigurationBuilder()
@@ -94,13 +94,13 @@ namespace YtReader {
   }
 
   public static class ChannelConfigExtensions {
-    public static ISimpleFileStore DataStore(this AppCfg cfg, StringPath path = null) =>
-      new AzureBlobFileStore(cfg.Storage.DataStorageCs, path ?? cfg.Storage.DbPath);
+    public static ISimpleFileStore DataStore(this AppCfg cfg, ILogger log, StringPath path = null) =>
+      new AzureBlobFileStore(cfg.Storage.DataStorageCs, path ?? cfg.Storage.DbPath, log);
 
     public static YtClient YtClient(this AppCfg cfg, ILogger log) => new YtClient(cfg.YTApiKeys, log);
 
     public static YtStore YtStore(this AppCfg cfg, ILogger log) {
-      var ytStore = new YtStore(cfg.DataStore(cfg.Storage.DbPath), log);
+      var ytStore = new YtStore(cfg.DataStore(log, cfg.Storage.DbPath), log);
       return ytStore;
     }
   }

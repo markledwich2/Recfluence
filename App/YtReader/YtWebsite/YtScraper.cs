@@ -376,8 +376,10 @@ namespace YtReader.YtWebsite {
         extra.SubError = "Unable to find recommended video because it is age restricted and requires to log in";
       }
       else {
-        extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
         extra.SubError = html.QueryElements("#unavailable-submessage").FirstOrDefault()?.GetInnerText();
+        if (extra.SubError == "") extra.SubError = null;
+        if(extra.SubError.HasValue()) // all pages have the error, but not a suberror
+          extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
       }
       if (extra.Error != null) return (new Rec[] { }, extra);
 

@@ -7,7 +7,8 @@ using Newtonsoft.Json;
 namespace SysExtensions.Serialization {
   public static class JsonlExtensions {
     public static void ToJsonl<T>(this IEnumerable<T> items, TextWriter tw) {
-      var serializer = new JsonSerializer {Formatting = Formatting.None};
+      var serializer = JsonExtensions.DefaultSerializer;
+      serializer.Formatting = Formatting.None;
       foreach (var row in items) {
         serializer.Serialize(tw, row);
         tw.WriteLine();

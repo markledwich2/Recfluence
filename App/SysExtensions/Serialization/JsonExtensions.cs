@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -103,6 +104,11 @@ namespace SysExtensions.Serialization {
 
     public static T ToObject<T>(this FPath file, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null) {
       using (var tr = file.OpenText()) return tr.ToObject<T>(settings, loadSettings);
+    }
+
+    public static T ToObject<T>(this Stream reader, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null) {
+      using var tr = new StreamReader(reader, Encoding.UTF8, leaveOpen:true);
+      return tr.ToObject<T>(settings, loadSettings);
     }
 
     public static T ToObject<T>(this TextReader reader, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null) {

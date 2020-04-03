@@ -249,7 +249,7 @@ namespace YtReader {
     /// <summary>Saves recs for all of the given vids</summary>
     async Task SaveRecsAndExtra(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, DbConnection conn, UpdateType updateType, ILogger log) {
       var recStore = Store.RecStore(c.ChannelId);
-      var videoExStore = Store.VideoExtraStore(c.ChannelId);
+      var videoExStore = Store.VideoExtraStore();
 
       var toUpdate = updateType switch {
         UpdateType.AllWithMissingRecs => await VideosWithNoRecs(c, conn),
@@ -364,26 +364,24 @@ from (select video_id, channel_id, channel_title
            , row_number() over (partition by channel_id order by upload_date desc) as num
            , ad_checks
       from video_latest l
-    where ad_checks > 0 and no_ads = ad_checks -- TODO: temporarily look at no_ads in-case they were actually errors
+    --where ad_checks > 0 and no_ads = ad_checks -- TODO: temporarily look at no_ads in-case they were actually errors
      )
-where num < 50 
+where num <= 50 -- most recent for each channel 
 {limitString}")).ToArray();
 
-        var res = await toUpdate.GroupBy(v => v.ChannelId)
-          .Select(g => new ProcessVideoExtraIn {ChannelId = g.Key, Videos = g.ToArray()})
-          .RunPipe(ProcessVideoExtra, PipeCtx(), 200, 4, Log)
+        var res = await toUpdate
+          .RunPipe(ProcessVideoExtra, PipeCtx(), 100, 4, Log)
           .WithDuration();
         
-        var videos = res.Result.Where(r => r.Metadata.Success).SelectMany(r => r.OutState).Sum(o => o.Updated);
+        var videos = res.Result.Where(r => r.Metadata.Success).Sum(o => o.OutState.Updated);
         Log.Information("Finished {Pipe} of {Channels} channels, {Videos} videos in {Duration}", 
           nameof(BackfillVideoExtra), res.Result.Count, videos, res.Duration);
       }
       else {
         var chId = "123TestChannel";
-        var toUpdate = new ProcessVideoExtraIn {
-          ChannelId = chId, Videos = videoIds.Split("|")
-            .Select(v => new ChannelVideoItem {ChannelId = chId, ChannelTitle = chId, VideoId = v}).ToArray()
-        }.AsEnumerable().ToArray();
+        var toUpdate = videoIds.Split("|")
+          .Select(v => new ChannelVideoItem {ChannelId = chId, VideoId = v});
+        
 
         var res = await toUpdate.RunPipe(ProcessVideoExtra, PipeCtx(), 200, 2, Log);
 
@@ -404,32 +402,25 @@ where num < 50
     }
 
     public class ProcessVideoExtraIn {
-      public string                                ChannelId { get; set; }
-      public IReadOnlyCollection<ChannelVideoItem> Videos    { get; set; }
+      public ChannelVideoItem[] Videos { get; set; }
     }
 
     public class ProcessVideoExtraOut {
-      public string ChannelId { get; set; }
       public int    Updated   { get; set; }
+      public StringPath Path { get; set; }
     }
 
     [Pipe]
-    public async Task<IEnumerable<ProcessVideoExtraOut>> ProcessVideoExtra(IEnumerable<ProcessVideoExtraIn> channels) {
-      var res = await channels.BlockTransform(async c => {
-        var f = c.Videos.First();
-        var log = Log.ForContext("Channel", f.ChannelTitle).ForContext("ChannelId", f.ChannelId);
-        var recsAndExtra = await c.Videos.BlockTransform(async v => await Scraper.GetRecsAndExtra(v.VideoId, Log), Cfg.DefaultParallel);
-        var extra = recsAndExtra.Select(r => r.extra).ToArray();
-        var store = Store.VideoExtraStore(f.ChannelId);
-        await store.Append(extra);
-        log.Information("{Channel} - Recorded {VideoExtra} extra info on video's",
-          f.ChannelTitle, extra.Length);
-        return new ProcessVideoExtraOut {
-          ChannelId = c.ChannelId,
-          Updated = extra.Length
-        };
-      }, Cfg.ParallelChannels);
-      return res;
+    public async Task<ProcessVideoExtraOut> ProcessVideoExtra(IEnumerable<ChannelVideoItem> videos) {
+      var recsAndExtra = await videos.BlockTransform(async v => await Scraper.GetRecsAndExtra(v.VideoId, Log), Cfg.DefaultParallel);
+      var extra = recsAndExtra.Select(r => r.extra).ToArray();
+      var store = Store.VideoExtraStore();
+      var file = await store.Append(extra);
+      Log.Information("Recorded {VideoExtra} extra info on video's", extra.Length);
+      return new ProcessVideoExtraOut {
+        Updated = extra.Length,
+        Path = file
+      };
     }
   }
 }

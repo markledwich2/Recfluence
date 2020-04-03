@@ -14,8 +14,8 @@ namespace Mutuo.Etl.Blob {
     public static async Task Sync(Uri csA, Uri csB, StringPath pathA, StringPath pathB, int parallel, ILogger log) {
       pathB = pathB ?? pathA;
 
-      var storeA = new AzureBlobFileStore(csA, pathA);
-      var storeB = new AzureBlobFileStore(csB, pathB);
+      var storeA = new AzureBlobFileStore(csA, log, pathA);
+      var storeB = new AzureBlobFileStore(csB, log, pathB);
 
       log.Information("Starting async({FromPath}) > ({ToPath})", storeA.BasePath, storeB.BasePath);
 

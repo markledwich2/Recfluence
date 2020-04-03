@@ -42,10 +42,11 @@ RUN dotnet run gitversion
 
 # publish YtCli
 WORKDIR /YtNetworks/App/YtCli
-RUN dotnet publish -r linux-musl-x64 --self-contained -c Release -o publish /p:PublishSingleFile=true /p:PublishTrimmed=true
+RUN dotnet publish -c Release -o publish
+#RUN dotnet publish -r linux-musl-x64 --self-contained -c Release -o publish /p:PublishSingleFile=true /p:PublishTrimmed=true
 
 # build runtime image
-FROM mcr.microsoft.com/dotnet/core/runtime-deps:3.1-alpine
+FROM mcr.microsoft.com/dotnet/core/runtime:3.1-alpine
 WORKDIR /app
 COPY --from=build-env YtNetworks/App/YtCli/publish  ./
 
