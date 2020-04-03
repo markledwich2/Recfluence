@@ -122,7 +122,7 @@ namespace Mutuo.Etl.Pipe {
           group = await group.RefreshAsync();
           var state = group.State();
 
-          if (!running && state != ContainerState.Running) {
+          if (!running && state == ContainerState.Running) {
             pipeLog.Information("{RunId} - container started in {Duration}", runId.ToString(), sw.Elapsed);
             running = true;
           }
@@ -150,7 +150,7 @@ namespace Mutuo.Etl.Pipe {
 
           return md;
         }
-      });
+      }, 10);
 
       await ids.BlockAction(async c => {
         var groupName = c.ContainerGroupName();

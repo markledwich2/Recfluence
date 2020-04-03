@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using Dapper;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
@@ -370,10 +371,10 @@ where num <= 50 -- most recent for each channel
 {limitString}")).ToArray();
 
         var res = await toUpdate
-          .RunPipe(ProcessVideoExtra, PipeCtx(), 100, 4, Log)
+          .RunPipe(ProcessVideoExtra, PipeCtx(), 1000, 4, Log)
           .WithDuration();
         
-        var videos = res.Result.Where(r => r.Metadata.Success).Sum(o => o.OutState.Updated);
+        var videos = res.Result.Sum(o => o.OutState.Sum(v => v.Updated));
         Log.Information("Finished {Pipe} of {Channels} channels, {Videos} videos in {Duration}", 
           nameof(BackfillVideoExtra), res.Result.Count, videos, res.Duration);
       }
@@ -405,22 +406,25 @@ where num <= 50 -- most recent for each channel
       public ChannelVideoItem[] Videos { get; set; }
     }
 
-    public class ProcessVideoExtraOut {
+    public class ProcessVideoExtraBatch {
       public int    Updated   { get; set; }
       public StringPath Path { get; set; }
     }
 
     [Pipe]
-    public async Task<ProcessVideoExtraOut> ProcessVideoExtra(IEnumerable<ChannelVideoItem> videos) {
-      var recsAndExtra = await videos.BlockTransform(async v => await Scraper.GetRecsAndExtra(v.VideoId, Log), Cfg.DefaultParallel);
-      var extra = recsAndExtra.Select(r => r.extra).ToArray();
-      var store = Store.VideoExtraStore();
-      var file = await store.Append(extra);
-      Log.Information("Recorded {VideoExtra} extra info on video's", extra.Length);
-      return new ProcessVideoExtraOut {
-        Updated = extra.Length,
-        Path = file
-      };
+    public async Task<IReadOnlyCollection<ProcessVideoExtraBatch>> ProcessVideoExtra(IEnumerable<ChannelVideoItem> videos) {
+      var batch = await videos.BatchGreedy(2000).BlockTransform(async b => {
+        var recsAndExtra = await b.NotNull().BlockTransform(async v => await Scraper.GetRecsAndExtra(v.VideoId, Log), Cfg.DefaultParallel);
+        var extra = recsAndExtra.Select(r => r.extra).ToArray();
+        var store = Store.VideoExtraStore();
+        var file = await store.Append(extra);
+        Log.Information("Recorded {VideoExtra} video_extra records to {Path}", extra.Length, file);
+        return new ProcessVideoExtraBatch {
+          Updated = extra.Length,
+          Path = file
+        };
+      });
+      return batch;
     }
   }
 }
