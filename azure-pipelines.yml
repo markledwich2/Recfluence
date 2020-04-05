@@ -27,7 +27,7 @@ jobs:
       command: buildAndPush
       containerRegistry: ytnetworks
       repository: $(image)
-      tags: $(GitVersion.NuGetVersion)
+      tags: $(GitVersion.SemVer)
       buildContext: .
       dockerFile: App/Dockerfile
 
@@ -37,7 +37,7 @@ jobs:
     vmImage: windows-latest
 
   steps:
-  - script: dotnet publish -c Release  --output $(Build.ArtifactStagingDirectory)/YtFunctions /p:Version='$(GitVersion.NuGetVersion)'
+  - script: dotnet publish -c Release  --output $(Build.ArtifactStagingDirectory)/YtFunctions /p:Version='$(GitVersion.SemVer)'
     workingDirectory: ./App/YtFunctions
     displayName: Publish YtFunctions
 
