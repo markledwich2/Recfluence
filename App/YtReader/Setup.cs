@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -62,9 +63,11 @@ namespace YtReader {
       Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
       ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
 
-    public static async Task<(AppCfg App, RootCfg Root)> LoadCfg2() {
+    public static async Task<(AppCfg App, RootCfg Root)> LoadCfg2(string basePath = null) {
+      //var basePath = FPath.Current.ParentWithFile("default.appcfg.json") ?? FPath.Current;
+      basePath ??= Environment.CurrentDirectory;
       var cfgRoot = new ConfigurationBuilder()
-        .SetBasePath(Environment.CurrentDirectory)
+        .SetBasePath(basePath)
         .AddEnvironmentVariables()
         .AddJsonFile("local.rootcfg.json", true)
         .Build().Get<RootCfg>();
@@ -77,7 +80,7 @@ namespace YtReader {
       var secrets = (await blob.Load($"{envLower}.appcfg.json")).AsString();
 
       var cfg = new ConfigurationBuilder()
-        .SetBasePath(Environment.CurrentDirectory)
+        .SetBasePath(basePath)
         .AddJsonFile("default.appcfg.json")
         .AddJsonFile($"{Env}.appcfg.json", true)
         .AddJsonStream(secrets.AsStream())
