@@ -1,57 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AngleSharp.Text;
 using Autofac;
 using CommandLine;
+using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using SysExtensions.Build;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using Troschuetz.Random;
 using YtReader;
 
 namespace YtCli {
   public class PipeCmd : PipeArgs {
-    [Option('z', "cloudinstance", HelpText = "run this command in a container instance")]
-    public bool LaunchContainer { get; set; }
-
-    public static async Task<ExitCode> RunPipe(CmdCtx<PipeCmd> ctx) {
+    public static async Task<ExitCode> RunPipe(ICmdCtx<PipeCmd> ctx) {
       var option = ctx.Option;
-      ctx.Log.Information("Pipe Run {RunId} - launched", option.RunId ?? option.Pipe);
-      var pipeCtx = ctx.Scope.Resolve<Func<IPipeCtx>>()();
-      if (option.RunId.HasValue() && pipeCtx.Id.ToString() != option.RunId)
-        throw new InvalidOperationException($"The pipe runId {option.RunId} was supplied but a new one was created that doesn't match {pipeCtx.Id}");
-      return await pipeCtx.RunPipe();
-    }
-
-    public static IPipeCtx PipeCtx(object option, RootCfg rootCfg, AppCfg cfg, IComponentContext scope, ILogger log) {
-      var semver = GitVersionInfo.Semver(typeof(Program));
-
-      var pipe = cfg.Pipe.JsonClone();
-      pipe.Container ??= cfg.Container.JsonClone();
-      pipe.Container.Tag ??= semver;
-
-      pipe.Store ??= new PipeAppStorageCfg {
-        Cs = cfg.Storage.DataStorageCs,
-        Path = cfg.Storage.PipePath
-      };
-      pipe.Azure ??= new PipeAzureCfg {
-        ResourceGroup = cfg.ResourceGroup,
-        ServicePrincipal = cfg.ServicePrincipal,
-        SubscriptionId = cfg.SubscriptionId
-      };
-
-      var runId = option switch {
-        PipeCmd p => p.RunId.HasValue() ? PipeRunId.FromString(p.RunId) : PipeRunId.FromName(p.Pipe),
-        _ => null
-      };
-
-      var envVars = new Dictionary<string, string> {
-        {nameof(RootCfg.Env), rootCfg.Env},
-        {nameof(RootCfg.AppCfgSas), rootCfg.AppCfgSas.ToString()}
-      };
-      var pipeCtx = Pipes.CreatePipeCtx(pipe, runId, log, scope, new[] {typeof(YtDataUpdater).Assembly}, envVars);
-      return pipeCtx;
+      var runId = option.RunId.HasValue() ? PipeRunId.FromString(option.RunId) : PipeRunId.FromName(option.Pipe);
+      ctx.Log.Information("Pipe Run {RunId} - launched", runId);
+      var pipeCtx = ctx.Scope.ResolvePipeCtx();
+      return await pipeCtx.DoPipeWork(runId);
     }
   }
 }

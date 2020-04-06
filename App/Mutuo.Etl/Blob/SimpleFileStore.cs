@@ -20,7 +20,7 @@ namespace Mutuo.Etl.Blob {
   }
 
   public static class SimpleStoreExtensions {
-    public static StringPath AddJsonExtention(this StringPath path, bool zip = true) => 
+    public static StringPath AddJsonExtention(this StringPath path, bool zip = true) =>
       new StringPath(path + (zip ? ".json.gz" : ".json"));
 
     public static async Task<T> GetOrCreate<T>(this ISimpleFileStore store, StringPath path, Func<T> create = null) where T : class, new() {
@@ -31,7 +31,7 @@ namespace Mutuo.Etl.Blob {
       }
       return o;
     }
-    
+
     public static async Task<T> Get<T>(this ISimpleFileStore store, StringPath path, bool zip = true) where T : class {
       using var stream = await store.Load(path.AddJsonExtention(zip));
       if (!zip) return stream.ToObject<T>();
@@ -46,19 +46,16 @@ namespace Mutuo.Etl.Blob {
     /// <param name="zip"></param>
     public static async Task Set<T>(this ISimpleFileStore store, StringPath path, T item, bool zip = true) {
       await using var memStream = new MemoryStream();
-      
-      if (zip) {
-        await using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, leaveOpen:true)) {
+
+      if (zip)
+        await using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true)) {
           await using var tw = new StreamWriter(zipWriter, Encoding.UTF8);
           JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
         }
-      }
-      else {
-        await using (var tw = new StreamWriter(memStream, Encoding.UTF8, leaveOpen: true)) {
+      else
+        await using (var tw = new StreamWriter(memStream, Encoding.UTF8, leaveOpen: true))
           JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
-        }
-      }
-      
+
       var fullPath = path.AddJsonExtention(zip);
       memStream.Seek(0, SeekOrigin.Begin);
 

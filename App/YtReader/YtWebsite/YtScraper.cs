@@ -34,15 +34,16 @@ namespace YtReader.YtWebsite {
       ProxyHttp = CreateHttpClient(true);
     }
 
-    HttpClient CreateHttpClient(bool useProxy) =>
-      new HttpClient(new HttpClientHandler {
+    HttpClient CreateHttpClient(bool useProxy) {
+      return new HttpClient(new HttpClientHandler {
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         UseCookies = false,
-        Proxy = useProxy ? new WebProxy("us.smartproxy.com:10000", true, new string[] { }, new NetworkCredential(Cfg.Creds.Name, Cfg.Creds.Secret)) : null,
+        Proxy = useProxy ? new WebProxy(Cfg.Url, true, new string[] { }, new NetworkCredential(Cfg.Creds.Name, Cfg.Creds.Secret)) : null,
         UseProxy = useProxy
       }) {
         Timeout = Cfg.TimeoutSeconds.Seconds()
       };
+    }
 
     long         DirectHttpFailures;
     const string MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
@@ -54,7 +55,7 @@ namespace YtReader.YtWebsite {
     async Task<string> GetRaw(string url, string desc, ILogger log) {
       log.Debug("Scraping {Desc} {Url}", desc, url);
 
-      var useDirect = Interlocked.Read(ref DirectHttpFailures) == 0;
+      var useDirect = !Cfg.AlwaysUseProxy && Interlocked.Read(ref DirectHttpFailures) == 0;
 
       if (useDirect)
         try {

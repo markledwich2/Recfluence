@@ -27,11 +27,28 @@
         "region": {
           "type": "string"
         },
-        "forwardEnvironmentVariables": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+        "exe": {
+          "type": "string"
+        }
+      }
+    },
+    "NamedPipeRunCfg": {
+      "type": "object",
+      "properties": {
+        "pipeName": {
+          "type": "string"
+        },
+        "minWorkItems": {
+          "type": "integer"
+        },
+        "maxParallel": {
+          "type": "integer"
+        },
+        "returnOnStart": {
+          "type": "boolean"
+        },
+        "container": {
+          "$ref": "#/definitions/ContainerCfg"
         }
       }
     },
@@ -44,9 +61,6 @@
         "azure": {
           "$ref": "#/definitions/PipeAzureCfg"
         },
-        "container": {
-          "$ref": "#/definitions/ContainerCfg"
-        },
         "location": {
           "type": "string",
           "enum": [
@@ -58,9 +72,14 @@
         "localParallel": {
           "type": "integer"
         },
-        "dockerUri": {
-          "type": "string",
-          "format": "uri"
+        "default": {
+          "$ref": "#/definitions/PipeRunCfg"
+        },
+        "pipes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/NamedPipeRunCfg"
+          }
         }
       }
     },
@@ -89,6 +108,23 @@
         }
       }
     },
+    "PipeRunCfg": {
+      "type": "object",
+      "properties": {
+        "minWorkItems": {
+          "type": "integer"
+        },
+        "maxParallel": {
+          "type": "integer"
+        },
+        "returnOnStart": {
+          "type": "boolean"
+        },
+        "container": {
+          "$ref": "#/definitions/ContainerCfg"
+        }
+      }
+    },
     "ResultsCfg": {
       "type": "object",
       "properties": {
@@ -111,6 +147,9 @@
         },
         "retry": {
           "type": "integer"
+        },
+        "alwaysUseProxy": {
+          "type": "boolean"
         }
       }
     },
@@ -205,6 +244,9 @@
         },
         "refreshAllAfter": {
           "type": "string"
+        },
+        "alwaysUseProxy": {
+          "type": "boolean"
         }
       }
     }
@@ -249,9 +291,6 @@
     },
     "servicePrincipal": {
       "$ref": "#/definitions/ServicePrincipalCfg"
-    },
-    "container": {
-      "$ref": "#/definitions/ContainerCfg"
     },
     "seqUrl": {
       "type": "string"

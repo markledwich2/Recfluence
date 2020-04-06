@@ -4,7 +4,6 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 using Dapper;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
@@ -53,49 +52,39 @@ namespace YtReader {
     YtReaderCfg RCfg => Cfg.YtReader;
     //bool Expired(DateTime updated, TimeSpan refreshAge) => (RCfg.To ?? DateTime.UtcNow) - updated > refreshAge;
 
-    public async Task UpdateData(UpdateType updateType) {
-      Log.Information("Starting data update: {Type}", updateType);
-      var sw = Stopwatch.StartNew();
-
-      var channels = await UpdateChannels().WithDuration();
-      Log.Information("Updated stats for {Channels} channels in {Duration}", channels.Result.Count, channels.Duration);
-
-      if (updateType == UpdateType.Channels) {
-        Log.Information("Update complete");
-      }
-      else {
-        using var conn = await GetConnection();
-        var channelResults = await channels.Result
-          .Where(c => c.Status == ChannelStatus.Alive)
-          .Select((c, i) => (c, i)).BlockTransform(async item => {
-            var (c, i) = item;
-            var log = Log
-              .ForContext("ChannelId", c.ChannelId)
-              .ForContext("Channel", c.ChannelTitle);
-            try {
-              await UpdateAllInChannel(c, conn, updateType, log);
-              log.Information("{Channel} - Completed {Count}/{Total} update of videos/recs/captions in {Duration}",
-                c.ChannelTitle, i, channels.Result.Count, sw.Elapsed);
-              return (c, Success: true);
-            }
-            catch (Exception ex) {
-              Log.Error(ex, "Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
-              return (c, Success: false);
-            }
-          }, Cfg.ParallelChannels);
-
-        var requestStats = Scraper.RequestStats;
-        Log.Information(
-          "Update complete {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
-          channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed, requestStats.direct, requestStats.proxy);
-      }
+    public class ChannelId {
+      public string Id { get; set; }
     }
 
-    async Task<IReadOnlyCollection<ChannelStored2>> UpdateChannels() {
-      var store = Store.ChannelStore;
+    [Pipe]
+    public async Task Update([PipeArg] UpdateType updateType = UpdateType.All) {
+      var channels = await UpdateAllChannels();
+      var work = channels.Select(c => new UpdateChannelWork {Channel = c, UpdateType = updateType});
+      var res = await work.RunPipe(ProcessChannels, PipeCtx(), Cfg.Pipe.Default, Log);
+    }
 
+    public class UpdateChannelWork {
+      public ChannelStored2 Channel    { get; set; }
+      public UpdateType     UpdateType { get; set; }
+    }
+
+    async Task<IEnumerable<ChannelStored2>> UpdateAllChannels() {
+      var store = Store.ChannelStore;
       Log.Information("Starting channels update. Limited to ({Included})",
         Cfg.LimitedToSeedChannels?.HasItems() == true ? Cfg.LimitedToSeedChannels.Join("|") : "All");
+
+      var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
+
+      var channels = await seeds.Where(c => Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(c.Id))
+        .BlockTransform(UpdateChannel, Cfg.DefaultParallel,
+          progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count)).WithDuration();
+
+      if (channels.Result.Any())
+        await store.Append(channels.Result);
+
+      Log.Information("Updated stats for {Channels} channels in {Duration}", channels.Result.Count, channels.Duration);
+
+      return channels.Result;
 
       async Task<ChannelStored2> UpdateChannel(ChannelSheet channel) {
         var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
@@ -129,20 +118,40 @@ namespace YtReader {
         };
         return channelStored;
       }
-
-      var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
-
-      var channels = await seeds.Where(c => Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(c.Id))
-        .BlockTransform(UpdateChannel, Cfg.DefaultParallel,
-          progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count));
-
-      if (channels.Any())
-        await store.Append(channels);
-
-      return channels;
     }
 
-    async Task UpdateAllInChannel(ChannelStored2 c, DbConnection conn, UpdateType updateType, ILogger log) {
+    [Pipe]
+    public async Task<object> ProcessChannels(IReadOnlyCollection<UpdateChannelWork> work) {
+      var sw = Stopwatch.StartNew();
+      var conn = new AsyncLazy<DbConnection>(() => GetConnection());
+      var channelResults = await work
+        .Where(c => c.Channel.Status == ChannelStatus.Alive)
+        .Select((c, i) => (c, i)).BlockTransform(async item => {
+          var (c, i) = item;
+          var log = Log
+            .ForContext("ChannelId", c.Channel.ChannelId)
+            .ForContext("Channel", c.Channel.ChannelTitle);
+          try {
+            await UpdateAllInChannel(c.Channel, conn, c.UpdateType, log);
+            log.Information("{Channel} - Completed {Count}/{Total} update of videos/recs/captions in {Duration}",
+              c.Channel.ChannelTitle, i, work.Count, sw.Elapsed);
+            return (c, Success: true);
+          }
+          catch (Exception ex) {
+            Log.Error(ex, "Error updating channel {Channel}: {Error}", c.Channel.ChannelTitle, ex.Message);
+            return (c, Success: false);
+          }
+        }, Cfg.ParallelChannels);
+
+      var requestStats = Scraper.RequestStats;
+      Log.Information(
+        "Update complete {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
+        channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed, requestStats.direct, requestStats.proxy);
+
+      return "";
+    }
+
+    async Task UpdateAllInChannel(ChannelStored2 c, AsyncLazy<DbConnection> conn, UpdateType updateType, ILogger log) {
       if (c.StatusMessage.HasValue()) {
         log.Information("{Channel} - Not updating videos/recs/captions because it has a status msg: {StatusMessage} ",
           c.ChannelTitle, c.StatusMessage);
@@ -248,12 +257,12 @@ namespace YtReader {
     }
 
     /// <summary>Saves recs for all of the given vids</summary>
-    async Task SaveRecsAndExtra(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, DbConnection conn, UpdateType updateType, ILogger log) {
+    async Task SaveRecsAndExtra(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AsyncLazy<DbConnection> conn, UpdateType updateType, ILogger log) {
       var recStore = Store.RecStore(c.ChannelId);
       var videoExStore = Store.VideoExtraStore();
 
       var toUpdate = updateType switch {
-        UpdateType.AllWithMissingRecs => await VideosWithNoRecs(c, conn),
+        UpdateType.AllWithMissingRecs => await VideosWithNoRecs(c, await conn.GetOrCreate()),
         _ => await VideoToUpdateRecs(vids, recStore)
       };
 
@@ -371,20 +380,20 @@ where num <= 50 -- most recent for each channel
 {limitString}")).ToArray();
 
         var res = await toUpdate
-          .RunPipe(ProcessVideoExtra, PipeCtx(), 1000, 4, Log)
+          .RunPipe(ProcessVideoExtra, PipeCtx(), new PipeRunCfg { MinWorkItems = 1000, MaxParallel = 8 }, Log)
           .WithDuration();
-        
+
         var videos = res.Result.Sum(o => o.OutState.Sum(v => v.Updated));
-        Log.Information("Finished {Pipe} of {Channels} channels, {Videos} videos in {Duration}", 
+        Log.Information("Finished {Pipe} of {Channels} channels, {Videos} videos in {Duration}",
           nameof(BackfillVideoExtra), res.Result.Count, videos, res.Duration);
       }
       else {
         var chId = "123TestChannel";
         var toUpdate = videoIds.Split("|")
           .Select(v => new ChannelVideoItem {ChannelId = chId, VideoId = v});
-        
 
-        var res = await toUpdate.RunPipe(ProcessVideoExtra, PipeCtx(), 200, 2, Log);
+
+        var res = await toUpdate.RunPipe(ProcessVideoExtra, PipeCtx(), new PipeRunCfg { MinWorkItems = 200, MaxParallel = 2 }, Log);
 
         /*var recsAndExtra = await videoIds.Split("|")
           .BlockTransform(async v => await Scraper.GetRecsAndExtra(v, Log), Cfg.DefaultParallel);
@@ -407,8 +416,8 @@ where num <= 50 -- most recent for each channel
     }
 
     public class ProcessVideoExtraBatch {
-      public int    Updated   { get; set; }
-      public StringPath Path { get; set; }
+      public int        Updated { get; set; }
+      public StringPath Path    { get; set; }
     }
 
     [Pipe]

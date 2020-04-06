@@ -17,10 +17,11 @@ namespace YtCli {
     public bool PublishToRegistry { get; set; }
 
     public static async Task<ExitCode> PublishContainer(CmdCtx<PublishContainerCmd> ctx) {
+      
       //var buildTools = new BuildTools(ctx.Log);
       //await buildTools.GitVersionUpdate();
       var v = await GitVersionInfo.Discover(ctx.Log);
-      var container = ctx.Cfg.Container;
+      var container = ctx.Cfg.Pipe.Default.Container;
       var sln = FPath.Current.ParentWithFile("YtNetworks.sln", true);
       if (!sln.Exists) throw new InvalidOperationException("Can't find YtNetworks.sln file to organize build");
       var image = $"{container.Registry}/{container.ImageName}:{v.SemVer}";

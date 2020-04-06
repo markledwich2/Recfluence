@@ -1,27 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
-using Newtonsoft.Json;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
-using SysExtensions.Serialization;
 using SysExtensions.Text;
 
 namespace Mutuo.Etl.Blob {
   public class AzureBlobFileStore : ISimpleFileStore {
     public ILogger Log { get; }
 
-    public AzureBlobFileStore(Uri sas, ILogger log, StringPath pathSansContainer = null) 
+    public AzureBlobFileStore(Uri sas, ILogger log, StringPath pathSansContainer = null)
       : this(pathSansContainer, log) => Container = new CloudBlobContainer(sas);
 
     public AzureBlobFileStore(string cs, StringPath path, ILogger log) : this(path, log) {
@@ -62,9 +58,7 @@ namespace Mutuo.Etl.Blob {
       }
     }
 
-
     public CloudBlockBlob BlobRef(StringPath path) => Container.GetBlockBlobReference(BasePathSansContainer.Add(path));
-    
 
     public async Task Save(StringPath path, FPath file) {
       var blob = BlobRef(path);

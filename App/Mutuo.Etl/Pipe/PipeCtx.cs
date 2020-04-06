@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using Autofac;
+using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
@@ -10,7 +11,6 @@ using SysExtensions.Text;
 namespace Mutuo.Etl.Pipe {
   /// <summary>Context & Cfg for running a pipe command</summary>
   public interface IPipeCtx {
-    PipeRunId         Id             { get; }
     ILogger           Log            { get; }
     ISimpleFileStore  Store          { get; }
     PipeAppCfg        Cfg            { get; }
@@ -19,6 +19,7 @@ namespace Mutuo.Etl.Pipe {
 
     /// <summary>Environment variables to forward</summary>
     IDictionary<string, string> EnvVars { get; }
+    Func<Region> CustomRegion { get; set; }
   }
 
   /// <summary>A unique string for a pipe run. Human readable and easily passable though commands.</summary>
@@ -53,15 +54,14 @@ namespace Mutuo.Etl.Pipe {
       };
     }
   }
-  
+
   class PipeCtx : IPipeCtx {
     public PipeCtx() { }
 
-    public PipeCtx(IPipeCtx ctx, PipeRunId id) {
+    public PipeCtx(IPipeCtx ctx) {
       Log = ctx.Log;
       Store = ctx.Store;
       Cfg = ctx.Cfg;
-      Id = id;
       PipeAssemblies = ctx.PipeAssemblies;
       Scope = ctx.Scope;
     }
@@ -69,9 +69,9 @@ namespace Mutuo.Etl.Pipe {
     public ILogger                     Log            { get; set; }
     public ISimpleFileStore            Store          { get; set; }
     public PipeAppCfg                  Cfg            { get; set; }
-    public PipeRunId                   Id             { get; set; }
     public Assembly[]                  PipeAssemblies { get; set; } = { };
     public IComponentContext           Scope          { get; set; }
     public IDictionary<string, string> EnvVars        { get; set; } = new Dictionary<string, string>();
+    public Func<Region>                CustomRegion   { get; set; }
   }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Serialization;
@@ -67,7 +68,7 @@ namespace Mutuo.Etl.Blob {
       var ts = items.Max(GetTs);
       var path = StoreFileMd.FilePath(Path, ts, Version);
 
-      await using var memStream = items.ToJsonlGzStream();
+      await using var memStream = items.ToJsonlGzStream(new JsonSerializerSettings());
       var res = await Store.Save(path, memStream).WithDuration();
       Log?.Debug("Store - Saved '{Path}' in {Duration}", path, res);
       return path;

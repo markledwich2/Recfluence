@@ -16,9 +16,11 @@ namespace SysExtensions.Text {
     public static Stream AsStream(this string content) => new MemoryStream(Encoding.UTF8.GetBytes(content));
 
     public static TextReader AsTextStream(this string content) => new StreamReader(new MemoryStream(Encoding.UTF8.GetBytes(content)));
+    
+    public static TextReader TextStream(this Stream stream, Encoding encoding = null) => new StreamReader(stream, encoding ?? Encoding.UTF8);
 
-    public static async Task<string> AsString(this Stream stream) {
-      using (var sr = new StreamReader(stream)) return await sr.ReadToEndAsync();
+    public static string AsString(this Stream stream) {
+      using (var sr = new StreamReader(stream)) return sr.ReadToEnd();
     }
 
     /// <summary>Is not null or emtpy</summary>

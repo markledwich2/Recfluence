@@ -27,4 +27,25 @@
     <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
     <ProjectReference Include="..\YtReader\YtReader.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\YtCli\default.appcfg.json">
+      <Link>default.appcfg.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\YtCli\dev.appcfg.json">
+      <Link>dev.appcfg.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\YtCli\local.appcfg.json">
+      <Link>local.appcfg.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\YtCli\local.rootcfg.json">
+      <Link>local.rootcfg.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\YtCli\prod.appcfg.json">
+      <Link>prod.appcfg.json</Link>
+    </Content>
+  </ItemGroup>
 </Project>

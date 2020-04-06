@@ -71,9 +71,20 @@ namespace SysExtensions.Serialization {
     public static JObject ToJObject(this object o, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null)
       => (JObject) ToJToken(o, settings, loadSettings);
 
-    public static string ToJson(this object o, JsonSerializerSettings settings = null) {
+    public static string ToJson<T>(this T o, JsonSerializerSettings settings = null) where T : new() {
       settings ??= DefaultSettings();
       return JsonConvert.SerializeObject(o, settings);
+    }
+
+    public static Stream ToJsonStream<T>(this T o, JsonSerializerSettings settings = null) where T : new() {
+      settings ??= DefaultSettings();
+      var ms = new MemoryStream();
+      using (var sw = new StreamWriter(ms, leaveOpen: true))
+      using (var jw = new JsonTextWriter(sw)) {
+        settings.Serializer().Serialize(jw, o);
+      }
+      ms.Seek(0, SeekOrigin.Begin);
+      return ms;
     }
 
     public static void WriteJson(this FPath filePath, object o, JsonSerializerSettings settings = null)
@@ -107,7 +118,7 @@ namespace SysExtensions.Serialization {
     }
 
     public static T ToObject<T>(this Stream reader, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null) {
-      using var tr = new StreamReader(reader, Encoding.UTF8, leaveOpen:true);
+      using var tr = new StreamReader(reader, Encoding.UTF8, leaveOpen: true);
       return tr.ToObject<T>(settings, loadSettings);
     }
 

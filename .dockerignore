@@ -1,3 +1,4 @@
+
 */node_modules
 npm-debug.log
 */Dockerfile
@@ -10,6 +11,8 @@ docker-compose*
 */publish
 README.md
 LICENSE
+/Site
+/Analysis
 
 # any dir starting with. (except git)
 */.idea

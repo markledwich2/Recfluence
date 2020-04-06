@@ -1,22 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Humanizer;
-using Newtonsoft.Json;
 using Polly;
 using Polly.Retry;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Security;
-using SysExtensions.Serialization;
 using SysExtensions.Text;
 
 namespace Mutuo.Etl.Blob {
