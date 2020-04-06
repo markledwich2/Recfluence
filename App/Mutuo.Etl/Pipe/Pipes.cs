@@ -75,7 +75,7 @@ namespace Mutuo.Etl.Pipe {
       IPipeWorker pipeWorker = ctx.Cfg.Location switch {
         PipeRunLocation.Container => new AzurePipeWorker(ctx.Cfg, log),
         PipeRunLocation.LocalContainer => new LocalPipeWorker(),
-        PipeRunLocation.LocalThread => new ThreadPipeWorker(),
+        PipeRunLocation.LocalThread => new ThreadPipeWorker()
       };
       return pipeWorker;
     }
