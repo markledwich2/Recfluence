@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <AzureFunctionsVersion>v3-preview</AzureFunctionsVersion>
+    <AzureFunctionsVersion>v3</AzureFunctionsVersion>
     <LangVersion>8</LangVersion>
     <AssemblyVersion>0.4.1</AssemblyVersion>
     <InformationalVersion>0.4.1-pipe.1</InformationalVersion>
@@ -44,6 +44,7 @@
     </Content>
     <Content Include="..\YtCli\prod.appcfg.json">
       <Link>prod.appcfg.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 </Project>

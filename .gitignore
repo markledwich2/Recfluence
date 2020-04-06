@@ -266,3 +266,4 @@ __pycache__/
 
 .*/
 Analysis/.Rhistory
+*local.*.json
