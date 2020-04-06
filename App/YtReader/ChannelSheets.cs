@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,7 +17,7 @@ using SysExtensions.Threading;
 namespace YtReader {
   public static class ChannelSheets {
     #region Read
-    
+
     public static Task<IReadOnlyCollection<MainChannelSheet>> MainChannels(SheetsCfg sheetsCfg, ILogger log) =>
       MainChannels(sheetsCfg, GetService(sheetsCfg), log);
 
@@ -99,9 +100,9 @@ namespace YtReader {
       };
       return lr;
     }
-    
+
     #endregion
-    
+
     #region Write
 
     public static async Task SyncNewChannelsForTags(SheetsCfg sheetsCfg, string mainChannelSheetId, IReadOnlyCollection<string> sheetIds) {
@@ -109,10 +110,8 @@ namespace YtReader {
       var mainSheet = await service.Spreadsheets.Get(mainChannelSheetId).ExecuteAsync();
       var channelSheet = mainSheet.Sheets.FirstOrDefault(s => s.Properties.Title == "Channels");
       var lastRow = channelSheet.Data.Max(d => d.StartRow);
-      
-      
     }
-    
+
     #endregion
 
     static SheetsService GetService(SheetsCfg sheetsCfg) {
@@ -134,7 +133,7 @@ namespace YtReader {
       if (range.Count == 0) return new T[] { };
       var csvText = range.Join("\n", l => l.Join(",", o => Quote(o?.ToString() ?? "")));
       using var reader = new StringReader(csvText);
-      using var csv = new CsvReader(reader);
+      using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
       csv.Configuration.HasHeaderRecord = true;
       csv.Configuration.MissingFieldFound = null;
       csv.Configuration.Escape = '\\';
@@ -173,9 +172,7 @@ namespace YtReader {
     public                                 string Complete { get; set; }
   }
 
-  /// <summary>
-  ///   Main & User sheet combined into a record representing the majority view
-  /// </summary>
+  /// <summary>Main & User sheet combined into a record representing the majority view</summary>
   public class ChannelSheet {
     public string                                 Id            { get; set; }
     public string                                 Title         { get; set; }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Mutuo.Etl;
+using Mutuo.Etl.Blob;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions;
@@ -12,10 +12,10 @@ using SysExtensions.Threading;
 
 namespace YtReader {
   public class StoreUpgrader {
-    readonly AppCfg Cfg;
+    readonly AppCfg           Cfg;
     readonly ISimpleFileStore Store;
-    readonly ILogger Log;
-    static DateTime V0UpdateTime;
+    readonly ILogger          Log;
+    static   DateTime         V0UpdateTime;
 
     public StoreUpgrader(AppCfg cfg, ISimpleFileStore store, ILogger log) {
       Cfg = cfg;

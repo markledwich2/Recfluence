@@ -8,9 +8,8 @@ using SysExtensions.Collections;
 
 namespace SysExtensions.Threading {
   public static class TaskExtensions {
-    /// <summary>
-    ///   Waits for all of the tasks, however will cancel the tasks and throw an exception if any of the tasks have a fault
-    /// </summary>
+    /// <summary>Waits for all of the tasks, however will cancel the tasks and throw an exception if any of the tasks have a
+    ///   fault</summary>
     /// <param name="tasks"></param>
     /// <param name="cancelSource"></param>
     /// <returns></returns>
@@ -29,9 +28,7 @@ namespace SysExtensions.Threading {
 
     public static Task Delay(this TimeSpan timespan) => Task.Delay(timespan);
 
-    /// <summary>
-    ///   Executes the tasks in order. Completing tasks trigger the next one to start
-    /// </summary>
+    /// <summary>Executes the tasks in order. Completing tasks trigger the next one to start</summary>
     public static IEnumerable<Task<T>> Interleaved<T>(this IEnumerable<Task<T>> tasks) {
       var inputTasks = tasks.ToList();
       var sources = Enumerable.Range(0, inputTasks.Count).Select(_ => new TaskCompletionSource<T>()).ToList();
@@ -93,6 +90,6 @@ namespace SysExtensions.Threading {
 
   public class TimedResult<T> {
     public TimeSpan Duration { get; set; }
-    public T Result { get; set; }
+    public T        Result   { get; set; }
   }
 }

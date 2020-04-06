@@ -28,32 +28,20 @@ namespace SysExtensions.Text {
 
   // ML: added formatting to metric. But didn't warrant forking Humanizer for just that
 
-  /// <summary>
-  ///   Contains extension methods for changing a number to Metric representation (ToMetric)
-  ///   and from Metric representation back to the number (FromMetric)
-  /// </summary>
+  /// <summary>Contains extension methods for changing a number to Metric representation (ToMetric) and from Metric
+  ///   representation back to the number (FromMetric)</summary>
   public static class MetricNumeralExtensions {
     static readonly double BigLimit;
     static readonly double SmallLimit;
 
-    /// <summary>
-    ///   Symbols is a list of every symbols for the Metric system.
-    /// </summary>
+    /// <summary>Symbols is a list of every symbols for the Metric system.</summary>
     static readonly List<char>[] Symbols = {
       new List<char> {'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'},
       new List<char> {'m', 'μ', 'n', 'p', 'f', 'a', 'z', 'y'}
     };
 
-    /// <summary>
-    ///   Names link a Metric symbol (as key) to its name (as value).
-    /// </summary>
-    /// <remarks>
-    ///   We dont support :
-    ///   {'h', "hecto"},
-    ///   {'da', "deca" }, // !string
-    ///   {'d', "deci" },
-    ///   {'c', "centi"},
-    /// </remarks>
+    /// <summary>Names link a Metric symbol (as key) to its name (as value).</summary>
+    /// <remarks>We dont support : {'h', "hecto"}, {'da', "deca" }, // !string {'d', "deci" }, {'c', "centi"},</remarks>
     static readonly Dictionary<char, string> Names = new Dictionary<char, string> {
       {'Y', "yotta"}, {'Z', "zetta"}, {'E', "exa"}, {'P', "peta"}, {'T', "tera"}, {'G', "giga"}, {'M', "mega"}, {'k', "kilo"},
       {'m', "milli"}, {'μ', "micro"}, {'n', "nano"}, {'p', "pico"}, {'f', "femto"}, {'a', "atto"}, {'z', "zepto"}, {'y', "yocto"}
@@ -65,13 +53,9 @@ namespace SysExtensions.Text {
       SmallLimit = Math.Pow(10, -limit);
     }
 
-    /// <summary>
-    ///   Converts a Metric representation into a number.
-    /// </summary>
-    /// <remarks>
-    ///   We don't support input in the format {number}{name} nor {number} {name}.
-    ///   We only provide a solution for {number}{symbol} and {number} {symbol}.
-    /// </remarks>
+    /// <summary>Converts a Metric representation into a number.</summary>
+    /// <remarks>We don't support input in the format {number}{name} nor {number} {name}. We only provide a solution for
+    ///   {number}{symbol} and {number} {symbol}.</remarks>
     /// <param name="input">Metric representation to convert to a number</param>
     /// <example>
     ///   <code>
@@ -86,14 +70,10 @@ namespace SysExtensions.Text {
       return BuildNumber(input, input[input.Length - 1]);
     }
 
-    /// <summary>
-    ///   Converts a number into a valid and Human-readable Metric representation.
-    /// </summary>
-    /// <remarks>
-    ///   Inspired by a snippet from Thom Smith.
-    ///   See <a href="http://stackoverflow.com/questions/12181024/formatting-a-number-with-a-metric-prefix">this link</a>
-    ///   for more.
-    /// </remarks>
+    /// <summary>Converts a number into a valid and Human-readable Metric representation.</summary>
+    /// <remarks>Inspired by a snippet from Thom Smith. See
+    ///   <a href="http://stackoverflow.com/questions/12181024/formatting-a-number-with-a-metric-prefix">this link</a> for
+    ///   more.</remarks>
     /// <param name="input">Number to convert to a Metric representation.</param>
     /// <param name="hasSpace">True will split the number and the symbol with a whitespace.</param>
     /// <param name="useSymbol">True will use symbol instead of name</param>
@@ -108,14 +88,10 @@ namespace SysExtensions.Text {
     public static string ToMetric(this int input, string format = null, bool hasSpace = false, bool useSymbol = true) =>
       ((double) input).ToMetric(format, hasSpace, useSymbol);
 
-    /// <summary>
-    ///   Converts a number into a valid and Human-readable Metric representation.
-    /// </summary>
-    /// <remarks>
-    ///   Inspired by a snippet from Thom Smith.
-    ///   See <a href="http://stackoverflow.com/questions/12181024/formatting-a-number-with-a-metric-prefix">this link</a>
-    ///   for more.
-    /// </remarks>
+    /// <summary>Converts a number into a valid and Human-readable Metric representation.</summary>
+    /// <remarks>Inspired by a snippet from Thom Smith. See
+    ///   <a href="http://stackoverflow.com/questions/12181024/formatting-a-number-with-a-metric-prefix">this link</a> for
+    ///   more.</remarks>
     /// <param name="input">Number to convert to a Metric representation.</param>
     /// <param name="hasSpace">True will split the number and the symbol with a whitespace.</param>
     /// <param name="useSymbol">True will use symbol instead of name</param>
@@ -136,9 +112,7 @@ namespace SysExtensions.Text {
       return BuildRepresentation(input, hasSpace, useSymbol, format);
     }
 
-    /// <summary>
-    ///   Clean or handle any wrong input
-    /// </summary>
+    /// <summary>Clean or handle any wrong input</summary>
     /// <param name="input">Metric representation to clean</param>
     /// <returns>A cleaned representation</returns>
     static string CleanRepresentation(string input) {
@@ -153,9 +127,7 @@ namespace SysExtensions.Text {
       return input.Replace(" ", string.Empty);
     }
 
-    /// <summary>
-    ///   Build a number from a metric representation or from a number
-    /// </summary>
+    /// <summary>Build a number from a metric representation or from a number</summary>
     /// <param name="input">A Metric representation to parse to a number</param>
     /// <param name="last">The last character of input</param>
     /// <returns>A number build from a Metric representation</returns>
@@ -164,9 +136,7 @@ namespace SysExtensions.Text {
         ? BuildMetricNumber(input, last)
         : double.Parse(input);
 
-    /// <summary>
-    ///   Build a number from a metric representation
-    /// </summary>
+    /// <summary>Build a number from a metric representation</summary>
     /// <param name="input">A Metric representation to parse to a number</param>
     /// <param name="last">The last character of input</param>
     /// <returns>A number build from a Metric representation</returns>
@@ -179,18 +149,14 @@ namespace SysExtensions.Text {
       return number * exponent;
     }
 
-    /// <summary>
-    ///   Replace every symbol's name by its symbol representation.
-    /// </summary>
+    /// <summary>Replace every symbol's name by its symbol representation.</summary>
     /// <param name="input">Metric representation with a name or a symbol</param>
     /// <returns>A metric representation with a symbol</returns>
     static string ReplaceNameBySymbol(string input) =>
       Names.Aggregate(input, (current, name) =>
         current.Replace(name.Value, name.Key.ToString()));
 
-    /// <summary>
-    ///   Build a Metric representation of the number.
-    /// </summary>
+    /// <summary>Build a Metric representation of the number.</summary>
     /// <param name="input">Number to convert to a Metric representation.</param>
     /// <param name="hasSpace">True will split the number and the symbol with a whitespace.</param>
     /// <param name="useSymbol">True will use symbol instead of name</param>
@@ -202,9 +168,7 @@ namespace SysExtensions.Text {
         : BuildMetricRepresentation(input, exponent, hasSpace, useSymbol, format);
     }
 
-    /// <summary>
-    ///   Build a Metric representation of the number.
-    /// </summary>
+    /// <summary>Build a Metric representation of the number.</summary>
     /// <param name="input">Number to convert to a Metric representation.</param>
     /// <param name="exponent">Exponent of the number in a scientific notation</param>
     /// <param name="hasSpace">True will split the number and the symbol with a whitespace.</param>
@@ -220,17 +184,13 @@ namespace SysExtensions.Text {
              + GetUnit(symbol, useSymbol);
     }
 
-    /// <summary>
-    ///   Get the unit from a symbol of from the symbol's name.
-    /// </summary>
+    /// <summary>Get the unit from a symbol of from the symbol's name.</summary>
     /// <param name="symbol">The symbol linked to the unit</param>
     /// <param name="useSymbol">True will use symbol instead of name</param>
     /// <returns>A symbol or a symbol's name</returns>
     static string GetUnit(char symbol, bool useSymbol) => useSymbol ? symbol.ToString() : Names[symbol];
 
-    /// <summary>
-    ///   Check if a Metric representation is out of the valid range.
-    /// </summary>
+    /// <summary>Check if a Metric representation is out of the valid range.</summary>
     /// <param name="input">A Metric representation who might be out of the valid range.</param>
     /// <returns>True if input is out of the valid range.</returns>
     static bool IsOutOfRange(this double input) {
@@ -240,14 +200,9 @@ namespace SysExtensions.Text {
              || Math.Sign(input) == -1 && outside(-BigLimit, -SmallLimit);
     }
 
-    /// <summary>
-    ///   Check if a string is not a valid Metric representation.
-    ///   A valid representation is in the format "{0}{1}" or "{0} {1}"
-    ///   where {0} is a number and {1} is an allowed symbol.
-    /// </summary>
-    /// <remarks>
-    ///   ToDo: Performance: Use (string input, out number) to escape the double use of Parse()
-    /// </remarks>
+    /// <summary>Check if a string is not a valid Metric representation. A valid representation is in the format "{0}{1}" or
+    ///   "{0} {1}" where {0} is a number and {1} is an allowed symbol.</summary>
+    /// <remarks>ToDo: Performance: Use (string input, out number) to escape the double use of Parse()</remarks>
     /// <param name="input">A string who might contain a invalid Metric representation.</param>
     /// <returns>True if input is not a valid Metric representation.</returns>
     static bool IsInvalidMetricNumeral(this string input) {

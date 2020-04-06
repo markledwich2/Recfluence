@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Mutuo.Etl;
+using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
@@ -26,8 +26,8 @@ namespace YtReader {
       new AppendCollectionStore<VideoStored2>(Store, StringPath.Relative("videos", channelId), v => v.UploadDate.FileSafeTimestamp(),
         Log, StoreVersion.ToString());
 
-    public AppendCollectionStore<VideoExtraStored2> VideoExtraStore(string channelId) =>
-      new AppendCollectionStore<VideoExtraStored2>(Store, StringPath.Relative("video_extra", channelId), v => v.Updated.FileSafeTimestamp(),
+    public AppendCollectionStore<VideoExtraStored2> VideoExtraStore() =>
+      new AppendCollectionStore<VideoExtraStored2>(Store, StringPath.Relative("video_extra"), v => v.Updated.FileSafeTimestamp(),
         Log, StoreVersion.ToString());
 
     public AppendCollectionStore<RecStored2> RecStore(string channelId) =>

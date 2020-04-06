@@ -6,10 +6,8 @@ using SysExtensions.Collections;
 using SysExtensions.Serialization;
 
 namespace SysExtensions.Text {
-    /// <summary>
-    ///   Represent a path (file systems, navigation) that easily converts to/from a string using the '/' separator
-    /// </summary>
-    [TypeConverter(typeof(StringConverter<StringPath>))]
+  /// <summary>Represent a path (file systems, navigation) that easily converts to/from a string using the '/' separator</summary>
+  [TypeConverter(typeof(StringConverter<StringPath>))]
   public class StringPath : IStringConvertable {
     protected const string UpToken = "..";
 
@@ -22,15 +20,15 @@ namespace SysExtensions.Text {
     public StringPath(IEnumerable<string> tokens) => Tokens = tokens.ToArray();
 
     protected virtual char EscapeChar => '\\';
-    protected virtual char Seperator => '/';
+    protected virtual char Seperator  => '/';
 
     public IReadOnlyCollection<string> Tokens { get; private set; }
 
-    public bool IsRoot => Tokens.Count == 1 && IsAbsolute;
+    public bool IsRoot     => Tokens.Count == 1 && IsAbsolute;
     public bool IsAbsolute { get; private set; }
     public bool IsRelative => !IsAbsolute;
     public bool IsFullPath => IsAbsolute && Tokens.All(t => t != UpToken);
-    public bool IsEmpty => Tokens.Count == 0;
+    public bool IsEmpty    => Tokens.Count == 0;
 
     public StringPath Parent => Tokens.Count <= 1
       ? new StringPath {IsAbsolute = IsAbsolute}
@@ -38,9 +36,7 @@ namespace SysExtensions.Text {
 
     public string Name => Tokens.LastOrDefault();
 
-    /// <summary>
-    ///   Like a file extension, except anything after the first "." is considered part of the extension
-    /// </summary>
+    /// <summary>Like a file extension, except anything after the first "." is considered part of the extension</summary>
     public string[] Extensions {
       get {
         var split = Name?.Split('.');
@@ -49,9 +45,7 @@ namespace SysExtensions.Text {
       }
     }
 
-    /// <summary>
-    ///   A name minus a file extension, except anything after the first "." is considered part of the extension
-    /// </summary>
+    /// <summary>A name minus a file extension, except anything after the first "." is considered part of the extension</summary>
     public string NameSansExtension => Name?.Split('.').FirstOrDefault();
 
     public StringPath WithExtension(string extension) => Parent.Add(NameSansExtension + extension);
@@ -104,9 +98,7 @@ namespace SysExtensions.Text {
 
     public static StringPath FromString(string path) => new StringPath {StringValue = path};
 
-    /// <summary>
-    ///   If the path is relative. Then uses the full path context to convert to a full path
-    /// </summary>
+    /// <summary>If the path is relative. Then uses the full path context to convert to a full path</summary>
     public StringPath FullPath(StringPath fullPathContext) {
       if (!fullPathContext.IsFullPath) throw new InvalidOperationException("Expecting a full path context");
       if (IsAbsolute) throw new NotImplementedException();
@@ -131,10 +123,8 @@ namespace SysExtensions.Text {
 
     public static StringPath Relative(params string[] tokens) => new StringPath(tokens) {IsAbsolute = false};
 
-    /// <summary>
-    ///   Returns a relative path from the given path if one exists, otherwise returns a copy of this.
-    ///   Both paths must be absolute
-    /// </summary>
+    /// <summary>Returns a relative path from the given path if one exists, otherwise returns a copy of this. Both paths must
+    ///   be absolute</summary>
     /// <param name="from"></param>
     /// <returns></returns>
     public StringPath RelativePath(StringPath from) {

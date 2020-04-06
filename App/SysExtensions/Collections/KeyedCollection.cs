@@ -18,13 +18,11 @@ namespace SysExtensions.Collections {
     Task<V> GetOrAdd(K k, Func<Task<V>> create);
   }
 
-  /// <summary>
-  ///   Wraps a dictionary for items that can provide a way to key items. More clean and collection compatible usage
-  ///   compared to dictionary
-  /// </summary>
+  /// <summary>Wraps a dictionary for items that can provide a way to key items. More clean and collection compatible usage
+  ///   compared to dictionary</summary>
   public class KeyedCollection<K, V> : IKeyedCollection<K, V> {
     readonly Expression<Func<V, K>> _getKeyExpression;
-    readonly IDictionary<K, V> _dic;
+    readonly IDictionary<K, V>      _dic;
 
     public IDictionary<K, V> ToDictioniary() => _dic.ToDictionary(t => t.Key, t => t.Value);
 
@@ -53,9 +51,7 @@ namespace SysExtensions.Collections {
     public V GetOrAdd(K k, Func<V> create) => _dic.GetOrAdd(k, create);
     public Task<V> GetOrAdd(K k, Func<Task<V>> create) => _dic.GetOrAdd(k, create);
 
-    /// <summary>
-    ///   Like add, but also returns the item so it can be chained
-    /// </summary>
+    /// <summary>Like add, but also returns the item so it can be chained</summary>
     public V AddItem(V item) {
       Add(item);
       return item;
@@ -85,9 +81,7 @@ namespace SysExtensions.Collections {
 
     public void Clear() => _dic.Clear();
 
-    /// <summary>
-    ///   Use key comparison rather than equality for performance and predictability
-    /// </summary>
+    /// <summary>Use key comparison rather than equality for performance and predictability</summary>
     public bool Contains(V item) => ContainsKey(GetKey(item));
 
     public void CopyTo(V[] array, int startIndex) => _dic.Values.CopyTo(array, startIndex);
@@ -100,8 +94,8 @@ namespace SysExtensions.Collections {
 
     public bool IsReadOnly => _dic.IsReadOnly;
 
-    public bool IsSynchronized => false;
-    public object SyncRoot => null;
+    public bool   IsSynchronized => false;
+    public object SyncRoot       => null;
 
     public IEnumerator<V> GetEnumerator() => _dic.Values.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -111,7 +105,7 @@ namespace SysExtensions.Collections {
 
   public class MultiValueKeyedCollection<K, V> : ICollection<V> {
     readonly MultiValueDictionary<K, V> _dic;
-    readonly Func<V, K> _getKey;
+    readonly Func<V, K>                 _getKey;
 
     public MultiValueKeyedCollection(Func<V, K> getKey, IEqualityComparer<K> comparer = null) {
       _dic = comparer == null ? new MultiValueDictionary<K, V>() : new MultiValueDictionary<K, V>(comparer);
@@ -160,21 +154,17 @@ namespace SysExtensions.Collections {
   }
 
   public static class KeyedCollectionExtensions {
-      /// <summary>
-      ///   Constructs a dictionary where items key is used for the dictionary and null in each item
-      /// </summary>
-      public static IDictionary<K, V> ToDictionaryForSerialization<K, V>(this IKeyedCollection<K, V> list) {
+    /// <summary>Constructs a dictionary where items key is used for the dictionary and null in each item</summary>
+    public static IDictionary<K, V> ToDictionaryForSerialization<K, V>(this IKeyedCollection<K, V> list) {
       var dic = list.ToList().JsonClone().ToDictionary(list.GetKey);
       foreach (var kv in dic.Values)
-        list.SetKey(kv, default(K));
+        list.SetKey(kv, default);
       return dic;
     }
 
-      /// <summary>
-      ///   Initializes the collection from a dictionary.
-      ///   Clones of items are created and their key properties set according to the dictionary
-      /// </summary>
-      public static void FromDictionaryForSerialization<K, V>(this IKeyedCollection<K, V> collection, IDictionary<K, V> dic) {
+    /// <summary>Initializes the collection from a dictionary. Clones of items are created and their key properties set
+    ///   according to the dictionary</summary>
+    public static void FromDictionaryForSerialization<K, V>(this IKeyedCollection<K, V> collection, IDictionary<K, V> dic) {
       foreach (var kv in dic) {
         var val = kv.Value.JsonClone();
         collection.SetKey(val, kv.Key);
@@ -182,10 +172,8 @@ namespace SysExtensions.Collections {
       }
     }
 
-      /// <summary>
-      ///   Convert a lambda expression for a getter into a setter
-      /// </summary>
-      public static Action<T, TProperty> GetSetter<T, TProperty>(Expression<Func<T, TProperty>> expression) {
+    /// <summary>Convert a lambda expression for a getter into a setter</summary>
+    public static Action<T, TProperty> GetSetter<T, TProperty>(Expression<Func<T, TProperty>> expression) {
       var memberExpression = (MemberExpression) expression.Body;
       var property = (PropertyInfo) memberExpression.Member;
       var setMethod = property.GetSetMethod();

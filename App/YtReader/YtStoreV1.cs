@@ -7,23 +7,23 @@ using YtReader.Yt;
 
 namespace YtReader {
   public class RecommendedVideoStored {
-    public string VideoId { get; set; }
-    public string VideoTitle { get; set; }
+    public string                         VideoId     { get; set; }
+    public string                         VideoTitle  { get; set; }
     public ICollection<RecommendedVideos> Recommended { get; set; } = new List<RecommendedVideos>();
-    public DateTime Updated { get; set; }
+    public DateTime                       Updated     { get; set; }
   }
 
   public class RecommendedVideos {
-    public DateTime Updated { get; set; }
-    public int Top { get; set; }
+    public DateTime                              Updated     { get; set; }
+    public int                                   Top         { get; set; }
     public ICollection<RecommendedVideoListItem> Recommended { get; set; } = new List<RecommendedVideoListItem>();
   }
 
   public class ChannelVideosStored {
-    public string ChannelId { get; set; }
-    public string ChannelTitle { get; set; }
-    public DateTime Updated { get; set; }
-    public DateTime From { get; set; }
+    public string   ChannelId    { get; set; }
+    public string   ChannelTitle { get; set; }
+    public DateTime Updated      { get; set; }
+    public DateTime From         { get; set; }
 
     [JsonIgnore]
     public IKeyedCollection<string, ChannelVideoListItem> Vids { get; set; } =
@@ -42,10 +42,10 @@ namespace YtReader {
   }
 
   public class VideoStored {
-    public string VideoId => Latest?.VideoId;
-    public string VideoTitle => Latest?.VideoTitle;
-    public VideoData Latest { get; set; }
-    public ICollection<VideoStats> History { get; set; } = new List<VideoStats>();
+    public string                  VideoId    => Latest?.VideoId;
+    public string                  VideoTitle => Latest?.VideoTitle;
+    public VideoData               Latest     { get; set; }
+    public ICollection<VideoStats> History    { get; set; } = new List<VideoStats>();
 
     public void SetLatest(VideoData v) {
       History.Add(Latest.Stats);
@@ -54,10 +54,10 @@ namespace YtReader {
   }
 
   public class ChannelStored {
-    public string ChannelId => Latest?.Id;
+    public string ChannelId    => Latest?.Id;
     public string ChannelTitle => Latest?.Title;
 
-    public ChannelData Latest { get; set; }
+    public ChannelData               Latest  { get; set; }
     public ICollection<ChannelStats> History { get; set; } = new List<ChannelStats>();
 
     public void SetLatest(ChannelData c) {
@@ -69,8 +69,8 @@ namespace YtReader {
   }
 
   public class ChannelRecommendations {
-    string ChannelId { get; set; }
-    string ChannelTitle { get; set; }
+    string                             ChannelId      { get; set; }
+    string                             ChannelTitle   { get; set; }
     public ICollection<Recommendation> Recomendations { get; set; } = new List<Recommendation>();
   }
 
@@ -82,8 +82,8 @@ namespace YtReader {
       To = to;
     }
 
-    public VideoItem From { get; set; }
-    public RecommendedVideoListItem To { get; set; }
-    public DateTime Updated { get; set; }
+    public VideoItem                From    { get; set; }
+    public RecommendedVideoListItem To      { get; set; }
+    public DateTime                 Updated { get; set; }
   }
 }

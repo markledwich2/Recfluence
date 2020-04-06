@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -12,21 +13,17 @@ using SysExtensions.IO;
 using SysExtensions.Text;
 
 namespace SysExtensions.Serialization {
-  /// <summary>
-  ///   Provides lean access to serialiation funcitoanlity. Uses a good default's for serialization, but can be overriden
-  ///   with any settings
-  /// </summary>
+  /// <summary>Provides lean access to serialiation funcitoanlity. Uses a good default's for serialization, but can be
+  ///   overriden with any settings</summary>
   public static class JsonExtensions {
-    /// <summary>
-    ///   Compile time defaults. To override use the overloads
-    /// </summary>
-    public static JsonSerializerSettings DefaultSettings()  {
+    /// <summary>Compile time defaults. To override use the overloads</summary>
+    public static JsonSerializerSettings DefaultSettings() {
       var settings = new JsonSerializerSettings {
-          NullValueHandling = NullValueHandling.Ignore, Formatting = Formatting.Indented, DefaultValueHandling = DefaultValueHandling.Ignore
-        };
-        settings.Converters.AddRange(new StringEnumConverter(new CamelCaseNamingStrategy(false, false), false));
-        settings.ContractResolver = new CoreSerializeContractResolver {NamingStrategy = new CamelCaseNamingStrategy(false, false)};
-        return settings;
+        NullValueHandling = NullValueHandling.Ignore, Formatting = Formatting.Indented, DefaultValueHandling = DefaultValueHandling.Ignore
+      };
+      settings.Converters.AddRange(new StringEnumConverter(new CamelCaseNamingStrategy(false, false), false));
+      settings.ContractResolver = new CoreSerializeContractResolver {NamingStrategy = new CamelCaseNamingStrategy(false, false)};
+      return settings;
     }
 
     public static JsonSerializer DefaultSerializer => JsonSerializer.Create(DefaultSettings());
@@ -74,12 +71,23 @@ namespace SysExtensions.Serialization {
     public static JObject ToJObject(this object o, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null)
       => (JObject) ToJToken(o, settings, loadSettings);
 
-    public static string ToJson(this object o, JsonSerializerSettings settings = null) {
+    public static string ToJson<T>(this T o, JsonSerializerSettings settings = null) where T : new() {
       settings ??= DefaultSettings();
       return JsonConvert.SerializeObject(o, settings);
     }
 
-    public static void ToJsonFile(this object o, FPath filePath, JsonSerializerSettings settings = null)
+    public static Stream ToJsonStream<T>(this T o, JsonSerializerSettings settings = null) where T : new() {
+      settings ??= DefaultSettings();
+      var ms = new MemoryStream();
+      using (var sw = new StreamWriter(ms, leaveOpen: true))
+      using (var jw = new JsonTextWriter(sw)) {
+        settings.Serializer().Serialize(jw, o);
+      }
+      ms.Seek(0, SeekOrigin.Begin);
+      return ms;
+    }
+
+    public static void WriteJson(this FPath filePath, object o, JsonSerializerSettings settings = null)
       => o.ToJsonFile(filePath.FullPath, settings);
 
     public static void ToJsonFile(this object o, string filePath, JsonSerializerSettings settings = null) {
@@ -109,6 +117,11 @@ namespace SysExtensions.Serialization {
       using (var tr = file.OpenText()) return tr.ToObject<T>(settings, loadSettings);
     }
 
+    public static T ToObject<T>(this Stream reader, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null) {
+      using var tr = new StreamReader(reader, Encoding.UTF8, leaveOpen: true);
+      return tr.ToObject<T>(settings, loadSettings);
+    }
+
     public static T ToObject<T>(this TextReader reader, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null) {
       settings ??= DefaultSettings();
       loadSettings ??= DefaultLoadSettings;
@@ -132,11 +145,8 @@ namespace SysExtensions.Serialization {
       return default;
     }
 
-    /// <summary>
-    ///   When an object is serialized to JObject's, some serialization formatting hasn't been applied yet (e.g. date time
-    ///   formatting).
-    ///   You must also use settings when outputting a string from the JToken
-    /// </summary>
+    /// <summary>When an object is serialized to JObject's, some serialization formatting hasn't been applied yet (e.g. date
+    ///   time formatting). You must also use settings when outputting a string from the JToken</summary>
     /// <param name="token"></param>
     /// <param name="formatting"></param>
     /// <param name="settings"></param>
@@ -165,10 +175,8 @@ namespace SysExtensions.Serialization {
       return prop.PropertyValue<T>(settings);
     }
 
-    /// <summary>
-    ///   Returns the .NET property value if it exists, null otherwise.
-    ///   Automatically converts types and deserializes string if required
-    /// </summary>
+    /// <summary>Returns the .NET property value if it exists, null otherwise. Automatically converts types and deserializes
+    ///   string if required</summary>
     public static T PropertyValue<T>(this JProperty jProp, JsonSerializerSettings settings = null) {
       var value = (jProp?.Value as JValue)?.Value;
       if (value == null) return default;

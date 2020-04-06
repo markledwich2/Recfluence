@@ -9,9 +9,9 @@ using System.Web;
 using Microsoft.Azure.Storage;
 using SysExtensions.Text;
 
-namespace Mutuo.Etl {
+namespace Mutuo.Etl.Blob {
   public static class AzureBlobHelper {
-    public static Uri BlobUri(this CloudStorageAccount storage, StringPath path) => 
+    public static Uri BlobUri(this CloudStorageAccount storage, StringPath path) =>
       new Uri(storage.BlobEndpoint.ToString().AddJoin("/", path));
 
     public static HttpRequestMessage WithBlobHeaders(this HttpRequestMessage req, CloudStorageAccount storage) {

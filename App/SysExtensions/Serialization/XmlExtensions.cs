@@ -3,13 +3,11 @@ using System.Xml.Linq;
 
 namespace SysExtensions.Serialization {
   public static class XmlExtensions {
-    public static XElement StripNamespaces(this XElement element)
-    {
+    public static XElement StripNamespaces(this XElement element) {
       // Original code credit: http://stackoverflow.com/a/1147012
 
       var result = new XElement(element);
-      foreach (var e in result.DescendantsAndSelf())
-      {
+      foreach (var e in result.DescendantsAndSelf()) {
         e.Name = XNamespace.None.GetName(e.Name.LocalName);
         var attributes = e.Attributes()
           .Where(a => !a.IsNamespaceDeclaration)

@@ -4,10 +4,8 @@ using System.Globalization;
 using Newtonsoft.Json;
 
 namespace SysExtensions.Serialization {
-    /// <summary>
-    ///   Represents a type that is meant to be converted to and from strings for serialization
-    /// </summary>
-    public interface IStringConvertable {
+  /// <summary>Represents a type that is meant to be converted to and from strings for serialization</summary>
+  public interface IStringConvertable {
     string StringValue { get; set; }
     string ToString();
   }
@@ -27,9 +25,7 @@ namespace SysExtensions.Serialization {
     }
   }
 
-  /// <summary>
-  ///   like string convertible, but the resulting type can be dynamic
-  /// </summary>
+  /// <summary>like string convertible, but the resulting type can be dynamic</summary>
   public interface IStringParsable<out T> {
     T Instance(string value);
     string ToString();
@@ -46,11 +42,9 @@ namespace SysExtensions.Serialization {
     }
   }
 
-  /// <summary>
-  ///   Will convert any class to a string (using ToString()).
-  ///   And from a string  with IConvertable, or with the default constructor + IStringConvertable.
-  ///   Use on properties. if you have a class you should decorate with [TypeConverter(typeof(StringConverter<T>))] instead
-  /// </summary>
+  /// <summary>Will convert any class to a string (using ToString()). And from a string  with IConvertable, or with the
+  ///   default constructor + IStringConvertable. Use on properties. if you have a class you should decorate with
+  ///   [TypeConverter(typeof(StringConverter<T>))] instead</summary>
   public class JsonStringConverter : JsonConverter {
     public override bool CanConvert(Type objectType)
       => IsTypeConvertable(objectType) || IsStringConvertable(objectType);

@@ -1,26 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using Humanizer;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Polly;
 using Polly.Retry;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Security;
-using SysExtensions.Serialization;
 using SysExtensions.Text;
 
-namespace Mutuo.Etl {
+namespace Mutuo.Etl.Blob {
   public class S3Store : ISimpleFileStore {
     readonly AmazonS3Client S3;
     readonly AsyncRetryPolicy S3Policy = Policy.Handle<HttpRequestException>()
@@ -42,43 +36,8 @@ namespace Mutuo.Etl {
       );
     }
 
-    S3Cfg Cfg { get; }
+    S3Cfg      Cfg      { get; }
     StringPath BasePath { get; }
-
-    [DebuggerHidden]
-    public async Task<T> Get<T>(StringPath path) where T : class {
-      GetObjectResponse response = null;
-      try {
-        response = await S3Policy.ExecuteAsync(() =>
-          S3.GetObjectAsync(new GetObjectRequest {BucketName = Cfg.Bucket, Key = FilePath(path)}));
-      }
-      catch (AmazonS3Exception e) {
-        if (e.ErrorCode == "NoSuchBucket" || e.ErrorCode == "NotFound" || e.ErrorCode == "NoSuchKey")
-          return null;
-        throw;
-      }
-
-      using (var zr = new GZipStream(response.ResponseStream, CompressionMode.Decompress))
-      using (var tr = new StreamReader(zr, Encoding.UTF8)) {
-        var jObject = await JObject.LoadAsync(new JsonTextReader(tr));
-        var r = jObject.ToObject<T>(JsonExtensions.DefaultSerializer);
-        return r;
-      }
-    }
-
-    public async Task Set<T>(StringPath path, T item) {
-      using (var memStream = new MemoryStream()) {
-        using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true))
-        using (var tw = new StreamWriter(zipWriter, Encoding.UTF8))
-          JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
-
-        var res = await S3Policy.ExecuteAsync(() => S3.PutObjectAsync(new PutObjectRequest {
-          BucketName = Cfg.Bucket,
-          Key = FilePath(path),
-          InputStream = memStream, AutoCloseStream = false, ContentType = "application/x-gzip"
-        }));
-      }
-    }
 
     public async Task Save(StringPath path, FPath file) {
       var tu = new TransferUtility(S3);
@@ -114,8 +73,8 @@ namespace Mutuo.Etl {
   }
 
   public sealed class S3Cfg {
-    public string Bucket { get; set; }
-    public string Region { get; set; }
+    public string     Bucket      { get; set; }
+    public string     Region      { get; set; }
     public NameSecret Credentials { get; set; }
   }
 }

@@ -11,10 +11,8 @@ namespace SysExtensions.Reflection {
   }
 
   public static class ReflectionExtensions {
-      /// <summary>
-      ///   Coppies properties and all items in ICollection<> properties
-      /// </summary>
-      public static void CopyPropertiesFrom<T>(this T to, object from, CopyPropertiesBehaviour behaviour = CopyPropertiesBehaviour.CopyAll)
+    /// <summary>Coppies properties and all items in ICollection<> properties</summary>
+    public static void CopyPropertiesFrom<T>(this T to, object from, CopyPropertiesBehaviour behaviour = CopyPropertiesBehaviour.CopyAll)
       where T : class {
       foreach (var toProp in to.GetType().GetProperties()) {
         var fromProp = from.GetType().GetProperty(toProp.Name, toProp.PropertyType);
@@ -73,9 +71,7 @@ namespace SysExtensions.Reflection {
       return false;
     }
 
-    /// <summary>
-    ///   Assumed to be a collection if it is enumerable and has an add method
-    /// </summary>
+    /// <summary>Assumed to be a collection if it is enumerable and has an add method</summary>
     /// <param name="type"></param>
     /// <returns></returns>
     public static bool IsCollection(this Type type) => type.ImplementsGenericDefinition(typeof(ICollection<>));
@@ -103,5 +99,14 @@ namespace SysExtensions.Reflection {
         info.IsClass && info.IsPublic && !info.IsAbstract && !info.IsEnum && !info.IsInterface &&
         !info.IsGenericTypeDefinition && !info.IsNested;
     }
+
+    public static MethodInfo GetMethodInfo(Action action) => action.Method;
+
+    public static MethodInfo GetMethodInfo<T>(Action<T> action) => action.Method;
+
+    //public static MethodInfo GetMethodInfo<T,U>(Action<T,U> action) => action.Method;
+    public static MethodInfo GetMethodInfo<TResult>(Func<TResult> fun) => fun.Method;
+    public static MethodInfo GetMethodInfo<T, TResult>(Func<T, TResult> fun) => fun.Method;
+    public static MethodInfo GetMethodInfo<T, U, TResult>(Func<T, U, TResult> fun) => fun.Method;
   }
 }
