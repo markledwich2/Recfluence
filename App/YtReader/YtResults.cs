@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -9,7 +10,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using CsvHelper;
 using Dapper;
-using Mutuo.Etl;
+using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Fluent.IO;
@@ -60,7 +61,7 @@ namespace YtReader {
       using var db = await SnowflakeCfg.OpenConnection();
 
       var now = DateTime.Now;
-      var dateRangeParams = new {from = "2019-11-01", to = $"{now.Year}-{now.Month-1}-1"};
+      var dateRangeParams = new {from = "2019-11-01", to = $"{now.Year}-{now.Month - 1}-1"};
       var queries = new[] {
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams),
@@ -123,9 +124,7 @@ namespace YtReader {
       return path;
     }
 
-    /// <summary>
-    ///   Saves the result for the given query to Storage and a local tmp file
-    /// </summary>
+    /// <summary>Saves the result for the given query to Storage and a local tmp file</summary>
     async Task<FPath> SaveResult(IDbConnection db, FPath tempDir, ResQuery q) {
       var sw = Stopwatch.StartNew();
       var reader = await ResQuery(db, q);
@@ -172,7 +171,7 @@ namespace YtReader {
     public static async Task WriteCsvGz(this IDataReader reader, Stream stream, string desc, ILogger log) {
       await using var zipWriter = new GZipStream(stream, CompressionLevel.Optimal);
       await using var streamWriter = new StreamWriter(zipWriter);
-      using var csvWriter = new CsvWriter(streamWriter);
+      using var csvWriter = new CsvWriter(streamWriter, CultureInfo.InvariantCulture);
 
       foreach (var col in reader.FieldRange().Select(reader.GetName)) csvWriter.WriteField(col);
       csvWriter.NextRecord();

@@ -1,101 +1,77 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
-using SysExtensions.Serialization;
 using SysExtensions.Text;
 
-namespace Mutuo.Etl {
+namespace Mutuo.Etl.Blob {
   public class AzureBlobFileStore : ISimpleFileStore {
-    public AzureBlobFileStore(string cs, StringPath path) {
-      ContainerName = path.Tokens.FirstOrDefault() ?? throw new InvalidOperationException("path needs to at least have a container");
-      BasePath = path;
+    public ILogger Log { get; }
+
+    public AzureBlobFileStore(Uri sas, ILogger log, StringPath pathSansContainer = null)
+      : this(pathSansContainer, log) => Container = new CloudBlobContainer(sas);
+
+    public AzureBlobFileStore(string cs, StringPath path, ILogger log) : this(path, log) {
+      var storage = CloudStorageAccount.Parse(cs);
+      var client = new CloudBlobClient(storage.BlobEndpoint, storage.Credentials);
+      var containerName = path.Tokens.FirstOrDefault() ?? throw new InvalidOperationException("path needs to at least have a container");
+      Container = client.GetContainerReference(containerName);
+    }
+
+    AzureBlobFileStore(StringPath path, ILogger log) {
+      Log = log;
       H = new HttpClient {
         Timeout = 10.Minutes()
       };
-      Storage = CloudStorageAccount.Parse(cs);
-      Client = new CloudBlobClient(Storage.BlobEndpoint, Storage.Credentials);
-      Container = Client.GetContainerReference(ContainerName);
+      BasePath = path ?? StringPath.Emtpy;
     }
 
-    CloudBlobContainer Container     { get; }
-    CloudBlobClient    Client        { get; }
-    string             ContainerName { get; }
+    CloudBlobContainer Container { get; }
 
-    //path including container
+    /// <summary>the Working directory of this storage wrapper. The first part of the bath is the container</summary>
     public StringPath BasePath { get; }
 
     StringPath BasePathSansContainer => new StringPath(BasePath.Tokens.Skip(1));
 
-    public CloudStorageAccount Storage { get; }
-    HttpClient                 H       { get; }
+    //public CloudStorageAccount Storage { get; }
+    HttpClient H { get; }
 
     public async Task<Stream> Load(StringPath path) {
-      var blob = BlobRef(path);
-      var mem = new MemoryStream();
-      await blob.DownloadToStreamAsync(mem);
-      mem.Seek(0, SeekOrigin.Begin);
-      return mem;
-    }
-
-    public async Task<T> Get<T>(StringPath path) where T : class {
-      var blob = BlobRef(path);
-
-      await using var mem = new MemoryStream();
       try {
+        var blob = BlobRef(path);
+        var mem = new MemoryStream();
         await blob.DownloadToStreamAsync(mem);
+        mem.Seek(0, SeekOrigin.Begin);
+        return mem;
       }
-      catch (Exception) {
-        var exists = await blob.ExistsAsync();
-        if (!exists) return null;
-        throw;
+      catch (Exception ex) {
+        throw new InvalidOperationException($"Unable to load blob {path}", ex);
       }
-
-      mem.Position = 0;
-      await using var zr = new GZipStream(mem, CompressionMode.Decompress);
-      using var tr = new StreamReader(zr, Encoding.UTF8);
-      var jObject = await JObject.LoadAsync(new JsonTextReader(tr));
-      var r = jObject.ToObject<T>(JsonExtensions.DefaultSerializer);
-      return r;
     }
 
     public CloudBlockBlob BlobRef(StringPath path) => Container.GetBlockBlobReference(BasePathSansContainer.Add(path));
-
-    public async Task Set<T>(StringPath path, T item) {
-      await using var memStream = new MemoryStream();
-      await using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true)) {
-        await using var tw = new StreamWriter(zipWriter, Encoding.UTF8);
-        JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
-      }
-
-      memStream.Seek(0, SeekOrigin.Begin);
-      var blob = BlobRef(path);
-      AutoPopulateProps(path, blob);
-      await blob.UploadFromStreamAsync(memStream);
-    }
 
     public async Task Save(StringPath path, FPath file) {
       var blob = BlobRef(path);
       AutoPopulateProps(path, blob);
       await blob.UploadFromFileAsync(file.FullPath);
+      Log.Debug("Saved {Path}", path);
     }
 
     public async Task Save(StringPath path, Stream contents) {
       var blob = BlobRef(path);
       AutoPopulateProps(path, blob);
       await blob.UploadFromStreamAsync(contents);
+      Log.Debug("Saved {Path}", path);
     }
 
     public async Task<Stream> OpenForWrite(StringPath path) {
@@ -124,10 +100,8 @@ namespace Mutuo.Etl {
       } while (token != null);
     }
 
-    /// <summary>
-    ///   autoamtically work set the blob properties based on the extenions.
-    ///   Assumes the format ContentType[.Encoding] (e.g. csv.gz or csv)
-    /// </summary>
+    /// <summary>autoamtically work set the blob properties based on the extenions. Assumes the format ContentType[.Encoding]
+    ///   (e.g. csv.gz or csv)</summary>
     static void AutoPopulateProps(StringPath path, CloudBlockBlob blob) {
       var ext = new Stack<string>(path.Extensions);
 

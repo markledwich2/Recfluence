@@ -5,7 +5,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
-using Mutuo.Etl;
+using Mutuo.Etl.Blob;
+using Mutuo.Etl.Pipe;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
@@ -30,19 +31,19 @@ namespace YtReader {
   }
 
   public class YtDataUpdater {
-    readonly UpdateType               UpdateType;
     readonly Func<Task<DbConnection>> GetConnection;
-    YtStore                           Store { get; }
-    AppCfg                            Cfg   { get; }
-    ILogger                           Log   { get; }
+    YtStore                           Store   { get; }
+    AppCfg                            Cfg     { get; }
+    Func<IPipeCtx>                    PipeCtx { get; }
+    ILogger                           Log     { get; }
     readonly YtScraper                Scraper;
     readonly YtClient                 Api;
 
-    public YtDataUpdater(YtStore store, AppCfg cfg, UpdateType updateType, Func<Task<DbConnection>> getConnection, ILogger log) {
-      UpdateType = updateType;
+    public YtDataUpdater(YtStore store, AppCfg cfg, Func<Task<DbConnection>> getConnection, Func<IPipeCtx> pipeCtx, ILogger log) {
       GetConnection = getConnection;
       Store = store;
       Cfg = cfg;
+      PipeCtx = pipeCtx;
       Log = log;
       Scraper = new YtScraper(cfg.Scraper);
       Api = new YtClient(cfg.YTApiKeys, log);
@@ -51,49 +52,39 @@ namespace YtReader {
     YtReaderCfg RCfg => Cfg.YtReader;
     //bool Expired(DateTime updated, TimeSpan refreshAge) => (RCfg.To ?? DateTime.UtcNow) - updated > refreshAge;
 
-    public async Task UpdateData() {
-      Log.Information("Starting data update: {Type}", UpdateType);
-      var sw = Stopwatch.StartNew();
-
-      var channels = await UpdateChannels().WithDuration();
-      Log.Information("Updated stats for {Channels} channels in {Duration}", channels.Result.Count, channels.Duration);
-
-      if (UpdateType == UpdateType.Channels) {
-        Log.Information("Update complete");
-      }
-      else {
-        using var conn = await GetConnection();
-        var channelResults = await channels.Result
-          .Where(c => c.Status == ChannelStatus.Alive)
-          .Select((c, i) => (c, i)).BlockTransform(async item => {
-            var (c, i) = item;
-            var log = Log
-              .ForContext("ChannelId", c.ChannelId)
-              .ForContext("Channel", c.ChannelTitle);
-            try {
-              await UpdateAllInChannel(c, conn, log);
-              log.Information("{Channel} - Completed {Count}/{Total} update of videos/recs/captions in {Duration}",
-                c.ChannelTitle, i, channels.Result.Count, sw.Elapsed);
-              return (c, Success: true);
-            }
-            catch (Exception ex) {
-              Log.Error(ex, "Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
-              return (c, Success: false);
-            }
-          }, Cfg.ParallelChannels);
-
-        var requestStats = Scraper.RequestStats;
-        Log.Information(
-          "Update complete {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
-          channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed, requestStats.direct, requestStats.proxy);
-      }
+    public class ChannelId {
+      public string Id { get; set; }
     }
 
-    async Task<IReadOnlyCollection<ChannelStored2>> UpdateChannels() {
-      var store = Store.ChannelStore;
+    [Pipe]
+    public async Task Update([PipeArg] UpdateType updateType = UpdateType.All) {
+      var channels = await UpdateAllChannels();
+      var work = channels.Select(c => new UpdateChannelWork {Channel = c, UpdateType = updateType});
+      var res = await work.RunPipe(ProcessChannels, PipeCtx(), Cfg.Pipe.Default, Log);
+    }
 
+    public class UpdateChannelWork {
+      public ChannelStored2 Channel    { get; set; }
+      public UpdateType     UpdateType { get; set; }
+    }
+
+    async Task<IEnumerable<ChannelStored2>> UpdateAllChannels() {
+      var store = Store.ChannelStore;
       Log.Information("Starting channels update. Limited to ({Included})",
         Cfg.LimitedToSeedChannels?.HasItems() == true ? Cfg.LimitedToSeedChannels.Join("|") : "All");
+
+      var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
+
+      var channels = await seeds.Where(c => Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(c.Id))
+        .BlockTransform(UpdateChannel, Cfg.DefaultParallel,
+          progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count)).WithDuration();
+
+      if (channels.Result.Any())
+        await store.Append(channels.Result);
+
+      Log.Information("Updated stats for {Channels} channels in {Duration}", channels.Result.Count, channels.Duration);
+
+      return channels.Result;
 
       async Task<ChannelStored2> UpdateChannel(ChannelSheet channel) {
         var log = Log.ForContext("Channel", channel.Title).ForContext("ChannelId", channel.Id);
@@ -127,20 +118,40 @@ namespace YtReader {
         };
         return channelStored;
       }
-
-      var seeds = await ChannelSheets.Channels(Cfg.Sheets, Log);
-
-      var channels = await seeds.Where(c => Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(c.Id))
-        .BlockTransform(UpdateChannel, Cfg.DefaultParallel,
-          progressUpdate: p => Log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count));
-
-      if (channels.Any())
-        await store.Append(channels);
-
-      return channels;
     }
 
-    async Task UpdateAllInChannel(ChannelStored2 c, DbConnection conn, ILogger log) {
+    [Pipe]
+    public async Task<object> ProcessChannels(IReadOnlyCollection<UpdateChannelWork> work) {
+      var sw = Stopwatch.StartNew();
+      var conn = new AsyncLazy<DbConnection>(() => GetConnection());
+      var channelResults = await work
+        .Where(c => c.Channel.Status == ChannelStatus.Alive)
+        .Select((c, i) => (c, i)).BlockTransform(async item => {
+          var (c, i) = item;
+          var log = Log
+            .ForContext("ChannelId", c.Channel.ChannelId)
+            .ForContext("Channel", c.Channel.ChannelTitle);
+          try {
+            await UpdateAllInChannel(c.Channel, conn, c.UpdateType, log);
+            log.Information("{Channel} - Completed {Count}/{Total} update of videos/recs/captions in {Duration}",
+              c.Channel.ChannelTitle, i, work.Count, sw.Elapsed);
+            return (c, Success: true);
+          }
+          catch (Exception ex) {
+            Log.Error(ex, "Error updating channel {Channel}: {Error}", c.Channel.ChannelTitle, ex.Message);
+            return (c, Success: false);
+          }
+        }, Cfg.ParallelChannels);
+
+      var requestStats = Scraper.RequestStats;
+      Log.Information(
+        "Update complete {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
+        channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed, requestStats.direct, requestStats.proxy);
+
+      return "";
+    }
+
+    async Task UpdateAllInChannel(ChannelStored2 c, AsyncLazy<DbConnection> conn, UpdateType updateType, ILogger log) {
       if (c.StatusMessage.HasValue()) {
         log.Information("{Channel} - Not updating videos/recs/captions because it has a status msg: {StatusMessage} ",
           c.ChannelTitle, c.StatusMessage);
@@ -167,8 +178,8 @@ namespace YtReader {
 
       if (vids != null)
         await SaveVids(c, vids, vidStore, lastUpload, log);
-      if (vids != null || UpdateType == UpdateType.AllWithMissingRecs)
-        await SaveRecsAndExtra(c, vids, conn, log);
+      if (vids != null || updateType == UpdateType.AllWithMissingRecs)
+        await SaveRecsAndExtra(c, vids, conn, updateType, log);
       if (vids != null)
         await SaveNewCaptions(c, vids, log);
     }
@@ -206,9 +217,7 @@ namespace YtReader {
         else yield break; // break on the first video older than updateFrom.
     }
 
-    /// <summary>
-    ///   Saves captions for all new videos from the vids list
-    /// </summary>
+    /// <summary>Saves captions for all new videos from the vids list</summary>
     async Task SaveNewCaptions(ChannelStored2 channel, IEnumerable<VideoItem> vids, ILogger log) {
       var store = Store.CaptionStore(channel.ChannelId);
       var lastUpload = (await store.LatestFileMetadata())?.Ts.ParseFileSafeTimestamp(); // last video upload we have captions for
@@ -247,15 +256,13 @@ namespace YtReader {
       log.Information("{Channel} - Saved {Captions} captions", channel.ChannelTitle, captionsToStore.Count);
     }
 
-    /// <summary>
-    ///   Saves recs for all of the given vids
-    /// </summary>
-    async Task SaveRecsAndExtra(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, DbConnection conn, ILogger log) {
+    /// <summary>Saves recs for all of the given vids</summary>
+    async Task SaveRecsAndExtra(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AsyncLazy<DbConnection> conn, UpdateType updateType, ILogger log) {
       var recStore = Store.RecStore(c.ChannelId);
-      var videoExStore = Store.VideoExtraStore(c.ChannelId);
+      var videoExStore = Store.VideoExtraStore();
 
-      var toUpdate = UpdateType switch {
-        UpdateType.AllWithMissingRecs => await VideosWithNoRecs(c, conn),
+      var toUpdate = updateType switch {
+        UpdateType.AllWithMissingRecs => await VideosWithNoRecs(c, await conn.GetOrCreate()),
         _ => await VideoToUpdateRecs(vids, recStore)
       };
 
@@ -353,42 +360,80 @@ namespace YtReader {
       return toUpdate.Select(v => (v.Id, v.Title)).ToList();
     }
 
-    /// <summary>
-    ///   A once off command to populate existing uploaded videos evenly with checks for ads.
-    /// </summary>
-    public async Task BackfillVideoExtra(IReadOnlyCollection<string> videoIds) {
-      if (!videoIds.Any()) {
+    /// <summary>A once off command to populate existing uploaded videos evenly with checks for ads.</summary>
+    [Pipe]
+    public async Task BackfillVideoExtra([PipeArg] string videoIds = null, [PipeArg] int? limit = null) {
+      if (videoIds == null) {
         using var conn = await GetConnection();
 
-        var toUpdate = await conn.QueryAsync<(string videoId, string channelId, string channelTitle)>(@"
-select video_id, channel_id, channel_title
+        var limitString = limit == null ? "" : $"limit {limit}";
+        var toUpdate = (await conn.QueryAsync<ChannelVideoItem>(@$"
+select video_id as VideoId, channel_id as ChannelId, channel_title as ChannelTitle
 from (select video_id, channel_id, channel_title
            , upload_date
            , row_number() over (partition by channel_id order by upload_date desc) as num
            , ad_checks
       from video_latest l
-    where ad_checks > 0 and no_ads = ad_checks -- TODO: temporarily look at no_ads in-case they were actually errors
+    --where ad_checks > 0 and no_ads = ad_checks -- TODO: temporarily look at no_ads in-case they were actually errors
      )
-where num < 50;");
-        
-        await toUpdate.GroupBy(v => v.channelId).BlockAction(async c => {
-          var f = c.First();
-          var log = Log.ForContext("Channel", f.channelTitle).ForContext("ChannelId", f.channelId);
-          var recsAndExtra = await c.BlockTransform(async v => await Scraper.GetRecsAndExtra(v.videoId, Log), Cfg.DefaultParallel);
-          var extra = recsAndExtra.Select(r => r.extra).ToArray();
-          var store = Store.VideoExtraStore(f.channelId);
-          await store.Append(extra);
-          log.Information("{Channel} - Recorded {VideoExtra} extra info on video's",
-            f.channelTitle, extra.Length);
-        }, Cfg.ParallelChannels);
+where num <= 50 -- most recent for each channel 
+{limitString}")).ToArray();
+
+        var res = await toUpdate
+          .RunPipe(ProcessVideoExtra, PipeCtx(), new PipeRunCfg { MinWorkItems = 1000, MaxParallel = 8 }, Log)
+          .WithDuration();
+
+        var videos = res.Result.Sum(o => o.OutState.Sum(v => v.Updated));
+        Log.Information("Finished {Pipe} of {Channels} channels, {Videos} videos in {Duration}",
+          nameof(BackfillVideoExtra), res.Result.Count, videos, res.Duration);
       }
       else {
-        var recsAndExtra = await videoIds.BlockTransform(async v => await Scraper.GetRecsAndExtra(v, Log), Cfg.DefaultParallel);
+        var chId = "123TestChannel";
+        var toUpdate = videoIds.Split("|")
+          .Select(v => new ChannelVideoItem {ChannelId = chId, VideoId = v});
+
+
+        var res = await toUpdate.RunPipe(ProcessVideoExtra, PipeCtx(), new PipeRunCfg { MinWorkItems = 200, MaxParallel = 2 }, Log);
+
+        /*var recsAndExtra = await videoIds.Split("|")
+          .BlockTransform(async v => await Scraper.GetRecsAndExtra(v, Log), Cfg.DefaultParallel);
+        
         await recsAndExtra.GroupBy(v => v.extra.ChannelId).BlockAction(async g => {
           var store = Store.VideoExtraStore(g.Key);
           await store.Append(g.Select(c => c.extra).ToArray());
-        });
+      });*/
       }
+    }
+
+    public class ChannelVideoItem {
+      public string ChannelId    { get; set; }
+      public string ChannelTitle { get; set; }
+      public string VideoId      { get; set; }
+    }
+
+    public class ProcessVideoExtraIn {
+      public ChannelVideoItem[] Videos { get; set; }
+    }
+
+    public class ProcessVideoExtraBatch {
+      public int        Updated { get; set; }
+      public StringPath Path    { get; set; }
+    }
+
+    [Pipe]
+    public async Task<IReadOnlyCollection<ProcessVideoExtraBatch>> ProcessVideoExtra(IEnumerable<ChannelVideoItem> videos) {
+      var batch = await videos.BatchGreedy(2000).BlockTransform(async b => {
+        var recsAndExtra = await b.NotNull().BlockTransform(async v => await Scraper.GetRecsAndExtra(v.VideoId, Log), Cfg.DefaultParallel);
+        var extra = recsAndExtra.Select(r => r.extra).ToArray();
+        var store = Store.VideoExtraStore();
+        var file = await store.Append(extra);
+        Log.Information("Recorded {VideoExtra} video_extra records to {Path}", extra.Length, file);
+        return new ProcessVideoExtraBatch {
+          Updated = extra.Length,
+          Path = file
+        };
+      });
+      return batch;
     }
   }
 }

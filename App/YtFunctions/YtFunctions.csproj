@@ -1,19 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <AzureFunctionsVersion>v3-preview</AzureFunctionsVersion>
     <LangVersion>8</LangVersion>
+    <AssemblyVersion>0.4.1</AssemblyVersion>
+    <InformationalVersion>0.4.1-pipe.1</InformationalVersion>
+    <PackageVersion>0.4.1-pipe.1</PackageVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.10.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.2.4" />
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="1.0.30-beta2" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
-    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.0.3" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.13.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.3" />
+    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.5" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0" />
     <PackageReference Include="Serilog.Sinks.ILogger" Version="1.0.2" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\YtReader\YtReader.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">
@@ -23,5 +22,28 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
+    <None Update="local.rootcfg.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="local.appcfg.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
+    <ProjectReference Include="..\YtReader\YtReader.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\YtCli\default.appcfg.json">
+      <Link>default.appcfg.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\YtCli\dev.appcfg.json">
+      <Link>dev.appcfg.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\YtCli\prod.appcfg.json">
+      <Link>prod.appcfg.json</Link>
+    </Content>
   </ItemGroup>
 </Project>

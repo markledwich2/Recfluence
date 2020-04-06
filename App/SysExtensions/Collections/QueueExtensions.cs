@@ -19,8 +19,8 @@ namespace SysExtensions.Collections {
 
     public static Stack<T> ToStack<T>(this IEnumerable<T> items) => new Stack<T>(items);
 
-    public static T TryPop<T>(this Stack<T> stack) => stack.Count > 0 ? stack.Pop() : default(T);
+    public static T TryPop<T>(this Stack<T> stack) => stack.Count > 0 ? stack.Pop() : default;
 
-    public static T TryDequeue<T>(this Queue<T> queue) => queue.Count > 0 ? queue.Dequeue() : default(T);
+    public static T TryDequeue<T>(this Queue<T> queue) => queue.Count > 0 ? queue.Dequeue() : default;
   }
 }

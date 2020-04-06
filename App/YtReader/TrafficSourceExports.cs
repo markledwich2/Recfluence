@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CsvHelper;
 using CsvHelper.Configuration.Attributes;
-using Mutuo.Etl;
+using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;

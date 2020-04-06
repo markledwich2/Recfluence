@@ -16,21 +16,20 @@ namespace SysExtensions.Text {
     public static Stream AsStream(this string content) => new MemoryStream(Encoding.UTF8.GetBytes(content));
 
     public static TextReader AsTextStream(this string content) => new StreamReader(new MemoryStream(Encoding.UTF8.GetBytes(content)));
+    
+    public static TextReader TextStream(this Stream stream, Encoding encoding = null) => new StreamReader(stream, encoding ?? Encoding.UTF8);
 
-    public static async Task<string> AsString(this Stream stream) {
-      using (var sr = new StreamReader(stream)) return await sr.ReadToEndAsync();
+    public static string AsString(this Stream stream) {
+      using (var sr = new StreamReader(stream)) return sr.ReadToEnd();
     }
 
-    /// <summary>
-    ///   Is not null or emtpy
-    /// </summary>
+    /// <summary>Is not null or emtpy</summary>
     public static bool HasValue(this string value) => !value.NullOrEmpty();
-    
+
     public static string EmptyIfNull(this string s) => s ?? string.Empty;
 
-    /// <summary>
-    ///   Like string.Join. However also will escape the seperator and escape charachter so this is reversable using Split
-    /// </summary>
+    /// <summary>Like string.Join. However also will escape the seperator and escape charachter so this is reversable using
+    ///   Split</summary>
     public static string Join<T>(this IEnumerable<T> items, string separator, Func<T, string> format = null, char? escapeCharacter = null) {
       format = format ?? (s => s.ToString());
       var escapeFormat = format;
@@ -85,9 +84,7 @@ namespace SysExtensions.Text {
 
     //public static string ToStringOrEmpty(this object o) => o == null ? "" : o.ToString();
 
-    /// <summary>
-    ///   Provides an append method with terse defintiions of the format and condition for appending the item.
-    /// </summary>
+    /// <summary>Provides an append method with terse defintiions of the format and condition for appending the item.</summary>
     public static string Add<T>(this string s, T item, Func<T, string> format = null, Func<T, bool> condition = null) {
       format = format ?? (o => o.ToString());
       condition = condition ?? (o => o != null);
@@ -99,9 +96,7 @@ namespace SysExtensions.Text {
       return s + (list.IsEmpty() ? "" : (s.EndsWith(sep) ? "" : sep) + list.Join(sep));
     }
 
-    /// <summary>
-    ///   Usefull in interpolated stirngs because you can't use ternary op
-    /// </summary>
+    /// <summary>Usefull in interpolated stirngs because you can't use ternary op</summary>
     public static string Text(this bool b, string trueString, string falseString = "") => b ? trueString : falseString;
 
     public static string SubstringAfter(this string s, string sub,
@@ -112,7 +107,7 @@ namespace SysExtensions.Text {
 
     public static string StripNonDigit(this string s) => Regex.Replace(s, "\\D", "");
 
-    public static long ParseInt(this string s) => int.Parse(s);
+    public static int ParseInt(this string s) => int.Parse(s);
 
     public static long ParseLong(this string s) {
       const NumberStyles styles = NumberStyles.AllowThousands;
@@ -123,10 +118,13 @@ namespace SysExtensions.Text {
     public static DateTime ParseDate(this string s) => DateTime.Parse(s);
 
     public static decimal ParseDecimal(this string s) => decimal.Parse(s, NumberFormatInfo.InvariantInfo);
-    
+
     public static DateTimeOffset ParseDateTimeOffset(this string s, string format) =>
       DateTimeOffset.ParseExact(s, format, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
-    
+
     public static bool IsNullOrWhiteSpace(this string s) => string.IsNullOrWhiteSpace(s);
+
+    public static string Right(this string source, int length) =>
+      length >= source.Length ? source : source.Substring(source.Length - length);
   }
 }

@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Humanizer;
 using LtGt;
-using LtGt.Models;
 using Newtonsoft.Json.Linq;
 using Polly;
 using Serilog;
@@ -35,15 +34,16 @@ namespace YtReader.YtWebsite {
       ProxyHttp = CreateHttpClient(true);
     }
 
-    HttpClient CreateHttpClient(bool useProxy) =>
-      new HttpClient(new HttpClientHandler {
+    HttpClient CreateHttpClient(bool useProxy) {
+      return new HttpClient(new HttpClientHandler {
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         UseCookies = false,
-        Proxy = useProxy ? new WebProxy("us.smartproxy.com:10000", true, new string[] { }, new NetworkCredential(Cfg.Creds.Name, Cfg.Creds.Secret)) : null,
+        Proxy = useProxy ? new WebProxy(Cfg.Url, true, new string[] { }, new NetworkCredential(Cfg.Creds.Name, Cfg.Creds.Secret)) : null,
         UseProxy = useProxy
       }) {
         Timeout = Cfg.TimeoutSeconds.Seconds()
       };
+    }
 
     long         DirectHttpFailures;
     const string MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
@@ -55,7 +55,7 @@ namespace YtReader.YtWebsite {
     async Task<string> GetRaw(string url, string desc, ILogger log) {
       log.Debug("Scraping {Desc} {Url}", desc, url);
 
-      var useDirect = Interlocked.Read(ref DirectHttpFailures) == 0;
+      var useDirect = !Cfg.AlwaysUseProxy && Interlocked.Read(ref DirectHttpFailures) == 0;
 
       if (useDirect)
         try {
@@ -108,13 +108,11 @@ namespace YtReader.YtWebsite {
         throw new InvalidOperationException(MissingYtResourceMessage);
     }
 
-    async Task<HtmlDocument> GetHtml(string url, string desc, ILogger log) => HtmlParser.Default.ParseDocument(await GetRaw(url, desc, log));
+    async Task<HtmlDocument> GetHtml(string url, string desc, ILogger log) => Html.ParseDocument(await GetRaw(url, desc, log));
 
     #region Public Static
 
-    /// <summary>
-    ///   Verifies that the given string is syntactically a valid YouTube channel ID.
-    /// </summary>
+    /// <summary>Verifies that the given string is syntactically a valid YouTube channel ID.</summary>
     public static bool ValidateChannelId(string channelId) {
       if (channelId.IsNullOrWhiteSpace())
         return false;
@@ -141,9 +139,7 @@ namespace YtReader.YtWebsite {
       return !Regex.IsMatch(videoId, @"[^0-9a-zA-Z_\-]");
     }
 
-    /// <summary>
-    ///   Verifies that the given string is syntactically a valid YouTube playlist ID.
-    /// </summary>
+    /// <summary>Verifies that the given string is syntactically a valid YouTube playlist ID.</summary>
     public static bool ValidatePlaylistId(string playlistId) {
       if (playlistId.IsNullOrWhiteSpace())
         return false;
@@ -174,17 +170,13 @@ namespace YtReader.YtWebsite {
       return !Regex.IsMatch(playlistId, @"[^0-9a-zA-Z_\-]");
     }
 
-    /// <summary>
-    ///   Parses video ID from a YouTube video URL.
-    /// </summary>
+    /// <summary>Parses video ID from a YouTube video URL.</summary>
     public static string ParseVideoId(string videoUrl) =>
       TryParseVideoId(videoUrl, out var result)
         ? result
         : throw new FormatException($"Could not parse video ID from given string [{videoUrl}].");
 
-    /// <summary>
-    ///   Tries to parse video ID from a YouTube video URL.
-    /// </summary>
+    /// <summary>Tries to parse video ID from a YouTube video URL.</summary>
     public static bool TryParseVideoId(string videoUrl, out string videoId) {
       videoId = default;
 
@@ -319,18 +311,18 @@ namespace YtReader.YtWebsite {
       // Get channel page HTML
       var channelPageHtml = await GetChannelPageHtmlAsync(channelId, log);
 
-      var alertMessage = channelPageHtml.GetElementsBySelector("div.yt-alert-message").FirstOrDefault()?.GetInnerText();
+      var alertMessage = channelPageHtml.QueryElements("div.yt-alert-message").FirstOrDefault()?.GetInnerText();
       if (alertMessage.HasValue())
         return new ChannelExtended {Id = channelId, StatusMessage = alertMessage};
 
       // Extract info
-      var channelTitle = channelPageHtml.GetElementsBySelector("meta[property=\"og:title\"]")
+      var channelTitle = channelPageHtml.QueryElements("meta[property=\"og:title\"]")
         .FirstOrDefault()?.GetAttribute("content").Value;
 
-      var channelLogoUrl = channelPageHtml.GetElementsBySelector("meta[property=\"og:image\"]")
+      var channelLogoUrl = channelPageHtml.QueryElements("meta[property=\"og:image\"]")
         .FirstOrDefault()?.GetAttribute("content").Value;
 
-      var subDesc = channelPageHtml.GetElementsBySelector("span.yt-subscription-button-subscriber-count-branded-horizontal.subscribed").FirstOrDefault()
+      var subDesc = channelPageHtml.QueryElements("span.yt-subscription-button-subscriber-count-branded-horizontal.subscribed").FirstOrDefault()
         ?.GetInnerText();
       return new ChannelExtended {
         Id = channelId,
@@ -360,13 +352,13 @@ namespace YtReader.YtWebsite {
     async Task<(HtmlDocument html, string raw, string url)> GetVideoWatchPageHtmlAsync(string videoId, ILogger log) {
       var url = $"https://youtube.com/watch?v={videoId}&disable_polymer=true&bpctr=9999999999&hl=en-us";
       var raw = await GetRaw(url, "video watch", log);
-      return (HtmlParser.Default.ParseDocument(raw), raw, url);
+      return (Html.ParseDocument(raw), raw, url);
     }
 
     static readonly Regex _ytAdRegex = new Regex(@"""yt_ad"":""??([0-1])""?", RegexOptions.Compiled);
 
     public const string RestrictedVideoError = "Restricted";
-    
+
     //ytInitialPlayerResponse.responseContext.serviceTrackingParams.filter(p => p.service == "CSI")[0].params
     public async Task<(IReadOnlyCollection<Rec> recs, VideoExtraStored2 extra)> GetRecsAndExtra(string videoId, ILogger log) {
       var (html, raw, url) = await GetVideoWatchPageHtmlAsync(videoId, log);
@@ -379,13 +371,16 @@ namespace YtReader.YtWebsite {
         ChannelTitle = channel.channelTitle
       };
 
-      var restrictedMode = html.GetElementsBySelector("head > meta[property=\"og:restrictions:age\"]").FirstOrDefault()?.GetAttribute("content")?.Value == "18+";
+      var restrictedMode = html.QueryElements("head > meta[property=\"og:restrictions:age\"]").FirstOrDefault()?.GetAttribute("content")?.Value == "18+";
       if (restrictedMode) {
         extra.Error = RestrictedVideoError;
         extra.SubError = "Unable to find recommended video because it is age restricted and requires to log in";
-      } else {
-          extra.Error = html.GetElementsBySelector("#unavailable-message").FirstOrDefault()?.GetInnerText();
-          extra.SubError = html.GetElementsBySelector("#unavailable-submessage").FirstOrDefault()?.GetInnerText();
+      }
+      else {
+        extra.SubError = html.QueryElements("#unavailable-submessage").FirstOrDefault()?.GetInnerText();
+        if (extra.SubError == "") extra.SubError = null;
+        if(extra.SubError.HasValue()) // all pages have the error, but not a suberror
+          extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
       }
       if (extra.Error != null) return (new Rec[] { }, extra);
 
@@ -398,24 +393,23 @@ namespace YtReader.YtWebsite {
 
       return (recs, extra);
     }
-    
-    
+
     static (string channelTitle, string channelId) ChannelInfoFromWatchPage(HtmlDocument html) {
-      var userInfo = html.GetElementsBySelector("div.yt-user-info > a").FirstOrDefault();
+      var userInfo = html.QueryElements("div.yt-user-info > a").FirstOrDefault();
       if (userInfo == null) return (null, null);
 
       var title = userInfo.GetInnerText();
       var url = userInfo.GetAttribute("href")?.Value;
       var id = url?.Split('/').Last();
-      
+
       return (title, id);
     }
 
     IReadOnlyCollection<Rec> GetRecs(HtmlDocument html, string url, ILogger log) {
-      var recs = (from d in html.GetElementsBySelector("li.video-list-item.related-list-item").Select((e, i) => (e, i))
-        let titleSpan = d.e.GetElementsBySelector("span.title").FirstOrDefault()
-        let channelSpan = d.e.GetElementsBySelector("span.stat.attribution > span").FirstOrDefault()
-        let videoA = d.e.GetElementsBySelector("a.content-link").FirstOrDefault()
+      var recs = (from d in html.QueryElements("li.video-list-item.related-list-item").Select((e, i) => (e, i))
+        let titleSpan = d.e.QueryElements("span.title").FirstOrDefault()
+        let channelSpan = d.e.QueryElements("span.stat.attribution > span").FirstOrDefault()
+        let videoA = d.e.QueryElements("a.content-link").FirstOrDefault()
         where videoA != null && channelSpan != null && videoA != null
         select new Rec {
           ToVideoId = ParseVideoId($"https://youtube.com/{videoA.GetAttribute("href").Value}"),
@@ -426,7 +420,6 @@ namespace YtReader.YtWebsite {
 
       return recs;
     }
-
 
     public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptions(string videoId, ILogger log) {
       var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
@@ -464,7 +457,7 @@ namespace YtReader.YtWebsite {
       var channelTitle = VideoValue<string>("author");
 
       var (videoWatchPageHtml, _, _) = await videoWatchPageTask;
-      var videoUploadDate = videoWatchPageHtml.GetElementsBySelector("meta[itemprop=\"datePublished\"]")
+      var videoUploadDate = videoWatchPageHtml.QueryElements("meta[itemprop=\"datePublished\"]")
                               .FirstOrDefault()?.GetAttribute("content").Value.ParseDateTimeOffset("yyyy-MM-dd") ??
                             throw new InvalidOperationException("No upload date found in page");
       var videoLikeCountRaw = videoWatchPageHtml.GetElementsByClassName("like-button-renderer-like-button")
@@ -556,8 +549,6 @@ namespace YtReader.YtWebsite {
     public long?  Subs          { get; set; }
     public string StatusMessage { get; set; }
   }
-  
-  
 
   public class Rec {
     public string    ToVideoId      { get; set; }

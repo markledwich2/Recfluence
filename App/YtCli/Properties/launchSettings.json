@@ -2,7 +2,10 @@
   "profiles": {
     "YtCli": {
       "commandName": "Project",
-      "commandLineArgs": "update"
+      "commandLineArgs": "pipe",
+      "environmentVariables": {
+       "YtNetworks_Env": "Dev"
+      }
     }
   }
 }

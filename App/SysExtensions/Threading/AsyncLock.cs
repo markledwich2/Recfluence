@@ -7,8 +7,8 @@ namespace SysExtensions.Threading {
     public AsyncLazy(Func<Task<T>> creator) => Creator = creator;
 
     readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
-    Func<Task<T>> Creator { get; }
-    public T Value { get; private set; }
+    Func<Task<T>>          Creator { get; }
+    public T               Value   { get; private set; }
 
     public async Task<T> GetOrCreate() {
       if (Value != null)

@@ -7,11 +7,9 @@ using Newtonsoft.Json.Serialization;
 using SysExtensions.Reflection;
 
 namespace SysExtensions.Serialization {
-    /// <summary>
-    ///   Camel case properties. Also when using OptOut, then only public properties that are writable are serialized by
-    ///   default
-    /// </summary>
-    public class CoreSerializeContractResolver : CamelCasePropertyNamesContractResolver {
+  /// <summary>Camel case properties. Also when using OptOut, then only public properties that are writable are serialized by
+  ///   default</summary>
+  public class CoreSerializeContractResolver : CamelCasePropertyNamesContractResolver {
     protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization) {
       var prop = base.CreateProperty(member, memberSerialization);
       if (memberSerialization != MemberSerialization.OptOut) return prop;
@@ -21,9 +19,7 @@ namespace SysExtensions.Serialization {
       return prop;
     }
 
-    /// <summary>
-    ///   Determines which contract type is created for the given type.
-    /// </summary>
+    /// <summary>Determines which contract type is created for the given type.</summary>
     /// <param name="objectType">Type of the object.</param>
     /// <returns>A <see cref="JsonContract" /> for the given type.</returns>
     protected override JsonContract CreateContract(Type objectType) {

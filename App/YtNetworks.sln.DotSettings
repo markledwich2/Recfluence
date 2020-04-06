@@ -33,6 +33,9 @@
 	<s:Int64 x:Key="/Default/CodeStyle/CodeFormatting/CSharpFormat/TAB_WIDTH/@EntryValue">2</s:Int64>
 	<s:String x:Key="/Default/CodeStyle/CodeFormatting/CSharpFormat/TYPE_DECLARATION_BRACES/@EntryValue">END_OF_LINE</s:String>
 	<s:Int64 x:Key="/Default/CodeStyle/CodeFormatting/CSharpFormat/WRAP_LIMIT/@EntryValue">160</s:Int64>
+	<s:Boolean x:Key="/Default/CodeStyle/CodeFormatting/XmlDocFormatter/KeepUserLineBreaks/@EntryValue">False</s:Boolean>
+	<s:Boolean x:Key="/Default/CodeStyle/CodeFormatting/XmlDocFormatter/LinebreaksInsideMultilineTag/@EntryValue">False</s:Boolean>
+	<s:Boolean x:Key="/Default/CodeStyle/CodeFormatting/XmlDocFormatter/LinebreaksInsideTagsWithTags/@EntryValue">False</s:Boolean>
 	<s:Boolean x:Key="/Default/CodeStyle/Naming/CSharpNaming/ApplyAutoDetectedRules/@EntryValue">False</s:Boolean>
 	<s:String x:Key="/Default/CodeStyle/Naming/CSharpNaming/PredefinedNamingRules/=PrivateInstanceFields/@EntryIndexedValue">&lt;Policy Inspect="True" Prefix="" Suffix="" Style="AaBb_AaBb" /&gt;</s:String>
 	<s:Boolean x:Key="/Default/Environment/SettingsMigration/IsMigratorApplied/=JetBrains_002EReSharper_002EPsi_002ECSharp_002ECodeStyle_002ECSharpKeepExistingMigration/@EntryIndexedValue">True</s:Boolean>

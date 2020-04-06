@@ -3,9 +3,6 @@ variables:
   image: ytnetworks
   env: prod
 
-trigger:
-  - master
-
 jobs:
 
 
@@ -14,31 +11,33 @@ jobs:
     vmImage: ubuntu-latest
 
   steps:
-  - task: Docker@1
-    displayName: Login
-    inputs:
-      azureSubscriptionEndpoint: Mark Ledwich ARM
-      azureContainerRegistry: $(acr)
-      command: login
 
-  - task: Docker@1
-    displayName: Build YtCli
+  - task: CmdLine@2
     inputs:
-      command: Build an image
-      imageName: $(acr)/$(image):latest
+      script: |
+        echo GitVersion
+        dotnet tool restore
+        dotnet dotnet-gitversion /output buildserver /nofetch
+      failOnStderr: true
+      workingDirectory: ./App
 
-  - task: Docker@1
-    displayName: Push YtCli
+  - task: Docker@2
+    displayName: Build and Push App
     inputs:
-      command: Push an image
-      imageName: $(acr)/$(image):latest
+      command: buildAndPush
+      containerRegistry: ytnetworks
+      repository: $(image)
+      tags: $(GitVersion.SemVer)
+      buildContext: .
+      dockerFile: App/Dockerfile
+
 
 - job: App
   pool:
     vmImage: windows-latest
 
   steps:
-  - script: dotnet publish -c Release --output $(Build.ArtifactStagingDirectory)/YtFunctions
+  - script: dotnet publish -c Release  --output $(Build.ArtifactStagingDirectory)/YtFunctions /p:Version='$(GitVersion.SemVer)'
     workingDirectory: ./App/YtFunctions
     displayName: Publish YtFunctions
 
