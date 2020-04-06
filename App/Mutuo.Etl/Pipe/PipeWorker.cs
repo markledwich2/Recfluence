@@ -225,11 +225,13 @@ namespace Mutuo.Etl.Pipe {
       var rg = Cfg.Azure.ResourceGroup;
       await EnsureNotRunning(groupName, Az.Value, rg);
 
+      var registryCreds = container.RegistryCreds ?? throw new InvalidOperationException("no registry credentials");
+
       var group = Az.Value.ContainerGroups.Define(groupName)
         .WithRegion(customRegion?.Invoke().Name ?? container.Region)
         .WithExistingResourceGroup(rg)
         .WithLinux()
-        .WithPrivateImageRegistry(container.Registry, container.RegistryCreds.Name, container.RegistryCreds.Secret)
+        .WithPrivateImageRegistry(container.Registry, registryCreds.Name, registryCreds.Secret)
         .WithoutVolume()
         .DefineContainerInstance(containerName)
         .WithImage(container.ContainerImageName())

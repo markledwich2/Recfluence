@@ -4,7 +4,6 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using Autofac;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Configuration;
@@ -19,7 +18,6 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
-using Troschuetz.Random;
 using YtReader.Yt;
 
 namespace YtReader {
@@ -72,7 +70,7 @@ namespace YtReader {
         .Build().Get<RootCfg>();
 
       if (cfgRoot.AppCfgSas == null)
-        throw new InvalidOperationException("AppCfgSas not provided in local.appcfg.json or environment variables");
+        throw new InvalidOperationException("AppCfgSas not provided in local.rootcfg.json or environment variables");
 
       var envLower = cfgRoot.Env.ToLowerInvariant();
       var blob = new AzureBlobFileStore(cfgRoot.AppCfgSas, Logger.None);
@@ -152,8 +150,6 @@ namespace YtReader {
 
     public static IPipeCtx ResolvePipeCtx(this ILifetimeScope scope) => scope.Resolve<Func<IPipeCtx>>()();
   }
-  
- 
 
   public static class ChannelConfigExtensions {
     public static ISimpleFileStore DataStore(this AppCfg cfg, ILogger log, StringPath path = null) =>

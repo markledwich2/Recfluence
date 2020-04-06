@@ -1,7 +1,6 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Autofac;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.WebJobs;
@@ -9,6 +8,7 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using Serilog.Sinks.ILogger;
+using SysExtensions.Net;
 using SysExtensions.Text;
 using YtReader;
 using IMSLogger = Microsoft.Extensions.Logging.ILogger;
@@ -44,19 +44,22 @@ namespace YtFunctions {
 
     [FunctionName("Update")]
     public static async Task<HttpResponseMessage> Update([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
-      HttpRequestMessage req, IMSLogger funcLogger) => req.CreateResponse(await RunUpdate(funcLogger));
+      HttpRequestMessage req, IMSLogger funcLogger) {
+      var updateMesssage = await RunUpdate(funcLogger);
+      return req.AsyncResponse(updateMesssage);
+    }
 
     static async Task<string> RunUpdate(IMSLogger funcLogger) {
       var s = await Init(funcLogger);
-      s.Log.Information("Function Update started");
+      s.Log.Information("Function {Function} started in environment {Env}", nameof(RunUpdate), s.Root.Env);
 
       try {
         var scope = Setup.BaseScope(s.Root, s.Cfg, s.Log);
         var pipeCtx = scope.ResolvePipeCtx();
         var res = await pipeCtx.RunPipe(nameof(YtDataUpdater.Update), false, s.Log);
-        return res.Error ? 
-          $"Error starting container: {res.ErrorMessage}" : 
-          $"Started containers(s): {res.Containers.Join(", ", c => $"{c.Image} -> {c.Name}")}";
+        return res.Error
+          ? $"Error starting container: {res.ErrorMessage}"
+          : $"Started containers(s): {res.Containers.Join(", ", c => $"{c.Image} -> {c.Name}")}";
       }
       catch (Exception ex) {
         s.Log.Error("Error starting container to update data {Error}", ex.Message, ex);
