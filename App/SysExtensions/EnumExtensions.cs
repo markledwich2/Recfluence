@@ -37,26 +37,21 @@ namespace SysExtensions {
     public static string EnumString(this Enum value) =>
       value.EnumExplicitName() ?? value.ToString();
 
-    public static string EnumString<T>(this T value) where T : IConvertible => EnumString(value as Enum);
+    public static string EnumString<T>(this T value) where T : Enum => EnumString(value as Enum);
 
-    public static bool TryToEnum<T>(this string s, out T value) where T : IConvertible {
-      var enumValue = ToEnum(s, typeof(T));
+    public static bool TryToEnum<T>(this string s, out T value) where T : Enum {
+      var enumValue = ToEnum<T>(s);
       if (enumValue == null)
         value = default;
       else
-        value = (T) (IConvertible) enumValue;
+        value = enumValue;
 
       return enumValue != null;
     }
 
-    /// <summary>Converts a string to an enum value. using the EnumMember attribute if it exists</summary>
-    public static T ToEnum<T>(this string s, bool ensureFound = true) where T : Enum {
-      var t = typeof(T);
-      var enumValue = (IConvertible) ToEnum(s, t, ensureFound: ensureFound);
-      return (T) enumValue;
-    }
+    public static T ToEnum<T>(this string s, bool ensureFound = true, Type t = null, Func<Enum, string> defaultEnumString = null) where T : Enum {
+      t ??= typeof(T);
 
-    public static Enum ToEnum(string s, Type t, Func<Enum, string> defaultEnumString = null, bool ensureFound = true) {
       defaultEnumString = defaultEnumString ?? (e => e.ToString());
 
       var enumCache = StringToEnumCache.GetOrAdd(t, k => new ConcurrentDictionary<string, Enum>(StringComparer.OrdinalIgnoreCase));
@@ -70,7 +65,8 @@ namespace SysExtensions {
       }
 
       if (ensureFound && !found) throw new InvalidCastException($"Unable to cast ({s}) to {t.Name}");
-      return enumValue;
+      if (enumValue == null) return default;
+      return (T) enumValue;
     }
 
     public static IEnumerable<T> Values<T>() where T : IConvertible => Enum.GetValues(typeof(T)).Cast<T>();

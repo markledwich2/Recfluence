@@ -13,7 +13,7 @@ namespace YtReader {
     // connection string to the configuration directory
     public string AzureStorageCs { get; set; }
 
-    // name of environment (Prod/Dev/MarkDev etc..). used to choose appropreate cfg
+    // name of environment (Prod/Dev etc..). used to choose appropreate cfg
     public string Env { get; set; }
   }
 
@@ -27,14 +27,15 @@ namespace YtReader {
     public int                 ParallelChannels      { get; set; } = 4;
     public int                 DefaultParallel       { get; set; } = 8;
     public int                 ChannelsPerContainer  { get; set; } = 150;
-    public string              ResourceGroup         { get; set; } = "ytnetworks";
+    public string              ResourceGroup         { get; set; }
     public YtReaderCfg         YtReader              { get; set; } = new YtReaderCfg();
     public StorageCfg          Storage               { get; set; } = new StorageCfg();
     public ICollection<string> YTApiKeys             { get; set; }
     public HashSet<string>     LimitedToSeedChannels { get; set; }
     public string              SubscriptionId        { get; set; }
     public ServicePrincipalCfg ServicePrincipal      { get; set; } = new ServicePrincipalCfg();
-    public string              SeqUrl                { get; set; }
+    public Uri                 SeqUrl                { get; set; }
+    public SeqHostCfg          SeqHost               { get; set; } = new SeqHostCfg();
     public SheetsCfg           Sheets                { get; set; }
     public ScraperCfg          Scraper               { get; set; } = new ScraperCfg();
     public SnowflakeCfg        Snowflake             { get; set; } = new SnowflakeCfg();
@@ -87,9 +88,14 @@ namespace YtReader {
 
   public class StorageCfg {
     public string DataStorageCs { get; set; }
-    public string DbPath        { get; set; } = "data/db";
-    public string ResultsPath   { get; set; } = "data/results";
-    public string PrivatePath   { get; set; } = "private";
-    public string PipePath      { get; set; } = "pipe";
+    public string DbPath        { get; set; }
+    public string ResultsPath   { get; set; }
+    public string PrivatePath   { get; set; }
+    public string PipePath      { get; set; }
+  }
+
+  public class SeqHostCfg {
+    public string IdleQuery          { get; set; } = "@Timestamp > Now() - 30m";
+    public string ContainerGroupName { get; set; } = "seq";
   }
 }

@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Humanizer;
 using Medallion.Shell;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.ContainerGroup.Definition;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
-using Microsoft.Azure.Management.ResourceManager.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.Blob;
 using Serilog;
@@ -16,8 +15,6 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
-
-//using Microsoft.Azure.Management.Fluent;
 
 namespace Mutuo.Etl.Pipe {
   public interface IPipeWorker {
@@ -34,7 +31,9 @@ namespace Mutuo.Etl.Pipe {
     Unknown,
     Running,
     Succeeded,
-    Failed
+    Failed,
+    Stopped,
+    Updating
   }
 
   public static class PipeWorkerEx {
@@ -48,6 +47,15 @@ namespace Mutuo.Etl.Pipe {
 
     public static ContainerState State(this IContainerGroup group) => group.State.ToEnum<ContainerState>(false);
     public static bool IsCompletedState(this ContainerState state) => state.In(ContainerState.Succeeded, ContainerState.Failed);
+
+    public static async Task<IContainerGroup> WaitForState(this IContainerGroup group, params ContainerState[] states) {
+      while (true) {
+        if (group.State().In(states))
+          return group;
+        await Task.Delay(1.Seconds());
+        group = await group.RefreshAsync();
+      }
+    }
 
     public static async Task<PipeRunMetadata> RunWork(this IPipeWorker worker, IPipeCtx ctx, string pipe, ILogger log) =>
       (await worker.RunWork(ctx, new[] {PipeRunId.FromName(pipe)}, log)).First();
@@ -113,14 +121,7 @@ namespace Mutuo.Etl.Pipe {
 
     public AzurePipeWorker(PipeAppCfg cfg) {
       Cfg = cfg;
-      Az = new Lazy<IAzure>(() => GetAzure(Cfg.Azure));
-    }
-
-    static IAzure GetAzure(PipeAzureCfg cfg) {
-      var sp = cfg.ServicePrincipal;
-      var creds = new AzureCredentialsFactory().FromServicePrincipal(sp.ClientId, sp.Secret, sp.TennantId, AzureEnvironment.AzureGlobalCloud);
-      var azure = Azure.Authenticate(creds).WithSubscription(cfg.SubscriptionId);
-      return azure;
+      Az = new Lazy<IAzure>(() => Cfg.Azure.GetAzure());
     }
 
     public Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) => RunWork(ctx, ids, false, log);

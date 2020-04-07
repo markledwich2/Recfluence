@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
+using Humanizer;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +20,7 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using SysExtensions.Threading;
 using YtReader.Yt;
 
 namespace YtReader {
@@ -28,26 +30,54 @@ namespace YtReader {
     public static FPath  SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
     public static FPath  LocalDataDir    => "Data".AsPath().InAppData(AppName);
 
-    static FPath RootCfgPath => "cfg.json".AsPath().InAppData(AppName);
-
     public static Logger CreateTestLogger() =>
       new LoggerConfiguration()
         .WriteTo.Seq("http://localhost:5341")
         .CreateLogger();
 
-    public static Logger CreateLogger(string env, AppCfg cfg = null) {
+    public static async Task<Logger> CreateLogger(string env, AppCfg cfg = null, bool startSeq = true) {
       var c = new LoggerConfiguration()
         .WriteTo.Console(LogEventLevel.Information);
-
-      if (cfg?.SeqUrl.HasValue() == true)
-        c.WriteTo.Seq(cfg.SeqUrl, LogEventLevel.Debug);
 
       if (cfg?.AppInsightsKey != null)
         c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces, LogEventLevel.Debug);
 
-      c.MinimumLevel.Debug();
-      c.Enrich.WithProperty("Env", env);
-      return c.CreateLogger();
+      if (cfg != null)
+        c = await c.WriteToSeqAndStartIfNeeded(cfg);
+
+      return c.MinimumLevel.Debug()
+        .Enrich.WithProperty("Env", env)
+        .CreateLogger();
+    }
+
+    static async Task<LoggerConfiguration> WriteToSeqAndStartIfNeeded(this LoggerConfiguration loggerCfg, AppCfg cfg) {
+      if (cfg?.SeqUrl == null) return loggerCfg;
+      var resCfg = loggerCfg.WriteTo.Seq(cfg.SeqUrl.OriginalString, LogEventLevel.Debug);
+      await StartSeqIfNeeded(cfg);
+      return resCfg;
+    }
+
+    /// <summary>Kick of a restart on seq if needed (doesn't wait for it)</summary>
+    public static async Task StartSeqIfNeeded(AppCfg cfg) {
+      var log = new LoggerConfiguration()
+        .WriteTo.Console(LogEventLevel.Information).CreateLogger();
+      if (cfg.SeqUrl.IsLoopback)
+        return;
+      try {
+        var azure = cfg.Pipe.Azure.GetAzure();
+        var seqGroup = await azure.SeqGroup(cfg);
+        if (seqGroup.State() != ContainerState.Running) {
+          await azure.ContainerGroups.StartAsync(seqGroup.ResourceGroupName, seqGroup.Name);
+          var seqStart = await seqGroup.WaitForState(ContainerState.Running).WithTimeout(30.Seconds());
+          log.Information(seqStart.Success ? "{SeqUrl} started" : "{SeqUrl} launched but not started yet", cfg.SeqUrl);
+        }
+        else {
+          log.Information("Seq connected on {SeqUrl}", cfg.SeqUrl);
+        }
+      }
+      catch (Exception ex) {
+        log.Error(ex, "Error starting seq: {Error}", ex.Message);
+      }
     }
 
     public static Dictionary<string, string> ContainerEnv(this RootCfg rootCfg) =>
@@ -145,6 +175,7 @@ namespace YtReader {
       b.Register(_ => cfg.YtStore(log)).SingleInstance();
       b.Register<Func<Task<DbConnection>>>(_ => async () => (DbConnection) await cfg.Snowflake.OpenConnection());
       b.Register<Func<IPipeCtx>>(c => () => PipeCtx(rootCfg, cfg, scopeHolder.Scope, log));
+      b.Register(_ => cfg.Pipe.Azure.GetAzure());
       b.RegisterType<YtDataUpdater>(); // this will resolve IPipeCtx
       var scope = b.Build().BeginLifetimeScope();
       scopeHolder.Scope = scope;
@@ -152,6 +183,9 @@ namespace YtReader {
     }
 
     public static IPipeCtx ResolvePipeCtx(this ILifetimeScope scope) => scope.Resolve<Func<IPipeCtx>>()();
+
+    public static Task<IContainerGroup> SeqGroup(this IAzure azure, AppCfg cfg) =>
+      azure.ContainerGroups.GetByResourceGroupAsync(cfg.ResourceGroup, cfg.SeqHost.ContainerGroupName);
   }
 
   public static class ChannelConfigExtensions {
@@ -164,5 +198,7 @@ namespace YtReader {
       var ytStore = new YtStore(cfg.DataStore(log, cfg.Storage.DbPath), log);
       return ytStore;
     }
+
+    public static bool IsProd(this RootCfg root) => root.Env.ToLowerInvariant() == "prod";
   }
 }

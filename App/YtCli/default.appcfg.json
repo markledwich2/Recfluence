@@ -1,4 +1,9 @@
 ﻿{
+    "seqUrl": "http://ytseq.westus2.azurecontainer.io",
+    "seqHost": {
+        "idleQuery": "@Timestamp > Now() - 1h",
+        "containerGroupName": "seq"
+    },
     "parallelChannels": 4,
     "defaultParallel": 8,
     "channelsPerContainer": 300,

@@ -1,12 +1,14 @@
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using AngleSharp.Text;
+using Autofac;
 using Microsoft.ApplicationInsights;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Mutuo.Etl.Pipe;
+using Seq.Api;
 using Serilog;
 using Serilog.Sinks.ILogger;
 using SysExtensions.Net;
@@ -20,20 +22,58 @@ using IMSLogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace YtFunctions {
   public static class YtFunctions {
-    static ILogger Logger(IMSLogger funcLogger, string appInsightsKey) {
+    static async Task<ILogger> Logger(IMSLogger funcLogger, AppCfg cfg, bool dontStartSeq = false) {
       var logCfg = new LoggerConfiguration();
-      if (appInsightsKey.HasValue())
-        logCfg = logCfg.WriteTo.ApplicationInsights(new TelemetryClient {InstrumentationKey = appInsightsKey}, TelemetryConverter.Traces);
-      logCfg = logCfg.WriteTo.ILogger(funcLogger);
+      if (cfg.AppInsightsKey.HasValue())
+        logCfg = logCfg.WriteTo.ApplicationInsights(new TelemetryClient {InstrumentationKey = cfg.AppInsightsKey}, TelemetryConverter.Traces);
+      if (funcLogger != null)
+        logCfg = logCfg.WriteTo.ILogger(funcLogger);
+      if (cfg.SeqUrl != null)
+        logCfg = logCfg.WriteTo.Seq(cfg.SeqUrl.OriginalString);
+
+      if (!dontStartSeq)
+        await Setup.StartSeqIfNeeded(cfg);
       return logCfg.CreateLogger();
     }
 
-    static async Task<(AppCfg Cfg, ILogger Log, RootCfg Root)> Init(IMSLogger funcLogger, ExecutionContext context) {
+    static async Task<(AppCfg Cfg, ILogger Log, RootCfg Root, ILifetimeScope scope)> Init(ExecutionContext context, IMSLogger funcLogger = null,
+      bool dontStartSeq = false) {
       funcLogger.LogInformation($"Context: {context.ToJson()}");
       var (app, root) = await Setup.LoadCfg2(context.FunctionAppDirectory);
-      var log = Logger(funcLogger, app.AppInsightsKey);
-      log.Information("Function {@Context}", context);
-      return (app, log, root);
+      var log = await Logger(funcLogger, app, dontStartSeq);
+      var scope = Setup.BaseScope(root, app, log);
+      return (app, log, root, scope);
+    }
+
+    [FunctionName("StopIdleSeq_Timer")]
+    public static async Task StopIdleSeq_Timer([TimerTrigger("*/15,30,45,0 * * * *")] TimerInfo myTimer, ExecutionContext context, IMSLogger log) =>
+      await StopIdleSeq(context, log);
+
+    [FunctionName("StopIdleSeq")]
+    public static async Task<HttpResponseMessage> StopIdleSeq([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
+      HttpRequestMessage req, ExecutionContext context, IMSLogger funcLogger) =>
+      req.AsyncResponse(await StopIdleSeq(context, funcLogger));
+
+    static async Task<string> StopIdleSeq(ExecutionContext context, IMSLogger log) {
+      var s = await Init(context, log, true);
+      if (!s.Root.IsProd()) return LogReason("not prod");
+      var azure = s.scope.Resolve<IAzure>();
+      var group = await azure.SeqGroup(s.Cfg);
+      if (group.State() != ContainerState.Running) return LogReason("seq container not running");
+      var seq = new SeqConnection(s.Cfg.SeqUrl.OriginalString);
+      var events = await seq.Events.ListAsync(count: 5, filter: s.Cfg.SeqHost.IdleQuery, render: true);
+      if (events.Any()) {
+        s.Log.Information("{Noun} - recent events exist from '{Query}'", nameof(StopIdleSeq), s.Cfg.SeqHost.IdleQuery);
+        return $"recent events exist: {events.Join("\n", e => e.RenderedMessage)}";
+      }
+      s.Log.Information("{Noun} - no recent events from '{Query}'. Stopping {ContainerGroup}", nameof(StopIdleSeq), s.Cfg.SeqHost.IdleQuery, group.Name);
+      await group.StopAsync();
+      return $"stopped group {group.Name}";
+
+      string LogReason(string reason) {
+        s.Log.Information("{Noun} - {reason}", nameof(StopIdleSeq), reason);
+        return reason;
+      }
     }
 
     [FunctionName("Update_Timer")]
@@ -42,18 +82,13 @@ namespace YtFunctions {
 
     [FunctionName("Update")]
     public static async Task<HttpResponseMessage> Update([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
-      HttpRequestMessage req, ExecutionContext context, IMSLogger funcLogger) {
-      var updateMesssage = await RunUpdate(funcLogger, context);
-      return req.AsyncResponse(updateMesssage);
-    }
+      HttpRequestMessage req, ExecutionContext context, IMSLogger funcLogger) =>
+      req.AsyncResponse(await RunUpdate(funcLogger, context));
 
     static async Task<string> RunUpdate(IMSLogger funcLogger, ExecutionContext context) {
-      var s = await Init(funcLogger, context);
-      s.Log.Information("Function {Function} started in environment {Env}", nameof(RunUpdate), s.Root.Env);
-
+      var s = await Init(context, funcLogger);
       try {
-        var scope = Setup.BaseScope(s.Root, s.Cfg, s.Log);
-        var pipeCtx = scope.ResolvePipeCtx();
+        var pipeCtx = s.scope.ResolvePipeCtx();
         var res = await pipeCtx.RunPipe(nameof(YtDataUpdater.Update), false, s.Log);
         return res.Error
           ? $"Error starting container: {res.ErrorMessage}"

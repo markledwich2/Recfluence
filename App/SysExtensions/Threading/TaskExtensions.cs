@@ -86,6 +86,9 @@ namespace SysExtensions.Threading {
       await foreach (var list in items) res.AddRange(list);
       return res;
     }
+
+    public static async Task<(bool Success, T Res)> WithTimeout<T>(this Task<T> task, TimeSpan timeout) =>
+      task == await Task.WhenAny(task, timeout.Delay()) ? (true, await task) : (false, default);
   }
 
   public class TimedResult<T> {
