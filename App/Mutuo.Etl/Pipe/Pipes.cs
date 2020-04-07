@@ -31,17 +31,33 @@ namespace Mutuo.Etl.Pipe {
     /// <summary>Launches a root pipe (i.e. on without work state)</summary>
     /// <returns></returns>
     public static async Task<PipeRunMetadata> RunPipe(this IPipeCtx ctx, string pipeName, bool returnOnStarted, ILogger log) {
-      var pipeWorker = PipeWorker(ctx, log);
-      return pipeWorker is IPipeWorkerStartable s ? await s.RunWork(ctx, pipeName, returnOnStarted) : await pipeWorker.RunWork(ctx, pipeName);
+      var pipeWorker = PipeWorker(ctx);
+      return pipeWorker is IPipeWorkerStartable s ? await s.RunWork(ctx, pipeName, returnOnStarted, log) : await pipeWorker.RunWork(ctx, pipeName, log);
     }
 
-    /// <summary>Runs a pipeline to process a list of work in batches on multiple containers. The transform is used to provide
-    ///   strong typing, but may not actually be run locally.</summary>
+    /// <summary>Executes pipe's on the items (logger, no result)</summary>
+    public static async Task RunPipe<TIn>(
+      this IEnumerable<TIn> items, Func<IReadOnlyCollection<TIn>, ILogger, Task> transform, IPipeCtx ctx, PipeRunCfg runCfg, ILogger log) =>
+      await RunPipeMethod<object>(items.Cast<object>(), transform.Method, ctx, runCfg, log);
+
+    /// <summary>Executes pipe's on the items (logger, result)</summary>
     public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> RunPipe<TIn, TOut>(
-      this IEnumerable<TIn> items, Func<IReadOnlyCollection<TIn>, Task<TOut>> transform, IPipeCtx ctx, PipeRunCfg runCfg, ILogger log) where TOut : class {
-      var isPipe = transform.Method.GetCustomAttribute<PipeAttribute>() != null;
-      if (!isPipe) throw new InvalidOperationException($"given transform '{transform.Method.Name}' must be a pipe");
-      var pipeNme = transform.Method.Name;
+      this IEnumerable<TIn> items, Func<IReadOnlyCollection<TIn>, ILogger, Task<TOut>> transform, IPipeCtx ctx, PipeRunCfg runCfg, ILogger log)
+      where TOut : class =>
+      await RunPipeMethod<TOut>(items.Cast<object>(), transform.Method, ctx, runCfg, log);
+
+    /// <summary>Executes pipe's on the items (No logger, result)</summary>
+    public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> RunPipe<TIn, TOut>(
+      this IEnumerable<TIn> items, Func<IReadOnlyCollection<TIn>, Task<TOut>> transform, IPipeCtx ctx, PipeRunCfg runCfg, ILogger log) where TOut : class =>
+      await RunPipeMethod<TOut>(items.Cast<object>(), transform.Method, ctx, runCfg, log);
+
+    /// <summary>Runs a pipe to process a list of work in batches on multiple containers. The transform is used to provide
+    ///   strong typing, but may not actually be run locally.</summary>
+    static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> RunPipeMethod<TOut>(
+      this IEnumerable<object> items, MethodInfo method, IPipeCtx ctx, PipeRunCfg runCfg, ILogger log) {
+      var isPipe = method.GetCustomAttribute<PipeAttribute>() != null;
+      if (!isPipe) throw new InvalidOperationException($"given transform '{method.Name}' must be a pipe");
+      var pipeNme = method.Name;
 
       // batch and create state for containers to read
       var group = PipeRunId.NewGroupId();
@@ -49,16 +65,16 @@ namespace Mutuo.Etl.Pipe {
       var batches = await items.Batch(runCfg.MinWorkItems, runCfg.MaxParallel)
         .Select((g, i) => (Id: new PipeRunId(pipeNme, group, i), In: g.ToArray()))
         .BlockTransform(async b => {
-          await ctx.SaveInState(b.In, b.Id);
+          await ctx.SaveInState(b.In, b.Id, log);
           return b.Id;
         });
 
-      var pipeWorker = PipeWorker(ctx, log);
-      var res = pipeWorker is IPipeWorkerStartable s ? await s.RunWork(ctx, batches, runCfg.ReturnOnStart) : await pipeWorker.RunWork(ctx, batches);
+      var pipeWorker = PipeWorker(ctx);
+      log.Information("{PipeWorker} - launching batches {@batches}", pipeWorker.GetType().Name, batches);
+      var res = pipeWorker is IPipeWorkerStartable s ? await s.RunWork(ctx, batches, runCfg.ReturnOnStart, log) : await pipeWorker.RunWork(ctx, batches, log);
 
-      var outState = await res
-        .BlockTransform(async b => (Metadata: b, OutState: b.Success ? await GetOutState<TOut>(ctx, b.Id) : null));
-
+      var hasOutState = typeof(TOut) != typeof(object);
+      var outState = hasOutState ? await GetOutState() : res.Select(r => (Metadata: r, OutState: (TOut) default)).ToArray();
       var batchId = $"{pipeNme}|{group}";
       log.Information("{BatchId} - Batches {Succeded}/{Total} succeeded/total",
         batchId, res.Count(r => r.Success), res.Count);
@@ -69,11 +85,21 @@ namespace Mutuo.Etl.Pipe {
           batchId, failed.Length, failed.Select(f => f.Metadata.Id));
 
       return outState;
+
+      async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> GetOutState() =>
+        await res
+          .BlockTransform(async b => {
+            var outstate = b.Success
+              ? await typeof(Pipes).GetMethod(nameof(Pipes.GetOutState), BindingFlags.Static | BindingFlags.NonPublic)
+                .CallStaticGenericTask<TOut>(new[] {typeof(TOut)}, ctx, b.Id, log)
+              : default;
+            return (Metadata: b, OutState: outstate);
+          });
     }
 
-    static IPipeWorker PipeWorker(IPipeCtx ctx, ILogger log) {
+    static IPipeWorker PipeWorker(IPipeCtx ctx) {
       IPipeWorker pipeWorker = ctx.Cfg.Location switch {
-        PipeRunLocation.Container => new AzurePipeWorker(ctx.Cfg, log),
+        PipeRunLocation.Container => new AzurePipeWorker(ctx.Cfg),
         PipeRunLocation.LocalContainer => new LocalPipeWorker(),
         _ => new ThreadPipeWorker()
       };
@@ -95,34 +121,33 @@ namespace Mutuo.Etl.Pipe {
 
       var pipeInstance = ctx.Scope.Resolve(pipeType.Type);
       var method = pipeType.Method;
-      var stateParams = method.GetParameters().Where(p => p.GetCustomAttribute<PipeArgAttribute>() == null).ToArray();
-      if (stateParams.Length > 1) throw new InvalidOperationException("Only one pipe state parameter supported");
 
+      var pipeLog = ctx.Log.ForContext("Pipe", pipeName).ForContext("RunId", id);
       var pipeParams = await method.GetParameters().BlockTransform(async p => {
         var argAttribute = p.GetCustomAttribute<PipeArgAttribute>();
-        if (argAttribute == null) {
-          var genericType = p.ParameterType.GenericTypeArguments.FirstOrDefault() ??
-                            throw new InvalidOperationException(
-                              $"Expecting arg method {pipeType.Type}.{method.Name} parameter {p.Name} to be IEnumerable<Type>");
-          var loadInStateMethod = typeof(Pipes).GetMethod(nameof(LoadInState), new[] {typeof(IPipeCtx), typeof(PipeRunId)})?.MakeGenericMethod(genericType)
-                                  ?? throw new InvalidOperationException($"{nameof(LoadInState)} method not found ");
-          try {
-            dynamic task = loadInStateMethod.Invoke(null, new object[] {ctx, id});
-            return (object) await task;
+
+        if (p.ParameterType.IsAssignableTo<ILogger>())
+          return pipeLog;
+
+        if (argAttribute != null) {
+          var variableName = $"{pipeName}:{p.Name}";
+          var stringValue = Environment.GetEnvironmentVariable(variableName);
+          if (stringValue == null) {
+            ctx.Log.Debug($"Unable to find pipe arg in environment variable '{variableName}'");
+            return p.ParameterType.DefaultForType();
           }
-          catch (Exception ex) {
-            throw new InvalidOperationException("Unable to load in state for pipe", ex);
-          }
+          var value = ChangeType(stringValue, p.ParameterType);
+          return value;
         }
 
-        var variableName = $"{pipeName}:{p.Name}";
-        var stringValue = Environment.GetEnvironmentVariable(variableName);
-        if (stringValue == null) {
-          ctx.Log.Debug($"Unable to find pipe arg in environment variable '{variableName}'");
-          return p.ParameterType.DefaultForType();
-        }
-        var value = ChangeType(stringValue, p.ParameterType);
-        return value;
+        var genericType = p.ParameterType.GenericTypeArguments.FirstOrDefault() ??
+                          throw new InvalidOperationException(
+                            $"Expecting arg method {pipeType.Type}.{method.Name} parameter {p.Name} to be IEnumerable<Type>");
+
+        var res = await typeof(Pipes).GetMethod(nameof(LoadInState), new[] {typeof(IPipeCtx), typeof(PipeRunId)})
+          .CallStaticGenericTask<IReadOnlyCollection<object>>(new[] {genericType}, ctx, id);
+
+        return res;
       });
 
       try {
@@ -133,7 +158,7 @@ namespace Mutuo.Etl.Pipe {
         }
         else {
           object pipeResult = await task;
-          await ctx.SetOutState(pipeResult, id);
+          await ctx.SetOutState(pipeResult, id, pipeLog);
         }
       }
       catch (Exception ex) {
@@ -162,16 +187,16 @@ namespace Mutuo.Etl.Pipe {
     static string OutStatePath(this PipeRunId id) => $"{id.StatePath()}.OutState";
     static string InStatePath(this PipeRunId id) => $"{id.StatePath()}.InState";
 
-    static async Task<T> GetOutState<T>(this IPipeCtx ctx, PipeRunId id) where T : class =>
-      await ctx.Store.Get<T>(id.OutStatePath());
+    static async Task<T> GetOutState<T>(this IPipeCtx ctx, PipeRunId id, ILogger log) where T : class =>
+      await ctx.Store.Get<T>(id.OutStatePath(), log: log);
 
-    static async Task SetOutState<T>(this IPipeCtx ctx, T state, PipeRunId id) where T : class =>
-      await ctx.Store.Set(id.OutStatePath(), state);
+    static async Task SetOutState<T>(this IPipeCtx ctx, T state, PipeRunId id, ILogger log) where T : class =>
+      await ctx.Store.Set(id.OutStatePath(), state, log: log);
 
-    static async Task SaveInState<T>(this IPipeCtx ctx, IEnumerable<T> state, PipeRunId id) {
+    static async Task SaveInState<T>(this IPipeCtx ctx, IEnumerable<T> state, PipeRunId id, ILogger log) {
       using var s = state.ToJsonlGzStream();
       var path = $"{id.InStatePath()}.jsonl.gz";
-      await ctx.Store.Save(path, s);
+      await ctx.Store.Save(path, s, log);
     }
 
     public static async Task<IReadOnlyCollection<T>> LoadInState<T>(this IPipeCtx ctx, PipeRunId id) {
@@ -222,4 +247,7 @@ namespace Mutuo.Etl.Pipe {
   /// <summary>Decorate a parameter that will come from environent variables in for format PipeName:ArgName</summary>
   [AttributeUsage(AttributeTargets.Parameter)]
   public class PipeArgAttribute : Attribute { }
+
+  [AttributeUsage(AttributeTargets.Parameter)]
+  public class PipeStateAttribute : Attribute { }
 }

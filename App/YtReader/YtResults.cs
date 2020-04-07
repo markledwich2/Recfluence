@@ -161,9 +161,9 @@ namespace YtReader {
 
     async Task SaveToLatestAndDateDirs(string fileName, FPath tempFile) =>
       await Task.WhenAll(
-        Store.Save(StringPath.Relative(Version, DateTime.UtcNow.ToString("yyyy-MM-dd")).Add(fileName), tempFile),
-        Store.Save(StringPath.Relative(Version, "latest").Add(fileName), tempFile),
-        Store.Save(StringPath.Relative("latest").Add(fileName), tempFile)
+        Store.Save(StringPath.Relative(Version, DateTime.UtcNow.ToString("yyyy-MM-dd")).Add(fileName), tempFile, Log),
+        Store.Save(StringPath.Relative(Version, "latest").Add(fileName), tempFile, Log),
+        Store.Save(StringPath.Relative("latest").Add(fileName), tempFile, Log)
       );
   }
 

@@ -25,8 +25,8 @@ namespace Mutuo.Etl.Blob {
     static async Task SyncDirectory(StringPath pathA, StringPath pathB, int parallel, ILogger log, AzureBlobFileStore storeA, AzureBlobFileStore storeB) {
       var sw = Stopwatch.StartNew();
 
-      var filesATask = storeA.List(allDirectories: true).ToListWithAction(b => log.Debug("Listed {Files} from source {Path}", b, pathA));
-      var filesBTask = storeB.List(allDirectories: true).ToListWithAction(b => log.Debug("Listed {Files} from destination {Path}", b, pathB));
+      var filesATask = storeA.List(pathA).ToListWithAction(b => log.Debug("Listed {Files} from source {Path}", b, pathA));
+      var filesBTask = storeB.List(pathB).ToListWithAction(b => log.Debug("Listed {Files} from destination {Path}", b, pathB));
 
       var filesA = (await filesATask).ToDictionary(f => f.Path);
       var filesB = (await filesBTask).ToDictionary(f => f.Path);
@@ -39,7 +39,7 @@ namespace Mutuo.Etl.Blob {
 
       async Task<IReadOnlyCollection<StringPath>> SaveAll(IEnumerable<FileListItem> files, string action) =>
         await files.BlockTransform(async f => {
-            using (var content = await storeA.Load(f.Path))
+            using (var content = await storeA.Load(f.Path, log))
               await storeB.Save(f.Path, content);
             return f.Path;
           },

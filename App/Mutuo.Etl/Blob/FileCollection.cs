@@ -64,12 +64,12 @@ namespace Mutuo.Etl.Blob {
 
     public async Task<IReadOnlyCollection<T>> Items(StringPath path) => await LoadJsonl(path);
 
-    public async Task<StringPath> Append(IReadOnlyCollection<T> items) {
+    public async Task<StringPath> Append(IReadOnlyCollection<T> items, ILogger log = null) {
       var ts = items.Max(GetTs);
       var path = StoreFileMd.FilePath(Path, ts, Version);
 
       await using var memStream = items.ToJsonlGzStream(new JsonSerializerSettings());
-      var res = await Store.Save(path, memStream).WithDuration();
+      var res = await Store.Save(path, memStream, log).WithDuration();
       Log?.Debug("Store - Saved '{Path}' in {Duration}", path, res);
       return path;
     }

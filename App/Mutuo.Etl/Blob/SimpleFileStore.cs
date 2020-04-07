@@ -5,18 +5,19 @@ using System.IO.Compression;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Serilog;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 
 namespace Mutuo.Etl.Blob {
   public interface ISimpleFileStore {
-    Task Save(StringPath path, FPath file);
-    Task Save(StringPath path, Stream contents);
-    Task<Stream> Load(StringPath path);
-    IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false);
-    Task<bool> Delete(StringPath path);
-    Task<Stream> OpenForWrite(StringPath path);
+    Task Save(StringPath path, FPath file, ILogger log = null);
+    Task Save(StringPath path, Stream contents, ILogger log = null);
+    Task<Stream> Load(StringPath path, ILogger log = null);
+    IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null);
+    Task<bool> Delete(StringPath path, ILogger log = null);
+    Task<Stream> OpenForWrite(StringPath path, ILogger log = null);
   }
 
   public static class SimpleStoreExtensions {
@@ -32,8 +33,8 @@ namespace Mutuo.Etl.Blob {
       return o;
     }
 
-    public static async Task<T> Get<T>(this ISimpleFileStore store, StringPath path, bool zip = true) where T : class {
-      using var stream = await store.Load(path.AddJsonExtention(zip));
+    public static async Task<T> Get<T>(this ISimpleFileStore store, StringPath path, bool zip = true, ILogger log = null) where T : class {
+      using var stream = await store.Load(path.AddJsonExtention(zip), log);
       if (!zip) return stream.ToObject<T>();
       await using var zr = new GZipStream(stream, CompressionMode.Decompress, true);
       return zr.ToObject<T>();
@@ -44,7 +45,8 @@ namespace Mutuo.Etl.Blob {
     /// <param name="path">The path to the object (no extensions)</param>
     /// <param name="item"></param>
     /// <param name="zip"></param>
-    public static async Task Set<T>(this ISimpleFileStore store, StringPath path, T item, bool zip = true) {
+    /// <param name="log"></param>
+    public static async Task Set<T>(this ISimpleFileStore store, StringPath path, T item, bool zip = true, ILogger log = null) {
       await using var memStream = new MemoryStream();
 
       if (zip)
@@ -59,7 +61,7 @@ namespace Mutuo.Etl.Blob {
       var fullPath = path.AddJsonExtention(zip);
       memStream.Seek(0, SeekOrigin.Begin);
 
-      await store.Save(fullPath, memStream);
+      await store.Save(fullPath, memStream, log);
     }
   }
 }

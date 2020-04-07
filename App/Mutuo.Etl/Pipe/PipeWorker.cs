@@ -23,11 +23,11 @@ namespace Mutuo.Etl.Pipe {
   public interface IPipeWorker {
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
-    Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids);
+    Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log);
   }
 
   public interface IPipeWorkerStartable : IPipeWorker {
-    Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning);
+    Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log);
   }
 
   public enum ContainerState {
@@ -43,21 +43,21 @@ namespace Mutuo.Etl.Pipe {
     public static string ContainerImageName(this ContainerCfg cfg) => $"{cfg.Registry}/{cfg.ImageName}:{cfg.Tag}";
     public static string[] PipeArgs(this PipeRunId runId) => new[] {"pipe", "-r", runId.ToString()};
 
-    public static async Task Save(this PipeRunMetadata md, ISimpleFileStore store) =>
-      await store.Set($"{md.Id.StatePath()}.RunMetadata", md, false);
+    public static async Task Save(this PipeRunMetadata md, ISimpleFileStore store, ILogger log) =>
+      await store.Set($"{md.Id.StatePath()}.RunMetadata", md, false, log);
 
     public static ContainerState State(this IContainerGroup group) => group.State.ToEnum<ContainerState>(false);
     public static bool IsCompletedState(this ContainerState state) => state.In(ContainerState.Succeeded, ContainerState.Failed);
 
-    public static async Task<PipeRunMetadata> RunWork(this IPipeWorker worker, IPipeCtx ctx, string pipe) =>
-      (await worker.RunWork(ctx, new[] {PipeRunId.FromName(pipe)})).First();
+    public static async Task<PipeRunMetadata> RunWork(this IPipeWorker worker, IPipeCtx ctx, string pipe, ILogger log) =>
+      (await worker.RunWork(ctx, new[] {PipeRunId.FromName(pipe)}, log)).First();
 
-    public static async Task<PipeRunMetadata> RunWork(this IPipeWorkerStartable worker, IPipeCtx ctx, string pipe, bool returnOnStarting) =>
-      (await worker.RunWork(ctx, new[] {PipeRunId.FromName(pipe)}, returnOnStarting)).First();
+    public static async Task<PipeRunMetadata> RunWork(this IPipeWorkerStartable worker, IPipeCtx ctx, string pipe, bool returnOnStarting, ILogger log) =>
+      (await worker.RunWork(ctx, new[] {PipeRunId.FromName(pipe)}, returnOnStarting, log)).First();
   }
 
   public class LocalPipeWorker : IPipeWorker {
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids) =>
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) =>
       await ids.BlockTransform(async id => {
         var runCfg = id.PipeCfg(ctx);
         var image = runCfg.Container.ContainerImageName();
@@ -77,19 +77,19 @@ namespace Mutuo.Etl.Pipe {
             Id = id,
             ErrorMessage = await cmd.StandardError.ReadToEndAsync()
           };
-        await md.Save(ctx.Store);
+        await md.Save(ctx.Store, log);
         return md;
       });
   }
 
   public class ThreadPipeWorker : IPipeWorker {
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids) {
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) {
       var res = await ids.BlockTransform(async id => {
         await ctx.DoPipeWork(id);
         var md = new PipeRunMetadata {
           Id = id
         };
-        await md.Save(ctx.Store);
+        await md.Save(ctx.Store, log);
         return md;
       });
       return res;
@@ -109,12 +109,10 @@ namespace Mutuo.Etl.Pipe {
 
   public class AzurePipeWorker : IPipeWorkerStartable {
     PipeAppCfg   Cfg { get; }
-    ILogger      Log { get; }
     Lazy<IAzure> Az  { get; }
 
-    public AzurePipeWorker(PipeAppCfg cfg, ILogger log) {
+    public AzurePipeWorker(PipeAppCfg cfg) {
       Cfg = cfg;
-      Log = log;
       Az = new Lazy<IAzure>(() => GetAzure(Cfg.Azure));
     }
 
@@ -125,11 +123,11 @@ namespace Mutuo.Etl.Pipe {
       return azure;
     }
 
-    public Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids) => RunWork(ctx, ids, false);
+    public Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) => RunWork(ctx, ids, false, log);
 
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning) {
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log) {
       var azure = Az.Value;
       var res = await ids.BlockTransform(async runId => {
         var runCfg = runId.PipeCfg(ctx); // id is for the sub-pipe, ctx is for the root
@@ -137,9 +135,9 @@ namespace Mutuo.Etl.Pipe {
         await EnsureNotRunning(groupName, azure, ctx.Cfg.Azure.ResourceGroup);
         var groupDef = await ContainerGroup(runCfg.Container, runId.ContainerGroupName(), runId.ContainerName(), ctx.EnvVars, runId.PipeArgs(),
           ctx.CustomRegion);
-        var pipeLog = Log.ForContext("Image", runCfg.Container.ContainerImageName()).ForContext("Pipe", runId.Name);
+        var pipeLog = log.ForContext("Image", runCfg.Container.ContainerImageName()).ForContext("Pipe", runId.Name);
         var group = await Create(groupDef, pipeLog);
-        var run = await Run(group, returnOnRunning).WithDuration();
+        var run = await Run(group, returnOnRunning, pipeLog).WithDuration();
 
         var logTxt = await run.Result.GetLogContentAsync(runId.ContainerName());
         var logPath = new StringPath($"{runId.StatePath()}.log.txt");
@@ -158,15 +156,15 @@ namespace Mutuo.Etl.Pipe {
           ErrorMessage = errorMsg
         };
         await Task.WhenAll(
-          ctx.Store.Save(logPath, logTxt.AsStream()),
-          md.Save(ctx.Store));
+          ctx.Store.Save(logPath, logTxt.AsStream(), pipeLog),
+          md.Save(ctx.Store, pipeLog));
         return md;
       }, 10);
 
       await ids.BlockAction(async c => {
         var groupName = c.ContainerGroupName();
         await azure.ContainerGroups.DeleteByResourceGroupAsync(ctx.Cfg.Azure.ResourceGroup, groupName);
-        Log.Debug("Deleted container {Container} for {Pipe}", groupName, c.Name);
+        log.Debug("Deleted container {Container} for {Pipe}", groupName, c.Name);
       }, 10);
 
       return res;
@@ -179,8 +177,7 @@ namespace Mutuo.Etl.Pipe {
       return group;
     }
 
-    public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning = false, ILogger log = null) {
-      log ??= Log;
+    public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, ILogger log) {
       var sw = Stopwatch.StartNew();
       var running = false;
 
@@ -210,13 +207,6 @@ namespace Mutuo.Etl.Pipe {
           throw new InvalidOperationException("Won't start container - it's not terminated");
         await azure.ContainerGroups.DeleteByIdAsync(group.Id);
       }
-    }
-
-    public async Task<IContainerGroup> Create(ContainerCfg container, string name, IDictionary<string, string> envVars, params string[] args) {
-      var groupName = $"{name.ToLowerInvariant()}-{DateTime.UtcNow.FileSafeTimestamp()}-{Guid.NewGuid().ToShortString(4)}";
-      var groupDef = await ContainerGroup(container, groupName, name.ToLowerInvariant(), envVars, args);
-      var group = await Create(groupDef, Log);
-      return group;
     }
 
     async Task<IWithCreate> ContainerGroup(ContainerCfg container, string groupName, string containerName, IDictionary<string, string> envVars,

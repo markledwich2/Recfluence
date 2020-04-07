@@ -15,7 +15,7 @@ using SysExtensions.Text;
 
 namespace Mutuo.Etl.Blob {
   public class AzureBlobFileStore : ISimpleFileStore {
-    public ILogger Log { get; }
+     ILogger Log { get; }
 
     public AzureBlobFileStore(Uri sas, ILogger log, StringPath pathSansContainer = null)
       : this(pathSansContainer, log) => Container = new CloudBlobContainer(sas);
@@ -45,7 +45,7 @@ namespace Mutuo.Etl.Blob {
     //public CloudStorageAccount Storage { get; }
     HttpClient H { get; }
 
-    public async Task<Stream> Load(StringPath path) {
+    public async Task<Stream> Load(StringPath path, ILogger log = null) {
       try {
         var blob = BlobRef(path);
         var mem = new MemoryStream();
@@ -60,28 +60,31 @@ namespace Mutuo.Etl.Blob {
 
     public CloudBlockBlob BlobRef(StringPath path) => Container.GetBlockBlobReference(BasePathSansContainer.Add(path));
 
-    public async Task Save(StringPath path, FPath file) {
+    public async Task Save(StringPath path, FPath file, ILogger log = null) {
+      log ??= Log;
       var blob = BlobRef(path);
       AutoPopulateProps(path, blob);
       await blob.UploadFromFileAsync(file.FullPath);
-      Log.Debug("Saved {Path}", path);
+      log.Debug("Saved {Path}", path);
     }
 
-    public async Task Save(StringPath path, Stream contents) {
+    public async Task Save(StringPath path, Stream contents, ILogger log = null) {
+      log ??= Log;
       var blob = BlobRef(path);
       AutoPopulateProps(path, blob);
       await blob.UploadFromStreamAsync(contents);
-      Log.Debug("Saved {Path}", path);
+      log.Debug("Saved {Path}", path);
     }
 
-    public async Task<Stream> OpenForWrite(StringPath path) {
+    public async Task<Stream> OpenForWrite(StringPath path, ILogger log = null) {
       var blob = BlobRef(path);
       await blob.DeleteIfExistsAsync();
       AutoPopulateProps(path, blob);
       return await blob.OpenWriteAsync();
     }
 
-    public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path = null, bool allDirectories = false) {
+    public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) {
+      log ??= Log;
       BlobContinuationToken token = null;
       do {
         var p = path != null ? BasePathSansContainer.Add(path) : BasePathSansContainer;
@@ -118,7 +121,7 @@ namespace Mutuo.Etl.Blob {
         };
     }
 
-    public async Task<bool> Delete(StringPath path) {
+    public async Task<bool> Delete(StringPath path, ILogger log = null) {
       var blob = BlobRef(path);
       return await blob.DeleteIfExistsAsync();
     }

@@ -1,0 +1,27 @@
+{
+	"folders": [
+		{
+			"path": "App"
+		},
+		{
+			"path": "Site"
+		}
+	],
+	"settings": {
+		"docker.defaultRegistryPath": "ytnetworks.azurecr.io",
+		"debug.internalConsoleOptions": "neverOpen",
+		"files.watcherExclude": {
+			"**/bin": true
+		},
+		"files.exclude": {
+			"**/.cache": true,
+			"**/.idea": true,
+			"**/bin": true,
+			"**/node_modules": true,
+			"**/obj": true
+		},
+		"cSpell.words": [
+			"Jsonl"
+		]
+	}
+}

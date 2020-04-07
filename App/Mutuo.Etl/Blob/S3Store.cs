@@ -10,6 +10,7 @@ using Amazon.S3.Transfer;
 using Humanizer;
 using Polly;
 using Polly.Retry;
+using Serilog;
 using SysExtensions.Fluent.IO;
 using SysExtensions.Security;
 using SysExtensions.Text;
@@ -39,16 +40,16 @@ namespace Mutuo.Etl.Blob {
     S3Cfg      Cfg      { get; }
     StringPath BasePath { get; }
 
-    public async Task Save(StringPath path, FPath file) {
+    public async Task Save(StringPath path, FPath file, ILogger log = default) {
       var tu = new TransferUtility(S3);
       await tu.UploadAsync(file.FullPath, Cfg.Bucket, BasePath.Add(path));
     }
 
-    public Task Save(StringPath path, Stream contents) => throw new NotImplementedException();
-    public Task<Stream> Load(StringPath path) => throw new NotImplementedException();
-    public IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false) => throw new NotImplementedException();
-    public Task<bool> Delete(StringPath path) => throw new NotImplementedException();
-    public Task<Stream> OpenForWrite(StringPath path) => throw new NotImplementedException();
+    public Task Save(StringPath path, Stream contents, ILogger log = null) => throw new NotImplementedException();
+    public Task<Stream> Load(StringPath path, ILogger log = null) => throw new NotImplementedException();
+    public IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) => throw new NotImplementedException();
+    public Task<bool> Delete(StringPath path, ILogger log = null) => throw new NotImplementedException();
+    public Task<Stream> OpenForWrite(StringPath path, ILogger log = null) => throw new NotImplementedException();
 
     string FilePath(StringPath path) => BasePath.Add(path).WithExtension(".json.gz");
 

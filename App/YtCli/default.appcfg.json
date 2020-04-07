@@ -8,7 +8,6 @@
         "resultsPath": "testdata/results",
         "pipePath": "testdata/pipe"
     },
-    //"LimitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCfrlXVXz-pT9AmmDELhpyOw"],
     "subscriptionId": "93ef8661-3e11-4fcc-92ae-d0383e7e4ad3",
     "servicePrincipal": {
         "clientId": "664f7796-ecbf-4244-ba6b-b4d76e1c1037",
