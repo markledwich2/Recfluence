@@ -11,6 +11,7 @@ using Mutuo.Etl.Pipe;
 using Seq.Api;
 using Serilog;
 using Serilog.Sinks.ILogger;
+using SysExtensions.Build;
 using SysExtensions.Net;
 using SysExtensions.Text;
 using SysExtensions.Threading;
@@ -59,7 +60,13 @@ namespace YtFunctions {
       HttpRequestMessage req, ExecutionContext context, IMSLogger funcLogger) =>
       req.AsyncResponse(await StopIdleSeq(context, funcLogger));
 
+    [FunctionName("Version")]
+    public static async Task<HttpResponseMessage> Version([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
+      HttpRequestMessage req, ExecutionContext context, IMSLogger funcLogger) =>
+      req.AsyncResponse($"Runtime version: ${GitVersionInfo.RuntimeSemVer(typeof(YtDataUpdater))}");
+
     static async Task<string> StopIdleSeq(ExecutionContext context, IMSLogger log) {
+      log.LogDebug("StopIdleSeq called");
       var s = await Init(context, log, true);
       if (!s.Root.IsProd()) return LogReason("not prod");
       var azure = s.scope.Resolve<IAzure>();
