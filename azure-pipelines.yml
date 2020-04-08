@@ -17,6 +17,7 @@ jobs:
         dotnet tool restore
         dotnet dotnet-gitversion /output buildserver /nofetch
     failOnStderr: true
+    workingDirectory: ./App
 
   - task: Docker@2
     displayName: Build and Push App
@@ -40,6 +41,7 @@ jobs:
         dotnet tool restore
         dotnet dotnet-gitversion /output buildserver /nofetch
     failOnStderr: true
+    workingDirectory: ./App
 
   - script: dotnet publish -c Release  --output $(Build.ArtifactStagingDirectory)/YtFunctions /p:Version='$(GitVersion.AssemblySemVer)' /p:InformationalVersion='$(GitVersion.SemVer)'
     workingDirectory: ./App/YtFunctions
