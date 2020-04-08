@@ -6,13 +6,16 @@ using Autofac;
 using Microsoft.ApplicationInsights;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Logging;
 using Mutuo.Etl.Pipe;
 using Seq.Api;
 using Serilog;
 using Serilog.Sinks.ILogger;
 using SysExtensions.Net;
 using SysExtensions.Text;
+using SysExtensions.Threading;
 using YtReader;
+using ILogger = Serilog.ILogger;
 using IMSLogger = Microsoft.Extensions.Logging.ILogger;
 
 #pragma warning disable 618
@@ -28,6 +31,8 @@ namespace YtFunctions {
       if (cfg.SeqUrl != null)
         logCfg = logCfg.WriteTo.Seq(cfg.SeqUrl.OriginalString);
 
+      funcLogger.LogDebug($"Initializing logger {root.Env} {context.FunctionDirectory}");
+
       logCfg = logCfg.YtEnrich(root.Env, context.FunctionName, await Setup.GetVersion());
 
       if (!dontStartSeq)
@@ -37,8 +42,10 @@ namespace YtFunctions {
 
     static async Task<(AppCfg Cfg, ILogger Log, RootCfg Root, ILifetimeScope scope)> Init(ExecutionContext context, IMSLogger funcLogger = null,
       bool dontStartSeq = false) {
-      var (app, root) = await Setup.LoadCfg2(context.FunctionAppDirectory);
-      var log = await Logger(root, context, funcLogger, app, dontStartSeq);
+      var consoleLogger = funcLogger != null ? new LoggerConfiguration().WriteTo.ILogger(funcLogger).CreateLogger() : Setup.ConsoleLogger();
+      consoleLogger.Debug("about to log config");
+      var (app, root) = await Setup.LoadCfg2(context.FunctionAppDirectory, consoleLogger).WithWrappedException("unable to load cfg");
+      var log = await Logger(root, context, funcLogger, app, dontStartSeq).WithWrappedException("unable to load logger");
       var scope = Setup.BaseScope(root, app, log);
       return (app, log, root, scope);
     }

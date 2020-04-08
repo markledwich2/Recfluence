@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Data.Common;
+using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
 using Humanizer;
@@ -109,8 +111,8 @@ namespace YtReader {
       Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
       ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
 
-    public static async Task<(AppCfg App, RootCfg Root)> LoadCfg2(string basePath = null) {
-      //var basePath = FPath.Current.ParentWithFile("default.appcfg.json") ?? FPath.Current;
+    public static async Task<(AppCfg App, RootCfg Root)> LoadCfg2(string basePath = null, ILogger rootLogger = null) {
+      rootLogger ??= Log.Logger ?? Logger.None;
       basePath ??= Environment.CurrentDirectory;
       var cfgRoot = new ConfigurationBuilder()
         .SetBasePath(basePath)
@@ -133,9 +135,25 @@ namespace YtReader {
         .AddJsonFile("local.appcfg.json", true)
         .AddEnvironmentVariables().Build();
       var appCfg = cfg.Get<AppCfg>();
-      appCfg.Sheets.CredJson = secrets.ToJObject().SelectToken("sheets.credJson") as JObject;
+
+      if (appCfg.Sheets != null)
+        appCfg.Sheets.CredJson = secrets.ToJObject().SelectToken("sheets.credJson") as JObject;
       appCfg.Pipe = GetPipeAppCfg(appCfg);
+
+      var validation = Validate(appCfg);
+      if (validation.Any()) {
+        rootLogger.Error("Validation errors in app cfg {Errors}", validation);
+        throw new InvalidOperationException($"validation errors with app cfg {validation.Join(", ")}");
+      }
+
       return (appCfg, cfgRoot);
+    }
+
+    public static IReadOnlyCollection<ValidationResult> Validate(object cfgObject) {
+      var context = new ValidationContext(cfgObject, null, null);
+      var results = new List<ValidationResult>();
+      Validator.TryValidateObject(cfgObject, context, results, true);
+      return results;
     }
 
     static PipeAppCfg GetPipeAppCfg(AppCfg cfg) {

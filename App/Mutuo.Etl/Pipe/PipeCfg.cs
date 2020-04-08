@@ -1,4 +1,5 @@
-﻿using SysExtensions.Security;
+﻿using System.ComponentModel.DataAnnotations;
+using SysExtensions.Security;
 using SysExtensions.Text;
 
 namespace Mutuo.Etl.Pipe {
@@ -9,24 +10,24 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class PipeAppCfg {
-    public PipeAppStorageCfg Store         { get; set; }
-    public PipeAzureCfg      Azure         { get; set; }
-    public PipeRunLocation   Location      { get; set; }
-    public int               LocalParallel { get; set; } = 2;
-    public PipeRunCfg        Default       { get; set; }
-    public NamedPipeRunCfg[] Pipes         { get; set; }
+    [Required] public PipeAppStorageCfg Store         { get; set; }
+    [Required] public PipeAzureCfg      Azure         { get; set; }
+    [Required] public PipeRunLocation   Location      { get; set; }
+    [Required] public int               LocalParallel { get; set; } = 2;
+    [Required] public PipeRunCfg        Default       { get; set; }
+    public            NamedPipeRunCfg[] Pipes         { get; set; }
   }
 
   public class PipeAzureCfg {
-    public string              SubscriptionId   { get; set; }
-    public ServicePrincipalCfg ServicePrincipal { get; set; }
-    public string              ResourceGroup    { get; set; }
+    public            string              SubscriptionId   { get; set; }
+    [Required] public ServicePrincipalCfg ServicePrincipal { get; set; }
+    public            string              ResourceGroup    { get; set; }
   }
 
   public class ServicePrincipalCfg {
-    public string ClientId  { get; set; }
-    public string Secret    { get; set; }
-    public string TennantId { get; set; }
+    [Required] public string ClientId  { get; set; }
+    [Required] public string Secret    { get; set; }
+    [Required] public string TennantId { get; set; }
   }
 
   public class ContainerCfg {
@@ -42,12 +43,12 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class PipeAppStorageCfg {
-    public string     Cs   { get; set; }
-    public StringPath Path { get; set; }
+    [Required] public string     Cs   { get; set; }
+    [Required] public StringPath Path { get; set; }
   }
 
   public class NamedPipeRunCfg : PipeRunCfg {
-    public string PipeName { get; set; }
+    [Required] public string PipeName { get; set; }
   }
 
   public class PipeRunCfg {
@@ -59,6 +60,6 @@ namespace Mutuo.Etl.Pipe {
 
     public bool ReturnOnStart { get; set; }
 
-    public ContainerCfg Container { get; set; }
+    [Required] public ContainerCfg Container { get; set; }
   }
 }

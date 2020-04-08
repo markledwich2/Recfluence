@@ -1,7 +1,7 @@
 ﻿{
     "seqUrl": "http://ytseq.westus2.azurecontainer.io",
     "seqHost": {
-        "idleQuery": "@Timestamp > Now() - 1h",
+        "idleQuery": "@Timestamp > Now() - 1h and App != 'StopIdleSeq_Timer'",
         "containerGroupName": "seq"
     },
     "parallelChannels": 4,
