@@ -20,15 +20,22 @@ jobs:
     workingDirectory: ./App
 
   - task: Docker@2
-    displayName: Build and Push App
+    displayName: YtCli Docker Build
     inputs:
-      command: buildAndPush
+      command: build
       containerRegistry: ytnetworks
       repository: $(image)
       tags: $(GitVersion.SemVer)
       arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
       buildContext: ./App
 
+  - task: Docker@2
+    displayName: YtCli Docker Push
+    inputs:
+      command: push
+      containerRegistry: ytnetworks
+      repository: $(image)
+      tags: $(GitVersion.SemVer)
 
 - job: App
   pool:
