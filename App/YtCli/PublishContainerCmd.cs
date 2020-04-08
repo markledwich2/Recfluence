@@ -17,19 +17,22 @@ namespace YtCli {
     public bool PublishToRegistry { get; set; }
 
     public static async Task<ExitCode> PublishContainer(CmdCtx<PublishContainerCmd> ctx) {
-      
       //var buildTools = new BuildTools(ctx.Log);
       //await buildTools.GitVersionUpdate();
-      var v = await GitVersionInfo.Discover(ctx.Log);
+      var v = await GitVersionInfo.DiscoverSemVer(typeof(Program), ctx.Log);
       var container = ctx.Cfg.Pipe.Default.Container;
       var sln = FPath.Current.ParentWithFile("YtNetworks.sln", true);
       if (!sln.Exists) throw new InvalidOperationException("Can't find YtNetworks.sln file to organize build");
-      var image = $"{container.Registry}/{container.ImageName}:{v.SemVer}";
+      var image = $"{container.Registry}/{container.ImageName}:{v}";
 
       ctx.Log.Information("Building & publishing container {Image}", image);
 
-      var shell = new Shell(o => o.WorkingDirectory(sln.Parent().FullPath));
-      await RunShell(shell, ctx.Log, "docker", "build", "-t", image, "-f", "App/Dockerfile", ".");
+      var appDir = sln.FullPath;
+      var shell = new Shell(o => o.WorkingDirectory(appDir));
+      await RunShell(shell, ctx.Log, "docker", "build", "-t", image,
+        "--build-arg", $"SEMVER={v}",
+        "--build-arg", $"ASSEMBLY_SEMVER={v.AssemblyVersion()}",
+        ".");
 
       if (ctx.Option.PublishToRegistry)
         await RunShell(shell, ctx.Log, "docker", "push", image);

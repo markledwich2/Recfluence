@@ -10,6 +10,7 @@ using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using Serilog.Core;
+using SysExtensions.Build;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using Troschuetz.Random;
@@ -21,7 +22,7 @@ namespace YtCli {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
         .ParseArguments<PipeCmd, UpdateCmd, SyncCmd, ChannelInfoOption, FixCmd, ResultsCmd, TrafficCmd,
-          PublishContainerCmd>(args)
+          PublishContainerCmd, VersionCmd>(args)
         .MapResult(
           (PipeCmd p) => Run(p, args, PipeCmd.RunPipe),
           (UpdateCmd u) => Run(u, args, UpdateCmd.Update),
@@ -31,6 +32,7 @@ namespace YtCli {
           (ResultsCmd f) => Run(f, args, ResultsCmd.Results),
           (TrafficCmd t) => Run(t, args, TrafficCmd.Traffic),
           (PublishContainerCmd p) => Run(p, args, PublishContainerCmd.PublishContainer),
+          (VersionCmd v) => VersionCmd.Verson(),
           errs => Task.FromResult(ExitCode.Error)
         );
       return (int) await res;
@@ -38,7 +40,7 @@ namespace YtCli {
 
     static async Task<CmdCtx<TOption>> TaskCtx<TOption>(TOption option, string[] args) {
       var (app, root) = await Setup.LoadCfg2();
-      var log = await Setup.CreateLogger(Setup.Env, app);
+      var log = await Setup.CreateLogger(root.Env, option.GetType().Name, app);
       var scope = Setup.BaseScope(root, app, log);
       return new CmdCtx<TOption>(root, app, log, option, scope, args);
     }
@@ -59,16 +61,25 @@ namespace YtCli {
     }
   }
 
+  [Verb("version")]
+  public class VersionCmd {
+    public static async Task<ExitCode> Verson() {
+      var log = Setup.ConsoleLogger();
+      var version = await GitVersionInfo.DiscoverSemVer(typeof(Program), log);
+      log.Information("{Version}", version);
+      return ExitCode.Success;
+    }
+  }
+
   [Verb("update", HelpText = "refresh new data from YouTube and collects it into results")]
   public class UpdateCmd : ICommonCmd {
+    static readonly Region[] Regions = {Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral};
+    static readonly TRandom  Rand    = new TRandom();
     [Option('c', "channels", HelpText = "optional '|' separated list of channels to process")]
     public string ChannelIds { get; set; }
 
     [Option('t', "type", HelpText = "Control what parts of the update process to run")]
     public UpdateType UpdateType { get; set; }
-
-    static readonly Region[] Regions = {Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral};
-    static readonly TRandom  Rand    = new TRandom();
 
     public static async Task<ExitCode> Update(CmdCtx<UpdateCmd> ctx) {
       if (ctx.Option.ChannelIds.HasValue())
@@ -171,12 +182,13 @@ namespace YtCli {
       OriginalArgs = originalArgs;
     }
 
-    public RootCfg        RootCfg      { get; }
-    public AppCfg         Cfg          { get; }
-    public ILogger        Log          { get; }
-    public TOption        Option       { get; }
-    public ILifetimeScope Scope        { get; }
-    public string[]       OriginalArgs { get; }
+    public string[] OriginalArgs { get; }
+
+    public RootCfg        RootCfg { get; }
+    public AppCfg         Cfg     { get; }
+    public ILogger        Log     { get; }
+    public TOption        Option  { get; }
+    public ILifetimeScope Scope   { get; }
 
     public void Dispose() {
       (Log as Logger)?.Dispose();

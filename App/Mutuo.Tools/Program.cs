@@ -13,9 +13,7 @@ namespace Mutuo.Tools {
       var root = new RootCommand();
       var log = new LoggerConfiguration()
         .WriteTo.Console(LogEventLevel.Information).CreateLogger();
-      var buildTools = new BuildTools(log);
       root.AddCommand(typeof(SchemaTool), nameof(SchemaTool.GenerateSchema));
-      root.AddCommand(buildTools, nameof(BuildTools.GitVersionUpdate));
       return await root.InvokeAsync(args);
     }
   }

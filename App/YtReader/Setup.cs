@@ -12,8 +12,10 @@ using Microsoft.Extensions.Configuration;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
+using Semver;
 using Serilog;
 using Serilog.Core;
+using Serilog.Core.Enrichers;
 using Serilog.Events;
 using SysExtensions.Build;
 using SysExtensions.Fluent.IO;
@@ -26,16 +28,22 @@ using YtReader.Yt;
 namespace YtReader {
   public static class Setup {
     public static string AppName = "YouTubeNetworks";
-    public static FPath  SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("YouTubeNetworks.sln");
-    public static FPath  SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
-    public static FPath  LocalDataDir    => "Data".AsPath().InAppData(AppName);
+
+    static readonly AsyncLazy<SemVersion> Version = new AsyncLazy<SemVersion>(() => GitVersionInfo.DiscoverSemVer(typeof(Setup)));
+    public static   FPath                 SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("YouTubeNetworks.sln");
+    public static   FPath                 SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
+    public static   FPath                 LocalDataDir    => "Data".AsPath().InAppData(AppName);
 
     public static Logger CreateTestLogger() =>
       new LoggerConfiguration()
         .WriteTo.Seq("http://localhost:5341")
         .CreateLogger();
 
-    public static async Task<Logger> CreateLogger(string env, AppCfg cfg = null, bool startSeq = true) {
+    public static ILogger ConsoleLogger() =>
+      new LoggerConfiguration()
+        .WriteTo.Console(LogEventLevel.Information).CreateLogger();
+
+    public static async Task<Logger> CreateLogger(string env, string app, AppCfg cfg = null, bool startSeq = true) {
       var c = new LoggerConfiguration()
         .WriteTo.Console(LogEventLevel.Information);
 
@@ -45,10 +53,19 @@ namespace YtReader {
       if (cfg != null)
         c = await c.WriteToSeqAndStartIfNeeded(cfg);
 
-      return c.MinimumLevel.Debug()
-        .Enrich.WithProperty("Env", env)
+      var log = c.MinimumLevel.Debug()
+        .YtEnrich(env, app, await GetVersion())
         .CreateLogger();
+
+      Log.Logger = log;
+      return log;
     }
+
+    public static LoggerConfiguration YtEnrich(this LoggerConfiguration logCfg, string env, string app, SemVersion v) =>
+      logCfg.Enrich.With(
+        new PropertyEnricher("App", app),
+        new PropertyEnricher("Env", env),
+        new PropertyEnricher("Version", v));
 
     static async Task<LoggerConfiguration> WriteToSeqAndStartIfNeeded(this LoggerConfiguration loggerCfg, AppCfg cfg) {
       if (cfg?.SeqUrl == null) return loggerCfg;
@@ -86,8 +103,7 @@ namespace YtReader {
         {nameof(RootCfg.AppCfgSas), rootCfg.AppCfgSas.ToString()}
       };
 
-    static        string _env;
-    public static string Env => _env ??= GetEnv("Env") ?? "dev";
+    public static Task<SemVersion> GetVersion() => Version.GetOrCreate();
 
     static string GetEnv(string name) =>
       Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
@@ -112,7 +128,7 @@ namespace YtReader {
       var cfg = new ConfigurationBuilder()
         .SetBasePath(basePath)
         .AddJsonFile("default.appcfg.json")
-        .AddJsonFile($"{Env}.appcfg.json", true)
+        .AddJsonFile($"{cfgRoot.Env}.appcfg.json", true)
         .AddJsonStream(secrets.AsStream())
         .AddJsonFile("local.appcfg.json", true)
         .AddEnvironmentVariables().Build();
@@ -123,11 +139,11 @@ namespace YtReader {
     }
 
     static PipeAppCfg GetPipeAppCfg(AppCfg cfg) {
-      var semver = GitVersionInfo.Semver(typeof(Setup));
+      var semver = Version;
 
       var pipe = cfg.Pipe.JsonClone();
-      pipe.Default.Container.Tag ??= semver;
-      foreach (var p in pipe.Pipes) p.Container.Tag ??= semver;
+      pipe.Default.Container.Tag ??= semver.ToString();
+      foreach (var p in pipe.Pipes) p.Container.Tag ??= semver.ToString();
 
       pipe.Store ??= new PipeAppStorageCfg {
         Cs = cfg.Storage.DataStorageCs,
@@ -162,10 +178,6 @@ namespace YtReader {
       return new Cfg {App = cfg, Root = rootCfg};
     }
 
-    class ScopeHolder {
-      public IComponentContext Scope { get; set; }
-    }
-
     public static ILifetimeScope BaseScope(RootCfg rootCfg, AppCfg cfg, ILogger log) {
       var scopeHolder = new ScopeHolder();
       var b = new ContainerBuilder();
@@ -186,6 +198,10 @@ namespace YtReader {
 
     public static Task<IContainerGroup> SeqGroup(this IAzure azure, AppCfg cfg) =>
       azure.ContainerGroups.GetByResourceGroupAsync(cfg.ResourceGroup, cfg.SeqHost.ContainerGroupName);
+
+    class ScopeHolder {
+      public IComponentContext Scope { get; set; }
+    }
   }
 
   public static class ChannelConfigExtensions {

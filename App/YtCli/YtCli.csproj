@@ -6,9 +6,6 @@
     <PackageOutputPath>./publish</PackageOutputPath> -->
     <AssemblyName>ytnetworks</AssemblyName>
     <LangVersion>8</LangVersion>
-    <AssemblyVersion>0.4.1</AssemblyVersion>
-    <PackageVersion>0.4.1-pipe.1</PackageVersion>
-    <InformationalVersion>0.4.1-pipe.1</InformationalVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.7.82" />

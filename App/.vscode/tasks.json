@@ -1,5 +1,5 @@
 {
-    "version": "2.0.0",
+    "version": "2.0.0" ,
     "tasks": [
         {
             "type": "func",
@@ -7,6 +7,16 @@
             "problemMatcher": [
                 "$func-watch"
             ]
+        },
+        {
+            "label": "Build Container",
+            "type": "shell",
+            "command":"dotnet",
+            "args": ["run", "publish-container"],
+            "options": {
+                "cwd": "${workspaceRoot}/YtCli"
+            },
+            "problemMatcher":"$msCompile"
         }
     ]
 }

@@ -6,23 +6,20 @@ using Autofac;
 using Microsoft.ApplicationInsights;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Extensions.Logging;
 using Mutuo.Etl.Pipe;
 using Seq.Api;
 using Serilog;
 using Serilog.Sinks.ILogger;
 using SysExtensions.Net;
-using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader;
-using ILogger = Serilog.ILogger;
 using IMSLogger = Microsoft.Extensions.Logging.ILogger;
 
 #pragma warning disable 618
 
 namespace YtFunctions {
   public static class YtFunctions {
-    static async Task<ILogger> Logger(IMSLogger funcLogger, AppCfg cfg, bool dontStartSeq = false) {
+    static async Task<ILogger> Logger(RootCfg root, ExecutionContext context, IMSLogger funcLogger, AppCfg cfg, bool dontStartSeq = false) {
       var logCfg = new LoggerConfiguration();
       if (cfg.AppInsightsKey.HasValue())
         logCfg = logCfg.WriteTo.ApplicationInsights(new TelemetryClient {InstrumentationKey = cfg.AppInsightsKey}, TelemetryConverter.Traces);
@@ -31,6 +28,8 @@ namespace YtFunctions {
       if (cfg.SeqUrl != null)
         logCfg = logCfg.WriteTo.Seq(cfg.SeqUrl.OriginalString);
 
+      logCfg = logCfg.YtEnrich(root.Env, context.FunctionName, await Setup.GetVersion());
+
       if (!dontStartSeq)
         await Setup.StartSeqIfNeeded(cfg);
       return logCfg.CreateLogger();
@@ -38,9 +37,8 @@ namespace YtFunctions {
 
     static async Task<(AppCfg Cfg, ILogger Log, RootCfg Root, ILifetimeScope scope)> Init(ExecutionContext context, IMSLogger funcLogger = null,
       bool dontStartSeq = false) {
-      funcLogger.LogInformation($"Context: {context.ToJson()}");
       var (app, root) = await Setup.LoadCfg2(context.FunctionAppDirectory);
-      var log = await Logger(funcLogger, app, dontStartSeq);
+      var log = await Logger(root, context, funcLogger, app, dontStartSeq);
       var scope = Setup.BaseScope(root, app, log);
       return (app, log, root, scope);
     }
@@ -91,8 +89,8 @@ namespace YtFunctions {
         var pipeCtx = s.scope.ResolvePipeCtx();
         var res = await pipeCtx.RunPipe(nameof(YtDataUpdater.Update), false, s.Log);
         return res.Error
-          ? $"Error starting container: {res.ErrorMessage}"
-          : $"Started containers(s): {res.Containers.Join(", ", c => $"{c.Image} -> {c.Name}")}";
+          ? $"Error starting pipe work: {res.ErrorMessage}"
+          : $"Started work on containers(s): {res.Containers.Join(", ", c => $"{c.Image} -> {c.Name}")}";
       }
       catch (Exception ex) {
         s.Log.Error("Error starting container to update data {Error}", ex.Message, ex);

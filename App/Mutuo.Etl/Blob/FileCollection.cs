@@ -30,12 +30,12 @@ namespace Mutuo.Etl.Blob {
   /// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl. Support arbitraty
   ///   metadata about the collection to allow efficient access?</summary>
   public class AppendCollectionStore<T> {
-    readonly ISimpleFileStore Store;
-    readonly StringPath       Path;
-    readonly Func<T, string>  GetTs;
-    readonly string           Version;
+    readonly Func<T, string> GetTs;
 
-    readonly ILogger Log;
+    readonly ILogger          Log;
+    readonly StringPath       Path;
+    readonly ISimpleFileStore Store;
+    readonly string           Version;
 
     public AppendCollectionStore(ISimpleFileStore store, StringPath path, Func<T, string> getTs, ILogger log, string version = "") {
       Store = store;
@@ -65,12 +65,12 @@ namespace Mutuo.Etl.Blob {
     public async Task<IReadOnlyCollection<T>> Items(StringPath path) => await LoadJsonl(path);
 
     public async Task<StringPath> Append(IReadOnlyCollection<T> items, ILogger log = null) {
+      log ??= Log;
       var ts = items.Max(GetTs);
       var path = StoreFileMd.FilePath(Path, ts, Version);
 
       await using var memStream = items.ToJsonlGzStream(new JsonSerializerSettings());
-      var res = await Store.Save(path, memStream, log).WithDuration();
-      Log?.Debug("Store - Saved '{Path}' in {Duration}", path, res);
+      await Store.Save(path, memStream, log).WithDuration();
       return path;
     }
 
@@ -81,17 +81,17 @@ namespace Mutuo.Etl.Blob {
   }
 
   public class StoreFileMd {
-    public StringPath Path     { get; }
-    public string     Ts       { get; }
-    public DateTime   Modified { get; }
-    public string     Version  { get; }
-
     public StoreFileMd(StringPath path, string ts, DateTime modified, string version = "0") {
       Path = path;
       Ts = ts;
       Modified = modified;
       Version = version;
     }
+
+    public StringPath Path     { get; }
+    public string     Ts       { get; }
+    public DateTime   Modified { get; }
+    public string     Version  { get; }
 
     public static StoreFileMd FromFileItem(FileListItem file) {
       var tokens = file.Path.Name.Split(".");

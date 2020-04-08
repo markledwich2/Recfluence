@@ -59,7 +59,7 @@ namespace YtReader {
             progressUpdate: p => log.Debug("Processing traffic sources for {Path}: {Rows}/{TotalRows}", b.Path, p.Completed, records.Count)))
           .NotNull().ToList();
 
-        await appendStore.Append(rows);
+        await appendStore.Append(rows, log);
         log.Information("Completed processing traffic source exports for {Path}", b.Path);
 
         async Task<TrafficSourceRow> Process(TrafficSourceExportRow row) {
