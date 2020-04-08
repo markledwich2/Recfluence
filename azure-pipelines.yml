@@ -28,8 +28,8 @@ jobs:
       containerRegistry: ytnetworks
       repository: $(image)
       tags: $(GitVersion.SemVer)
-      buildContext: .
-      dockerFile: App/Dockerfile
+      arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
+      buildContext: ./App
 
 
 - job: App
@@ -37,7 +37,7 @@ jobs:
     vmImage: windows-latest
 
   steps:
-  - script: dotnet publish -c Release  --output $(Build.ArtifactStagingDirectory)/YtFunctions /p:Version='$(GitVersion.SemVer)'
+  - script: dotnet publish -c Release  --output $(Build.ArtifactStagingDirectory)/YtFunctions /p:Version='$(GitVersion.AssemblySemVer)' /p:InformationalVersion='$(GitVersion.SemVer)'
     workingDirectory: ./App/YtFunctions
     displayName: Publish YtFunctions
 
