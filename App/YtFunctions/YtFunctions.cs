@@ -4,15 +4,17 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Autofac;
 using Microsoft.ApplicationInsights;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Mutuo.Etl.Pipe;
 using Seq.Api;
 using Serilog;
+using Serilog.Events;
 using Serilog.Sinks.ILogger;
 using SysExtensions.Build;
-using SysExtensions.Net;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
@@ -23,7 +25,7 @@ using IMSLogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace YtFunctions {
   public static class YtFunctions {
-    static async Task<ILogger> Logger(RootCfg root, ExecutionContext context, IMSLogger funcLogger, AppCfg cfg, bool dontStartSeq = false) {
+    static async Task<ILogger> Logger(RootCfg root, ExecutionContext context, AppCfg cfg, bool dontStartSeq = false, IMSLogger funcLogger = null) {
       var logCfg = new LoggerConfiguration();
       if (cfg.AppInsightsKey.HasValue())
         logCfg = logCfg.WriteTo.ApplicationInsights(new TelemetryClient {InstrumentationKey = cfg.AppInsightsKey}, TelemetryConverter.Traces);
@@ -32,7 +34,7 @@ namespace YtFunctions {
       if (cfg.SeqUrl != null)
         logCfg = logCfg.WriteTo.Seq(cfg.SeqUrl.OriginalString);
 
-      funcLogger.LogDebug($"Initializing logger {root.Env} {context.FunctionDirectory}");
+      funcLogger?.LogDebug($"Initializing logger {root.Env} {context.FunctionDirectory}");
 
       logCfg = logCfg.YtEnrich(root.Env, context.FunctionName, await Setup.GetVersion());
 
@@ -43,30 +45,33 @@ namespace YtFunctions {
 
     static async Task<(AppCfg Cfg, ILogger Log, RootCfg Root, ILifetimeScope scope)> Init(ExecutionContext context, IMSLogger funcLogger = null,
       bool dontStartSeq = false) {
-      var consoleLogger = funcLogger != null ? new LoggerConfiguration().WriteTo.ILogger(funcLogger).CreateLogger() : Setup.ConsoleLogger();
+      var consoleLogger = funcLogger != null ? new LoggerConfiguration().WriteTo.ILogger(funcLogger).CreateLogger() : Setup.ConsoleLogger(LogEventLevel.Debug);
       consoleLogger.Debug("about to log config");
       var (app, root) = await Setup.LoadCfg2(context.FunctionAppDirectory, consoleLogger).WithWrappedException("unable to load cfg");
-      var log = await Logger(root, context, funcLogger, app, dontStartSeq).WithWrappedException("unable to load logger");
+      var log = await Logger(root, context, app, dontStartSeq, funcLogger).WithWrappedException("unable to load logger");
       var scope = Setup.BaseScope(root, app, log);
       return (app, log, root, scope);
     }
 
     [FunctionName("StopIdleSeq_Timer")]
     public static async Task StopIdleSeq_Timer([TimerTrigger("*/15,30,45,0 * * * *")] TimerInfo myTimer, ExecutionContext context, IMSLogger log) =>
-      await StopIdleSeq(context, log);
+      await StopIdleSeqInner(context, log);
 
     [FunctionName("StopIdleSeq")]
-    public static async Task<HttpResponseMessage> StopIdleSeq([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
-      HttpRequestMessage req, ExecutionContext context, IMSLogger funcLogger) =>
-      req.AsyncResponse(await StopIdleSeq(context, funcLogger));
+    public static async Task<IActionResult> StopIdleSeq([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
+      HttpRequest req, ExecutionContext context, IMSLogger funcLogger) {
+      Console.WriteLine($"funcLogger {funcLogger}");
+      funcLogger?.LogInformation("StopIdleSeq called");
+      return new OkObjectResult(await StopIdleSeqInner(context, funcLogger));
+    }
 
     [FunctionName("Version")]
-    public static async Task<HttpResponseMessage> Version([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
-      HttpRequestMessage req, ExecutionContext context, IMSLogger funcLogger) =>
-      req.AsyncResponse($"Runtime version: ${GitVersionInfo.RuntimeSemVer(typeof(YtDataUpdater))}");
+    public static async Task<IActionResult> Version([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
+      HttpRequest req, ExecutionContext context, IMSLogger funcLogger) =>
+      new OkObjectResult(
+        $"Runtime version: ${GitVersionInfo.RuntimeSemVer(typeof(YtDataUpdater))},  FunctionAppDirectory={context.FunctionAppDirectory}, funcLogger={funcLogger}");
 
-    static async Task<string> StopIdleSeq(ExecutionContext context, IMSLogger log) {
-      log.LogDebug("StopIdleSeq called");
+    static async Task<string> StopIdleSeqInner(ExecutionContext context, IMSLogger log) {
       var s = await Init(context, log, true);
       if (!s.Root.IsProd()) return LogReason("not prod");
       var azure = s.scope.Resolve<IAzure>();
@@ -75,15 +80,15 @@ namespace YtFunctions {
       var seq = new SeqConnection(s.Cfg.SeqUrl.OriginalString);
       var events = await seq.Events.ListAsync(count: 5, filter: s.Cfg.SeqHost.IdleQuery, render: true);
       if (events.Any()) {
-        s.Log.Information("{Noun} - recent events exist from '{Query}'", nameof(StopIdleSeq), s.Cfg.SeqHost.IdleQuery);
+        s.Log.Information("{Noun} - recent events exist from '{Query}'", nameof(StopIdleSeqInner), s.Cfg.SeqHost.IdleQuery);
         return $"recent events exist: {events.Join("\n", e => e.RenderedMessage)}";
       }
-      s.Log.Information("{Noun} - no recent events from '{Query}'. Stopping {ContainerGroup}", nameof(StopIdleSeq), s.Cfg.SeqHost.IdleQuery, group.Name);
+      s.Log.Information("{Noun} - no recent events from '{Query}'. Stopping {ContainerGroup}", nameof(StopIdleSeqInner), s.Cfg.SeqHost.IdleQuery, group.Name);
       await group.StopAsync();
       return $"stopped group {group.Name}";
 
       string LogReason(string reason) {
-        s.Log.Information("{Noun} - {reason}", nameof(StopIdleSeq), reason);
+        s.Log.Information("{Noun} - {reason}", nameof(StopIdleSeqInner), reason);
         return reason;
       }
     }
@@ -93,9 +98,9 @@ namespace YtFunctions {
       await RunUpdate(log, context);
 
     [FunctionName("Update")]
-    public static async Task<HttpResponseMessage> Update([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
+    public static async Task<IActionResult> Update([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
       HttpRequestMessage req, ExecutionContext context, IMSLogger funcLogger) =>
-      req.AsyncResponse(await RunUpdate(funcLogger, context));
+      new OkObjectResult(await RunUpdate(funcLogger, context).WithWrappedException(e => $"Error running update: {e}"));
 
     static async Task<string> RunUpdate(IMSLogger funcLogger, ExecutionContext context) {
       var s = await Init(context, funcLogger);

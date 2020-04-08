@@ -41,9 +41,9 @@ namespace YtReader {
         .WriteTo.Seq("http://localhost:5341")
         .CreateLogger();
 
-    public static ILogger ConsoleLogger() =>
+    public static ILogger ConsoleLogger(LogEventLevel level = LogEventLevel.Information) =>
       new LoggerConfiguration()
-        .WriteTo.Console(LogEventLevel.Information).CreateLogger();
+        .WriteTo.Console(level).CreateLogger();
 
     public static async Task<Logger> CreateLogger(string env, string app, AppCfg cfg = null, bool startSeq = true) {
       var c = new LoggerConfiguration()

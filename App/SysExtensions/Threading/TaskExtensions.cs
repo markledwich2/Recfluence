@@ -90,6 +90,15 @@ namespace SysExtensions.Threading {
     public static async Task<(bool Success, T Res)> WithTimeout<T>(this Task<T> task, TimeSpan timeout) =>
       task == await Task.WhenAny(task, timeout.Delay()) ? (true, await task) : (false, default);
 
+    public static async Task<T> WithWrappedException<T>(this Task<T> task, Func<Exception, string> getMesage) {
+      try {
+        return await task;
+      }
+      catch (Exception ex) {
+        throw new InvalidOperationException(getMesage(ex), ex);
+      }
+    }
+
     public static async Task<T> WithWrappedException<T>(this Task<T> task, string message) {
       try {
         return await task;

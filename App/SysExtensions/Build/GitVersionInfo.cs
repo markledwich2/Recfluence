@@ -25,7 +25,7 @@ namespace SysExtensions.Build {
     /// <summary>Use github to work out the current version</summary>
     public static async Task<SemVersion> DiscoverSemVer(Type typeToDetectVersion, ILogger log = null) {
       log = log ?? Log.Logger ?? Logger.None;
-      if (FPath.Current.DirOfParent(".git").Exists) {
+      if (FPath.Current.DirOfParent(".git")?.Exists == true) {
         var outputLines = new List<string>();
         var process = Command.Run("dotnet", "gitversion");
         await process.StandardOutput.PipeToAsync(outputLines);
