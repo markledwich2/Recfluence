@@ -116,13 +116,13 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class AzurePipeWorker : IPipeWorkerStartable {
-    PipeAppCfg   Cfg { get; }
-    Lazy<IAzure> Az  { get; }
-
     public AzurePipeWorker(PipeAppCfg cfg) {
       Cfg = cfg;
       Az = new Lazy<IAzure>(() => Cfg.Azure.GetAzure());
     }
+
+    PipeAppCfg   Cfg { get; }
+    Lazy<IAzure> Az  { get; }
 
     public Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) => RunWork(ctx, ids, false, log);
 
@@ -172,10 +172,9 @@ namespace Mutuo.Etl.Pipe {
     }
 
     static async Task<IContainerGroup> Create(IWithCreate groupDef, ILogger log) {
-      log.Information("{ContainerGroup} - creating", groupDef.Name);
-      var group = await groupDef.CreateAsync();
-      log.Information("{ContainerGroup} - created", group.Name);
-      return group;
+      var group = await groupDef.CreateAsync().WithDuration();
+      log.Information("{ContainerGroup} - group created in {Duration}", group.Result.Name, group.Duration);
+      return group.Result;
     }
 
     public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, ILogger log) {
@@ -197,7 +196,7 @@ namespace Mutuo.Etl.Pipe {
         }
         break;
       }
-      log.Information("{ContainerGroup} - completed ({Status}) in {Duration}", group.Name, group.State, sw.Elapsed);
+      log.Information("{ContainerGroup} - container ({Status}) in {Duration}", group.Name, group.State, sw.Elapsed);
       return group;
     }
 

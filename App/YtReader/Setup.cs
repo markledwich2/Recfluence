@@ -67,7 +67,8 @@ namespace YtReader {
       logCfg.Enrich.With(
         new PropertyEnricher("App", app),
         new PropertyEnricher("Env", env),
-        new PropertyEnricher("Version", v));
+        new PropertyEnricher("Version", v),
+        new PropertyEnricher("Machine", Environment.MachineName));
 
     static async Task<LoggerConfiguration> WriteToSeqAndStartIfNeeded(this LoggerConfiguration loggerCfg, AppCfg cfg) {
       if (cfg?.SeqUrl == null) return loggerCfg;
@@ -138,7 +139,7 @@ namespace YtReader {
 
       if (appCfg.Sheets != null)
         appCfg.Sheets.CredJson = secrets.ToJObject().SelectToken("sheets.credJson") as JObject;
-      appCfg.Pipe = GetPipeAppCfg(appCfg);
+      appCfg.Pipe = await GetPipeAppCfg(appCfg);
 
       var validation = Validate(appCfg);
       if (validation.Any()) {
@@ -156,8 +157,8 @@ namespace YtReader {
       return results;
     }
 
-    static PipeAppCfg GetPipeAppCfg(AppCfg cfg) {
-      var semver = Version;
+    static async Task<PipeAppCfg> GetPipeAppCfg(AppCfg cfg) {
+      var semver = await GetVersion();
 
       var pipe = cfg.Pipe.JsonClone();
       pipe.Default.Container.Tag ??= semver.ToString();
