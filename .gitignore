@@ -1,6 +1,7 @@
 # ignore all directories starting with "." with some exceptions
 .*/ 
 !.vscode/
+!.devcontainer/
 *local.*.json
 
 
@@ -29,3 +30,4 @@ __pycache__/
 # Tableau & R
 *.twbr
 Analysis/.Rhistory
+UserScrape/.env
