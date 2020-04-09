@@ -9,11 +9,6 @@ FROM mcr.microsoft.com/vscode/devcontainers/universal:0-linux
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
-   && apt-get -y install --no-install-recommends chromium-driver \
-   #
-   # Clean up
-   && apt-get autoremove -y \
-   && apt-get clean -y \
-   && rm -rf /var/lib/apt/lists/*
+   && apt-get -y install --no-install-recommends chromium-driver 
 ENV DEBIAN_FRONTEND=dialog
 
