@@ -1,2 +1,3 @@
 selenium
 azure-storage-blob
+python-dotenv

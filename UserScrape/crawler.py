@@ -4,73 +4,106 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.common.exceptions import NoSuchElementException
 from datetime import datetime
 import os, uuid
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 from pathlib import Path
 from time import sleep
+import json
+from urllib.parse import urlparse
+from dataclasses import dataclass
+
+@dataclass
+class CrawlResult:
+    success: bool = True
+    res: str = None
 
 class Crawler:
-    def __init__(self, driver:WebDriver, sas_url:str):
+    def __init__(self, driver:WebDriver, sas_url:str, email:str, password:str, lang = 'en'):
         self._video_infos = {}
         self.wait = WebDriverWait(driver, 10)
         self.driver = driver
-        self.sessionPath = ''
         self.container = ContainerClient.from_container_url(sas_url)
+        self.email = email
+        self.password = password
+        self.init_time = datetime.now()
+        self.lang = lang
 
-    # easy method to save screenshots for headless mode
-    def log_info(self, name:str):
-        localDir = f'/tmp/crawler/{self.sessionPath}'
 
+    def load_home_and_login(self):
+        wd = self.driver
+        wd.get('https://www.youtube.com') # need to go to the domain to add cookies
+        self.__load_cookies()
+
+        wd.get('https://www.youtube.com')
+        content = WebDriverWait(wd, 10).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#contents')))
+
+        self.__log_info('home')
+        
+        try:
+            login = wd.find_element_by_css_selector('paper-button[aria-label="Sign in"]')
+        except NoSuchElementException:
+            login = None
+
+        if(login != None):
+            self.login()
+
+    def login(self) -> CrawlResult:
+        wd = self.driver
         
 
-        Path(localDir).mkdir(parents=True, exist_ok=True)
-
-        wd = self.driver
-
-        imageFile = f'{localDir}/{name}.png'
-        with open(imageFile, 'w') as f:
-            wd.get_screenshot_as_file(imageFile)
-        #with open(imageFile, 'r') as f:
-        #    self.container.upload_blob(f'{self.sessionPath}/{name}.png', f)
-
-        htmlFile = f'{localDir}/{name}.html'
-        with open(htmlFile, "w") as f:
-            f.write(wd.page_source)
-        #with open(imageFile, 'r') as f:
-        #    self.container.upload_blob(f'{self.sessionPath}/{name}.html', f)
-
-        print(f'{name} - {self.sessionPath} ',)
-
-    def login(self, email:str, password, lang = 'en'):
-        wd = self.driver
-        user = email.split("@")[0]
-        self.sessionPath = f'{datetime.now().strftime("%Y%m%d-%H%M%S")}.{user}.{wd.session_id}'
-
          # this link is maybe too specific (e.g. it contains country codes)
-        wd.get(f'https://accounts.google.com/signin/v2/identifier?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3D{lang}%26next%3D%252F&hl={lang}&ec=65620&flowName=GlifWebSignIn&flowEntry=ServiceLogin')
-        self.log_info(f'landing')
+        wd.get(f'https://accounts.google.com/signin/v2/identifier?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3D{self.lang}%26next%3D%252F&hl={self.lang}&ec=65620&flowName=GlifWebSignIn&flowEntry=ServiceLogin')
 
-        wd.find_element_by_css_selector('input[type="email"]').send_keys(email) #login_email = wd.find_element_by_id('Email').send_keys(email)
+        emailEl:WebElement = WebDriverWait(wd, 5).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, 'input[type="email"]'))
+        )
+        self.__log_info(f'enter_email')
+        emailEl.send_keys(self.email)
         wd.find_element_by_css_selector('#identifierNext').click() #next_button = wd.find_element_by_id('next').click()
 
-        sleep(3) # sleep to recorded html is post click events
-        self.log_info('email_entered')
-
-        password = WebDriverWait(wd, 5).until(
+        passwordEl:WebElement = WebDriverWait(wd, 5).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, 'input[type="password"]'))
-        ).send_keys(password)
+        )
+        self.__log_info('email_entered')
+        passwordEl.send_keys(self.password)
+        passwordUrl = wd.current_url
         wd.find_element_by_css_selector('#passwordNext').click()
-        sleep(3)
-        self.log_info('password_entered')
 
-        # non-headless
-        # login_email = driver.find_element_by_id('identifierId').send_keys(user)
-        # next_button = driver.find_element_by_id('identifierNext').click()
-        # password = WebDriverWait(driver, 5).until(
-        #     EC.element_to_be_clickable((By.XPATH, "//input[@name='password']"))
-        # ).send_keys(password)
-        # password_next_button = driver.find_element_by_id('passwordNext').click()
+        sleep(1)
+        self.__log_info('password_entered')
+
+        url = urlparse(wd.current_url)
+        if url.netloc != "www.youtube.com":
+            verify = wd.find_element_by_css_selector('#authzenNext')
+            if(verify):
+                verify.click()
+
+                # verify, at least on my account presents a number to enter on the phone
+                figure:WebElement = WebDriverWait(wd, 2).until(
+                    EC.text_to_be_present_in_element((By.CSS_SELECTOR, 'figure > samp'))
+                    )
+                    
+                self.sendMessageToUser(f'Enter {figure.text} on your phone')
+
+                # wait for 5 minutes for an IRL meat-person to verify
+                WebDriverWait(wd, 5*60).until(EC.url_changes(wd.current_url))
+                newUrl = urlparse(wd.current_url)
+                if newUrl.netloc != "youtube.com":
+                    return CrawlResult(True, f'did not navigate to youtube after verifying (url:{wd.current_url})')
+
+            return CrawlResult(True, f'did not nvagate to youtube after password (url:{wd.current_url})')
+
+        self.__save_cookies()
+
+        return CrawlResult()
+        
+
+    def sendMessageToUser(self, message):
+        #todo send to discour/slack/email to get the meat-user to click a number
+        print(f'to {self.emial}: {message}')
 
     def get_n_search_results(self, search_term, max_results=5, order="relevance"):
         wd = self.driver
@@ -140,5 +173,63 @@ class Crawler:
         self.get_video_features(source, recos)
         return recos[0:branching]
 
+    def __save_cookies(self):
+        cookies = { 'cookies': self.driver.get_cookies() }
+        self.__save_file(f'{self.path_user()}/cookies.json', json.dumps(cookies))
+
+    def __load_cookies(self):
+        cookiePath = f'{self.path_user()}/cookies.json'
+        try:
+            blob = self.container.download_blob(cookiePath)
+            for c in json.loads(blob.content_as_text())['cookies']:
+                self.driver.add_cookie(c)
+        except:
+            print(f'could not load cookies from: {cookiePath}')
+
+
+        # easy method to save screenshots for headless mode
+    def __log_info(self, name:str):
+        wd = self.driver
+
+        seshPath = self.path_session()
+
+        self.__save_file(f'{seshPath}/{name}.html', wd.page_source)
+
+        state = {
+            'url':wd.current_url,
+            'title':wd.title
+        }
+        self.__save_file(f'{seshPath}/{name}.json', json.dumps(state))
+        
+        imagePath = f'{seshPath}/{name}.png'
+        localImagePath =  f'/tmp/{imagePath}'
+        wd.get_screenshot_as_file(localImagePath)
+        self.__upload_file(localImagePath, imagePath)
+
+        print(f'scraped: {name} - {seshPath}')
+
+
+    def __save_file(self, relativePath:str, content:str):
+        localPath = f'/tmp/{relativePath}'
+        Path(localPath).parent.mkdir(parents=True, exist_ok=True)
+        with open(localPath, "w") as w:
+            w.write(content)
+        self.__upload_file(localPath, relativePath)
+
+
+    def __upload_file(self, localFile, remotePath):
+        with open(localFile, 'rb') as f:
+            self.container.upload_blob(remotePath, f, overwrite=True)
+
+    def path_user(self):
+        return f'user_scrape/{self.email}'
+
+    def path_session(self):
+        return f'user_scrape/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.{self.driver.session_id}'
+
     def shutdown(self):
         self.driver.quit()
+
+
+
+    

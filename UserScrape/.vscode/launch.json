@@ -1,6 +1,6 @@
 {
   "configurations": [
-    {"name":"Python: Current File","type":"python","request":"launch","program":"app.py","console":"integratedTerminal"},
+    {"name":"Python: app.py","type":"python","request":"launch","program":"app.py","console":"integratedTerminal"},
     // {
     //   "name": "Docker: Python - General",
     //   "type": "docker",
