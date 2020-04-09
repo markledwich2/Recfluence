@@ -111,7 +111,7 @@ namespace YtReader {
 
     [Pipe]
     public async Task ProcessChannels([PipeState] IReadOnlyCollection<UpdateChannelWork> work, ILogger log) {
-      
+      var workSw = Stopwatch.StartNew();
       var conn = new AsyncLazy<DbConnection>(() => GetConnection());
       var channelResults = await work
         .Where(c => c.Channel.Status == ChannelStatus.Alive)
@@ -136,7 +136,7 @@ namespace YtReader {
       var requestStats = Scraper.RequestStats;
       log.Information(
         "Update complete {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
-        channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), sw.Elapsed, requestStats.direct, requestStats.proxy);
+        channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), workSw.Elapsed, requestStats.direct, requestStats.proxy);
     }
 
     async Task UpdateAllInChannel(ChannelStored2 c, AsyncLazy<DbConnection> conn, UpdateType updateType, ILogger log) {

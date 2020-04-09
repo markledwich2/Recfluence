@@ -63,10 +63,10 @@ namespace YtFunctions {
     }
 
     [FunctionName("Version")]
-    public static async Task<IActionResult> Version([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
+    public static Task<IActionResult> Version([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
       HttpRequest req, ExecutionContext context, IMSLogger funcLogger) =>
-      new OkObjectResult(
-        $"Runtime version: ${GitVersionInfo.RuntimeSemVer(typeof(YtDataUpdater))},  FunctionAppDirectory={context.FunctionAppDirectory}, funcLogger={funcLogger}");
+      Task.FromResult((IActionResult) new OkObjectResult(
+        $"Runtime version: ${GitVersionInfo.RuntimeSemVer(typeof(YtDataUpdater))},  FunctionAppDirectory={context.FunctionAppDirectory}, funcLogger={funcLogger}"));
 
     static async Task<string> StopIdleSeqInner(ExecutionContext context, IMSLogger log) {
       var s = await Init(context, log, true);
