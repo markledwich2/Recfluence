@@ -1,8 +1,13 @@
 {
     "cSpell.words": [
+        "appcfg",
         "asyncio",
+        "creds",
+        "dotenv",
         "getenv",
         "spawnl",
         "strftime"
-    ]
+    ],
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true
 }

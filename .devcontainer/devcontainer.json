@@ -26,5 +26,5 @@
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
-	"postCreateCommand": "sudo pip install -r requirements.txt",
+	"postCreateCommand": "sudo pip install -r ../UserScrape/requirements.txt",
 }

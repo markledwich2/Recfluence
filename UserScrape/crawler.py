@@ -6,6 +6,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.chrome.options import Options
+from selenium import webdriver
 from datetime import datetime
 import os, uuid
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
@@ -14,23 +16,43 @@ from time import sleep
 import json
 from urllib.parse import urlparse
 from dataclasses import dataclass
+from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath
+import tempfile
 
 @dataclass
 class CrawlResult:
     success: bool = True
     res: str = None
 
+def create_driver(headless:bool) -> WebDriver:
+    options = Options()
+    if(headless):
+        options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    # this is mark@ledwich.com's recently used user agent.
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36")
+    capabilities = DesiredCapabilities.CHROME.copy()
+    capabilities['acceptSslCerts'] = True
+    capabilities['acceptInsecureCerts'] = True
+    return webdriver.Chrome(options=options, desired_capabilities=capabilities)
+
 class Crawler:
-    def __init__(self, driver:WebDriver, sas_url:str, email:str, password:str, lang = 'en'):
+    def __init__(self, sas_url:str, email:str, password:str, headless:bool, lang = 'en'):
         self._video_infos = {}
-        self.wait = WebDriverWait(driver, 10)
-        self.driver = driver
+        self.driver = create_driver(headless)
+        self.wait = WebDriverWait(self.driver, 10)
         self.container = ContainerClient.from_container_url(sas_url)
         self.email = email
         self.password = password
         self.init_time = datetime.now()
         self.lang = lang
 
+    def test_ip(self):
+        wd = self.driver
+        wd.get('https://httpbin.org/ip')
+        pre:WebElement = wd.find_element_by_css_selector('pre')
+        print(f'Running with IP {json.loads(pre.text)["origin"]}')
 
     def load_home_and_login(self):
         wd = self.driver
@@ -103,7 +125,7 @@ class Crawler:
 
     def sendMessageToUser(self, message):
         #todo send to discour/slack/email to get the meat-user to click a number
-        print(f'to {self.emial}: {message}')
+        print(f'to {self.email}: {message}')
 
     def get_n_search_results(self, search_term, max_results=5, order="relevance"):
         wd = self.driver
@@ -174,58 +196,74 @@ class Crawler:
         return recos[0:branching]
 
     def __save_cookies(self):
+        """saves all cookies
+        """
         cookies = { 'cookies': self.driver.get_cookies() }
-        self.__save_file(f'{self.path_user()}/cookies.json', json.dumps(cookies))
+        self.__save_file(self.path_user() / 'cookies.json', json.dumps(cookies))
 
     def __load_cookies(self):
-        cookiePath = f'{self.path_user()}/cookies.json'
+        """loads cookies for the current domain
+        """
+        cookiePath = self.path_user() / 'cookies.json'
+        
         try:
-            blob = self.container.download_blob(cookiePath)
-            for c in json.loads(blob.content_as_text())['cookies']:
-                self.driver.add_cookie(c)
-        except:
-            print(f'could not load cookies from: {cookiePath}')
+            blob = self.container.download_blob(cookiePath.as_posix())
+        except BaseException as e:
+            blob = None
 
+        if(blob == None): return
+        currentUrl = urlparse(self.driver.current_url)
+        for c in json.loads(blob.content_as_text())['cookies']:
+            if currentUrl.netloc.endswith(c['domain']):
+                c.pop('expiry', None) # not sure why, but this stops it being loaded.
+                try:
+                    self.driver.add_cookie(c)
+                except BaseException as e:
+                    print(f'could not load cookies from: {cookiePath}: {e}')
 
-        # easy method to save screenshots for headless mode
+    # easy method to save screenshots for headless mode
     def __log_info(self, name:str):
         wd = self.driver
 
         seshPath = self.path_session()
 
-        self.__save_file(f'{seshPath}/{name}.html', wd.page_source)
+        # save page source
+        self.__save_file(seshPath / f'{name}.html', wd.page_source)
 
+        # save metadata
         state = {
             'url':wd.current_url,
             'title':wd.title
         }
-        self.__save_file(f'{seshPath}/{name}.json', json.dumps(state))
+        self.__save_file(seshPath / f'{name}.json', json.dumps(state))
         
-        imagePath = f'{seshPath}/{name}.png'
-        localImagePath =  f'/tmp/{imagePath}'
-        wd.get_screenshot_as_file(localImagePath)
+        # save image
+        imagePath = seshPath / f'{name}.png'
+        localImagePath =  Path(tempfile.gettempdir()) / imagePath
+        wd.get_screenshot_as_file(str(localImagePath))
         self.__upload_file(localImagePath, imagePath)
 
         print(f'scraped: {name} - {seshPath}')
 
 
-    def __save_file(self, relativePath:str, content:str):
-        localPath = f'/tmp/{relativePath}'
-        Path(localPath).parent.mkdir(parents=True, exist_ok=True)
-        with open(localPath, "w") as w:
+    def __save_file(self, relativePath:PurePath, content:str):
+
+        localPath = Path(tempfile.gettempdir()) / relativePath
+        localPath.parent.mkdir(parents=True, exist_ok=True)
+        with open(localPath, "w", encoding="utf-8") as w:
             w.write(content)
         self.__upload_file(localPath, relativePath)
 
 
-    def __upload_file(self, localFile, remotePath):
+    def __upload_file(self, localFile:PurePath, remotePath:PurePath):
         with open(localFile, 'rb') as f:
-            self.container.upload_blob(remotePath, f, overwrite=True)
+            self.container.upload_blob(remotePath.as_posix(), f, overwrite=True)
 
-    def path_user(self):
-        return f'user_scrape/{self.email}'
+    def path_user(self)-> PurePath: 
+        return PurePosixPath(f'user_scrape/{self.email}')
 
-    def path_session(self):
-        return f'user_scrape/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.{self.driver.session_id}'
+    def path_session(self) -> PurePath:
+        return PurePosixPath(f'user_scrape/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.{self.driver.session_id}')
 
     def shutdown(self):
         self.driver.quit()
