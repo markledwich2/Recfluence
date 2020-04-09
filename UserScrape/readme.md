@@ -1,4 +1,4 @@
-# User Scraper
+# User Scrape
 
 Python app that uses selenium to collect personalized recommendation data for prototypical users with history.
 
