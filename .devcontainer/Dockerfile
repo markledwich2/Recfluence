@@ -7,8 +7,6 @@
 # https://github.com/microsoft/vscode-dev-containers/tree/v0.106.0/containers/vsonline-linux/.devcontainer/Dockerfile
 FROM mcr.microsoft.com/vscode/devcontainers/universal:0-linux
 
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update \
-   && apt-get -y install --no-install-recommends chromium-driver 
-ENV DEBIAN_FRONTEND=dialog
+RUN sudo apt-get update \
+   && sudo apt-get -y install --no-install-recommends chromium-driver 
 
