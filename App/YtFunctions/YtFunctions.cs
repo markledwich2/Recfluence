@@ -33,9 +33,6 @@ namespace YtFunctions {
         logCfg = logCfg.WriteTo.ILogger(funcLogger);
       if (cfg.SeqUrl != null)
         logCfg = logCfg.WriteTo.Seq(cfg.SeqUrl.OriginalString);
-
-      funcLogger?.LogDebug($"Initializing logger {root.Env} {context.FunctionDirectory}");
-
       logCfg = logCfg.YtEnrich(root.Env, context.FunctionName, await Setup.GetVersion());
 
       if (!dontStartSeq)
@@ -54,7 +51,7 @@ namespace YtFunctions {
     }
 
     [FunctionName("StopIdleSeq_Timer")]
-    public static async Task StopIdleSeq_Timer([TimerTrigger("*/15,30,45,0 * * * *")] TimerInfo myTimer, ExecutionContext context, IMSLogger log) =>
+    public static async Task StopIdleSeq_Timer([TimerTrigger("0 */15 * ? * *")] TimerInfo myTimer, ExecutionContext context, IMSLogger log) =>
       await StopIdleSeqInner(context, log);
 
     [FunctionName("StopIdleSeq")]
@@ -80,15 +77,15 @@ namespace YtFunctions {
       var seq = new SeqConnection(s.Cfg.SeqUrl.OriginalString);
       var events = await seq.Events.ListAsync(count: 5, filter: s.Cfg.SeqHost.IdleQuery, render: true);
       if (events.Any()) {
-        s.Log.Information("{Noun} - recent events exist from '{Query}'", nameof(StopIdleSeqInner), s.Cfg.SeqHost.IdleQuery);
+        s.Log.Information("{Events} recent events exist from '{Query}'", events.Count, s.Cfg.SeqHost.IdleQuery);
         return $"recent events exist: {events.Join("\n", e => e.RenderedMessage)}";
       }
-      s.Log.Information("{Noun} - no recent events from '{Query}'. Stopping {ContainerGroup}", nameof(StopIdleSeqInner), s.Cfg.SeqHost.IdleQuery, group.Name);
+      s.Log.Information("No recent events from '{Query}'. Stopping {ContainerGroup}", s.Cfg.SeqHost.IdleQuery, group.Name);
       await group.StopAsync();
       return $"stopped group {group.Name}";
 
       string LogReason(string reason) {
-        s.Log.Information("{Noun} - {reason}", nameof(StopIdleSeqInner), reason);
+        s.Log.Information("{Noun} - {reason}", nameof(StopIdleSeq), reason);
         return reason;
       }
     }

@@ -111,19 +111,20 @@ namespace YtReader {
 
     [Pipe]
     public async Task ProcessChannels([PipeState] IReadOnlyCollection<UpdateChannelWork> work, ILogger log) {
-      var sw = Stopwatch.StartNew();
+      
       var conn = new AsyncLazy<DbConnection>(() => GetConnection());
       var channelResults = await work
         .Where(c => c.Channel.Status == ChannelStatus.Alive)
         .Select((c, i) => (c, i)).BlockTransform(async item => {
           var (c, i) = item;
+          var sw = Stopwatch.StartNew();
           log = log
             .ForContext("ChannelId", c.Channel.ChannelId)
             .ForContext("Channel", c.Channel.ChannelTitle);
           try {
             await UpdateAllInChannel(c.Channel, conn, c.UpdateType, log);
-            log.Information("{Channel} - Completed {Count}/{Total} update of videos/recs/captions in {Duration}",
-              c.Channel.ChannelTitle, i, work.Count, sw.Elapsed);
+            log.Information("{Channel} - Completed videos/recs/captions in {Duration}. Progress: {Count}/{BatchTotal} channels",
+              c.Channel.ChannelTitle, sw.Elapsed, i, work.Count);
             return (c, Success: true);
           }
           catch (Exception ex) {
