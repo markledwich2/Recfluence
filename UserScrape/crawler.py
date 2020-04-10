@@ -196,6 +196,37 @@ class Crawler:
         self.get_video_features(source, recos)
         return recos[0:branching]
 
+    def delete_last_video_from_history(self):
+        self.driver.get('https://www.youtube.com/feed/history')
+        # todo: maybe replace the full xpath because its ugly, but it works
+        last_video_delete_button = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH,
+                                            '/html/body/ytd-app/div/ytd-page-manager/ytd-browse/ytd-two-column-browse'
+                                            '-results-renderer/div[1]/ytd-section-list-renderer/div['
+                                            '2]/ytd-item-section-renderer[1]/div[3]/ytd-video-renderer/div['
+                                            '1]/div/div['
+                                            '1]/div/div/ytd-menu-renderer/div/ytd-button-renderer/a/yt-icon-button'
+                                            '/button'))
+        ).click()
+
+
+    def delete_history(self):
+        self.driver.get('https://www.youtube.com/feed/history')
+        history_delete_button = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH,
+                                            '/html/body/ytd-app/div/ytd-page-manager/ytd-browse/ytd-two-column-browse'
+                                            '-results-renderer/div['
+                                            '2]/ytd-browse-feed-actions-renderer/div/ytd-button-renderer['
+                                            '1]/a/paper-button/yt-formatted-string'))
+        ).click()
+
+        confirm_button = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH,
+                                            '/html/body/ytd-app/ytd-popup-container/paper-dialog/yt-confirm-dialog'
+                                            '-renderer/div[2]/div/yt-button-renderer['
+                                            '2]/a/paper-button/yt-formatted-string'))
+        ).click()
+
     def take_screenshot(self, path:PurePath):
         self.driver.save_screenshot(path)
 
