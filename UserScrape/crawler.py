@@ -30,6 +30,7 @@ def create_driver(headless:bool) -> WebDriver:
         options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
+    options.add_argument("--window-size=1920,1080") #to load more recommendations on the feed
     # this is mark@ledwich.com's recently used user agent.
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36")
     capabilities = DesiredCapabilities.CHROME.copy()
