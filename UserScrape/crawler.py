@@ -12,7 +12,6 @@ from datetime import datetime
 import os, uuid
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 from pathlib import Path
-from time import sleep
 import json
 from urllib.parse import urlparse
 from dataclasses import dataclass
@@ -128,73 +127,50 @@ class Crawler:
         #todo send to discour/slack/email to get the meat-user to click a number
         print(f'to {self.email}: {message}')
 
-    def get_n_search_results(self, search_term, max_results=5, order="relevance"):
-        wd = self.driver
+    def get_video_features(self, id, recommendations, personalized_count):
+        filename = 'output/recommendations/' + self.email +'_'+ id +'_'+ str(self.init_time).replace(':','-').replace(' ','_') + '.json'
+        video_info = {
+            'id': id,
+            'title': self.wait.until(EC.presence_of_element_located(
+                (By.CSS_SELECTOR, "#container > h1 > yt-formatted-string"))).text,
+            'channel': self.wait.until(EC.presence_of_element_located(
+                (By.CSS_SELECTOR,
+                "ytd-channel-name.ytd-video-owner-renderer > div:nth-child(1) > "
+                "div:nth-child(1)"))).text,
+            'channel_id': self.wait.until(EC.presence_of_element_located(
+                (By.CSS_SELECTOR, "#text > a"))).get_attribute('href').strip(
+                'https://www.youtube.com/channel/'),
+            'recommendations': recommendations,
+            'personalization_count': personalized_count
+        }
 
-        search_bar = WebDriverWait(wd, 10).until(
-            EC.element_to_be_clickable((By.ID, "search"))
-        ).send_keys(search_term)
-        search_button = wd.find_element_by_id('search-icon-legacy').click()
+        self.__save_file(filename, str(video_info))
+        # self.__upload_file(filename, filename)
 
-        # Wait until the search results are loaded
-        results_content = WebDriverWait(wd, 10).until(
-            EC.visibility_of_element_located((By.XPATH, '//*[@id="filter-menu"]')))
-        all_videos = WebDriverWait(wd, 10).until(
-            EC.presence_of_all_elements_located((By.XPATH, '//*[@id="video-title"]'))
-        )
-        links = []
-        for i in all_videos:
-            # somehow there are also empty elements with the id video-title found, these need to be removed
-            if len(i.text) != 0:
-                full_link = i.get_attribute('href')
-                links.append(full_link.replace('https://www.youtube.com/watch?v=', ''))
-        return links[0:max_results]
-
-    def get_n_recommendations(self, seed, depth, branching=5):
-        if depth == 0:
-            self.driver.get("https://www.youtube.com/watch?v=" + seed)
-            self.get_video_features(seed, [])
-            return [seed]
-        current_video = seed
-        all_recos = [seed]
-        for video in self.get_recommendations_for_video(source=current_video, branching=branching):
-            all_recos.extend(self.get_n_recommendations(video, depth - 1))
-        return all_recos
-
-    def get_video_features(self, id, recommendations):
-        if id in self._video_infos:
-            self._video_infos[id]['recommendations'] = self._video_infos[id]['recommendations'] + \
-                                                       list(set(recommendations) - set(
-                                                           self._video_infos[id]['recommendations']))
-        if id not in self._video_infos:
-            self._video_infos[id] = {'recommendations': recommendations,
-                                     'title': self.wait.until(EC.presence_of_element_located(
-                                         (By.CSS_SELECTOR, "#container > h1 > yt-formatted-string"))).text,
-                                     'id': id,
-                                     'channel': self.wait.until(EC.presence_of_element_located(
-                                         (By.CSS_SELECTOR,
-                                          "ytd-channel-name.ytd-video-owner-renderer > div:nth-child(1) > "
-                                          "div:nth-child(1)"))).text,
-                                     'channel_id': self.wait.until(EC.presence_of_element_located(
-                                         (By.CSS_SELECTOR, "#text > a"))).get_attribute('href').strip(
-                                         'https://www.youtube.com/channel/')
-                                     }
-
-    def get_recommendations_for_video(self, source, branching):
+    def get_recommendations_for_video(self, source):
         self.driver.get("https://www.youtube.com/watch?v=" + source)
-        results_content = WebDriverWait(self.driver, 10).until(
-            EC.visibility_of_element_located((By.XPATH, '// *[ @ id = "upnext"]')))
-        all_recs = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_all_elements_located((By.XPATH, '//*[@id="dismissable"]/div/div[1]/a'))
-        )
 
-        recos = []
+        # this is the list of elements from the recommendation sidebar
+        # it does not always load all recommendations at the same time, therefore the loop
+        all_recs = []
+        while len(all_recs) < 19:
+            all_recs = WebDriverWait(self.driver, 10).until(
+                EC.visibility_of_all_elements_located((By.XPATH, '//*[@id="dismissable"]/div/div[1]/a'))
+            )
+
+        recos = {}
+        personalized_counter = 0
         for i in all_recs:
-            # somehow there are also empty elements with the id video-title found, these need to be removed
-            if len(i.text) != 0:
-                recos.append(i.get_attribute('href').replace('https://www.youtube.com/watch?v=', ''))
-        self.get_video_features(source, recos)
-        return recos[0:branching]
+            personalized = 'Recommended for you' in i.text
+            if personalized:
+                personalized_counter += 1
+            # take the link and remove everything except for the id of the video that the link leads to
+            recommendation_id = i.get_attribute('href').replace('https://www.youtube.com/watch?v=', '')
+            recos[recommendation_id] = {'id': recommendation_id, 'personalized': personalized}
+        # store the information about the current video plus the corresponding recommendations
+        self.get_video_features(source, recos, personalized_counter)
+        # return a number of recommendations up to the branching factor
+        return recos
 
     def delete_last_video_from_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
@@ -226,10 +202,6 @@ class Crawler:
                                             '-renderer/div[2]/div/yt-button-renderer['
                                             '2]/a/paper-button/yt-formatted-string'))
         ).click()
-
-    def take_screenshot(self, path:PurePath):
-        self.driver.save_screenshot(path)
-
 
     def __save_cookies(self):
         """saves all cookies

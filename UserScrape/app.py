@@ -15,7 +15,7 @@ for user in cfg.users:
     crawler = Crawler(cfg.storage_sas, user.email, user.password, headless)
     try:
         crawler.load_home_and_login()
-        crawler.take_screenshot('home.png')
+        crawler.get_recommendations_for_video('dQYf-AI5m0Q')
         crawler.shutdown()
     except NoSuchElementException as e:
         print(f'Not able to find a required element {e.msg}. {user.email}')
