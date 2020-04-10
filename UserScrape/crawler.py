@@ -9,7 +9,9 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 from datetime import datetime
-import os, uuid
+import time
+import os
+import uuid
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 from pathlib import Path
 import json
@@ -18,27 +20,32 @@ from dataclasses import dataclass
 from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath
 import tempfile
 
+
 @dataclass
 class CrawlResult:
     success: bool = True
     res: str = None
 
-def create_driver(headless:bool) -> WebDriver:
+
+def create_driver(headless: bool) -> WebDriver:
     options = Options()
     if(headless):
         options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    options.add_argument("--window-size=1920,1080") #to load more recommendations on the feed
+    # to load more recommendations on the feed
+    options.add_argument("--window-size=1920,1080")
     # this is mark@ledwich.com's recently used user agent.
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36")
+    options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36")
     capabilities = DesiredCapabilities.CHROME.copy()
     capabilities['acceptSslCerts'] = True
     capabilities['acceptInsecureCerts'] = True
     return webdriver.Chrome(options=options, desired_capabilities=capabilities)
 
+
 class Crawler:
-    def __init__(self, sas_url:str, email:str, password:str, headless:bool, lang = 'en'):
+    def __init__(self, sas_url: str, email: str, password: str, headless: bool, lang='en'):
         self._video_infos = {}
         self.driver = create_driver(headless)
         self.wait = WebDriverWait(self.driver, 10)
@@ -51,21 +58,24 @@ class Crawler:
     def test_ip(self):
         wd = self.driver
         wd.get('https://httpbin.org/ip')
-        pre:WebElement = wd.find_element_by_css_selector('pre')
+        pre: WebElement = wd.find_element_by_css_selector('pre')
         print(f'Running with IP {json.loads(pre.text)["origin"]}')
 
     def load_home_and_login(self):
         wd = self.driver
-        wd.get('https://www.youtube.com') # need to go to the domain to add cookies
+        # need to go to the domain to add cookies
+        wd.get('https://www.youtube.com')
         self.__load_cookies()
 
         wd.get('https://www.youtube.com')
-        content = WebDriverWait(wd, 10).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#contents')))
+        content = WebDriverWait(wd, 10).until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, '#contents')))
 
         self.__log_info('home')
-        
+
         try:
-            login = wd.find_element_by_css_selector('paper-button[aria-label="Sign in"]')
+            login = wd.find_element_by_css_selector(
+                'paper-button[aria-label="Sign in"]')
         except NoSuchElementException:
             login = None
 
@@ -74,20 +84,23 @@ class Crawler:
 
     def login(self) -> CrawlResult:
         wd = self.driver
-        
 
-         # this link is maybe too specific (e.g. it contains country codes)
-        wd.get(f'https://accounts.google.com/signin/v2/identifier?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3D{self.lang}%26next%3D%252F&hl={self.lang}&ec=65620&flowName=GlifWebSignIn&flowEntry=ServiceLogin')
+        # this link is maybe too specific (e.g. it contains country codes)
+        wd.get(
+            f'https://accounts.google.com/signin/v2/identifier?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3D{self.lang}%26next%3D%252F&hl={self.lang}&ec=65620&flowName=GlifWebSignIn&flowEntry=ServiceLogin')
 
-        emailEl:WebElement = WebDriverWait(wd, 5).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, 'input[type="email"]'))
+        emailEl: WebElement = WebDriverWait(wd, 5).until(
+            EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, 'input[type="email"]'))
         )
         self.__log_info(f'enter_email')
         emailEl.send_keys(self.email)
-        wd.find_element_by_css_selector('#identifierNext').click() #next_button = wd.find_element_by_id('next').click()
+        # next_button = wd.find_element_by_id('next').click()
+        wd.find_element_by_css_selector('#identifierNext').click()
 
-        passwordEl:WebElement = WebDriverWait(wd, 5).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, 'input[type="password"]'))
+        passwordEl: WebElement = WebDriverWait(wd, 5).until(
+            EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, 'input[type="password"]'))
         )
         self.__log_info('email_entered')
         passwordEl.send_keys(self.password)
@@ -104,10 +117,11 @@ class Crawler:
                 verify.click()
 
                 # verify, at least on my account presents a number to enter on the phone
-                figure:WebElement = WebDriverWait(wd, 2).until(
-                    EC.text_to_be_present_in_element((By.CSS_SELECTOR, 'figure > samp'))
-                    )
-                    
+                figure: WebElement = WebDriverWait(wd, 2).until(
+                    EC.text_to_be_present_in_element(
+                        (By.CSS_SELECTOR, 'figure > samp'))
+                )
+
                 self.sendMessageToUser(f'Enter {figure.text} on your phone')
 
                 # wait for 5 minutes for an IRL meat-person to verify
@@ -121,22 +135,22 @@ class Crawler:
         self.__save_cookies()
 
         return CrawlResult()
-        
 
     def sendMessageToUser(self, message):
-        #todo send to discour/slack/email to get the meat-user to click a number
+        # todo send to discour/slack/email to get the meat-user to click a number
         print(f'to {self.email}: {message}')
 
-    def get_video_features(self, id, recommendations, personalized_count):
-        filename = 'output/recommendations/' + self.email +'_'+ id +'_'+ str(self.init_time).replace(':','-').replace(' ','_') + '.json'
+    def get_video_features(self, id, recommendations: dict, personalized_count: int):
+        filename = 'output/recommendations/' + self.email + '_' + id + '_' + \
+            str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
         video_info = {
             'id': id,
             'title': self.wait.until(EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "#container > h1 > yt-formatted-string"))).text,
             'channel': self.wait.until(EC.presence_of_element_located(
                 (By.CSS_SELECTOR,
-                "ytd-channel-name.ytd-video-owner-renderer > div:nth-child(1) > "
-                "div:nth-child(1)"))).text,
+                 "ytd-channel-name.ytd-video-owner-renderer > div:nth-child(1) > "
+                 "div:nth-child(1)"))).text,
             'channel_id': self.wait.until(EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "#text > a"))).get_attribute('href').strip(
                 'https://www.youtube.com/channel/'),
@@ -144,8 +158,8 @@ class Crawler:
             'personalization_count': personalized_count
         }
 
+        # upload the information as a blob
         self.__save_file(filename, str(video_info))
-        # self.__upload_file(filename, filename)
 
     def get_recommendations_for_video(self, source):
         self.driver.get("https://www.youtube.com/watch?v=" + source)
@@ -155,21 +169,24 @@ class Crawler:
         all_recs = []
         while len(all_recs) < 19:
             all_recs = WebDriverWait(self.driver, 10).until(
-                EC.visibility_of_all_elements_located((By.XPATH, '//*[@id="dismissable"]/div/div[1]/a'))
+                EC.visibility_of_all_elements_located(
+                    (By.XPATH, '//*[@id="dismissable"]/div/div[1]/a'))
             )
 
         recos = {}
-        personalized_counter = 0
+        personalized_counter = 0 # how many of the recommendations are personalized?
         for i in all_recs:
             personalized = 'Recommended for you' in i.text
             if personalized:
                 personalized_counter += 1
             # take the link and remove everything except for the id of the video that the link leads to
-            recommendation_id = i.get_attribute('href').replace('https://www.youtube.com/watch?v=', '')
-            recos[recommendation_id] = {'id': recommendation_id, 'personalized': personalized}
+            recommendation_id = i.get_attribute('href').replace(
+                'https://www.youtube.com/watch?v=', '')
+            recos[recommendation_id] = {
+                'id': recommendation_id, 'personalized': personalized}
         # store the information about the current video plus the corresponding recommendations
         self.get_video_features(source, recos, personalized_counter)
-        # return a number of recommendations up to the branching factor
+        # return the recommendations 
         return recos
 
     def delete_last_video_from_history(self):
@@ -184,7 +201,6 @@ class Crawler:
                                             '1]/div/div/ytd-menu-renderer/div/ytd-button-renderer/a/yt-icon-button'
                                             '/button'))
         ).click()
-
 
     def delete_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
@@ -203,34 +219,61 @@ class Crawler:
                                             '2]/a/paper-button/yt-formatted-string'))
         ).click()
 
+    def _get_seconds(self, duration: str):
+        # helper function to correctly parse the time from the info bar
+        if len(duration) > 5:
+            duration_time = datetime.strptime(duration, "%H:%M:%S")
+        else:
+            duration_time = datetime.strptime(duration, "%M:%S")
+        return (duration_time-datetime(1900, 1, 1)).total_seconds()
+
+    def watch_video(self, videoId: str):
+        self.driver.get("https://www.youtube.com/watch?v=" + videoId)
+        # unfortunately YouTube orders the player in multiple different ways so we have to try them all unless there is a better way?
+        duration = WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'ytp-time-duration'))).text
+        # start the video
+        duration = self._get_seconds(duration)
+        # to make sure that every video is watched long enough
+        # todo: this will be a problem if an ad is longer than the respective watch time?
+        watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
+        play_button = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, '/html/body/ytd-app/div/ytd-page-manager/ytd-watch-flexy/div[4]/div[1]/div/div[1]/div/div/div/ytd-player/div/div/div[29]/div[2]/div[1]/button'))).click()
+        time.sleep(watch_time)
+        # todo: replace this with proper logging
+        print('watched %s for %f seconds' % (videoId, watch_time))
+
     def __save_cookies(self):
         """saves all cookies
         """
-        cookies = { 'cookies': self.driver.get_cookies() }
-        self.__save_file(self.path_user() / 'cookies.json', json.dumps(cookies))
+        cookies = {'cookies': self.driver.get_cookies()}
+        self.__save_file(self.path_user() / 'cookies.json',
+                         json.dumps(cookies))
 
     def __load_cookies(self):
         """loads cookies for the current domain
         """
         cookiePath = self.path_user() / 'cookies.json'
-        
+
         try:
             blob = self.container.download_blob(cookiePath.as_posix())
         except BaseException as e:
             blob = None
 
-        if(blob == None): return
+        if(blob == None):
+            return
         currentUrl = urlparse(self.driver.current_url)
         for c in json.loads(blob.content_as_text())['cookies']:
             if currentUrl.netloc.endswith(c['domain']):
-                c.pop('expiry', None) # not sure why, but this stops it being loaded.
+                # not sure why, but this stops it being loaded.
+                c.pop('expiry', None)
                 try:
                     self.driver.add_cookie(c)
                 except BaseException as e:
                     print(f'could not load cookies from: {cookiePath}: {e}')
 
     # easy method to save screenshots for headless mode
-    def __log_info(self, name:str):
+    def __log_info(self, name: str):
         wd = self.driver
 
         seshPath = self.path_session()
@@ -240,21 +283,20 @@ class Crawler:
 
         # save metadata
         state = {
-            'url':wd.current_url,
-            'title':wd.title
+            'url': wd.current_url,
+            'title': wd.title
         }
         self.__save_file(seshPath / f'{name}.json', json.dumps(state))
-        
+
         # save image
         imagePath = seshPath / f'{name}.png'
-        localImagePath =  Path(tempfile.gettempdir()) / imagePath
+        localImagePath = Path(tempfile.gettempdir()) / imagePath
         wd.get_screenshot_as_file(str(localImagePath))
         self.__upload_file(localImagePath, imagePath)
 
         print(f'scraped: {name} - {seshPath}')
 
-
-    def __save_file(self, relativePath:PurePath, content:str):
+    def __save_file(self, relativePath: PurePath, content: str):
 
         localPath = Path(tempfile.gettempdir()) / relativePath
         localPath.parent.mkdir(parents=True, exist_ok=True)
@@ -262,12 +304,12 @@ class Crawler:
             w.write(content)
         self.__upload_file(localPath, relativePath)
 
-
-    def __upload_file(self, localFile:PurePath, remotePath:PurePath):
+    def __upload_file(self, localFile: PurePath, remotePath: PurePath):
         with open(localFile, 'rb') as f:
-            self.container.upload_blob(remotePath.as_posix(), f, overwrite=True)
+            self.container.upload_blob(
+                remotePath.as_posix(), f, overwrite=True)
 
-    def path_user(self)-> PurePath: 
+    def path_user(self) -> PurePath:
         return PurePosixPath(f'user_scrape/{self.email}')
 
     def path_session(self) -> PurePath:
@@ -275,7 +317,3 @@ class Crawler:
 
     def shutdown(self):
         self.driver.quit()
-
-
-
-    
