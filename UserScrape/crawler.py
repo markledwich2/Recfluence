@@ -195,6 +195,10 @@ class Crawler:
         self.get_video_features(source, recos)
         return recos[0:branching]
 
+    def take_screenshot(self, path:PurePath):
+        self.driver.save_screenshot(path)
+
+
     def __save_cookies(self):
         """saves all cookies
         """
