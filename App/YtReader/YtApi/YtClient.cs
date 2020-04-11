@@ -173,7 +173,7 @@ namespace YtReader.Yt {
       var s = YtService.Channels.List("snippet,statistics");
       s.Id = id;
       var r = await GetResponse(s);
-      var c = r.Items.FirstOrDefault();
+      var c = r.Items?.FirstOrDefault();
       if (c == null) return null;
 
       var data = new ChannelData {
