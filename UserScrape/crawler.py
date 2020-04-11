@@ -140,7 +140,7 @@ class Crawler:
         # todo send to discour/slack/email to get the meat-user to click a number
         print(f'to {self.email}: {message}')
 
-    def get_video_features(self, id, recommendations: dict, personalized_count: int):
+    def get_video_features(self, id, recommendations: list, personalized_count: int):
         filename = 'output/recommendations/' + self.email + '_' + id + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
         video_info = {
@@ -173,7 +173,7 @@ class Crawler:
                     (By.XPATH, '//*[@id="dismissable"]/div/div[1]/a'))
             )
 
-        recos = {}
+        recos = []
         personalized_counter = 0 # how many of the recommendations are personalized?
         for i in all_recs:
             personalized = 'Recommended for you' in i.text
@@ -182,8 +182,8 @@ class Crawler:
             # take the link and remove everything except for the id of the video that the link leads to
             recommendation_id = i.get_attribute('href').replace(
                 'https://www.youtube.com/watch?v=', '')
-            recos[recommendation_id] = {
-                'id': recommendation_id, 'personalized': personalized}
+            recos.append({
+                'id': recommendation_id, 'personalized': personalized})
         # store the information about the current video plus the corresponding recommendations
         self.get_video_features(source, recos, personalized_counter)
         # return the recommendations 
