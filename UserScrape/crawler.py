@@ -107,7 +107,7 @@ class Crawler:
         passwordUrl = wd.current_url
         wd.find_element_by_css_selector('#passwordNext').click()
 
-        sleep(1)
+        time.sleep(1)
         self.__log_info('password_entered')
 
         url = urlparse(wd.current_url)
