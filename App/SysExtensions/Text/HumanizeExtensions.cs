@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Linq;
+using Humanizer.Localisation;
+using static Humanizer.Localisation.TimeUnit;
 
 namespace SysExtensions.Text {
   public static class HumanizeExtensions {
@@ -22,6 +25,16 @@ namespace SysExtensions.Text {
         default:
           throw new ArgumentOutOfRangeException();
       }
+    }
+
+    public static string HumanizeShort(this TimeSpan t, int precision = 2, TimeUnit minUnit = Second) {
+      var units = new (int v, string s, TimeUnit u)[]
+        {(t.Days, "d", Day), (t.Hours, "h", Hour), (t.Minutes, "m", Minute), (t.Seconds, "s", Second), (t.Milliseconds, "ms", Millisecond)};
+      var res = units
+        .SkipWhile(s => s.Item1 == 0 && s.u > minUnit)
+        .Take(precision).Where(s => s.u >= minUnit)
+        .Join(" ", s => $"{s.Item1}{s.Item2}");
+      return res;
     }
   }
 

@@ -51,7 +51,7 @@ namespace YtFunctions {
     }
 
     [FunctionName("StopIdleSeq_Timer")]
-    public static async Task StopIdleSeq_Timer([TimerTrigger("0 */15 * ? * *")] TimerInfo myTimer, ExecutionContext context, IMSLogger log) =>
+    public static async Task StopIdleSeq_Timer([TimerTrigger("0 */15 * * * *")] TimerInfo myTimer, ExecutionContext context, IMSLogger log) =>
       await StopIdleSeqInner(context, log);
 
     [FunctionName("StopIdleSeq")]

@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
+using Amazon.S3.Model;
 using Autofac;
 using CommandLine;
+using Google.Apis.Sheets.v4;
 using Google.Apis.Util;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.Blob;
@@ -15,6 +19,7 @@ using SysExtensions.Collections;
 using SysExtensions.Text;
 using Troschuetz.Random;
 using YtReader;
+using YtReader.Search;
 using YtReader.YtWebsite;
 
 namespace YtCli {
@@ -22,7 +27,7 @@ namespace YtCli {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
         .ParseArguments<PipeCmd, UpdateCmd, SyncCmd, ChannelInfoOption, FixCmd, ResultsCmd, TrafficCmd,
-          PublishContainerCmd, VersionCmd>(args)
+          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd>(args)
         .MapResult(
           (PipeCmd p) => Run(p, args, PipeCmd.RunPipe),
           (UpdateCmd u) => Run(u, args, UpdateCmd.Update),
@@ -33,6 +38,7 @@ namespace YtCli {
           (TrafficCmd t) => Run(t, args, TrafficCmd.Traffic),
           (PublishContainerCmd p) => Run(p, args, PublishContainerCmd.PublishContainer),
           (VersionCmd v) => VersionCmd.Verson(),
+          (UpdateSearchIndexCmd s) => Run(s, args, UpdateSearchIndexCmd.UpdateSearchIndex),
           errs => Task.FromResult(ExitCode.Error)
         );
       return (int) await res;
@@ -51,7 +57,9 @@ namespace YtCli {
       try {
         var verb = option.GetType().GetCustomAttribute<VerbAttribute>()?.Name ?? option.GetType().Name;
         ctx.Log.Information("Starting cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
-        return await task(ctx);
+        var res = await task(ctx);
+        ctx.Log.Information("Completed cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
+        return res;
       }
       catch (Exception ex) {
         var flatEx = ex switch {AggregateException a => a.Flatten(), _ => ex};
@@ -121,23 +129,27 @@ namespace YtCli {
     }
   }
 
-  [Verb("ChannelInfo", HelpText = "Show channel information (ID,Name) given a video ID")]
+  [Verb("channel-info", HelpText = "Show channel information (ID,Name) given a video ID")]
   public class ChannelInfoOption : ICommonCmd {
-    [Option('v', Required = true, HelpText = "the ID of a video")]
+    [Option('v',  HelpText = "the ID of a video")]
     public string VideoId { get; set; }
+
+    [Option('c', HelpText = "the ID of a channel")]
+    public string ChannelId { get; set; }
 
     public static async Task<ExitCode> ChannelInfo(CmdCtx<ChannelInfoOption> ctx) {
       var yt = ctx.Cfg.YtClient(ctx.Log);
-      var v = await yt.VideoData(ctx.Option.VideoId);
-      ctx.Log.Information("{ChannelId},{ChannelTitle}", v.ChannelId, v.ChannelTitle);
+      if(ctx.Option.VideoId.HasValue()) {
+        var v = await yt.VideoData(ctx.Option.VideoId);
+        ctx.Log.Information("{ChannelId},{ChannelTitle}", v.ChannelId, v.ChannelTitle);
+      }
+      if(ctx.Option.ChannelId.HasValue()) {
+        var c = await yt.ChannelData(ctx.Option.ChannelId);
+        ctx.Log.Information("{ChannelTitle},{Status}", c.Title, c.Status);
+      }
+      
       return ExitCode.Success;
     }
-  }
-
-  public enum RunLocation {
-    Normal,
-    ContainerLaunch,
-    ContainerComplete
   }
 
   public interface ICommonCmd { }
@@ -160,6 +172,16 @@ namespace YtCli {
     public static async Task<ExitCode> Traffic(CmdCtx<TrafficCmd> ctx) {
       var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.PrivatePath);
       await TrafficSourceExports.Process(store, ctx.Cfg, new YtScraper(ctx.Cfg.Scraper), ctx.Log);
+      return ExitCode.Success;
+    }
+  }
+  
+  [Verb("index", HelpText = "Update the search index")]
+  public class UpdateSearchIndexCmd : ICommonCmd {
+    public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
+      var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.ResultsPath);
+      await YtSearch.BuildSolrCaptionIndex(ctx.Cfg.Solr, ctx.Scope.Resolve<Func<Task<DbConnection>>>(), ctx.Log);
+      //await YtSearch.BuildAlgoliaVideoIndex(ctx.Cfg.Algolia, store, ctx.Scope.Resolve<Func<Task<DbConnection>>>(), ctx.Log);
       return ExitCode.Success;
     }
   }

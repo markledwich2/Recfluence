@@ -5,8 +5,9 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Algolia.Search" Version="6.6.0" />
     <PackageReference Include="CsvHelper" Version="15.0.3" />
-    <PackageReference Include="Dapper" Version="2.0.30" />
+    <PackageReference Include="Dapper" Version="2.0.35" />
     <PackageReference Include="Google.Apis.Sheets.v4" Version="1.44.1.1895" />
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.44.1.1869" />
     <PackageReference Include="LtGt" Version="2.1.0" />

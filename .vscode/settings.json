@@ -6,5 +6,5 @@
   "debug.internalConsoleOptions": "neverOpen",
   "dotnet-test-explorer.testProjectPath": "/App/Tests",
   "python.dataScience.jupyterServerURI": " http://localhost:8888/?token=e272f55131dfdbf050b519e59b2e77600b76178603e5e338",
-  "python.pythonPath": "/opt/python/latest/bin/python3.8"
+  "python.pythonPath": "C:\\Users\\mark\\AppData\\Local\\Programs\\Python\\Python38-32\\python.exe"
 }

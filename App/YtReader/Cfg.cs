@@ -43,6 +43,8 @@ namespace YtReader {
     [Required] public SnowflakeCfg        Snowflake             { get; set; } = new SnowflakeCfg();
     [Required] public ResultsCfg          Results               { get; set; } = new ResultsCfg();
     [Required] public PipeAppCfg          Pipe                  { get; set; } = new PipeAppCfg();
+    public            SolrCfg             Solr                  { get; set; } = new SolrCfg();
+    public            AlgoliaCfg          Algolia               { get; set; } = new AlgoliaCfg();
   }
 
   public class ResultsCfg {
@@ -95,5 +97,13 @@ namespace YtReader {
   public class SeqHostCfg {
     public string IdleQuery          { get; set; } = "@Timestamp > Now() - 30m";
     public string ContainerGroupName { get; set; } = "seq";
+  }
+
+  public class AlgoliaCfg {
+    public NameSecret Creds { get; set; }
+  }
+
+  public class SolrCfg {
+    public Uri Url { get; set; }
   }
 }

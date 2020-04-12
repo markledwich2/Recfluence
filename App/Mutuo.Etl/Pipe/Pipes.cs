@@ -38,23 +38,23 @@ namespace Mutuo.Etl.Pipe {
     /// <summary>Executes pipe's on the items (logger, no result)</summary>
     public static async Task RunPipe<TIn>(
       this IEnumerable<TIn> items, Func<IReadOnlyCollection<TIn>, ILogger, Task> transform, IPipeCtx ctx, PipeRunCfg runCfg, ILogger log) =>
-      await RunPipeMethod<object>(items.Cast<object>(), transform.Method, ctx, runCfg, log);
+      await RunPipeMethod<object>(items.Cast<object>().ToArray(), transform.Method, ctx, runCfg, log);
 
     /// <summary>Executes pipe's on the items (logger, result)</summary>
     public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> RunPipe<TIn, TOut>(
       this IEnumerable<TIn> items, Func<IReadOnlyCollection<TIn>, ILogger, Task<TOut>> transform, IPipeCtx ctx, PipeRunCfg runCfg, ILogger log)
       where TOut : class =>
-      await RunPipeMethod<TOut>(items.Cast<object>(), transform.Method, ctx, runCfg, log);
+      await RunPipeMethod<TOut>(items.Cast<object>().ToArray(), transform.Method, ctx, runCfg, log);
 
     /// <summary>Executes pipe's on the items (No logger, result)</summary>
     public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> RunPipe<TIn, TOut>(
       this IEnumerable<TIn> items, Func<IReadOnlyCollection<TIn>, Task<TOut>> transform, IPipeCtx ctx, PipeRunCfg runCfg, ILogger log) where TOut : class =>
-      await RunPipeMethod<TOut>(items.Cast<object>(), transform.Method, ctx, runCfg, log);
+      await RunPipeMethod<TOut>(items.Cast<object>().ToArray(), transform.Method, ctx, runCfg, log);
 
     /// <summary>Runs a pipe to process a list of work in batches on multiple containers. The transform is used to provide
     ///   strong typing, but may not actually be run locally.</summary>
     static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> RunPipeMethod<TOut>(
-      this IEnumerable<object> items, MethodInfo method, IPipeCtx ctx, PipeRunCfg runCfg, ILogger log) {
+      this IReadOnlyCollection<object> items, MethodInfo method, IPipeCtx ctx, PipeRunCfg runCfg, ILogger log) {
       var isPipe = method.GetCustomAttribute<PipeAttribute>() != null;
       if (!isPipe) throw new InvalidOperationException($"given transform '{method.Name}' must be a pipe");
       var pipeNme = method.Name;

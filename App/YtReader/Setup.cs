@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
@@ -204,12 +205,13 @@ namespace YtReader {
       b.Register(_ => cfg).SingleInstance();
       b.Register(_ => cfg).SingleInstance();
       b.Register(_ => cfg.YtStore(log)).SingleInstance();
-      b.Register<Func<Task<DbConnection>>>(_ => async () => (DbConnection) await cfg.Snowflake.OpenConnection());
+      b.Register<Func<Task<DbConnection>>>(_ => async () => await cfg.Snowflake.OpenConnection());
       b.Register<Func<IPipeCtx>>(c => () => PipeCtx(rootCfg, cfg, scopeHolder.Scope, log));
       b.Register(_ => cfg.Pipe.Azure.GetAzure());
       b.RegisterType<YtDataUpdater>(); // this will resolve IPipeCtx
       var scope = b.Build().BeginLifetimeScope();
       scopeHolder.Scope = scope;
+
       return scope;
     }
 

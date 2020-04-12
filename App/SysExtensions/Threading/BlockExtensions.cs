@@ -60,11 +60,7 @@ namespace SysExtensions.Threading {
     }
 
     static async Task ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block) {
-      foreach (var item in source) {
-        var res = await block.SendAsync(item);
-        if (!res)
-          throw new InvalidOperationException("Unable to send item to target block");
-      }
+      foreach (var item in source) await block.SendAsync(item);
       block.Complete();
     }
   }

@@ -71,12 +71,12 @@ namespace SysExtensions.Serialization {
     public static JObject ToJObject(this object o, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null)
       => (JObject) ToJToken(o, settings, loadSettings);
 
-    public static string ToJson<T>(this T o, JsonSerializerSettings settings = null) where T : new() {
+    public static string ToJson<T>(this T o, JsonSerializerSettings settings = null) {
       settings ??= DefaultSettings();
       return JsonConvert.SerializeObject(o, settings);
     }
 
-    public static Stream ToJsonStream<T>(this T o, JsonSerializerSettings settings = null) where T : new() {
+    public static Stream ToJsonStream<T>(this T o, JsonSerializerSettings settings = null) {
       settings ??= DefaultSettings();
       var ms = new MemoryStream();
       using (var sw = new StreamWriter(ms, leaveOpen: true))

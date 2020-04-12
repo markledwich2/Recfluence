@@ -1,5 +1,13 @@
 {
   "definitions": {
+    "AlgoliaCfg": {
+      "type": "object",
+      "properties": {
+        "creds": {
+          "type": "string"
+        }
+      }
+    },
     "ContainerCfg": {
       "type": "object",
       "properties": {
@@ -213,6 +221,15 @@
         }
       }
     },
+    "SolrCfg": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
     "StorageCfg": {
       "type": "object",
       "properties": {
@@ -304,7 +321,8 @@
       "$ref": "#/definitions/ServicePrincipalCfg"
     },
     "seqUrl": {
-      "type": "string"
+      "type": "string",
+      "format": "uri"
     },
     "seqHost": {
       "$ref": "#/definitions/SeqHostCfg"
@@ -323,6 +341,12 @@
     },
     "pipe": {
       "$ref": "#/definitions/PipeAppCfg"
+    },
+    "solr": {
+      "$ref": "#/definitions/SolrCfg"
+    },
+    "algolia": {
+      "$ref": "#/definitions/AlgoliaCfg"
     }
   }
 }
