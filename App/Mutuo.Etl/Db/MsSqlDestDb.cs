@@ -6,6 +6,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using Humanizer;
 using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Text;
@@ -103,9 +104,10 @@ values ({cols.Join(",", c => $"s.{this.Sql(c)}")})
     public async Task<long> BulkCopy(IDataReader reader, TableId table, ILogger log) {
       using var bc = new SqlBulkCopy((SqlConnection) Connection) {
         EnableStreaming = true,
-        BatchSize = 500_000,
+        BatchSize = 100_000,
         DestinationTableName = this.Sql(table),
-        NotifyAfter = 100_000
+        NotifyAfter = 20_000,
+        BulkCopyTimeout = (int)10.Minutes().TotalSeconds
       };
       bc.SqlRowsCopied += (sender, args) => log.Debug("{Table} - bulk copied {Rows}", table, args.RowsCopied);
 
