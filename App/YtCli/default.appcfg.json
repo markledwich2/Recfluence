@@ -60,5 +60,50 @@
     },
     "solr": {
         "url": "https://ss225254-ank9au43-us-west-1-aws.searchstax.com/solr"
+    },
+    "appDb": {
+        "host": "recfluence.database.windows.net",
+        "db": "recfluence"
+    },
+    "syncDb": {
+        "defaultTsCol": "updated",
+        "tables": [
+            {
+                "name": "channel_latest",
+                "syncType": "Incremental",
+                "cols": [
+                    {
+                        "name": "channel_id",
+                        "id": true
+                    }
+                ]
+            },
+            {
+                "name": "video_latest",
+                "syncType": "Incremental",
+                "cols": [
+                    { 
+                        "name": "video_id",
+                        "id": true
+                    }
+                ]
+            },
+            {
+                "name": "caption",
+                "syncType": "Incremental",
+                "selectedCols": ["caption_id", "video_id", "channel_id", "caption", "offset_seconds"],
+                "cols": [
+                    {
+                        "name": "caption_id",
+                        "id": true
+                    },
+                    {
+                        "name": "caption",
+                        "typeOverride": "nvarchar(400)"
+                    }
+                ]
+                
+            }
+        ]
     }
 }

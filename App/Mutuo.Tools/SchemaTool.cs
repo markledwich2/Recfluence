@@ -10,6 +10,7 @@ using Newtonsoft.Json.Schema.Generation;
 using Newtonsoft.Json.Serialization;
 using SysExtensions.Collections;
 using SysExtensions.IO;
+using SysExtensions.Serialization;
 using SysExtensions.Threading;
 
 namespace Mutuo.Tools {
@@ -38,7 +39,7 @@ namespace Mutuo.Tools {
         var g = new JSchemaGenerator {
           DefaultRequired = Required.DisallowNull,
           ContractResolver =
-            new DefaultContractResolver {
+            new CoreSerializeContractResolver {
               NamingStrategy = new CamelCaseNamingStrategy()
             },
           GenerationProviders = {new StringEnumGenerationProvider()}

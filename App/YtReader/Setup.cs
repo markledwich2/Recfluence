@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,6 +12,7 @@ using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Extensions.Configuration;
 using Mutuo.Etl.Blob;
+using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Semver;
@@ -141,6 +141,12 @@ namespace YtReader {
       if (appCfg.Sheets != null)
         appCfg.Sheets.CredJson = secrets.ToJObject().SelectToken("sheets.credJson") as JObject;
       appCfg.Pipe = await GetPipeAppCfg(appCfg);
+
+
+      appCfg.SyncDb.Tables = appCfg.SyncDb.Tables.JsonClone();
+      foreach (var table in appCfg.SyncDb.Tables)
+        if (table.TsCol == null && table.SyncType != SyncType.Full)
+          table.Cols.Add(new SyncColCfg {Name = appCfg.SyncDb.DefaultTsCol, Ts = true});
 
       var validation = Validate(appCfg);
       if (validation.Any()) {

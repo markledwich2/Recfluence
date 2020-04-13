@@ -8,6 +8,23 @@
         }
       }
     },
+    "AppDbCfg": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "db": {
+          "type": "string"
+        },
+        "creds": {
+          "type": "string"
+        },
+        "defaultSchema": {
+          "type": "string"
+        }
+      }
+    },
     "ContainerCfg": {
       "type": "object",
       "properties": {
@@ -250,6 +267,64 @@
         }
       }
     },
+    "SyncColCfg": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "ts": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "boolean"
+        },
+        "typeOverride": {
+          "type": "string"
+        }
+      }
+    },
+    "SyncDbCfg": {
+      "type": "object",
+      "properties": {
+        "tables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SyncTableCfg"
+          }
+        },
+        "defaultTsCol": {
+          "type": "string"
+        }
+      }
+    },
+    "SyncTableCfg": {
+      "type": "object",
+      "properties": {
+        "syncType": {
+          "type": "string",
+          "enum": [
+            "Incremental",
+            "Full"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "cols": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SyncColCfg"
+          }
+        },
+        "selectedCols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "YtReaderCfg": {
       "type": "object",
       "properties": {
@@ -336,6 +411,9 @@
     "snowflake": {
       "$ref": "#/definitions/SnowflakeCfg"
     },
+    "appDb": {
+      "$ref": "#/definitions/AppDbCfg"
+    },
     "results": {
       "$ref": "#/definitions/ResultsCfg"
     },
@@ -347,6 +425,9 @@
     },
     "algolia": {
       "$ref": "#/definitions/AlgoliaCfg"
+    },
+    "syncDb": {
+      "$ref": "#/definitions/SyncDbCfg"
     }
   }
 }

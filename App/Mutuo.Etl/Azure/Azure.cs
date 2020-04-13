@@ -20,13 +20,27 @@ namespace Mutuo.Etl.Pipe {
   public class Azure : IAzure {
     readonly IAuthenticated authenticated;
 
-    readonly IResourceManager resourceManager;
-    readonly IStorageManager  storageManager;
-    readonly INetworkManager  networkManager;
-
     readonly IContainerInstanceManager containerInstanceManager;
 
-    readonly IMsiManager msiManager;
+    readonly IMsiManager     msiManager;
+    readonly INetworkManager networkManager;
+
+    readonly IResourceManager resourceManager;
+    readonly IStorageManager  storageManager;
+
+    Azure(RestClient restClient, string subscriptionId, string tenantId, IAuthenticated authenticated) {
+      resourceManager = ResourceManager.Authenticate(restClient).WithSubscription(subscriptionId);
+      storageManager = StorageManager.Authenticate(restClient, subscriptionId);
+      networkManager = NetworkManager.Authenticate(restClient, subscriptionId);
+
+      containerInstanceManager = ContainerInstanceManager.Authenticate(restClient, subscriptionId);
+
+      msiManager = MsiManager.Authenticate(restClient, subscriptionId);
+
+
+      SubscriptionId = subscriptionId;
+      this.authenticated = authenticated;
+    }
 
     /// <returns>the currently selected subscription ID this client is authenticated to work with</returns>
     public string SubscriptionId { get; }
@@ -104,20 +118,6 @@ namespace Mutuo.Etl.Pipe {
 
     public IIdentities Identities => msiManager.Identities;
 
-    Azure(RestClient restClient, string subscriptionId, string tenantId, IAuthenticated authenticated) {
-      resourceManager = ResourceManager.Authenticate(restClient).WithSubscription(subscriptionId);
-      storageManager = StorageManager.Authenticate(restClient, subscriptionId);
-      networkManager = NetworkManager.Authenticate(restClient, subscriptionId);
-
-      containerInstanceManager = ContainerInstanceManager.Authenticate(restClient, subscriptionId);
-
-      msiManager = MsiManager.Authenticate(restClient, subscriptionId);
-
-
-      SubscriptionId = subscriptionId;
-      this.authenticated = authenticated;
-    }
-
     public IEnumerable<IAzureClient> ManagementClients {
       get {
         var managersList = new List<object>();
@@ -189,10 +189,17 @@ namespace Mutuo.Etl.Pipe {
     }
 
     protected class Authenticated : IAuthenticated {
-      readonly RestClient                     restClient;
-      readonly ResourceManager.IAuthenticated resourceManagerAuthenticated;
       readonly IGraphRbacManager              graphRbacManager;
+      readonly ResourceManager.IAuthenticated resourceManagerAuthenticated;
+      readonly RestClient                     restClient;
       string                                  defaultSubscription;
+
+      public Authenticated(RestClient restClient, string tenantId) {
+        this.restClient = restClient;
+        resourceManagerAuthenticated = ResourceManager.Authenticate(this.restClient);
+        graphRbacManager = GraphRbacManager.Authenticate(this.restClient, tenantId);
+        TenantId = tenantId;
+      }
 
       public string TenantId { get; }
 
@@ -211,15 +218,6 @@ namespace Mutuo.Etl.Pipe {
       public IRoleDefinitions RoleDefinitions => graphRbacManager.RoleDefinitions;
 
       public IRoleAssignments RoleAssignments => graphRbacManager.RoleAssignments;
-
-      public Authenticated(RestClient restClient, string tenantId) {
-        this.restClient = restClient;
-        resourceManagerAuthenticated = ResourceManager.Authenticate(this.restClient);
-        graphRbacManager = GraphRbacManager.Authenticate(this.restClient, tenantId);
-        TenantId = tenantId;
-      }
-
-      public void SetDefaultSubscription(string subscriptionId) => defaultSubscription = subscriptionId;
 
       public IAzure WithSubscription(string subscriptionId) => new Azure(restClient, subscriptionId, TenantId, this);
 
@@ -240,6 +238,8 @@ namespace Mutuo.Etl.Pipe {
 
         return WithSubscription(subscription?.SubscriptionId);
       }
+
+      public void SetDefaultSubscription(string subscriptionId) => defaultSubscription = subscriptionId;
 
       static ISubscription GetDefaultSubscription(IEnumerable<ISubscription> subscriptions) =>
         subscriptions
@@ -311,10 +311,6 @@ namespace Mutuo.Etl.Pipe {
     /// <summary>Entry point to application gateway management</summary>
     IApplicationGateways ApplicationGateways { get; }
 
-    /// <summary>Returns the subscription the API is currently configured to work with.</summary>
-    /// <returns></returns>
-    ISubscription GetCurrentSubscription();
-
     ISubscriptions Subscriptions { get; }
 
     /// <summary>Entry point to resource group management.</summary>
@@ -352,6 +348,10 @@ namespace Mutuo.Etl.Pipe {
 
     /// <summary>Entry point to Azure Resource Manager policy definition management.</summary>
     IPolicyDefinitions PolicyDefinitions { get; }
+
+    /// <summary>Returns the subscription the API is currently configured to work with.</summary>
+    /// <returns></returns>
+    ISubscription GetCurrentSubscription();
   }
 
   public interface IAccessManagement : IBeta {

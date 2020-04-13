@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
-using Amazon.S3.Model;
 using Autofac;
 using CommandLine;
-using Google.Apis.Sheets.v4;
 using Google.Apis.Util;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.Blob;
@@ -26,12 +23,12 @@ namespace YtCli {
   class Program {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
-        .ParseArguments<PipeCmd, UpdateCmd, SyncCmd, ChannelInfoOption, FixCmd, ResultsCmd, TrafficCmd,
-          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd>(args)
+        .ParseArguments<PipeCmd, UpdateCmd, SyncBlobCmd, ChannelInfoOption, FixCmd, ResultsCmd, TrafficCmd,
+          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd>(args)
         .MapResult(
           (PipeCmd p) => Run(p, args, PipeCmd.RunPipe),
           (UpdateCmd u) => Run(u, args, UpdateCmd.Update),
-          (SyncCmd s) => Run(s, args, SyncCmd.Sync),
+          (SyncBlobCmd s) => Run(s, args, SyncBlobCmd.Sync),
           (ChannelInfoOption v) => Run(v, args, ChannelInfoOption.ChannelInfo),
           (FixCmd f) => Run(f, args, FixCmd.Fix),
           (ResultsCmd f) => Run(f, args, ResultsCmd.Results),
@@ -39,6 +36,7 @@ namespace YtCli {
           (PublishContainerCmd p) => Run(p, args, PublishContainerCmd.PublishContainer),
           (VersionCmd v) => VersionCmd.Verson(),
           (UpdateSearchIndexCmd s) => Run(s, args, UpdateSearchIndexCmd.UpdateSearchIndex),
+          (SyncDbCmd s) => Run(s, args, SyncDbCmd.Sync),
           errs => Task.FromResult(ExitCode.Error)
         );
       return (int) await res;
@@ -109,8 +107,8 @@ namespace YtCli {
     }
   }
 
-  [Verb("sync", HelpText = "synchronize two blobs")]
-  public class SyncCmd : ICommonCmd {
+  [Verb("sync-blob", HelpText = "synchronize two blobs")]
+  public class SyncBlobCmd : ICommonCmd {
     [Option('a', Required = true, HelpText = "SAS Uri to source storage service a")]
     public Uri SasA { get; set; }
 
@@ -123,7 +121,7 @@ namespace YtCli {
     [Option(Required = false, HelpText = "The path in the form container/dir1/dir2 for b (if different to a)")]
     public string PathB { get; set; }
 
-    public static async Task<ExitCode> Sync(CmdCtx<SyncCmd> ctx) {
+    public static async Task<ExitCode> Sync(CmdCtx<SyncBlobCmd> ctx) {
       await SyncBlobs.Sync(ctx.Option.SasA, ctx.Option.SasB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.DefaultParallel, ctx.Log);
       return ExitCode.Success;
     }
@@ -131,7 +129,7 @@ namespace YtCli {
 
   [Verb("channel-info", HelpText = "Show channel information (ID,Name) given a video ID")]
   public class ChannelInfoOption : ICommonCmd {
-    [Option('v',  HelpText = "the ID of a video")]
+    [Option('v', HelpText = "the ID of a video")]
     public string VideoId { get; set; }
 
     [Option('c', HelpText = "the ID of a channel")]
@@ -139,15 +137,15 @@ namespace YtCli {
 
     public static async Task<ExitCode> ChannelInfo(CmdCtx<ChannelInfoOption> ctx) {
       var yt = ctx.Cfg.YtClient(ctx.Log);
-      if(ctx.Option.VideoId.HasValue()) {
+      if (ctx.Option.VideoId.HasValue()) {
         var v = await yt.VideoData(ctx.Option.VideoId);
         ctx.Log.Information("{ChannelId},{ChannelTitle}", v.ChannelId, v.ChannelTitle);
       }
-      if(ctx.Option.ChannelId.HasValue()) {
+      if (ctx.Option.ChannelId.HasValue()) {
         var c = await yt.ChannelData(ctx.Option.ChannelId);
         ctx.Log.Information("{ChannelTitle},{Status}", c.Title, c.Status);
       }
-      
+
       return ExitCode.Success;
     }
   }
@@ -161,8 +159,26 @@ namespace YtCli {
 
     public static async Task<ExitCode> Results(CmdCtx<ResultsCmd> ctx) {
       var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.ResultsPath);
-      var result = new YtResults(ctx.Cfg.Snowflake, ctx.Cfg.Results, store, ctx.Log);
-      await result.SaveResults(ctx.Option.QueryNames.NotNull().ToList());
+      var result = new YtResults(ctx.Cfg.Snowflake, ctx.Cfg.AppDb, ctx.Cfg.Results, store, ctx.Log);
+      await result.SaveBlobResults(ctx.Option.QueryNames.NotNull().ToList());
+      return ExitCode.Success;
+    }
+  }
+
+  [Verb("sync-db")]
+  public class SyncDbCmd : ICommonCmd {
+    [Option('t', HelpText = "list of tables to sync")]
+    public IEnumerable<string> Tables { get; set; }
+
+    [Option('l', HelpText = "limit rows. For Debugging")]
+    public int Limit { get; set; }
+
+    [Option('f', HelpText = "if true, will clear and load data")]
+    public bool FullLoad { get; set; }
+
+    public static async Task<ExitCode> Sync(CmdCtx<SyncDbCmd> ctx) {
+      var result = new YtSync(ctx.Cfg.Snowflake, ctx.Cfg.AppDb, ctx.Log);
+      await result.SyncDb(ctx.Cfg.SyncDb, ctx.Log, ctx.Option.Tables.ToReadOnly(), ctx.Option.FullLoad, ctx.Option.Limit);
       return ExitCode.Success;
     }
   }
@@ -175,7 +191,7 @@ namespace YtCli {
       return ExitCode.Success;
     }
   }
-  
+
   [Verb("index", HelpText = "Update the search index")]
   public class UpdateSearchIndexCmd : ICommonCmd {
     public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
