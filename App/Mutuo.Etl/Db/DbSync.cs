@@ -59,8 +59,10 @@ namespace Mutuo.Etl.Db {
       log.Debug("{Table} - loaded {Rows} into {LoadTable} ({SyncType})", destTable, newRows, loadTable, syncType);
 
       // shuffle for temp loads
-      if (loadTable == tmpTable && newRows > 0) {
-        if (syncType.IsIncremental()) {
+      if (loadTable == tmpTable) {
+        if(newRows == 0)
+          await Dest.DropTable(tmpTable);
+        else if (syncType.IsIncremental()) {
           var cols = sourceSchema.Columns;
           var mergeRes = await Dest.Merge(destTable, tmpTable, tableCfg.IdCol, cols);
           log.Debug("{Table} - merged {Records} from {TempTable}", destTable, mergeRes, tmpTable);

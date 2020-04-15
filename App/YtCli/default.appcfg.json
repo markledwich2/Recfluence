@@ -99,7 +99,19 @@
                     },
                     {
                         "name": "caption",
-                        "typeOverride": "nvarchar(400)"
+                        "typeOverride": "nvarchar(1000)"
+                    },
+                    {
+                        "name": "caption_id",
+                        "typeOverride": "nvarchar(100)"
+                    },
+                    {
+                        "name": "video_id",
+                        "typeOverride": "nvarchar(50)"
+                    },
+                    {
+                        "name": "channel_id",
+                        "typeOverride": "nvarchar(50)"
                     }
                 ]
                 

@@ -34,12 +34,12 @@ namespace Mutuo.Etl.Db {
           .Select(Sql)
         : new[] {"*"};
       var selectSql = $"select {colList.Join(", ")} from {Sql(table)}";
-      var whereSql = tsValue == null || tsValue.GetType().DefaultForType() == tsValue
-        ? ""
-        : $" where {Sql(tableCfg.TsCol ?? throw new InvalidOperationException("tsValue specified without a column"))} > :maxTs";
-      var limitSql = limit == 0 ? "" : " limit :limit";
-      var statements = new[] {selectSql, whereSql, limitSql};
-      return await Connection.ExecuteReaderAsync(statements.Join("\n"), new {maxTs = tsValue, limit});
+      bool incremental = tsValue != null && tsValue.GetType().DefaultForType() != tsValue;
+      var whereSql = incremental ? $"where {Sql(tableCfg.TsCol ?? throw new InvalidOperationException("tsValue specified without a column"))} > :maxTs" : null; 
+      var orderBySql = incremental ?  $"order by {tableCfg.TsCol} asc" : null;
+      var limitSql = limit == 0 ? null : " limit :limit";
+      var sql = new[] {selectSql, whereSql, orderBySql, limitSql}.NotNull().Join("\n");
+      return await Connection.ExecuteReaderAsync(sql, new {maxTs = tsValue, limit});
     }
 
     public string Sql(string name) => QuoteIfRequired(name);
