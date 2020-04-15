@@ -51,7 +51,7 @@ namespace Mutuo.Etl.Db {
       if (loadTable == tmpTable) {
         if (await Dest.Schema(tmpTable) != null)
           await Dest.DropTable(tmpTable);
-        await Dest.CreateTable(sourceSchema, tmpTable);
+        await Dest.CreateTable(sourceSchema, tmpTable, false);
       }
 
       // copy data

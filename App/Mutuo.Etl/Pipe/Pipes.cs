@@ -17,17 +17,6 @@ using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Pipe {
   public static class Pipes {
-    public static IPipeCtx CreatePipeCtx(PipeAppCfg cfg, ILogger log, IComponentContext getScope,
-      IEnumerable<Assembly> pipeAssemblies = null, IEnumerable<KeyValuePair<string, string>> environmentVars = null) =>
-      new PipeCtx {
-        Cfg = cfg,
-        Store = new AzureBlobFileStore(cfg.Store.Cs, cfg.Store.Path, log),
-        PipeAssemblies = pipeAssemblies?.ToArray() ?? new Assembly[] { },
-        Log = log,
-        Scope = getScope,
-        EnvVars = new Dictionary<string, string>(environmentVars ?? new List<KeyValuePair<string, string>>())
-      };
-
     /// <summary>Launches a root pipe (i.e. on without work state)</summary>
     /// <returns></returns>
     public static async Task<PipeRunMetadata> RunPipe(this IPipeCtx ctx, string pipeName, bool returnOnStarted, ILogger log) {
@@ -106,11 +95,9 @@ namespace Mutuo.Etl.Pipe {
       return pipeWorker;
     }
 
-    static IEnumerable<Assembly> PipeAssemblies(this IPipeCtx ctx) => Assembly.GetExecutingAssembly().AsEnumerable().Concat(ctx.PipeAssemblies);
-
     /// <summary>Executes a pipe in this process</summary>
     public static async Task<ExitCode> DoPipeWork(this IPipeCtx ctx, PipeRunId id) {
-      var pipeMethods = ctx.PipeAssemblies().SelectMany(a => a.GetLoadableTypes())
+      var pipeMethods = ctx.AppCtx.Assemblies.SelectMany(a => a.GetLoadableTypes())
         .SelectMany(t => t.GetRuntimeMethods().Where(m => m.GetCustomAttribute<PipeAttribute>() != null).Select(m => (Type: t, Method: m)))
         .ToKeyedCollection(m => m.Method.Name);
 

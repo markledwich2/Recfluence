@@ -32,21 +32,20 @@ namespace YtReader {
 
   public class YtDataUpdater {
     readonly YtClient                 Api;
+    readonly AppCfg                   Cfg;
     readonly Func<Task<DbConnection>> GetConnection;
+    readonly IPipeCtx                 PipeCtx;
     readonly YtScraper                Scraper;
+    readonly YtStore                  Store;
 
-    public YtDataUpdater(YtStore store, AppCfg cfg, Func<Task<DbConnection>> getConnection, Func<IPipeCtx> pipeCtx, ILogger log) {
-      GetConnection = getConnection;
+    public YtDataUpdater(YtStore store, AppCfg cfg, Func<Task<DbConnection>> getConnection, IPipeCtx pipeCtx, ILogger log) {
       Store = store;
       Cfg = cfg;
+      GetConnection = getConnection;
       PipeCtx = pipeCtx;
       Scraper = new YtScraper(cfg.Scraper);
       Api = new YtClient(cfg.YTApiKeys, log);
     }
-
-    YtStore        Store   { get; }
-    AppCfg         Cfg     { get; }
-    Func<IPipeCtx> PipeCtx { get; }
 
     YtReaderCfg RCfg => Cfg.YtReader;
 
@@ -54,7 +53,7 @@ namespace YtReader {
     public async Task Update(ILogger log, [PipeArg] UpdateType updateType = UpdateType.All) {
       var channels = await UpdateAllChannels(log);
       var work = channels.Select(c => new UpdateChannelWork {Channel = c, UpdateType = updateType});
-      await work.RunPipe(ProcessChannels, PipeCtx(), Cfg.Pipe.Default, log);
+      await work.RunPipe(ProcessChannels, PipeCtx, Cfg.Pipe.Default, log);
     }
 
     async Task<IEnumerable<ChannelStored2>> UpdateAllChannels(ILogger log) {
@@ -368,7 +367,7 @@ where num <= 50 -- most recent for each channel
 {limitString}")).ToArray();
 
         var res = await toUpdate
-          .RunPipe(ProcessVideoExtra, PipeCtx(), new PipeRunCfg {MinWorkItems = 1000, MaxParallel = 8}, log)
+          .RunPipe(ProcessVideoExtra, PipeCtx, new PipeRunCfg {MinWorkItems = 1000, MaxParallel = 8}, log)
           .WithDuration();
 
         var videos = res.Result.Sum(o => o.OutState.Sum(v => v.Updated));
@@ -381,11 +380,10 @@ where num <= 50 -- most recent for each channel
           .Select(v => new ChannelVideoItem {ChannelId = chId, VideoId = v});
 
 
-        var res = await toUpdate.RunPipe(ProcessVideoExtra, PipeCtx(), new PipeRunCfg {MinWorkItems = 200, MaxParallel = 2}, log);
+        var res = await toUpdate.RunPipe(ProcessVideoExtra, PipeCtx, new PipeRunCfg {MinWorkItems = 200, MaxParallel = 2}, log);
 
         /*var recsAndExtra = await videoIds.Split("|")
           .BlockTransform(async v => await Scraper.GetRecsAndExtra(v, log), Cfg.DefaultParallel);
-        
         await recsAndExtra.GroupBy(v => v.extra.ChannelId).BlockAction(async g => {
           var store = Store.VideoExtraStore(g.Key);
           await store.Append(g.Select(c => c.extra).ToArray());

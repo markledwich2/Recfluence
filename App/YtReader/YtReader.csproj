@@ -32,4 +32,7 @@
     <ProjectReference Include="..\Mutuo.Etl\Mutuo.Etl.csproj" />
     <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Pipe" />
+  </ItemGroup>
 </Project>

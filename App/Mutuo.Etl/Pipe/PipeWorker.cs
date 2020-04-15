@@ -70,7 +70,7 @@ namespace Mutuo.Etl.Pipe {
         var runCfg = id.PipeCfg(ctx);
         var image = runCfg.Container.ContainerImageName();
         var args = new[] {"run"}
-          .Concat(ctx.EnvVars.SelectMany(e => new[] {"--env", $"{e.Key}={e.Value}"}))
+          .Concat(ctx.AppCtx.EnvironmentVariables.SelectMany(e => new[] {"--env", $"{e.name}={e.value}"}))
           .Concat("--rm", "-i", image)
           .Concat(runCfg.Container.Exe)
           .Concat(id.PipeArgs())
@@ -134,8 +134,9 @@ namespace Mutuo.Etl.Pipe {
         var runCfg = runId.PipeCfg(ctx); // id is for the sub-pipe, ctx is for the root
         var groupName = runId.ContainerGroupName();
         await EnsureNotRunning(groupName, azure, ctx.Cfg.Azure.ResourceGroup);
-        var groupDef = await ContainerGroup(runCfg.Container, runId.ContainerGroupName(), runId.ContainerName(), ctx.EnvVars, runId.PipeArgs(),
-          ctx.CustomRegion);
+        var groupDef = await ContainerGroup(runCfg.Container, runId.ContainerGroupName(), runId.ContainerName(), ctx.AppCtx.EnvironmentVariables,
+          runId.PipeArgs(),
+          ctx.AppCtx.CustomRegion);
         var pipeLog = log.ForContext("Image", runCfg.Container.ContainerImageName()).ForContext("Pipe", runId.Name);
         var group = await Create(groupDef, pipeLog);
         var run = await Run(group, returnOnRunning, pipeLog).WithDuration();
@@ -209,7 +210,7 @@ namespace Mutuo.Etl.Pipe {
       }
     }
 
-    async Task<IWithCreate> ContainerGroup(ContainerCfg container, string groupName, string containerName, IDictionary<string, string> envVars,
+    async Task<IWithCreate> ContainerGroup(ContainerCfg container, string groupName, string containerName, IEnumerable<(string name, string value)> envVars,
       string[] args, Func<Region> customRegion = null
     ) {
       var rg = Cfg.Azure.ResourceGroup;
@@ -228,7 +229,7 @@ namespace Mutuo.Etl.Pipe {
         .WithoutPorts()
         .WithCpuCoreCount(container.Cores)
         .WithMemorySizeInGB(container.Mem)
-        .WithEnvironmentVariables(envVars)
+        .WithEnvironmentVariables(envVars.ToDictionary(e => e.name, e => e.value))
         .WithStartingCommandLine(container.Exe, args);
 
       var createGroup = group

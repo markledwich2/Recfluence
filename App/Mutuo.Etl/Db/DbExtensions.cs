@@ -11,7 +11,8 @@ using SysExtensions.Text;
 
 namespace Mutuo.Etl.Db {
   public static class DbExtensions {
-    static FieldInfo _rowsCopiedField;
+    static readonly Lazy<FieldInfo> RowsCopiedField = new Lazy<FieldInfo>(() =>
+      typeof(SqlBulkCopy).GetField("_rowsCopied", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance));
     public static string SquareBrackets(this string name) => $"[{name}]";
     public static string DoubleQuote(this string s) => $"\"{s.Replace("\"", "\"\"")}\"";
     public static string SingleQuote(this string s) => $"'{s.Replace("'", "''")}'";
@@ -56,11 +57,7 @@ namespace Mutuo.Etl.Db {
       table.Schema.HasValue() ? $"{db.Sql(table.Schema)}.{db.Sql(table.Table)}" : $"{db.Sql(table.Table)}";
 
     public static bool IsIncremental(this SyncType syncType) => syncType != SyncType.Full;
-
-    public static int GetRowsCopied(this SqlBulkCopy bulkCopy) {
-      _rowsCopiedField ??= typeof(SqlBulkCopy).GetField("_rowsCopied", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance);
-      return (int) _rowsCopiedField.GetValue(bulkCopy);
-    }
+    public static int GetRowsCopied(this SqlBulkCopy bulkCopy) => (int) RowsCopiedField.Value.GetValue(bulkCopy);
   }
 
   public class TableSchema {

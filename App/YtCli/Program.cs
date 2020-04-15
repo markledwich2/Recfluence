@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
@@ -43,9 +42,10 @@ namespace YtCli {
     }
 
     static async Task<CmdCtx<TOption>> TaskCtx<TOption>(TOption option, string[] args) {
-      var (app, root) = await Setup.LoadCfg2(rootLogger: Setup.ConsoleLogger());
+      var (app, root) = await Setup.LoadCfg(rootLogger: Setup.ConsoleLogger());
       var log = await Setup.CreateLogger(root.Env, option.GetType().Name, app);
-      var scope = Setup.BaseScope(root, app, log);
+
+      var scope = Setup.BaseScope(root, app, Setup.PipeAppCtxEmptyScope(root), log);
       return new CmdCtx<TOption>(root, app, log, option, scope, args);
     }
 
@@ -91,8 +91,12 @@ namespace YtCli {
       if (ctx.Option.ChannelIds.HasValue())
         ctx.Cfg.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
 
-      var pipeCtx = ctx.Scope.ResolvePipeCtx();
-      pipeCtx.CustomRegion = () => Rand.Choice(Regions);
+      // make a new app context with a custom region defined
+      var appCtx = new PipeAppCtx(ctx.Scope.Resolve<PipeAppCtx>());
+      appCtx.CustomRegion = () => Rand.Choice(Regions);
+      var standardPipeCtx = ctx.Scope.Resolve<IPipeCtx>();
+      var pipeCtx = new PipeCtx(standardPipeCtx.Cfg, appCtx, standardPipeCtx.Store, standardPipeCtx.Log);
+
       var id = PipeRunId.FromName("Update");
       await pipeCtx.DoPipeWork(id);
       return ExitCode.Success;
@@ -158,8 +162,7 @@ namespace YtCli {
     public IEnumerable<string> QueryNames { get; set; }
 
     public static async Task<ExitCode> Results(CmdCtx<ResultsCmd> ctx) {
-      var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.ResultsPath);
-      var result = new YtResults(ctx.Cfg.Snowflake, ctx.Cfg.AppDb, ctx.Cfg.Results, store, ctx.Log);
+      var result = ctx.Scope.Resolve<YtResults>();
       await result.SaveBlobResults(ctx.Option.QueryNames.NotNull().ToList());
       return ExitCode.Success;
     }
@@ -195,9 +198,9 @@ namespace YtCli {
   [Verb("index", HelpText = "Update the search index")]
   public class UpdateSearchIndexCmd : ICommonCmd {
     public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
-      var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.ResultsPath);
-      await YtSearch.BuildSolrCaptionIndex(ctx.Cfg.Solr, ctx.Scope.Resolve<Func<Task<DbConnection>>>(), ctx.Log);
-      //await YtSearch.BuildAlgoliaVideoIndex(ctx.Cfg.Algolia, store, ctx.Scope.Resolve<Func<Task<DbConnection>>>(), ctx.Log);
+      var search = ctx.Scope.Resolve<YtSearch>();
+      //await search.BuildSolrCaptionIndex();
+      await search.BuildAlgoliaVideoIndex();
       return ExitCode.Success;
     }
   }
