@@ -1,20 +1,15 @@
 using System;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
-using Dapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Mutuo.Etl.Pipe;
-using Newtonsoft.Json;
 using Seq.Api;
 using Serilog;
 using SysExtensions.Build;
-using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader;
 using YtReader.Db;
@@ -24,22 +19,18 @@ using IMSLogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace YtFunctions {
   public class YtFunctions {
-    readonly IAzure                 Azure;
-    readonly AppCfg                 Cfg;
-    readonly AppDb                  Db;
-    readonly JsonSerializerSettings JSettings;
-    readonly ILogger                Log;
-    readonly IPipeCtx               PipeCtx;
-    readonly RootCfg                RootCfg;
+    readonly IAzure   Azure;
+    readonly AppCfg   Cfg;
+    readonly ILogger  Log;
+    readonly IPipeCtx PipeCtx;
+    readonly RootCfg  RootCfg;
 
-    public YtFunctions(ILogger log, IPipeCtx pipeCtx, AppCfg cfg, RootCfg rootCfg, IAzure azure, AppDb db) {
+    public YtFunctions(ILogger log, IPipeCtx pipeCtx, AppCfg cfg, RootCfg rootCfg, IAzure azure) {
       Log = log;
       PipeCtx = pipeCtx;
       Cfg = cfg;
       RootCfg = rootCfg;
       Azure = azure;
-      Db = db;
-      JSettings = JsonExtensions.DefaultSettings();
     }
 
     [FunctionName("StopIdleSeq_Timer")]
@@ -58,22 +49,6 @@ Runtime ${GitVersionInfo.RuntimeSemVer(typeof(YtDataUpdater))}
 Discovered ${GitVersionInfo.DiscoverSemVer(typeof(YtDataUpdater))}";
       return Task.FromResult((IActionResult) new OkObjectResult(versionText));
     }
-
-    [FunctionName("Video")]
-    public async Task<HttpResponseMessage> Video([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "Video/{videoId}")]
-      HttpRequest req, string videoId, ExecutionContext context) =>
-      await context.Run(Log, async log => {
-        var conn = await Db.OpenConnection();
-        var videoTask = conn.QueryFirstAsync<DbVideo>("select * from video_latest where video_id = :video_id", new {video_id = videoId});
-        var captionsTask = conn.QueryAsync<DbCaption>("select * from caption where video_id = :video_id", new {video_id = videoId});
-        var res = new VideoResponse {
-          Video = await videoTask ?? new DbVideo {video_title = "(unable to find this video)"},
-          Captions = (await captionsTask).ToArray()
-        };
-        return new HttpResponseMessage(HttpStatusCode.OK) {
-          Content = new StringContent(res.ToJson(), Encoding.UTF8, "application/json")
-        };
-      });
 
     async Task<string> StopIdleSeqInner() {
       if (!RootCfg.IsProd()) return LogReason("not prod");
@@ -115,11 +90,6 @@ Discovered ${GitVersionInfo.DiscoverSemVer(typeof(YtDataUpdater))}";
         Log.Error("Error starting container to update data {Error}", ex.Message, ex);
         throw;
       }
-    }
-
-    public class VideoResponse {
-      public DbVideo     Video    { get; set; }
-      public DbCaption[] Captions { get; set; }
     }
   }
 }

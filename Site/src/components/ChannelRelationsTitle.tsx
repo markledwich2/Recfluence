@@ -4,7 +4,7 @@ import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
 import { YtModel, ChannelData, ChannelEx } from '../common/YtModel'
 import { compactInteger, formatNumber } from 'humanize-plus'
 import * as _ from 'lodash'
-import { SearchChannels } from '../components/SearchChannels'
+import { SearchChannels } from './SearchChannels'
 import * as dateformat from 'dateformat'
 import { Dim, ColEx } from '../common/Dim'
 import * as d3 from 'd3'
@@ -13,7 +13,7 @@ import { color } from 'd3'
 interface State extends InteractiveDataState { }
 interface Props extends InteractiveDataProps<YtModel> { }
 
-export class ChannelTitle extends React.Component<Props, State> {
+export class ChannelRelationsTitle extends React.Component<Props, State> {
   chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this, 'search')
   state: Readonly<State> = {
     selections: this.props.model.selectionState
@@ -29,31 +29,12 @@ export class ChannelTitle extends React.Component<Props, State> {
     return channelId ? this.props.model.channels.rows.find(c => c.channelId == channelId) : null
   }
 
-  tagAlias: Record<string, string> = {
-    ManoelAltLite: 'Ribeiro - Alt-light',
-    ManoelAltRight: 'Ribeiro - Alt-right',
-    ManoelIDW: 'Ribeiro - IDW',
-    ManoelControl: 'Ribeiro - Control',
-    AntiSJW: 'Anti-SJW',
-    SocialJusticeL: 'Social Justice',
-    WhiteIdentitarian: 'White Identitarian',
-    PartisanLeft: 'Partisan Left',
-    PartisanRight: 'Partisan Right',
-    AntiTheist: 'Anti-theist',
-    ReligiousConservative: 'Religious Conservative',
-    MissingLinkMedia: 'Missing Link Media',
-    StateFunded: 'State Funded',
-    AntiWhiteness: 'Anti-whiteness',
-    LateNightTalkShow: '_',
-    Revolutionary: '_'
-  }
-
   render() {
     let channel = this.channel()
     let dateFormat = (d: Date) => d ? dateformat(d, 'd mmm yyyy') : d
 
     const renderChannel = (c: ChannelData) => {
-      let tags = c.tags.length == 0 ? ['None'] : c.tags.map(t => this.tagAlias[t] ?? t).filter(t => t != '_')
+      let tags = c.tags.length == 0 ? ['None'] : c.tags.map(t => YtModel.tagAlias[t] ?? t).filter(t => t != '_')
       let lrCol = this.props.model.channels.col('lr')
       let labelFunc = ColEx.labelFunc(lrCol)
       let colorFunc = ColEx.colorFunc(lrCol)

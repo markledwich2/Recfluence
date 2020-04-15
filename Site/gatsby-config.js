@@ -6,25 +6,29 @@ require('dotenv').config({
   path: `.env.${activeEnv}`,
 })
 
-if(process.env.GATSBY_PATH_PREFIX) // this is for building a beta version that you can upload to a subdirectory
+if (process.env.GATSBY_PATH_PREFIX) // this is for building a beta version that you can upload to a subdirectory
   console.log(`GATSBY_PATH_PREFIX: '${process.env.GATSBY_PATH_PREFIX}'`)
 
 module.exports = {
-    siteMetadata: {
-      title: `Recfluence`,
-      dataUrl: process.env.RESULTS_URL || `https://pyt-data.azureedge.net/data/results`
-    },
-    plugins: [ 
-      `gatsby-plugin-typescript`,
-      `gatsby-plugin-react-helmet`,
-      {
-        resolve: `gatsby-plugin-google-analytics`,
-        options: {
-          trackingId: "UA-130770302-1",
-          head: true,
-        }
+  siteMetadata: {
+    title: `Recfluence`,
+    dataUrl: process.env.RESULTS_URL || `https://pyt-data.azureedge.net/data/results`
+  },
+  plugins: [
+    `gatsby-plugin-typescript`,
+    `gatsby-plugin-react-helmet`,
+    `gatsby-plugin-styled-components`,
+    {
+      resolve: `gatsby-plugin-google-analytics`,
+      options: {
+        trackingId: "UA-130770302-1",
+        head: true,
       }
-    ],
-    pathPrefix:process.env.GATSBY_PATH_PREFIX
-  }
-  
+    },
+    {
+      resolve: `gatsby-plugin-create-client-paths`,
+      options: { prefixes: [`/video/*`] },
+    },
+  ],
+  pathPrefix: process.env.GATSBY_PATH_PREFIX
+}

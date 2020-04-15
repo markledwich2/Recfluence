@@ -23,6 +23,7 @@ namespace YtFunctions {
       builder.UseAutofacServiceProviderFactory(c => {
         c.ConfigureBase(cfg.Root, cfg.App, appCtx, log);
         c.RegisterType<YtFunctions>();
+        c.RegisterType<YtData>();
       });
     }
 

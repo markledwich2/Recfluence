@@ -1,42 +1,27 @@
-import * as React from 'react'
-import { ChannelRelationsPage } from '../components/ChannelRelationsPage'
-import Helmet from 'react-helmet'
-import { StaticQuery, graphql } from 'gatsby'
+import * as React from "react";
+import { ChannelRelationsPage } from "../components/ChannelRelationsPage";
+import { StaticQuery, graphql } from "gatsby";
+import { MainLayout } from "../components/MainLayout";
 
 const App = () => {
   return (
-    <StaticQuery query={graphql`
-    query SiteTitleQuery {
-      site {
-        siteMetadata {
-          title
-          dataUrl
+    <StaticQuery
+      query={graphql`
+        query DataUrlQuery {
+          site {
+            siteMetadata {
+              dataUrl
+            }
+          }
         }
-      }
-    }
-  `} render={
-        (data:Query) => (
-          <>
-            <Helmet>
-              <title>{data.site.siteMetadata.title}</title>
-            </Helmet>
+      `}
+      render={(data) => (
+        <MainLayout>
             <ChannelRelationsPage dataUrl={data.site.siteMetadata.dataUrl} />
-          </>
-        )
-      } />)
+        </MainLayout>
+      )}
+    />
+  )
 }
 
-interface Query {
-  site: Site
-}
-
-interface Site {
-  siteMetadata:SiteMetadata
-}
-
-interface SiteMetadata {
-  title:string
-  dataUrl:string
-}
-
-export default App
+export default App;
