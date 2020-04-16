@@ -1,5 +1,6 @@
 import { ChannelData } from "./YtModel"
 import { parseISO } from "date-fns"
+import { getJson } from "./Utils"
 
 export class DbModel {
     static ChannelData(dbChannel: any): ChannelData {
@@ -22,7 +23,51 @@ export class DbModel {
             media: dbChannel.MEDIA,
             relevance: dbChannel.RELEVANCE,
             manoel: dbChannel.MANOEL,
-            ain: dbChannel.AIN
+            ain: dbChannel.AIN,
+            lifetimeDailyViews: dbChannel.CHANNEL_LIFETIME_DAILY_VIEWS ?
+                +dbChannel.CHANNEL_LIFETIME_DAILY_VIEWS : null
         }
     }
+}
+
+export class FuncClient {
+    static async getVideo(videoId: string): Promise<VideoData> {
+        var res = await getJson<VideoResponse>(`${process.env.FUNC_URL}/Video/${videoId}`)
+        var data = {
+            video: res.video,
+            captions: res.captions,
+            channel: DbModel.ChannelData(res.channel)
+        } as VideoData
+        return data
+    }
+}
+
+export interface VideoDb {
+    VIDEO_ID: string
+    VIDEO_TITLE: string
+    UPLOAD_DATE: string
+    VIEWS: number
+    LIKES: number
+    DISLIKES: number
+    PCT_ADS: number
+    DESCRIPTION: string
+}
+
+export interface CaptionDb {
+    CAPTION?: string
+    CAPTION_ID: string
+    OFFSET_SECONDS: number
+}
+
+
+export interface VideoData {
+    video: VideoDb
+    channel: ChannelData
+    captions: CaptionDb[]
+}
+
+export interface VideoResponse {
+    video: any
+    captions: any[]
+    channel: any
 }

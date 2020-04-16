@@ -31,7 +31,9 @@ export interface ChannelData {
   ideology: string
   media: string,
   manoel: string,
-  ain: string
+  ain: string,
+  /** this only exists when from the the azure function */
+  lifetimeDailyViews?: number
 }
 
 export class ChannelEx {

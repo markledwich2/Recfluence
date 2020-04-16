@@ -17,6 +17,7 @@ namespace YtReader.Db {
     public string   CHANNEL_ID    { get; set; }
     public string   CHANNEL_TITLE { get; set; }
     public DateTime UPLOAD_DATE   { get; set; }
+    public long     VIEWS         { get; set; }
     public string   THUMB_HIGH    { get; set; }
     public long     LIKES         { get; set; }
     public long     DISLIKES      { get; set; }
