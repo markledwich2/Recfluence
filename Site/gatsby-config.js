@@ -9,6 +9,12 @@
 // if (process.env.GATSBY_PATH_PREFIX) // this is for building a beta version that you can upload to a subdirectory
 //   console.log(`GATSBY_PATH_PREFIX: '${process.env.GATSBY_PATH_PREFIX}'`)
 
+const getBranch = require('current-git-branch')
+const branch = getBranch()
+const assetPrefix = (!branch || branch == "master") ? null : '/branch/' + branch
+
+console.log(`assetPrefix: '${assetPrefix}'`)
+
 module.exports = {
   siteMetadata: {
     title: `Recfluence`
@@ -36,6 +42,6 @@ module.exports = {
       resolve: `gatsby-plugin-create-client-paths`,
       options: { prefixes: [`/video/*`] },
     }
-  ]
-  //pathPrefix: process.env.GATSBY_PATH_PREFIX
+  ],
+  pathPrefix: assetPrefix
 }

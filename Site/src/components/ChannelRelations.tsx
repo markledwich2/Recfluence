@@ -1,6 +1,6 @@
 import * as React from 'react'
 import * as d3 from 'd3'
-import '../styles/Main.css'
+import '../styles/main.css'
 import { layoutTextLabel, layoutGreedy, layoutLabel } from 'd3fc-label-layout'
 import { YtModel, ChannelData } from '../common/YtModel'
 import { SelectableCell, DimQuery, Dim } from '../common/Dim'
@@ -294,7 +294,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       let selected = nodes.filter(n => n.selected)
       let highlighted = nodes.filter(n => n.highlighted)
 
-      const related = (n: Node): boolean => 
+      const related = (n: Node): boolean =>
         selectedOrHighlighted.length <= 2 && selectedOrHighlighted.some(c => isConnected(n.channelId, c.channelId))
 
       nodesCircle.classed('related', related)
@@ -319,10 +319,10 @@ export class ChannelRelations extends React.Component<Props, State> {
       linkEnter.style('opacity', selectedOrHighlighted.length > 2 ? 0.1 : 0.3)
     }
 
-    const chart = this.chart;
+    const chart = this.chart
     const updateEffects = () => {
       let zoom = d3.zoomTransform(svg.node())
-      return chart.updateShapeEffects(nodesCircle, { unselectedGlow: d => d.size  > lay.maxSize * 0.1 * zoom.k})
+      return chart.updateShapeEffects(nodesCircle, { unselectedGlow: d => d.size > lay.maxSize * 0.1 * zoom.k })
     }
 
     function updatePositions() {
