@@ -1,22 +1,12 @@
-// let activeEnv =
-//   process.env.GATSBY_ACTIVE_ENV || process.env.NODE_ENV || "development"
-// console.log(`Using environment: '${activeEnv}'`)
 
-// require('dotenv').config({
-//   path: `.env.${activeEnv}`,
-// })
-require('dotenv')
+//require('dotenv')
+// const getBranch = require('current-git-branch')
+// if (process.env.BRANCH)
+//   console.log(`branch '${process.env.BRANCH}' specified from BRANCH environment variable`)
+// const branch = process.env.BRANCH || getBranch()
+// const assetPrefix = (!branch || branch == "master") ? null : '/branch/' + branch
 
-// if (process.env.GATSBY_PATH_PREFIX) // this is for building a beta version that you can upload to a subdirectory
-//   console.log(`GATSBY_PATH_PREFIX: '${process.env.GATSBY_PATH_PREFIX}'`)
-
-const getBranch = require('current-git-branch')
-if (process.env.BRANCH)
-  console.log(`branch '${process.env.BRANCH}' specified from BRANCH environment variable`)
-const branch = process.env.BRANCH || getBranch()
-const assetPrefix = (!branch || branch == "master") ? null : '/branch/' + branch
-
-console.log(`assetPrefix: '${assetPrefix}'`)
+// console.log(`assetPrefix: '${assetPrefix}'`)
 
 module.exports = {
   siteMetadata: {
@@ -45,6 +35,5 @@ module.exports = {
       resolve: `gatsby-plugin-create-client-paths`,
       options: { prefixes: [`/video/*`] },
     }
-  ],
-  pathPrefix: assetPrefix
+  ]
 }

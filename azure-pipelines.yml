@@ -85,7 +85,7 @@ stages:
     - script: npm ci
       workingDirectory: ./Site      
       
-    - script: BRANCH=$(Build.SourceBranchName)  npm run build --prefix-paths
+    - script: npm run build
       env:
         NODE_ENV: ${env}
       displayName: npm build
