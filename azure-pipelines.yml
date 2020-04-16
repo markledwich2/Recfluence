@@ -1,12 +1,12 @@
 variables:
   acr: ytnetworks.azurecr.io
   image: ytnetworks
+  branch: -${{ variables['Build.SourceBranchName'] }}
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     env: prod
-    branchName: ''
   ${{ if ne( variables['Build.SourceBranchName'], 'master') }}:
-    env: -${{ variables['Build.SourceBranchName'] }}
-    branchName: -${{ variables['Build.SourceBranchName'] }}
+    env: stage
+    
 
 stages:
 - stage: App
@@ -66,6 +66,8 @@ stages:
           artifactName: YtFunctions
 
 - stage: Site
+  variables:
+    npm_config_cache: $(Pipeline.Workspace)/.npm
   dependsOn: []
   jobs:
   - job: Site
@@ -73,25 +75,31 @@ stages:
       vmImage: ubuntu-latest
       
     steps:
+    - task: Cache@2
+      inputs:
+        key: 'npm | "$(Agent.OS)" | ./Site/package-lock.json'
+        restoreKeys: |
+          npm | "$(Agent.OS)"
+        path: $(npm_config_cache)
+      displayName: Cache npm
 
-      - script: npm install
-        displayName: npm install
-        workingDirectory: ./Site
-        
-      - script: npm run build --prefix-paths
-        env:
-          NODE_ENV: ${env}
-        displayName: npm build
-        workingDirectory: ./Site
+    - script: npm ci
+      workingDirectory: ./Site      
+      
+    - script: BRANCH=$(branch)  npm run build --prefix-paths
+      env:
+        NODE_ENV: ${env}
+      displayName: npm build
+      workingDirectory: ./Site
 
-      - task: CopyFiles@2
-        displayName: Copy site
-        inputs:
-            SourceFolder: ./Site/public/
-            TargetFolder: $(Build.ArtifactStagingDirectory)/public
+    - task: CopyFiles@2
+      displayName: Copy site
+      inputs:
+          SourceFolder: ./Site/public/
+          TargetFolder: $(Build.ArtifactStagingDirectory)/public
 
-      - task: PublishBuildArtifacts@1
-        displayName: Pubish artifacts
-        inputs:
-            pathtoPublish: $(Build.ArtifactStagingDirectory)/public
-            artifactName: web
+    - task: PublishBuildArtifacts@1
+      displayName: Pubish artifacts
+      inputs:
+          pathtoPublish: $(Build.ArtifactStagingDirectory)/public
+          artifactName: web
