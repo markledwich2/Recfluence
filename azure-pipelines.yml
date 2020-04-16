@@ -4,7 +4,7 @@ variables:
   env: prod
 
 stages:
-- stage: App (Docker + YtFunctions artifact)
+- stage: App
   jobs:
   - job: Docker
     pool:
@@ -60,7 +60,7 @@ stages:
           pathtoPublish: $(Build.ArtifactStagingDirectory)/YtFunctions
           artifactName: YtFunctions
 
-- stage: Site (Docker + YtFunctions artifact)
+- stage: Site
   jobs:
   - job: Site
     pool:
