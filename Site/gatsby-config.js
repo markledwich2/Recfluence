@@ -5,12 +5,15 @@
 // require('dotenv').config({
 //   path: `.env.${activeEnv}`,
 // })
+require('dotenv')
 
 // if (process.env.GATSBY_PATH_PREFIX) // this is for building a beta version that you can upload to a subdirectory
 //   console.log(`GATSBY_PATH_PREFIX: '${process.env.GATSBY_PATH_PREFIX}'`)
 
 const getBranch = require('current-git-branch')
-const branch = getBranch()
+if (process.env.BRANCH)
+  console.log(`branch '${process.env.BRANCH}' specified from BRANCH environment variable`)
+const branch = process.env.BRANCH || getBranch()
 const assetPrefix = (!branch || branch == "master") ? null : '/branch/' + branch
 
 console.log(`assetPrefix: '${assetPrefix}'`)
