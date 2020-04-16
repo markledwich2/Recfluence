@@ -1,7 +1,12 @@
 variables:
   acr: ytnetworks.azurecr.io
   image: ytnetworks
-  env: prod
+  ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+    env: prod
+    branchName: ''
+  ${{ if ne( variables['Build.SourceBranchName'], 'master') }}:
+    env: -${{ variables['Build.SourceBranchName'] }}
+    branchName: -${{ variables['Build.SourceBranchName'] }}
 
 stages:
 - stage: App
@@ -61,6 +66,7 @@ stages:
           artifactName: YtFunctions
 
 - stage: Site
+  dependsOn: []
   jobs:
   - job: Site
     pool:
