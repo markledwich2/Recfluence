@@ -1,7 +1,6 @@
 variables:
   acr: ytnetworks.azurecr.io
   image: ytnetworks
-  branch: -${{ variables['Build.SourceBranchName'] }}
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     env: prod
   ${{ if ne( variables['Build.SourceBranchName'], 'master') }}:
@@ -86,7 +85,7 @@ stages:
     - script: npm ci
       workingDirectory: ./Site      
       
-    - script: BRANCH=$(branch)  npm run build --prefix-paths
+    - script: BRANCH=$(Build.SourceBranchName)  npm run build --prefix-paths
       env:
         NODE_ENV: ${env}
       displayName: npm build
