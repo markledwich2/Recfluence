@@ -71,8 +71,6 @@ stages:
   dependsOn: []
   jobs:
   - job: Site
-    workspace:
-      
     pool:
       vmImage: ubuntu-latest
       
