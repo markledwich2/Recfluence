@@ -62,7 +62,7 @@ jobs:
 
 - job: Site
   pool:
-    vmImage: vs2017-win2016
+    vmImage: ubuntu-latest
     
   steps:
 
@@ -70,7 +70,7 @@ jobs:
       displayName: npm install
       workingDirectory: ./Site
       
-    - script: npm run build
+    - script: npm run build --prefix-paths
       env:
         NODE_ENV: ${env}
       displayName: npm build
