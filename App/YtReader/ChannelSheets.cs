@@ -16,6 +16,52 @@ using SysExtensions.Threading;
 
 namespace YtReader {
   public static class ChannelSheets {
+    #region Write
+
+    public static async Task SyncNewChannelsForTags(SheetsCfg sheetsCfg, string mainChannelSheetId, IReadOnlyCollection<string> sheetIds) {
+      var service = GetService(sheetsCfg);
+      var mainSheet = await service.Spreadsheets.Get(mainChannelSheetId).ExecuteAsync();
+      var channelSheet = mainSheet.Sheets.FirstOrDefault(s => s.Properties.Title == "Channels");
+      var lastRow = channelSheet.Data.Max(d => d.StartRow);
+    }
+
+    #endregion
+
+    static SheetsService GetService(SheetsCfg sheetsCfg) {
+      //var creds = new ClientSecrets {ClientId = sheetsCfg.Creds.Name, ClientSecret = sheetsCfg.Creds.Secret};
+      var creds = GoogleCredential.FromJson(sheetsCfg.CredJson.ToString()).CreateScoped(SheetsService.Scope.SpreadsheetsReadonly);
+      var service = new SheetsService(new BaseClientService.Initializer {
+        HttpClientInitializer = creds,
+        ApplicationName = Setup.AppName
+      });
+      return service;
+    }
+
+    static string Quote(this string value) {
+      if (value.NullOrEmpty()) return value;
+      return "\"" + value.Replace("\"", "\\\"") + "\"";
+    }
+
+    static IReadOnlyCollection<T> RangeWithHeaderToClass<T>(ICollection<IList<object>> range, ILogger log) {
+      if (range.Count == 0) return new T[] { };
+      var csvText = range.Join("\n", l => l.Join(",", o => Quote(o?.ToString() ?? "")));
+      using var reader = new StringReader(csvText);
+      using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+      csv.Configuration.HasHeaderRecord = true;
+      csv.Configuration.MissingFieldFound = null;
+      csv.Configuration.Escape = '\\';
+      csv.Configuration.BadDataFound = c => log.Warning("Error reading csv data at {RowNumber}: {RowData}", c.Row, c.RawRecord);
+      csv.Configuration.LineBreakInQuotedFieldIsBadData = false;
+      var rows = csv.GetRecords<T>().ToList();
+      return rows;
+    }
+
+    static async Task<IReadOnlyCollection<T>> SheetValues<T>(SheetsService service, string sheetId, string range, ILogger log) {
+      var request = service.Spreadsheets.Values.Get(sheetId, range);
+      var res = await request.ExecuteAsync();
+      return RangeWithHeaderToClass<T>(res.Values, log).ToList();
+    }
+
     #region Read
 
     public static Task<IReadOnlyCollection<MainChannelSheet>> MainChannels(SheetsCfg sheetsCfg, ILogger log) =>
@@ -30,7 +76,8 @@ namespace YtReader {
         .Select((v, i) => new
           {SheetId = v, Weight = 1}) // I used to weight some users higher (that's why there is that logic). Now we weight them all the same (1)
         .BlockTransform(async s => new {
-          Channels = await SheetValues<UserChannelSheet>(service, s.SheetId, "Channels", log),
+          Channels = await SheetValues<UserChannelSheet>(service, s.SheetId, "Channels", log)
+            .WithWrappedException($"eror reading user sheet {s.SheetId}", log),
           s.SheetId,
           s.Weight
         }, 4);
@@ -102,52 +149,6 @@ namespace YtReader {
     }
 
     #endregion
-
-    #region Write
-
-    public static async Task SyncNewChannelsForTags(SheetsCfg sheetsCfg, string mainChannelSheetId, IReadOnlyCollection<string> sheetIds) {
-      var service = GetService(sheetsCfg);
-      var mainSheet = await service.Spreadsheets.Get(mainChannelSheetId).ExecuteAsync();
-      var channelSheet = mainSheet.Sheets.FirstOrDefault(s => s.Properties.Title == "Channels");
-      var lastRow = channelSheet.Data.Max(d => d.StartRow);
-    }
-
-    #endregion
-
-    static SheetsService GetService(SheetsCfg sheetsCfg) {
-      //var creds = new ClientSecrets {ClientId = sheetsCfg.Creds.Name, ClientSecret = sheetsCfg.Creds.Secret};
-      var creds = GoogleCredential.FromJson(sheetsCfg.CredJson.ToString()).CreateScoped(SheetsService.Scope.SpreadsheetsReadonly);
-      var service = new SheetsService(new BaseClientService.Initializer {
-        HttpClientInitializer = creds,
-        ApplicationName = Setup.AppName
-      });
-      return service;
-    }
-
-    static string Quote(this string value) {
-      if (value.NullOrEmpty()) return value;
-      return "\"" + value.Replace("\"", "\\\"") + "\"";
-    }
-
-    static IReadOnlyCollection<T> RangeWithHeaderToClass<T>(ICollection<IList<object>> range, ILogger log) {
-      if (range.Count == 0) return new T[] { };
-      var csvText = range.Join("\n", l => l.Join(",", o => Quote(o?.ToString() ?? "")));
-      using var reader = new StringReader(csvText);
-      using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-      csv.Configuration.HasHeaderRecord = true;
-      csv.Configuration.MissingFieldFound = null;
-      csv.Configuration.Escape = '\\';
-      csv.Configuration.BadDataFound = c => log.Warning("Error reading csv data at {RowNumber}: {RowData}", c.Row, c.RawRecord);
-      csv.Configuration.LineBreakInQuotedFieldIsBadData = false;
-      var rows = csv.GetRecords<T>().ToList();
-      return rows;
-    }
-
-    static async Task<IReadOnlyCollection<T>> SheetValues<T>(SheetsService service, string sheetId, string range, ILogger log) {
-      var request = service.Spreadsheets.Values.Get(sheetId, range);
-      var res = await request.ExecuteAsync();
-      return RangeWithHeaderToClass<T>(res.Values, log).ToList();
-    }
   }
 
   public class MainChannelSheet {

@@ -3,32 +3,29 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Autofac;
 using Dapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Newtonsoft.Json;
-using Serilog;
 using SysExtensions.Serialization;
+using SysExtensions.Threading;
 using YtReader.Db;
 
 namespace YtFunctions {
   public class YtData {
-    readonly ILogger Log;
-    readonly AppDb   Db;
+    static readonly JsonSerializerSettings               JSettings = new JsonSerializerSettings {Formatting = Formatting.None};
+    readonly        AsyncLazy<FuncCtx, ExecutionContext> Ctx;
 
-    public YtData(ILogger log, AppDb db) {
-      Log = log;
-      Db = db;
-    }
-
-    static readonly JsonSerializerSettings JSettings = new JsonSerializerSettings {Formatting = Formatting.None};
+    public YtData(AsyncLazy<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
 
     [FunctionName("Video")]
     public async Task<HttpResponseMessage> Video([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "Video/{videoId}")]
-      HttpRequest req, string videoId, ExecutionContext context) =>
-      await context.Run(Log, async log => {
-        var conn = await Db.OpenConnection();
+      HttpRequest req, string videoId, ExecutionContext exec) =>
+      await Ctx.Run(exec, async c => {
+        var db = c.Scope.Resolve<AppDb>();
+        var conn = await db.OpenConnection();
         var videoTask = conn.QueryFirstAsync<DbVideo>("select * from video_latest where video_id = :video_id", new {video_id = videoId});
         var captionsTask = conn.QueryAsync<DbCaption>("select * from caption where video_id = :video_id order by offset_seconds", new {video_id = videoId});
         var video = await videoTask;
