@@ -8,9 +8,9 @@ import { ChannelRelationsTitle } from './ChannelRelationsTitle'
 import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, ActionType, Action } from '../common/Chart'
 import _ from 'lodash'
 import { toRecord } from '../common/Utils'
-import { RouteComponentProps } from 'react-router'
+import { RouteComponentProps } from "@reach/router"
 
-interface Props {
+interface Props extends RouteComponentProps {
   dataUrl: string
 }
 

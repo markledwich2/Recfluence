@@ -2,6 +2,8 @@ import * as React from "react"
 import { ChannelRelationsPage } from "../components/ChannelRelationsPage"
 import { StaticQuery, graphql } from "gatsby"
 import { MainLayout } from "../components/MainLayout"
+import { Router } from "@reach/router"
+import { Video } from "../components/VideoPage"
 
 // const App = () => {
 //   return (
@@ -27,7 +29,10 @@ import { MainLayout } from "../components/MainLayout"
 
 const App = () => (
   <MainLayout>
-    <ChannelRelationsPage dataUrl={process.env.RESULTS_URL} />
+    <Router>
+      <ChannelRelationsPage path="/" dataUrl={process.env.RESULTS_URL} />
+      <Video path="video/:videoId"></Video>
+    </Router>
   </MainLayout>)
 
 export default App

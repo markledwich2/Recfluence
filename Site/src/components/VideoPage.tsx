@@ -63,21 +63,13 @@ const VideoStatsDiv = styled.div`
   }
 `
 
-export const VideoPage = () => {
-  return (
-    <MainLayout>
-      <Router>
-        <Video path="video/:videoId"></Video>
-      </Router>
-    </MainLayout>
-  )
-}
+
 
 interface VideoProps extends RouteComponentProps {
   videoId?: string
 }
 
-const Video: React.FC<VideoProps> = (props) => {
+export const Video: React.FC<VideoProps> = (props) => {
   const [data, setData] = useState<VideoData>()
   //const [offset, setOffset] = useState<number>()
   const [player, setPlayer] = useState<YT.Player>(null)
