@@ -1,42 +1,38 @@
-import * as React from 'react'
-import { ChannelRelationsPage } from '../components/ChannelRelationsPage'
-import Helmet from 'react-helmet'
-import { StaticQuery, graphql } from 'gatsby'
+import * as React from "react"
+import { ChannelRelationsPage } from "../components/ChannelRelationsPage"
+import { StaticQuery, graphql } from "gatsby"
+import { MainLayout } from "../components/MainLayout"
+import { Router } from "@reach/router"
+import { Video } from "../components/VideoPage"
 
-const App = () => {
-  return (
-    <StaticQuery query={graphql`
-    query SiteTitleQuery {
-      site {
-        siteMetadata {
-          title
-          dataUrl
-        }
-      }
-    }
-  `} render={
-        (data:Query) => (
-          <>
-            <Helmet>
-              <title>{data.site.siteMetadata.title}</title>
-            </Helmet>
-            <ChannelRelationsPage dataUrl={data.site.siteMetadata.dataUrl} />
-          </>
-        )
-      } />)
-}
+// const App = () => {
+//   return (
+//     <StaticQuery
+//       query={graphql`
+//         query DataUrlQuery {
+//           site {
+//             siteMetadata {
+//               dataUrl,
+//               funcUrl
+//             }
+//           }
+//         }
+//       `}
+//       render={(data) => (
+//         <MainLayout>
+//           <ChannelRelationsPage dataUrl={data.site.siteMetadata.dataUrl} />
+//         </MainLayout>
+//       )}
+//     />
+//   )
+// }
 
-interface Query {
-  site: Site
-}
-
-interface Site {
-  siteMetadata:SiteMetadata
-}
-
-interface SiteMetadata {
-  title:string
-  dataUrl:string
-}
+const App = () => (
+  <MainLayout>
+    <Router>
+      <ChannelRelationsPage path="/" dataUrl={process.env.RESULTS_URL} />
+      <Video path="video/:videoId"></Video>
+    </Router>
+  </MainLayout>)
 
 export default App

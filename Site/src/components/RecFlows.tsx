@@ -2,7 +2,7 @@ import * as React from 'react'
 import { renderToString } from 'react-dom/server'
 import * as d3 from 'd3'
 import { sankey, sankeyLinkHorizontal, sankeyLeft, SankeyNode, SankeyLink } from 'd3-sankey'
-import '../styles/Main.css'
+import '../styles/main.css'
 import { YtModel, Graph, ChannelData, RecEx, RecDir, RecData } from '../common/YtModel'
 import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
 import { compactInteger } from 'humanize-plus'
@@ -105,14 +105,14 @@ export class RecFlows extends React.Component<Props, State> {
   get channels() { return this.props.model.channels }
 
   centerNodeLayout(selection: Record<keyof ChannelData, string>): Graph<Node[], Link[]> {
-    if(!selection) return null
+    if (!selection) return null
 
     const colorBy = this.chart.selections.params().colorBy
     const selectionCols = typedKeys(selection)
 
     const selectionCol = selectionCols.find(c => c == 'channelId') ?? selectionCols.find(c => c == colorBy) ?? null
 
-    if(!selectionCol) return null
+    if (!selectionCol) return null
 
     const recs = selectionCol == 'channelId' ? this.props.model.recs : this.props.model.recCats
 
@@ -142,10 +142,10 @@ export class RecFlows extends React.Component<Props, State> {
     const flowPartId = (c: RecData | Cell<RecData>, dir: RecDir): string => CellEx.cellValue(c, RecEx.recCol(dir, selectionCol))
     const centerPartId = selection[selectionCol]
     const displayToUnknown = false
-    const recRows: RecData[] = recs.rows.filter(r => 
+    const recRows: RecData[] = recs.rows.filter(r =>
       (flowPartId(r, 'from') == centerPartId || flowPartId(r, 'to') == centerPartId)
       && (displayToUnknown || flowPartId(r, 'to'))
-      )
+    )
 
     const nodeCells = (mode: NodeMode) => {
       if (mode == 'center') throw 'nodeCell only works with left or right'
@@ -168,7 +168,7 @@ export class RecFlows extends React.Component<Props, State> {
       return `${mode}.${idValue}`
     }
 
-    const recToChannelRecord = (r:Record<string, string>) => {
+    const recToChannelRecord = (r: Record<string, string>) => {
       const channelEntries = _.entries(r).filter(e => RecEx.channelCol(e[0])) // props that exist on channel
       const channelRecord = toRecord(channelEntries, e => RecEx.channelCol(e[0]), e => e[1])
       return channelRecord
@@ -227,7 +227,7 @@ export class RecFlows extends React.Component<Props, State> {
   async createChart() {
     let svg = d3.select(this.ref)
     let container = this.chart.createContainer(svg, 'flows')
-    let padding = { top:40, bottom:40, left:10, right:10 }
+    let padding = { top: 40, bottom: 40, left: 10, right: 10 }
     container.attr('transform', `translate(${padding.left}, ${padding.top})`) // move down 10 px to allow space for title
     let linkG = container.append('g').attr('class', 'links')
     let nodeG = container.append('g').attr('class', 'nodes')
@@ -242,7 +242,7 @@ export class RecFlows extends React.Component<Props, State> {
       let selections = this.state.selections
       let hl = selections.highlighted
 
-      let highlightedOrSelected = 
+      let highlightedOrSelected =
         (hl && hl.source != RecFlows.source ? hl.record : null) // ignore highlights from this component for changing center node
         ?? selections.selected.find(_ => true)?.record
 

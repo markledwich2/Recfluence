@@ -9,17 +9,53 @@ using SysExtensions;
 using SysExtensions.Text;
 
 namespace Mutuo.Etl.Pipe {
-  /// <summary>Context & Cfg for running a pipe command</summary>
+  /// <summary>Context & Cfg for running a pipe commands</summary>
   public interface IPipeCtx {
-    ILogger           Log            { get; }
-    ISimpleFileStore  Store          { get; }
-    PipeAppCfg        Cfg            { get; }
-    Assembly[]        PipeAssemblies { get; }
-    IComponentContext Scope          { get; set; }
+    ILogger           Log    { get; }
+    ISimpleFileStore  Store  { get; }
+    PipeAppCfg        Cfg    { get; }
+    PipeAppCtx        AppCtx { get; }
+    IComponentContext Scope  { get; }
+  }
 
-    /// <summary>Environment variables to forward</summary>
-    IDictionary<string, string> EnvVars { get; }
-    Func<Region> CustomRegion { get; set; }
+  public class PipeAppCtx {
+    public PipeAppCtx() { }
+
+    public PipeAppCtx(PipeAppCtx appCtx) {
+      Scope = appCtx.Scope;
+      Assemblies = appCtx.Assemblies;
+      EnvironmentVariables = appCtx.EnvironmentVariables;
+      CustomRegion = appCtx.CustomRegion;
+    }
+
+    /// <summary>Context to resolve pipe instances</summary>
+    public IComponentContext Scope { get;                                               set; }
+    public IReadOnlyCollection<Assembly>                    Assemblies           { get; set; } = new List<Assembly>();
+    public IReadOnlyCollection<(string name, string value)> EnvironmentVariables { get; set; } = new List<(string, string)>();
+    public Func<Region>                                     CustomRegion         { get; set; }
+  }
+
+  public class PipeCtx : IPipeCtx {
+    public PipeCtx() { }
+
+    public PipeCtx(PipeAppCfg cfg, PipeAppCtx appCtx, ISimpleFileStore store, ILogger log) {
+      AppCtx = appCtx;
+      Cfg = cfg;
+      Store = store;
+      Log = log;
+    }
+
+    public PipeCtx(IPipeCtx ctx) {
+      Log = ctx.Log;
+      Store = ctx.Store;
+      Cfg = ctx.Cfg;
+    }
+
+    public ILogger           Log    { get; }
+    public ISimpleFileStore  Store  { get; }
+    public PipeAppCtx        AppCtx { get; }
+    public PipeAppCfg        Cfg    { get; }
+    public IComponentContext Scope  => AppCtx.Scope;
   }
 
   /// <summary>A unique string for a pipe run. Human readable and easily passable though commands.</summary>
@@ -53,25 +89,5 @@ namespace Mutuo.Etl.Pipe {
         Num = split[2].ParseInt()
       };
     }
-  }
-
-  class PipeCtx : IPipeCtx {
-    public PipeCtx() { }
-
-    public PipeCtx(IPipeCtx ctx) {
-      Log = ctx.Log;
-      Store = ctx.Store;
-      Cfg = ctx.Cfg;
-      PipeAssemblies = ctx.PipeAssemblies;
-      Scope = ctx.Scope;
-    }
-
-    public ILogger                     Log            { get; set; }
-    public ISimpleFileStore            Store          { get; set; }
-    public PipeAppCfg                  Cfg            { get; set; }
-    public Assembly[]                  PipeAssemblies { get; set; } = { };
-    public IComponentContext           Scope          { get; set; }
-    public IDictionary<string, string> EnvVars        { get; set; } = new Dictionary<string, string>();
-    public Func<Region>                CustomRegion   { get; set; }
   }
 }

@@ -9,7 +9,7 @@ html {
 }
 @media all and (min-width: 600px) {
   html {
-    font-size: 14px;
+    font-size: 16px;
   }
 }
 
@@ -19,6 +19,7 @@ body, select {
   font-size: 1em;
   color: #eee;
 }
+
 
 select {
   background-color: transparent;
@@ -41,13 +42,16 @@ h1,
 h2,
 h3,
 p {
-  margin: 0.2em;
+  margin: 0px;
   padding: 0px;
 }
 
 a {
   color: rgb(148, 168, 172);
   text-decoration: none;
+}
+a:hover {
+ cursor:pointer;
 }
 
 span.tag {

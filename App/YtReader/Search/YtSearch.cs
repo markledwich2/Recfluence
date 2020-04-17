@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
@@ -11,7 +10,6 @@ using Algolia.Search.Clients;
 using Algolia.Search.Exceptions;
 using Dapper;
 using Humanizer.Localisation;
-using Mutuo.Etl.Blob;
 using Polly;
 using Serilog;
 using SysExtensions.Collections;
@@ -19,32 +17,44 @@ using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Db;
 
 namespace YtReader.Search {
-  public static class YtSearch {
+  public class YtSearch {
+    readonly AlgoliaCfg Angolia;
+    readonly AppDb      Db;
+    readonly ILogger    Log;
+    readonly SolrCfg    Solr;
 
-    public static async Task BuildSolrCaptionIndex(SolrCfg solr, Func<Task<DbConnection>> getConnection, ILogger log) {
-      using var conn = await getConnection();
+    public YtSearch(AlgoliaCfg angolia, SolrCfg solr, AppDb db, ILogger log) {
+      Angolia = angolia;
+      Solr = solr;
+      Db = db;
+      Log = log;
+    }
+
+    public async Task BuildSolrCaptionIndex() {
+      using var conn = await Db.OpenConnection();
       var caps = GetCaptionsRecords(conn);
       var http = new HttpClient();
       await caps.Batch(1000).BlockAction(async batch => {
-        var req = solr.Url.Build()
+        var req = Solr.Url.Build()
           .WithPathSegment("captions/update").WithParameter("commit", "true")
           .Post()
           .WithJsonContent(batch.ToJson());
         var res = await http.SendAsyncWithLog(req);
         res.EnsureSuccessStatusCode();
-        log.Information("Indexed {Objects} solr objects", batch.Count);
+        Log.Information("Indexed {Objects} solr objects", batch.Count);
       }, 4);
     }
-    
-    public static async Task BuildAlgoliaVideoIndex(AlgoliaCfg cfg, ISimpleFileStore store, Func<Task<DbConnection>> getConnection, ILogger log) {
-      using var conn = await getConnection();
-      var client = new SearchClient(cfg.Creds.Name, cfg.Creds.Secret);
+
+    public async Task BuildAlgoliaVideoIndex() {
+      using var conn = await Db.OpenConnection();
+      var client = new SearchClient(Angolia.Creds.Name, Angolia.Creds.Secret);
       var index = client.InitIndex("captions");
       var rawCaps = GetCaptionsRecords(conn);
 
-      var algoliaPolicy = Policy.Handle<AlgoliaUnreachableHostException>().RetryWithBackoff("saving algolia objects", 3, log);
+      var algoliaPolicy = Policy.Handle<AlgoliaUnreachableHostException>().RetryWithBackoff("saving algolia objects", 3, Log);
 
       await rawCaps
         .ChunkBy(c => c.video_id)
@@ -59,13 +69,13 @@ namespace YtReader.Search {
           if (toUpload.Any()) {
             var res = await algoliaPolicy.ExecuteAsync(_ => index.SaveObjectsAsync(caps), CancellationToken.None);
           }
-          log.Information("Indexed {NewCaptions}/{Total} in {Duration}", toUpload.Length, caps.Count, sw.Elapsed.HumanizeShort(minUnit: TimeUnit.Millisecond));
+          Log.Information("Indexed {NewCaptions}/{Total} in {Duration}", toUpload.Length, caps.Count, sw.Elapsed.HumanizeShort(minUnit: TimeUnit.Millisecond));
         });
     }
 
     static IEnumerable<VideoCaption> GetCaptionsRecords(IDbConnection conn, int limit = 0) {
       var limitStr = limit == 0 ? "" : $"limit {limit}";
-      
+
       return conn.Query<VideoCaption>($@"
 with captions_carona as (
   select *
