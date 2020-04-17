@@ -1,6 +1,5 @@
 import * as React from 'react'
 import * as d3 from 'd3'
-import '../styles/main.css'
 import { layoutTextLabel, layoutGreedy, layoutLabel } from 'd3fc-label-layout'
 import { YtModel, ChannelData } from '../common/YtModel'
 import { SelectableCell, DimQuery, Dim } from '../common/Dim'

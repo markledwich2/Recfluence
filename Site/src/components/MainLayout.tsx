@@ -1,7 +1,7 @@
 import { StaticQuery, graphql } from "gatsby"
 import React from "react"
 import Helmet from "react-helmet"
-
+import '../styles/main.css'
 
 export class MainLayout extends React.Component<{}, {}> {
   render() {
