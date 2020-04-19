@@ -22,7 +22,7 @@ namespace SysExtensions.Build {
     public int Minor { get; set; }
     public int Path  { get; set; }
 
-    /// <summary>Use github to work out the current version</summary>
+    /// <summary>Use github to work out the current version in dev, will use the curerent machine as the branch name</summary>
     public static async Task<SemVersion> DiscoverSemVer(Type typeToDetectVersion, ILogger log = null) {
       log = log ?? Log.Logger ?? Logger.None;
       if (FPath.Current.DirOfParent(".git")?.Exists == true) {

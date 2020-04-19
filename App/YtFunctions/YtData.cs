@@ -41,12 +41,12 @@ namespace YtFunctions {
         return res.JsonResponse(JCfg);
       });
 
-    [FunctionName("search")]
+    /*[FunctionName("search")]
     public async Task<HttpResponseMessage> Search([HttpTrigger(AuthorizationLevel.Anonymous, "get")]
       HttpRequest req, string query, ExecutionContext exec) => await Ctx.Run(exec, async c => {
       var captions = "";
       return captions.JsonResponse(JCfg);
-    });
+    });*/
 
     public class VideoResponse {
       public DbVideo     video    { get; set; }

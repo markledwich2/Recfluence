@@ -6,7 +6,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using SysExtensions.Collections;
 
 namespace SysExtensions.Text {
@@ -16,7 +15,7 @@ namespace SysExtensions.Text {
     public static Stream AsStream(this string content) => new MemoryStream(Encoding.UTF8.GetBytes(content));
 
     public static TextReader AsTextStream(this string content) => new StreamReader(new MemoryStream(Encoding.UTF8.GetBytes(content)));
-    
+
     public static TextReader TextStream(this Stream stream, Encoding encoding = null) => new StreamReader(stream, encoding ?? Encoding.UTF8);
 
     public static string AsString(this Stream stream) {
@@ -115,7 +114,7 @@ namespace SysExtensions.Text {
       return long.Parse(s, styles, format);
     }
 
-    public static DateTime ParseDate(this string s) => DateTime.Parse(s);
+    public static DateTime ParseDate(this string s, IFormatProvider format = null, DateTimeStyles style = default) => DateTime.Parse(s, format, style);
 
     public static decimal ParseDecimal(this string s) => decimal.Parse(s, NumberFormatInfo.InvariantInfo);
 

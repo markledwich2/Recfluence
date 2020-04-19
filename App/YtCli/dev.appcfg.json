@@ -1,11 +1,11 @@
 ﻿{
-  "limitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCfrlXVXz-pT9AmmDELhpyOw"],
+  "limitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCfrlXVXz-pT9AmmDELhpyOw", "UCgRvm1yLFoaQKhmaTqXk9SA"],
   "ytReader": {
     "from": "2019-10-01",
     "to": null,
     "refreshRecsWithin": "20.00:00:00.0"
   },
   "pipe": {
-    "location": "LocalThread"
+    "location": "LocalContainer"
   }
 }

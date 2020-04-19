@@ -53,7 +53,10 @@ namespace YtReader {
     public async Task Update(ILogger log, [PipeArg] UpdateType updateType = UpdateType.All) {
       var channels = await UpdateAllChannels(log);
       var work = channels.Select(c => new UpdateChannelWork {Channel = c, UpdateType = updateType});
-      await work.RunPipe(ProcessChannels, PipeCtx, Cfg.Pipe.Default, log);
+      var processRes = await work.RunPipe(ProcessChannels, PipeCtx, Cfg.Pipe.Default, log).WithDuration();
+      var allChannelResults = processRes.Result.SelectMany(r => r.OutState.Channels).ToArray();
+      log.Information("{Pipe} Complete - {Success}/{Total} channels updated in {Duration}",
+        nameof(Update), allChannelResults.Count(c => c.Success), allChannelResults.Length, processRes.Duration.HumanizeShort());
     }
 
     async Task<IEnumerable<ChannelStored2>> UpdateAllChannels(ILogger log) {
@@ -109,7 +112,7 @@ namespace YtReader {
     }
 
     [Pipe]
-    public async Task ProcessChannels([PipeState] IReadOnlyCollection<UpdateChannelWork> work, ILogger log) {
+    public async Task<ProcessChannelResults> ProcessChannels([PipeState] IReadOnlyCollection<UpdateChannelWork> work, ILogger log) {
       var workSw = Stopwatch.StartNew();
       var conn = new AsyncLazy<DbConnection>(() => GetConnection());
       var channelResults = await work
@@ -132,10 +135,18 @@ namespace YtReader {
           }
         }, Cfg.ParallelChannels);
 
-      var requestStats = Scraper.RequestStats;
+      var res = new ProcessChannelResults {
+        Channels = channelResults.Select(r => new ProcessChannelResult {ChannelId = r.c.Channel.ChannelId, Success = r.Success}).ToArray(),
+        Duration = workSw.Elapsed,
+        RequestStats = Scraper.RequestStats
+      };
+
       log.Information(
-        "Update complete {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
-        channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), workSw.Elapsed, requestStats.direct, requestStats.proxy);
+        "{Pipe} complete - {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
+        nameof(ProcessChannels), channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), res.Duration, res.RequestStats.direct,
+        res.RequestStats.proxy);
+
+      return res;
     }
 
     async Task UpdateAllInChannel(ChannelStored2 c, AsyncLazy<DbConnection> conn, UpdateType updateType, ILogger log) {
@@ -406,11 +417,18 @@ where num <= 50 -- most recent for each channel
       });
       return batch;
     }
-    //bool Expired(DateTime updated, TimeSpan refreshAge) => (RCfg.To ?? DateTime.UtcNow) - updated > refreshAge;
 
-    public class ChannelId {
-      public string Id { get; set; }
+    public class ProcessChannelResult {
+      public string ChannelId { get; set; }
+      public bool   Success   { get; set; }
     }
+
+    public class ProcessChannelResults {
+      public ProcessChannelResult[]    Channels     { get; set; }
+      public TimeSpan                  Duration     { get; set; }
+      public (long direct, long proxy) RequestStats { get; set; }
+    }
+    //bool Expired(DateTime updated, TimeSpan refreshAge) => (RCfg.To ?? DateTime.UtcNow) - updated > refreshAge;
 
     public class UpdateChannelWork {
       public ChannelStored2 Channel    { get; set; }
@@ -421,10 +439,6 @@ where num <= 50 -- most recent for each channel
       public string ChannelId    { get; set; }
       public string ChannelTitle { get; set; }
       public string VideoId      { get; set; }
-    }
-
-    public class ProcessVideoExtraIn {
-      public ChannelVideoItem[] Videos { get; set; }
     }
 
     public class ProcessVideoExtraBatch {

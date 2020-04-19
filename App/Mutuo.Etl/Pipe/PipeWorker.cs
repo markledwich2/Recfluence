@@ -8,7 +8,9 @@ using Medallion.Shell;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.ContainerGroup.Definition;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
+using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
+using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
@@ -160,16 +162,20 @@ namespace Mutuo.Etl.Pipe {
         await Task.WhenAll(
           ctx.Store.Save(logPath, logTxt.AsStream(), pipeLog),
           md.Save(ctx.Store, pipeLog));
+
+        // delete succeeded containers. Failed, and rutned on running will be cleaned up by another process
+        if (run.Result.State() == ContainerState.Succeeded) await DeleteContainer(ctx, log, runId, azure);
+
         return md;
       }, 10);
 
-      await ids.BlockAction(async c => {
-        var groupName = c.ContainerGroupName();
-        await azure.ContainerGroups.DeleteByResourceGroupAsync(ctx.Cfg.Azure.ResourceGroup, groupName);
-        log.Debug("Deleted container {Container} for {Pipe}", groupName, c.Name);
-      }, 10);
-
       return res;
+    }
+
+    static async Task DeleteContainer(IPipeCtx ctx, ILogger log, PipeRunId c, IAzure azure) {
+      var groupName = c.ContainerGroupName();
+      await azure.ContainerGroups.DeleteByResourceGroupAsync(ctx.Cfg.Azure.ResourceGroup, groupName);
+      log.Debug("Deleted container {Container} for {Pipe}", groupName, c.Name);
     }
 
     static async Task<IContainerGroup> Create(IWithCreate groupDef, ILogger log) {
@@ -233,7 +239,9 @@ namespace Mutuo.Etl.Pipe {
         .WithStartingCommandLine(container.Exe, args);
 
       var createGroup = group
-        .Attach().WithRestartPolicy(ContainerGroupRestartPolicy.Never);
+        .Attach()
+        .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
+        .WithTag("expire", (DateTime.UtcNow + 2.Days()).ToString("o"));
 
       return createGroup;
     }

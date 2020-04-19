@@ -45,7 +45,7 @@ namespace YtCli {
       var (app, root) = await Setup.LoadCfg(rootLogger: Setup.ConsoleLogger());
       var log = await Setup.CreateLogger(root.Env, option.GetType().Name, app);
 
-      var scope = Setup.BaseScope(root, app, Setup.PipeAppCtxEmptyScope(root), log);
+      var scope = Setup.BaseScope(root, app, Setup.PipeAppCtxEmptyScope(root, app), log);
       return new CmdCtx<TOption>(root, app, log, option, scope, args);
     }
 

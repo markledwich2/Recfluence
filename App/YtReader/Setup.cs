@@ -9,7 +9,9 @@ using Autofac.Builder;
 using Humanizer;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
+using Microsoft.Azure.Management.Fluent;
 using Microsoft.Extensions.Configuration;
+using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
@@ -103,10 +105,16 @@ namespace YtReader {
       }
     }
 
-    public static (string name, string value)[] PipeEnv(this RootCfg rootCfg) =>
+    /// <summary>Will pass root & app config to pipes from the calling process. Only configuration that should come from the
+    ///   caller is passed. e.g. all root cfg's and a few app ones</summary>
+    /// <param name="rootCfg"></param>
+    /// <param name="appCfg"></param>
+    /// <returns></returns>
+    public static (string name, string value)[] PipeEnv(RootCfg rootCfg, AppCfg appCfg) =>
       new[] {
         (nameof(RootCfg.Env), rootCfg.Env),
-        (nameof(RootCfg.AppCfgSas), rootCfg.AppCfgSas.ToString())
+        (nameof(RootCfg.AppCfgSas), rootCfg.AppCfgSas.ToString()),
+        ("pipe__location", appCfg.Pipe.Location.ToString())
       };
 
     public static Task<SemVersion> GetVersion() => Version.GetOrCreate();
@@ -166,10 +174,10 @@ namespace YtReader {
       return results;
     }
 
-    public static PipeAppCtx PipeAppCtxEmptyScope(RootCfg root) =>
+    public static PipeAppCtx PipeAppCtxEmptyScope(RootCfg root, AppCfg appCfg) =>
       new PipeAppCtx {
         Assemblies = new[] {typeof(YtDataUpdater).Assembly},
-        EnvironmentVariables = root.PipeEnv(),
+        EnvironmentVariables = PipeEnv(root, appCfg),
         Scope = new ContainerBuilder().Build().BeginLifetimeScope()
       };
 

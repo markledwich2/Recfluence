@@ -17,10 +17,8 @@ namespace SysExtensions.Collections {
     public static MultiValueDictionary<TKey, T> ToMultiValueDictionary<TKey, T>(this IEnumerable<T> items, Func<T, TKey> keySelector) =>
       items.ToMultiValueDictionary(keySelector, v => v);
 
-    public static TValue TryGet<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue defaultValue = default) {
-      TValue value;
-      return dictionary.TryGetValue(key, out value) ? value : defaultValue;
-    }
+    public static TValue TryGet<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue defaultValue = default) =>
+      dictionary.TryGetValue(key, out var value) ? value : defaultValue;
 
     public static IReadOnlyCollection<TValue> TryGet<TKey, TValue>(this MultiValueDictionary<TKey, TValue> dictionary, TKey key) {
       IReadOnlyCollection<TValue> value;

@@ -4,8 +4,10 @@ using System.Threading.Tasks;
 using Autofac;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
 using Seq.Api;
 using SysExtensions.Build;
@@ -21,6 +23,10 @@ namespace YtFunctions {
     readonly AsyncLazy<FuncCtx, ExecutionContext> Ctx;
 
     public YtFunctions(AsyncLazy<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
+
+    [FunctionName(nameof(DeleteExpiredResources_Timer))]
+    public Task DeleteExpiredResources_Timer([TimerTrigger("0 0 * * * *")] TimerInfo myTimer, ExecutionContext exec) =>
+      Ctx.Run(exec, async ctx => { await ctx.Scope.Resolve<IAzure>().DeleteExpiredResources(ctx.Log); });
 
     [FunctionName("StopIdleSeq_Timer")]
     public async Task StopIdleSeq_Timer([TimerTrigger("0 */15 * * * *")] TimerInfo myTimer, ExecutionContext exec) =>

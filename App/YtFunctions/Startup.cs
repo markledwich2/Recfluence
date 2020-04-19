@@ -46,7 +46,7 @@ namespace YtFunctions {
     public static async Task<FuncCtx> LoadCtx(ExecutionContext exec) {
       var cfg = await Setup.LoadCfg(exec.FunctionAppDirectory);
       var log = await Logger(cfg.Root, cfg.App);
-      var appCtx = Setup.PipeAppCtxEmptyScope(cfg.Root);
+      var appCtx = Setup.PipeAppCtxEmptyScope(cfg.Root, cfg.App);
       var scope = Setup.BaseScope(cfg.Root, cfg.App, appCtx, log);
       return new FuncCtx(log, appCtx, cfg.Root, cfg.App, scope);
     }
@@ -76,13 +76,13 @@ namespace YtFunctions {
       var c = await ctx.GetOrCreate(exec);
       c = c.WithLog(c.Log.ForContext("Function", exec.FunctionName));
       try {
-        c.Log.Information("{Function} - started", exec.FunctionName);
+        c.Log.Information("{Function} function - started", exec.FunctionName);
         var res = await func(c).WithDuration();
-        c.Log.Information("{Function} - completed in {Duration}", exec.FunctionName, res.Duration.HumanizeShort(2, TimeUnit.Millisecond));
+        c.Log.Information("{Function} function - completed in {Duration}", exec.FunctionName, res.Duration.HumanizeShort(2, TimeUnit.Millisecond));
         return res.Result;
       }
       catch (Exception ex) {
-        c.Log.Error(ex, "{Function} - unhandled exception: {Message}", exec.FunctionName, ex.Message);
+        c.Log.Error(ex, "{Function} function - unhandled exception: {Message}", exec.FunctionName, ex.Message);
         throw;
       }
     }
