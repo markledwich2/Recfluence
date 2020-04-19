@@ -22,7 +22,9 @@ namespace YtReader {
         log.Information("Starting sync of table {Table}", t.Name);
         using var sourceConn = await SnowflakeCfg.OpenConnection();
         using var destConn = await SqlServerCfg.OpenConnection(log);
-        var sync = new DbSync(new SnowflakeSourceDb(sourceConn, SnowflakeCfg.Schema), new MsSqlDestDb(destConn, SqlServerCfg.DefaultSchema));
+        var sync = new DbSync(
+          new SnowflakeSourceDb(sourceConn, SnowflakeCfg.Schema, log),
+          new MsSqlDestDb(destConn, SqlServerCfg.DefaultSchema, t.FullTextCatalog, log));
         var dur = await sync.UpdateTable(t, log, fullLoad, optionLimit).WithDuration();
       }, cfg.Parallel).WithDuration();
       log.Information("Completed loading {Tables} in {Duration}", toRun.Select(t => t.Name), dur.HumanizeShort());

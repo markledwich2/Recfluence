@@ -5,7 +5,6 @@ using System.Data.Common;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
-using Dapper;
 using Humanizer;
 using Serilog;
 using SysExtensions.Collections;
@@ -20,6 +19,7 @@ namespace Mutuo.Etl.Db {
     Task<long> BulkCopy(IDataReader reader, TableId table, ILogger log);
     string CreateTableSql(TableSchema schema, TableId table, bool withColumnStore = true);
     Task<long> Merge(TableId destTable, TableId tmpTable, string idCol, IReadOnlyCollection<ColumnSchema> cols);
+    Task CreateIndex(TableId table, IndexType type, string[] cols);
   }
 
   public class MsSqlDestDb : IDestDb {
@@ -39,30 +39,37 @@ namespace Mutuo.Etl.Db {
     static readonly Dictionary<string, (Type Type, string ProviderName, string[] TypeArgs)> ProviderToType =
       TypeToProvider.ToDictionary(t => t.Value.ProviderName, t => t.Value);
 
-    public MsSqlDestDb(SqlConnection conn, string defaultSchema) {
-      Connection = conn;
+    static readonly int     DeaultVarcharSize = 400;
+    static readonly int     MaxVarcharSize    = 8000;
+    readonly        ILogger Log;
+    readonly        string  TextCatalog;
+
+    public MsSqlDestDb(SqlConnection conn, string defaultSchema, string textCatalog, ILogger log) {
+      TextCatalog = textCatalog;
+      Log = log.ForContext("DataSource", conn.DataSource).ForContext("Database", conn.Database);
+      Connection = conn.AsLogged(log);
       DefaultSchema = defaultSchema;
     }
 
-    public DbConnection Connection    { get; }
-    public string       DefaultSchema { get; }
+    public LoggedConnection Connection    { get; }
+    public string           DefaultSchema { get; }
 
     public string Sql(string name) => name.SquareBrackets();
 
     public async Task RenameTable(TableId from, TableId to, DbTransaction transaction = null) =>
-      await Connection.ExecuteAsync($"EXEC sp_rename '{this.Sql(from)}', '{to.Table}'", transaction: transaction);
+      await Connection.Execute(nameof(RenameTable), $"EXEC sp_rename '{this.Sql(from)}', '{to.Table}'", transaction);
 
     public async Task DropTable(TableId table, DbTransaction transaction = null) =>
-      await Connection.ExecuteAsync($"drop table {this.Sql(table)}", transaction: transaction);
+      await Connection.Execute(nameof(DropTable), $"drop table {this.Sql(table)}", transaction);
 
     public async Task<TableSchema> Schema(TableId table) {
-      var exists = await Connection.ExecuteScalarAsync<int>(@$"select count(*) from information_schema.tables 
+      var exists = await Connection.ExecuteScalar<int>(nameof(Schema), @$"select count(*) from information_schema.tables 
         where table_name='{table.Table}' and table_schema='{table.Schema}'");
 
       if (exists == 0)
         return null;
 
-      var cols = await Connection.QueryAsync<(string name, string type)>(
+      var cols = await Connection.Query<(string name, string type)>(nameof(Schema),
         @$"select column_name, data_type from information_schema.columns 
         where table_name='{table.Table}' and table_schema='{table.Schema}'");
 
@@ -77,14 +84,31 @@ namespace Mutuo.Etl.Db {
     }
 
     public async Task CreateTable(TableSchema schema, TableId table, bool withColumnStore = true, DbTransaction transaction = null) =>
-      await Connection.ExecuteAsync(CreateTableSql(schema, table, withColumnStore), transaction: transaction);
+      await Connection.Execute(nameof(CreateTable), CreateTableSql(schema, table, withColumnStore), transaction);
 
     public string CreateTableSql(TableSchema schema, TableId table, bool withColumnStore = true) {
-      var statements = schema.Columns.Select(SqlType).ToList();
+      var statements = schema.Columns.Select(c => ColumnSql(table, c)).ToList();
       if (withColumnStore)
-        statements.Add($"index [{table.Table}_idx] clustered columnstore");
+        statements.Add($"index [{table.Table}_colstore] clustered columnstore");
       var createStatement = $"create table {table} (\n\t{statements.Join(",\n\t")})";
       return createStatement;
+    }
+
+    public async Task CreateIndex(TableId table, IndexType type, string[] cols) {
+      if (type == IndexType.FullText) {
+        if (TextCatalog.NullOrEmpty()) throw new InvalidOperationException($"text index on {table.Table}, but no text catalog specified");
+        if (await Connection.ExecuteScalar<int>(nameof(CreateIndex),
+          "select count(*) from sys.fulltext_catalogs where name= @name", new {name = TextCatalog}) == 0)
+          await Connection.Execute(nameof(CreateIndex), $"create fulltext catalog {TextCatalog} as default");
+      }
+
+      var sql = type switch {
+        IndexType.Default => @$"create index {Sql($"{table.Table}_{cols.Join("_")}_idx")} on {this.Sql(table)} ({cols.Join(", ", Sql)})",
+        IndexType.FullText => $"create fulltext index on {Sql(table.Table)} ({cols.Join(", ", Sql)}) key index {PkName(table)}",
+        _ => throw new InvalidOperationException($"unsupported index type {type}")
+      };
+
+      await Connection.Execute(nameof(CreateIndex), sql);
     }
 
     public async Task<long> Merge(TableId destTable, TableId tmpTable, string idCol, IReadOnlyCollection<ColumnSchema> cols) {
@@ -98,16 +122,17 @@ when not matched by target then
 insert ({cols.Join(",", c => this.Sql(c))})
 values ({cols.Join(",", c => $"s.{this.Sql(c)}")})
 ;";
-      return await Connection.ExecuteScalarAsync<int>(mergeSql);
+      // mege operations can take a v long time when large
+      return await Connection.ExecuteScalar<int>(nameof(Merge), mergeSql, timeout: 2.Hours());
     }
 
     public async Task<long> BulkCopy(IDataReader reader, TableId table, ILogger log) {
-      using var bc = new SqlBulkCopy((SqlConnection) Connection) {
+      using var bc = new SqlBulkCopy((SqlConnection) Connection.Conn) {
         EnableStreaming = true,
         BatchSize = 100_000,
         DestinationTableName = this.Sql(table),
         NotifyAfter = 20_000,
-        BulkCopyTimeout = (int)10.Minutes().TotalSeconds
+        BulkCopyTimeout = 0 // no timeout
       };
       bc.SqlRowsCopied += (sender, args) => log.Debug("{Table} - bulk copied {Rows}", table, args.RowsCopied);
 
@@ -115,13 +140,25 @@ values ({cols.Join(",", c => $"s.{this.Sql(c)}")})
       return bc.GetRowsCopied();
     }
 
-    static string SqlType(ColumnSchema col) {
-      var providerType = MsSqlType(col.DataType);
-      var sqlType = providerType switch {
-        "nvarchar" => "nvarchar(" + (col.ColumnSize == 0 || col.ColumnSize > 4000 ? "max" : col.ColumnSize.ToString()) + ")",
-        _ => providerType
-      };
-      return $"{col.ColumnName} {sqlType}";
+    string PkName(TableId table) => Sql($"{table.Table}_pk");
+
+    string ColumnSql(TableId table, ColumnSchema col) {
+      // populate any size params
+      var sqlType = col.ProviderTypeExpression ??
+                    (col.ProviderTypeName ?? MsSqlType(col.DataType)) switch {
+                      "nvarchar" => "nvarchar(" + VarcharSize(col) + ")",
+                      { } providerType => providerType, // TODO support sized/precision for decimal etc...
+                      _ => throw new InvalidOperationException($"no type found for col {col}")
+                    };
+      var sqlNull = col.AllowDBNull == false ? "not null" : null;
+      var sqlConstraint = col.Key == true ? $"constraint {PkName(table)}  primary key nonclustered" : null;
+      return new[] {col.ColumnName, sqlType, sqlNull, sqlConstraint}.Join(" ");
+    }
+
+    static string VarcharSize(ColumnSchema col) {
+      if (col.ColumnSize > 0 && col.ColumnSize < MaxVarcharSize) return col.ColumnSize.ToString();
+      if (col.Key == true) return col.ColumnSize == 0 ? DeaultVarcharSize.ToString() : MaxVarcharSize.ToString();
+      return "max";
     }
 
     public static string MsSqlType(Type t) =>

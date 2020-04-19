@@ -8,23 +8,6 @@
         }
       }
     },
-    "AppDbCfg": {
-      "type": "object",
-      "properties": {
-        "host": {
-          "type": "string"
-        },
-        "db": {
-          "type": "string"
-        },
-        "creds": {
-          "type": "string"
-        },
-        "defaultSchema": {
-          "type": "string"
-        }
-      }
-    },
     "ContainerCfg": {
       "type": "object",
       "properties": {
@@ -247,6 +230,23 @@
         }
       }
     },
+    "SqlServerCfg": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "db": {
+          "type": "string"
+        },
+        "creds": {
+          "type": "string"
+        },
+        "defaultSchema": {
+          "type": "string"
+        }
+      }
+    },
     "StorageCfg": {
       "type": "object",
       "properties": {
@@ -281,6 +281,15 @@
         },
         "typeOverride": {
           "type": "string"
+        },
+        "null": {
+          "type": "boolean"
+        },
+        "index": {
+          "type": "boolean"
+        },
+        "fullText": {
+          "type": "boolean"
         }
       }
     },
@@ -295,6 +304,9 @@
         },
         "defaultTsCol": {
           "type": "string"
+        },
+        "parallel": {
+          "type": "integer"
         }
       }
     },
@@ -322,6 +334,15 @@
           "items": {
             "type": "string"
           }
+        },
+        "manualSchema": {
+          "type": "boolean"
+        },
+        "filter": {
+          "type": "string"
+        },
+        "colStore": {
+          "type": "boolean"
         }
       }
     },
@@ -412,7 +433,7 @@
       "$ref": "#/definitions/SnowflakeCfg"
     },
     "appDb": {
-      "$ref": "#/definitions/AppDbCfg"
+      "$ref": "#/definitions/SqlServerCfg"
     },
     "results": {
       "$ref": "#/definitions/ResultsCfg"

@@ -1,7 +1,6 @@
 ﻿{
     "seqUrl": "http://ytseq.westus2.azurecontainer.io",
     "seqHost": {
-        "idleQuery": "@Timestamp > Now() - 1h and App != 'StopIdleSeq_Timer'",
         "containerGroupName": "seq"
     },
     "parallelChannels": 4,
@@ -81,40 +80,57 @@
             {
                 "name": "video_latest",
                 "syncType": "Incremental",
+                "filter": "channel_id in ('UCzQUP1qoWDoEbmsQxvdjxgQ', 'UCupvZG-5ko_eiXAupbDfxWw')",
                 "cols": [
                     { 
                         "name": "video_id",
+                        "typeOverride": "nvarchar(100)",
                         "id": true
+                    },
+                    {
+                        "name": "channel_id",
+                        "typeOverride": "nvarchar(100)",
+                        "index": true
+                    },
+                    {
+                        "name": "video_title",
+                        "fullText": true
+                    },
+                    {
+                        "name": "description",
+                        "fullText": true
                     }
                 ]
             },
             {
                 "name": "caption",
                 "syncType": "Incremental",
+                "manualSchema": true,
+                "colStore": false,
+                "filter": "channel_id in ('UCzQUP1qoWDoEbmsQxvdjxgQ', 'UCupvZG-5ko_eiXAupbDfxWw') ",
                 "selectedCols": ["caption_id", "video_id", "channel_id", "caption", "offset_seconds"],
                 "cols": [
                     {
                         "name": "caption_id",
-                        "id": true
-                    },
-                    {
-                        "name": "caption",
-                        "typeOverride": "nvarchar(1000)"
-                    },
-                    {
-                        "name": "caption_id",
+                        "id": true,
                         "typeOverride": "nvarchar(100)"
                     },
                     {
+                        "name": "caption",
+                        "typeOverride": "nvarchar(4000)",
+                        "fullText": true
+                    },
+                    {
                         "name": "video_id",
-                        "typeOverride": "nvarchar(50)"
+                        "typeOverride": "nvarchar(100)",
+                        "index": true
                     },
                     {
                         "name": "channel_id",
-                        "typeOverride": "nvarchar(50)"
+                        "typeOverride": "nvarchar(100)",
+                        "index": true
                     }
                 ]
-                
             }
         ]
     }

@@ -69,6 +69,7 @@ namespace Mutuo.Etl.Db {
     public override string ToString() => Columns.Join(", ", c => $"{c.ColumnName} {c.DataType}");
   }
 
+  /// <summary>This is a representation of a columns schema.</summary>
   public class ColumnSchema {
     public ColumnSchema() { }
 
@@ -77,6 +78,18 @@ namespace Mutuo.Etl.Db {
       DataType = dataType;
     }
 
+    public bool? Key { get; set; }
+
+    /// <summary>Populated for table schema information in databses</summary>
+    public string ProviderTypeName { get; set; }
+
+    /// <summary>Set manually by sync config overrides. Takes precedence over DataType & ProviderTypeName</summary>
+    public string ProviderTypeExpression { get; set; }
+
+    public override string ToString() => $"{ColumnName} {ProviderTypeExpression ?? DataType.ToString()}";
+
+    #region standard properties form data reader schema
+
     public string ColumnName       { get; set; }
     public int    ColumnOrdinal    { get; set; }
     public int    ColumnSize       { get; set; }
@@ -84,7 +97,9 @@ namespace Mutuo.Etl.Db {
     public int?   NumericScale     { get; set; }
     public bool?  AllowDBNull      { get; set; }
     public Type   DataType         { get; set; }
-    public int    ProviderType     { get; set; }
-    public string ProviderTypeName { get; set; }
+    /// <summary>set by queries. I beleive corresponds ot type enums in those databse libraries, but we aren't looking at these</summary>
+    public int ProviderType { get; set; }
+
+    #endregion
   }
 }

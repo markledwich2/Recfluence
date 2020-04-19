@@ -109,7 +109,7 @@ namespace YtReader {
   }
 
   public class SeqHostCfg {
-    public string IdleQuery          { get; set; } = "@Timestamp > Now() - 30m";
+    public string IdleQuery          { get; set; } = "@Timestamp > Now() - 1h and App != 'StopIdleSeq_Timer'";
     public string ContainerGroupName { get; set; } = "seq";
   }
 

@@ -15,12 +15,14 @@ using YtReader.Db;
 
 namespace YtFunctions {
   public class YtData {
-    static readonly JsonSerializerSettings               JSettings = new JsonSerializerSettings {Formatting = Formatting.None};
-    readonly        AsyncLazy<FuncCtx, ExecutionContext> Ctx;
+    /// <summary>Use the Json.net defaults because we want to keep original name casings so that we aren't re-casing the
+    ///   databse in different formats</summary>
+    static readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {Formatting = Formatting.None};
+    readonly AsyncLazy<FuncCtx, ExecutionContext> Ctx;
 
     public YtData(AsyncLazy<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
 
-    [FunctionName("Video")]
+    [FunctionName("video")]
     public async Task<HttpResponseMessage> Video([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "Video/{videoId}")]
       HttpRequest req, string videoId, ExecutionContext exec) =>
       await Ctx.Run(exec, async c => {
@@ -36,16 +38,29 @@ namespace YtFunctions {
           captions = (await captionsTask).ToArray(),
           channel = channel
         };
-
-        return new HttpResponseMessage(HttpStatusCode.OK) {
-          Content = new StringContent(res.ToJson(JSettings), Encoding.UTF8, "application/json")
-        };
+        return res.JsonResponse(JCfg);
       });
+
+    [FunctionName("search")]
+    public async Task<HttpResponseMessage> Search([HttpTrigger(AuthorizationLevel.Anonymous, "get")]
+      HttpRequest req, string query, ExecutionContext exec) => await Ctx.Run(exec, async c => {
+      var captions = "";
+      return captions.JsonResponse(JCfg);
+    });
 
     public class VideoResponse {
       public DbVideo     video    { get; set; }
       public DbCaption[] captions { get; set; }
       public DbChannel   channel  { get; set; }
     }
+
+    public class SearchResponse { }
+  }
+
+  public static class HttpResponseEx {
+    public static HttpResponseMessage JsonResponse(this object o, JsonSerializerSettings settings) =>
+      new HttpResponseMessage(HttpStatusCode.OK) {
+        Content = new StringContent(o.ToJson(settings), Encoding.UTF8, "application/json")
+      };
   }
 }
