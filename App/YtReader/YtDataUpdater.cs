@@ -163,7 +163,6 @@ namespace YtReader {
       var md = await vidStore.LatestFileMetadata();
       var lastUpload = md?.Ts?.ParseFileSafeTimestamp();
       var lastModified = md?.Modified;
-
       var recentlyUpdated = lastModified != null && lastModified.Value.IsYoungerThan(RCfg.RefreshAllAfter);
 
       // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.

@@ -54,9 +54,9 @@ namespace YtCli {
 
       try {
         var verb = option.GetType().GetCustomAttribute<VerbAttribute>()?.Name ?? option.GetType().Name;
-        ctx.Log.Information("Starting cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
+        ctx.Log.Debug("Starting cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
         var res = await task(ctx);
-        ctx.Log.Information("Completed cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
+        ctx.Log.Debug("Completed cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
         return res;
       }
       catch (Exception ex) {
