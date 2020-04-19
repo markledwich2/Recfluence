@@ -107,14 +107,15 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class PipeRunMetadata {
-    public PipeRunId   Id           { get; set; }
-    public string      FinalState   { get; set; }
-    public TimeSpan    Duration     { get; set; }
-    public Container[] Containers   { get; set; }
-    public string      ErrorMessage { get; set; }
+    public PipeRunId      Id           { get; set; }
+    public string         RawState     { get; set; }
+    public ContainerState State        { get; set; }
+    public TimeSpan       Duration     { get; set; }
+    public Container[]    Containers   { get; set; }
+    public string         ErrorMessage { get; set; }
+    public PipeRunCfg     RunCfg       { get; set; }
 
-    public bool Success => !Error;
-    public bool Error   => ErrorMessage.HasValue();
+    public bool Error => ErrorMessage.HasValue();
   }
 
   public class AzurePipeWorker : IPipeWorkerStartable {
@@ -156,7 +157,9 @@ namespace Mutuo.Etl.Pipe {
           Id = runId,
           Duration = run.Duration,
           Containers = run.Result.Containers.Select(c => c.Value).ToArray(),
-          FinalState = run.Result.State,
+          RawState = run.Result.State,
+          State = run.Result.State(),
+          RunCfg = runCfg,
           ErrorMessage = errorMsg
         };
         await Task.WhenAll(
@@ -195,7 +198,7 @@ namespace Mutuo.Etl.Pipe {
         if (!running && state == ContainerState.Running) {
           log.Information("{ContainerGroup} - container started in {Duration}", group.Name, sw.Elapsed);
           running = true;
-          if (!returnOnRunning) return group;
+          if (returnOnRunning) return group;
         }
         if (!state.IsCompletedState()) {
           await Task.Delay(500);

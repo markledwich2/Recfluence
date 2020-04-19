@@ -59,18 +59,23 @@ namespace Mutuo.Etl.Pipe {
         });
 
       var pipeWorker = PipeWorker(ctx);
-      log.Information("{PipeWorker} - launching batches {@batches}", pipeWorker.GetType().Name, batches);
+      log.Debug("{PipeWorker} - launching batches {@batches}", pipeWorker.GetType().Name, batches);
       var res = pipeWorker is IPipeWorkerStartable s ? await s.RunWork(ctx, batches, runCfg.ReturnOnStart, log) : await pipeWorker.RunWork(ctx, batches, log);
 
-      var hasOutState = typeof(TOut) != typeof(object);
+      var hasOutState = typeof(TOut) != typeof(object) && !runCfg.ReturnOnStart;
       var outState = hasOutState ? await GetOutState() : res.Select(r => (Metadata: r, OutState: (TOut) default)).ToArray();
       var batchId = $"{pipeNme}|{group}";
-      log.Information("{BatchId} - Batches {Succeded}/{Total} succeeded/total",
-        batchId, res.Count(r => r.Success), res.Count);
+
+      if (runCfg.ReturnOnStart)
+        log.Debug("Pipe Batch {BatchId} - Launched {Started}/{ContainersTotal} containers",
+          batchId, res.Count(r => !r.Error), res.Count);
+      else
+        log.Debug("Pipe Batch {BatchId} - Succeeded {Succeeded}/{ContainersTotal} succeeded/total",
+          batchId, res.Count(r => !r.Error && r.State == ContainerState.Succeeded), res.Count);
 
       var failed = outState.Where(o => o.Metadata.Error).ToArray();
       if (failed.Any())
-        log.Error("{BatchId} - {Batches} batches failed. Ids:{Ids}",
+        log.Error("Pipe Batch {BatchId} - {Batches} batches failed. Ids:{Ids}",
           batchId, failed.Length, failed.Select(f => f.Metadata.Id));
 
       return outState;
@@ -78,7 +83,7 @@ namespace Mutuo.Etl.Pipe {
       async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> GetOutState() =>
         await res
           .BlockTransform(async b => {
-            var outstate = b.Success
+            var outstate = b.State == ContainerState.Succeeded
               ? await typeof(Pipes).GetMethod(nameof(Pipes.GetOutState), BindingFlags.Static | BindingFlags.NonPublic)
                 .CallStaticGenericTask<TOut>(new[] {typeof(TOut)}, ctx, b.Id, log)
               : default;
