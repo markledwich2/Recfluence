@@ -74,6 +74,6 @@
                 "cwd": "${workspaceRoot}/YtCli"
             },
             "problemMatcher":"$msCompile"
-        },
+        }
     ]
 }

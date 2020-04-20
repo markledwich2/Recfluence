@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -24,11 +25,11 @@ using TimeUnit = Humanizer.Localisation.TimeUnit;
 
 namespace YtReader.Search {
   public class YtSearch {
-    readonly AlgoliaCfg    Angolia;
-    readonly AppDb         Db;
+    readonly AlgoliaCfg Angolia;
+    readonly AppDb Db;
     readonly ElasticClient Elastic;
-    readonly ILogger       Log;
-    readonly SolrCfg       Solr;
+    readonly ILogger Log;
+    readonly SolrCfg Solr;
 
     public YtSearch(AlgoliaCfg angolia, SolrCfg solr, AppDb db, ElasticClient elastic, ILogger log) {
       Angolia = angolia;
@@ -41,28 +42,25 @@ namespace YtReader.Search {
     public async Task BulkElasticCaptionIndex() {
       //trying to allow aggregation on categorical fields. https://www.elastic.co/guide/en/elasticsearch/reference/current/fielddata.html
 
-      var dir = $"captionIndex/{DateTime.UtcNow.FileSafeTimestamp()}".AsPath()
-        .InAppData("recfluence").CreateDirectories();
+      var dir = $"./.data/captionIndex/{DateTime.UtcNow.FileSafeTimestamp()}".AsPath();
+      dir.CreateDirectory();
 
       var files = new List<FPath>();
-      using (var conn = await Db.OpenLoggedConnection(Log))
-        foreach (var (batch, index) in conn.Query<VideoCaption>(nameof(GetCaptionsRecords),
-          "select * from caption where views > 10000 limit 200000", buffered: false).Batch(50000).WithIndex()) {
-          var file = dir.Combine($"captions.{index}.jsonl.gz");
-          batch.ToJsonlGz(file.FullPath);
-          Log.Debug("cached caption file for indexing: {File}", file.FullPath);
-          files.Add(file);
-        }
+      using var conn = await Db.OpenLoggedConnection(Log);
 
-      await files.BlockAction(async f => {
-        var captons = f.OpenText().LoadJsonlGz<VideoCaption>().ToArray();
-        var res = await Elastic.IndexManyAsync(captons);
+      var allCaps = conn.Query<VideoCaption>(nameof(BulkElasticCaptionIndex),
+                    "select * from caption where views > 10000", buffered: false)
+                    .Batch(10000).WithIndex();
+
+      await allCaps.BlockAction(async b => {
+        var res = await Elastic.IndexManyAsync(b.item);
         if (res.ItemsWithErrors.Any())
-          Log.Information("Indexed {Success}/{Total} elastic documents. Top 5 Error items: {@ItemsWithErrors}",
-            res.Items.Count - res.ItemsWithErrors.Count(), captons.Length, res.ItemsWithErrors.Take(5));
+          Log.Information("Indexed {Success}/{Total} elastic documents (batch {Batch}). Top 5 Error items: {@ItemsWithErrors}",
+              res.Items.Count - res.ItemsWithErrors.Count(), b.item.Count, b.index, res.ItemsWithErrors.Take(5));
         else
-          Log.Information("Indexed {Success}/{Total} elastic documents", res.Items.Count, captons.Length);
-      }, 4);
+          Log.Information("Indexed {Success}/{Total} elastic documents (batch {Batch})",
+              res.Items.Count, b.item.Count, b.index);
+      }, 4, 8);
     }
 
     public async Task BuildSolrCaptionIndex() {
@@ -93,7 +91,7 @@ namespace YtReader.Search {
         .Batch(1000) // batch 1000 videos
         .BlockAction(async caps => {
           // TODO fix this to work with new POCO (No objectid)
-          var existingObjects = await index.GetObjectsAsync<VideoCaption>(caps.Select(c => c.caption_id), attributesToRetrieve: new[] {"caption_id"});
+          var existingObjects = await index.GetObjectsAsync<VideoCaption>(caps.Select(c => c.caption_id), attributesToRetrieve: new[] { "caption_id" });
           var existingIds = existingObjects.NotNull().ToArray().Select(c => c.caption_id).ToHashSet();
           var toUpload = caps.Where(c => !existingIds.Contains(c.caption_id)).ToArray();
           var sw = Stopwatch.StartNew();
@@ -156,22 +154,22 @@ where exists(select *
       get => _objectId ?? $"{video_id}|{offset_seconds}";
       set => _objectId = value;
     }*/
-    public string   caption_id     { get; set; }
-    public string   video_id       { get; set; }
-    public string   ideology       { get; set; }
-    public string   media          { get; set; }
-    public string   country        { get; set; }
-    public string   lr             { get; set; }
-    public string   video_title    { get; set; }
-    public string   channel_title  { get; set; }
-    public string   channel_id     { get; set; }
-    public string   keywords       { get; set; }
-    public string   description    { get; set; }
-    public string   thumb_high     { get; set; }
-    public long     offset_seconds { get; set; }
-    public string   caption        { get; set; }
-    public DateTime upload_date    { get; set; }
-    public long     views          { get; set; }
+    public string caption_id { get; set; }
+    public string video_id { get; set; }
+    public string ideology { get; set; }
+    public string media { get; set; }
+    public string country { get; set; }
+    public string lr { get; set; }
+    public string video_title { get; set; }
+    public string channel_title { get; set; }
+    public string channel_id { get; set; }
+    public string keywords { get; set; }
+    public string description { get; set; }
+    public string thumb_high { get; set; }
+    public long offset_seconds { get; set; }
+    public string caption { get; set; }
+    public DateTime upload_date { get; set; }
+    public long views { get; set; }
     public string url {
       get => $"https://youtu.be/{video_id}?t={offset_seconds}";
       set { }
