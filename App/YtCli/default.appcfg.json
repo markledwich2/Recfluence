@@ -83,7 +83,7 @@
             {
                 "name": "video_latest",
                 "syncType": "Incremental",
-                "filter": "channel_id in ('UCzQUP1qoWDoEbmsQxvdjxgQ', 'UCupvZG-5ko_eiXAupbDfxWw')",
+                // "filter": "channel_id in ('UCzQUP1qoWDoEbmsQxvdjxgQ', 'UCupvZG-5ko_eiXAupbDfxWw')",
                 "cols": [
                     { 
                         "name": "video_id",
@@ -110,7 +110,7 @@
                 "syncType": "Incremental",
                 "manualSchema": true,
                 "colStore": false,
-                "filter": "channel_id in ('UCzQUP1qoWDoEbmsQxvdjxgQ', 'UCupvZG-5ko_eiXAupbDfxWw') ",
+                // "filter": "channel_id in ('UCzQUP1qoWDoEbmsQxvdjxgQ', 'UCupvZG-5ko_eiXAupbDfxWw') ",
                 "selectedCols": ["caption_id", "video_id", "channel_id", "caption", "offset_seconds"],
                 "cols": [
                     {
@@ -120,7 +120,7 @@
                     },
                     {
                         "name": "caption",
-                        "typeOverride": "nvarchar(4000)",
+                        "typeOverride": "nvarchar(max)",
                         "fullText": true
                     },
                     {

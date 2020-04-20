@@ -8,5 +8,9 @@
     "cSpell.words": [
         "Jsonl",
         "Mutuo"
-    ]
+    ],
+    "files.exclude": {
+        "**/bin": true,
+        "**/obj": true
+    }
 }

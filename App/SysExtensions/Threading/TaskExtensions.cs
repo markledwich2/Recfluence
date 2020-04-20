@@ -119,13 +119,14 @@ namespace SysExtensions.Threading {
       }
     }
 
-    public static async Task WithWrappedException(this Task task, string message, ILogger log = null) {
+    public static async Task WithWrappedException(this Task task, string taskDescription, ILogger log = null) {
       try {
         await task;
       }
       catch (Exception ex) {
-        log?.Error(ex, message);
-        throw new InvalidOperationException(message, ex);
+        var msg = $"Unhandled error performing ({taskDescription}): {ex.Message}";
+        log?.Error(ex, msg);
+        throw new InvalidOperationException(msg, ex);
       }
     }
   }

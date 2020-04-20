@@ -19,7 +19,6 @@ namespace Mutuo.Etl.Db {
 
     public async Task UpdateTable(SyncTableCfg tableCfg, ILogger log, bool fullLoad = false, int limit = 0) {
       var sw = Stopwatch.StartNew();
-      log = log.ForContext("Table", tableCfg.Name);
       var sourceTable = new TableId(Source.DefaultSchema, tableCfg.Name);
       var destTable = new TableId(Dest.DefaultSchema, tableCfg.Name);
       var destSchema = await Dest.Schema(destTable);
