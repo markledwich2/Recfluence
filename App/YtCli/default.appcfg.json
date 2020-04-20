@@ -60,6 +60,9 @@
     "solr": {
         "url": "https://ss225254-ank9au43-us-west-1-aws.searchstax.com/solr"
     },
+    "elastic": {
+        "cloudId": "Recfluence:d2VzdHVzMi5henVyZS5lbGFzdGljLWNsb3VkLmNvbTo5MjQzJDg5OTljNTUxYjkyYjRmYjA5YTRkZjYwMmVjYTQ3ZmJjJGJmOTFlMzE2YzNkZTQyOWE4Mzk3MDlhZjI0NTRlYzg0"
+    },
     "appDb": {
         "host": "recfluence.database.windows.net",
         "db": "recfluence"

@@ -40,6 +40,17 @@
         }
       }
     },
+    "ElasticCfg": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "creds": {
+          "type": "string"
+        }
+      }
+    },
     "NamedPipeRunCfg": {
       "type": "object",
       "properties": {
@@ -343,6 +354,9 @@
         },
         "colStore": {
           "type": "boolean"
+        },
+        "fullTextCatalog": {
+          "type": "string"
         }
       }
     },
@@ -446,6 +460,9 @@
     },
     "algolia": {
       "$ref": "#/definitions/AlgoliaCfg"
+    },
+    "elastic": {
+      "$ref": "#/definitions/ElasticCfg"
     },
     "syncDb": {
       "$ref": "#/definitions/SyncDbCfg"

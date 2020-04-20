@@ -63,6 +63,8 @@ namespace SysExtensions.Collections {
         yield return b;
     }
 
+    public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> items) => items.Select((item, index) => (item, index));
+
     public static IEnumerable<IGrouping<TKey, TSource>> ChunkBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector) =>
       source.ChunkBy(keySelector, EqualityComparer<TKey>.Default);
 
@@ -110,18 +112,13 @@ namespace SysExtensions.Collections {
     // A Chunk is a contiguous group of one or more source elements that have the same key. A Chunk 
     // has a key and a list of ChunkItem objects, which are copies of the elements in the source sequence.
     class Chunk<TKey, TSource> : IGrouping<TKey, TSource> {
-      class ChunkItem {
-        public ChunkItem(TSource value) => Value = value;
-        public readonly TSource   Value;
-        public          ChunkItem Next;
-      }
+      readonly ChunkItem head;
+      readonly object    m_Lock;
 
       IEnumerator<TSource> enumerator;
-      Func<TSource, bool>  predicate;
-      readonly ChunkItem   head;
-      ChunkItem            tail;
       internal bool        isLastSourceElement;
-      readonly object      m_Lock;
+      Func<TSource, bool>  predicate;
+      ChunkItem            tail;
 
       public Chunk(TKey key, IEnumerator<TSource> enumerator, Func<TSource, bool> predicate) {
         Key = key;
@@ -137,6 +134,33 @@ namespace SysExtensions.Collections {
       // the tail of the linked list is set to null in the CopyNextChunkElement method if the
       // key of the next element does not match the current chunk's key, or there are no more elements in the source.
       bool DoneCopyingChunk => tail == null;
+
+      public TKey Key { get; }
+
+      // Invoked by the inner foreach loop. This method stays just one step ahead
+      // of the client requests. It adds the next element of the chunk only after
+      // the clients requests the last element in the list so far.
+      public IEnumerator<TSource> GetEnumerator() {
+        //Specify the initial element to enumerate.
+        var current = head;
+
+        // There should always be at least one ChunkItem in a Chunk.
+        while (current != null) {
+          // Yield the current item in the list.
+          yield return current.Value;
+
+          // Copy the next item from the source sequence, 
+          // if we are at the end of our local list.
+          lock (m_Lock)
+            if (current == tail)
+              CopyNextChunkElement();
+
+          // Move to the next ChunkItem in the list.
+          current = current.Next;
+        }
+      }
+
+      IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
       // Adds one ChunkItem to the current group
       // REQUIRES: !DoneCopyingChunk && lock(this)
@@ -174,32 +198,11 @@ namespace SysExtensions.Collections {
               CopyNextChunkElement();
       }
 
-      public TKey Key { get; }
-
-      // Invoked by the inner foreach loop. This method stays just one step ahead
-      // of the client requests. It adds the next element of the chunk only after
-      // the clients requests the last element in the list so far.
-      public IEnumerator<TSource> GetEnumerator() {
-        //Specify the initial element to enumerate.
-        var current = head;
-
-        // There should always be at least one ChunkItem in a Chunk.
-        while (current != null) {
-          // Yield the current item in the list.
-          yield return current.Value;
-
-          // Copy the next item from the source sequence, 
-          // if we are at the end of our local list.
-          lock (m_Lock)
-            if (current == tail)
-              CopyNextChunkElement();
-
-          // Move to the next ChunkItem in the list.
-          current = current.Next;
-        }
+      class ChunkItem {
+        public readonly TSource   Value;
+        public          ChunkItem Next;
+        public ChunkItem(TSource value) => Value = value;
       }
-
-      IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
   }
 }

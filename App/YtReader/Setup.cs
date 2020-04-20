@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Builder;
+using Elasticsearch.Net;
 using Humanizer;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
@@ -15,6 +16,7 @@ using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
+using Nest;
 using Newtonsoft.Json.Linq;
 using Semver;
 using Serilog;
@@ -211,7 +213,11 @@ namespace YtReader {
       b.Register(_ => log).SingleInstance();
       b.Register(_ => cfg).SingleInstance();
       b.Register(_ => rootCfg).SingleInstance();
+
       b.Register(_ => cfg.Pipe).SingleInstance();
+      b.Register(_ => cfg.Elastic).SingleInstance();
+      b.Register(_ => cfg.Algolia).SingleInstance();
+      b.Register(_ => cfg.Solr).SingleInstance();
 
       b.Register<Func<Task<DbConnection>>>(_ => async () => await cfg.Snowflake.OpenConnection());
       b.RegisterType<AppDb>().SingleInstance();
@@ -223,6 +229,11 @@ namespace YtReader {
 
 
       b.RegisterType<YtClient>();
+      b.Register(_ => new ElasticClient(new ConnectionSettings(
+          cfg.Elastic.CloudId,
+          new BasicAuthenticationCredentials(cfg.Elastic.Creds.Name, cfg.Elastic.Creds.Secret))
+        .DefaultIndex("caption")));
+
       b.RegisterType<YtStore>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>());
       b.RegisterType<YtResults>().WithKeyedParam(StoreType.Results, Typ.Of<ISimpleFileStore>());
       b.RegisterType<YtSearch>();

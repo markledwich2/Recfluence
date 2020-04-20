@@ -47,7 +47,7 @@ namespace Mutuo.Etl.Db {
         orderBySql,
         limitSql
       }.NotNull().Join("\n");
-      return await Connection.ExecuteReader(nameof(Read), sql, new {maxTs = tsValue, limit});
+      return await Connection.ExecuteReaderAsync(nameof(Read), sql, new {maxTs = tsValue, limit});
     }
 
     public string Sql(string name) => QuoteIfRequired(name);

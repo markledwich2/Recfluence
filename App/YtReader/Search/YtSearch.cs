@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
@@ -8,33 +7,66 @@ using System.Threading;
 using System.Threading.Tasks;
 using Algolia.Search.Clients;
 using Algolia.Search.Exceptions;
-using Dapper;
-using Humanizer.Localisation;
-using Polly;
+using Mutuo.Etl.Db;
+using Nest;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
+using SysExtensions.Fluent.IO;
+using SysExtensions.IO;
 using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
+using Policy = Polly.Policy;
+using TimeUnit = Humanizer.Localisation.TimeUnit;
 
 namespace YtReader.Search {
   public class YtSearch {
-    readonly AlgoliaCfg Angolia;
-    readonly AppDb      Db;
-    readonly ILogger    Log;
-    readonly SolrCfg    Solr;
+    readonly AlgoliaCfg    Angolia;
+    readonly AppDb         Db;
+    readonly ElasticClient Elastic;
+    readonly ILogger       Log;
+    readonly SolrCfg       Solr;
 
-    public YtSearch(AlgoliaCfg angolia, SolrCfg solr, AppDb db, ILogger log) {
+    public YtSearch(AlgoliaCfg angolia, SolrCfg solr, AppDb db, ElasticClient elastic, ILogger log) {
       Angolia = angolia;
       Solr = solr;
       Db = db;
+      Elastic = elastic;
       Log = log;
     }
 
+    public async Task BulkElasticCaptionIndex() {
+      //trying to allow aggregation on categorical fields. https://www.elastic.co/guide/en/elasticsearch/reference/current/fielddata.html
+
+      var dir = $"captionIndex/{DateTime.UtcNow.FileSafeTimestamp()}".AsPath()
+        .InAppData("recfluence").CreateDirectories();
+
+      var files = new List<FPath>();
+      using (var conn = await Db.OpenLoggedConnection(Log))
+        foreach (var (batch, index) in conn.Query<VideoCaption>(nameof(GetCaptionsRecords),
+          "select * from caption where views > 10000 limit 200000", buffered: false).Batch(50000).WithIndex()) {
+          var file = dir.Combine($"captions.{index}.jsonl.gz");
+          batch.ToJsonlGz(file.FullPath);
+          Log.Debug("cached caption file for indexing: {File}", file.FullPath);
+          files.Add(file);
+        }
+
+      await files.BlockAction(async f => {
+        var captons = f.OpenText().LoadJsonlGz<VideoCaption>().ToArray();
+        var res = await Elastic.IndexManyAsync(captons);
+        if (res.ItemsWithErrors.Any())
+          Log.Information("Indexed {Success}/{Total} elastic documents. Top 5 Error items: {@ItemsWithErrors}",
+            res.Items.Count - res.ItemsWithErrors.Count(), captons.Length, res.ItemsWithErrors.Take(5));
+        else
+          Log.Information("Indexed {Success}/{Total} elastic documents", res.Items.Count, captons.Length);
+      }, 4);
+    }
+
     public async Task BuildSolrCaptionIndex() {
-      using var conn = await Db.OpenConnection();
+      using var conn = await Db.OpenLoggedConnection(Log);
       var caps = GetCaptionsRecords(conn);
       var http = new HttpClient();
       await caps.Batch(1000).BlockAction(async batch => {
@@ -49,7 +81,7 @@ namespace YtReader.Search {
     }
 
     public async Task BuildAlgoliaVideoIndex() {
-      using var conn = await Db.OpenConnection();
+      using var conn = await Db.OpenLoggedConnection(Log);
       var client = new SearchClient(Angolia.Creds.Name, Angolia.Creds.Secret);
       var index = client.InitIndex("captions");
       var rawCaps = GetCaptionsRecords(conn);
@@ -57,14 +89,13 @@ namespace YtReader.Search {
       var algoliaPolicy = Policy.Handle<AlgoliaUnreachableHostException>().RetryWithBackoff("saving algolia objects", 3, Log);
 
       await rawCaps
-        .ChunkBy(c => c.video_id)
-        .Select(VideoCaptions)
-        .SelectMany(c => c) // ungroup
+        .ChunkBy(c => c.video_id).Select(VideoCaptions).SelectMany(c => c) // ungroup
         .Batch(1000) // batch 1000 videos
         .BlockAction(async caps => {
-          var existingObjects = await index.GetObjectsAsync<VideoCaption>(caps.Select(c => c.ObjectID), attributesToRetrieve: new[] {"objectID"});
-          var existingIds = existingObjects.NotNull().ToArray().Select(c => c.ObjectID).ToHashSet();
-          var toUpload = caps.Where(c => !existingIds.Contains(c.ObjectID)).ToArray();
+          // TODO fix this to work with new POCO (No objectid)
+          var existingObjects = await index.GetObjectsAsync<VideoCaption>(caps.Select(c => c.caption_id), attributesToRetrieve: new[] {"caption_id"});
+          var existingIds = existingObjects.NotNull().ToArray().Select(c => c.caption_id).ToHashSet();
+          var toUpload = caps.Where(c => !existingIds.Contains(c.caption_id)).ToArray();
           var sw = Stopwatch.StartNew();
           if (toUpload.Any()) {
             var res = await algoliaPolicy.ExecuteAsync(_ => index.SaveObjectsAsync(caps), CancellationToken.None);
@@ -73,10 +104,10 @@ namespace YtReader.Search {
         });
     }
 
-    static IEnumerable<VideoCaption> GetCaptionsRecords(IDbConnection conn, int limit = 0) {
+    static IEnumerable<VideoCaption> GetCaptionsRecords(LoggedConnection conn, int limit = 0) {
       var limitStr = limit == 0 ? "" : $"limit {limit}";
 
-      return conn.Query<VideoCaption>($@"
+      return conn.Query<VideoCaption>(nameof(GetCaptionsRecords), $@"
 with captions_carona as (
   select *
   from caption c
@@ -119,12 +150,13 @@ where exists(select *
     //$"<a href='{f.url}'>{f.offset_seconds.Seconds().HumanizeShort()}</a> {microCaps.Join(" ", c => c.caption)}";
   }
 
+  [ElasticsearchType(IdProperty = nameof(caption_id))]
   public class VideoCaption {
-    string _objectId;
-    public string ObjectID {
+    /*public string ObjectID {
       get => _objectId ?? $"{video_id}|{offset_seconds}";
       set => _objectId = value;
-    }
+    }*/
+    public string   caption_id     { get; set; }
     public string   video_id       { get; set; }
     public string   ideology       { get; set; }
     public string   media          { get; set; }
@@ -139,6 +171,7 @@ where exists(select *
     public long     offset_seconds { get; set; }
     public string   caption        { get; set; }
     public DateTime upload_date    { get; set; }
+    public long     views          { get; set; }
     public string url {
       get => $"https://youtu.be/{video_id}?t={offset_seconds}";
       set { }

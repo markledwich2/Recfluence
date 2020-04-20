@@ -47,7 +47,13 @@ namespace YtReader {
     [Required] public PipeAppCfg          Pipe                  { get; set; } = new PipeAppCfg();
     public            SolrCfg             Solr                  { get; set; } = new SolrCfg();
     public            AlgoliaCfg          Algolia               { get; set; } = new AlgoliaCfg();
+    public            ElasticCfg          Elastic               { get; set; }
     public            SyncDbCfg           SyncDb                { get; set; } = new SyncDbCfg();
+  }
+
+  public class ElasticCfg {
+    public string     CloudId { get; set; }
+    public NameSecret Creds   { get; set; }
   }
 
   public class SyncDbCfg {

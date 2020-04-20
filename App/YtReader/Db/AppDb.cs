@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Data.Common;
 using System.Threading.Tasks;
+using Mutuo.Etl.Db;
+using Serilog;
 
 namespace YtReader.Db {
   public class AppDb {
@@ -9,6 +11,7 @@ namespace YtReader.Db {
     public AppDb(Func<Task<DbConnection>> getConnection) => GetConnection = getConnection;
 
     public Task<DbConnection> OpenConnection() => GetConnection();
+    public async Task<LoggedConnection> OpenLoggedConnection(ILogger log) => (await GetConnection()).AsLogged(log);
   }
 
   public class DbVideo {

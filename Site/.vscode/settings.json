@@ -9,5 +9,8 @@
     "typescript.format.semicolons": "remove",
     "[typescriptreact]": {
         "editor.defaultFormatter": "vscode.typescript-language-features"
-    }
+    },
+    "cSpell.words": [
+        "algoliasearch"
+    ]
 }

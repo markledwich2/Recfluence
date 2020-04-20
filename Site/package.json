@@ -40,7 +40,10 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
+    "@appbaseio/reactivesearch": "^3.7.11",
+    "@types/react-instantsearch-dom": "^6.3.0",
     "@types/youtube": "0.0.38",
+    "algoliasearch": "^4.1.0",
     "babel-plugin-styled-components": "^1.10.7",
     "chai": "^4.2.0",
     "current-git-branch": "^1.1.0",
@@ -56,6 +59,7 @@
     "react-container-dimensions": "^1.4.1",
     "react-dom": "^16.11.0",
     "react-helmet": "^5.2.1",
+    "react-instantsearch-dom": "^6.4.0",
     "react-router": "^4.3.1",
     "react-router-dom": "^4.3.1",
     "react-select": "^2.4.4",

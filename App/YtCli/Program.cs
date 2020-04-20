@@ -200,7 +200,8 @@ namespace YtCli {
     public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
       var search = ctx.Scope.Resolve<YtSearch>();
       //await search.BuildSolrCaptionIndex();
-      await search.BuildAlgoliaVideoIndex();
+      //await search.BuildAlgoliaVideoIndex();
+      await search.BulkElasticCaptionIndex();
       return ExitCode.Success;
     }
   }
