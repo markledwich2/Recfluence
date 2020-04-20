@@ -19,13 +19,21 @@ namespace YtReader {
     public async Task SyncDb(SyncDbCfg cfg, ILogger log, IReadOnlyCollection<string> tables = null, bool fullLoad = false, int optionLimit = 0) {
       var toRun = cfg.Tables.Where(t => tables == null || !tables.Any() || tables.Contains(t.Name)).ToArray();
       var dur = await toRun.BlockAction(async t => {
-        log.Information("Starting sync of table {Table}", t.Name);
+        var tableLog = log.ForContext("Table", t.Name);
+
+        tableLog.Information("Table Sync {Table} - started", t.Name);
         using var sourceConn = await SnowflakeCfg.OpenConnection();
-        using var destConn = await SqlServerCfg.OpenConnection(log);
+        using var destConn = await SqlServerCfg.OpenConnection(tableLog);
         var sync = new DbSync(
-          new SnowflakeSourceDb(sourceConn, SnowflakeCfg.Schema, log),
-          new MsSqlDestDb(destConn, SqlServerCfg.DefaultSchema, t.FullTextCatalog, log));
-        var dur = await sync.UpdateTable(t, log, fullLoad, optionLimit).WithDuration();
+          new SnowflakeSourceDb(sourceConn, SnowflakeCfg.Schema, tableLog),
+          new MsSqlDestDb(destConn, SqlServerCfg.DefaultSchema, t.FullTextCatalog, tableLog));
+        
+        var res = await sync.UpdateTable(t, tableLog, fullLoad, optionLimit)
+          .WithWrappedException($"sync table '{t.Name}'", tableLog) // log the error and rethrow. Won't interrupt untill other sync have completed
+          .WithDuration();
+
+        tableLog.Information("Talbe sync {Table} - completed in {Duration}", t.Name, res.HumanizeShort());
+
       }, cfg.Parallel).WithDuration();
       log.Information("Completed loading {Tables} in {Duration}", toRun.Select(t => t.Name), dur.HumanizeShort());
     }

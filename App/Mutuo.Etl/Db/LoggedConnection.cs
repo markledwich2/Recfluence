@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Dapper;
 using Humanizer.Localisation;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
@@ -25,7 +26,7 @@ namespace Mutuo.Etl.Db {
       await ExecWithLog(() => Conn.QueryAsync<T>(sql, transaction), sql, operation);
 
     public async Task<T> ExecuteScalar<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
-      await ExecWithLog(() => Conn.ExecuteScalarAsync<T>(sql, param, transaction), sql, operation);
+      await ExecWithLog(() => Conn.ExecuteScalarAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation);
 
     public async Task<DbDataReader> ExecuteReader(string operation, string sql, object param, DbTransaction transaction = null) =>
       await ExecWithLog(() => Conn.ExecuteReaderAsync(sql, param, transaction), sql, operation);
@@ -33,6 +34,7 @@ namespace Mutuo.Etl.Db {
     async Task<T> ExecWithLog<T>(Func<Task<T>> exec, string sql, string operation) {
       TimedResult<T> res;
       try {
+        Log.Debug("{Operation} - started: {Sql}", operation, sql);
         res = await exec().WithDuration();
       }
       catch (Exception ex) {
