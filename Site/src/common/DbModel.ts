@@ -32,13 +32,17 @@ export class DbModel {
 
 export class FuncClient {
     static async getVideo(videoId: string): Promise<VideoData> {
-        var res = await getJson<VideoResponse>(`${process.env.FUNC_URL}/Video/${videoId}`)
+        var res = await getJson<VideoResponse>(`${process.env.FUNC_URL}/video/${videoId}`)
         var data = {
             video: res.video,
-            captions: res.captions,
             channel: DbModel.ChannelData(res.channel)
         } as VideoData
         return data
+    }
+
+    static async getCaptions(videoId: string): Promise<CaptionDb[]> {
+        var res = await getJson<CaptionDb[]>(`${process.env.FUNC_URL}/captions/${videoId}`)
+        return res
     }
 }
 
@@ -63,7 +67,6 @@ export interface CaptionDb {
 export interface VideoData {
     video: VideoDb
     channel: ChannelData
-    captions: CaptionDb[]
 }
 
 export interface VideoResponse {

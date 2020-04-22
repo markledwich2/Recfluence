@@ -11,7 +11,7 @@ const App = () => (
     <Router>
       <ChannelRelationsPage path="/" dataUrl={process.env.RESULTS_URL} />
       <VideoSearch path="video"></VideoSearch>
-      <Video path="video/:videoId"></Video>
+      <Video path="video/:videoId" ></Video>
     </Router>
   </MainLayout>)
 

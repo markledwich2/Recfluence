@@ -4,14 +4,16 @@ import { compactInteger } from "humanize-plus"
 import React, { useEffect, useState } from "react"
 import YouTube from 'react-youtube'
 import styled from 'styled-components'
-import { FuncClient, VideoData } from "../common/DbModel"
-import '../common/NodeTypings.d.ts'
+import { FuncClient, VideoData, CaptionDb } from "../common/DbModel"
+import '../types/NodeTypings.d.ts'
 import { dateFormat, secondsToHHMMSS } from "../common/Utils"
-import { MainLayout } from "../components/MainLayout"
+import { MainLayout, BasicPageDiv } from "../components/MainLayout"
 import { ChannelComponentProps } from "./ChannelTags"
+import { ChannelData } from "../common/YtModel"
+import { useLocation } from '@reach/router'
+import queryString from 'query-string'
 
-
-const PageDiv = styled.div`
+const VidePageDiv = styled(BasicPageDiv)`
   display:flex;
   flex-direction:column;
   max-width:1024px;
@@ -28,12 +30,6 @@ const CaptionDiv = styled.div`
   overflow-y: scroll;
   height:100%;
   font-size: 1.2em;
-  &::-webkit-scrollbar {
-    width: 0.5em;
-  }
-  &::-webkit-scrollbar-thumb {
-    background-color: #333;
-  }
   > div {
     margin-bottom: 0.5em;
   }
@@ -63,61 +59,84 @@ const VideoStatsDiv = styled.div`
   }
 `
 
-
-
 interface VideoProps extends RouteComponentProps {
   videoId?: string
 }
 
 export const Video: React.FC<VideoProps> = (props) => {
-  const [data, setData] = useState<VideoData>()
+  const { videoId } = props
+
+  const [video, setVideoData] = useState<VideoData>()
+  const [captions, setCaptions] = useState<CaptionDb[]>()
   //const [offset, setOffset] = useState<number>()
   const [player, setPlayer] = useState<YT.Player>(null)
 
+  const v = video?.video
+  const location = useLocation()
+  const t = +queryString.parse(location.search).t
 
   useEffect(() => {
     async function renderVideo() {
-      const data = await FuncClient.getVideo(props.videoId)
-      setData(data)
+      const captionTask = FuncClient.getCaptions(videoId)
+      const videoTask = await FuncClient.getVideo(videoId)
+      setVideoData(await videoTask)
+      setCaptions(await captionTask)
     }
     renderVideo()
   }, [])
 
+  useEffect(() => {
+    if (!t) return
+    const e = document.getElementById(t.toString())
+    if (e)
+      e.scrollIntoView()
+  })
 
-  const v = data?.video
-
-  const onReady = (event: any) => {
-    setPlayer(event.target)
+  const onVideoReader = (event: any) => {
+    const player: YT.Player = event.target
+    setPlayer(player)
+    if (t)
+      player?.seekTo(t, true)
   }
 
   const onCaptionClick = (offset: number) => {
     player?.seekTo(offset, true)
   }
 
-  if (!data) return <></>
 
-  return (<PageDiv>
-    <YtContainer><YouTube videoId={v.VIDEO_ID} onReady={e => onReady(e)} opts={{ height: "100%", width: "100%" }} /></YtContainer>
-    <div>
-      <h2>{v.VIDEO_TITLE}</h2>
-    </div>
-    <VideoStatsDiv>
-      <span><b>{compactInteger(v.VIEWS)}</b> views</span>
-      <span>{dateFormat(parseISO(v.UPLOAD_DATE))}</span>
-      <span style={{ marginLeft: 'auto' }}>
-        <span><b>{compactInteger(v.LIKES)}</b> likes</span>
-        <span><b>{compactInteger(v.DISLIKES)}</b> dislikes</span>
-      </span>
-    </VideoStatsDiv>
-    <CaptionDiv>
-      <VideoChannelTitle Channel={data.channel} />
-      <DescriptionDiv>{v.DESCRIPTION}</DescriptionDiv>
+  return (
+    <VidePageDiv>
+      <YtContainer><YouTube videoId={videoId} onReady={e => onVideoReader(e)} opts={{ height: "100%", width: "100%" }} /></YtContainer>
       <div>
-        {data.captions.map(c => <span key={c.CAPTION_ID}>
-          <a onClick={() => onCaptionClick(c.OFFSET_SECONDS)}>{secondsToHHMMSS(c.OFFSET_SECONDS)}</a> {c.CAPTION}<br /></span>)}
+        <h2>{v?.VIDEO_TITLE}</h2>
       </div>
-    </CaptionDiv>
-  </PageDiv >)
+
+      {v ? (
+        <>
+          <VideoStatsDiv>
+            <span><b>{compactInteger(v.VIEWS)}</b> views</span>
+            <span>{dateFormat(parseISO(v.UPLOAD_DATE))}</span>
+            <span style={{ marginLeft: 'auto' }}>
+              <span><b>{compactInteger(v.LIKES)}</b> likes</span>
+              <span><b>{compactInteger(v.DISLIKES)}</b> dislikes</span>
+            </span>
+          </VideoStatsDiv>
+          <CaptionDiv>
+            <VideoChannelTitle Channel={video.channel} />
+            <DescriptionDiv>{v.DESCRIPTION}</DescriptionDiv>
+            <div>
+              {captions?.map(c => (
+                <span key={c.OFFSET_SECONDS} id={c.OFFSET_SECONDS.toString()}>
+                  <a onClick={() => onCaptionClick(c.OFFSET_SECONDS)}>{secondsToHHMMSS(c.OFFSET_SECONDS)}</a> {c.CAPTION}<br />
+                </span>
+              )) ?? <></>}
+            </div>
+          </CaptionDiv>
+        </>
+      ) : <></>}
+
+    </VidePageDiv >
+  )
 }
 
 const Card = styled.div`
@@ -125,7 +144,11 @@ const Card = styled.div`
   display: flex;
 `
 
-const VideoChannelTitle = (props: ChannelComponentProps) => {
+export interface VideoChannelTitleProps {
+  Channel: ChannelData
+}
+
+const VideoChannelTitle = (props: VideoChannelTitleProps) => {
   const c = props.Channel
   return (<Card>
     <a href={`{https://www.youtube.com}/channel/${c.channelId}`} target="blank">

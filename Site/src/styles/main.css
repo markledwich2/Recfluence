@@ -9,16 +9,18 @@ html {
 }
 @media all and (min-width: 600px) {
   html, input {
-    font-size: 16px;
+    font-size: 14px;
   }
 }
 
-body, select, input {
+ body, select, input {
   padding: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 1em;
-  color: #eee;
+  color: #ccc;
 }
+
+/*
 
 input {
   background-color: transparent;
@@ -30,17 +32,25 @@ input {
 
 input:focus {
   box-shadow: 0px 0px 15px rgba(144, 144, 145, 0.75);
-}
+} */
 
 /* stop the standard focus style */
-input[type="text"], input[type="password"], textarea, select { 
+/* input[type="text"], input[type="password"], textarea, select { 
   outline: none;
-}
+} */
 
 select {
   background-color: transparent;
   border: none;
   outline: none;
+}
+
+*::-webkit-scrollbar {
+    width: 0.5em;
+}
+  
+*::-webkit-scrollbar-thumb {
+    background-color: #333;
 }
 
 select option {
@@ -54,12 +64,17 @@ ul {
   padding: 0px;
 }
 
-h1,
-h2,
-h3,
-p {
+b, h1, h2, h3 {
+  color: #fff
+}
+
+h1, h2, h3, p {
   margin: 0px;
   padding: 0px;
+}
+
+h2 {
+  font-size: 1.2em;
 }
 
 a {
