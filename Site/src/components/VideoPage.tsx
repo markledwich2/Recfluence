@@ -1,4 +1,4 @@
-import { RouteComponentProps, Router } from "@reach/router"
+import { RouteComponentProps } from "@reach/router"
 import { parseISO } from "date-fns"
 import { compactInteger } from "humanize-plus"
 import React, { useEffect, useState } from "react"
@@ -7,13 +7,12 @@ import styled from 'styled-components'
 import { FuncClient, VideoData, CaptionDb } from "../common/DbModel"
 import '../types/NodeTypings.d.ts'
 import { dateFormat, secondsToHHMMSS } from "../common/Utils"
-import { MainLayout, BasicPageDiv } from "../components/MainLayout"
-import { ChannelComponentProps } from "./ChannelTags"
+import { TextPage } from "../components/MainLayout"
 import { ChannelData } from "../common/YtModel"
 import { useLocation } from '@reach/router'
 import queryString from 'query-string'
 
-const VidePageDiv = styled(BasicPageDiv)`
+const VidePageDiv = styled(TextPage)`
   display:flex;
   flex-direction:column;
   max-width:1024px;

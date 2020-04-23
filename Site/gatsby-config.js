@@ -30,10 +30,10 @@ module.exports = {
         trackingId: "UA-130770302-1",
         head: true,
       }
-    },
-    {
-      resolve: `gatsby-plugin-create-client-paths`,
-      options: { prefixes: [`/*`] },
     }
+    // {
+    //   resolve: `gatsby-plugin-create-client-paths`,
+    //   options: { prefixes: [`/video/*`] },
+    // }
   ]
 }

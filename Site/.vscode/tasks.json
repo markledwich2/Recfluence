@@ -4,6 +4,7 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "develop",
             "type": "npm",
             "script": "develop",
             "problemMatcher": [
@@ -21,8 +22,9 @@
             "group": "build"
         },
         {
+            "label": "serve",
             "type": "npm",
-            "script": "publish",
+            "script": "serve",
             "problemMatcher": [
                 "$eslint-stylish"
             ]

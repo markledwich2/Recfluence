@@ -3,9 +3,10 @@ import React from "react"
 import Helmet from "react-helmet"
 import '../styles/main.css'
 import styled from 'styled-components'
-import { rgb, color as dcolor } from "d3"
+import { color as dcolor } from "d3"
+import { Router, RouteComponentProps as CP } from "@reach/router"
 
-export class MainLayout extends React.Component<{}, {}> {
+export class MainLayout extends React.Component<CP<{}>, {}> {
   render() {
     const { children } = this.props
 
@@ -33,7 +34,6 @@ export class MainLayout extends React.Component<{}, {}> {
   }
 }
 
-
 const themeIntent: ThemeIntent = {
   fontFamily: 'Segoe UI, Tahoma',
   themeColor: '#249e98',
@@ -42,13 +42,21 @@ const themeIntent: ThemeIntent = {
 
 export const theme = makeTheme(themeIntent)
 
-export const BasicPageDiv = styled.div`
+export const TextPage = styled.div`
   max-width:1024px;
   margin: 0 auto;
+  padding-top: 1em;
   mark {
     background-color: ${theme.themeColorSubtler};
     color: ${theme.fontColor};
   }
+`
+
+export const FlexRow = styled.div`
+    display:flex;
+    > * {
+        padding-right:1em
+    }
 `
 
 interface ThemeIntent {

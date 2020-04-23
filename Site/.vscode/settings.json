@@ -11,9 +11,12 @@
         "editor.defaultFormatter": "vscode.typescript-language-features"
     },
     "cSpell.words": [
+        "Zaitsev",
         "aggs",
         "algoliasearch",
-        "dcolor"
+        "appbaseio",
+        "dcolor",
+        "reactivesearch"
     ],
     "[json]": {
         "editor.defaultFormatter": "vscode.json-language-features"
@@ -22,5 +25,8 @@
     "javascript.preferences.quoteStyle": "single",
     "[typescript]": {
         "editor.defaultFormatter": "vscode.typescript-language-features"
+    },
+    "[html]": {
+        "editor.defaultFormatter": "vscode.html-language-features"
     }
 }

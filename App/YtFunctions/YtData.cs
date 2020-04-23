@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,13 +7,10 @@ using Dapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Nest;
 using Newtonsoft.Json;
 using SysExtensions.Serialization;
-using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
-using YtReader.Search;
 
 namespace YtFunctions {
   public class YtData {
@@ -31,8 +27,9 @@ namespace YtFunctions {
       await Ctx.Run(exec, async c => {
         var db = c.Scope.Resolve<AppDb>();
         using var conn = await db.OpenConnection();
-        var videoTask = conn.QueryFirstAsync<DbVideo>("select * from video_latest where video_id = :video_id", new {video_id = videoId});
+        var videoTask = conn.QueryFirstOrDefaultAsync<DbVideo>("select * from video_latest where video_id = :video_id", new {video_id = videoId});
         var video = await videoTask;
+        if (video == null) return new VideoResponse { error = $"Video {videoId} not found"}.JsonResponse(JCfg);
         var channel = await conn.QueryFirstAsync<DbChannel>("select * from channel_latest where channel_id= :channel_id", new {channel_id = video.CHANNEL_ID});
         channel.TAGS = channel.TAGS.Replace("\n", " ");
         var res = new VideoResponse {
@@ -41,7 +38,7 @@ namespace YtFunctions {
         };
         return res.JsonResponse(JCfg);
       });
-    
+
     [FunctionName("captions")]
     public async Task<HttpResponseMessage> Captions([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "captions/{videoId}")]
       HttpRequest req, string videoId, ExecutionContext exec) =>
@@ -51,10 +48,11 @@ namespace YtFunctions {
         var captions = await conn.QueryAsync<DbCaption>("select * from caption where video_id = :video_id order by offset_seconds", new {video_id = videoId});
         return captions.JsonResponse(JCfg);
       });
-    
+
     public class VideoResponse {
-      public DbVideo     video    { get; set; }
-      public DbChannel   channel  { get; set; }
+      public DbVideo   video   { get; set; }
+      public DbChannel channel { get; set; }
+      public string    error   { get; set; }
     }
   }
 
