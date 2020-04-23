@@ -7,6 +7,7 @@ import _ from 'lodash'
 import { luceneTerms } from '../common/Lucine'
 import styled from 'styled-components'
 import { FlexRow, theme } from './MainLayout'
+import { Link } from 'gatsby'
 
 interface CaptionSearchResult extends CaptionDocument {
     _doc_count: number
@@ -82,7 +83,8 @@ interface VideoLinkProps {
     offset: number
 }
 const VideoA: FunctionComponent<VideoLinkProps> = ({ id, offset, children }) =>
-    <a href={`/video/watch/${id}?t=${offset}`} target="_video">{children}</a>
+    <Link to={`/video/${id}?t=${offset}`}>{children}</Link>
+// <a href={`/video/watch/${id}?t=${offset}`} target="_video">{children}</a>
 
 interface VideoSearchResultProps {
     caption: CaptionSearchResult
