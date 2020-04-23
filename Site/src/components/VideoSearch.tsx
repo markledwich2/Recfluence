@@ -94,6 +94,23 @@ export const VideoSearch = (props: CProps<{}>) => {
                     </SearchRow>
 
                     <FilterRow>
+
+                        <SingleDataList
+                            componentId='sortList'
+                            title='Sort'
+                            filterLabel='Sort'
+                            dataField='value'
+                            data={_(sortOptions).keys().map(k => ({ label: k })).value()}
+                            showRadio={false}
+                            //showFilter={false}
+                            showCount={false}
+                            showSearch={false}
+                            onValueChange={(label: string) => {
+                                console.log('sortList.onValueChange', label)
+                                return setSort({ field: sortOptions[label], sort: 'desc' })
+                            }}
+                        />
+
                         <SingleRange
                             componentId="viewsSlider"
                             dataField="views"
@@ -176,22 +193,6 @@ export const VideoSearch = (props: CProps<{}>) => {
                             transformData={(data: any[]) => {
                                 const res = data.map(d => ({ key: d.key as string, doc_count: +d.video_count.value }))
                                 return res
-                            }}
-                        />
-
-                        <SingleDataList
-                            componentId='sortList'
-                            title='Sort'
-                            filterLabel='Sort'
-                            dataField='value'
-                            data={_(sortOptions).keys().map(k => ({ label: k })).value()}
-                            showRadio={false}
-                            //showFilter={false}
-                            showCount={false}
-                            showSearch={false}
-                            onValueChange={(label: string) => {
-                                console.log('sortList.onValueChange', label)
-                                return setSort({ field: sortOptions[label], sort: 'desc' })
                             }}
                         />
 
