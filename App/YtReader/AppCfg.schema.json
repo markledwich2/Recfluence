@@ -43,11 +43,14 @@
     "ElasticCfg": {
       "type": "object",
       "properties": {
-        "url": {
+        "cloudId": {
           "type": "string"
         },
         "creds": {
           "type": "string"
+        },
+        "fullLoad": {
+          "type": "boolean"
         }
       }
     },

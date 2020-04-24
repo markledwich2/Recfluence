@@ -39,7 +39,7 @@ namespace YtReader.Search {
       Log = log;
     }
 
-    public async Task BulkElasticCaptionIndex() {
+    public async Task BulkElasticCaptionIndex(bool fullLoad) {
       //trying to allow aggregation on categorical fields. https://www.elastic.co/guide/en/elasticsearch/reference/current/fielddata.html
 
       var dir = $"./.data/captionIndex/{DateTime.UtcNow.FileSafeTimestamp()}".AsPath();
@@ -48,16 +48,36 @@ namespace YtReader.Search {
       var files = new List<FPath>();
       using var conn = await Db.OpenLoggedConnection(Log);
 
+      var lastUpdateRes = await Elastic.SearchAsync<VideoCaption>(c => c.Aggregations(a => a.Max("max_updated", m => m.Field(p => p.updated))));
+      var lastUpdate = lastUpdateRes.Aggregations.Max("max_updated")?.ValueAsString.ParseDate();
+      var param = lastUpdate == null || fullLoad ? null : new { max_updated = lastUpdate };
+      var conditions = new[] {
+        "views > 1000",
+        param?.max_updated == null ? null : "updated > :max_updated"
+        }.NotNull().Join("and");
+
+      // var elasticPolicy = Policy
+      //   .HandleResult<BulkResponse>(r => r.ItemsWithErrors.Any(i => i.Status == 403))
+      //   .RetryAsync(3, );
+
+      // .RetryAsync(retryCount, async (e, i) => {
+      //   var delay = i.ExponentialBackoff(1.Seconds());
+      //   log?.Debug("retryable error with {Description}: '{Error}'. Retrying in {Duration}, attempt {Attempt}/{Total}",
+      //     description, e.ItemsWithErrors.Take(5).Select(r => r.Status), delay, i, retryCount);
+      //   await Task.Delay(delay);
+      // });
+
       var allCaps = conn.Query<VideoCaption>(nameof(BulkElasticCaptionIndex),
-                    "select * from caption where views > 10000", buffered: false)
+                    $"select * from caption where {conditions}",
+                    param: param, buffered: false)
                     .Batch(10000).WithIndex();
 
       await allCaps.BlockAction(async b => {
         var res = await Elastic.IndexManyAsync(b.item);
-        if (res.ItemsWithErrors.Any())
+        if (res.ItemsWithErrors.Any()) {
           Log.Information("Indexed {Success}/{Total} elastic documents (batch {Batch}). Top 5 Error items: {@ItemsWithErrors}",
-              res.Items.Count - res.ItemsWithErrors.Count(), b.item.Count, b.index, res.ItemsWithErrors.Take(5));
-        else
+              res.Items.Count - res.ItemsWithErrors.Count(), b.item.Count, b.index, res.ItemsWithErrors.Select(r => r.Error).Take(5));
+        } else
           Log.Information("Indexed {Success}/{Total} elastic documents (batch {Batch})",
               res.Items.Count, b.item.Count, b.index);
       }, 4, 8);
@@ -164,11 +184,13 @@ where exists(select *
     public string channel_title { get; set; }
     public string channel_id { get; set; }
     public string keywords { get; set; }
-    public string description { get; set; }
+    //public string description { get; set; }
     public string thumb_high { get; set; }
     public long offset_seconds { get; set; }
     public string caption { get; set; }
     public DateTime upload_date { get; set; }
+    public DateTime updated { get; set; }
+    public Double? pcd_ads { get; set; }
     public long views { get; set; }
     public string url {
       get => $"https://youtu.be/{video_id}?t={offset_seconds}";

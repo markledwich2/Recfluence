@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "inputs": [
     {
-      "id": "verb",
+      "id": "ytcli_verb",
       "options": ["index", "update", "results", "sunc-db", "version"],
       "type": "pickString",
       "description": "Choose the YtCli command to debug"
@@ -15,7 +15,7 @@
       "request": "launch",
       "preLaunchTask": "build",
       "program": "${workspaceFolder}/YtCli/bin/Debug/netcoreapp3.1/ytnetworks.dll",
-      "args": ["${input:verb}"],
+      "args": ["${input:ytcli_verb}"],
       "cwd": "${workspaceFolder}/YtCli",
       "stopAtEntry": false,
       "console": "internalConsole"

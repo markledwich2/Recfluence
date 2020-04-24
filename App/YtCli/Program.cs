@@ -38,7 +38,7 @@ namespace YtCli {
           (SyncDbCmd s) => Run(s, args, SyncDbCmd.Sync),
           errs => Task.FromResult(ExitCode.Error)
         );
-      return (int) await res;
+      return (int)await res;
     }
 
     static async Task<CmdCtx<TOption>> TaskCtx<TOption>(TOption option, string[] args) {
@@ -58,9 +58,8 @@ namespace YtCli {
         var res = await task(ctx);
         ctx.Log.Debug("Completed cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
         return res;
-      }
-      catch (Exception ex) {
-        var flatEx = ex switch {AggregateException a => a.Flatten(), _ => ex};
+      } catch (Exception ex) {
+        var flatEx = ex switch { AggregateException a => a.Flatten(), _ => ex };
         ctx.Log.Error(flatEx, "Unhandled error: {Error}", flatEx.Message);
         return ExitCode.Error;
       }
@@ -79,8 +78,8 @@ namespace YtCli {
 
   [Verb("update", HelpText = "refresh new data from YouTube and collects it into results")]
   public class UpdateCmd : ICommonCmd {
-    static readonly Region[] Regions = {Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral};
-    static readonly TRandom  Rand    = new TRandom();
+    static readonly Region[] Regions = { Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral };
+    static readonly TRandom Rand = new TRandom();
     [Option('c', "channels", HelpText = "optional '|' separated list of channels to process")]
     public string ChannelIds { get; set; }
 
@@ -199,19 +198,18 @@ namespace YtCli {
   public class UpdateSearchIndexCmd : ICommonCmd {
     public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
       var search = ctx.Scope.Resolve<YtSearch>();
-      //await search.BuildSolrCaptionIndex();
-      //await search.BuildAlgoliaVideoIndex();
-      await search.BulkElasticCaptionIndex();
+      var fullLoad = ctx.Cfg.Elastic.FullLoad;
+      await search.BulkElasticCaptionIndex(fullLoad);
       return ExitCode.Success;
     }
   }
 
   public interface ICmdCtx<out TOption> {
-    RootCfg        RootCfg { get; }
-    AppCfg         Cfg     { get; }
-    ILogger        Log     { get; }
-    TOption        Option  { get; }
-    ILifetimeScope Scope   { get; }
+    RootCfg RootCfg { get; }
+    AppCfg Cfg { get; }
+    ILogger Log { get; }
+    TOption Option { get; }
+    ILifetimeScope Scope { get; }
   }
 
   public class CmdCtx<TOption> : IDisposable, ICmdCtx<TOption> {
@@ -226,11 +224,11 @@ namespace YtCli {
 
     public string[] OriginalArgs { get; }
 
-    public RootCfg        RootCfg { get; }
-    public AppCfg         Cfg     { get; }
-    public ILogger        Log     { get; }
-    public TOption        Option  { get; }
-    public ILifetimeScope Scope   { get; }
+    public RootCfg RootCfg { get; }
+    public AppCfg Cfg { get; }
+    public ILogger Log { get; }
+    public TOption Option { get; }
+    public ILifetimeScope Scope { get; }
 
     public void Dispose() {
       (Log as Logger)?.Dispose();
