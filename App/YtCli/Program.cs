@@ -12,6 +12,7 @@ using Serilog;
 using Serilog.Core;
 using SysExtensions.Build;
 using SysExtensions.Collections;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
 using Troschuetz.Random;
 using YtReader;
@@ -38,7 +39,7 @@ namespace YtCli {
           (SyncDbCmd s) => Run(s, args, SyncDbCmd.Sync),
           errs => Task.FromResult(ExitCode.Error)
         );
-      return (int)await res;
+      return (int) await res;
     }
 
     static async Task<CmdCtx<TOption>> TaskCtx<TOption>(TOption option, string[] args) {
@@ -58,8 +59,9 @@ namespace YtCli {
         var res = await task(ctx);
         ctx.Log.Debug("Completed cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
         return res;
-      } catch (Exception ex) {
-        var flatEx = ex switch { AggregateException a => a.Flatten(), _ => ex };
+      }
+      catch (Exception ex) {
+        var flatEx = ex switch {AggregateException a => a.Flatten(), _ => ex};
         ctx.Log.Error(flatEx, "Unhandled error: {Error}", flatEx.Message);
         return ExitCode.Error;
       }
@@ -78,8 +80,8 @@ namespace YtCli {
 
   [Verb("update", HelpText = "refresh new data from YouTube and collects it into results")]
   public class UpdateCmd : ICommonCmd {
-    static readonly Region[] Regions = { Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral };
-    static readonly TRandom Rand = new TRandom();
+    static readonly Region[] Regions = {Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral};
+    static readonly TRandom  Rand    = new TRandom();
     [Option('c', "channels", HelpText = "optional '|' separated list of channels to process")]
     public string ChannelIds { get; set; }
 
@@ -91,13 +93,15 @@ namespace YtCli {
         ctx.Cfg.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
 
       // make a new app context with a custom region defined
-      var appCtx = new PipeAppCtx(ctx.Scope.Resolve<PipeAppCtx>());
-      appCtx.CustomRegion = () => Rand.Choice(Regions);
+      var appCtx = new PipeAppCtx(ctx.Scope.Resolve<PipeAppCtx>()) {CustomRegion = () => Rand.Choice(Regions)};
       var standardPipeCtx = ctx.Scope.Resolve<IPipeCtx>();
-      var pipeCtx = new PipeCtx(standardPipeCtx.Cfg, appCtx, standardPipeCtx.Store, standardPipeCtx.Log);
 
-      var id = PipeRunId.FromName("Update");
-      await pipeCtx.DoPipeWork(id);
+      // run the work in this process
+      var cfg = standardPipeCtx.Cfg.JsonClone();
+      cfg.Location = PipeRunLocation.Local;
+      var pipeCtx = new PipeCtx(cfg, appCtx, standardPipeCtx.Log);
+      await pipeCtx.Run((YtDataUpdater d) => d.Update(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType));
+      //await pipeCtx.DoPipeWork(PipeRunId.FromName("Update"));
       return ExitCode.Success;
     }
   }
@@ -196,20 +200,28 @@ namespace YtCli {
 
   [Verb("index", HelpText = "Update the search index")]
   public class UpdateSearchIndexCmd : ICommonCmd {
+    [Option('l', HelpText = "Location to run (Local, Container, LocalContainer)")]
+    public PipeRunLocation Location { get; set; }
+
+    [Option('t', HelpText = "Limit the query to top t results")]
+    public long? Limit { get; set; }
+
+    [Option('f', HelpText = "If all captions should be re-indexed")]
+    public bool FullLoad { get; set; }
+
     public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
-      var search = ctx.Scope.Resolve<YtSearch>();
-      var fullLoad = ctx.Cfg.Elastic.FullLoad;
-      await search.BulkElasticCaptionIndex(fullLoad);
+      var pipeCtx = ctx.Scope.Resolve<IPipeCtx>();
+      await pipeCtx.Run((YtSearch s) => s.CaptionIndex(ctx.Option.FullLoad, ctx.Option.Limit), location: ctx.Option.Location);
       return ExitCode.Success;
     }
   }
 
   public interface ICmdCtx<out TOption> {
-    RootCfg RootCfg { get; }
-    AppCfg Cfg { get; }
-    ILogger Log { get; }
-    TOption Option { get; }
-    ILifetimeScope Scope { get; }
+    RootCfg        RootCfg { get; }
+    AppCfg         Cfg     { get; }
+    ILogger        Log     { get; }
+    TOption        Option  { get; }
+    ILifetimeScope Scope   { get; }
   }
 
   public class CmdCtx<TOption> : IDisposable, ICmdCtx<TOption> {
@@ -224,11 +236,11 @@ namespace YtCli {
 
     public string[] OriginalArgs { get; }
 
-    public RootCfg RootCfg { get; }
-    public AppCfg Cfg { get; }
-    public ILogger Log { get; }
-    public TOption Option { get; }
-    public ILifetimeScope Scope { get; }
+    public RootCfg        RootCfg { get; }
+    public AppCfg         Cfg     { get; }
+    public ILogger        Log     { get; }
+    public TOption        Option  { get; }
+    public ILifetimeScope Scope   { get; }
 
     public void Dispose() {
       (Log as Logger)?.Dispose();

@@ -46,6 +46,7 @@ namespace YtReader {
     public static Logger CreateTestLogger() =>
       new LoggerConfiguration()
         .WriteTo.Seq("http://localhost:5341")
+        .WriteTo.Console()
         .CreateLogger();
 
     public static ILogger ConsoleLogger(LogEventLevel level = LogEventLevel.Information) =>
@@ -151,9 +152,8 @@ namespace YtReader {
       var appCfg = cfg.Get<AppCfg>();
 
       if (appCfg.Sheets != null)
-        appCfg.Sheets.CredJson = secrets.ToJObject().SelectToken("sheets.credJson") as JObject;
+        appCfg.Sheets.CredJson = secrets.ParseJToken().SelectToken("sheets.credJson") as JObject;
       appCfg.Pipe = await PipeAppCfg(appCfg);
-
 
       appCfg.SyncDb.Tables = appCfg.SyncDb.Tables.JsonClone();
       foreach (var table in appCfg.SyncDb.Tables)
@@ -177,10 +177,8 @@ namespace YtReader {
     }
 
     public static PipeAppCtx PipeAppCtxEmptyScope(RootCfg root, AppCfg appCfg) =>
-      new PipeAppCtx {
-        Assemblies = new[] {typeof(YtDataUpdater).Assembly},
-        EnvironmentVariables = PipeEnv(root, appCfg),
-        Scope = new ContainerBuilder().Build().BeginLifetimeScope()
+      new PipeAppCtx(new ContainerBuilder().Build().BeginLifetimeScope(), typeof(YtDataUpdater)) {
+        EnvironmentVariables = PipeEnv(root, appCfg)
       };
 
     static async Task<PipeAppCfg> PipeAppCfg(AppCfg cfg) {
@@ -190,11 +188,12 @@ namespace YtReader {
       pipe.Default.Container.Tag ??= semver.ToString();
       foreach (var p in pipe.Pipes) p.Container.Tag ??= semver.ToString();
 
-      pipe.Store ??= new PipeAppStorageCfg {
+      // override pipe cfg with equivalent global cfg
+      pipe.Store = new PipeAppStorageCfg {
         Cs = cfg.Storage.DataStorageCs,
         Path = cfg.Storage.PipePath
       };
-      pipe.Azure ??= new PipeAzureCfg {
+      pipe.Azure = new PipeAzureCfg {
         ResourceGroup = cfg.ResourceGroup,
         ServicePrincipal = cfg.ServicePrincipal,
         SubscriptionId = cfg.SubscriptionId
@@ -216,17 +215,14 @@ namespace YtReader {
 
       b.Register(_ => cfg.Pipe).SingleInstance();
       b.Register(_ => cfg.Elastic).SingleInstance();
-      b.Register(_ => cfg.Algolia).SingleInstance();
-      b.Register(_ => cfg.Solr).SingleInstance();
 
       b.Register<Func<Task<DbConnection>>>(_ => async () => await cfg.Snowflake.OpenConnection());
       b.RegisterType<AppDb>().SingleInstance();
       b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();
       b.Register(_ => cfg.DataStore(log, cfg.Storage.ResultsPath)).Keyed<ISimpleFileStore>(StoreType.Results).SingleInstance();
       b.Register(_ => cfg.DataStore(log, cfg.Storage.DbPath)).Keyed<ISimpleFileStore>(StoreType.Db).SingleInstance();
-      b.Register(_ => cfg.DataStore(log, cfg.Storage.PipePath)).Keyed<ISimpleFileStore>(StoreType.Pipe).SingleInstance();
+      //b.Register(_ => cfg.DataStore(log, cfg.Storage.PipePath)).Keyed<ISimpleFileStore>(StoreType.Pipe).SingleInstance();
       b.Register(_ => cfg.DataStore(log, cfg.Storage.PrivatePath)).Keyed<ISimpleFileStore>(StoreType.Private).SingleInstance();
-
 
       b.RegisterType<YtClient>();
       b.Register(_ => new ElasticClient(new ConnectionSettings(
@@ -240,7 +236,7 @@ namespace YtReader {
       b.RegisterType<YtDataUpdater>();
 
       b.Register(_ => pipeAppCtx);
-      b.RegisterType<PipeCtx>().WithKeyedParam(StoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>().SingleInstance();
+      b.RegisterType<PipeCtx>().As<IPipeCtx>().SingleInstance();
 
       return b;
     }

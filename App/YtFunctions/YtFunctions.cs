@@ -10,6 +10,7 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
 using Seq.Api;
+using Serilog;
 using SysExtensions.Build;
 using SysExtensions.Text;
 using SysExtensions.Threading;
@@ -79,7 +80,7 @@ Discovered ${GitVersionInfo.DiscoverSemVer(typeof(YtDataUpdater))}";
 
     Task<string> RunUpdate(ExecutionContext exec) => Ctx.Run(exec, async c => {
       var pipeCtx = c.Scope.Resolve<IPipeCtx>();
-      var res = await pipeCtx.RunPipe(nameof(YtDataUpdater.Update), true, c.Log);
+      var res = await pipeCtx.Run((YtDataUpdater u) => u.Update(PipeArg.Inject<ILogger>(), UpdateType.All), c.Log, true);
       return res.Error
         ? $"Error starting pipe work: {res.ErrorMessage}"
         : $"Started work on containers(s): {res.Containers.Join(", ", c => $"{c.Image} -> {c.Name}")}";

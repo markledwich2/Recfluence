@@ -3,5 +3,8 @@
     "dbPath": "data/db2",
     "resultsPath": "data/results",
     "pipePath": "data/pipe"
+  },
+  "pipe": {
+    "location": "Container"
   }
 }

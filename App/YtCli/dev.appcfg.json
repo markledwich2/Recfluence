@@ -4,8 +4,5 @@
     "from": "2019-10-01",
     "to": null,
     "refreshRecsWithin": "20.00:00:00.0"
-  },
-  "pipe": {
-    "location": "LocalContainer"
   }
 }

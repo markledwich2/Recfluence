@@ -86,9 +86,9 @@
         "location": {
           "type": "string",
           "enum": [
+            "Local",
             "Container",
-            "LocalContainer",
-            "LocalThread"
+            "LocalContainer"
           ]
         },
         "localParallel": {

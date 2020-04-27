@@ -13,14 +13,14 @@ namespace SysExtensions {
     static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, Enum>> StringToEnumCache =
       new ConcurrentDictionary<Type, ConcurrentDictionary<string, Enum>>();
 
+    static readonly ConcurrentDictionary<Type, ConcurrentDictionary<Enum, string>> EnumExplicitNameCache =
+      new ConcurrentDictionary<Type, ConcurrentDictionary<Enum, string>>();
+
     public static string EnumExplicitName<T>(this T value) where T : IConvertible {
       var fieldInfo = value.GetType().GetTypeInfo().GetField(value.ToString(CultureInfo.InvariantCulture));
       var enumMember = (EnumMemberAttribute) fieldInfo.GetCustomAttributes(typeof(EnumMemberAttribute), false).FirstOrDefault();
       return enumMember?.Value;
     }
-
-    static readonly ConcurrentDictionary<Type, ConcurrentDictionary<Enum, string>> EnumExplicitNameCache =
-      new ConcurrentDictionary<Type, ConcurrentDictionary<Enum, string>>();
 
     public static string EnumExplicitName(Enum value) {
       var t = value.GetType();
@@ -51,11 +51,15 @@ namespace SysExtensions {
 
     public static T ToEnum<T>(this string s, bool ensureFound = true, Type t = null, Func<Enum, string> defaultEnumString = null) where T : Enum {
       t ??= typeof(T);
+      return (T) ToEnum(s, t, ensureFound, defaultEnumString);
+    }
 
-      defaultEnumString = defaultEnumString ?? (e => e.ToString());
+    public static object ToEnum(this string s, Type t, bool ensureFound = true, Func<Enum, string> defaultEnumString = null) {
+      defaultEnumString ??= e => e.ToString();
 
+      Enum enumValue;
       var enumCache = StringToEnumCache.GetOrAdd(t, k => new ConcurrentDictionary<string, Enum>(StringComparer.OrdinalIgnoreCase));
-      var found = enumCache.TryGetValue(s, out var enumValue);
+      var found = enumCache.TryGetValue(s, out enumValue);
 
       // initialize if missing (not just if first cache miss) because there may be different defaultEnumString() functions depending on the context (e.g. serialization settings)
       if (!found) {
@@ -65,8 +69,7 @@ namespace SysExtensions {
       }
 
       if (ensureFound && !found) throw new InvalidCastException($"Unable to cast ({s}) to {t.Name}");
-      if (enumValue == null) return default;
-      return (T) enumValue;
+      return enumValue;
     }
 
     public static IEnumerable<T> Values<T>() where T : IConvertible => Enum.GetValues(typeof(T)).Cast<T>();

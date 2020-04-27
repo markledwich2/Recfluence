@@ -16,6 +16,10 @@ namespace SysExtensions.Serialization {
   /// <summary>Provides lean access to serialiation funcitoanlity. Uses a good default's for serialization, but can be
   ///   overriden with any settings</summary>
   public static class JsonExtensions {
+    public static JsonSerializer DefaultSerializer => JsonSerializer.Create(DefaultSettings());
+
+    public static JsonLoadSettings DefaultLoadSettings => new JsonLoadSettings();
+
     /// <summary>Compile time defaults. To override use the overloads</summary>
     public static JsonSerializerSettings DefaultSettings() {
       var settings = new JsonSerializerSettings {
@@ -25,10 +29,6 @@ namespace SysExtensions.Serialization {
       settings.ContractResolver = new CoreSerializeContractResolver {NamingStrategy = new CamelCaseNamingStrategy(false, false)};
       return settings;
     }
-
-    public static JsonSerializer DefaultSerializer => JsonSerializer.Create(DefaultSettings());
-
-    public static JsonLoadSettings DefaultLoadSettings => new JsonLoadSettings();
 
     public static JsonSerializer Serializer(this JsonSerializerSettings settings) => JsonSerializer.Create(settings);
 
@@ -68,8 +68,8 @@ namespace SysExtensions.Serialization {
       return token;
     }
 
-    public static JObject ToJObject(this object o, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null)
-      => (JObject) ToJToken(o, settings, loadSettings);
+    public static JObject ToJObject(this object o, JsonSerializerSettings settings = null)
+      => (JObject) SerializeToJToken(o, settings);
 
     public static string ToJson<T>(this T o, JsonSerializerSettings settings = null) {
       settings ??= DefaultSettings();
@@ -80,9 +80,8 @@ namespace SysExtensions.Serialization {
       settings ??= DefaultSettings();
       var ms = new MemoryStream();
       using (var sw = new StreamWriter(ms, leaveOpen: true))
-      using (var jw = new JsonTextWriter(sw)) {
+      using (var jw = new JsonTextWriter(sw))
         settings.Serializer().Serialize(jw, o);
-      }
       ms.Seek(0, SeekOrigin.Begin);
       return ms;
     }
@@ -100,11 +99,11 @@ namespace SysExtensions.Serialization {
       }
     }
 
-    public static JToken ToJToken(this object o, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null) {
+    public static JObject ParseJObject(this string s, JsonLoadSettings loadSettings = null) => (JObject) s.ParseJToken(loadSettings);
+    public static JToken ParseJToken(this string s, JsonLoadSettings loadSettings = null) => JToken.Parse(s, loadSettings);
+
+    public static JToken SerializeToJToken(this object o, JsonSerializerSettings settings = null) {
       settings ??= DefaultSettings();
-      loadSettings ??= DefaultLoadSettings;
-      if (o is string s)
-        return JToken.Parse(s, loadSettings);
       return JToken.FromObject(o, JsonSerializer.Create(settings));
     }
 

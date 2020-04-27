@@ -104,37 +104,43 @@ export const Video: React.FC<VideoProps> = (props) => {
 
 
   return (
-    <VidePageDiv>
-      <YtContainer><YouTube videoId={videoId} onReady={e => onVideoReader(e)} opts={{ height: "100%", width: "100%" }} /></YtContainer>
-      <div>
-        <h2>{v?.VIDEO_TITLE}</h2>
-      </div>
+    <div>
+      <VidePageDiv>
+        <YtContainer><YouTube videoId={videoId} onReady={e => onVideoReader(e)} opts={{ height: "100%", width: "100%" }} /></YtContainer>
+        <div>
+          <h2>{v?.VIDEO_TITLE}</h2>
+        </div>
 
-      {v ? (
-        <>
-          <VideoStatsDiv>
-            <span><b>{compactInteger(v.VIEWS)}</b> views</span>
-            <span>{dateFormat(parseISO(v.UPLOAD_DATE))}</span>
-            <span style={{ marginLeft: 'auto' }}>
-              <span><b>{compactInteger(v.LIKES)}</b> likes</span>
-              <span><b>{compactInteger(v.DISLIKES)}</b> dislikes</span>
-            </span>
-          </VideoStatsDiv>
-          <CaptionDiv>
-            <VideoChannelTitle Channel={video.channel} />
-            <DescriptionDiv>{v.DESCRIPTION}</DescriptionDiv>
-            <div>
-              {captions?.map(c => (
-                <span key={c.OFFSET_SECONDS} id={c.OFFSET_SECONDS.toString()}>
-                  <a onClick={() => onCaptionClick(c.OFFSET_SECONDS)}>{secondsToHHMMSS(c.OFFSET_SECONDS)}</a> {c.CAPTION}<br />
-                </span>
-              )) ?? <></>}
-            </div>
-          </CaptionDiv>
-        </>
-      ) : <></>}
+        {v ? (
+          <>
+            <VideoStatsDiv>
+              <span><b>{compactInteger(v.VIEWS)}</b> views</span>
+              <span>{dateFormat(parseISO(v.UPLOAD_DATE))}</span>
+              <span style={{ marginLeft: 'auto' }}>
+                <span><b>{compactInteger(v.LIKES)}</b> likes</span>
+                <span><b>{compactInteger(v.DISLIKES)}</b> dislikes</span>
+              </span>
+            </VideoStatsDiv>
+            <CaptionDiv>
+              <VideoChannelTitle Channel={video.channel} />
+              <DescriptionDiv>{v.DESCRIPTION}</DescriptionDiv>
+              <div>
+                {captions?.map(c => {
+                  var selected = c.OFFSET_SECONDS == t
+                  return (
+                    <span key={c.OFFSET_SECONDS} id={c.OFFSET_SECONDS.toString()}>
+                      <a onClick={() => onCaptionClick(c.OFFSET_SECONDS)} style={{ fontWeight: selected ? 2 : 1 }} >{secondsToHHMMSS(c.OFFSET_SECONDS)}</a> {c.CAPTION}<br />
+                    </span>
+                  ) ?? <></>
+                })
+                }
+              </div>
+            </CaptionDiv>
+          </>
+        ) : <></>}
 
-    </VidePageDiv >
+      </VidePageDiv >
+    </div>
   )
 }
 

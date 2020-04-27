@@ -14,6 +14,7 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Yt;
 using YtReader.YtWebsite;
+using static Mutuo.Etl.Pipe.PipeArg;
 using VideoItem = YtReader.YtWebsite.VideoItem;
 
 namespace YtReader {
@@ -50,10 +51,12 @@ namespace YtReader {
     YtReaderCfg RCfg => Cfg.YtReader;
 
     [Pipe]
-    public async Task Update(ILogger log, [PipeArg] UpdateType updateType = UpdateType.All) {
+    public async Task Update(ILogger log, UpdateType updateType = UpdateType.All) {
       var channels = await UpdateAllChannels(log);
-      var work = channels.Select(c => new UpdateChannelWork {Channel = c, UpdateType = updateType});
-      var processRes = await work.RunPipe(ProcessChannels, PipeCtx, Cfg.Pipe.Default, log).WithDuration();
+      var work = channels.Select(c => new UpdateChannelWork {Channel = c, UpdateType = updateType}).ToArray();
+      // logger is in labda because 
+      var processRes = await work.Process(PipeCtx, b => ProcessChannels(b, Inject<ILogger>()), PipeCtx.Cfg.Default).WithDuration();
+
       var allChannelResults = processRes.Result.SelectMany(r => r.OutState.Channels).ToArray();
       log.Information("{Pipe} Complete - {Success}/{Total} channels updated in {Duration}",
         nameof(Update), allChannelResults.Count(c => c.Success), allChannelResults.Length, processRes.Duration.HumanizeShort());
@@ -112,7 +115,7 @@ namespace YtReader {
     }
 
     [Pipe]
-    public async Task<ProcessChannelResults> ProcessChannels([PipeState] IReadOnlyCollection<UpdateChannelWork> work, ILogger log) {
+    public async Task<ProcessChannelResults> ProcessChannels(IReadOnlyCollection<UpdateChannelWork> work, ILogger log = null) {
       var workSw = Stopwatch.StartNew();
       var conn = new AsyncLazy<DbConnection>(() => GetConnection());
       var channelResults = await work
@@ -125,8 +128,8 @@ namespace YtReader {
             .ForContext("Channel", c.Channel.ChannelTitle);
           try {
             await UpdateAllInChannel(c.Channel, conn, c.UpdateType, log);
-            log.Information("{Channel} - Completed videos/recs/captions in {Duration}. Progress: {Count}/{BatchTotal} channels",
-              c.Channel.ChannelTitle, sw.Elapsed, i, work.Count);
+            log.Information("{Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
+              c.Channel.ChannelTitle, sw.Elapsed, i + 1, work.Count);
             return (c, Success: true);
           }
           catch (Exception ex) {
@@ -359,7 +362,7 @@ namespace YtReader {
 
     /// <summary>A once off command to populate existing uploaded videos evenly with checks for ads.</summary>
     [Pipe]
-    public async Task BackfillVideoExtra(ILogger log, [PipeArg] string videoIds = null, [PipeArg] int? limit = null) {
+    public async Task BackfillVideoExtra(ILogger log, string videoIds = null, int? limit = null) {
       if (videoIds == null) {
         using var conn = await GetConnection();
 
@@ -377,7 +380,7 @@ where num <= 50 -- most recent for each channel
 {limitString}")).ToArray();
 
         var res = await toUpdate
-          .RunPipe(ProcessVideoExtra, PipeCtx, new PipeRunCfg {MinWorkItems = 1000, MaxParallel = 8}, log)
+          .Process(PipeCtx, b => ProcessVideoExtra(b, Inject<ILogger>()), new PipeRunCfg {MinWorkItems = 1000, MaxParallel = 8}, log)
           .WithDuration();
 
         var videos = res.Result.Sum(o => o.OutState.Sum(v => v.Updated));
@@ -390,7 +393,7 @@ where num <= 50 -- most recent for each channel
           .Select(v => new ChannelVideoItem {ChannelId = chId, VideoId = v});
 
 
-        var res = await toUpdate.RunPipe(ProcessVideoExtra, PipeCtx, new PipeRunCfg {MinWorkItems = 200, MaxParallel = 2}, log);
+        var res = await toUpdate.Process(PipeCtx, b => ProcessVideoExtra(b, Inject<ILogger>()), new PipeRunCfg {MinWorkItems = 200, MaxParallel = 2}, log);
 
         /*var recsAndExtra = await videoIds.Split("|")
           .BlockTransform(async v => await Scraper.GetRecsAndExtra(v, log), Cfg.DefaultParallel);
@@ -402,7 +405,7 @@ where num <= 50 -- most recent for each channel
     }
 
     [Pipe]
-    public async Task<IReadOnlyCollection<ProcessVideoExtraBatch>> ProcessVideoExtra([PipeState] IEnumerable<ChannelVideoItem> videos, ILogger log) {
+    public async Task<IReadOnlyCollection<ProcessVideoExtraBatch>> ProcessVideoExtra(IEnumerable<ChannelVideoItem> videos, ILogger log) {
       var batch = await videos.BatchGreedy(2000).BlockTransform(async b => {
         var recsAndExtra = await b.NotNull().BlockTransform(async v => await Scraper.GetRecsAndExtra(v.VideoId, log), Cfg.DefaultParallel);
         var extra = recsAndExtra.Select(r => r.extra).ToArray();

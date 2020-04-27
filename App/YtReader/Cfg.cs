@@ -54,7 +54,6 @@ namespace YtReader {
   public class ElasticCfg {
     public string     CloudId { get; set; }
     public NameSecret Creds   { get; set; }
-    public bool       FullLoad { get; set; } = false;
   }
 
   public class SyncDbCfg {

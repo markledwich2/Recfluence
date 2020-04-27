@@ -14,6 +14,7 @@ using SysExtensions.Text;
 namespace SysExtensions.Build {
   public class GitVersionInfo {
     public string SemVer          { get; set; }
+    public string FullSemVer      { get; set; }
     public string BranchName      { get; set; }
     public string MajorMinorPatch { get; set; }
     public string NuGetVersionV2  { get; set; }
@@ -33,6 +34,7 @@ namespace SysExtensions.Build {
         try {
           var jVersion = JObject.Parse(outputLines.Join("\n"));
           var gitVersion = jVersion.ToObject<GitVersionInfo>();
+
           log.Debug("{Noun} - '.git/' detected. Discovered version: {Version}", nameof(GitVersionInfo), gitVersion.SemVer);
           return SemVersion.Parse(gitVersion.SemVer);
         }

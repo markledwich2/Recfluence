@@ -27,15 +27,14 @@ namespace YtReader {
         var sync = new DbSync(
           new SnowflakeSourceDb(sourceConn, SnowflakeCfg.Schema, tableLog),
           new MsSqlDestDb(destConn, SqlServerCfg.DefaultSchema, t.FullTextCatalog, tableLog));
-        
+
         var res = await sync.UpdateTable(t, tableLog, fullLoad, optionLimit)
           .WithWrappedException($"sync table '{t.Name}'", tableLog) // log the error and rethrow. Won't interrupt untill other sync have completed
           .WithDuration();
 
         tableLog.Information("Talbe sync {Table} - completed in {Duration}", t.Name, res.HumanizeShort());
-
       }, cfg.Parallel).WithDuration();
-      log.Information("Completed loading {Tables} in {Duration}", toRun.Select(t => t.Name), dur.HumanizeShort());
+      log.Information("Completed loading {Tables} in {Duration}", toRun.Select(t => t.Name), dur.Duration.HumanizeShort());
     }
   }
 }

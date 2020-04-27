@@ -57,7 +57,7 @@ namespace Mutuo.Etl.Db {
       table.Schema.HasValue() ? $"{db.Sql(table.Schema)}.{db.Sql(table.Table)}" : $"{db.Sql(table.Table)}";
 
     public static bool IsIncremental(this SyncType syncType) => syncType != SyncType.Full;
-    public static int GetRowsCopied(this SqlBulkCopy bulkCopy) => (int) RowsCopiedField.Value.GetValue(bulkCopy);
+    public static int GetRowsCopied(this SqlBulkCopy bulkCopy) => (int) (RowsCopiedField.Value.GetValue(bulkCopy) ?? 0);
   }
 
   public class TableSchema {

@@ -8,9 +8,10 @@
     "channelsPerContainer": 300,
     "resourceGroup": "ytnetworks",
     "storage": {
-        "dbPath": "testdata/db2",
-        "resultsPath": "testdata/results",
-        "pipePath": "testdata/pipe"
+      "dataStorageCs": "UseDevelopmentStorage=true",
+      "dbPath": "testdata/db2",
+      "resultsPath": "testdata/results",
+      "pipePath": "testdata/pipe"
     },
     "subscriptionId": "93ef8661-3e11-4fcc-92ae-d0383e7e4ad3",
     "servicePrincipal": {

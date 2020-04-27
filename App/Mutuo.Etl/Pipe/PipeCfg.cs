@@ -4,23 +4,23 @@ using SysExtensions.Text;
 
 namespace Mutuo.Etl.Pipe {
   public enum PipeRunLocation {
+    Local,
     Container,
-    LocalContainer,
-    LocalThread
+    LocalContainer
   }
 
   public class PipeAppCfg {
-    [Required] public PipeAppStorageCfg Store         { get; set; }
-    [Required] public PipeAzureCfg      Azure         { get; set; }
-    [Required] public PipeRunLocation   Location      { get; set; }
+    [Required] public PipeAppStorageCfg Store         { get; set; } = new PipeAppStorageCfg();
+    [Required] public PipeAzureCfg      Azure         { get; set; } = new PipeAzureCfg();
+    [Required] public PipeRunLocation   Location      { get; set; } = PipeRunLocation.Local;
     [Required] public int               LocalParallel { get; set; } = 2;
-    [Required] public PipeRunCfg        Default       { get; set; }
-    public            NamedPipeRunCfg[] Pipes         { get; set; }
+    [Required] public PipeRunCfg        Default       { get; set; } = new PipeRunCfg();
+    public            NamedPipeRunCfg[] Pipes         { get; set; } = { };
   }
 
   public class PipeAzureCfg {
     public            string              SubscriptionId   { get; set; }
-    [Required] public ServicePrincipalCfg ServicePrincipal { get; set; }
+    [Required] public ServicePrincipalCfg ServicePrincipal { get; set; } = new ServicePrincipalCfg();
     public            string              ResourceGroup    { get; set; }
   }
 
@@ -43,8 +43,8 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class PipeAppStorageCfg {
-    [Required] public string     Cs   { get; set; }
-    [Required] public StringPath Path { get; set; }
+    [Required] public string     Cs   { get; set; } = "UseDevelopmentStorage=true";
+    [Required] public StringPath Path { get; set; } = "pipe";
   }
 
   public class NamedPipeRunCfg : PipeRunCfg {
@@ -60,6 +60,6 @@ namespace Mutuo.Etl.Pipe {
 
     public bool ReturnOnStart { get; set; }
 
-    [Required] public ContainerCfg Container { get; set; }
+    [Required] public ContainerCfg Container { get; set; } = new ContainerCfg();
   }
 }

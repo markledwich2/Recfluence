@@ -8,13 +8,14 @@ using SysExtensions.Text;
 
 namespace SysExtensions.Threading {
   public static class BlockExtensions {
-    public static async Task BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallelism = 1, int? capacity = null) {
+    public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallelism = 1, int? capacity = null) {
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
 
       var block = new ActionBlock<T>(action, options);
-      await ProduceAsync(source, block);
+      var produced = await ProduceAsync(source, block);
       await block.Completion;
+      return produced;
     }
 
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
@@ -59,22 +60,27 @@ namespace SysExtensions.Threading {
       return result;
     }
 
-    static async Task ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block) {
-      foreach (var item in source) await block.SendAsync(item);
+    static async Task<long> ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block) {
+      var produced = 0;
+      foreach (var item in source) {
+        await block.SendAsync(item);
+        produced++;
+      }
       block.Complete();
+      return produced;
     }
   }
 
   public class BulkProgressInfo {
-    public int      Completed      { get; }
-    public int      CompletedTotal { get; }
-    public TimeSpan Elapsed        { get; }
-
     public BulkProgressInfo(int completed, int completedTotal, TimeSpan elapsed) {
       Completed = completed;
       CompletedTotal = completedTotal;
       Elapsed = elapsed;
     }
+
+    public int      Completed      { get; }
+    public int      CompletedTotal { get; }
+    public TimeSpan Elapsed        { get; }
 
     public Speed Speed(string units) => Completed.Speed(units, Elapsed);
   }

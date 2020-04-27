@@ -33,7 +33,7 @@ namespace Mutuo.Etl.Blob {
       return o;
     }
 
-    public static async Task<T> Get<T>(this ISimpleFileStore store, StringPath path, bool zip = true, ILogger log = null) where T : class {
+    public static async Task<T> Get<T>(this ISimpleFileStore store, StringPath path, bool zip = true, ILogger log = null) {
       using var stream = await store.Load(path.AddJsonExtention(zip), log);
       if (!zip) return stream.ToObject<T>();
       await using var zr = new GZipStream(stream, CompressionMode.Decompress, true);

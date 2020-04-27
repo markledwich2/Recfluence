@@ -6,7 +6,6 @@ using SysExtensions.Text;
 
 namespace Tests {
   public static class FormattingTests {
- 
     [Test]
     public static void TestTimestampHumanise() {
       120.Seconds().HumanizeShort().Should().Be("2m 0s");

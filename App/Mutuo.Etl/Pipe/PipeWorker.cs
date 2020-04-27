@@ -22,11 +22,13 @@ namespace Mutuo.Etl.Pipe {
   public interface IPipeWorker {
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
-    Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log);
+    Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log);
   }
 
   public interface IPipeWorkerStartable : IPipeWorker {
-    Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log);
+    /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
+    ///   returns the status.</summary>
+    Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log);
   }
 
   public enum ContainerState {
@@ -59,15 +61,17 @@ namespace Mutuo.Etl.Pipe {
       }
     }
 
-    public static async Task<PipeRunMetadata> RunWork(this IPipeWorker worker, IPipeCtx ctx, string pipe, ILogger log) =>
-      (await worker.RunWork(ctx, new[] {PipeRunId.FromName(pipe)}, log)).First();
+    /// <summary>Starts some pipe work. Assumes required state has been created</summary>
+    public static async Task<PipeRunMetadata> Launch(this IPipeWorker worker, IPipeCtx ctx, PipeRunId runId, ILogger log) =>
+      (await worker.Launch(ctx, new[] {runId}, log)).First();
 
-    public static async Task<PipeRunMetadata> RunWork(this IPipeWorkerStartable worker, IPipeCtx ctx, string pipe, bool returnOnStarting, ILogger log) =>
-      (await worker.RunWork(ctx, new[] {PipeRunId.FromName(pipe)}, returnOnStarting, log)).First();
+    /// <summary>Starts some pipe work. Assumes required state has been created</summary>
+    public static async Task<PipeRunMetadata> Launch(this IPipeWorkerStartable worker, IPipeCtx ctx, PipeRunId runId, bool returnOnStarting, ILogger log) =>
+      (await worker.Launch(ctx, new[] {runId}, returnOnStarting, log)).First();
   }
 
   public class LocalPipeWorker : IPipeWorker {
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) =>
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) =>
       await ids.BlockTransform(async id => {
         var runCfg = id.PipeCfg(ctx);
         var image = runCfg.Container.ContainerImageName();
@@ -93,7 +97,7 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class ThreadPipeWorker : IPipeWorker {
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) {
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) {
       var res = await ids.BlockTransform(async id => {
         await ctx.DoPipeWork(id);
         var md = new PipeRunMetadata {
@@ -127,11 +131,11 @@ namespace Mutuo.Etl.Pipe {
     PipeAppCfg   Cfg { get; }
     Lazy<IAzure> Az  { get; }
 
-    public Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) => RunWork(ctx, ids, false, log);
+    public Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) => Launch(ctx, ids, false, log);
 
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> RunWork(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log) {
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log) {
       var azure = Az.Value;
       var res = await ids.BlockTransform(async runId => {
         var runCfg = runId.PipeCfg(ctx); // id is for the sub-pipe, ctx is for the root
