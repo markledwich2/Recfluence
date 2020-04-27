@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
@@ -16,9 +17,14 @@ namespace YtCli {
     [Option('p', HelpText = "Publish to registry, otherwise a local build only")]
     public bool PublishToRegistry { get; set; }
 
+    [Option('n', HelpText = "Local Nuget Cache Directory")]
+    public string LocalNugetCache { get; set; }
+
     public static async Task<ExitCode> PublishContainer(CmdCtx<PublishContainerCmd> ctx) {
       //var buildTools = new BuildTools(ctx.Log);
       //await buildTools.GitVersionUpdate();
+
+      var sw = Stopwatch.StartNew();
       var v = await GitVersionInfo.DiscoverSemVer(typeof(Program), ctx.Log);
       var container = ctx.Cfg.Pipe.Default.Container;
       var sln = FPath.Current.ParentWithFile("YtNetworks.sln", true);
@@ -36,6 +42,8 @@ namespace YtCli {
 
       if (ctx.Option.PublishToRegistry)
         await RunShell(shell, ctx.Log, "docker", "push", image);
+
+      ctx.Log.Information("Completed building docker image {Image} in {Duration}", image, sw.Elapsed.HumanizeShort());
 
       return ExitCode.Success;
     }

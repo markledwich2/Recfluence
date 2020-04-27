@@ -196,6 +196,8 @@ namespace Mutuo.Etl.Pipe {
       var needsConversion = !type.IsInstanceOfType(value);
       if (!needsConversion) return value;
 
+      if (value == null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+        return type.DefaultForType();
       if (value is string s && type.IsEnum)
         return s.ToEnum(type);
       try {

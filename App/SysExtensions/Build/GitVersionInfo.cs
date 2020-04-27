@@ -26,9 +26,12 @@ namespace SysExtensions.Build {
     /// <summary>Use github to work out the current version in dev, will use the curerent machine as the branch name</summary>
     public static async Task<SemVersion> DiscoverSemVer(Type typeToDetectVersion, ILogger log = null) {
       log = log ?? Log.Logger ?? Logger.None;
-      if (FPath.Current.DirOfParent(".git")?.Exists == true) {
+      var rootPath = FPath.Current.DirOfParent(".git")?.Parent();
+      if (rootPath?.Exists == true) {
         var outputLines = new List<string>();
-        var process = Command.Run("dotnet", "gitversion");
+        var appDir = rootPath.Combine("App");
+        var shell = new Shell(o => o.WorkingDirectory(appDir.FullPath));
+        var process = shell.Run("dotnet", "gitversion");
         await process.StandardOutput.PipeToAsync(outputLines);
         await process.Task;
         try {

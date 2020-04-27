@@ -8,7 +8,6 @@
     "channelsPerContainer": 300,
     "resourceGroup": "ytnetworks",
     "storage": {
-      "dataStorageCs": "UseDevelopmentStorage=true",
       "dbPath": "testdata/db2",
       "resultsPath": "testdata/results",
       "pipePath": "testdata/pipe"

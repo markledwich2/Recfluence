@@ -36,10 +36,11 @@ namespace YtReader.Search {
         param?.max_updated == null ? null : "updated > :max_updated"
       }.NotNull().Join(" and ");
       var sqlLimit = limit == null ? "" : $" limit {limit}";
+      var batchSize = 10000;
       var allCaps = conn.Query<VideoCaption>(nameof(CaptionIndex),
           $"select * from caption where {sqlConditions}{sqlLimit}",
           param, buffered: false)
-        .Batch(10000).WithIndex();
+        .Batch(batchSize).WithIndex();
 
       var elasticPolicy = Policy
         .HandleResult<BulkResponse>(r => r.ItemsWithErrors.Any(i => i.Status == 403))
@@ -50,7 +51,7 @@ namespace YtReader.Search {
           await Task.Delay(delay);
         });
 
-      var capNo = await allCaps.BlockAction(async b => {
+      var completedNo = await allCaps.BlockAction(async b => {
         var (item, index) = b;
         var res = await elasticPolicy.ExecuteAsync(() => Elastic.IndexManyAsync(item));
         if (res.ItemsWithErrors.Any())
@@ -61,7 +62,7 @@ namespace YtReader.Search {
             res.Items.Count, item.Count, index);
       }, 3, 8);
 
-      Log.Information("Completed indexing {Captions} captions", capNo);
+      Log.Information("Completed indexing {Captions} captions", completedNo * batchSize);
     }
   }
 

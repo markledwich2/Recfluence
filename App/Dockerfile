@@ -1,8 +1,14 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1-alpine AS build-env
-ARG SEMVER=0.1-missing
-ARG ASSEMBLY_SEMVER=0.1
+ARG SEMVER
+ARG ASSEMBLY_SEMVER
 
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1-alpine AS build-env
+ARG SEMVER
+ARG ASSEMBLY_SEMVER
 RUN echo SemVer={$SEMVER} AssemblySemVer={$ASSEMBLY_SEMVER}
+
+# restore all csproj frst and docker wil cache thislayer nicely
+COPY */*.csproj ./
+RUN for projectName in *.csproj; do dotnet restore $projectName; done
 
 COPY YtCli YtCli/
 COPY YtReader YtReader/

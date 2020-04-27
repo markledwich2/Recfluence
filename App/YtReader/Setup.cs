@@ -116,8 +116,7 @@ namespace YtReader {
     public static (string name, string value)[] PipeEnv(RootCfg rootCfg, AppCfg appCfg) =>
       new[] {
         (nameof(RootCfg.Env), rootCfg.Env),
-        (nameof(RootCfg.AppCfgSas), rootCfg.AppCfgSas.ToString()),
-        ("pipe__location", appCfg.Pipe.Location.ToString())
+        (nameof(RootCfg.AppCfgSas), rootCfg.AppCfgSas.ToString())
       };
 
     public static Task<SemVersion> GetVersion() => Version.GetOrCreate();
