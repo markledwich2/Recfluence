@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 using Autofac;
 using Autofac.Util;
 using CommandLine;
-using Microsoft.Extensions.Configuration;
 using Mutuo.Etl.Blob;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Core;
 using SysExtensions;
@@ -255,16 +255,10 @@ namespace Mutuo.Etl.Pipe {
       PipeRunCfg pipeCfg = cfg.Pipes.FirstOrDefault(p => p.PipeName == id.Name);
       if (pipeCfg == null) return cfg.Default;
 
-      using var defaultStream = cfg.Default.ToJsonStream();
-      using var pipeStream = cfg.Default.ToJsonStream();
-
-      var builder = new ConfigurationBuilder()
-        .AddJsonStream(defaultStream)
-        .AddJsonStream(pipeStream)
-        .Build();
-
-      pipeCfg = builder.Get<PipeRunCfg>();
-      return pipeCfg;
+      var cfgJson = cfg.Default.ToJObject();
+      cfgJson.Merge(pipeCfg.ToJObject(), new JsonMergeSettings {MergeNullValueHandling = MergeNullValueHandling.Ignore});
+      var mergedCfg = cfgJson.ToObject<PipeRunCfg>();
+      return mergedCfg;
     }
 
     public static PipeRunCfg PipeCfg(this PipeRunId id, IPipeCtx ctx) => id.PipeCfg(ctx.Cfg);
