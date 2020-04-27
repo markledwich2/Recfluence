@@ -58,7 +58,7 @@
       {
         "pipeName": "CaptionIndex",
         "container": {
-          "mem": 8
+          "mem": 4
         }
       }
     ]
