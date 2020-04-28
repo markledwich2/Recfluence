@@ -142,8 +142,10 @@ class Crawler:
         print(f'to {self.email}: {message}')
 
     def get_video_features(self, id, recommendations: list, personalized_count: int):
+        seshPath = self.path_session()
         filename = 'output/recommendations/' + self.email + '_' + id + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
+        
         video_info = {
             'id': id,
             'title': self.wait.until(EC.presence_of_element_located(
@@ -160,7 +162,7 @@ class Crawler:
         }
 
         # upload the information as a blob
-        self.__save_file(filename, str(video_info))
+        self.__save_file(seshPath / filename, str(video_info))
 
     def get_recommendations_for_video(self, source):
         self.driver.get("https://www.youtube.com/watch?v=" + source)
@@ -192,33 +194,40 @@ class Crawler:
 
     def delete_last_video_from_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
-        # todo: maybe replace the full xpath because its ugly, but it works
-        last_video_delete_button = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH,
-                                            '/html/body/ytd-app/div/ytd-page-manager/ytd-browse/ytd-two-column-browse'
-                                            '-results-renderer/div[1]/ytd-section-list-renderer/div['
-                                            '2]/ytd-item-section-renderer[1]/div[3]/ytd-video-renderer/div['
-                                            '1]/div/div['
-                                            '1]/div/div/ytd-menu-renderer/div/ytd-button-renderer/a/yt-icon-button'
-                                            '/button'))
-        ).click()
+        self.__log_info('before deleting first video from history')
+        
+        #todo: replace with 'Remove from Watch history'
+        delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Aus \"Wiedergabeverlauf\" entfernen']")
+        
+        # reasons why there are no videos in the history:
+        # 1. the history is empty
+        # 2. we are actually not logged in
+        # 3. The ui is in the wrong language
+        if len(delete_buttons)>0:
+            delete_buttons[0].click()
+        self.__log_info('deleted first video from history')
+
 
     def delete_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
-        history_delete_button = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH,
-                                            '/html/body/ytd-app/div/ytd-page-manager/ytd-browse/ytd-two-column-browse'
-                                            '-results-renderer/div['
-                                            '2]/ytd-browse-feed-actions-renderer/div/ytd-button-renderer['
-                                            '1]/a/paper-button/yt-formatted-string'))
-        ).click()
+        self.__log_info('before deleting full history')
 
-        confirm_button = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH,
-                                            '/html/body/ytd-app/ytd-popup-container/paper-dialog/yt-confirm-dialog'
-                                            '-renderer/div[2]/div/yt-button-renderer['
-                                            '2]/a/paper-button/yt-formatted-string'))
-        ).click()
+        
+        messages = self.driver.find_elements_by_xpath("//*[@id='message']")
+        # if there are not videos in the history a text appears that says 'no videos here' but apparently there is a second, hidden, message with the same
+        # id on the page. So instead of checking whether this element exists we differentiate between 1 message (there are videos in the history) and 
+        # two messages (there are no videos in the history)
+        if len(messages)==1:
+            # Clear all watch history
+            # Gesamten Wiedergabeverlauf löschen
+            delete_buttons = self.driver.find_element_by_xpath("//*[@aria-label = 'Gesamten Wiedergabeverlauf löschen']").click()
+
+            # todo replace with english terms
+            # CLEAR WATCH HISTORY
+            # WIEDERGABEVERLAUF LÖSCHEN
+            confirm_button = self.driver.find_element_by_xpath("//*[@aria-label = 'WIEDERGABEVERLAUF LÖSCHEN']").click()
+        self.__log_info('deleted history')
+
 
     def _get_seconds(self, duration: str):
         # helper function to correctly parse the time from the info bar

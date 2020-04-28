@@ -16,9 +16,10 @@ for user in cfg.users:
 
     try:
         crawler.load_home_and_login()
-
-        for video in user_seed_videos:
-            crawler.get_recommendations_for_video(video.video_id, 0)
+        # crawler.login()
+        # for video in user_seed_videos:
+        #     crawler.get_recommendations_for_video(video.video_id)
+        crawler.delete_history()
 
         crawler.shutdown()
     except NoSuchElementException as e:
