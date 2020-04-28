@@ -3,3 +3,4 @@ azure-storage-blob
 python-dotenv
 dataclasses
 dataclasses_json
+dataclasses_jsonschema

@@ -9,5 +9,22 @@
         "strftime"
     ],
     "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true
+    "python.linting.enabled": true,
+    "json.schemas": [
+        {
+            "fileMatch": [
+                "userscrape.json"
+            ],
+            "url": "./userscrape.schema.json"
+        }
+    ],
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "__*__":true,
+        "__azurite_*.json": true
+    }
 }

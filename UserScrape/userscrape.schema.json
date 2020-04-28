@@ -1,0 +1,50 @@
+{
+  "type": "object",
+  "required": [
+    "data_storage_cs",
+    "users",
+    "headless"
+  ],
+  "properties": {
+    "data_storage_cs": {
+      "type": "string",
+      "examples": [
+        "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"
+      ],
+      "description": "connection string to the azure blob storage account storing the input, and output from scraping."
+    },
+    "users": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/UserCfg"
+      },
+      "description": "the YouTube viewing users in the experiment. Contains credentials and other information"
+    },
+    "headless": {
+      "type": "boolean",
+      "description": "When true, selenium will run without an interactive browser showing. Must be true when running in a ocntainer"
+    }
+  },
+  "description": "UserScrape configuration",
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "definitions": {
+    "UserCfg": {
+      "type": "object",
+      "required": [
+        "email",
+        "password"
+      ],
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "email of the user e.g. mra.userscrape@gmail.com"
+        },
+        "password": {
+          "type": "string",
+          "description": "password for the user "
+        }
+      },
+      "description": "UserCfg(email: str, password: str)"
+    }
+  }
+}

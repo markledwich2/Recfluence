@@ -1,18 +1,14 @@
 import os
-from dotenv import load_dotenv
-from setup import app_cfg
+from cfg import load_cfg
 from crawler import Crawler
 from selenium.common.exceptions import NoSuchElementException
 
-load_dotenv()
-cfg_sas = os.getenv('cfg_sas')
-cfg = app_cfg(cfg_sas)
-headless = os.getenv('headless') == '1' or os.getenv('headless') == 'true'
+cfg = load_cfg()
 
 for user in cfg.users:
-    
     print(f'scraping for user {user.email}')
-    crawler = Crawler(cfg.storage_sas, user.email, user.password, headless)
+    crawler = Crawler(cfg.data_storage_cs, user.email, user.password, cfg.headless)
+    crawler.test_ip()
     try:
         crawler.load_home_and_login()
         crawler.shutdown()
