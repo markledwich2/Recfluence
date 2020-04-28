@@ -16,15 +16,10 @@ for user in cfg.users:
 
     try:
         crawler.load_home_and_login()
-<<<<<<< HEAD
-        # crawler.watch_video('UnSILVWDKL8')
-        # crawler.get_recommendations_for_video('dQYf-AI5m0Q')
-=======
 
         for video in user_seed_videos:
             crawler.get_recommendations_for_video(video.video_id, 0)
 
->>>>>>> e93f78d599e72adeffd0e14076ec89eee5da7eec
         crawler.shutdown()
     except NoSuchElementException as e:
         print(f'Not able to find a required element {e.msg}. {user.email}')

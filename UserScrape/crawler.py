@@ -45,11 +45,7 @@ def create_driver(headless: bool) -> WebDriver:
 
 
 class Crawler:
-<<<<<<< HEAD
-    def __init__(self, sas_url: str, email: str, password: str, headless: bool, lang='en'):
-=======
     def __init__(self, data_storage_cs:str, email:str, password:str, headless:bool, lang = 'en'):
->>>>>>> e93f78d599e72adeffd0e14076ec89eee5da7eec
         self._video_infos = {}
         self.container = ContainerClient.from_connection_string(data_storage_cs, "userscrape")
         self.driver = create_driver(headless)
@@ -314,13 +310,8 @@ class Crawler:
             self.container.upload_blob(
                 remotePath.as_posix(), f, overwrite=True)
 
-<<<<<<< HEAD
-    def path_user(self) -> PurePath:
-        return PurePosixPath(f'user_scrape/{self.email}')
-=======
     def path_user(self)-> PurePath: 
         return PurePosixPath(f'session_logs/{self.email}')
->>>>>>> e93f78d599e72adeffd0e14076ec89eee5da7eec
 
     def path_session(self) -> PurePath:
         return PurePosixPath(f'session_logs/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.{self.driver.session_id}')
