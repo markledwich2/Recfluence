@@ -1,22 +1,11 @@
 {
   "configurations": [
-    {"name":"Python: app.py","type":"python","request":"launch","program":"app.py","console":"integratedTerminal"},
-    // {
-    //   "name": "Docker: Python - General",
-    //   "type": "docker",
-    //   "request": "launch",
-    //   "preLaunchTask": "docker-run: debug",
-    //   "python": {
-    //     "pathMappings": [
-    //       {
-    //         "localRoot": "${workspaceFolder}",
-    //         "remoteRoot": "/app"
-    //       }
-    //     ],
-    //     "projectType": "general",
-       
-    //   }
-    // },
-    
+    {
+      "name": "Python: current file",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal"
+    },
   ]
 }

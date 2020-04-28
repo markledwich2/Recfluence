@@ -1,42 +1,17 @@
-import * as React from 'react'
-import { ChannelRelationsPage } from '../components/ChannelRelationsPage'
-import Helmet from 'react-helmet'
-import { StaticQuery, graphql } from 'gatsby'
+import * as React from "react"
+import { ChannelRelationsPage } from "../components/ChannelRelationsPage"
+import { MainLayout } from "../components/MainLayout"
 
-const App = () => {
-  return (
-    <StaticQuery query={graphql`
-    query SiteTitleQuery {
-      site {
-        siteMetadata {
-          title
-          dataUrl
-        }
-      }
-    }
-  `} render={
-        (data:Query) => (
-          <>
-            <Helmet>
-              <title>{data.site.siteMetadata.title}</title>
-            </Helmet>
-            <ChannelRelationsPage dataUrl={data.site.siteMetadata.dataUrl} />
-          </>
-        )
-      } />)
-}
 
-interface Query {
-  site: Site
-}
+// On a build+server, or in prod. the server will breifly show the main page before replacing with the correct rout
+// This is because when /video/ is requested, the redirects aren't pointing to /index.html.
+// i think I should use a static page 
+// https://stackoverflow.com/questions/52051090/gatsbyjs-client-only-paths-goes-to-404-page-when-the-url-is-directly-accessed-in
 
-interface Site {
-  siteMetadata:SiteMetadata
-}
-
-interface SiteMetadata {
-  title:string
-  dataUrl:string
-}
+const App = () => (
+  <MainLayout>
+    <ChannelRelationsPage dataUrl={process.env.RESULTS_URL} />
+  </MainLayout>
+)
 
 export default App

@@ -1,5 +1,13 @@
 {
   "definitions": {
+    "AlgoliaCfg": {
+      "type": "object",
+      "properties": {
+        "creds": {
+          "type": "string"
+        }
+      }
+    },
     "ContainerCfg": {
       "type": "object",
       "properties": {
@@ -29,6 +37,20 @@
         },
         "exe": {
           "type": "string"
+        }
+      }
+    },
+    "ElasticCfg": {
+      "type": "object",
+      "properties": {
+        "cloudId": {
+          "type": "string"
+        },
+        "creds": {
+          "type": "string"
+        },
+        "fullLoad": {
+          "type": "boolean"
         }
       }
     },
@@ -64,9 +86,9 @@
         "location": {
           "type": "string",
           "enum": [
+            "Local",
             "Container",
-            "LocalContainer",
-            "LocalThread"
+            "LocalContainer"
           ]
         },
         "localParallel": {
@@ -213,6 +235,32 @@
         }
       }
     },
+    "SolrCfg": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "SqlServerCfg": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "db": {
+          "type": "string"
+        },
+        "creds": {
+          "type": "string"
+        },
+        "defaultSchema": {
+          "type": "string"
+        }
+      }
+    },
     "StorageCfg": {
       "type": "object",
       "properties": {
@@ -229,6 +277,88 @@
           "type": "string"
         },
         "pipePath": {
+          "type": "string"
+        }
+      }
+    },
+    "SyncColCfg": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "ts": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "boolean"
+        },
+        "typeOverride": {
+          "type": "string"
+        },
+        "null": {
+          "type": "boolean"
+        },
+        "index": {
+          "type": "boolean"
+        },
+        "fullText": {
+          "type": "boolean"
+        }
+      }
+    },
+    "SyncDbCfg": {
+      "type": "object",
+      "properties": {
+        "tables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SyncTableCfg"
+          }
+        },
+        "defaultTsCol": {
+          "type": "string"
+        },
+        "parallel": {
+          "type": "integer"
+        }
+      }
+    },
+    "SyncTableCfg": {
+      "type": "object",
+      "properties": {
+        "syncType": {
+          "type": "string",
+          "enum": [
+            "Incremental",
+            "Full"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "cols": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SyncColCfg"
+          }
+        },
+        "selectedCols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "manualSchema": {
+          "type": "boolean"
+        },
+        "filter": {
+          "type": "string"
+        },
+        "colStore": {
+          "type": "boolean"
+        },
+        "fullTextCatalog": {
           "type": "string"
         }
       }
@@ -304,7 +434,8 @@
       "$ref": "#/definitions/ServicePrincipalCfg"
     },
     "seqUrl": {
-      "type": "string"
+      "type": "string",
+      "format": "uri"
     },
     "seqHost": {
       "$ref": "#/definitions/SeqHostCfg"
@@ -318,11 +449,26 @@
     "snowflake": {
       "$ref": "#/definitions/SnowflakeCfg"
     },
+    "appDb": {
+      "$ref": "#/definitions/SqlServerCfg"
+    },
     "results": {
       "$ref": "#/definitions/ResultsCfg"
     },
     "pipe": {
       "$ref": "#/definitions/PipeAppCfg"
+    },
+    "solr": {
+      "$ref": "#/definitions/SolrCfg"
+    },
+    "algolia": {
+      "$ref": "#/definitions/AlgoliaCfg"
+    },
+    "elastic": {
+      "$ref": "#/definitions/ElasticCfg"
+    },
+    "syncDb": {
+      "$ref": "#/definitions/SyncDbCfg"
     }
   }
 }

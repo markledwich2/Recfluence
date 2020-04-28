@@ -7,9 +7,16 @@
         "target": "es6",
         "jsx": "react",
         "allowSyntheticDefaultImports": true,
-        "keyofStringsOnly":true
+        "keyofStringsOnly": true
     },
     "include": [
-        "./src/**/*"
+        "./src/**/*",
+    ],
+    "typeRoots": [
+        "./src/types",
+        "node_modules/@types"
+    ],
+    "types": [
+        "youtube"
     ]
 }

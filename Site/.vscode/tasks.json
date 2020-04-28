@@ -4,6 +4,7 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "develop",
             "type": "npm",
             "script": "develop",
             "problemMatcher": [
@@ -14,29 +15,16 @@
         {
             "label": "build",
             "type": "npm",
-            "script": "build",
+            "script": "build --prefix-paths",
             "problemMatcher": [
                 "$eslint-stylish"
             ],
             "group": "build"
         },
         {
-            "label": "beta build",
+            "label": "serve",
             "type": "npm",
-            "script": "betabuild",
-            "problemMatcher": [
-                "$eslint-stylish"
-            ],
-            "group": "build",
-            "options": {
-                "env": {
-                    "GATSBY_PATH_PREFIX": "beta"
-                }
-            }
-        },
-        {
-            "type": "npm",
-            "script": "publish",
+            "script": "serve",
             "problemMatcher": [
                 "$eslint-stylish"
             ]

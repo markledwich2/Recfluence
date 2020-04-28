@@ -5,26 +5,33 @@ using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Builder;
+using Elasticsearch.Net;
 using Humanizer;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Management.Fluent;
 using Microsoft.Extensions.Configuration;
+using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Blob;
+using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
+using Nest;
 using Newtonsoft.Json.Linq;
 using Semver;
 using Serilog;
 using Serilog.Core;
 using Serilog.Core.Enrichers;
 using Serilog.Events;
+using SysExtensions;
 using SysExtensions.Build;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Db;
+using YtReader.Search;
 using YtReader.Yt;
 
 namespace YtReader {
@@ -39,6 +46,7 @@ namespace YtReader {
     public static Logger CreateTestLogger() =>
       new LoggerConfiguration()
         .WriteTo.Seq("http://localhost:5341")
+        .WriteTo.Console()
         .CreateLogger();
 
     public static ILogger ConsoleLogger(LogEventLevel level = LogEventLevel.Information) =>
@@ -100,10 +108,15 @@ namespace YtReader {
       }
     }
 
-    public static Dictionary<string, string> ContainerEnv(this RootCfg rootCfg) =>
-      new Dictionary<string, string> {
-        {nameof(RootCfg.Env), rootCfg.Env},
-        {nameof(RootCfg.AppCfgSas), rootCfg.AppCfgSas.ToString()}
+    /// <summary>Will pass root & app config to pipes from the calling process. Only configuration that should come from the
+    ///   caller is passed. e.g. all root cfg's and a few app ones</summary>
+    /// <param name="rootCfg"></param>
+    /// <param name="appCfg"></param>
+    /// <returns></returns>
+    public static (string name, string value)[] PipeEnv(RootCfg rootCfg, AppCfg appCfg) =>
+      new[] {
+        (nameof(RootCfg.Env), rootCfg.Env),
+        (nameof(RootCfg.AppCfgSas), rootCfg.AppCfgSas.ToString())
       };
 
     public static Task<SemVersion> GetVersion() => Version.GetOrCreate();
@@ -112,7 +125,7 @@ namespace YtReader {
       Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
       ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
 
-    public static async Task<(AppCfg App, RootCfg Root)> LoadCfg2(string basePath = null, ILogger rootLogger = null) {
+    public static async Task<(AppCfg App, RootCfg Root)> LoadCfg(string basePath = null, ILogger rootLogger = null) {
       rootLogger ??= Log.Logger ?? Logger.None;
       basePath ??= Environment.CurrentDirectory;
       var cfgRoot = new ConfigurationBuilder()
@@ -138,8 +151,13 @@ namespace YtReader {
       var appCfg = cfg.Get<AppCfg>();
 
       if (appCfg.Sheets != null)
-        appCfg.Sheets.CredJson = secrets.ToJObject().SelectToken("sheets.credJson") as JObject;
-      appCfg.Pipe = await GetPipeAppCfg(appCfg);
+        appCfg.Sheets.CredJson = secrets.ParseJToken().SelectToken("sheets.credJson") as JObject;
+      appCfg.Pipe = await PipeAppCfg(appCfg);
+
+      appCfg.SyncDb.Tables = appCfg.SyncDb.Tables.JsonClone();
+      foreach (var table in appCfg.SyncDb.Tables)
+        if (table.TsCol == null && table.SyncType != SyncType.Full)
+          table.Cols.Add(new SyncColCfg {Name = appCfg.SyncDb.DefaultTsCol, Ts = true});
 
       var validation = Validate(appCfg);
       if (validation.Any()) {
@@ -157,18 +175,24 @@ namespace YtReader {
       return results;
     }
 
-    static async Task<PipeAppCfg> GetPipeAppCfg(AppCfg cfg) {
+    public static PipeAppCtx PipeAppCtxEmptyScope(RootCfg root, AppCfg appCfg) =>
+      new PipeAppCtx(new ContainerBuilder().Build().BeginLifetimeScope(), typeof(YtDataUpdater)) {
+        EnvironmentVariables = PipeEnv(root, appCfg)
+      };
+
+    static async Task<PipeAppCfg> PipeAppCfg(AppCfg cfg) {
       var semver = await GetVersion();
 
       var pipe = cfg.Pipe.JsonClone();
       pipe.Default.Container.Tag ??= semver.ToString();
       foreach (var p in pipe.Pipes) p.Container.Tag ??= semver.ToString();
 
-      pipe.Store ??= new PipeAppStorageCfg {
+      // override pipe cfg with equivalent global cfg
+      pipe.Store = new PipeAppStorageCfg {
         Cs = cfg.Storage.DataStorageCs,
         Path = cfg.Storage.PipePath
       };
-      pipe.Azure ??= new PipeAzureCfg {
+      pipe.Azure = new PipeAzureCfg {
         ResourceGroup = cfg.ResourceGroup,
         ServicePrincipal = cfg.ServicePrincipal,
         SubscriptionId = cfg.SubscriptionId
@@ -176,64 +200,68 @@ namespace YtReader {
       return pipe;
     }
 
-    public static IPipeCtx PipeCtx(RootCfg rootCfg, AppCfg cfg, IComponentContext scope, ILogger log) {
-      var envVars = rootCfg.ContainerEnv();
-      var pipeCtx = Pipes.CreatePipeCtx(cfg.Pipe, log, scope, new[] {typeof(YtDataUpdater).Assembly}, envVars);
-      return pipeCtx;
-    }
-
-    public static async Task<Cfg> LoadCfg(ILogger log = null) {
-      var rootCfg = new RootCfg();
-      rootCfg.Env = GetEnv("YtNetworks_Env") ?? "Dev";
-      rootCfg.AzureStorageCs = GetEnv("YtNetworks_AzureStorageCs");
-
-      if (rootCfg.AzureStorageCs.NullOrEmpty()) throw new InvalidOperationException("AzureStorageCs variable not provided");
-
-      var storageAccount = CloudStorageAccount.Parse(rootCfg.AzureStorageCs);
-      var cloudBlobClient = storageAccount.CreateCloudBlobClient();
-      var cfgText = await cloudBlobClient.GetText("cfg", $"{rootCfg.Env}.json");
-      var cfg = cfgText.ToObject<AppCfg>();
-
-      return new Cfg {App = cfg, Root = rootCfg};
-    }
-
-    public static ILifetimeScope BaseScope(RootCfg rootCfg, AppCfg cfg, ILogger log) {
-      var scopeHolder = new ScopeHolder();
-      var b = new ContainerBuilder();
-      b.Register(_ => log).SingleInstance();
-      b.Register(_ => cfg).SingleInstance();
-      b.Register(_ => cfg).SingleInstance();
-      b.Register(_ => cfg.YtStore(log)).SingleInstance();
-      b.Register<Func<Task<DbConnection>>>(_ => async () => (DbConnection) await cfg.Snowflake.OpenConnection());
-      b.Register<Func<IPipeCtx>>(c => () => PipeCtx(rootCfg, cfg, scopeHolder.Scope, log));
-      b.Register(_ => cfg.Pipe.Azure.GetAzure());
-      b.RegisterType<YtDataUpdater>(); // this will resolve IPipeCtx
-      var scope = b.Build().BeginLifetimeScope();
-      scopeHolder.Scope = scope;
+    public static ILifetimeScope BaseScope(RootCfg rootCfg, AppCfg cfg, PipeAppCtx pipeAppCtx, ILogger log) {
+      var scope = new ContainerBuilder().ConfigureBase(rootCfg, cfg, pipeAppCtx, log)
+        .Build().BeginLifetimeScope();
+      pipeAppCtx.Scope = scope;
       return scope;
     }
 
-    public static IPipeCtx ResolvePipeCtx(this ILifetimeScope scope) => scope.Resolve<Func<IPipeCtx>>()();
+    public static ContainerBuilder ConfigureBase(this ContainerBuilder b, RootCfg rootCfg, AppCfg cfg, PipeAppCtx pipeAppCtx, ILogger log) {
+      b.Register(_ => log).SingleInstance();
+      b.Register(_ => cfg).SingleInstance();
+      b.Register(_ => rootCfg).SingleInstance();
+
+      b.Register(_ => cfg.Pipe).SingleInstance();
+      b.Register(_ => cfg.Elastic).SingleInstance();
+
+      b.Register<Func<Task<DbConnection>>>(_ => async () => await cfg.Snowflake.OpenConnection());
+      b.RegisterType<AppDb>().SingleInstance();
+      b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();
+      b.Register(_ => cfg.DataStore(log, cfg.Storage.ResultsPath)).Keyed<ISimpleFileStore>(StoreType.Results).SingleInstance();
+      b.Register(_ => cfg.DataStore(log, cfg.Storage.DbPath)).Keyed<ISimpleFileStore>(StoreType.Db).SingleInstance();
+      //b.Register(_ => cfg.DataStore(log, cfg.Storage.PipePath)).Keyed<ISimpleFileStore>(StoreType.Pipe).SingleInstance();
+      b.Register(_ => cfg.DataStore(log, cfg.Storage.PrivatePath)).Keyed<ISimpleFileStore>(StoreType.Private).SingleInstance();
+
+      b.RegisterType<YtClient>();
+      b.Register(_ => new ElasticClient(new ConnectionSettings(
+          cfg.Elastic.CloudId,
+          new BasicAuthenticationCredentials(cfg.Elastic.Creds.Name, cfg.Elastic.Creds.Secret))
+        .DefaultIndex("caption")));
+
+      b.RegisterType<YtStore>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<YtResults>().WithKeyedParam(StoreType.Results, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<YtSearch>();
+      b.RegisterType<YtDataUpdater>();
+
+      b.Register(_ => pipeAppCtx);
+      b.RegisterType<PipeCtx>().As<IPipeCtx>().SingleInstance();
+
+      return b;
+    }
+
+    public static IRegistrationBuilder<TLimit, TReflectionActivatorData, TStyle>
+      WithKeyedParam<TLimit, TReflectionActivatorData, TStyle, TKey, TParam>(
+        this IRegistrationBuilder<TLimit, TReflectionActivatorData, TStyle> registration, TKey key, Of<TParam> param)
+      where TReflectionActivatorData : ReflectionActivatorData where TKey : Enum =>
+      registration.WithParameter(
+        (pi, ctx) => pi.ParameterType == typeof(TParam),
+        (pi, ctx) => ctx.ResolveKeyed<TParam>(key));
 
     public static Task<IContainerGroup> SeqGroup(this IAzure azure, AppCfg cfg) =>
       azure.ContainerGroups.GetByResourceGroupAsync(cfg.ResourceGroup, cfg.SeqHost.ContainerGroupName);
 
-    class ScopeHolder {
-      public IComponentContext Scope { get; set; }
-    }
-  }
-
-  public static class ChannelConfigExtensions {
     public static ISimpleFileStore DataStore(this AppCfg cfg, ILogger log, StringPath path = null) =>
       new AzureBlobFileStore(cfg.Storage.DataStorageCs, path ?? cfg.Storage.DbPath, log);
 
     public static YtClient YtClient(this AppCfg cfg, ILogger log) => new YtClient(cfg.YTApiKeys, log);
-
-    public static YtStore YtStore(this AppCfg cfg, ILogger log) {
-      var ytStore = new YtStore(cfg.DataStore(log, cfg.Storage.DbPath), log);
-      return ytStore;
-    }
-
     public static bool IsProd(this RootCfg root) => root.Env.ToLowerInvariant() == "prod";
+  }
+
+  public enum StoreType {
+    Pipe,
+    Db,
+    Results,
+    Private
   }
 }

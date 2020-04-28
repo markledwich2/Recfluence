@@ -12,36 +12,41 @@ using Serilog;
 using Serilog.Core;
 using SysExtensions.Build;
 using SysExtensions.Collections;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
 using Troschuetz.Random;
 using YtReader;
+using YtReader.Search;
 using YtReader.YtWebsite;
 
 namespace YtCli {
   class Program {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
-        .ParseArguments<PipeCmd, UpdateCmd, SyncCmd, ChannelInfoOption, FixCmd, ResultsCmd, TrafficCmd,
-          PublishContainerCmd, VersionCmd>(args)
+        .ParseArguments<PipeCmd, UpdateCmd, SyncBlobCmd, ChannelInfoOption, FixCmd, ResultsCmd, TrafficCmd,
+          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd>(args)
         .MapResult(
           (PipeCmd p) => Run(p, args, PipeCmd.RunPipe),
           (UpdateCmd u) => Run(u, args, UpdateCmd.Update),
-          (SyncCmd s) => Run(s, args, SyncCmd.Sync),
+          (SyncBlobCmd s) => Run(s, args, SyncBlobCmd.Sync),
           (ChannelInfoOption v) => Run(v, args, ChannelInfoOption.ChannelInfo),
           (FixCmd f) => Run(f, args, FixCmd.Fix),
           (ResultsCmd f) => Run(f, args, ResultsCmd.Results),
           (TrafficCmd t) => Run(t, args, TrafficCmd.Traffic),
           (PublishContainerCmd p) => Run(p, args, PublishContainerCmd.PublishContainer),
           (VersionCmd v) => VersionCmd.Verson(),
+          (UpdateSearchIndexCmd s) => Run(s, args, UpdateSearchIndexCmd.UpdateSearchIndex),
+          (SyncDbCmd s) => Run(s, args, SyncDbCmd.Sync),
           errs => Task.FromResult(ExitCode.Error)
         );
       return (int) await res;
     }
 
     static async Task<CmdCtx<TOption>> TaskCtx<TOption>(TOption option, string[] args) {
-      var (app, root) = await Setup.LoadCfg2(rootLogger: Setup.ConsoleLogger());
+      var (app, root) = await Setup.LoadCfg(rootLogger: Setup.ConsoleLogger());
       var log = await Setup.CreateLogger(root.Env, option.GetType().Name, app);
-      var scope = Setup.BaseScope(root, app, log);
+
+      var scope = Setup.BaseScope(root, app, Setup.PipeAppCtxEmptyScope(root, app), log);
       return new CmdCtx<TOption>(root, app, log, option, scope, args);
     }
 
@@ -50,8 +55,10 @@ namespace YtCli {
 
       try {
         var verb = option.GetType().GetCustomAttribute<VerbAttribute>()?.Name ?? option.GetType().Name;
-        ctx.Log.Information("Starting cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
-        return await task(ctx);
+        ctx.Log.Debug("Starting cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
+        var res = await task(ctx);
+        ctx.Log.Debug("Completed cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
+        return res;
       }
       catch (Exception ex) {
         var flatEx = ex switch {AggregateException a => a.Flatten(), _ => ex};
@@ -85,10 +92,16 @@ namespace YtCli {
       if (ctx.Option.ChannelIds.HasValue())
         ctx.Cfg.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
 
-      var pipeCtx = ctx.Scope.ResolvePipeCtx();
-      pipeCtx.CustomRegion = () => Rand.Choice(Regions);
-      var id = PipeRunId.FromName("Update");
-      await pipeCtx.DoPipeWork(id);
+      // make a new app context with a custom region defined
+      var appCtx = new PipeAppCtx(ctx.Scope.Resolve<PipeAppCtx>()) {CustomRegion = () => Rand.Choice(Regions)};
+      var standardPipeCtx = ctx.Scope.Resolve<IPipeCtx>();
+
+      // run the work in this process
+      var cfg = standardPipeCtx.Cfg.JsonClone();
+      cfg.Location = PipeRunLocation.Local;
+      var pipeCtx = new PipeCtx(cfg, appCtx, standardPipeCtx.Log);
+      await pipeCtx.Run((YtDataUpdater d) => d.Update(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType));
+      //await pipeCtx.DoPipeWork(PipeRunId.FromName("Update"));
       return ExitCode.Success;
     }
   }
@@ -101,8 +114,8 @@ namespace YtCli {
     }
   }
 
-  [Verb("sync", HelpText = "synchronize two blobs")]
-  public class SyncCmd : ICommonCmd {
+  [Verb("sync-blob", HelpText = "synchronize two blobs")]
+  public class SyncBlobCmd : ICommonCmd {
     [Option('a', Required = true, HelpText = "SAS Uri to source storage service a")]
     public Uri SasA { get; set; }
 
@@ -115,29 +128,33 @@ namespace YtCli {
     [Option(Required = false, HelpText = "The path in the form container/dir1/dir2 for b (if different to a)")]
     public string PathB { get; set; }
 
-    public static async Task<ExitCode> Sync(CmdCtx<SyncCmd> ctx) {
+    public static async Task<ExitCode> Sync(CmdCtx<SyncBlobCmd> ctx) {
       await SyncBlobs.Sync(ctx.Option.SasA, ctx.Option.SasB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.DefaultParallel, ctx.Log);
       return ExitCode.Success;
     }
   }
 
-  [Verb("ChannelInfo", HelpText = "Show channel information (ID,Name) given a video ID")]
+  [Verb("channel-info", HelpText = "Show channel information (ID,Name) given a video ID")]
   public class ChannelInfoOption : ICommonCmd {
-    [Option('v', Required = true, HelpText = "the ID of a video")]
+    [Option('v', HelpText = "the ID of a video")]
     public string VideoId { get; set; }
+
+    [Option('c', HelpText = "the ID of a channel")]
+    public string ChannelId { get; set; }
 
     public static async Task<ExitCode> ChannelInfo(CmdCtx<ChannelInfoOption> ctx) {
       var yt = ctx.Cfg.YtClient(ctx.Log);
-      var v = await yt.VideoData(ctx.Option.VideoId);
-      ctx.Log.Information("{ChannelId},{ChannelTitle}", v.ChannelId, v.ChannelTitle);
+      if (ctx.Option.VideoId.HasValue()) {
+        var v = await yt.VideoData(ctx.Option.VideoId);
+        ctx.Log.Information("{ChannelId},{ChannelTitle}", v.ChannelId, v.ChannelTitle);
+      }
+      if (ctx.Option.ChannelId.HasValue()) {
+        var c = await yt.ChannelData(ctx.Option.ChannelId);
+        ctx.Log.Information("{ChannelTitle},{Status}", c.Title, c.Status);
+      }
+
       return ExitCode.Success;
     }
-  }
-
-  public enum RunLocation {
-    Normal,
-    ContainerLaunch,
-    ContainerComplete
   }
 
   public interface ICommonCmd { }
@@ -148,9 +165,26 @@ namespace YtCli {
     public IEnumerable<string> QueryNames { get; set; }
 
     public static async Task<ExitCode> Results(CmdCtx<ResultsCmd> ctx) {
-      var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.ResultsPath);
-      var result = new YtResults(ctx.Cfg.Snowflake, ctx.Cfg.Results, store, ctx.Log);
-      await result.SaveResults(ctx.Option.QueryNames.NotNull().ToList());
+      var result = ctx.Scope.Resolve<YtResults>();
+      await result.SaveBlobResults(ctx.Option.QueryNames.NotNull().ToList());
+      return ExitCode.Success;
+    }
+  }
+
+  [Verb("sync-db")]
+  public class SyncDbCmd : ICommonCmd {
+    [Option('t', HelpText = "list of tables to sync")]
+    public IEnumerable<string> Tables { get; set; }
+
+    [Option('l', HelpText = "limit rows. For Debugging")]
+    public int Limit { get; set; }
+
+    [Option('f', HelpText = "if true, will clear and load data")]
+    public bool FullLoad { get; set; }
+
+    public static async Task<ExitCode> Sync(CmdCtx<SyncDbCmd> ctx) {
+      var result = new YtSync(ctx.Cfg.Snowflake, ctx.Cfg.AppDb, ctx.Log);
+      await result.SyncDb(ctx.Cfg.SyncDb, ctx.Log, ctx.Option.Tables.ToReadOnly(), ctx.Option.FullLoad, ctx.Option.Limit);
       return ExitCode.Success;
     }
   }
@@ -160,6 +194,24 @@ namespace YtCli {
     public static async Task<ExitCode> Traffic(CmdCtx<TrafficCmd> ctx) {
       var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.PrivatePath);
       await TrafficSourceExports.Process(store, ctx.Cfg, new YtScraper(ctx.Cfg.Scraper), ctx.Log);
+      return ExitCode.Success;
+    }
+  }
+
+  [Verb("index", HelpText = "Update the search index")]
+  public class UpdateSearchIndexCmd : ICommonCmd {
+    [Option('l', HelpText = "Location to run (Local, Container, LocalContainer)")]
+    public PipeRunLocation Location { get; set; }
+
+    [Option('t', HelpText = "Limit the query to top t results")]
+    public long? Limit { get; set; }
+
+    [Option('f', HelpText = "If all captions should be re-indexed")]
+    public bool FullLoad { get; set; }
+
+    public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
+      var pipeCtx = ctx.Scope.Resolve<IPipeCtx>();
+      await pipeCtx.Run((YtSearch s) => s.CaptionIndex(ctx.Option.FullLoad, ctx.Option.Limit), location: ctx.Option.Location, log: ctx.Log);
       return ExitCode.Success;
     }
   }

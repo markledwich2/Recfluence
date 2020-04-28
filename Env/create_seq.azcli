@@ -22,9 +22,9 @@ STORAGE_KEY=$(az storage account keys list --resource-group $ACI_PERS_RESOURCE_G
 echo $STORAGE_KEY
 
 MOUNT_PATH=/data
-az container create --resource-group $ACI_PERS_RESOURCE_GROUP --name $NAME -l $ACI_PERS_LOCATION --image datalust/seq:latest --dns-name-label ytseq --ports 80 -e ACCEPT_EULA=Y --azure-file-volume-account-name $ACI_PERS_STORAGE_ACCOUNT_NAME --azure-file-volume-account-key $STORAGE_KEY --azure-file-volume-share-name $ACI_PERS_SHARE_NAME --azure-file-volume-mount-path $MOUNT_PATH
+az container create --resource-group $ACI_PERS_RESOURCE_GROUP --name $NAME -l $ACI_PERS_LOCATION --image datalust/seq:latest --dns-name-label ytseq --ports 80 443 -e ACCEPT_EULA=Y --azure-file-volume-account-name $ACI_PERS_STORAGE_ACCOUNT_NAME --azure-file-volume-account-key $STORAGE_KEY --azure-file-volume-share-name $NAME --azure-file-volume-mount-path $MOUNT_PATH --memory 4 --cpu 1
 
 #az  container restart -n $NAME -g $ACI_PERS_RESOURCE_GROUP
-#az container stop -n $NAME --resource-group $ACI_PERS_RESOURCE_GROUP
+az container stop -n $NAME --resource-group $ACI_PERS_RESOURCE_GROUP
 #az container delete -n $NAME --resource-group $ACI_PERS_RESOURCE_GROUP
 #curl -XPOST "http://ytseq.westus2.azurecontainer.io/api/events/raw?clef" -d "{'@t':'2018-06-07T03:44:57.8532799Z','@mt':'Hello, {User}','User':'alice'}"

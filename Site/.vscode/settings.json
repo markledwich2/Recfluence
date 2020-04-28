@@ -1,0 +1,32 @@
+{
+    "files.exclude": {
+        ".cache": true,
+        "node_modules": true
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "javascript.format.semicolons": "remove",
+    "typescript.format.semicolons": "remove",
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "vscode.typescript-language-features"
+    },
+    "cSpell.words": [
+        "Zaitsev",
+        "aggs",
+        "algoliasearch",
+        "appbaseio",
+        "dcolor",
+        "reactivesearch"
+    ],
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "typescript.preferences.quoteStyle": "single",
+    "javascript.preferences.quoteStyle": "single",
+    "[typescript]": {
+        "editor.defaultFormatter": "vscode.typescript-language-features"
+    },
+    "[html]": {
+        "editor.defaultFormatter": "vscode.html-language-features"
+    }
+}

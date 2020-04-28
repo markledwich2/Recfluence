@@ -1,9 +1,9 @@
 import * as d3 from 'd3'
 import * as _ from 'lodash'
-import { Dim, Col } from './Dim'
+import { capitalCase, merge, toRecord } from '../common/Utils'
 import { SelectionState } from './Chart'
-import { parseISO } from 'date-fns'
-import { merge, capitalCase, toRecord } from '../common/Utils'
+import { Col, Dim } from './Dim'
+import { DbModel } from './DbModel'
 
 export interface Graph<N, L> {
   nodes: N
@@ -31,11 +31,13 @@ export interface ChannelData {
   ideology: string
   media: string,
   manoel: string,
-  ain: string
+  ain: string,
+  /** this only exists when from the the azure function */
+  lifetimeDailyViews?: number
 }
 
 export class ChannelEx {
-  static impressionAdvantagePercent = (c:ChannelData) => c.relevantImpressionsDailyIn / c.relevantImpressionsDaily - 1
+  static impressionAdvantagePercent = (c: ChannelData) => c.relevantImpressionsDailyIn / c.relevantImpressionsDaily - 1
 }
 
 export interface RecData {
@@ -63,7 +65,7 @@ export class RecEx {
   static recCol = (dir: RecDir, col: keyof ChannelData): keyof RecData =>
     `${dir}${_.upperFirst(col)}` as keyof RecData
 
-  static channelCol = (col: keyof RecData|string): keyof ChannelData => {
+  static channelCol = (col: keyof RecData | string): keyof ChannelData => {
     if (col.startsWith('from')) return _.lowerFirst(col.substr(4)) as keyof ChannelData
     if (col.startsWith('to')) return _.lowerFirst(col.substr(2)) as keyof ChannelData
     return null
@@ -85,35 +87,18 @@ export class YtModel {
 
   static version = 'v2.3'
 
+  constructor() {
+    this.recs = new Dim<RecData>(YtModel.recDimStatic.meta)
+    this.recCats = new Dim<RecData>(YtModel.recCatDimStatic.meta)
+    this.channels = new Dim<ChannelData>(YtModel.channelDimStatic.meta)
+    this.selectionState = { selected: [], parameters: { record: { colorBy: 'ideology' } } }
+  }
+
   static async dataSet(path: string): Promise<YtModel> {
     const channelsTask = d3.csv(path + 'vis_channel_stats.csv.gz')
     const recTask = d3.csv(path + 'vis_channel_recs.csv.gz')
     const recCatTask = d3.csv(path + 'vis_category_recs.csv.gz')
-    const channels = (await channelsTask).map((c: any) => {
-
-      return <ChannelData>{
-        channelId: c.CHANNEL_ID,
-        title: c.CHANNEL_TITLE,
-        tags: JSON.parse(c.TAGS),
-        subCount: c.SUBS,
-        channelVideoViews: +c.CHANNEL_VIEWS,
-        thumbnail: c.LOGO_URL,
-        lr: c.LR,
-        publishedFrom: parseISO(c.FROM_DATE),
-        publishedTo: parseISO(c.TO_DATE),
-        dailyViews: +c.VIDEO_VIEWS_DAILY,
-        relevantDailyViews: +c.RELEVANT_VIDEO_VIEWS_DAILY,
-        views: +c.CHANNEL_VIEWS,
-        relevantImpressionsDaily: c.RELEVANT_IMPRESSIONS_DAILY,
-        relevantImpressionsDailyIn: c.RELEVANT_IMPRESSIONS_IN_DAILY,
-        ideology: c.IDEOLOGY,
-        media: c.MEDIA,
-        relevance: c.RELEVANCE,
-        manoel: c.MANOEL,
-        ain: c.AIN
-      }
-    })
-
+    const channels = (await channelsTask).map((c: any) => DbModel.ChannelData(c))
     const channelDic = _(channels).keyBy(c => c.channelId).value()
 
     let recCol = (dir: RecDir, c: keyof ChannelData) => ({ recCol: RecEx.recCol(dir, c), channelCol: c, dir })
@@ -148,12 +133,11 @@ export class YtModel {
       return rec
     })
 
-    return {
-      channels: new Dim(this.channelDimStatic.meta, channels),
-      recs: new Dim(this.recDimStatic.meta, recs),
-      recCats: new Dim(this.recCatDimStatic.meta, recCats),
-      selectionState: { selected: [], parameters: { record: { colorBy: 'ideology' } } },
-    }
+    const m = new YtModel()
+    m.channels = new Dim(this.channelDimStatic.meta, channels)
+    m.recs = new Dim(this.recDimStatic.meta, recs)
+    m.recCats = new Dim(this.recCatDimStatic.meta, recCats)
+    return m
   }
 
   static categoryCols: (keyof ChannelData)[] = ['ideology', 'lr', 'media', 'manoel', 'ain']
@@ -237,6 +221,25 @@ export class YtModel {
     ]
   })
 
+  static tagAlias: Record<string, string> = {
+    ManoelAltLite: 'Ribeiro - Alt-light',
+    ManoelAltRight: 'Ribeiro - Alt-right',
+    ManoelIDW: 'Ribeiro - IDW',
+    ManoelControl: 'Ribeiro - Control',
+    AntiSJW: 'Anti-SJW',
+    SocialJusticeL: 'Social Justice',
+    WhiteIdentitarian: 'White Identitarian',
+    PartisanLeft: 'Partisan Left',
+    PartisanRight: 'Partisan Right',
+    AntiTheist: 'Anti-theist',
+    ReligiousConservative: 'Religious Conservative',
+    MissingLinkMedia: 'Missing Link Media',
+    StateFunded: 'State Funded',
+    AntiWhiteness: 'Anti-whiteness',
+    LateNightTalkShow: '_',
+    Revolutionary: '_'
+  }
+
   private static recCol(dir: RecDir, name: keyof ChannelData) {
     const col = YtModel.channelDimStatic.col(name)
     return merge(col as any as Col<RecData>, {
@@ -258,6 +261,7 @@ export class YtModel {
       .flatMap(c => ([YtModel.recCol('from', c), YtModel.recCol('to', c)])).value()
   })
 }
+
 
 
 

@@ -9,7 +9,7 @@ using SysExtensions.Text;
 namespace SysExtensions.Reflection {
   public enum CopyPropertiesBehaviour {
     CopyAll,
-    IfNotNull
+    SkipDefault
   }
 
   public static class ReflectionExtensions {
@@ -26,7 +26,7 @@ namespace SysExtensions.Reflection {
             case CopyPropertiesBehaviour.CopyAll:
               SetValue(to, from, toProp);
               break;
-            case CopyPropertiesBehaviour.IfNotNull:
+            case CopyPropertiesBehaviour.SkipDefault:
               var existingValue = toProp.GetValue(to);
               if (existingValue == toProp.PropertyType.DefaultForType())
                 SetValue(to, from, toProp);
@@ -51,6 +51,12 @@ namespace SysExtensions.Reflection {
       var to = new T();
       to.CopyPropertiesFrom(from);
       return to;
+    }
+
+    public static T ShallowWith<T>(this T from, T with) where T : class, new() {
+      var clone = from.ShallowClone();
+      clone.CopyPropertiesFrom(with, CopyPropertiesBehaviour.SkipDefault);
+      return clone;
     }
 
     public static object DefaultForType(this Type type) => type.GetTypeInfo().IsValueType ? Activator.CreateInstance(type) : null;
@@ -110,11 +116,9 @@ namespace SysExtensions.Reflection {
     public static MethodInfo GetMethodInfo<TResult>(Func<TResult> fun) => fun.Method;
     public static MethodInfo GetMethodInfo<T, TResult>(Func<T, TResult> fun) => fun.Method;
     public static MethodInfo GetMethodInfo<T, U, TResult>(Func<T, U, TResult> fun) => fun.Method;
-    
-    
-    
+
     public static async Task<TOut> CallStaticGenericTask<TOut>(this MethodInfo methodInfo, Type[] generics, params object[] args) {
-      var loadInStateMethod = methodInfo?.MakeGenericMethod(generics) 
+      var loadInStateMethod = methodInfo?.MakeGenericMethod(generics)
                               ?? throw new InvalidOperationException($"{nameof(methodInfo)}<{generics.Join(", ", g => g.Name)}> method not found ");
       dynamic task = loadInStateMethod.Invoke(null, args);
       return (TOut) await task;

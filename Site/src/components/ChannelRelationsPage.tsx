@@ -3,13 +3,14 @@ import ContainerDimensions from 'react-container-dimensions'
 import { RecFlows } from './RecFlows'
 import { ChannelRelations } from './ChannelRelations'
 import { YtModel } from '../common/YtModel'
-import { ChannelTitle } from './ChannelTitle'
-import '../styles/Main.css'
+import { ChannelRelationsTitle } from './ChannelRelationsTitle'
+
 import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, ActionType, Action } from '../common/Chart'
 import _ from 'lodash'
 import { toRecord } from '../common/Utils'
+import { RouteComponentProps } from "@reach/router"
 
-interface Props {
+interface Props extends RouteComponentProps {
   dataUrl: string
 }
 
@@ -21,7 +22,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   selections: SelectionStateHelper<any, any>
   relations: ChannelRelations
   flows: RecFlows
-  title: ChannelTitle
+  title: ChannelRelationsTitle
   state: Readonly<State> = {
     model: null
   }
@@ -34,7 +35,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   }
 
   componentDidMount() {
-     
+
     this.load()
   }
 
@@ -45,8 +46,8 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
     const params = new URLSearchParams(location.search)
     if (Array.from(params).length > 0) {
-      var selectRecord:Record<string, any> = {}
-      params.forEach((v,k) => selectRecord[k] = v)
+      var selectRecord: Record<string, any> = {}
+      params.forEach((v, k) => selectRecord[k] = v)
       let sh = new SelectionStateHelper(() => data.selectionState)
       sh.select(selectRecord)
     }
@@ -64,15 +65,15 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
     if (action.type == ActionType.clear) {
       // in the future, if this page use params for anything else we will need to determine which is a selection
-      params.forEach((_,k) => params.delete(k))
+      params.forEach((_, k) => params.delete(k))
       updateUrl()
     }
 
     if (action.type == ActionType.select) {
-      params.forEach((_,k) => params.delete(k))
-      if(action.select.length == 1) {
+      params.forEach((_, k) => params.delete(k))
+      if (action.select.length == 1) {
         const rec = action.select[0].record
-        for(let k in rec)
+        for (let k in rec)
           params.append(k, rec[k])
       }
       updateUrl()
@@ -80,7 +81,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
 
     console.log('onSelection', action)
 
-    if(this.state.model) {
+    if (this.state.model) {
       this.state.model.selectionState = this.selections.applyAction(action)
       this.graphComponents().forEach(g => {
         const selections = this.state.model.selectionState
@@ -97,7 +98,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     if (this.state.model) {
       return (
         <div className={'ChannelRelationPage'}>
-          <ChannelTitle
+          <ChannelRelationsTitle
             ref={r => (this.title = r)}
             model={this.state.model}
             onSelection={this.onSelection.bind(this)}

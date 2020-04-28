@@ -29,13 +29,14 @@ namespace SysExtensions.Security {
 
     public string Pattern => @"([^:\n]+):([^:\n]+)";
 
+    public override string ToString() => StringValue;
+
     public SecureString SecureString() {
       var ss = new SecureString();
       foreach (var c in Secret)
         ss.AppendChar(c);
+      ss.MakeReadOnly();
       return ss;
     }
-
-    public override string ToString() => StringValue;
   }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Humanizer;
+using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using SysExtensions.Security;
@@ -41,8 +42,29 @@ namespace YtReader {
     [Required] public SheetsCfg           Sheets                { get; set; } = new SheetsCfg();
     [Required] public ScraperCfg          Scraper               { get; set; } = new ScraperCfg();
     [Required] public SnowflakeCfg        Snowflake             { get; set; } = new SnowflakeCfg();
+    [Required] public SqlServerCfg        AppDb                 { get; set; } = new SqlServerCfg();
     [Required] public ResultsCfg          Results               { get; set; } = new ResultsCfg();
     [Required] public PipeAppCfg          Pipe                  { get; set; } = new PipeAppCfg();
+    public            SolrCfg             Solr                  { get; set; } = new SolrCfg();
+    public            AlgoliaCfg          Algolia               { get; set; } = new AlgoliaCfg();
+    public            ElasticCfg          Elastic               { get; set; }
+    public            SyncDbCfg           SyncDb                { get; set; } = new SyncDbCfg();
+  }
+
+  public class ElasticCfg {
+    public string     CloudId { get; set; }
+    public NameSecret Creds   { get; set; }
+  }
+
+  public class SyncDbCfg {
+    public SyncTableCfg[] Tables       { get; set; } = { };
+    public string         DefaultTsCol { get; set; } = "updated";
+    public int            Parallel     { get; set; } = 4;
+  }
+
+  public enum MergeStrategy {
+    DeleteFirst,
+    MergeStatement
   }
 
   public class ResultsCfg {
@@ -93,7 +115,15 @@ namespace YtReader {
   }
 
   public class SeqHostCfg {
-    public string IdleQuery          { get; set; } = "@Timestamp > Now() - 30m";
+    public string IdleQuery          { get; set; } = "@Timestamp > Now() - 1h and App != 'StopIdleSeq_Timer'";
     public string ContainerGroupName { get; set; } = "seq";
+  }
+
+  public class AlgoliaCfg {
+    public NameSecret Creds { get; set; }
+  }
+
+  public class SolrCfg {
+    public Uri Url { get; set; }
   }
 }

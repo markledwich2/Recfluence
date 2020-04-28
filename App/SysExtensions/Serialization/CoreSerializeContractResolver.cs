@@ -15,7 +15,7 @@ namespace SysExtensions.Serialization {
       if (memberSerialization != MemberSerialization.OptOut) return prop;
       if (!prop.Writable && !prop.PropertyType.IsCollection()
                          && member.GetCustomAttribute<JsonPropertyAttribute>(true) == null)
-        prop.ShouldSerialize = o => false;
+        return null;
       return prop;
     }
 

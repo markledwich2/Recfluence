@@ -1,22 +1,30 @@
 import os
-from dotenv import load_dotenv
-from setup import app_cfg
+from cfg import load_cfg
 from crawler import Crawler
 from selenium.common.exceptions import NoSuchElementException
+from data import load_all_seeds, seeds_for_user
 
-load_dotenv()
-cfg_sas = os.getenv('cfg_sas')
-cfg = app_cfg(cfg_sas)
-headless = os.getenv('headless') == '1' or os.getenv('headless') == 'true'
+cfg = load_cfg()
+video_seeds_df = load_all_seeds()
 
 for user in cfg.users:
-    
     print(f'scraping for user {user.email}')
-    crawler = Crawler(cfg.storage_sas, user.email, user.password, headless)
+    crawler = Crawler(cfg.data_storage_cs, user.email, user.password, cfg.headless)
+    crawler.test_ip()
+
+    user_seed_videos = seeds_for_user(user, video_seeds_df)
+
     try:
         crawler.load_home_and_login()
+<<<<<<< HEAD
         # crawler.watch_video('UnSILVWDKL8')
         # crawler.get_recommendations_for_video('dQYf-AI5m0Q')
+=======
+
+        for video in user_seed_videos:
+            crawler.get_recommendations_for_video(video.video_id, 0)
+
+>>>>>>> e93f78d599e72adeffd0e14076ec89eee5da7eec
         crawler.shutdown()
     except NoSuchElementException as e:
         print(f'Not able to find a required element {e.msg}. {user.email}')

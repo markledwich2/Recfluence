@@ -1,61 +1,152 @@
 ﻿{
-    "seqUrl": "http://ytseq.westus2.azurecontainer.io",
-    "seqHost": {
-        "idleQuery": "@Timestamp > Now() - 1h and App != 'StopIdleSeq_Timer'",
-        "containerGroupName": "seq"
+  "seqUrl": "http://ytseq.westus2.azurecontainer.io",
+  "seqHost": {
+    "containerGroupName": "seq"
+  },
+  "parallelChannels": 4,
+  "defaultParallel": 8,
+  "channelsPerContainer": 300,
+  "resourceGroup": "ytnetworks",
+  "storage": {
+    "dbPath": "testdata/db2",
+    "resultsPath": "testdata/results",
+    "pipePath": "testdata/pipe"
+  },
+  "subscriptionId": "93ef8661-3e11-4fcc-92ae-d0383e7e4ad3",
+  "servicePrincipal": {
+    "clientId": "664f7796-ecbf-4244-ba6b-b4d76e1c1037",
+    "tennantId": "6084d3dc-3b42-4303-8568-314a3db26017"
+  },
+  "sheets": {
+    "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",
+    "userChannelSheetIds": [
+      "1S1nYJXSRTKXmAQnCur7hKK4aFdDTMHV70L2UUUAs0os",
+      "1lGDF1YAGRza336C_hg6KJfzIuChIuDF2IzGg8LjEcAc",
+      "1FclpJwIYGo4u4fQdgwBiV1LC72NRHwXyF7y90yV7wzY",
+      "12OUpAzlrUPxWi0TJNQYVwu5FB5Q0ughLLPgakGWEGf8"
+    ]
+  },
+  "scraper": {
+    "url": "us.smartproxy.com:10000"
+  },
+  "snowflake": {
+    "Account": "MUTUO",
+    "Warehouse": "YT",
+    "Db": "YT",
+    "Schema": "PUBLIC"
+  },
+  "pipe": {
+    "default": {
+      "container": {
+        "registry": "ytnetworks.azurecr.io",
+        "name": "ytnetworks",
+        "imageName": "ytnetworks",
+        "cores": 2,
+        "mem": 2,
+        "exe": "./ytnetworks"
+      }
     },
-    "parallelChannels": 4,
-    "defaultParallel": 8,
-    "channelsPerContainer": 300,
-    "resourceGroup": "ytnetworks",
-    "storage": {
-        "dbPath": "testdata/db2",
-        "resultsPath": "testdata/results",
-        "pipePath": "testdata/pipe"
-    },
-    "subscriptionId": "93ef8661-3e11-4fcc-92ae-d0383e7e4ad3",
-    "servicePrincipal": {
-        "clientId": "664f7796-ecbf-4244-ba6b-b4d76e1c1037",
-        "tennantId": "6084d3dc-3b42-4303-8568-314a3db26017"
-    },
-    "sheets": {
-        "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",
-        "userChannelSheetIds": [
-            "1S1nYJXSRTKXmAQnCur7hKK4aFdDTMHV70L2UUUAs0os",
-            "1lGDF1YAGRza336C_hg6KJfzIuChIuDF2IzGg8LjEcAc",
-            "1FclpJwIYGo4u4fQdgwBiV1LC72NRHwXyF7y90yV7wzY",
-            "12OUpAzlrUPxWi0TJNQYVwu5FB5Q0ughLLPgakGWEGf8"
+    "pipes": [
+      {
+        "pipeName": "ProcessChannels",
+        "maxParallel": 8,
+        "minWorkItems": 50,
+        "container": {
+          "mem": 4
+        }
+      },
+      {
+        "pipeName": "CaptionIndex",
+        "container": {
+          "mem": 4
+        }
+      }
+    ]
+  },
+  "solr": {
+    "url": "https://ss225254-ank9au43-us-west-1-aws.searchstax.com/solr"
+  },
+  "elastic": {
+    "cloudId": "Recfluence:d2VzdHVzMi5henVyZS5lbGFzdGljLWNsb3VkLmNvbTo5MjQzJDg5OTljNTUxYjkyYjRmYjA5YTRkZjYwMmVjYTQ3ZmJjJGJmOTFlMzE2YzNkZTQyOWE4Mzk3MDlhZjI0NTRlYzg0"
+  },
+  "appDb": {
+    "host": "recfluence.database.windows.net",
+    "db": "recfluence"
+  },
+  "syncDb": {
+    "defaultTsCol": "updated",
+    "tables": [
+      {
+        "name": "channel_latest",
+        "syncType": "Incremental",
+        "cols": [
+          {
+            "name": "channel_id",
+            "id": true
+          }
         ]
-    },
-    "scraper": {
-        "url": "us.smartproxy.com:10000"
-    },
-    "snowflake": {
-        "Account": "MUTUO",
-        "Warehouse": "YT",
-        "Db": "YT",
-        "Schema": "PUBLIC"
-    },
-    "pipe": {
-        "default": {
-            "container": {
-                "registry": "ytnetworks.azurecr.io",
-                "name": "ytnetworks",
-                "imageName": "ytnetworks",
-                "cores": 2,
-                "mem": 2,
-                "exe": "./ytnetworks"
-            }
-        },
-        "pipes": [
-            {
-                "pipeName": "ProcessChannels",
-                "maxParallel": 8,
-                "minWorkItems": 50,
-                "container": {
-                    "mem": 4
-                }
-            }
+      },
+      {
+        "name": "video_latest",
+        "syncType": "Incremental",
+        // "filter": "channel_id in ('UCzQUP1qoWDoEbmsQxvdjxgQ', 'UCupvZG-5ko_eiXAupbDfxWw')",
+        "cols": [
+          {
+            "name": "video_id",
+            "typeOverride": "nvarchar(100)",
+            "id": true
+          },
+          {
+            "name": "channel_id",
+            "typeOverride": "nvarchar(100)",
+            "index": true
+          },
+          {
+            "name": "video_title",
+            "fullText": true
+          },
+          {
+            "name": "description",
+            "fullText": true
+          }
         ]
-    }
+      },
+      {
+        "name": "caption",
+        "syncType": "Incremental",
+        "manualSchema": true,
+        "colStore": false,
+        // "filter": "channel_id in ('UCzQUP1qoWDoEbmsQxvdjxgQ', 'UCupvZG-5ko_eiXAupbDfxWw') ",
+        "selectedCols": [
+          "caption_id",
+          "video_id",
+          "channel_id",
+          "caption",
+          "offset_seconds"
+        ],
+        "cols": [
+          {
+            "name": "caption_id",
+            "id": true,
+            "typeOverride": "nvarchar(100)"
+          },
+          {
+            "name": "caption",
+            "typeOverride": "nvarchar(max)",
+            "fullText": true
+          },
+          {
+            "name": "video_id",
+            "typeOverride": "nvarchar(100)",
+            "index": true
+          },
+          {
+            "name": "channel_id",
+            "typeOverride": "nvarchar(100)",
+            "index": true
+          }
+        ]
+      }
+    ]
+  }
 }

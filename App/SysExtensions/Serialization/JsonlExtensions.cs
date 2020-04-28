@@ -20,6 +20,13 @@ namespace SysExtensions.Serialization {
       items.ToJsonl(tw, settings);
     }
 
+    public static void ToJsonlGz<T>(this IEnumerable<T> items, string filePath, JsonSerializerSettings settings = null) {
+      using var fw = File.OpenWrite(filePath);
+      using var zipWriter = new GZipStream(fw, CompressionLevel.Optimal, true);
+      using var tw = new StreamWriter(zipWriter);
+      items.ToJsonl(tw, settings);
+    }
+
     public static IEnumerable<T> LoadJsonlGz<T>(this TextReader tr, JsonSerializerSettings settings = null) {
       settings ??= JsonExtensions.DefaultSettings();
       if (settings.Formatting != Formatting.None) settings.Formatting = Formatting.None;

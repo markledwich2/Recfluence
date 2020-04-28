@@ -45,11 +45,15 @@ def create_driver(headless: bool) -> WebDriver:
 
 
 class Crawler:
+<<<<<<< HEAD
     def __init__(self, sas_url: str, email: str, password: str, headless: bool, lang='en'):
+=======
+    def __init__(self, data_storage_cs:str, email:str, password:str, headless:bool, lang = 'en'):
+>>>>>>> e93f78d599e72adeffd0e14076ec89eee5da7eec
         self._video_infos = {}
+        self.container = ContainerClient.from_connection_string(data_storage_cs, "userscrape")
         self.driver = create_driver(headless)
         self.wait = WebDriverWait(self.driver, 10)
-        self.container = ContainerClient.from_container_url(sas_url)
         self.email = email
         self.password = password
         self.init_time = datetime.now()
@@ -60,6 +64,7 @@ class Crawler:
         wd.get('https://httpbin.org/ip')
         pre: WebElement = wd.find_element_by_css_selector('pre')
         print(f'Running with IP {json.loads(pre.text)["origin"]}')
+        self.__log_info('ip')
 
     def load_home_and_login(self):
         wd = self.driver
@@ -309,11 +314,16 @@ class Crawler:
             self.container.upload_blob(
                 remotePath.as_posix(), f, overwrite=True)
 
+<<<<<<< HEAD
     def path_user(self) -> PurePath:
         return PurePosixPath(f'user_scrape/{self.email}')
+=======
+    def path_user(self)-> PurePath: 
+        return PurePosixPath(f'session_logs/{self.email}')
+>>>>>>> e93f78d599e72adeffd0e14076ec89eee5da7eec
 
     def path_session(self) -> PurePath:
-        return PurePosixPath(f'user_scrape/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.{self.driver.session_id}')
+        return PurePosixPath(f'session_logs/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.{self.driver.session_id}')
 
     def shutdown(self):
         self.driver.quit()

@@ -1,7 +1,9 @@
-﻿using Microsoft.Azure.Management.ResourceManager.Fluent;
+﻿using Microsoft.Azure.Management.Fluent;
+using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
+using Mutuo.Etl.Pipe;
 
-namespace Mutuo.Etl.Pipe {
+namespace Mutuo.Etl.AzureManagement {
   public static class AzureEx {
     public static IAzure GetAzure(this PipeAzureCfg cfg) {
       var sp = cfg.ServicePrincipal;
