@@ -32,7 +32,8 @@
       "type": "object",
       "required": [
         "email",
-        "password"
+        "password",
+        "ideology"
       ],
       "properties": {
         "email": {
@@ -42,9 +43,28 @@
         "password": {
           "type": "string",
           "description": "password for the user "
+        },
+        "ideology": {
+          "type": "string",
+          "examples": [
+            "Partisan Right",
+            "White Identitarian",
+            "Provocative Anti-SJW",
+            "Anti-theist",
+            "Religious Conservative",
+            "Partisan Left",
+            "MRA",
+            "Anti-SJW",
+            "Socialist",
+            "Center/Left MSM",
+            "Libertarian",
+            "Conspiracy",
+            "Social Justice"
+          ],
+          "description": "The users ideology, expected to be unique between users"
         }
       },
-      "description": "UserCfg(email: str, password: str)"
+      "description": "UserCfg(email: str, password: str, ideology: str)"
     }
   }
 }
