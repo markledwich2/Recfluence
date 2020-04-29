@@ -195,10 +195,9 @@ class Crawler:
 
     def delete_last_video_from_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
-        self.__log_info('before deleting first video from history')
         
-        #todo: replace with 'Remove from Watch history'
-        delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Aus \"Wiedergabeverlauf\" entfernen']")
+        delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Remove from Watch history']")
+        # delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Aus \"Wiedergabeverlauf\" entfernen']")
         
         # reasons why there are no videos in the history:
         # 1. the history is empty
@@ -206,28 +205,21 @@ class Crawler:
         # 3. The ui is in the wrong language
         if len(delete_buttons)>0:
             delete_buttons[0].click()
-        self.__log_info('deleted first video from history')
 
 
     def delete_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
-        self.__log_info('before deleting full history')
 
-        
         messages = self.driver.find_elements_by_xpath("//*[@id='message']")
         # if there are not videos in the history a text appears that says 'no videos here' but apparently there is a second, hidden, message with the same
         # id on the page. So instead of checking whether this element exists we differentiate between 1 message (there are videos in the history) and 
         # two messages (there are no videos in the history)
         if len(messages)==1:
-            # Clear all watch history
-            # Gesamten Wiedergabeverlauf löschen
-            delete_buttons = self.driver.find_element_by_xpath("//*[@aria-label = 'Gesamten Wiedergabeverlauf löschen']").click()
+            delete_buttons = self.driver.find_element_by_xpath("//*[@aria-label = 'Clear all watch history']").click()
+            # delete_buttons = self.driver.find_element_by_xpath("//*[@aria-label = 'Gesamten Wiedergabeverlauf löschen']").click()
 
-            # todo replace with english terms
-            # CLEAR WATCH HISTORY
-            # WIEDERGABEVERLAUF LÖSCHEN
-            confirm_button = self.driver.find_element_by_xpath("//*[@aria-label = 'WIEDERGABEVERLAUF LÖSCHEN']").click()
-        self.__log_info('deleted history')
+            confirm_button = self.driver.find_element_by_xpath("//*[@aria-label = 'CLEAR WATCH HISTORY']").click()
+            # confirm_button = self.driver.find_element_by_xpath("//*[@aria-label = 'WIEDERGABEVERLAUF LÖSCHEN']").click()
 
 
     def _get_seconds(self, duration: str):
