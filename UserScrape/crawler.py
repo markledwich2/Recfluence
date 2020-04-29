@@ -239,6 +239,12 @@ class Crawler:
 
     def watch_video(self, videoId: str):
         self.driver.get("https://www.youtube.com/watch?v=" + videoId)
+        self.__log_info('open video')
+        # First we need to detect whether an ad is playing
+        if len(self.driver.find_elements_by_xpath("//*[@id='skip-button:a']/span/button")) != 0:
+            print(self.driver.find_element_by_xpath("//*[@class='ytp-ad-button ytp-ad-visit-advertiser-button ytp-ad-button-link']"))
+            self.__log_info('ad is playing')
+        self.__log_info('ad is not playing')
         # unfortunately YouTube orders the player in multiple different ways so we have to try them all unless there is a better way?
         duration = WebDriverWait(self.driver, 3).until(
                 EC.presence_of_element_located((By.CLASS_NAME, 'ytp-time-duration'))).text
@@ -252,6 +258,15 @@ class Crawler:
         time.sleep(watch_time)
         # todo: replace this with proper logging
         print('watched %s for %f seconds' % (videoId, watch_time))
+        #skip button
+        #/html/body/ytd-app/div/ytd-page-manager/ytd-watch-flexy/div[4]/div[1]/div/div[1]/div/div/div/ytd-player/div/div/div[15]/div/div[3]/div/div[2]/span/button/span
+
+
+
+# //*[@id="visit-advertiser:y"] aria-label 
+
+
+# //*[@id="domain"]
 
     def __save_cookies(self):
         """saves all cookies
