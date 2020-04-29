@@ -19,7 +19,7 @@ for user in cfg.users:
         # crawler.login()
         # for video in user_seed_videos:
         #     crawler.get_recommendations_for_video(video.video_id)
-        crawler.watch_video('-FlxM_0S2lA')
+        crawler.watch_video('Pn9TWf3wNaQ')
 
         crawler.shutdown()
     except NoSuchElementException as e:

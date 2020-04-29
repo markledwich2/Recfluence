@@ -7,6 +7,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium import webdriver
 from datetime import datetime
 import time
@@ -141,9 +142,9 @@ class Crawler:
         # todo send to discour/slack/email to get the meat-user to click a number
         print(f'to {self.email}: {message}')
 
-    def get_video_features(self, id, recommendations: list, personalized_count: int):
+    def get_video_features(self, videoId, recommendations: list, personalized_count: int):
         seshPath = self.path_session()
-        filename = 'output/recommendations/' + self.email + '_' + id + '_' + \
+        filename = 'output/recommendations/' + self.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
         
         video_info = {
@@ -238,35 +239,79 @@ class Crawler:
         return (duration_time-datetime(1900, 1, 1)).total_seconds()
 
     def watch_video(self, videoId: str):
+        """[summary]
+        starts video, skips any ads in the beginning and then watches video for an amount of time that is dependent on video length
+        Currently we are ignoring ads that appear in the middle of the video. At the moment we are assuming that watching an ad also contributes
+        to the watchtime of the video itself
+        Arguments:
+            videoId {str} -- The id of the video to be watched
+        """
+        seshPath = self.path_session()
+
+        
         self.driver.get("https://www.youtube.com/watch?v=" + videoId)
-        self.__log_info('open video')
-        # First we need to detect whether an ad is playing
-        if len(self.driver.find_elements_by_xpath("//*[@id='skip-button:a']/span/button")) != 0:
-            print(self.driver.find_element_by_xpath("//*[@class='ytp-ad-button ytp-ad-visit-advertiser-button ytp-ad-button-link']"))
-            self.__log_info('ad is playing')
-        self.__log_info('ad is not playing')
-        # unfortunately YouTube orders the player in multiple different ways so we have to try them all unless there is a better way?
-        duration = WebDriverWait(self.driver, 3).until(
-                EC.presence_of_element_located((By.CLASS_NAME, 'ytp-time-duration'))).text
-        # start the video
+        # wait until video is loaded
+        playbutton = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.XPATH,
+                                            '//*[@class="ytp-play-button ytp-button"]'))
+        )
+        # todo: in the end this will be only english
+        if playbutton.get_attribute('title') in ["Play (k)", "Wiedergabe (k)"]:
+            playbutton.click()
+        # unfortunately the ad loads slower than the player so we wait here to be sure we detect the ad if any appears
+        time.sleep(1)
+        # we store any advertisements that appear
+        advertisements = {videoId: []}
+        filename = 'output/advertisements/' + self.email + '_' + videoId + '_' + \
+            str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
+
+        # todo: surveys
+        # we check whether a skip button is pöresent
+        if len(self.driver.find_elements_by_xpath("//*[@class='ytp-ad-preview-container countdown-next-to-thumbnail']")) != 0:
+            # store the advertiser
+            advertisements[videoId].append(self.driver.find_element_by_xpath(
+                "//*[@class='ytp-ad-button ytp-ad-visit-advertiser-button ytp-ad-button-link']").text)
+            # wait until we can skip
+            time.sleep(5)
+            # if the ad is only 5 seconds long, it is already over now, so have to check whether the button is still there before we click it
+            skip_button = self.driver.find_element_by_xpath("//*[@class='ytp-ad-skip-button ytp-button']")
+            if skip_button.is_displayed():
+                skip_button.click()
+        # wait again, for second ad that might appear
+        time.sleep(1)
+        # check for presence of second ad
+        if len(self.driver.find_elements_by_xpath("//*[@class='ytp-ad-preview-container countdown-next-to-thumbnail']")) != 0:
+            advertisements[videoId].append(self.driver.find_element_by_xpath(
+                "//*[@class='ytp-ad-button ytp-ad-visit-advertiser-button ytp-ad-button-link']").text)
+            time.sleep(5)
+            skip_button = self.driver.find_element_by_xpath("//*[@class='ytp-ad-skip-button ytp-button']")
+            if skip_button.is_displayed():
+                skip_button.click()
+
+        # measure for how long we are watching the actual video
+        start_time = time.time()
+
+        # upload the list of advertisers
+        self.__save_file(seshPath / filename, str(advertisements))
+
+        # detect the length of th actual video
+        time_element = WebDriverWait(self.driver, 3).until(
+                EC.presence_of_element_located((By.CLASS_NAME, 'ytp-time-duration')))
+        ActionChains(self.driver).move_to_element(time_element).perform() # we need to hover over the bar or else the time is not visible
+        duration = time_element.text
         duration = self._get_seconds(duration)
         # to make sure that every video is watched long enough
-        # todo: this will be a problem if an ad is longer than the respective watch time?
         watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
-        play_button = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, '/html/body/ytd-app/div/ytd-page-manager/ytd-watch-flexy/div[4]/div[1]/div/div[1]/div/div/div/ytd-player/div/div/div[29]/div[2]/div[1]/button'))).click()
         time.sleep(watch_time)
-        # todo: replace this with proper logging
-        print('watched %s for %f seconds' % (videoId, watch_time))
-        #skip button
-        #/html/body/ytd-app/div/ytd-page-manager/ytd-watch-flexy/div[4]/div[1]/div/div[1]/div/div/div/ytd-player/div/div/div[15]/div/div[3]/div/div[2]/span/button/span
-
-
-
-# //*[@id="visit-advertiser:y"] aria-label 
-
-
-# //*[@id="domain"]
+        #todo replace with seq logging
+        watch_time_log_file = 'output/watch_times/' + self.email + '_' + videoId + '_' + \
+            str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
+        watch_time = {
+            'video_length': duration,
+            'goal_watch_time': watch_time,
+            'watch_time': time.time()-start_time
+        }
+        self.__save_file(seshPath / watch_time_log_file, str(watch_time))
 
     def __save_cookies(self):
         """saves all cookies
