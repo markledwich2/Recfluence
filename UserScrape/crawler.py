@@ -313,7 +313,6 @@ class Crawler:
         """            
         tasks = []
         main_window = self.driver.window_handles[-1]
-        print(type(main_window))
         for video in videos:
             self.driver.execute_script("window.open('');")
             new_tab = self.driver.window_handles[-1]
