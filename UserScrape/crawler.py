@@ -126,7 +126,7 @@ class Crawler:
             ).send_keys(code)
             code_next_button = self.driver.find_element_by_id('idvanyphoneverifyNext').click()
         feed = self.wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="grid-title"]')))
-
+        self.__log_info('home')
         self.__save_cookies()
 
         return CrawlResult()
