@@ -5,3 +5,4 @@ dataclasses
 dataclasses_json
 dataclasses_jsonschema
 pandas
+discord.py

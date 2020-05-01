@@ -20,7 +20,8 @@ from urllib.parse import urlparse
 from dataclasses import dataclass
 from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath
 import tempfile
-
+import asyncio
+import discord_bot
 
 @dataclass
 class CrawlResult:
@@ -46,13 +47,14 @@ def create_driver(headless: bool) -> WebDriver:
 
 
 class Crawler:
-    def __init__(self, data_storage_cs:str, email:str, password:str, headless:bool, lang = 'en'):
+    def __init__(self, data_storage_cs:str, email:str, password:str, tel_nr:str, headless:bool, lang = 'en'):
         self._video_infos = {}
         self.container = ContainerClient.from_connection_string(data_storage_cs, "userscrape")
         self.driver = create_driver(headless)
         self.wait = WebDriverWait(self.driver, 10)
         self.email = email
         self.password = password
+        self.tel_nr = tel_nr
         self.init_time = datetime.now()
         self.lang = lang
 
@@ -109,38 +111,25 @@ class Crawler:
         passwordUrl = wd.current_url
         wd.find_element_by_css_selector('#passwordNext').click()
 
-        time.sleep(1)
         self.__log_info('password_entered')
 
-        url = urlparse(wd.current_url)
-        if url.netloc != "www.youtube.com":
-            verify = wd.find_element_by_css_selector('#authzenNext')
-            if(verify):
-                verify.click()
+        time.sleep(1)
+        phone_input = self.driver.find_elements_by_xpath("//input[@type='tel']")
 
-                # verify, at least on my account presents a number to enter on the phone
-                figure: WebElement = WebDriverWait(wd, 2).until(
-                    EC.text_to_be_present_in_element(
-                        (By.CSS_SELECTOR, 'figure > samp'))
-                )
-
-                self.sendMessageToUser(f'Enter {figure.text} on your phone')
-
-                # wait for 5 minutes for an IRL meat-person to verify
-                WebDriverWait(wd, 5*60).until(EC.url_changes(wd.current_url))
-                newUrl = urlparse(wd.current_url)
-                if newUrl.netloc != "youtube.com":
-                    return CrawlResult(True, f'did not navigate to youtube after verifying (url:{wd.current_url})')
-
-            return CrawlResult(True, f'did not nvagate to youtube after password (url:{wd.current_url})')
-
+        if len(phone_input) != 0:
+            phone_input[0].send_keys(self.tel_nr)
+            tel_next_button = self.driver.find_element_by_id('idvanyphonecollectNext').click()
+            code_bot = discord_bot.DiscordBot()
+            code = code_bot.get_code()
+            code_input = WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//input[@type='tel']"))
+            ).send_keys(code)
+            code_next_button = self.driver.find_element_by_id('idvanyphoneverifyNext').click()
+        feed = self.wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="grid-title"]')))
+        self.__log_info('home')
         self.__save_cookies()
 
         return CrawlResult()
-
-    def sendMessageToUser(self, message):
-        # todo send to discour/slack/email to get the meat-user to click a number
-        print(f'to {self.email}: {message}')
 
     def get_video_features(self, videoId, recommendations: list, personalized_count: int):
         seshPath = self.path_session()
@@ -230,17 +219,20 @@ class Crawler:
             duration_time = datetime.strptime(duration, "%M:%S")
         return (duration_time-datetime(1900, 1, 1)).total_seconds()
 
-    def watch_video(self, videoId: str):
+    async def watch_video(self, videoId: str, main_tab: str, current_tab: str):
         """[summary]
         starts video, skips any ads in the beginning and then watches video for an amount of time that is dependent on video length
         Currently we are ignoring ads that appear in the middle of the video. At the moment we are assuming that watching an ad also contributes
         to the watchtime of the video itself
+
         Arguments:
-            videoId {str} -- The id of the video to be watched
+            videoId {str} -- id of video
+            main_tab {str} -- the selenium window handle of the main tab to switch back to after current tab is closed
+            current_tab {str} -- the tab in which the video shall be watched
         """
         seshPath = self.path_session()
 
-        
+        self.driver.switch_to.window(current_tab)
         self.driver.get("https://www.youtube.com/watch?v=" + videoId)
         # wait until video is loaded
         playbutton = WebDriverWait(self.driver, 10).until(
@@ -256,9 +248,9 @@ class Crawler:
         advertisements = {videoId: []}
         filename = 'output/advertisements/' + self.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
-
+        self.__log_info("video opened")
         # todo: surveys
-        # we check whether a skip button is pöresent
+        # we check whether a skip button is present
         if len(self.driver.find_elements_by_xpath("//*[@class='ytp-ad-preview-container countdown-next-to-thumbnail']")) != 0:
             # store the advertiser
             advertisements[videoId].append(self.driver.find_element_by_xpath(
@@ -294,7 +286,9 @@ class Crawler:
         duration = self._get_seconds(duration)
         # to make sure that every video is watched long enough
         watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
-        time.sleep(watch_time)
+
+        # let the asynchronous manager know that now other videos can be started
+        await asyncio.sleep(watch_time)
         #todo replace with seq logging
         watch_time_log_file = 'output/watch_times/' + self.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
@@ -304,6 +298,29 @@ class Crawler:
             'watch_time': time.time()-start_time
         }
         self.__save_file(seshPath / watch_time_log_file, str(watch_time))
+        self.driver.switch_to.window(current_tab)
+        self.driver.close()
+        self.driver.switch_to.window(main_tab)
+
+    async def watch_videos(self, videos: list[str]):
+        """
+        This methods starts watching multiple videos in different tabs asynchronously, I.e. while one watch_video method is in the
+        state of just sleeping, it already opens the next tab with another video.
+        As soon as video is finished watching, the tab is closed
+
+        Arguments:
+            videos {list[str]} -- a list with all the video id's that are supposed to be watched
+        """            
+        tasks = []
+        main_window = self.driver.window_handles[-1]
+        for video in videos:
+            self.driver.execute_script("window.open('');")
+            new_tab = self.driver.window_handles[-1]
+            tasks.append(
+                self.watch_video(video, main_window, new_tab)
+            )
+        await asyncio.gather(*tasks)
+
 
     def __save_cookies(self):
         """saves all cookies

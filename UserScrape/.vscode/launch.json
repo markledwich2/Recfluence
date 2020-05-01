@@ -1,5 +1,6 @@
 {
   "configurations": [
+    {"name":"start experiment","type":"python","request":"launch","program":"app.py","console":"integratedTerminal"},
     {
       "name": "Python: current file",
       "type": "python",

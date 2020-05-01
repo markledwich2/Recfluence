@@ -13,6 +13,7 @@ class UserCfg(JsonSchemaMixin):
     email: str = field(
         metadata={"description": "email of the user e.g. mra.userscrape@gmail.com"})
     password: str = field(metadata={"description": "password for the user "})
+    telephone_number: str = field(metadata={"description": "telephone number to verify account "})
     ideology: str = field(metadata=JsonSchemaMeta({
         "description": "The users ideology, expected to be unique between users",
         "examples": [
