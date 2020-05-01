@@ -1,13 +1,14 @@
 import React, { FunctionComponent } from "react"
 import { compactInteger } from "humanize-plus"
-import { dateFormat, secondsToHHMMSS } from "../common/Utils"
-import { ChannelTags, ChannelTagData } from "./ChannelTags"
+import { dateFormat, secondsToHHMMSS } from "../../common/Utils"
+import { ChannelTags, ChannelTagData } from "../ChannelTags"
 import Highlighter from "react-highlight-words"
 import _ from 'lodash'
-import { queryHighlights } from '../common/Elastic'
+import { queryHighlights } from '../../common/Elastic'
 import styled from 'styled-components'
-import { theme, media } from './MainLayout'
+import { theme, media } from '../MainLayout'
 import { Link } from 'gatsby'
+import ReactMarkdown from 'react-markdown/with-html'
 
 interface CaptionSearchResult extends CaptionDocument {
     _doc_count: number
@@ -39,8 +40,78 @@ export interface CaptionDocument {
     url: string
 }
 
+const HelpStyle = styled.div`
+    font-size: 1.2em;
+    padding:2em;
+    b, h1, h2, h3 {
+        color:${theme.fontColor}
+    }
+    p {
+        padding: 0.5em 0em 1em 0em;
+    }
+    code, inlineCode  {
+        font-family:monospace;
+        background-color:${theme.backColor1};
+        padding: 0.1em 0.2em;
+        border: 1px solid ${theme.backColor2};
+        border-radius: 5px;
+    }
+`
+
+const TableStyle = styled.table`
+    padding:1em;
+`
+
+const searchMd = `
+Search titles and captions of political YouTube videos created since Jan 2019. 
+
+### Quotes
+Use \`""\` to find full phrases.
+
+\`"Charlie Brown"\` will only return results that mention Charlie by his full name (just like Google search). 
+
+This can be combined with other terms. 
+Example: \`"Charlie Brown" Snoopy\` will also find results with Snoopy.
+
+### Logic
+
+\`+\` will ensure a both terms are present. \`Snoopy + Charlie\` will only return video segments that have both \`Snoopy\` and \`Charlie\` somewhere in the document.
+
+\`-\` Will ensure a word is not present. \`Snoopy -Space\` will only return video segments that have \`Snoopy\` but no \`Space\`
+
+\`()\` controls precedence. \`(dog|wolf) +collar\` will find video segments that have either \`dog\` or \`wolf\` but must have \`collar\`.
+
+### Wildcard
+Use \`*\` to match any characters in the part of a word. \`Snoo*\` will match \`Snoopy\`, \`Snooze\`, \`Snoop\`
+
+### Near
+Use \`~\` to match variations within a single character. E.g. \`Charlie~\` will match \`Charlie\` and \`Charlies\`. 
+
+Use \`~N\` to match N character different. E.g. \`Utilitarian~3\` will match \`Utilitarians\` and \`Utilitarianism\`. 
+
+
+`
+
+const SearchHelp2 = <HelpStyle><ReactMarkdown source={searchMd} escapeHtml={false} /></HelpStyle>
+
+const SearchHelp = <HelpStyle>
+    Titles and captions of political YouTube videos will be searched.
+    <b>Basic</b>
+    <p>The most relevant videos that include any of the search will be returned. </p>
+    <br /><br />
+    <b>Advanced</b>
+    <TableStyle>
+        <tr>
+            <td><b>|</b> (or)</td>
+            <td>Default behavior. Results must only match at one of the words</td>
+            <td>cats | feline</td>
+        </tr>
+    </TableStyle>
+    <b>Search Query</b><br /><p>this is more detail</p>
+</HelpStyle>
+
 export const VideoSearchResults = ({ data, query, error }: { data: CaptionSearchResult[], query: string, error: string }) => {
-    if (!query) return <></> // don't show empty results
+    if (!query) return SearchHelp2// don't show empty results
 
     const byVid = _(data).groupBy(c => c.video_id).map(g => {
         const first = g[0]

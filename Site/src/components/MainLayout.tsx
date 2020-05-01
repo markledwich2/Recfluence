@@ -3,7 +3,7 @@ import React from "react"
 import Helmet from "react-helmet"
 import '../styles/main.css'
 import styled from 'styled-components'
-import { color as dcolor } from "d3"
+import { color as dcolor, hsl } from "d3"
 import { Router, RouteComponentProps as CP } from "@reach/router"
 
 export class MainLayout extends React.Component<CP<{}>, {}> {
@@ -94,14 +94,17 @@ interface Theme {
   fontSize: string,
   themeColor: string,
   themeColorSubtler: string,
-  backColor: string
+  backColor: string,
+  backColor1: string,
+  backColor2: string
 }
 
 function makeTheme(intent: ThemeIntent): Theme {
   const { dark } = intent
   const fontColor = dark ? '#bbb' : '#222'
-  const subtler = (color: string, k: number) => dark ? dcolor(color).darker(k).toString() : dcolor(color).brighter(k).toString()
-  const bolder = (color: string, k: number) => dark ? dcolor(color).brighter(k).toString() : dcolor(color).darker(k).toString()
+  const subtler = (color: string, k: number) => dark ? hsl(color).darker(k).toString() : hsl(color).brighter(k).toString()
+  const bolder = (color: string, k: number) => dark ? hsl(color).brighter(k).toString() : hsl(color).darker(k).toString()
+  const backColor = dark ? '#111' : `#fff`
   return {
     fontFamily: intent.fontFamily,
     fontColor: fontColor,
@@ -109,7 +112,9 @@ function makeTheme(intent: ThemeIntent): Theme {
     fontSize: '1em',
     themeColor: intent.themeColor,
     themeColorSubtler: subtler(intent.themeColor, 2),
-    backColor: dark ? '#000' : `#fff`
+    backColor: backColor,
+    backColor1: bolder(backColor, 1),
+    backColor2: bolder(backColor, 4)
   }
 }
 

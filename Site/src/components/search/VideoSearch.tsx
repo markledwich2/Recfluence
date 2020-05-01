@@ -1,23 +1,18 @@
 import React, { useState } from "react"
 import { RouteComponentProps as CProps } from "@reach/router"
 import { ReactiveBase, ReactiveList, DataSearch, MultiList, SelectedFilters, SingleRange, SingleDataList, StateProvider, DateRange } from '@appbaseio/reactivesearch'
-import { theme, media, isGatsbyServer } from "./MainLayout"
+import { theme, media, isGatsbyServer } from "../MainLayout"
 import styled from 'styled-components'
 import _, { Dictionary } from 'lodash'
 import { VideoSearchResults } from './VideoSearchResults'
 import { useMediaQuery } from 'react-responsive'
-import { Button } from './Button'
+import { Button } from '../Button'
 import { FilterList } from '@styled-icons/material'
 
 
 const MainContainer = styled.div`
     max-width:1400px;
     margin: auto;
-
-    padding:2em 0.2em;
-    > div {
-        padding-bottom:0.5em;
-    }
     display:flex;
     justify-content:space-around;
     flex-direction:column;
@@ -31,15 +26,16 @@ const MainContainer = styled.div`
 `
 
 const ContentPane = styled.div`
+    padding: 2em 2em;
     display:flex;
     flex-direction:column;
     flex: 100%;
     max-width:1100px;
-    padding: 0em 1em;
 `
 
 
 const SearchRow = styled.div`
+    display:flex;
     input {
         font-size:1.5rem;
         box-sizing:border-box;
@@ -49,6 +45,7 @@ const SearchRow = styled.div`
 const FiltersPane = styled.div`
     display:flex;
     overflow-y:auto;
+    background-color: ${theme.backColor1};
 
     justify-content:start;
     flex-direction:row;
@@ -231,18 +228,20 @@ const SearchBar: React.FunctionComponent = () => {
                 autosuggest={false}
                 showIcon={false}
                 searchOperators
-                style={{ fontSize: "2em" }}
-                theme={{ fontSize: "2em" }}
+                style={{ fontSize: "2em", flex: '100%' }}
                 URLParams
                 onKeyPress={handleKey}
                 onChange={handleChange}
                 value={query}
             />
-        </SearchRow>
+            {/* <ToolTip placement="left-end" title={SearchHelp}>
+                <IconHelp height="2em" color={theme.backColorBolder} style={{ margin: '0.5em' }} />
+            </ToolTip> */}
+
+        </SearchRow >
+
     )
 }
-
-export default SearchBar
 
 const FiltersPaneComponent = ({ setSort, sort }: { setSort: React.Dispatch<React.SetStateAction<SortValue>>, sort: SortValue }) => <FiltersPane>
 

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { VideoSearch } from '../components/VideoSearch'
+import { VideoSearch } from '../components/search/VideoSearch'
 import { MainLayout } from '../components/MainLayout'
 
 const SearchPage = () => (
