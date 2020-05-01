@@ -26,13 +26,18 @@ export class MainLayout extends React.Component<CP<{}>, {}> {
             <Helmet>
               <title>{data.site.siteMetadata.title}</title>
             </Helmet>
-            {children}
+            <MainStyleDiv>
+              {children}
+            </MainStyleDiv>
           </>
         )}
       />
     )
   }
 }
+
+export function isGatsbyServer() { return typeof window === 'undefined' }
+
 
 const themeIntent: ThemeIntent = {
   fontFamily: 'Segoe UI, Tahoma',
@@ -42,21 +47,38 @@ const themeIntent: ThemeIntent = {
 
 export const theme = makeTheme(themeIntent)
 
-export const TextPage = styled.div`
-  max-width:1024px;
-  margin: 0 auto;
-  padding-top: 1em;
+export const size = {
+  small: 600,
+  medium: 800,
+  large: 1000,
+  xlarge: 1200
+}
+
+export const media = {
+  width: {
+    small: `min-width: ${size.small}px`,
+    medium: `min-width: ${size.medium}px`,
+    large: `min-width: ${size.large}px`
+  },
+  height: {
+    small: `min-height: ${size.small}px`,
+    medium: `min-height: ${size.medium}px`,
+    large: `min-height: ${size.large}px`,
+    xlarge: `min-height: ${size.xlarge}px`
+  }
+}
+
+const MainStyleDiv = styled.div`
   mark {
     background-color: ${theme.themeColorSubtler};
     color: ${theme.fontColor};
   }
 `
 
-export const FlexRow = styled.div`
-    display:flex;
-    > * {
-        padding-right:1em
-    }
+export const TextPage = styled.div`
+  max-width:1024px;
+  margin: 0 auto;
+  padding-top: 1em;
 `
 
 interface ThemeIntent {
@@ -72,6 +94,7 @@ interface Theme {
   fontSize: string,
   themeColor: string,
   themeColorSubtler: string,
+  backColor: string
 }
 
 function makeTheme(intent: ThemeIntent): Theme {
@@ -85,7 +108,8 @@ function makeTheme(intent: ThemeIntent): Theme {
     fontColorBolder: bolder(fontColor, 2),
     fontSize: '1em',
     themeColor: intent.themeColor,
-    themeColorSubtler: subtler(intent.themeColor, 2)
+    themeColorSubtler: subtler(intent.themeColor, 2),
+    backColor: dark ? '#000' : `#fff`
   }
 }
 

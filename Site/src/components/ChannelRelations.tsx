@@ -11,6 +11,34 @@ import Select from 'react-select'
 import { renderToString } from 'react-dom/server'
 import { classNames, delay } from '../common/Utils'
 import { range } from 'd3'
+import styled from 'styled-components'
+
+const LegendStyle = styled.div`
+  position: absolute;
+  display: flex;
+  flex-flow: column;
+  padding: 5px;
+  min-width: 150px;
+  width: 20%;
+  max-width: 250px;
+  
+  background-color: rgba(0, 0, 0, 0.5);
+  top:0;
+
+   > * {
+    margin: 5px;
+  }
+
+  g.legend {
+    cursor: pointer;
+    margin: 5px;
+  }
+
+  g.legend text {
+    fill: #eee;
+  }
+  `
+
 
 interface State extends InteractiveDataState { }
 interface Props extends ChartProps<YtModel> { }
@@ -25,11 +53,6 @@ interface Node extends d3.SimulationNodeDatum, SelectableCell<Node> {
   size: number
   row: ChannelData
 }
-
-// interface ChannelData extends ChannelData {
-//   fromChannelId?:string
-//   toChannelId?:string
-// }
 
 export class ChannelRelations extends React.Component<Props, State> {
   svg: SVGSVGElement
@@ -86,7 +109,7 @@ export class ChannelRelations extends React.Component<Props, State> {
     let options = YtModel.categoryCols.map(c => dim.col(c)).map(c => ({ value: c.name, label: c.label ?? c.name }))
     let selected = options.find(o => o.value == colorBy)
     return (
-      <div className={'legend'}>
+      <LegendStyle>
         <Select
           options={options}
           value={selected}
@@ -119,7 +142,7 @@ export class ChannelRelations extends React.Component<Props, State> {
             })}
           </g>
         </svg>
-      </div>
+      </LegendStyle>
     )
   }
 

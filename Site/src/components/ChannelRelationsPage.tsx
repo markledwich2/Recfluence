@@ -4,11 +4,11 @@ import { RecFlows } from './RecFlows'
 import { ChannelRelations } from './ChannelRelations'
 import { YtModel } from '../common/YtModel'
 import { ChannelRelationsTitle } from './ChannelRelationsTitle'
-
 import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, ActionType, Action } from '../common/Chart'
 import _ from 'lodash'
-import { toRecord } from '../common/Utils'
 import { RouteComponentProps } from "@reach/router"
+import styled from 'styled-components'
+import { media } from './MainLayout'
 
 interface Props extends RouteComponentProps {
   dataUrl: string
@@ -17,6 +17,179 @@ interface Props extends RouteComponentProps {
 interface State {
   model?: YtModel
 }
+
+const ChannelRelationsStyles = styled.div`
+  font-size: 11px;
+  @media ${media.width.medium} {
+    font-size: 14px;
+  }
+
+  height:100vh;
+    
+  /* Title */
+  div.title-details > div {
+    margin-bottom: 1px;
+  }
+
+  /* common chart elements */
+  /* g.chart line.link {
+      opacity: 0.2;
+    } */
+
+  g.chart path.link {
+    opacity: 0.4;
+    fill: none;
+  }
+
+  g.chart text {
+    text-shadow: -1px 1 black, 1 1px black, 1px 1 black, 0 -1px black;
+    fill: #eee;
+  }
+
+  g.chart text tspan.subtitle {
+    fill: #aaa;
+  }
+
+  g.chart text tspan.subtitle-bold {
+    fill: #ccc;
+  }
+
+  /* common chart shapes */
+  g.chart g.node .selectable {
+    stroke: none;
+    /* transition: all 0.2s; */
+  }
+
+  g.chart g.node .selectable.dimmed {
+    opacity: 0.5;
+  }
+
+  g.chart text.label.selected {
+    font-weight: bold;
+  }
+
+  /* relations chart */
+
+  g.chart.relations g.node circle.related {
+    opacity: 1;
+  }
+
+  g.chart.relations g.labels rect,
+  g.chart.relations g.labels circle {
+    display: none;
+  }
+
+  g.chart.relations line.link {
+    display: none;
+  }
+  g.chart.relations line.link.related {
+    display: inherit;
+  }
+
+  g.chart.relations g.label text {
+    display: none;
+    fill: white;
+  }
+
+  g.chart.relations g.label text.selected,
+  g.chart.relations g.label text.highlighted,
+  g.chart.relations g.label text.related {
+    display: inherit;
+  }
+
+  g.chart.relations g.label text.related {
+    font-size: 0.9em;
+    fill-opacity: 0.8;
+  }
+
+  g.chart.relations g.label text.highlighted,
+  g.chart.relations g.label text.selected {
+    font-size: 1em;
+    fill-opacity: 1;
+  }
+
+  /* flows chart */
+  g.chart.flows g.node .selectable.dimmed {
+    opacity: 1; /* remove dimming effect */
+  }
+
+  /* Relations page layout */
+
+  div.ChannelRelationPage svg.chart {
+    position: absolute;
+  }
+
+  div.ChannelRelationPage {
+    width: 100%;
+  }
+
+  div.ChannelRelationPage > * {
+    padding: 5px;
+  }
+
+  div.footer {
+    display: flex;
+    flex-flow: wrap;
+    justify-content: left;
+  }
+
+  div.footer > * {
+    padding-right: 2em;
+  }
+
+  @media all and (min-width: 1200px) {
+
+    div.footer {
+      position: absolute;
+      bottom: 1px;
+      margin: 5px;
+    }
+  }
+`
+
+const MainChartStyled = styled.div`
+  > * {
+    padding: 0px;
+  }
+
+  display: flex;
+  flex-flow: row wrap;
+  align-items: stretch;
+  flex: 1;
+
+  height:none;
+  > .Relations {
+    height: 50vh;
+    min-height: 400px;
+    flex: 1 100%;
+  }
+
+  > .Flows {
+    position: relative;
+    height: 50vh;
+    min-height: 800px;
+    flex: 1 100%;
+  }
+
+  
+  @media all and (min-width: 1200px) {
+    height: 100%;
+
+    > .Relations {
+      height: 100%;
+      flex: 2 auto;
+    }
+
+    > .Flows {
+      position: absolute;
+      right: 5px;
+      width: 30%;
+      min-width: 500px;
+      height: 80vh;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+  }
+`
 
 export class ChannelRelationsPage extends React.Component<Props, State> {
   selections: SelectionStateHelper<any, any>
@@ -97,14 +270,14 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   render() {
     if (this.state.model) {
       return (
-        <div className={'ChannelRelationPage'}>
+        <ChannelRelationsStyles>
           <ChannelRelationsTitle
             ref={r => (this.title = r)}
             model={this.state.model}
             onSelection={this.onSelection.bind(this)}
           />
 
-          <div className={'MainChartContainer'}>
+          <MainChartStyled>
             <div className={'Relations'}>
               <ContainerDimensions>
                 {({ height, width }) => (
@@ -131,13 +304,13 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
                 )}
               </ContainerDimensions>
             </div>
-          </div>
+          </MainChartStyled>
           <div className={'footer'}>
             <a href={'https://twitter.com/mark_ledwich'}>@mark_ledwich</a>
             <a href={'mailto:mark@ledwich.com.au?Subject=Political YouTube'}>mark@ledwich.com.au</a>
             <span> &nbsp;<a href={'https://github.com/markledwich2/YouTubeNetworks'}>GitHub project</a> &nbsp;</span>
           </div>
-        </div >
+        </ChannelRelationsStyles>
       )
     } else {
       return (

@@ -2,8 +2,7 @@ import { ColEx } from "../common/Dim"
 import { ChannelData, YtModel } from "../common/YtModel"
 import { color } from "d3"
 import React from "react"
-
-
+import { Tag } from './Tag'
 
 export interface ChannelTagData extends ChannelTagCols {
     tags: string[],
@@ -28,7 +27,6 @@ export const ChannelTags = (props: ChannelComponentProps) => {
     return <div>
         <ColTag colName="ideology" channel={c} />
         <ColTag colName="lr" channel={c} />
-        {tags.map(t => (<span key={t} className={'tag'}>{t}</span>))}
     </div>
 }
 
@@ -36,11 +34,9 @@ interface ColTagProps { colName: keyof ChannelTagCols, channel: ChannelTagData }
 const ColTag = (p: ColTagProps) => {
     const c = p.channel
     const col = dim.col(p.colName)
-
     const labelFunc = ColEx.labelFunc(col)
     const colorFunc = ColEx.colorFunc(col)
     const darkerColor = (v: string) => color(colorFunc(v))?.darker(2).hex()
     const val = c[p.colName]
-
-    return <span key={c.lr} className={'tag'} style={{ backgroundColor: darkerColor(val) }}>{labelFunc(val)}</span>
+    return <Tag key={c.lr} label={labelFunc(val)} color={darkerColor(val)} />
 }

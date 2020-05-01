@@ -5,12 +5,35 @@ import { YtModel, ChannelData, ChannelEx } from '../common/YtModel'
 import { compactInteger, formatNumber } from 'humanize-plus'
 import * as _ from 'lodash'
 import { SearchChannels } from './SearchChannels'
-
-import { Dim, ColEx } from '../common/Dim'
-import * as d3 from 'd3'
-import { color } from 'd3'
+import { Dim } from '../common/Dim'
 import { dateFormat } from '../common/Utils'
 import { ChannelTags } from './ChannelTags'
+
+import styled from 'styled-components'
+
+const TitleStyle = styled.div`
+  background-color: rgb(22, 22, 22);
+  padding: 0px;
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 8em;
+  justify-content: space-between;
+
+  > .Card {
+    display: flex;
+    height: 8em;
+    margin-left: 1em;
+    flex: 3 30em;
+    align-items: center;
+  }
+
+  .Search {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1 20em;
+  }`
 
 interface State extends InteractiveDataState { }
 interface Props extends InteractiveDataProps<YtModel> { }
@@ -33,7 +56,6 @@ export class ChannelRelationsTitle extends React.Component<Props, State> {
 
   render() {
     let channel = this.channel()
-
 
     const renderChannel = (c: ChannelData) => {
       let advantage = ChannelEx.impressionAdvantagePercent(c)
@@ -60,7 +82,7 @@ export class ChannelRelationsTitle extends React.Component<Props, State> {
     }
 
     return (
-      <div className={'Title'}>
+      <TitleStyle>
         <div className={'Card'}>
           {channel == null ? (
             <div style={{}}>
@@ -74,7 +96,7 @@ export class ChannelRelationsTitle extends React.Component<Props, State> {
         <div className={'Search'} style={{}}>
           <SearchChannels model={this.props.model} onSelection={this.props.onSelection} selections={this.state.selections} />
         </div>
-      </div>
+      </TitleStyle>
     )
   }
 }
