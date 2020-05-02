@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from "react"
 import { RouteComponentProps as CProps } from "@reach/router"
 import { ReactiveBase, ReactiveList, DataSearch, MultiList, SelectedFilters, SingleRange, SingleDataList, StateProvider, DateRange } from '@appbaseio/reactivesearch'
-import { theme, media, isGatsbyServer } from "../MainLayout"
+import { theme, media, isGatsbyServer, CenterDiv } from "../MainLayout"
 import styled from 'styled-components'
 import _, { Dictionary } from 'lodash'
 import { VideoSearchResults, SearchHelp } from './VideoSearchResults'
 import { useMediaQuery } from 'react-responsive'
 import { Button } from '../Button'
 import { FilterList, Close as IconClose } from '@styled-icons/material'
-
+import { SadTear as IconSad } from '@styled-icons/fa-solid'
 
 const MainContainer = styled.div`
     max-width:1400px;
@@ -114,6 +114,9 @@ const FiltersPane = styled.div`
 `
 
 const ResultsPane = styled.div`
+    position:relative;
+    height:100%;
+    width:100%;
     overflow-y:auto;
     @media (${media.width.medium}) {
         overflow-y:scroll;
@@ -210,10 +213,15 @@ export const VideoSearch = ({ }: CProps<{}>) => {
                                         showResultStats={false}
                                         infiniteScroll
                                         scrollTarget={isMultiColumn ? "results" : null}
-                                        size={30}
+                                        size={20}
                                         dataField={sort.field}
                                         sortBy={sort.sort}
                                         showLoader={false}
+                                        renderNoResults={() => <CenterDiv>
+                                            <span style={{ color: theme.fontColorSubtler, fontSize: '1.5em' }}>
+                                                <IconSad color={theme.backColor2} height='2em' style={{ position: 'relative', top: '0.5em', left: '-1em' }} />
+                                            Nothing found</span>
+                                        </CenterDiv>}
                                     /> : SearchHelp
                                 }}
                             </StateProvider>
@@ -376,7 +384,7 @@ const FiltersPaneComponent = ({ setSort, sort }: { setSort: React.Dispatch<React
                     },
                     terms: {
                         field: "channel_title.keyword",
-                        size: 50,
+                        size: 100,
                         order: { "video_count": "desc" }, "missing": "N/A"
                     }
                 }

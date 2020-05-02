@@ -43,11 +43,12 @@ export interface CaptionDocument {
 
 const HelpStyle = styled.div`
     font-size: 1.2em;
+    line-height: 1.5em;
     b, h1, h2, h3 {
         color:${theme.fontColor}
     }
     p {
-        padding: 0.5em 0em 1em 0em;
+        margin: 0.5em 0em 1em 0em;
     }
     code, inlineCode  {
         font-family:monospace;
@@ -93,8 +94,6 @@ export const SearchHelp = <HelpStyle><ReactMarkdown source={searchMd} escapeHtml
 export const VideoSearchResults = ({ data, query, error, loading }: { data: CaptionSearchResult[], query: string, error: string, loading: any }) => {
     if (!query) return <></> // don't show empty results
 
-    if (loading) return <Spinner size="80px" />
-
     const byVid = _(data).groupBy(c => c.video_id).map(g => {
         const first = g[0]
         const grouped: CaptionSearchResult = _.assign({}, first,
@@ -110,7 +109,15 @@ export const VideoSearchResults = ({ data, query, error, loading }: { data: Capt
 
     var words = query ? queryHighlights(query) : []
 
-    return <>{byVid.map(d => <VideoSearchResult caption={d} searchWords={words} key={d.caption_id} />)}</>
+    return <>
+        <div style={{ position: 'relative' }}>
+            {byVid.map(d => <VideoSearchResult caption={d} searchWords={words} key={d.caption_id} />)}
+            {loading && <>
+                <div style={{ position: 'absolute', top: '0', left: '0', width: '100%', height: '100%', backdropFilter: 'blur(5px)' }} />
+            </>}
+        </div>
+        {loading && <Spinner size="80px" />}
+    </>
 }
 
 const ResultsRow = styled.div`
