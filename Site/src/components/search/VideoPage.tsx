@@ -4,11 +4,11 @@ import { compactInteger } from "humanize-plus"
 import React, { useEffect, useState } from "react"
 import YouTube from 'react-youtube'
 import styled from 'styled-components'
-import { FuncClient, VideoData, CaptionDb } from "../common/DbModel"
-import '../types/NodeTypings.d.ts'
-import { dateFormat, secondsToHHMMSS } from "../common/Utils"
-import { TextPage } from "../components/MainLayout"
-import { ChannelData } from "../common/YtModel"
+import { FuncClient, VideoData, CaptionDb } from "../../common/DbModel"
+import '../../types/NodeTypings.d.ts'
+import { dateFormat, secondsToHHMMSS } from "../../common/Utils"
+import { TextPage } from "../MainLayout"
+import { ChannelData } from "../../common/YtModel"
 import { useLocation } from '@reach/router'
 import queryString from 'query-string'
 

@@ -1,7 +1,7 @@
 import React, { FunctionComponent } from "react"
 import { compactInteger } from "humanize-plus"
 import { dateFormat, secondsToHHMMSS } from "../../common/Utils"
-import { ChannelTags, ChannelTagData } from "../ChannelTags"
+import { ChannelTags, ChannelTagData } from "../channel_relations/ChannelTags"
 import Highlighter from "react-highlight-words"
 import _ from 'lodash'
 import { queryHighlights } from '../../common/Elastic'
@@ -9,6 +9,7 @@ import styled from 'styled-components'
 import { theme, media } from '../MainLayout'
 import { Link } from 'gatsby'
 import ReactMarkdown from 'react-markdown/with-html'
+import { Spinner } from '../Spinner'
 
 interface CaptionSearchResult extends CaptionDocument {
     _doc_count: number
@@ -87,8 +88,12 @@ Use \`~N\` to match N character different. E.g. \`Utilitarian~3\` will match \`U
 
 export const SearchHelp = <HelpStyle><ReactMarkdown source={searchMd} escapeHtml={false} /></HelpStyle>
 
-export const VideoSearchResults = ({ data, query, error }: { data: CaptionSearchResult[], query: string, error: string }) => {
+
+
+export const VideoSearchResults = ({ data, query, error, loading }: { data: CaptionSearchResult[], query: string, error: string, loading: any }) => {
     if (!query) return <></> // don't show empty results
+
+    if (loading) return <Spinner size="80px" />
 
     const byVid = _(data).groupBy(c => c.video_id).map(g => {
         const first = g[0]
@@ -113,22 +118,25 @@ const ResultsRow = styled.div`
     flex-direction: column;
     padding: 0.5em 0.1em;
     @media (${media.width.large}) {
-        /* images to left */
-        flex-direction: row; 
+        flex-direction: row;  /* images to left */
     }
     > * {
-        padding: 0.5em;
+        padding: 0.5em 0em;
+        @media (${media.width.large}) {
+            padding: 0.5em 0.5em;
+        }
     }
 `
 
 const DetailsRow = styled.div`
     display:flex;
+    flex-wrap:wrap;
+    flex:3;
     b {
         color:${theme.fontColor}
     }
     > * {
         padding-right:1em;
-        margin:auto;
     }
 `
 
@@ -162,7 +170,7 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
                         <span><b>{compactInteger(c.views)}</b> views</span>
                         <span>{dateFormat(c.upload_date)}</span>
                     </DetailsRow>
-                    <ChannelTags channel={cd} />
+                    <div style={{ flex: '1' }}><ChannelTags channel={cd} /></div>
                 </div>
                 <span>
                     {c.captions.slice(0, maxCaptions).map(t => (

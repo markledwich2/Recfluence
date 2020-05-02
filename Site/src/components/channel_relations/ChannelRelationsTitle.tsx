@@ -1,12 +1,12 @@
 import * as React from 'react'
-import { InteractiveDataProps, InteractiveDataState } from '../common/Chart'
-import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
-import { YtModel, ChannelData, ChannelEx } from '../common/YtModel'
+import { InteractiveDataProps, InteractiveDataState } from '../../common/Chart'
+import { YtInteractiveChartHelper } from "../../common/YtInteractiveChartHelper"
+import { YtModel, ChannelData, ChannelEx } from '../../common/YtModel'
 import { compactInteger, formatNumber } from 'humanize-plus'
 import * as _ from 'lodash'
 import { SearchChannels } from './SearchChannels'
-import { Dim } from '../common/Dim'
-import { dateFormat } from '../common/Utils'
+import { Dim } from '../../common/Dim'
+import { dateFormat } from '../../common/Utils'
 import { ChannelTags } from './ChannelTags'
 
 import styled from 'styled-components'

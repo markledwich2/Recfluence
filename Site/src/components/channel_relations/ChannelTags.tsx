@@ -1,8 +1,8 @@
-import { ColEx } from "../common/Dim"
-import { ChannelData, YtModel } from "../common/YtModel"
+import { ColEx } from "../../common/Dim"
+import { ChannelData, YtModel } from "../../common/YtModel"
 import { color } from "d3"
 import React from "react"
-import { Tag } from './Tag'
+import { Tag } from '../Tag'
 
 export interface ChannelTagData extends ChannelTagCols {
     tags: string[],
@@ -24,10 +24,9 @@ export const ChannelTags = (props: ChannelComponentProps) => {
     const c = props.channel
     let tags = c.tags.map(t => YtModel.tagAlias[t] ?? t).filter(t => t != '_')
 
-    return <div>
-        <ColTag colName="ideology" channel={c} />
-        <ColTag colName="lr" channel={c} />
-    </div>
+    return <>
+        <ColTag colName="ideology" channel={c} />{' '}<ColTag colName="lr" channel={c} />
+    </>
 }
 
 interface ColTagProps { colName: keyof ChannelTagCols, channel: ChannelTagData }

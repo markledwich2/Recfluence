@@ -1,17 +1,17 @@
 import React, { } from 'react'
 import Select, { createFilter } from 'react-select'
 import _ from 'lodash'
-import { YtInteractiveChartHelper, YtParams } from "../common/YtInteractiveChartHelper"
-import { YtModel, ChannelData } from '../common/YtModel'
-import { delay } from '../common/Utils'
-import { InteractiveDataProps, ChartProps, InteractiveDataState, SelectionState, SelectionStateHelper } from '../common/Chart'
-import { Dim, Col } from '../common/Dim'
-import { YtTheme } from '../common/YtTheme'
+import { YtInteractiveChartHelper, YtParams } from "../../common/YtInteractiveChartHelper"
+import { YtModel, ChannelData } from '../../common/YtModel'
+import { delay } from '../../common/Utils'
+import { InteractiveDataProps, ChartProps, InteractiveDataState, SelectionState, SelectionStateHelper } from '../../common/Chart'
+import { Dim, Col } from '../../common/Dim'
+import { YtTheme } from '../../common/YtTheme'
 
 interface State {
 }
-interface Props extends InteractiveDataProps<YtModel> { 
-  selections:SelectionState
+interface Props extends InteractiveDataProps<YtModel> {
+  selections: SelectionState
 }
 
 interface Option {
@@ -22,7 +22,7 @@ interface Option {
 export class SearchChannels extends React.Component<Props, State> {
   state: Readonly<State>
 
-  constructor(props:Readonly<Props>) {
+  constructor(props: Readonly<Props>) {
     super(props)
   }
 

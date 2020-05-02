@@ -26,7 +26,7 @@ const MainContainer = styled.div`
 `
 
 const ContentPane = styled.div`
-    padding: 1em;
+    padding:1em;
     @media (${media.width.medium}) {
         padding: 2em;
     }
@@ -42,6 +42,7 @@ const SearchRow = styled.div`
     input {
         font-size:1.5rem;
         box-sizing:border-box;
+        border-radius:5px;
     }
 `
 
@@ -88,7 +89,7 @@ const FiltersPane = styled.div`
         overflow-y:auto;
         padding: 0em;
         max-height:none;
-        padding: 0 1em 0 0em;
+        padding: 0 1em 0 0.2em;
         li {
             min-height:none;
             margin:0em;
@@ -156,7 +157,7 @@ export const VideoSearch = ({ }: CProps<{}>) => {
             {
                 display: 'block',
                 position: 'absolute',
-                top: '8em',
+                top: '70px',
                 left: '1vh',
                 width: '95vw',
                 zIndex: 2
@@ -198,23 +199,21 @@ export const VideoSearch = ({ }: CProps<{}>) => {
                             </div>}
                         </div>
 
-
-
                         <ResultsPane id="results">
-                            <StateProvider strict={false}>
+                            <StateProvider strict={false} >
                                 {({ searchState }) => {
                                     const query = searchState?.q?.value
                                     return query ? <ReactiveList
                                         componentId="result"
                                         react={{ and: ['q', 'views', 'sort', 'ideology', 'channel', 'upload'] }}
-                                        render={({ data, error }) => <VideoSearchResults data={data} query={query} error={error} />}
-                                        renderNoResults={() => <></>}
+                                        render={({ data, error, loading }) => <VideoSearchResults data={data} query={query} error={error} loading={loading} />}
                                         showResultStats={false}
                                         infiniteScroll
                                         scrollTarget={isMultiColumn ? "results" : null}
                                         size={30}
                                         dataField={sort.field}
                                         sortBy={sort.sort}
+                                        showLoader={false}
                                     /> : SearchHelp
                                 }}
                             </StateProvider>
@@ -255,7 +254,7 @@ const SearchBar: React.FunctionComponent = () => {
             <DataSearch
                 componentId="q"
                 filterLabel="Search"
-                dataField={["caption", "video_title", "channel_title"]}
+                dataField={["caption"]}
                 placeholder="Search video captions"
                 autosuggest={false}
                 showIcon={false}

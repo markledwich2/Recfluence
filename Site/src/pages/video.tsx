@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Router, RouteComponentProps as CP } from "@reach/router"
-import { Video } from "../components/VideoPage"
+import { Video } from "../components/search/VideoPage"
 import { VideoSearch } from '../components/search/VideoSearch'
 import { MainLayout } from '../components/MainLayout'
 
