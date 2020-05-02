@@ -42,7 +42,6 @@ export interface CaptionDocument {
 
 const HelpStyle = styled.div`
     font-size: 1.2em;
-    padding:2em;
     b, h1, h2, h3 {
         color:${theme.fontColor}
     }
@@ -56,10 +55,6 @@ const HelpStyle = styled.div`
         border: 1px solid ${theme.backColor2};
         border-radius: 5px;
     }
-`
-
-const TableStyle = styled.table`
-    padding:1em;
 `
 
 const searchMd = `
@@ -88,30 +83,12 @@ Use \`*\` to match any characters in the part of a word. \`Snoo*\` will match \`
 Use \`~\` to match variations within a single character. E.g. \`Charlie~\` will match \`Charlie\` and \`Charlies\`. 
 
 Use \`~N\` to match N character different. E.g. \`Utilitarian~3\` will match \`Utilitarians\` and \`Utilitarianism\`. 
-
-
 `
 
-const SearchHelp2 = <HelpStyle><ReactMarkdown source={searchMd} escapeHtml={false} /></HelpStyle>
-
-const SearchHelp = <HelpStyle>
-    Titles and captions of political YouTube videos will be searched.
-    <b>Basic</b>
-    <p>The most relevant videos that include any of the search will be returned. </p>
-    <br /><br />
-    <b>Advanced</b>
-    <TableStyle>
-        <tr>
-            <td><b>|</b> (or)</td>
-            <td>Default behavior. Results must only match at one of the words</td>
-            <td>cats | feline</td>
-        </tr>
-    </TableStyle>
-    <b>Search Query</b><br /><p>this is more detail</p>
-</HelpStyle>
+export const SearchHelp = <HelpStyle><ReactMarkdown source={searchMd} escapeHtml={false} /></HelpStyle>
 
 export const VideoSearchResults = ({ data, query, error }: { data: CaptionSearchResult[], query: string, error: string }) => {
-    if (!query) return SearchHelp2// don't show empty results
+    if (!query) return <></> // don't show empty results
 
     const byVid = _(data).groupBy(c => c.video_id).map(g => {
         const first = g[0]
