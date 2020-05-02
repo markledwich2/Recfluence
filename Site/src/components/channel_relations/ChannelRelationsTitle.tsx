@@ -76,7 +76,9 @@ export class ChannelRelationsTitle extends React.Component<Props, State> {
               {advantage >= 0 ? <span style={{ color: '#56b881' }}>▲</span> : <span style={{ color: '#e0393e' }}>▼</span>}  {formatNumber(advantage * 100, 0)}% impression advantage
               </span>
           </div>
-          <ChannelTags channel={c}></ChannelTags>
+          <div style={{ margin: '0.4em 0' }}>
+            <ChannelTags channel={c}></ChannelTags>
+          </div>
         </div>
       </>)
     }
