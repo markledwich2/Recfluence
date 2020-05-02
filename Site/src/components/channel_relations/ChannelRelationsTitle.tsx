@@ -1,12 +1,12 @@
 import * as React from 'react'
-import { InteractiveDataProps, InteractiveDataState } from '../common/Chart'
-import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
-import { YtModel, ChannelData, ChannelEx } from '../common/YtModel'
+import { InteractiveDataProps, InteractiveDataState } from '../../common/Chart'
+import { YtInteractiveChartHelper } from "../../common/YtInteractiveChartHelper"
+import { YtModel, ChannelData, ChannelEx } from '../../common/YtModel'
 import { compactInteger, formatNumber } from 'humanize-plus'
 import * as _ from 'lodash'
 import { SearchChannels } from './SearchChannels'
-import { Dim } from '../common/Dim'
-import { dateFormat } from '../common/Utils'
+import { Dim } from '../../common/Dim'
+import { dateFormat } from '../../common/Utils'
 import { ChannelTags } from './ChannelTags'
 
 import styled from 'styled-components'
@@ -76,7 +76,9 @@ export class ChannelRelationsTitle extends React.Component<Props, State> {
               {advantage >= 0 ? <span style={{ color: '#56b881' }}>▲</span> : <span style={{ color: '#e0393e' }}>▼</span>}  {formatNumber(advantage * 100, 0)}% impression advantage
               </span>
           </div>
-          <ChannelTags channel={c}></ChannelTags>
+          <div style={{ margin: '0.4em 0' }}>
+            <ChannelTags channel={c}></ChannelTags>
+          </div>
         </div>
       </>)
     }

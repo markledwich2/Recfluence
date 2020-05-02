@@ -4,34 +4,37 @@ import { theme } from './MainLayout'
 import { StyledIconBase } from '@styled-icons/styled-icon'
 
 interface ButtonProps {
-    label: string
+    label?: string
     icon?: JSX.Element
     onclick: MouseEventHandler<JSX.Element>
 }
 
 const ButtonStyle = styled.button`
+    display:flex;
+
     text-transform: uppercase;
     text-align: center;
 
-    background-color: ${theme.backColor};
+    background-color: ${theme.backColor1};
     border: none;
     cursor: pointer;
     align-self: center;
     color: ${theme.fontColor};
 
-    font-size: 1.2em;
-    line-height: 1.2em;
-    padding: .3em .5em;
-    border-radius: 0.5em;
+    font-size: 1em;
+    line-height: 1em;
+    padding: .5em 1em 0.2em 1em;
+    margin: 0.7em 0.1em;
+    border-radius: 0.2em;
     outline: none;
     font-weight: bolder;
-    margin: 2px;
+    
 
     ${StyledIconBase} {
         height: 1.4em;
         width: 1.4em;
         position: relative;
-        top: -0.1em;
+        top: -0.15em;
         padding-right: 0.2em;
     }
 `

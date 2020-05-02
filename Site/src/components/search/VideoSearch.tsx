@@ -1,14 +1,14 @@
-import React, { useState } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { RouteComponentProps as CProps } from "@reach/router"
 import { ReactiveBase, ReactiveList, DataSearch, MultiList, SelectedFilters, SingleRange, SingleDataList, StateProvider, DateRange } from '@appbaseio/reactivesearch'
-import { theme, media, isGatsbyServer } from "../MainLayout"
+import { theme, media, isGatsbyServer, CenterDiv } from "../MainLayout"
 import styled from 'styled-components'
 import _, { Dictionary } from 'lodash'
-import { VideoSearchResults } from './VideoSearchResults'
+import { VideoSearchResults, SearchHelp } from './VideoSearchResults'
 import { useMediaQuery } from 'react-responsive'
 import { Button } from '../Button'
-import { FilterList } from '@styled-icons/material'
-
+import { FilterList, Close as IconClose } from '@styled-icons/material'
+import { SadTear as IconSad } from '@styled-icons/fa-solid'
 
 const MainContainer = styled.div`
     max-width:1400px;
@@ -26,7 +26,10 @@ const MainContainer = styled.div`
 `
 
 const ContentPane = styled.div`
-    padding: 2em 2em;
+    padding:1em;
+    @media (${media.width.medium}) {
+        padding: 2em;
+    }
     display:flex;
     flex-direction:column;
     flex: 100%;
@@ -39,25 +42,30 @@ const SearchRow = styled.div`
     input {
         font-size:1.5rem;
         box-sizing:border-box;
+        border-radius:5px;
     }
 `
 
 const FiltersPane = styled.div`
     display:flex;
-    overflow-y:auto;
     background-color: ${theme.backColor1};
 
     justify-content:start;
-    flex-direction:row;
+    flex-direction:column;
     flex-wrap:wrap;
+    overflow-y:auto;
+
+    @media (${media.width.small}) {
+        max-height:70vh;
+    }
     @media (${media.width.medium}) {
-        flex-direction:column;
         flex-wrap:nowrap;
-        justify-content:start;
-        width:400px;
+        width:300px;
+        max-height:none;
+        height:100%;
     }
     
-    padding-top:0.5em;
+    padding:0.5em 0.5em;
     
     > * {
         padding:0.5em 1em;
@@ -81,7 +89,7 @@ const FiltersPane = styled.div`
         overflow-y:auto;
         padding: 0em;
         max-height:none;
-        padding: 0 1em 0 0em;
+        padding: 0 1em 0 0.2em;
         li {
             min-height:none;
             margin:0em;
@@ -106,6 +114,9 @@ const FiltersPane = styled.div`
 `
 
 const ResultsPane = styled.div`
+    position:relative;
+    height:100%;
+    width:100%;
     overflow-y:auto;
     @media (${media.width.medium}) {
         overflow-y:scroll;
@@ -135,11 +146,29 @@ const sortOptions: Dictionary<string> = {
 }
 
 
+
+
 export const VideoSearch = ({ }: CProps<{}>) => {
     const [sort, setSort] = useState<SortValue>({ field: '_score', sort: 'desc' })
     const [filterVisible, setFilterVisible] = useState<boolean>(false)
     const isMultiColumn = useMediaQuery({ query: `(${media.width.medium})` })
     if (isGatsbyServer()) return <div></div>
+
+    var filtersStyle: React.CSSProperties = { display: 'block' }
+    if (!isMultiColumn) {
+        filtersStyle = filterVisible ?
+            {
+                display: 'block',
+                position: 'absolute',
+                top: '70px',
+                left: '1vh',
+                width: '95vw',
+                zIndex: 2
+            } : {
+                display: 'none',
+                position: 'static'
+            }
+    }
 
     return (
         <div>
@@ -154,33 +183,46 @@ export const VideoSearch = ({ }: CProps<{}>) => {
                 }}
             >
                 <MainContainer>
-                    {isMultiColumn && <FiltersPaneComponent setSort={setSort} sort={sort} />}
+                    <div style={filtersStyle}>
+                        {!isMultiColumn && (
+                            <div style={{ position: 'absolute', top: '5px', right: '5px' }}>
+                                <Button icon={<IconClose />} onclick={_ => setFilterVisible(!filterVisible)} />
+                            </div>
+                        )}
+                        <FiltersPaneComponent setSort={setSort} sort={sort} />
+
+                    </div>
                     <ContentPane>
                         <SearchBar />
 
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <SelectedFilters style={{ marginTop: '0.5em' }} />
-                            {!isMultiColumn && <Button label="Filter" icon={<FilterList />} onclick={_ => setFilterVisible(!filterVisible)} />}
+                            <SelectedFilters style={{ margin: '0.5em 0px' }} />
+                            {!isMultiColumn && <div style={{ verticalAlign: 'top' }} >
+                                <Button label="Filter" icon={<FilterList />} onclick={_ => setFilterVisible(!filterVisible)} />
+                            </div>}
                         </div>
 
-                        {!isMultiColumn && filterVisible && <FiltersPaneComponent setSort={setSort} sort={sort} />}
-
                         <ResultsPane id="results">
-                            <StateProvider strict={false}>
+                            <StateProvider strict={false} >
                                 {({ searchState }) => {
                                     const query = searchState?.q?.value
-                                    return <ReactiveList
+                                    return query ? <ReactiveList
                                         componentId="result"
                                         react={{ and: ['q', 'views', 'sort', 'ideology', 'channel', 'upload'] }}
-                                        render={({ data, error }) => <VideoSearchResults data={data} query={query} error={error} />}
-                                        renderNoResults={() => <></>}
+                                        render={({ data, error, loading }) => <VideoSearchResults data={data} query={query} error={error} loading={loading} />}
                                         showResultStats={false}
                                         infiniteScroll
                                         scrollTarget={isMultiColumn ? "results" : null}
-                                        size={30}
+                                        size={20}
                                         dataField={sort.field}
                                         sortBy={sort.sort}
-                                    />
+                                        showLoader={false}
+                                        renderNoResults={() => <CenterDiv>
+                                            <span style={{ color: theme.fontColorSubtler, fontSize: '1.5em' }}>
+                                                <IconSad color={theme.backColor2} height='2em' style={{ position: 'relative', top: '0.5em', left: '-1em' }} />
+                                            Nothing found</span>
+                                        </CenterDiv>}
+                                    /> : SearchHelp
                                 }}
                             </StateProvider>
                         </ResultsPane>
@@ -193,21 +235,18 @@ export const VideoSearch = ({ }: CProps<{}>) => {
 }
 
 const SearchBar: React.FunctionComponent = () => {
-    const [query, setQuery] = React.useState<string>("")
-    const [timer, setTimer] = React.useState<number>()
+    const [query, setQuery] = useState<string>("")
+    const [timer, setTimer] = useState<number>()
 
-    React.useEffect(
-        () => () => {
-            // When the component unmounts, remove the timer.
-            clearTimeout(timer)
-        },
-        []
-    )
+    useEffect(() => () => {
+        // When the component unmounts, remove the timer.
+        clearTimeout(timer)
+    }, [])
 
     const handleChange = (value: string, triggerQuery: Function) => {
         setQuery(value)
         // Set a timer for debouncing, if it's passed, call triggerQuery.
-        setTimer(setTimeout(triggerQuery, 2000))
+        //setTimer(setTimeout(triggerQuery, 2000))
     }
 
     const handleKey = (e: KeyboardEvent, triggerQuery: Function) => {
@@ -223,7 +262,7 @@ const SearchBar: React.FunctionComponent = () => {
             <DataSearch
                 componentId="q"
                 filterLabel="Search"
-                dataField={["caption", "video_title", "channel_title"]}
+                dataField={["caption"]}
                 placeholder="Search video captions"
                 autosuggest={false}
                 showIcon={false}
@@ -233,10 +272,8 @@ const SearchBar: React.FunctionComponent = () => {
                 onKeyPress={handleKey}
                 onChange={handleChange}
                 value={query}
+                autoFocus={true}
             />
-            {/* <ToolTip placement="left-end" title={SearchHelp}>
-                <IconHelp height="2em" color={theme.backColorBolder} style={{ margin: '0.5em' }} />
-            </ToolTip> */}
 
         </SearchRow >
 
@@ -347,7 +384,7 @@ const FiltersPaneComponent = ({ setSort, sort }: { setSort: React.Dispatch<React
                     },
                     terms: {
                         field: "channel_title.keyword",
-                        size: 50,
+                        size: 100,
                         order: { "video_count": "desc" }, "missing": "N/A"
                     }
                 }

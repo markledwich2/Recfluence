@@ -2,13 +2,13 @@ import * as React from 'react'
 import ContainerDimensions from 'react-container-dimensions'
 import { RecFlows } from './RecFlows'
 import { ChannelRelations } from './ChannelRelations'
-import { YtModel } from '../common/YtModel'
+import { YtModel } from '../../common/YtModel'
 import { ChannelRelationsTitle } from './ChannelRelationsTitle'
-import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, ActionType, Action } from '../common/Chart'
+import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, ActionType, Action } from '../../common/Chart'
 import _ from 'lodash'
 import { RouteComponentProps } from "@reach/router"
 import styled from 'styled-components'
-import { media } from './MainLayout'
+import { media } from '../MainLayout'
 
 interface Props extends RouteComponentProps {
   dataUrl: string

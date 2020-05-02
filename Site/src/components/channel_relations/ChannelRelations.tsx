@@ -1,15 +1,15 @@
 import * as React from 'react'
 import * as d3 from 'd3'
 import { layoutTextLabel, layoutGreedy, layoutLabel } from 'd3fc-label-layout'
-import { YtModel, ChannelData } from '../common/YtModel'
-import { SelectableCell, DimQuery, Dim } from '../common/Dim'
-import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
+import { YtModel, ChannelData } from '../../common/YtModel'
+import { SelectableCell, DimQuery, Dim } from '../../common/Dim'
+import { YtInteractiveChartHelper } from "../../common/YtInteractiveChartHelper"
 import * as _ from 'lodash'
-import { ChartProps, InteractiveDataState } from '../common/Chart'
-import { YtTheme } from '../common/YtTheme'
+import { ChartProps, InteractiveDataState } from '../../common/Chart'
+import { YtTheme } from '../../common/YtTheme'
 import Select from 'react-select'
 import { renderToString } from 'react-dom/server'
-import { classNames, delay } from '../common/Utils'
+import { classNames, delay } from '../../common/Utils'
 import { range } from 'd3'
 import styled from 'styled-components'
 

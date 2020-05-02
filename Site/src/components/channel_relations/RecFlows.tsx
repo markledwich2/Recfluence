@@ -2,14 +2,13 @@ import * as React from 'react'
 import { renderToString } from 'react-dom/server'
 import * as d3 from 'd3'
 import { sankey, sankeyLinkHorizontal, sankeyLeft, SankeyNode, SankeyLink } from 'd3-sankey'
-import '../styles/main.css'
-import { YtModel, Graph, ChannelData, RecEx, RecDir, RecData } from '../common/YtModel'
-import { YtInteractiveChartHelper } from "../common/YtInteractiveChartHelper"
+import { YtModel, Graph, ChannelData, RecEx, RecDir, RecData } from '../../common/YtModel'
+import { YtInteractiveChartHelper } from "../../common/YtInteractiveChartHelper"
 import { compactInteger } from 'humanize-plus'
 import * as _ from 'lodash'
-import { ChartProps, InteractiveDataState } from '../common/Chart'
-import { SelectableCell, ColEx, Cell, CellEx, DimQuery, Dim } from '../common/Dim'
-import { typedKeys, merge, toRecord } from '../common/Utils'
+import { ChartProps, InteractiveDataState } from '../../common/Chart'
+import { SelectableCell, ColEx, Cell, CellEx, DimQuery, Dim } from '../../common/Dim'
+import { typedKeys, merge, toRecord } from '../../common/Utils'
 
 interface State extends InteractiveDataState { }
 interface Props extends ChartProps<YtModel> { }

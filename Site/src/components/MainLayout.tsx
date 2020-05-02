@@ -75,6 +75,14 @@ const MainStyleDiv = styled.div`
   }
 `
 
+export const CenterDiv = styled.div`
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%, -50%);
+    background: none;
+`
+
 export const TextPage = styled.div`
   max-width:1024px;
   margin: 0 auto;
@@ -91,6 +99,7 @@ interface Theme {
   fontFamily: string,
   fontColor: string,
   fontColorBolder: string,
+  fontColorSubtler: string,
   fontSize: string,
   themeColor: string,
   themeColorSubtler: string,
@@ -109,6 +118,7 @@ function makeTheme(intent: ThemeIntent): Theme {
     fontFamily: intent.fontFamily,
     fontColor: fontColor,
     fontColorBolder: bolder(fontColor, 2),
+    fontColorSubtler: subtler(fontColor, 2),
     fontSize: '1em',
     themeColor: intent.themeColor,
     themeColorSubtler: subtler(intent.themeColor, 2),

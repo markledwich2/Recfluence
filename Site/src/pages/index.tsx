@@ -1,5 +1,5 @@
 import * as React from "react"
-import { ChannelRelationsPage } from "../components/ChannelRelationsPage"
+import { ChannelRelationsPage } from "../components/channel_relations/ChannelRelationsPage"
 import { MainLayout } from "../components/MainLayout"
 
 

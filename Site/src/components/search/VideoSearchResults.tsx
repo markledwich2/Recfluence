@@ -1,7 +1,7 @@
 import React, { FunctionComponent } from "react"
 import { compactInteger } from "humanize-plus"
 import { dateFormat, secondsToHHMMSS } from "../../common/Utils"
-import { ChannelTags, ChannelTagData } from "../ChannelTags"
+import { ChannelTags, ChannelTagData } from "../channel_relations/ChannelTags"
 import Highlighter from "react-highlight-words"
 import _ from 'lodash'
 import { queryHighlights } from '../../common/Elastic'
@@ -9,6 +9,7 @@ import styled from 'styled-components'
 import { theme, media } from '../MainLayout'
 import { Link } from 'gatsby'
 import ReactMarkdown from 'react-markdown/with-html'
+import { Spinner } from '../Spinner'
 
 interface CaptionSearchResult extends CaptionDocument {
     _doc_count: number
@@ -42,12 +43,12 @@ export interface CaptionDocument {
 
 const HelpStyle = styled.div`
     font-size: 1.2em;
-    padding:2em;
+    line-height: 1.5em;
     b, h1, h2, h3 {
         color:${theme.fontColor}
     }
     p {
-        padding: 0.5em 0em 1em 0em;
+        margin: 0.5em 0em 1em 0em;
     }
     code, inlineCode  {
         font-family:monospace;
@@ -56,10 +57,6 @@ const HelpStyle = styled.div`
         border: 1px solid ${theme.backColor2};
         border-radius: 5px;
     }
-`
-
-const TableStyle = styled.table`
-    padding:1em;
 `
 
 const searchMd = `
@@ -88,30 +85,14 @@ Use \`*\` to match any characters in the part of a word. \`Snoo*\` will match \`
 Use \`~\` to match variations within a single character. E.g. \`Charlie~\` will match \`Charlie\` and \`Charlies\`. 
 
 Use \`~N\` to match N character different. E.g. \`Utilitarian~3\` will match \`Utilitarians\` and \`Utilitarianism\`. 
-
-
 `
 
-const SearchHelp2 = <HelpStyle><ReactMarkdown source={searchMd} escapeHtml={false} /></HelpStyle>
+export const SearchHelp = <HelpStyle><ReactMarkdown source={searchMd} escapeHtml={false} /></HelpStyle>
 
-const SearchHelp = <HelpStyle>
-    Titles and captions of political YouTube videos will be searched.
-    <b>Basic</b>
-    <p>The most relevant videos that include any of the search will be returned. </p>
-    <br /><br />
-    <b>Advanced</b>
-    <TableStyle>
-        <tr>
-            <td><b>|</b> (or)</td>
-            <td>Default behavior. Results must only match at one of the words</td>
-            <td>cats | feline</td>
-        </tr>
-    </TableStyle>
-    <b>Search Query</b><br /><p>this is more detail</p>
-</HelpStyle>
 
-export const VideoSearchResults = ({ data, query, error }: { data: CaptionSearchResult[], query: string, error: string }) => {
-    if (!query) return SearchHelp2// don't show empty results
+
+export const VideoSearchResults = ({ data, query, error, loading }: { data: CaptionSearchResult[], query: string, error: string, loading: any }) => {
+    if (!query) return <></> // don't show empty results
 
     const byVid = _(data).groupBy(c => c.video_id).map(g => {
         const first = g[0]
@@ -128,7 +109,15 @@ export const VideoSearchResults = ({ data, query, error }: { data: CaptionSearch
 
     var words = query ? queryHighlights(query) : []
 
-    return <>{byVid.map(d => <VideoSearchResult caption={d} searchWords={words} key={d.caption_id} />)}</>
+    return <>
+        <div style={{ position: 'relative' }}>
+            {byVid.map(d => <VideoSearchResult caption={d} searchWords={words} key={d.caption_id} />)}
+            {loading && <>
+                <div style={{ position: 'absolute', top: '0', left: '0', width: '100%', height: '100%', backdropFilter: 'blur(5px)' }} />
+            </>}
+        </div>
+        {loading && <Spinner size="80px" />}
+    </>
 }
 
 const ResultsRow = styled.div`
@@ -136,22 +125,25 @@ const ResultsRow = styled.div`
     flex-direction: column;
     padding: 0.5em 0.1em;
     @media (${media.width.large}) {
-        /* images to left */
-        flex-direction: row; 
+        flex-direction: row;  /* images to left */
     }
     > * {
-        padding: 0.5em;
+        padding: 0.5em 0em;
+        @media (${media.width.large}) {
+            padding: 0.5em 0.5em;
+        }
     }
 `
 
 const DetailsRow = styled.div`
     display:flex;
+    flex-wrap:wrap;
+    flex:3;
     b {
         color:${theme.fontColor}
     }
     > * {
         padding-right:1em;
-        margin:auto;
     }
 `
 
@@ -185,7 +177,7 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
                         <span><b>{compactInteger(c.views)}</b> views</span>
                         <span>{dateFormat(c.upload_date)}</span>
                     </DetailsRow>
-                    <ChannelTags channel={cd} />
+                    <div style={{ flex: '1' }}><ChannelTags channel={cd} /></div>
                 </div>
                 <span>
                     {c.captions.slice(0, maxCaptions).map(t => (
