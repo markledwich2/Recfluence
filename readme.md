@@ -42,7 +42,7 @@ This is not a repeatable process, but by using a variety of methods we are able 
 ### Channel Classification
 To understand the influence of recommendations we need to classify channels using fairly soft criteria to be relevant to way people discuss politics. To limit the subjectivity in this, a well defined process was followed to 'tag' channels appropriately based on the content of the videos. 3 or more reviewers have independently classified > 90% of the channels and the majority opinion used. The full [list of channels and each reviewers notes and classifications](https://docs.google.com/spreadsheets/d/17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs/edit?usp=sharing) are available to review and use as you wish.
 
-The following describes the process the revilers used to classify each channel:
+The following describes the process reviewers used to classify each channel:
 
 ### Left/Center/Right
 
