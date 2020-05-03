@@ -16,17 +16,17 @@ const VidePageDiv = styled(TextPage)`
   display:flex;
   flex-direction:column;
   max-width:1024px;
-  margin: 0 auto; 
+  margin: auto; 
   justify-content: stretch;
-  flex-basis:15%;
-  height:100vh;
+  height:98vh;
   & > * {
-    margin: 0.2em;
+    margin: 0.5em;
   }
 `
 
 const CaptionDiv = styled.div`
   overflow-y: scroll;
+  flex:2 0;
   height:100%;
   font-size: 1.2em;
   > div {
@@ -39,15 +39,16 @@ const DescriptionDiv = styled.div`
 `
 
 const YtContainer = styled.div`
-    position:relative;
-    padding-top:56.25%;
-    > div {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width:100%;
-      height:100%;
-    }
+  position:relative;
+  
+  flex: 1 1;
+  > div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width:100%;
+    height:100%;
+  }
 `
 
 const VideoStatsDiv = styled.div`
