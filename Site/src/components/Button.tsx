@@ -15,7 +15,7 @@ const ButtonStyle = styled.button`
     text-transform: uppercase;
     text-align: center;
 
-    background-color: ${theme.backColor1};
+    background-color: ${theme.backColorBolder};
     border: none;
     cursor: pointer;
     align-self: center;

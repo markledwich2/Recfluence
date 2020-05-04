@@ -104,8 +104,9 @@ interface Theme {
   themeColor: string,
   themeColorSubtler: string,
   backColor: string,
-  backColor1: string,
-  backColor2: string
+  backColorBolder: string,
+  backColorBolder2: string,
+  backColorBolder3: string,
 }
 
 function makeTheme(intent: ThemeIntent): Theme {
@@ -123,8 +124,9 @@ function makeTheme(intent: ThemeIntent): Theme {
     themeColor: intent.themeColor,
     themeColorSubtler: subtler(intent.themeColor, 2),
     backColor: backColor,
-    backColor1: bolder(backColor, 1),
-    backColor2: bolder(backColor, 4)
+    backColorBolder: bolder(backColor, 2),
+    backColorBolder2: bolder(backColor, 5),
+    backColorBolder3: bolder(backColor, 6),
   }
 }
 

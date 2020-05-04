@@ -53,9 +53,9 @@ const HelpStyle = styled.div`
     }
     code, inlineCode  {
         font-family:monospace;
-        background-color:${theme.backColor1};
+        background-color:${theme.backColorBolder};
         padding: 0.1em 0.2em;
-        border: 1px solid ${theme.backColor2};
+        border: 1px solid ${theme.backColorBolder2};
         border-radius: 5px;
     }
 `
@@ -202,7 +202,7 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
 
 export const NoResult = () => <CenterDiv>
   <span style={{ color: theme.fontColorSubtler, fontSize: '1.5em' }}>
-    <IconSad color={theme.backColor2} height='2em'
+    <IconSad color={theme.backColorBolder2} height='2em'
       style={{ position: 'relative', top: '0.5em', left: '-1em' }} />
                     Nothing found
     </span>

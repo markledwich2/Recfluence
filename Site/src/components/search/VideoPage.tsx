@@ -1,16 +1,17 @@
-import { RouteComponentProps } from "@reach/router"
-import { parseISO } from "date-fns"
-import { compactInteger } from "humanize-plus"
-import React, { useEffect, useState } from "react"
+import { RouteComponentProps } from '@reach/router'
+import { parseISO } from 'date-fns'
+import { compactInteger } from 'humanize-plus'
+import React, { useEffect, useState } from 'react'
 import YouTube from 'react-youtube'
 import styled from 'styled-components'
-import { FuncClient, VideoData, CaptionDb } from "../../common/DbModel"
+import { FuncClient, VideoData, CaptionDb } from '../../common/DbModel'
 import '../../types/NodeTypings.d.ts'
-import { dateFormat, secondsToHHMMSS } from "../../common/Utils"
-import { TextPage } from "../MainLayout"
-import { ChannelData } from "../../common/YtModel"
+import { dateFormat, secondsToHHMMSS } from '../../common/Utils'
+import { TextPage, theme } from '../MainLayout'
+import { ChannelData } from '../../common/YtModel'
 import { useLocation } from '@reach/router'
 import queryString from 'query-string'
+import scrollIntoView from 'scroll-into-view-if-needed'
 
 const VidePageDiv = styled(TextPage)`
   display:flex;
@@ -26,11 +27,21 @@ const VidePageDiv = styled(TextPage)`
 
 const CaptionDiv = styled.div`
   overflow-y: scroll;
-  flex:2 0;
+  font-size: 1.1em;
   height:100%;
-  font-size: 1.2em;
   > div {
     margin-bottom: 0.5em;
+  }
+
+  color: ${theme.fontColor};
+
+  .caption {
+    padding-left: 10px;
+  }
+  .current.caption {
+    color: ${theme.fontColorBolder};
+    padding-left: 5px;
+    border-left: 5px solid ${theme.backColorBolder2};
   }
 `
 
@@ -38,10 +49,9 @@ const DescriptionDiv = styled.div`
   color: #BBB;
 `
 
-const YtContainer = styled.div`
+const VideoContainer = styled.div`
+  min-height:30vh;
   position:relative;
-  
-  flex: 1 1;
   > div {
     position: absolute;
     top: 0;
@@ -71,10 +81,13 @@ export const Video: React.FC<VideoProps> = (props) => {
   //const [offset, setOffset] = useState<number>()
   const [player, setPlayer] = useState<YT.Player>(null)
 
+
   const v = video?.video
   const location = useLocation()
-  const t = +queryString.parse(location.search).t
+  const urlTime = +queryString.parse(location.search).t ?? 0
+  const [time, setTime] = useState<number>(urlTime)
 
+  // get data for video from function
   useEffect(() => {
     async function renderVideo() {
       const captionTask = FuncClient.getCaptions(videoId)
@@ -85,79 +98,91 @@ export const Video: React.FC<VideoProps> = (props) => {
     renderVideo()
   }, [])
 
-  useEffect(() => {
-    if (!t) return
-    const e = document.getElementById(t.toString())
-    if (e)
-      e.scrollIntoView()
-  })
+  // scroll to time if there is on in the url
+  // useEffect(() => {
+  //   if (!urlTime) return
+  //   const e = document.getElementById(urlTime.toString())
+  //   if (e)
+  //     e.scrollIntoView()
+  // })
 
-  const onVideoReader = (event: any) => {
+  const onCaptionChange = (player: YT.Player) => {
+    if (player.getPlayerState() == YT.PlayerState.PLAYING) {
+      setTime(player.getCurrentTime()) // if it is playing, update the state of the control to match
+      const captions = document.querySelector('#captions')
+      const lastScroll = captions.getAttribute('data-last-scroll')
+      const e = document.querySelector('#captions .current.caption')
+      if (e && lastScroll != e.id) {
+        scrollIntoView(e, { behavior: 'smooth', scrollMode: 'if-needed' })
+        captions.setAttribute('data-last-scroll', e.id)
+      }
+    }
+  }
+
+  const onVideoRender = (event: any) => {
     const player: YT.Player = event.target
     setPlayer(player)
-    if (t)
-      player?.seekTo(t, true)
+    if (urlTime)
+      player?.seekTo(urlTime, true)
+    window.setInterval(() => onCaptionChange(player), 1000) // update component state with current periodically
   }
 
   const onCaptionClick = (offset: number) => {
     player?.seekTo(offset, true)
   }
 
+  const fInt = (n?: number) => n ? compactInteger(n) : ''
+  const fDate = (d?: string) => d ? dateFormat(parseISO(d)) : ''
 
   return (
     <div>
       <VidePageDiv>
-        <YtContainer><YouTube videoId={videoId} onReady={e => onVideoReader(e)} opts={{ height: "100%", width: "100%" }} /></YtContainer>
-        <div>
-          <h2>{v?.VIDEO_TITLE}</h2>
-        </div>
-
-        {v ? (
-          <>
-            <VideoStatsDiv>
-              <span><b>{compactInteger(v.VIEWS)}</b> views</span>
-              <span>{dateFormat(parseISO(v.UPLOAD_DATE))}</span>
-              <span style={{ marginLeft: 'auto' }}>
-                <span><b>{compactInteger(v.LIKES)}</b> likes</span>
-                <span><b>{compactInteger(v.DISLIKES)}</b> dislikes</span>
-              </span>
-            </VideoStatsDiv>
-            <CaptionDiv>
-              <VideoChannelTitle Channel={video.channel} />
-              <DescriptionDiv>{v.DESCRIPTION}</DescriptionDiv>
-              <div>
-                {captions?.map(c => {
-                  var selected = c.OFFSET_SECONDS == t
-                  return (
-                    <span key={c.OFFSET_SECONDS} id={c.OFFSET_SECONDS.toString()}>
-                      <a onClick={() => onCaptionClick(c.OFFSET_SECONDS)} style={{ fontWeight: selected ? 2 : 1 }} >{secondsToHHMMSS(c.OFFSET_SECONDS)}</a> {c.CAPTION}<br />
-                    </span>
-                  ) ?? <></>
-                })
-                }
-              </div>
-            </CaptionDiv>
-          </>
-        ) : <></>}
-
+        <VideoContainer><YouTube videoId={videoId} onReady={e => onVideoRender(e)} opts={{ height: '100%', width: '100%' }} /></VideoContainer>
+        <h2>{v?.VIDEO_TITLE}</h2>
+        <VideoStatsDiv>
+          {v && <>
+            <span><b>{fInt(v?.VIEWS)}</b> views</span>
+            <span>{fDate(v?.UPLOAD_DATE)}</span>
+            <span style={{ marginLeft: 'auto' }}>
+              <span><b>{fInt(v?.LIKES)}</b> likes</span>
+              <span><b>{fInt(v?.DISLIKES)}</b> dislikes</span>
+            </span>
+          </>}
+        </VideoStatsDiv>
+        <CaptionDiv id="captions">
+          <ChannelTitle channel={video?.channel} />
+          <DescriptionDiv>{v?.DESCRIPTION}</DescriptionDiv>
+          <div>
+            {captions?.map((c, i) => {
+              var cNext = captions[i + 1]
+              var playerTime = player?.getCurrentTime() ?? time
+              var currentCaption = c.OFFSET_SECONDS <= playerTime && cNext?.OFFSET_SECONDS > playerTime //TODO: look at current time in video
+              return (
+                <div key={c.OFFSET_SECONDS} id={c.OFFSET_SECONDS.toString()} className={'caption' + (currentCaption ? ' current' : '')}>
+                  <a onClick={() => onCaptionClick(c.OFFSET_SECONDS)}>
+                    {secondsToHHMMSS(c.OFFSET_SECONDS)}
+                  </a>
+                  <i> </i>{c.CAPTION}<br />
+                </div>
+              ) ?? <></>
+            })}
+          </div>
+        </CaptionDiv>
       </VidePageDiv >
     </div>
   )
 }
 
-const Card = styled.div`
+const ChannelTitleStyle = styled.div`
   margin: 1em;
   display: flex;
 `
 
-export interface VideoChannelTitleProps {
-  Channel: ChannelData
-}
-
-const VideoChannelTitle = (props: VideoChannelTitleProps) => {
-  const c = props.Channel
-  return (<Card>
-    <a href={`{https://www.youtube.com}/channel/${c.channelId}`} target="blank">
+const ChannelTitle = (p: { channel: ChannelData }) => {
+  const c = p.channel
+  if (c == null) return <ChannelTitleStyle />
+  return <ChannelTitleStyle>
+    <a href={`{https://www.youtube.com}/channel/${c.channelId}`} target='blank'>
       <img src={c.thumbnail} style={{ height: '7em', marginRight: '1em', clipPath: 'circle()' }} />
     </a>
     <div>
@@ -170,7 +195,7 @@ const VideoChannelTitle = (props: VideoChannelTitleProps) => {
       </div>
 
     </div>
-  </Card>)
+  </ChannelTitleStyle>
 }
 
 

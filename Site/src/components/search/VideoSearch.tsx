@@ -45,7 +45,7 @@ const SearchRow = styled.div`
 
 const FiltersPane = styled.div`
     display:flex; flex-flow:column wrap; justify-content:start;
-    background-color: ${theme.backColor1};
+    background-color: ${theme.backColorBolder};
     min-height:0px; /*needed for column wrap to kick in*/
     padding:0.5em 0.5em;
     

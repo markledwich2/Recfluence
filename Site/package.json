@@ -66,6 +66,7 @@
     "react-select": "^2.4.4",
     "react-twitter-widgets": "^1.7.1",
     "react-youtube": "^7.11.2",
+    "scroll-into-view-if-needed": "^2.2.24",
     "styled-components": "^5.1.0",
     "styled-icons": "^10.2.1"
   }

@@ -8,8 +8,7 @@ const VideoPage = () => (
     <MainLayout>
         <Router >
             <Video path="video/:videoId" />
-            <BlankPage path="video" />
-            <VideoPageNotFound default />
+            <BlankPage path="video" default />
         </Router>
     </MainLayout>
 )
