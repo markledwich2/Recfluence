@@ -170,7 +170,7 @@ export const VideoSearch = ({ }: CProps<{}>) => {
                     render={({ data, error, loading }) => <VideoSearchResults data={data} query={query} error={error} loading={loading} />}
                     infiniteScroll
                     scrollTarget={filterOnRight ? "results" : null}
-                    size={20}
+                    size={40}
                     dataField={sort.field}
                     sortBy={sort.sort}
                     showResultStats={false}
