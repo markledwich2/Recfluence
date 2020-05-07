@@ -6,5 +6,7 @@ declare namespace NodeJS {
         NODE_ENV: "development" | "production"
         RESULTS_URL: string
         FUNC_URL: string
+        AUTH0_DOMAIN: string
+        AUTH0_CLIENTID: string
     }
 }

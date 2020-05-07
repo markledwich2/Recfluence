@@ -76,7 +76,7 @@ export class SelectionStateHelper<T, TParams> {
     source: string
 
     constructor(getState: () => SelectionState, onSelection?: SelectionHandler, source?: string) {
-        this.getState = getState
+        this.getState = () => getState() ?? { selected: [{ record: {} }], parameters: { record: {} } }
         this.onSelection = onSelection ?? (a => Object.assign(getState(), this.applyAction(a)))
         this.source = source
     }

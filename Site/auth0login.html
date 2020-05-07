@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Log in to Recfluence</title>
+  <link rel="stylesheet" href="https://cdn.auth0.com/ulp/react-components/1.0.0/css/main.cdn.min.css" />
+  <style id="custom-styles-container">
+    /* recfluence customized - start */
+    body {
+      background: #000;
+      font-family: ulp-font, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, sans-serif;
+      color: #eee;
+    }
+
+    form .input {
+      background-color: #111;
+      border: 1px solid #444;
+      border-color: #444;
+      color: #eee;
+      box-shadow: none;
+    }
+
+    form input:focus {
+      border-color: #666 !important;
+      box-shadow: none !important;
+    }
+
+    .input-container::before {
+      background-color: #444;
+    }
+
+    div.password {
+      border-color: #444 !important;
+      box-shadow: none !important;
+    }
+
+    .idp-social-button {
+      background-color: #222;
+      border: none;
+      color: #eee;
+    }
+
+    .idp-social-button:hover {
+      background-color: #333;
+    }
+
+    .ulp-footer {
+      background: #000;
+    }
+
+    *::-webkit-scrollbar {
+      width: 0.5em;
+    }
+
+    *::-webkit-scrollbar-thumb {
+      background-color: #333;
+    }
+
+    /* recfluence customized - end */
+    .main-wrapper {
+      background: #000000;
+      overflow-y: auto;
+    }
+
+    .ulp-alert.danger {
+      background: #e55e3f;
+    }
+
+    .ulp-alert.success {
+      background: #1bc462;
+    }
+
+    .ulp-button-default {
+      background-color: #007E6F;
+      color: #ffffff;
+    }
+
+    .ulp-button-success {
+      background-color: #1bc462;
+    }
+
+    .ulp-button-error {
+      background-color: #e55e3f;
+    }
+
+    @supports (mask-image: url('/static/img/branding-generic/copy-icon.svg')) {
+      @supports not (-ms-ime-align: auto) {
+        .input-container.error::before {
+          background-color: #e55e3f;
+        }
+      }
+    }
+
+    .input.ulp-input-error {
+      border-color: #e55e3f;
+    }
+
+    .error-cloud {
+      background-color: #e55e3f;
+    }
+
+    .error-fatal {
+      background-color: #e55e3f;
+    }
+
+    .error-local {
+      background-color: #e55e3f;
+    }
+
+    .ulp-popover.error {
+      background-color: #e55e3f;
+      border-color: #e55e3f;
+    }
+
+    .ulp-popover.error::before {
+      border-bottom-color: #e55e3f;
+    }
+
+    .ulp-popover.error::after {
+      border-bottom-color: #e55e3f;
+    }
+
+    #alert-trigger {
+      background-color: #e55e3f;
+    }
+
+    .ulp-box-inner {
+      background-color: #000000;
+      color: #eee;
+    }
+  </style>
+  <style>
+    /* By default, hide features for javascript-disabled browsing */
+    /* We use !important to override any css with higher specificity */
+    /* It is also overriden by the styles in <noscript> in the header file */
+    .no-js {
+      display: none !important;
+    }
+  </style>
+  <noscript>
+    <style>
+      /* We use !important to override the default for js enabled */
+      /* If the display should be other than block, it should be defined specifically here */
+      .js-required {
+        display: none !important;
+      }
+
+      .no-js {
+        display: block !important;
+      }
+
+      div.input-container input {
+        padding-right: 16px !important;
+      }
+
+      div.input-container::after {
+        display: none !important;
+      }
+    </style>
+  </noscript>
+</head>
+
+<body>
+  <div class="main-wrapper _page-background">
+    <main class="ulp-outer login">
+      <section class="ulp-box  ">
+        <div class="ulp-box-inner _prompt-box">
+          <div class="ulp-main">
+            <header class="ulp-header _header">
+              <img class="header-logo" id="prompt-logo-center"
+                src="https://raw.githubusercontent.com/markledwich2/Recfluence/authentication/Site/src/images/recfluence_word.svg"
+                alt="Welcome" />
+              <h3 style="padding-top:1em">Log in or sign up to recfluence.net</h3>
+            </header>
+            <div class="ulp-container">
+              <form method="POST" class="ulp-db">
+                <input type="hidden" name="state"
+                  value="g6Fo2SBqSmN6b2JiZlZkSkNpT2plR3JQX2FKY1NpNWxhR2tQS6N0aWTZIG1oYk9WOUpWd09ad0dMTURvUHB2X3JuYWNZdFhFUGw3o2NpZNkgNXhNUE5WZnpzMW02UDE0dHU5aGpzVGdsanBsVzc3Y0k" />
+                <div class="ulp-fieldset-container">
+                  <fieldset class="ulp-input-group">
+                    <div class="input-container _input-container email" data-action-text=""
+                      data-alternate-action-text="">
+                      <label for="username">username</label>
+                      <input class="input _input" name="username" id="username" placeholder="Email address" type="text"
+                        aria-label="Email address" value="" required autoFocus />
+                    </div>
+                    <div class="input-container _input-container password" data-action-text=""
+                      data-alternate-action-text="">
+                      <label for="password">password</label>
+                      <input class="input _input" name="password" id="password" placeholder="Password" type="password"
+                        aria-label="Password" required />
+                    </div>
+                  </fieldset>
+                </div>
+                <p class="ulp-forgot-password-link">
+                  <a class="link _link"
+                    href="/u/reset-password/request/Username-Password-Authentication?state=g6Fo2SBqSmN6b2JiZlZkSkNpT2plR3JQX2FKY1NpNWxhR2tQS6N0aWTZIG1oYk9WOUpWd09ad0dMTURvUHB2X3JuYWNZdFhFUGw3o2NpZNkgNXhNUE5WZnpzMW02UDE0dHU5aGpzVGdsanBsVzc3Y0k">Forgot
+                    password?</a>
+                </p>
+                <div class="button-bar">
+                  <button type="submit" name="action" value="default"
+                    class="ulp-button ulp-button-default _button _button-default ">Continue</button>
+                </div>
+              </form>
+              <div class="ulp-vertical-separator _vertical-separator">
+                <span>Or</span>
+              </div>
+              <div class="ulp-social-providers">
+                <form method="post" class="idp-social-button-container">
+                  <input type="hidden" name="state"
+                    value="g6Fo2SBqSmN6b2JiZlZkSkNpT2plR3JQX2FKY1NpNWxhR2tQS6N0aWTZIG1oYk9WOUpWd09ad0dMTURvUHB2X3JuYWNZdFhFUGw3o2NpZNkgNXhNUE5WZnpzMW02UDE0dHU5aGpzVGdsanBsVzc3Y0k" />
+                  <input type="hidden" name="connection" value="google-oauth2" />
+                  <button type="submit" class="idp-social-button _social-button" data-provider="google">
+                    <span class="idp-icon" data-provider="google"></span>
+                    <span class="idp-text">Continue with Google</span>
+                  </button>
+                </form>
+                <form method="post" class="idp-social-button-container">
+                  <input type="hidden" name="state"
+                    value="g6Fo2SBqSmN6b2JiZlZkSkNpT2plR3JQX2FKY1NpNWxhR2tQS6N0aWTZIG1oYk9WOUpWd09ad0dMTURvUHB2X3JuYWNZdFhFUGw3o2NpZNkgNXhNUE5WZnpzMW02UDE0dHU5aGpzVGdsanBsVzc3Y0k" />
+                  <input type="hidden" name="connection" value="twitter" />
+                  <button type="submit" class="idp-social-button _social-button" data-provider="twitter">
+                    <span class="idp-icon" data-provider="twitter"></span>
+                    <span class="idp-text">Continue with Twitter</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+          <div class="ulp-footer _footer">
+            <div>Don&#39;t have an account? <a class="link _link"
+                href="/u/signup?state=g6Fo2SBqSmN6b2JiZlZkSkNpT2plR3JQX2FKY1NpNWxhR2tQS6N0aWTZIG1oYk9WOUpWd09ad0dMTURvUHB2X3JuYWNZdFhFUGw3o2NpZNkgNXhNUE5WZnpzMW02UDE0dHU5aGpzVGdsanBsVzc3Y0k">Sign
+                up</a>
+            </div>
+          </div>
+        </div>
+        <!-- <a href="https://auth0.com/?utm_source=lock&amp;utm_campaign=badge&amp;utm_medium=widget" target="_blank"
+          rel="noopener noreferrer" class="ulp-auth0-badge" aria-label="Link to the Auth0 website">
+          <span class="ulp-auth0-badge-image"></span>
+        </a> -->
+      </section>
+    </main>
+    <script id="client-scripts" type="text/javascript">
+      !function () { var e, t = { exports: function (r, n) { function s(e, t, r) { return e.addEventListener(t, r) } function o(e, t) { return e.getAttribute(t) } function i(e) { return "string" == typeof e } function a(e, t, r) { return e.setAttribute(t, r) } return { addClass: function (e, t) { if (e.classList) return e.classList.add(t); var r = e.className.split(" "); -1 === r.indexOf(t) && (r.push(t), e.className = r.join(" ")) }, toggleClass: function (e, t) { if (e.classList) return e.classList.toggle(t); var r = e.className.split(" "), n = r.indexOf(t); -1 !== n ? r.splice(n, 1) : r.push(t), e.className = r.join(" ") }, addClickListener: function (e, t) { return s(e, "click", t) }, addEventListener: s, getAttribute: o, getElementById: function (e) { return n.getElementById(e) }, getParent: function (e) { return e.parentNode }, isString: i, poll: function (e) { var o = e.interval || 2e3, t = e.url || r.location.href, i = e.condition || function () { return !0 }, a = e.onSuccess || function () { }, u = e.onError || function () { }; return setTimeout(function n() { var s = new XMLHttpRequest; return s.open("GET", t), s.setRequestHeader("Accept", "application/json"), s.onload = function () { if (200 === s.status) { var e = "application/json" === s.getResponseHeader("Content-Type").split(";")[0] ? JSON.parse(s.responseText) : s.responseText; return i(e) ? a() : setTimeout(n, o) } if (429 !== s.status) return u({ status: s.status, responseText: s.responseText }); var t = 1e3 * Number.parseInt(s.getResponseHeader("X-RateLimit-Reset")), r = t - (new Date).getTime(); return setTimeout(n, o < r ? r : o) }, s.send() }, o) }, querySelector: function (e, t) { return i(e) ? n.querySelector(e) : e.querySelector(t) }, querySelectorAll: function (e, t) { var r = i(e) ? n.querySelectorAll(e) : e.querySelectorAll(t); return Array.prototype.slice.call(r) }, removeClass: function (e, t) { if (e.classList) return e.classList.remove(t); var r = e.className.split(" "), n = r.indexOf(t); -1 !== n && (r.splice(n, 1), e.className = r.join(" ")) }, setAttribute: a, swapAttributes: function (e, t, r) { var n = o(e, t), s = o(e, r); a(e, r, n), a(e, t, s) } } } }.exports(window, document); ((e = {}).exports = function (s, e, o, i, a, u) { e("div.input-container.password").forEach(function (e) { var r, n, t = s(e, "input"); o(e, (r = e, n = t, function (e) { if (!(e.offsetX < r.offsetWidth - 45)) { n.type = "password" === n.type ? "text" : "password"; var t = u(n); "text" === n.type ? i(t, "show") : a(t, "show") } })) }) }, e.exports)(t.querySelector, t.querySelectorAll, t.addClickListener, t.addClass, t.removeClass, t.getParent), { exports: function (e, n, s, t) { var r = e(".ulp-outer"), o = e("#alert-trigger"), i = e(".ulp-alert-dropdown-outer"), a = e(".alert-list"), u = !1; o && a && r && t(r, function (e) { var t = e.target === o, r = a.contains(e.target); return t && !u ? (n(i, "show"), void (u = !0)) : t && u || u && !r ? (s(i, "show"), void (u = !1)) : void 0 }) } }.exports(t.querySelector, t.addClass, t.removeClass, t.addClickListener) }();
+    </script>
+  </div>
+</body>
+
+</html>
