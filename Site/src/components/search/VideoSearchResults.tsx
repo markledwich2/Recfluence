@@ -44,21 +44,26 @@ export interface CaptionDocument {
 }
 
 const HelpStyle = styled.div`
-    font-size: 1.2em;
-    line-height: 1.5em;
-    b, h1, h2, h3 {
-        color:${theme.fontColor}
-    }
-    p {
-        margin: 0.5em 0em 1em 0em;
-    }
-    code, inlineCode  {
-        font-family:monospace;
-        background-color:${theme.backColorBolder};
-        padding: 0.1em 0.2em;
-        border: 1px solid ${theme.backColorBolder2};
-        border-radius: 5px;
-    }
+  padding:1em;
+  font-size: 1.2em;
+  line-height: 1.5em;
+  b, h1, h2, h3 {
+      color:${theme.fontColor}
+  }
+  p {
+      margin: 0.5em 0em 1em 0em;
+  }
+  code, inlineCode  {
+      font-family:monospace;
+      background-color:${theme.backColorBolder};
+      padding: 0.1em 0.2em;
+      border: 1px solid ${theme.backColorBolder2};
+      border-radius: 5px;
+  }
+`
+
+const ResultsPane = styled.div`
+  padding: 0 1em;
 `
 
 const LoginOverlay = styled.div`
@@ -144,7 +149,7 @@ export const VideoSearchResults = ({ data, query, error, loading }: { data: Capt
 
   var words = query ? queryHighlights(query) : []
 
-  return <>
+  return <ResultsPane>
     {loading && data.length == 0 && <Spinner size="80px" />}
     <BlurOverlay>
       {byVid.map(d => <VideoSearchResult caption={d} searchWords={words} key={d.caption_id} />)}
@@ -154,7 +159,7 @@ export const VideoSearchResults = ({ data, query, error, loading }: { data: Capt
     </BlurOverlay>
     {!user && <LoginOverlay><a onClick={_ => logIn()}>Log in</a> to enable search</LoginOverlay>}
     {loading && data.length > 0 && <Spinner size="80px" />}
-  </>
+  </ResultsPane>
 }
 
 const ResultsRow = styled.div`

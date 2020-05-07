@@ -1,4 +1,4 @@
-import React, { useContext } from "react"
+import React, { useContext, FunctionComponent } from 'react'
 import styled from 'styled-components'
 import logo from '../images/recfluence_word.svg'
 import { theme } from './MainLayout'
@@ -25,9 +25,12 @@ const NavStyle = styled.nav`
     margin-bottom: 6px;
   }
 
-  a, .menu-text {
-    padding: 0 0.5em;
+  a, .menu-item {
     vertical-align: bottom;
+  }
+
+  .menu-item {
+    padding: 0 1em;
   }
   
   a {
@@ -58,12 +61,21 @@ interface HeaderBarProps extends ShowLoginProps {
   style: React.CSSProperties
 }
 
-export const HomeLogo = () => <Link to='/'><LogoStyle src={logo} title="Recfluence" /></Link>
+export const HomeLogo = () => <Link to='/'><LogoStyle src={logo} title='Recfluence' /></Link>
 
 export const TopSiteBar = ({ showLogin, style }: HeaderBarProps) => <HeaderBar style={style}>
   <HomeLogo />
   <SiteLinks showLogin={showLogin} />
 </HeaderBar>
+
+
+export const LinkA: FunctionComponent<{ to: string, className?: string }> = ({ to, children, className }) => {
+  const active = location.pathname == to
+  const classes = [className + ' menu-item', active ? 'active' : null].filter(c => c).join(" ")
+
+  // we use A instead of Link because Flows pages is super heavy and navigating causes large javascript slowdowns
+  return <a href={to} className={classes}>{children}</a>
+}
 
 export const SiteLinks = ({ showLogin }: ShowLoginProps) => {
   const userCtx = useContext(UserContext)
@@ -72,17 +84,18 @@ export const SiteLinks = ({ showLogin }: ShowLoginProps) => {
   return <>
     <NavStyle>
       <div>
-        <Link to='/' activeClassName="active">Flows</Link>
-        <Link to='/search' activeClassName="active">Search</Link>
+        <LinkA to='/'>Flows</LinkA>
+        <LinkA to='/search/'>Search</LinkA>
       </div>
       {showLogin &&
         <div>
           {user ?
             <>
-              <IconUser className="text-icon" /> <span className="menu-text">{user?.name ?? '(no name)'}</span>
-              <a onClick={() => userCtx?.logOut()}><IconLogout className="icon" title="Log out" /></a>
+              <span className='menu-item'> {user?.name ?? '(no name)'}
+                <a onClick={() => userCtx?.logOut()}> <IconLogout className='icon' title='Log out' /></a>
+              </span>
             </>
-            : <a onClick={async () => {
+            : <a className='menu-item' onClick={async () => {
               if (!userCtx) return
               await userCtx.logIn()
             }}>Log&nbsp;In</a>}

@@ -42,7 +42,7 @@ export const UserContextProvider: FunctionComponent<{ authOptions: Auth0ClientOp
 
   const logIn = async () => {
     const c = await getOrInitClient()
-    await c.loginWithPopup({ display: 'page' })
+    await c.loginWithPopup({ display: 'page', prompt: 'select_account' })
     const u: User = await c.getUser()
     setUser(u)
     return u
@@ -50,7 +50,7 @@ export const UserContextProvider: FunctionComponent<{ authOptions: Auth0ClientOp
 
   const logOut = async () => {
     const c = await getOrInitClient()
-    await c.logout({ localOnly: true })
+    await c.logout({ localOnly: false })
     setUser(null)
   }
 

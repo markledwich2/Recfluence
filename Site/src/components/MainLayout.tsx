@@ -32,20 +32,21 @@ export class MainLayout extends React.Component<CP<{}>, {}> {
           }
         `}
         render={data => (
-          <>
+          <UserContextProvider authOptions={{
+            domain: process.env.AUTH0_DOMAIN,
+            client_id: process.env.AUTH0_CLIENTID,
+            redirect_uri: process.env.AUTH0_CALLBACK,
+            responseType: "token id_token",
+            scope: "openid profile email",
+            cacheLocation: 'localstorage'
+          }}>
             <Helmet>
               <title>{data.site.siteMetadata.title}</title>
             </Helmet>
             <MainStyleDiv>
-              <UserContextProvider authOptions={{
-                domain: process.env.AUTH0_DOMAIN,
-                client_id: process.env.AUTH0_CLIENTID,
-                redirect_uri: process.env.AUTH0_CALLBACK,
-                responseType: "token id_token",
-                scope: "openid profile email",
-              }} children={children} />
+              {children}
             </MainStyleDiv>
-          </>
+          </UserContextProvider>
         )}
       />
     )

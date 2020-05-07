@@ -19,13 +19,7 @@ const Page = styled.div`
 const SearchAndFilterPane = styled.div`
     display:flex; flex-direction:column;
     min-height:0;
-    @media (${media.width.small}) {
-      
-    }
-
-    @media (${media.width.medium}) {
-      flex-direction:row;
-    }
+    flex-direction:row;
 `
 
 const ContentPane = styled.div`
@@ -47,7 +41,13 @@ const SearchTextBoxStyle = styled.div`
 `
 
 const SearchPane = styled.div`
-  padding: 1em;
+  padding: 0.5em 1em;
+`
+
+const SearchSelectionPane = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5em 0 0;
 `
 
 const FiltersPane = styled.div`
@@ -110,11 +110,7 @@ const FiltersPane = styled.div`
 const ResultsPane = styled.div`
     position:relative;
     height:100%; width:100%;
-    overflow-y:hidden;
-    @media (${media.width.medium}) {
-        overflow-y:scroll;
-    }
-
+    overflow-y:scroll;
     select {
         background:${theme.backColor};
         outline:1px solid #333;
@@ -123,8 +119,8 @@ const ResultsPane = styled.div`
 `
 
 const FilteredListStyle: React.CSSProperties = {
-  display: "flex", flexDirection: "column",
-
+  display: "flex",
+  flexDirection: "column"
 }
 
 interface SortValue { field: string, sort: 'asc' | 'desc' }
@@ -159,18 +155,18 @@ export const VideoSearch = ({ }: CProps<{}>) => {
     >
       <Page>
         <TopSiteBar showLogin style={{ flex: '0 0 auto' }} />
-        <SearchAndFilterPane style={{ flex: '1 1 auto' }}>
+        <SearchAndFilterPane style={{ flex: '1 1 auto', flexDirection: filterOpened ? 'column' : 'row' }}>
           <ContentPane>
             <SearchPane>
               <SearchTexBox />
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <SelectedFilters style={{ margin: '0.5em 0px' }} />
+              <SearchSelectionPane>
+                <SelectedFilters />
                 {!filterOnRight && <div style={{ verticalAlign: 'top' }} >
                   <Button
                     label={filterOpened ? "Results" : "Filter"}
                     icon={filterOpened ? <IconList /> : <IconFilter />} onclick={_ => setFilterOpened(!filterOpened)} />
                 </div>}
-              </div>
+              </SearchSelectionPane>
             </SearchPane>
 
             <ResultsPane id="results" style={{ display: resultsVisible ? 'block' : 'none' }}>
@@ -183,8 +179,9 @@ export const VideoSearch = ({ }: CProps<{}>) => {
                     render={({ data, error, loading }) =>
                       <VideoSearchResults data={data} query={query} error={error} loading={loading} />
                     }
-                    infiniteScroll={user != null}
-                    scrollTarget={filterOnRight ? "results" : null}
+                    infiniteScroll
+                    scrollTarget="results"
+
                     size={30}
                     dataField={sort.field}
                     sortBy={sort.sort}
