@@ -1,6 +1,7 @@
 
 import createAuth0Client, { Auth0Client, Auth0ClientOptions } from '@auth0/auth0-spa-js'
 import React, { useState, useEffect, FunctionComponent } from 'react'
+import { isGatsbyServer } from './MainLayout'
 
 export const UserContext = React.createContext<UserCtx>(null)
 
@@ -32,26 +33,37 @@ export const UserContextProvider: FunctionComponent<{ authOptions: Auth0ClientOp
   }
 
   useEffect(() => {
+    if (isGatsbyServer()) return null
     async function init() {
-      const c = await getOrInitClient()
-      const u: User = await c.getUser()
-      setUser(u)
+      try {
+        const c = await getOrInitClient()
+        const u: User = await c.getUser()
+        setUser(u)
+      }
+      catch (error) {
+        console.log('error in UserContextProvider.init', error)
+      }
     }
     init()
   }, []) // only runs on mount
 
   const logIn = async () => {
-    const c = await getOrInitClient()
-    await c.loginWithPopup({ display: 'page', prompt: 'select_account' })
-    const u: User = await c.getUser()
-    setUser(u)
-    return u
+    try {
+      const c = await getOrInitClient()
+      await c.loginWithPopup({ display: 'page', prompt: 'select_account' })
+      const u: User = await c.getUser()
+      setUser(u)
+      return u
+    }
+    catch (error) {
+      console.log('error in UserContextProvider.logIn', error)
+    }
   }
 
   const logOut = async () => {
     const c = await getOrInitClient()
-    await c.logout({ localOnly: false })
     setUser(null)
+    c.logout({ localOnly: false, returnTo: location.origin })
   }
 
   return <UserContext.Provider value={{ user, logIn, logOut }} children={children} />

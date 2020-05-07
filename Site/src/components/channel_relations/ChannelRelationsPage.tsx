@@ -8,7 +8,7 @@ import { InteractiveDataProps, SelectionStateHelper, InteractiveDataState, Actio
 import _ from 'lodash'
 import { RouteComponentProps } from "@reach/router"
 import styled from 'styled-components'
-import { media } from '../MainLayout'
+import { media, isGatsbyServer } from '../MainLayout'
 
 interface Props extends RouteComponentProps {
   dataUrl: string
@@ -201,6 +201,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   }
 
   componentDidMount() {
+    if (isGatsbyServer()) return
     this.load()
   }
 
@@ -220,8 +221,6 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     try {
       this.setState({ model: data })
     } catch (e) { }
-
-
   }
 
   onSelection = (action: Action) => {
@@ -260,56 +259,57 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   }
 
   render() {
-    if (this.state.model) {
-      return (
-        <ChannelRelationsStyles>
-          <ChannelRelationsTitle
-            ref={r => (this.title = r)}
-            model={this.state.model}
-            onSelection={this.onSelection.bind(this)}
-          />
+    let model = this.state.model
+    return (
+      <ChannelRelationsStyles>
+        <ChannelRelationsTitle
+          ref={r => (this.title = r)}
+          model={model}
+          onSelection={this.onSelection.bind(this)}
+        />
 
-          <MainChartStyled>
-            <div className={'Relations'}>
-              <ContainerDimensions>
-                {({ height, width }) => (
-                  <ChannelRelations
-                    ref={r => (this.relations = r)}
-                    height={height}
-                    width={width}
-                    model={this.state.model}
-                    onSelection={this.onSelection.bind(this)}
-                  />
-                )}
-              </ContainerDimensions>
+        <MainChartStyled>
+          {model ?
+            <>
+              <div className={'Relations'}>
+                <ContainerDimensions>
+                  {({ height, width }) => (
+                    <ChannelRelations
+                      ref={r => (this.relations = r)}
+                      height={height}
+                      width={width}
+                      model={model}
+                      onSelection={this.onSelection.bind(this)}
+                    />
+                  )}
+                </ContainerDimensions>
+              </div>
+              <div className={'Flows'}>
+                <ContainerDimensions>
+                  {({ height, width }) => (
+                    <RecFlows
+                      ref={r => (this.flows = r)}
+                      height={height}
+                      width={width}
+                      model={model}
+                      onSelection={this.onSelection.bind(this)}
+                    />
+                  )}
+                </ContainerDimensions>
+              </div>
+            </>
+            :
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
+              <img src='spinner.png'></img>
             </div>
-            <div className={'Flows'}>
-              <ContainerDimensions>
-                {({ height, width }) => (
-                  <RecFlows
-                    ref={r => (this.flows = r)}
-                    height={height}
-                    width={width}
-                    model={this.state.model}
-                    onSelection={this.onSelection.bind(this)}
-                  />
-                )}
-              </ContainerDimensions>
-            </div>
-          </MainChartStyled>
-          <div className={'footer'}>
-            <a href={'https://twitter.com/mark_ledwich'}>@mark_ledwich</a>
-            <a href={'mailto:mark@ledwich.com.au?Subject=Political YouTube'}>mark@ledwich.com.au</a>
-            <span> &nbsp;<a href={'https://github.com/markledwich2/YouTubeNetworks'}>GitHub project</a> &nbsp;</span>
-          </div>
-        </ChannelRelationsStyles>
-      )
-    } else {
-      return (
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
-          <img src='spinner.svg'></img>
+          }
+        </MainChartStyled>
+        <div className={'footer'}>
+          <a href={'https://twitter.com/mark_ledwich'}>@mark_ledwich</a>
+          <a href={'mailto:mark@ledwich.com.au?Subject=Political YouTube'}>mark@ledwich.com.au</a>
+          <span> &nbsp;<a href={'https://github.com/markledwich2/YouTubeNetworks'}>GitHub project</a> &nbsp;</span>
         </div>
-      )
-    }
+      </ChannelRelationsStyles>
+    )
   }
 }

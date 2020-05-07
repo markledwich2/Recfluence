@@ -24,7 +24,7 @@ export class YtInteractiveChartHelper {
     selections: SelectionStateHelper<ChannelData, YtParams>
     component: React.Component<InteractiveDataProps<any>, InteractiveDataState>
 
-    constructor(component: React.Component<InteractiveDataProps<any>, InteractiveDataState>, source:string) {
+    constructor(component: React.Component<InteractiveDataProps<any>, InteractiveDataState>, source: string) {
         this.component = component
         this.selections = new SelectionStateHelper(() => this.component.state.selections, component.props.onSelection, source)
     }
@@ -40,25 +40,25 @@ export class YtInteractiveChartHelper {
             .classed('chart', true)
             .classed(chartName, true)
 
-        var GlowFilters = (props: {glows: { name: string, blur?: number, intensity?: number }[]}) => {
+        var GlowFilters = (props: { glows: { name: string, blur?: number, intensity?: number }[] }) => {
             return (<>
                 {props.glows.map(g => (
-                <filter key={g.name} id={g.name} width={'800%'} height={'800%'} x={'-400%'} y={'-400%'} > 
-                    <feGaussianBlur stdDeviation={g.blur ?? 5} result='coloredBlur'/>
-                    <feMerge>
-                        {range(g.intensity ?? 1).map(_ => (<feMergeNode in='coloredBlur' />))}
-                        <feMergeNode in='SourceGraphic' />
-                    </feMerge>
-                </filter>))}
+                    <filter key={g.name} id={g.name} width={'800%'} height={'800%'} x={'-400%'} y={'-400%'} >
+                        <feGaussianBlur stdDeviation={g.blur ?? 5} result='coloredBlur' />
+                        <feMerge>
+                            {range(g.intensity ?? 1).map(i => (<feMergeNode in='coloredBlur' key={i} />))}
+                            <feMergeNode in='SourceGraphic' />
+                        </feMerge>
+                    </filter>))}
             </>)
         }
 
         var defs = svg.append("defs")
-        defs.html(renderToString(           
+        defs.html(renderToString(
             <GlowFilters glows={[
-                { name: 'glow', blur: 5 }, 
-                { name: 'glowBig', blur: 10, intensity:3 }]} />
-          ))
+                { name: 'glow', blur: 5 },
+                { name: 'glowBig', blur: 10, intensity: 3 }]} />
+        ))
 
         return container
     }

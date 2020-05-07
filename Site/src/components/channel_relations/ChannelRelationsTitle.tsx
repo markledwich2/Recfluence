@@ -42,17 +42,17 @@ interface Props extends InteractiveDataProps<YtModel> { }
 export class ChannelRelationsTitle extends React.Component<Props, State> {
   chart: YtInteractiveChartHelper = new YtInteractiveChartHelper(this, 'search')
   state: Readonly<State> = {
-    selections: this.props.model.selectionState
+    selections: this.props.model?.selectionState
   }
 
   get dim(): Dim<ChannelData> {
-    return this.props.model.channels
+    return this.props.model?.channels
   }
 
   channel() {
     const channelId = this.chart.selections
-      .highlightedOrSelectedValue(this.dim.col("channelId"))
-    return channelId ? this.props.model.channels.rows.find(c => c.channelId == channelId) : null
+      .highlightedOrSelectedValue(this.dim?.col("channelId"))
+    return channelId ? this.props.model?.channels.rows.find(c => c.channelId == channelId) : null
   }
 
   render() {

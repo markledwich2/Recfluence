@@ -14,12 +14,18 @@ import queryString from 'query-string'
 import scrollIntoView from 'scroll-into-view-if-needed'
 import { TopSiteBar } from '../SiteMenu'
 
-const VidePageDiv = styled.div`
+const MainPageDiv = styled.div`
+  height:100vh;
   display:flex;
   flex-direction:column;
-  max-width:1024px;
   justify-content: stretch;
-  height:100vh;
+`
+
+const VidePageDiv = styled.div`
+  width:100vw;
+  max-width:1024px;
+  margin:0 auto;
+  position:relative;
 `
 
 const ContentDiv = styled.div`
@@ -41,7 +47,6 @@ const VideoContainer = styled.div`
 const CaptionDiv = styled(ContentDiv)`
   overflow-y: scroll;
   font-size: 1.1em;
-  height:100%;
   margin: 0.5em;
   > div {
     margin-bottom: 0.5em;
@@ -141,9 +146,9 @@ export const Video: React.FC<VideoProps> = (props) => {
   const fDate = (d?: string) => d ? dateFormat(parseISO(d)) : ''
 
   return (
-    <div>
+    <MainPageDiv>
+      <TopSiteBar showLogin />
       <VidePageDiv>
-        <TopSiteBar showLogin />
         <VideoContainer><YouTube videoId={videoId} onReady={e => onVideoRender(e)} opts={{ height: '100%', width: '100%' }} /></VideoContainer>
         <ContentDiv>
           <VideoTitle>{v?.VIDEO_TITLE}</VideoTitle>
@@ -178,7 +183,7 @@ export const Video: React.FC<VideoProps> = (props) => {
           </div>
         </CaptionDiv>
       </VidePageDiv >
-    </div>
+    </MainPageDiv>
   )
 }
 

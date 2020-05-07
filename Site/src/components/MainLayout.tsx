@@ -7,6 +7,8 @@ import { hsl, rgb } from "d3"
 import { RouteComponentProps as CP } from "@reach/router"
 import { UserContextProvider } from './UserContext'
 
+export function isGatsbyServer() { return typeof window === 'undefined' }
+
 
 const themeIntent: ThemeIntent = {
   fontFamily: 'Segoe UI, Tahoma',
@@ -35,7 +37,6 @@ export class MainLayout extends React.Component<CP<{}>, {}> {
           <UserContextProvider authOptions={{
             domain: process.env.AUTH0_DOMAIN,
             client_id: process.env.AUTH0_CLIENTID,
-            redirect_uri: process.env.AUTH0_CALLBACK,
             responseType: "token id_token",
             scope: "openid profile email",
             cacheLocation: 'localstorage'
@@ -52,9 +53,6 @@ export class MainLayout extends React.Component<CP<{}>, {}> {
     )
   }
 }
-
-export function isGatsbyServer() { return typeof window === 'undefined' }
-
 
 export const size = {
   small: 600,

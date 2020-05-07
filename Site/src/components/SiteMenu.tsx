@@ -58,7 +58,7 @@ interface ShowLoginProps {
 }
 
 interface HeaderBarProps extends ShowLoginProps {
-  style: React.CSSProperties
+  style?: React.CSSProperties
 }
 
 export const HomeLogo = () => <Link to='/'><LogoStyle src={logo} title='Recfluence' /></Link>
@@ -95,9 +95,9 @@ export const SiteLinks = ({ showLogin }: ShowLoginProps) => {
                 <a onClick={() => userCtx?.logOut()}> <IconLogout className='icon' title='Log out' /></a>
               </span>
             </>
-            : <a className='menu-item' onClick={async () => {
+            : <a className='menu-item' onClick={() => {
               if (!userCtx) return
-              await userCtx.logIn()
+              userCtx.logIn()
             }}>Log&nbsp;In</a>}
         </div>
       }
