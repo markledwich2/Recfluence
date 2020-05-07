@@ -1,7 +1,7 @@
 import React, { useContext, FunctionComponent } from 'react'
 import styled from 'styled-components'
 import logo from '../images/recfluence_word.svg'
-import { theme } from './MainLayout'
+import { theme, safeLocation } from './MainLayout'
 import { Link } from 'gatsby'
 import { Person as IconUser, ExitToApp as IconLogout } from '@styled-icons/material'
 import { UserContext } from './UserContext'
@@ -68,9 +68,8 @@ export const TopSiteBar = ({ showLogin, style }: HeaderBarProps) => <HeaderBar s
   <SiteLinks showLogin={showLogin} />
 </HeaderBar>
 
-
 export const LinkA: FunctionComponent<{ to: string, className?: string }> = ({ to, children, className }) => {
-  const active = location.pathname == to
+  const active = safeLocation()?.pathname == to
   const classes = [className + ' menu-item', active ? 'active' : null].filter(c => c).join(" ")
 
   // we use A instead of Link because Flows pages is super heavy and navigating causes large javascript slowdowns

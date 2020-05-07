@@ -9,6 +9,7 @@ import { UserContextProvider } from './UserContext'
 
 export function isGatsbyServer() { return typeof window === 'undefined' }
 
+export function safeLocation(): Location { return isGatsbyServer() ? null : location }
 
 const themeIntent: ThemeIntent = {
   fontFamily: 'Segoe UI, Tahoma',
