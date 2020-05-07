@@ -24,7 +24,6 @@ const ButtonStyle = styled.button`
     font-size: 1em;
     line-height: 1em;
     padding: .5em 1em 0.2em 1em;
-    margin: 0.7em 0.1em;
     border-radius: 0.2em;
     outline: none;
     font-weight: bolder;

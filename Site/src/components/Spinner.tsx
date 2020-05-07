@@ -3,13 +3,10 @@ import styled from 'styled-components'
 import { theme } from './MainLayout'
 
 const SvgStyle = styled.svg`
-    position:absolute;
-    left:50%;
-    transform:translate(-50%, 0);
-    margin: auto; 
     background: none; 
     display: block; 
     shape-rendering: auto;
+    margin: 0 auto;
 `
 
 export const Spinner = ({ size }: { size: string }) => <SvgStyle width={size} height={size} viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">

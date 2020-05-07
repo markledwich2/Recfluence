@@ -36,6 +36,7 @@ export class SearchChannels extends React.Component<Props, State> {
     let sh = new SelectionStateHelper<ChannelData, YtParams>(() => props.selections, null, SearchChannels.source)
     const channelId = sh.selectedSingleValue('channelId')
     let r = this.ref as any
+    if (!r) return true
     let selectedOption = r.select.state.selectValue.find(() => true)
     let selectedValue = selectedOption ? selectedOption.value : undefined
     return channelId != selectedValue
@@ -43,6 +44,7 @@ export class SearchChannels extends React.Component<Props, State> {
 
   onUserInteracted = () => {
     let r = this.ref as any
+    if (!r) return
     delay(1).then(() => {
       const focusedOption = r.select.state.focusedOption
 
@@ -58,7 +60,9 @@ export class SearchChannels extends React.Component<Props, State> {
   }
 
   render() {
-    const channels = this.props.model.channels
+    const channels = this.props.model?.channels
+    if (!channels) return <></>
+
     let channelId = this.selectionHelper.selectedSingleValue(channels.col('channelId'))
     let options = _(channels.rows)
       .map(c => ({ value: c.channelId, label: c.title } as Option))

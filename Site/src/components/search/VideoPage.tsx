@@ -12,23 +12,42 @@ import { ChannelData } from '../../common/YtModel'
 import { useLocation } from '@reach/router'
 import queryString from 'query-string'
 import scrollIntoView from 'scroll-into-view-if-needed'
+import { TopSiteBar } from '../SiteMenu'
 
-const VidePageDiv = styled(TextPage)`
+const MainPageDiv = styled.div`
+  height:100vh;
   display:flex;
   flex-direction:column;
-  max-width:1024px;
-  margin: auto; 
   justify-content: stretch;
-  height:98vh;
-  & > * {
-    margin: 0.5em;
+`
+
+const VidePageDiv = styled.div`
+  width:100vw;
+  max-width:1024px;
+  margin:0 auto;
+  position:relative;
+`
+
+const ContentDiv = styled.div`
+  margin:1em;
+`
+
+const VideoContainer = styled.div`
+  min-height:30vh;
+  position:relative;
+  > div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width:100%;
+    height:100%;
   }
 `
 
-const CaptionDiv = styled.div`
+const CaptionDiv = styled(ContentDiv)`
   overflow-y: scroll;
   font-size: 1.1em;
-  height:100%;
+  margin: 0.5em;
   > div {
     margin-bottom: 0.5em;
   }
@@ -49,16 +68,8 @@ const DescriptionDiv = styled.div`
   color: #BBB;
 `
 
-const VideoContainer = styled.div`
-  min-height:30vh;
-  position:relative;
-  > div {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width:100%;
-    height:100%;
-  }
+const VideoTitle = styled.h2`
+  margin: 0.5em 0;
 `
 
 const VideoStatsDiv = styled.div`
@@ -135,20 +146,23 @@ export const Video: React.FC<VideoProps> = (props) => {
   const fDate = (d?: string) => d ? dateFormat(parseISO(d)) : ''
 
   return (
-    <div>
+    <MainPageDiv>
+      <TopSiteBar showLogin />
       <VidePageDiv>
         <VideoContainer><YouTube videoId={videoId} onReady={e => onVideoRender(e)} opts={{ height: '100%', width: '100%' }} /></VideoContainer>
-        <h2>{v?.VIDEO_TITLE}</h2>
-        <VideoStatsDiv>
-          {v && <>
-            <span><b>{fInt(v?.VIEWS)}</b> views</span>
-            <span>{fDate(v?.UPLOAD_DATE)}</span>
-            <span style={{ marginLeft: 'auto' }}>
-              <span><b>{fInt(v?.LIKES)}</b> likes</span>
-              <span><b>{fInt(v?.DISLIKES)}</b> dislikes</span>
-            </span>
-          </>}
-        </VideoStatsDiv>
+        <ContentDiv>
+          <VideoTitle>{v?.VIDEO_TITLE}</VideoTitle>
+          <VideoStatsDiv>
+            {v && <>
+              <span><b>{fInt(v?.VIEWS)}</b> views</span>
+              <span>{fDate(v?.UPLOAD_DATE)}</span>
+              <span style={{ marginLeft: 'auto' }}>
+                <span><b>{fInt(v?.LIKES)}</b> likes</span>
+                <span><b>{fInt(v?.DISLIKES)}</b> dislikes</span>
+              </span>
+            </>}
+          </VideoStatsDiv>
+        </ContentDiv>
         <CaptionDiv id="captions">
           <ChannelTitle channel={video?.channel} />
           <DescriptionDiv>{v?.DESCRIPTION}</DescriptionDiv>
@@ -169,7 +183,7 @@ export const Video: React.FC<VideoProps> = (props) => {
           </div>
         </CaptionDiv>
       </VidePageDiv >
-    </div>
+    </MainPageDiv>
   )
 }
 
