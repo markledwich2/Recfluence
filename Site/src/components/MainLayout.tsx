@@ -3,8 +3,18 @@ import React from "react"
 import Helmet from "react-helmet"
 import '../styles/main.css'
 import styled from 'styled-components'
-import { color as dcolor, hsl } from "d3"
-import { Router, RouteComponentProps as CP } from "@reach/router"
+import { hsl, rgb } from "d3"
+import { RouteComponentProps as CP } from "@reach/router"
+import { UserContextProvider } from './UserContext'
+
+
+const themeIntent: ThemeIntent = {
+  fontFamily: 'Segoe UI, Tahoma',
+  themeColor: '#249e98',
+  dark: true
+}
+
+export const theme = makeTheme(themeIntent)
 
 export class MainLayout extends React.Component<CP<{}>, {}> {
   render() {
@@ -27,7 +37,13 @@ export class MainLayout extends React.Component<CP<{}>, {}> {
               <title>{data.site.siteMetadata.title}</title>
             </Helmet>
             <MainStyleDiv>
-              {children}
+              <UserContextProvider authOptions={{
+                domain: process.env.AUTH0_DOMAIN,
+                client_id: process.env.AUTH0_CLIENTID,
+                redirect_uri: process.env.AUTH0_CALLBACK,
+                responseType: "token id_token",
+                scope: "openid profile email",
+              }} children={children} />
             </MainStyleDiv>
           </>
         )}
@@ -38,14 +54,6 @@ export class MainLayout extends React.Component<CP<{}>, {}> {
 
 export function isGatsbyServer() { return typeof window === 'undefined' }
 
-
-const themeIntent: ThemeIntent = {
-  fontFamily: 'Segoe UI, Tahoma',
-  themeColor: '#249e98',
-  dark: true
-}
-
-export const theme = makeTheme(themeIntent)
 
 export const size = {
   small: 600,
@@ -73,6 +81,16 @@ const MainStyleDiv = styled.div`
     background-color: ${theme.themeColorSubtler};
     color: ${theme.fontColor};
   }
+
+  a {
+    color: ${theme.themeColor};
+    text-decoration: none;
+  }
+  a:hover {
+      cursor: pointer;
+      color: ${theme.themeColorBolder};
+      text-shadow: ${theme.fontThemeShadow};
+    }
 `
 
 export const CenterDiv = styled.div`
@@ -101,12 +119,15 @@ interface Theme {
   fontColorBolder: string,
   fontColorSubtler: string,
   fontSize: string,
+  fontThemeShadow: string,
   themeColor: string,
   themeColorSubtler: string,
+  themeColorBolder: string,
   backColor: string,
   backColorBolder: string,
   backColorBolder2: string,
   backColorBolder3: string,
+  backColorTransparent: string
 }
 
 function makeTheme(intent: ThemeIntent): Theme {
@@ -114,19 +135,25 @@ function makeTheme(intent: ThemeIntent): Theme {
   const fontColor = dark ? '#bbb' : '#222'
   const subtler = (color: string, k: number) => dark ? hsl(color).darker(k).toString() : hsl(color).brighter(k).toString()
   const bolder = (color: string, k: number) => dark ? hsl(color).brighter(k).toString() : hsl(color).darker(k).toString()
+  const withOpacity = (color: string, opacity: number) => Object.assign(rgb(color), { opacity: opacity })
   const backColor = dark ? '#111' : `#fff`
+  const themeColor = intent.themeColor
+  const themeColorBolder = bolder(themeColor, 2)
   return {
     fontFamily: intent.fontFamily,
     fontColor: fontColor,
     fontColorBolder: bolder(fontColor, 2),
     fontColorSubtler: subtler(fontColor, 2),
     fontSize: '1em',
-    themeColor: intent.themeColor,
-    themeColorSubtler: subtler(intent.themeColor, 2),
+    themeColor: themeColor,
+    themeColorSubtler: subtler(themeColor, 2),
+    themeColorBolder: themeColorBolder,
     backColor: backColor,
     backColorBolder: bolder(backColor, 2),
     backColorBolder2: bolder(backColor, 5),
     backColorBolder3: bolder(backColor, 6),
+    backColorTransparent: Object.assign(rgb(backColor), { opacity: 0.5 }).toString(),
+    fontThemeShadow: `0 0 0.2em ${withOpacity(themeColorBolder, 0.99)}, 0 0 1em ${withOpacity(themeColor, 0.3)}, 0 0 0.4em ${withOpacity(themeColorBolder, 0.7)}`,
   }
 }
 

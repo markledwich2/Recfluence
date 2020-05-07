@@ -10,6 +10,7 @@ import { dateFormat } from '../../common/Utils'
 import { ChannelTags } from './ChannelTags'
 
 import styled from 'styled-components'
+import { HomeLogo, SiteLinks } from '../SiteMenu'
 
 const TitleStyle = styled.div`
   background-color: rgb(22, 22, 22);
@@ -19,7 +20,7 @@ const TitleStyle = styled.div`
   min-height: 8em;
   justify-content: space-between;
 
-  > .Card {
+  > .title {
     display: flex;
     height: 8em;
     margin-left: 1em;
@@ -27,7 +28,7 @@ const TitleStyle = styled.div`
     align-items: center;
   }
 
-  .Search {
+  .search {
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -85,17 +86,20 @@ export class ChannelRelationsTitle extends React.Component<Props, State> {
 
     return (
       <TitleStyle>
-        <div className={'Card'}>
+        <div className='title'>
           {channel == null ? (
-            <div style={{}}>
-              <h2>Recfluence</h2>
+            <div>
+              <div style={{ display: 'flex' }}>
+                <HomeLogo />
+                <SiteLinks />
+              </div>
               <p>Analysis of YouTube's political influence through recommendations</p>
             </div>
           ) : (
               renderChannel(channel)
             )}
         </div>
-        <div className={'Search'} style={{}}>
+        <div className={'search'} style={{}}>
           <SearchChannels model={this.props.model} onSelection={this.props.onSelection} selections={this.state.selections} />
         </div>
       </TitleStyle>

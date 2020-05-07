@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, CSSProperties } from "react"
+import React, { useState, useEffect, useRef, CSSProperties, useContext } from "react"
 import { RouteComponentProps as CProps } from "@reach/router"
 import { ReactiveBase, ReactiveList, DataSearch, MultiList, SelectedFilters, SingleRange, SingleDataList, StateProvider, DateRange } from '@appbaseio/reactivesearch'
 import { theme, media, isGatsbyServer, CenterDiv } from "../MainLayout"
@@ -8,13 +8,19 @@ import { VideoSearchResults, SearchHelp, NoResult } from './VideoSearchResults'
 import { useMediaQuery } from 'react-responsive'
 import { Button } from '../Button'
 import { FilterList as IconFilter, Close as IconClose, List as IconList } from '@styled-icons/material'
+import { TopSiteBar } from '../SiteMenu'
+import { IdToken } from '@auth0/auth0-spa-js'
 
+const Page = styled.div`
+  display:flex; flex-direction:column;
+  height:100vh;
+`
 
-const MainContainer = styled.div`
+const SearchAndFilterPane = styled.div`
     display:flex; flex-direction:column;
-    
+    min-height:0;
     @media (${media.width.small}) {
-      height:100vh;
+      
     }
 
     @media (${media.width.medium}) {
@@ -23,17 +29,14 @@ const MainContainer = styled.div`
 `
 
 const ContentPane = styled.div`
-    padding:1em;
-    @media (${media.width.medium}) {
-        padding: 2em;
-    }
+    padding:0;
     display:flex; flex-direction:column;
     width:100%;
     max-width:1100px;
     margin:0 auto;
 `
 
-const SearchRow = styled.div`
+const SearchTextBoxStyle = styled.div`
     display:flex;
     width:100%;
     input {
@@ -43,8 +46,14 @@ const SearchRow = styled.div`
     }
 `
 
+const SearchPane = styled.div`
+  padding: 1em;
+`
+
 const FiltersPane = styled.div`
-    display:flex; flex-flow:column wrap; justify-content:start;
+    display:none; 
+    flex-flow:column wrap; 
+    justify-content:start;
     background-color: ${theme.backColorBolder};
     min-height:0px; /*needed for column wrap to kick in*/
     padding:0.5em 0.5em;
@@ -128,37 +137,41 @@ const sortOptions: Dictionary<string> = {
 
 export const VideoSearch = ({ }: CProps<{}>) => {
   const [sort, setSort] = useState<SortValue>({ field: '_score', sort: 'desc' })
-  const [filterOpened, setFilterOpened] = useState<boolean>(false)
+  const [filterOpened, setFilterOpened] = useState(false)
+  const [user, setUser] = useState<IdToken>(null)
   const filterOnRight = useMediaQuery({ query: `(${media.width.medium})` })
   const filterVisible = filterOnRight || filterOpened
   const resultsVisible = filterOnRight || !filterOpened
 
   if (isGatsbyServer()) return <div></div>
 
-  return (
-    <div>
-      <ReactiveBase
-        app="caption"
-        url="https://8999c551b92b4fb09a4df602eca47fbc.westus2.azure.elastic-cloud.com:9243"
-        credentials="public:5&54ZPnh!hCg"
-        themePreset="dark"
-        theme={{
-          typography: { fontSize: theme.fontSize, fontFamily: theme.fontFamily },
-          colors: { textColor: theme.fontColor, primaryColor: theme.themeColor }
-        }}
-      >
-        <MainContainer>
-          <ContentPane>
-            <SearchBar />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <SelectedFilters style={{ margin: '0.5em 0px' }} />
-              {!filterOnRight && <div style={{ verticalAlign: 'top' }} >
-                <Button
-                  label={filterOpened ? "Results" : "Filter"}
-                  icon={filterOpened ? <IconList /> : <IconFilter />} onclick={_ => setFilterOpened(!filterOpened)} />
-              </div>}
-            </div>
+  return (
+    <ReactiveBase
+      app="caption"
+      url="https://8999c551b92b4fb09a4df602eca47fbc.westus2.azure.elastic-cloud.com:9243"
+      credentials="public:5&54ZPnh!hCg"
+      themePreset="dark"
+      theme={{
+        typography: { fontSize: theme.fontSize, fontFamily: theme.fontFamily },
+        colors: { textColor: theme.fontColor, primaryColor: theme.themeColor }
+      }}
+    >
+      <Page>
+        <TopSiteBar showLogin style={{ flex: '0 0 auto' }} />
+        <SearchAndFilterPane style={{ flex: '1 1 auto' }}>
+          <ContentPane>
+            <SearchPane>
+              <SearchTexBox />
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <SelectedFilters style={{ margin: '0.5em 0px' }} />
+                {!filterOnRight && <div style={{ verticalAlign: 'top' }} >
+                  <Button
+                    label={filterOpened ? "Results" : "Filter"}
+                    icon={filterOpened ? <IconList /> : <IconFilter />} onclick={_ => setFilterOpened(!filterOpened)} />
+                </div>}
+              </div>
+            </SearchPane>
 
             <ResultsPane id="results" style={{ display: resultsVisible ? 'block' : 'none' }}>
               <StateProvider strict={false} >
@@ -167,10 +180,12 @@ export const VideoSearch = ({ }: CProps<{}>) => {
                   return query ? <ReactiveList
                     componentId="result"
                     react={{ and: ['q', 'views', 'sort', 'ideology', 'channel', 'upload'] }}
-                    render={({ data, error, loading }) => <VideoSearchResults data={data} query={query} error={error} loading={loading} />}
-                    infiniteScroll
+                    render={({ data, error, loading }) =>
+                      <VideoSearchResults data={data} query={query} error={error} loading={loading} />
+                    }
+                    infiniteScroll={user != null}
                     scrollTarget={filterOnRight ? "results" : null}
-                    size={40}
+                    size={30}
                     dataField={sort.field}
                     sortBy={sort.sort}
                     showResultStats={false}
@@ -181,19 +196,17 @@ export const VideoSearch = ({ }: CProps<{}>) => {
               </StateProvider>
             </ResultsPane>
           </ContentPane>
-
           <FiltersPaneComponent setSort={setSort} sort={sort} style={{ display: filterVisible ? 'flex' : 'none' }} />
-
-        </MainContainer>
-      </ReactiveBase >
-    </div>
+        </SearchAndFilterPane>
+      </Page>
+    </ReactiveBase >
   )
 }
 
-const SearchBar: React.FunctionComponent = () => {
+const SearchTexBox: React.FunctionComponent = () => {
   const [query, setQuery] = useState<string>("")
   return (
-    <SearchRow>
+    <SearchTextBoxStyle>
       <DataSearch
         componentId="q"
         filterLabel="Search"
@@ -212,7 +225,7 @@ const SearchBar: React.FunctionComponent = () => {
         value={query}
         autoFocus={true}
       />
-    </SearchRow >
+    </SearchTextBoxStyle >
   )
 }
 

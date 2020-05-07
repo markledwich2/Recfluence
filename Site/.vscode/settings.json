@@ -9,6 +9,7 @@
     "aggs",
     "algoliasearch",
     "appbaseio",
+    "authed",
     "dcolor",
     "lucene",
     "reactivesearch"

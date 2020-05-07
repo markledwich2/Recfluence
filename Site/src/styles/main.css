@@ -1,6 +1,7 @@
 * {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 html,
@@ -17,6 +18,7 @@ input {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   font-size: 1em;
   color: #ccc;
+  
 }
 
 select {
@@ -44,13 +46,6 @@ ul {
   padding: 0px;
 }
 
-b,
-h1,
-h2,
-h3 {
-  color: #fff;
-}
-
 h1,
 h2,
 h3,
@@ -63,10 +58,13 @@ h2 {
   font-size: 1.2em;
 }
 
-a {
-  color: rgb(148, 168, 172);
-  text-decoration: none;
+
+b,
+h1,
+h2,
+h3 {
+  color: #fff;
 }
-a:hover {
-  cursor: pointer;
-}
+
+
+

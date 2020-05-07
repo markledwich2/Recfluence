@@ -20,7 +20,7 @@ interface State {
 
 const ChannelRelationsStyles = styled.div`
   font-size: 11px;
-  @media ${media.width.medium} {
+  @media (${media.width.medium}) {
     font-size: 14px;
   }
 
@@ -30,11 +30,6 @@ const ChannelRelationsStyles = styled.div`
   div.title-details > div {
     margin-bottom: 1px;
   }
-
-  /* common chart elements */
-  /* g.chart line.link {
-      opacity: 0.2;
-    } */
 
   g.chart path.link {
     opacity: 0.4;
@@ -57,7 +52,6 @@ const ChannelRelationsStyles = styled.div`
   /* common chart shapes */
   g.chart g.node .selectable {
     stroke: none;
-    /* transition: all 0.2s; */
   }
 
   g.chart g.node .selectable.dimmed {
@@ -69,7 +63,6 @@ const ChannelRelationsStyles = styled.div`
   }
 
   /* relations chart */
-
   g.chart.relations g.node circle.related {
     opacity: 1;
   }
@@ -208,7 +201,6 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
   }
 
   componentDidMount() {
-
     this.load()
   }
 

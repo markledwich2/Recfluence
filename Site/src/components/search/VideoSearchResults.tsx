@@ -1,4 +1,4 @@
-import React, { FunctionComponent } from "react"
+import React, { FunctionComponent, useContext } from "react"
 import { compactInteger } from "humanize-plus"
 import { dateFormat, secondsToHHMMSS } from "../../common/Utils"
 import { ChannelTags, ChannelTagData } from "../channel_relations/ChannelTags"
@@ -11,6 +11,7 @@ import { Link } from 'gatsby'
 import ReactMarkdown from 'react-markdown/with-html'
 import { Spinner } from '../Spinner'
 import { SadTear as IconSad } from '@styled-icons/fa-solid'
+import { UserContext } from '../UserContext'
 
 interface CaptionSearchResult extends CaptionDocument {
   _doc_count: number
@@ -60,6 +61,30 @@ const HelpStyle = styled.div`
     }
 `
 
+const LoginOverlay = styled.div`
+  position: absolute; 
+  top:0; left:0;
+  width:100%;
+  text-align:center;
+  padding: 1em;
+  margin: 5em 0;
+  font-size: 1.5em;
+  background-color: ${theme.backColorTransparent};
+`
+
+const BlurOverlay = styled.div`
+  position: relative;
+  > div.blurred {
+    position: absolute;
+    top:0; left: 0;
+    width: 100%; height: 100%;
+    backdrop-filter: blur(2px);
+  }
+  > div.blurred.un-authed {
+    backdrop-filter: blur(15px);
+  }
+`
+
 const searchMd = `
 Search titles and captions of political YouTube videos created since Jan 2019. 
 
@@ -97,6 +122,12 @@ export const SearchHelp = <HelpStyle><ReactMarkdown source={searchMd} escapeHtml
 export const VideoSearchResults = ({ data, query, error, loading }: { data: CaptionSearchResult[], query: string, error: string, loading: any }) => {
   if (!query) return <></> // don't show empty results
 
+
+  const { user, logIn } = useContext(UserContext)
+
+  if (!user)
+    data = data.slice(0, 5)
+
   const byVid = _(data).groupBy(c => c.video_id).map(g => {
     const first = g[0]
     const grouped: CaptionSearchResult = _.assign({}, first,
@@ -110,16 +141,19 @@ export const VideoSearchResults = ({ data, query, error, loading }: { data: Capt
     return grouped
   }).value()
 
+
   var words = query ? queryHighlights(query) : []
 
   return <>
-    <div style={{ position: 'relative' }}>
+    {loading && data.length == 0 && <Spinner size="80px" />}
+    <BlurOverlay>
       {byVid.map(d => <VideoSearchResult caption={d} searchWords={words} key={d.caption_id} />)}
-      {loading && <>
-        <div style={{ position: 'absolute', top: '0', left: '0', width: '100%', height: '100%', backdropFilter: 'blur(5px)' }} />
+      {(loading || !user) && <>
+        <div className={user ? "blurred" : "blurred un-authed"} />
       </>}
-    </div>
-    {loading && <Spinner size="80px" />}
+    </BlurOverlay>
+    {!user && <LoginOverlay><a onClick={_ => logIn()}>Log in</a> to enable search</LoginOverlay>}
+    {loading && data.length > 0 && <Spinner size="80px" />}
   </>
 }
 
@@ -163,7 +197,6 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
   var maxCaptions = 4
   return (
     <ResultsRow key={c.caption_id}>
-
       <VideoA id={c.video_id} offset={c.offset_seconds}><img src={c.thumb_high} style={{ verticalAlign: "text-top", width: "300px" }} /></VideoA>
       <div style={{ width: "100%" }}>
         <h2>
