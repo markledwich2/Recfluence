@@ -5,6 +5,7 @@ import { theme, safeLocation } from './MainLayout'
 import { Link } from 'gatsby'
 import { Person as IconUser, ExitToApp as IconLogout } from '@styled-icons/material'
 import { UserContext } from './UserContext'
+import { UserMenu } from './UserMenu'
 
 const HeaderBar = styled.div`
   padding:6px 5px 3px 10px;
@@ -16,35 +17,27 @@ const HeaderBar = styled.div`
 const NavStyle = styled.nav`
   display:flex;
   justify-content:space-between;
-  align-items:flex-end;
-  
+  align-items:center; /* vertical alignment of child items. I'm crap a googling, or this is a secret */
   width:100%;
-  margin: 0;
-
-  > div {
-    margin-bottom: 6px;
-  }
-
-  a, .menu-item {
-    vertical-align: bottom;
-  }
 
   .menu-item {
-    padding: 0 1em;
+    padding-left: 1em;
   }
   
-  a {
+  .text-links a {
     text-transform: uppercase;
   }
-  a.active {
+
+  .text-links a.active {
     color: ${theme.themeColorBolder};
     text-shadow: ${theme.fontThemeShadow};
   }
-  .icon, .text-icon {
+
+  /* .icon, .text-icon {
     height: 1.7em;
     position:relative;
     top:0.2em;
-  }
+  } */
 `
 
 const LogoStyle = styled.img`
@@ -80,26 +73,11 @@ export const SiteLinks = ({ showLogin }: ShowLoginProps) => {
   const userCtx = useContext(UserContext)
   const user = userCtx?.user
 
-  return <>
-    <NavStyle>
-      <div>
-        <LinkA to='/'>Flows</LinkA>
-        <LinkA to='/search/'>Search</LinkA>
-      </div>
-      {showLogin &&
-        <div>
-          {user ?
-            <>
-              <span className='menu-item'> {user?.name ?? '(no name)'}
-                <a onClick={() => userCtx?.logOut()}> <IconLogout className='icon' title='Log out' /></a>
-              </span>
-            </>
-            : <a className='menu-item' onClick={() => {
-              if (!userCtx) return
-              userCtx.logIn()
-            }}>Log&nbsp;In</a>}
-        </div>
-      }
-    </NavStyle>
-  </>
+  return <NavStyle>
+    <div className="text-links">
+      <LinkA to='/'>Flows</LinkA>
+      <LinkA to='/search/'>Search</LinkA>
+    </div>
+    {showLogin && <UserMenu />}
+  </NavStyle>
 }

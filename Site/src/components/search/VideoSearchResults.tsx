@@ -68,13 +68,18 @@ const ResultsPane = styled.div`
 
 const LoginOverlay = styled.div`
   position: absolute; 
-  top:0; left:0;
+  top:0px; left:0px;
   width:100%;
-  text-align:center;
-  padding: 1em;
-  margin: 5em 0;
-  font-size: 1.5em;
-  background-color: ${theme.backColorTransparent};
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+
+  > div {
+    max-width:500px;
+    padding: 1em 2em;
+    margin: 5em auto;
+    background-color: ${theme.backColorTransparent};
+  }
 `
 
 const BlurOverlay = styled.div`
@@ -157,7 +162,12 @@ export const VideoSearchResults = ({ data, query, error, loading }: { data: Capt
         <div className={user ? "blurred" : "blurred un-authed"} />
       </>}
     </BlurOverlay>
-    {!user && <LoginOverlay><a onClick={_ => logIn()}>Log in</a> to enable search</LoginOverlay>}
+    {!user && <LoginOverlay><div>
+      <big><a onClick={_ => logIn()}>Sign in</a> to enable search</big><br /><br />
+        Consider your searches public information. This service is free (for now) but we want to be are to use the search data however we wish in the future.<br /><br />
+
+        Please use responsibly.
+        </div></LoginOverlay>}
     {loading && data.length > 0 && <Spinner size="80px" />}
   </ResultsPane>
 }
