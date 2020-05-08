@@ -26,6 +26,9 @@ const VidePageDiv = styled.div`
   max-width:1024px;
   margin:0 auto;
   position:relative;
+  display:flex;
+  flex-direction:column;
+  min-height:0px; /* to get inner overflow-y:auto to work: intermediate divs must all be display:flex and min-hight:0 */
 `
 
 const ContentDiv = styled.div`

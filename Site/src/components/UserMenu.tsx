@@ -16,6 +16,7 @@ const ProfileIcon = styled.img`
 
 const MainDiv = styled.div`
   position:relative;
+  padding:0 5px;
 `
 
 const UserMenuDiv = styled.div`
@@ -29,7 +30,7 @@ const UserMenuDiv = styled.div`
 
   width:200px;
   max-width:90vw;
-
+  
   div.profile {
     text-align:center;
     padding:1em;
