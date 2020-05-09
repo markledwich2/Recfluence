@@ -211,7 +211,7 @@ namespace YtCli {
 
     public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
       var pipeCtx = ctx.Scope.Resolve<IPipeCtx>();
-      await pipeCtx.Run((YtSearch s) => s.CaptionIndex(ctx.Option.FullLoad, ctx.Option.Limit), location: ctx.Option.Location, log: ctx.Log);
+      await pipeCtx.Run((YtSearch s) => s.SyncToElastic(ctx.Option.FullLoad, ctx.Option.Limit), location: ctx.Option.Location, log: ctx.Log);
       return ExitCode.Success;
     }
   }

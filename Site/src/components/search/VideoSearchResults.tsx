@@ -19,8 +19,10 @@ interface CaptionSearchResult extends CaptionDocument {
 }
 
 interface TimedCaption {
+  caption_id: string
   offset_seconds: number
   caption: string
+  part: CaptionPart
 }
 
 export interface CaptionDocument {
@@ -41,7 +43,10 @@ export interface CaptionDocument {
   upload_date: Date
   views: number
   url: string
+  part: CaptionPart
 }
+
+type CaptionPart = 'Caption' | 'Title' | 'Description' | 'Keywords'
 
 const HelpStyle = styled.div`
   padding:1em;
@@ -127,7 +132,12 @@ Use \`~N\` to match N character different. E.g. \`Utilitarian~3\` will match \`U
 
 export const SearchHelp = <HelpStyle><ReactMarkdown source={searchMd} escapeHtml={false} /></HelpStyle>
 
-
+const captionPartOrder: { [P in CaptionPart]: number } = {
+  Title: 0,
+  Description: 1,
+  Keywords: 2,
+  Caption: 3,
+}
 
 export const VideoSearchResults = ({ data, query, error, loading }: { data: CaptionSearchResult[], query: string, error: string, loading: any }) => {
   if (!query) return <></> // don't show empty results
@@ -142,8 +152,11 @@ export const VideoSearchResults = ({ data, query, error, loading }: { data: Capt
     const first = g[0]
     const grouped: CaptionSearchResult = _.assign({}, first,
       {
-        captions: _(g).sortBy(c => c.offset_seconds)
+        captions: _(g).sortBy(c => `${captionPartOrder[c.part]}.${c.offset_seconds}`)
+          .filter(c => c.part != 'Title') // don't display title separately
           .map(c => ({
+            caption_id: c.caption_id,
+            part: c.part,
             offset_seconds: c.offset_seconds,
             caption: c.caption
           })).value()
@@ -198,6 +211,18 @@ const DetailsRow = styled.div`
     }
 `
 
+const CaptionP = styled.p`
+  padding-bottom:0.3em;
+
+  .part-name {
+    color:${theme.fontColorSubtler}
+  }
+
+  .caption.part-Description, .caption.part-Keywords {
+    color:${theme.fontColorSubtler}
+  }
+`
+
 const VideoA: FunctionComponent<{ id: string, offset: number }> = ({ id, offset, children }) =>
   <Link to={`/video/${id}?t=${offset}`}>{children}</Link>
 
@@ -231,14 +256,16 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
         </div>
         <span>
           {c.captions.slice(0, maxCaptions).map(t => (
-            <p key={t.offset_seconds} style={{ paddingBottom: "0.3em" }}>
-              <VideoA id={c.video_id} offset={t.offset_seconds}>{secondsToHHMMSS(t.offset_seconds)} </VideoA>
+            <CaptionP key={t.caption_id}>
+              {t.part == 'Keywords' && <span className='part-name'>keywords: </span>}
+              {t.part == 'Caption' && <VideoA id={c.video_id} offset={t.offset_seconds}>{secondsToHHMMSS(t.offset_seconds)}</VideoA>}
               <Highlighter
                 searchWords={p.searchWords}
                 autoEscape
                 textToHighlight={t.caption}
+                className={`caption part-${t.part}`}
               />
-            </p>
+            </CaptionP>
           ))}
           {c.captions.length > maxCaptions ? <p>{c.captions.length - maxCaptions} more...</p> : <></>}
         </span>

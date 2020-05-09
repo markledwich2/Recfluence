@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,15 +8,19 @@ using Dapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Nest;
 using Newtonsoft.Json;
 using SysExtensions.Serialization;
+using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
+using YtReader.Search;
+using TimeUnit = Humanizer.Localisation.TimeUnit;
 
 namespace YtFunctions {
   public class YtData {
     /// <summary>Use the Json.net defaults because we want to keep original name casings so that we aren't re-casing the
-    ///   databse in different formats</summary>
+    ///   db in different formats</summary>
     static readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {Formatting = Formatting.None};
     readonly AsyncLazy<FuncCtx, ExecutionContext> Ctx;
 
@@ -25,27 +30,34 @@ namespace YtFunctions {
     public async Task<HttpResponseMessage> Video([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "video/{videoId}")]
       HttpRequest req, string videoId, ExecutionContext exec) =>
       await Ctx.Run(exec, async c => {
-        var db = c.Scope.Resolve<AppDb>();
-        using var conn = await db.OpenConnection();
-        var videoTask = conn.QueryFirstOrDefaultAsync<DbVideo>("select * from video_latest where video_id = :video_id", new {video_id = videoId});
-        var video = await videoTask;
-        if (video == null) return new VideoResponse { error = $"Video {videoId} not found"}.JsonResponse(JCfg);
-        var channel = await conn.QueryFirstAsync<DbChannel>("select * from channel_latest where channel_id= :channel_id", new {channel_id = video.CHANNEL_ID});
-        channel.TAGS = channel.TAGS.Replace("\n", " ");
-        var res = new VideoResponse {
-          video = video,
-          channel = channel
-        };
-        return res.JsonResponse(JCfg);
+        var es = c.Scope.Resolve<ElasticClient>();
+        var videoRes = await es.GetAsync<EsVideo>(videoId);
+        var video = videoRes?.Source;
+        if (video == null) return new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent($"video `{videoId}` not found")};
+        var channelRes = await es.GetAsync<EsChannel>(video.channel_id);
+        var channel = channelRes.Source;
+        if(channel == null) return new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent($"channel `{video.channel_id}` not found")};
+        return new { video, channel}.JsonResponse(JCfg);
       });
 
     [FunctionName("captions")]
     public async Task<HttpResponseMessage> Captions([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "captions/{videoId}")]
       HttpRequest req, string videoId, ExecutionContext exec) =>
       await Ctx.Run(exec, async c => {
-        var db = c.Scope.Resolve<AppDb>();
-        using var conn = await db.OpenConnection();
-        var captions = await conn.QueryAsync<DbCaption>("select * from caption where video_id = :video_id order by offset_seconds", new {video_id = videoId});
+        var es = c.Scope.Resolve<ElasticClient>();
+        var res = await es.SearchAsync<EsCaption>(s => s
+          .Source(sf => sf.Includes(i => i.Fields(
+            f => f.caption_id,
+            f => f.video_id,
+            f => f.caption,
+            f => f.offset_seconds
+          )))
+          .Query(q => q.Term(t => t.video_id, videoId) && q.Term(t => t.part, nameof(CaptionPart.Caption)))
+          .Sort(o => o.Ascending(f => f.offset_seconds))
+          .Size(5000)
+        );
+          
+        var captions = res.Hits.Select(h => h.Source).ToArray();
         return captions.JsonResponse(JCfg);
       });
 

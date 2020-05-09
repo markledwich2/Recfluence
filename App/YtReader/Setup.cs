@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Common;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Builder;
+using Autofac.Util;
 using Elasticsearch.Net;
 using Humanizer;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -220,14 +223,25 @@ namespace YtReader {
       b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();
       b.Register(_ => cfg.DataStore(log, cfg.Storage.ResultsPath)).Keyed<ISimpleFileStore>(StoreType.Results).SingleInstance();
       b.Register(_ => cfg.DataStore(log, cfg.Storage.DbPath)).Keyed<ISimpleFileStore>(StoreType.Db).SingleInstance();
-      //b.Register(_ => cfg.DataStore(log, cfg.Storage.PipePath)).Keyed<ISimpleFileStore>(StoreType.Pipe).SingleInstance();
       b.Register(_ => cfg.DataStore(log, cfg.Storage.PrivatePath)).Keyed<ISimpleFileStore>(StoreType.Private).SingleInstance();
 
       b.RegisterType<YtClient>();
-      b.Register(_ => new ElasticClient(new ConnectionSettings(
-          cfg.Elastic.CloudId,
-          new BasicAuthenticationCredentials(cfg.Elastic.Creds.Name, cfg.Elastic.Creds.Secret))
-        .DefaultIndex("caption")));
+
+      b.Register(_ => {
+          var esMappngTypes = typeof(EsIndex).Assembly.GetLoadableTypes()
+            .Select(t => (t, es: t.GetCustomAttribute<ElasticsearchTypeAttribute>(), table: t.GetCustomAttribute<TableAttribute>()))
+            .Where(t => t.es != null)
+            .ToArray();
+          if (esMappngTypes.Any(t => t.table == null))
+            throw new InvalidOperationException("All document types must have a mapping to and index. Add a Table(\"Index name\") attribute.");
+          var clrMap = esMappngTypes.Select(t => new ClrTypeMapping(t.t) {IdPropertyName = t.es.IdProperty, IndexName = t.table.Name});
+          var cs = new ConnectionSettings(
+            cfg.Elastic.CloudId,
+            new BasicAuthenticationCredentials(cfg.Elastic.Creds.Name, cfg.Elastic.Creds.Secret)
+            ).DefaultMappingFor(clrMap);
+          return new ElasticClient(cs);
+        }
+      ).SingleInstance();
 
       b.RegisterType<YtStore>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>());
       b.RegisterType<YtResults>().WithKeyedParam(StoreType.Results, Typ.Of<ISimpleFileStore>());

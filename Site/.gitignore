@@ -65,3 +65,5 @@ yarn-error.log
 #tableau recovery
 *.twbr
 
+__*__
+__*__.json

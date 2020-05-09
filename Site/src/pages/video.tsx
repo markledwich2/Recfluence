@@ -4,11 +4,12 @@ import { Video } from "../components/search/VideoPage"
 import { VideoSearch } from '../components/search/VideoSearch'
 import { MainLayout } from '../components/MainLayout'
 import { TopSiteBar } from '../components/SiteMenu'
+import { esCfgFromEnv } from '../common/Elastic'
 
 const VideoPage = () => (
     <MainLayout>
         <Router >
-            <Video path="video/:videoId" />
+            <Video path="video/:videoId" esCfg={esCfgFromEnv()} />
             <BlankPage path="video" default />
         </Router>
     </MainLayout>

@@ -60,7 +60,7 @@ namespace YtFunctions {
         logCfg = logCfg.WriteTo.Seq(cfg.SeqUrl.OriginalString, LogEventLevel.Debug);
       logCfg = logCfg.YtEnrich(root.Env, nameof(YtFunctions), await Setup.GetVersion());
       var startSeqTask = Setup.StartSeqIfNeeded(cfg);
-      return logCfg.CreateLogger();
+      return logCfg.MinimumLevel.Debug().CreateLogger();
     }
   }
 

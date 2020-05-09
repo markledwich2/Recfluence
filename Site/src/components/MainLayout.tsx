@@ -142,8 +142,8 @@ function makeTheme(intent: ThemeIntent): Theme {
   return {
     fontFamily: intent.fontFamily,
     fontColor: fontColor,
-    fontColorBolder: bolder(fontColor, 2),
-    fontColorSubtler: subtler(fontColor, 2),
+    fontColorBolder: bolder(fontColor, 1),
+    fontColorSubtler: subtler(fontColor, 0.5),
     fontSize: '1em',
     themeColor: themeColor,
     themeColorSubtler: subtler(themeColor, 2),

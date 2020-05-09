@@ -8,5 +8,7 @@ declare namespace NodeJS {
         FUNC_URL: string
         AUTH0_DOMAIN: string
         AUTH0_CLIENTID: string
+        ES_URL: string
+        ES_CREDS: string
     }
 }

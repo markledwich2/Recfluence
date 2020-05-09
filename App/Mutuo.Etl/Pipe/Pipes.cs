@@ -204,7 +204,7 @@ namespace Mutuo.Etl.Pipe {
         return Convert.ChangeType(value, type);
       }
       catch (Exception ex) {
-        throw new NotImplementedException($"unable to convert arg deserialized as {value.GetType()} to parameter type {type} : {ex.Message}", ex);
+        throw new NotImplementedException($"unable to convert arg deserialized as {value?.GetType()} to parameter type {type} : {ex.Message}", ex);
       }
     }
 

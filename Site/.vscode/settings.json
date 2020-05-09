@@ -1,5 +1,7 @@
 {
   "files.exclude": {
+    "__*__.json": true,
+    "__*__": true,
     ".cache": true,
     "node_modules": true
   },
@@ -12,6 +14,7 @@
     "authed",
     "dcolor",
     "lucene",
+    "manoel",
     "reactivesearch"
   ],
   "typescript.preferences.quoteStyle": "single",

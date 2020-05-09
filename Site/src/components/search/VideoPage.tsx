@@ -4,15 +4,16 @@ import { compactInteger } from 'humanize-plus'
 import React, { useEffect, useState } from 'react'
 import YouTube from 'react-youtube'
 import styled from 'styled-components'
-import { FuncClient, VideoData, CaptionDb } from '../../common/DbModel'
+import { FuncClient, EsCaption, VideoData } from '../../common/DbModel'
 import '../../types/NodeTypings.d.ts'
 import { dateFormat, secondsToHHMMSS } from '../../common/Utils'
-import { TextPage, theme } from '../MainLayout'
+import { theme } from '../MainLayout'
 import { ChannelData } from '../../common/YtModel'
 import { useLocation } from '@reach/router'
 import queryString from 'query-string'
 import scrollIntoView from 'scroll-into-view-if-needed'
 import { TopSiteBar } from '../SiteMenu'
+import { EsCfg } from '../../common/Elastic'
 
 const MainPageDiv = styled.div`
   height:100vh;
@@ -83,20 +84,13 @@ const VideoStatsDiv = styled.div`
   }
 `
 
-interface VideoProps extends RouteComponentProps {
-  videoId?: string
-}
+interface VideoProps extends RouteComponentProps { videoId?: string, esCfg: EsCfg }
 
-export const Video: React.FC<VideoProps> = (props) => {
-  const { videoId } = props
-
+export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
   const [video, setVideoData] = useState<VideoData>()
-  const [captions, setCaptions] = useState<CaptionDb[]>()
-  //const [offset, setOffset] = useState<number>()
+  const [captions, setCaptions] = useState<EsCaption[]>()
   const [player, setPlayer] = useState<YT.Player>(null)
 
-
-  const v = video?.video
   const location = useLocation()
   const urlTime = +queryString.parse(location.search).t ?? 0
   const [time, setTime] = useState<number>(urlTime)
@@ -104,21 +98,12 @@ export const Video: React.FC<VideoProps> = (props) => {
   // get data for video from function
   useEffect(() => {
     async function renderVideo() {
-      const captionTask = FuncClient.getCaptions(videoId)
-      const videoTask = await FuncClient.getVideo(videoId)
-      setVideoData(await videoTask)
-      setCaptions(await captionTask)
+      //esMatch<EsCaption>(esCfg, { video_id: 'sgNEtq_b2dY' }).then(({ items }) => setCaptions(items))
+      FuncClient.getCaptions(videoId).then(c => setCaptions(c))
+      FuncClient.getVideo(videoId).then(v => setVideoData(v))
     }
     renderVideo()
   }, [])
-
-  // scroll to time if there is on in the url
-  // useEffect(() => {
-  //   if (!urlTime) return
-  //   const e = document.getElementById(urlTime.toString())
-  //   if (e)
-  //     e.scrollIntoView()
-  // })
 
   const onCaptionChange = (player: YT.Player) => {
     if (player.getPlayerState() == YT.PlayerState.PLAYING) {
@@ -147,6 +132,8 @@ export const Video: React.FC<VideoProps> = (props) => {
 
   const fInt = (n?: number) => n ? compactInteger(n) : ''
   const fDate = (d?: string) => d ? dateFormat(parseISO(d)) : ''
+  const v = video?.video
+  const c = video?.channel
 
   return (
     <MainPageDiv>
@@ -154,32 +141,32 @@ export const Video: React.FC<VideoProps> = (props) => {
       <VidePageDiv>
         <VideoContainer><YouTube videoId={videoId} onReady={e => onVideoRender(e)} opts={{ height: '100%', width: '100%' }} /></VideoContainer>
         <ContentDiv>
-          <VideoTitle>{v?.VIDEO_TITLE}</VideoTitle>
+          <VideoTitle>{v?.video_title}</VideoTitle>
           <VideoStatsDiv>
-            {v && <>
-              <span><b>{fInt(v?.VIEWS)}</b> views</span>
-              <span>{fDate(v?.UPLOAD_DATE)}</span>
+            {video && <>
+              <span><b>{fInt(v?.views)}</b> views</span>
+              <span>{fDate(v?.upload_date)}</span>
               <span style={{ marginLeft: 'auto' }}>
-                <span><b>{fInt(v?.LIKES)}</b> likes</span>
-                <span><b>{fInt(v?.DISLIKES)}</b> dislikes</span>
+                <span><b>{fInt(v?.likes)}</b> likes</span>
+                <span><b>{fInt(v?.dislikes)}</b> dislikes</span>
               </span>
             </>}
           </VideoStatsDiv>
         </ContentDiv>
         <CaptionDiv id="captions">
           <ChannelTitle channel={video?.channel} />
-          <DescriptionDiv>{v?.DESCRIPTION}</DescriptionDiv>
+          <DescriptionDiv>{v?.description}</DescriptionDiv>
           <div>
             {captions?.map((c, i) => {
               var cNext = captions[i + 1]
               var playerTime = player?.getCurrentTime() ?? time
-              var currentCaption = c.OFFSET_SECONDS <= playerTime && cNext?.OFFSET_SECONDS > playerTime //TODO: look at current time in video
+              var currentCaption = c.offset_seconds <= playerTime && cNext?.offset_seconds > playerTime //TODO: look at current time in video
               return (
-                <div key={c.OFFSET_SECONDS} id={c.OFFSET_SECONDS.toString()} className={'caption' + (currentCaption ? ' current' : '')}>
-                  <a onClick={() => onCaptionClick(c.OFFSET_SECONDS)}>
-                    {secondsToHHMMSS(c.OFFSET_SECONDS)}
+                <div key={c.offset_seconds} id={c.offset_seconds.toString()} className={'caption' + (currentCaption ? ' current' : '')}>
+                  <a onClick={() => onCaptionClick(c.offset_seconds)}>
+                    {secondsToHHMMSS(c.offset_seconds)}
                   </a>
-                  <i> </i>{c.CAPTION}<br />
+                  <i> </i>{c.caption}<br />
                 </div>
               ) ?? <></>
             })}

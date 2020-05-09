@@ -10,6 +10,7 @@ import { Button } from '../Button'
 import { FilterList as IconFilter, Close as IconClose, List as IconList } from '@styled-icons/material'
 import { TopSiteBar } from '../SiteMenu'
 import { IdToken } from '@auth0/auth0-spa-js'
+import { EsCfg } from '../../common/Elastic'
 
 const Page = styled.div`
   display:flex; flex-direction:column;
@@ -131,7 +132,7 @@ const sortOptions: Dictionary<string> = {
   'Uploaded': 'upload_date'
 }
 
-export const VideoSearch = ({ }: CProps<{}>) => {
+export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
   const [sort, setSort] = useState<SortValue>({ field: '_score', sort: 'desc' })
   const [filterOpened, setFilterOpened] = useState(false)
   const [user, setUser] = useState<IdToken>(null)
@@ -144,9 +145,9 @@ export const VideoSearch = ({ }: CProps<{}>) => {
 
   return (
     <ReactiveBase
-      app="caption"
-      url="https://8999c551b92b4fb09a4df602eca47fbc.westus2.azure.elastic-cloud.com:9243"
-      credentials="public:5&54ZPnh!hCg"
+      app="caption2"
+      url={esCfg.url}
+      credentials={esCfg.creds}
       themePreset="dark"
       theme={{
         typography: { fontSize: theme.fontSize, fontFamily: theme.fontFamily },
@@ -187,6 +188,7 @@ export const VideoSearch = ({ }: CProps<{}>) => {
                     showResultStats={false}
                     showLoader={false}
                     renderNoResults={() => <NoResult />}
+                    onError={e => console.log("search error:", e)}
                   /> : SearchHelp
                 }}
               </StateProvider>
@@ -206,7 +208,7 @@ const SearchTexBox: React.FunctionComponent = () => {
       <DataSearch
         componentId="q"
         filterLabel="Search"
-        dataField={["caption", "video_title"]}
+        dataField={["caption"]}
         placeholder="Search video captions"
         autosuggest={false}
         showIcon={false}
@@ -266,25 +268,26 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
       className="multi-list ideology"
       componentId="ideology"
       title="Ledwich & Zaitsev Group" filterLabel="Group"
-      dataField="ideology.keyword"
+      dataField="ideology"
       showCheckbox showCount showMissing
       showSearch={false}
       react={{ and: ['q', 'views', 'upload'] }}
       style={FilteredListStyle}
       defaultQuery={_ => ({
         aggs: {
-          "ideology.keyword": {
+          "ideology": {
             aggs: {
               video_count: {
                 cardinality: {
-                  field: "video_id.keyword"
+                  field: "video_id"
                 }
               }
             },
             terms: {
-              field: "ideology.keyword",
+              field: "ideology",
               size: 50,
-              order: { "video_count": "desc" }, "missing": "N/A"
+              order: { "video_count": "desc" },
+              missing: "N/A"
             }
           }
         }
@@ -312,14 +315,15 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
             aggs: {
               video_count: {
                 cardinality: {
-                  field: "video_id.keyword"
+                  field: "video_id"
                 }
               }
             },
             terms: {
               field: "channel_title.keyword",
               size: 100,
-              order: { "video_count": "desc" }, "missing": "N/A"
+              order: { "video_count": "desc" },
+              missing: "N/A"
             }
           }
         }
