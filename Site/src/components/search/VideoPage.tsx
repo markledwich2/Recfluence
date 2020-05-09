@@ -99,22 +99,26 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
   useEffect(() => {
     async function renderVideo() {
       //esMatch<EsCaption>(esCfg, { video_id: 'sgNEtq_b2dY' }).then(({ items }) => setCaptions(items))
-      FuncClient.getCaptions(videoId).then(c => setCaptions(c))
+      FuncClient.getCaptions(videoId).then(c => setCaptions(c)).then(() => scrollToCurrentTime())
       FuncClient.getVideo(videoId).then(v => setVideoData(v))
     }
     renderVideo()
   }, [])
 
-  const onCaptionChange = (player: YT.Player) => {
-    if (player.getPlayerState() == YT.PlayerState.PLAYING) {
+  const checkVideoTime = (player: YT.Player) => {
+    if (player.getPlayerState() == YT.PlayerState.PLAYING && player.getCurrentTime() > 0) {
       setTime(player.getCurrentTime()) // if it is playing, update the state of the control to match
-      const captions = document.querySelector('#captions')
-      const lastScroll = captions.getAttribute('data-last-scroll')
-      const e = document.querySelector('#captions .current.caption')
-      if (e && lastScroll != e.id) {
-        scrollIntoView(e, { behavior: 'smooth', scrollMode: 'if-needed' })
-        captions.setAttribute('data-last-scroll', e.id)
-      }
+      scrollToCurrentTime()
+    }
+  }
+
+  const scrollToCurrentTime = () => {
+    const captions = document.querySelector('#captions')
+    const lastScroll = captions.getAttribute('data-last-scroll')
+    const e = document.querySelector('#captions .current.caption')
+    if (e && lastScroll != e.id) {
+      scrollIntoView(e, { behavior: 'smooth', scrollMode: 'if-needed' })
+      captions.setAttribute('data-last-scroll', e.id)
     }
   }
 
@@ -123,7 +127,7 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
     setPlayer(player)
     if (urlTime)
       player?.seekTo(urlTime, true)
-    window.setInterval(() => onCaptionChange(player), 1000) // update component state with current periodically
+    window.setInterval(() => checkVideoTime(player), 1000) // update component state with current periodically
   }
 
   const onCaptionClick = (offset: number) => {
@@ -159,8 +163,7 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
           <div>
             {captions?.map((c, i) => {
               var cNext = captions[i + 1]
-              var playerTime = player?.getCurrentTime() ?? time
-              var currentCaption = c.offset_seconds <= playerTime && cNext?.offset_seconds > playerTime //TODO: look at current time in video
+              var currentCaption = c.offset_seconds <= time && cNext?.offset_seconds > time
               return (
                 <div key={c.offset_seconds} id={c.offset_seconds.toString()} className={'caption' + (currentCaption ? ' current' : '')}>
                   <a onClick={() => onCaptionClick(c.offset_seconds)}>

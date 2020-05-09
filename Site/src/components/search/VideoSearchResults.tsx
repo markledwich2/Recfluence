@@ -221,10 +221,13 @@ const CaptionP = styled.p`
   .caption.part-Description, .caption.part-Keywords {
     color:${theme.fontColorSubtler}
   }
+  .video-offset-link {
+    margin-right:0.5em;
+  }
 `
 
-const VideoA: FunctionComponent<{ id: string, offset: number }> = ({ id, offset, children }) =>
-  <Link to={`/video/${id}?t=${offset}`}>{children}</Link>
+const VideoA: FunctionComponent<{ id: string, offset: number, className?: string }> = ({ id, offset, children, className }) =>
+  <Link to={`/video/${id}?t=${offset}`} className={className}>{children}</Link>
 
 
 export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords: string[] }) => {
@@ -258,7 +261,7 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
           {c.captions.slice(0, maxCaptions).map(t => (
             <CaptionP key={t.caption_id}>
               {t.part == 'Keywords' && <span className='part-name'>keywords: </span>}
-              {t.part == 'Caption' && <VideoA id={c.video_id} offset={t.offset_seconds}>{secondsToHHMMSS(t.offset_seconds)}</VideoA>}
+              {t.part == 'Caption' && <VideoA id={c.video_id} offset={t.offset_seconds} className='video-offset-link'>{secondsToHHMMSS(t.offset_seconds)}</VideoA>}
               <Highlighter
                 searchWords={p.searchWords}
                 autoEscape

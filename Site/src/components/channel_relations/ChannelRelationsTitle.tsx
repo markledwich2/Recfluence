@@ -14,7 +14,7 @@ import { HomeLogo, SiteLinks } from '../SiteMenu'
 
 const TitleStyle = styled.div`
   background-color: rgb(22, 22, 22);
-  padding: 0px;
+  padding: 0px 0.5em;
   display: flex;
   flex-wrap: wrap;
   min-height: 8em;
@@ -23,7 +23,6 @@ const TitleStyle = styled.div`
   > .title {
     display: flex;
     height: 8em;
-    margin-left: 1em;
     flex: 3 30em;
     align-items: center;
   }
