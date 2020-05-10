@@ -19,10 +19,6 @@ interface State {
 }
 
 const ChannelRelationsStyles = styled.div`
-  font-size: 11px;
-  @media (${media.width.medium}) {
-    font-size: 14px;
-  }
 
   height:100vh;
     
@@ -31,75 +27,81 @@ const ChannelRelationsStyles = styled.div`
     margin-bottom: 1px;
   }
 
-  g.chart path.link {
-    opacity: 0.4;
-    fill: none;
+  g.chart {
+    path.link {
+      opacity: 0.4;
+      fill: none;
+    }
+
+    text {
+      text-shadow: -1px 1 black, 1 1px black, 1px 1 black, 0 -1px black;
+      fill: #eee;
+    }
+
+    text tspan.subtitle {
+      fill: #aaa;
+    }
+
+    text tspan.subtitle-bold {
+      fill: #ccc;
+    }
+
+    /* common chart shapes */
+    g.node {
+      .selectable {
+        stroke: none;
+      }
+
+      .selectable.dimmed {
+      opacity: 0.5;
+      }
+    }
+
+    text.label.selected {
+      font-weight: bold;
+    }
   }
 
-  g.chart text {
-    text-shadow: -1px 1 black, 1 1px black, 1px 1 black, 0 -1px black;
-    fill: #eee;
+  g.chart.relations {
+    /* relations chart */
+    g.node circle.related {
+      opacity: 1;
+    }
+
+    g.labels rect,
+    g.labels circle {
+      display: none;
+    }
+
+    line.link {
+      display: none;
+    }
+    line.link.related {
+      display: inherit;
+    }
+
+    g.label {
+       text {
+        display: none;
+        fill: white;
+      }
+
+      text.selected, text.highlighted, text.related {
+        display: inherit;
+      }
+
+       text.related {
+        font-size: 0.9em;
+        fill-opacity: 0.8;
+      }
+
+       text.highlighted, text.selected {
+        font-size: 1em;
+        fill-opacity: 1;
+      }
+    }
   }
 
-  g.chart text tspan.subtitle {
-    fill: #aaa;
-  }
-
-  g.chart text tspan.subtitle-bold {
-    fill: #ccc;
-  }
-
-  /* common chart shapes */
-  g.chart g.node .selectable {
-    stroke: none;
-  }
-
-  g.chart g.node .selectable.dimmed {
-    opacity: 0.5;
-  }
-
-  g.chart text.label.selected {
-    font-weight: bold;
-  }
-
-  /* relations chart */
-  g.chart.relations g.node circle.related {
-    opacity: 1;
-  }
-
-  g.chart.relations g.labels rect,
-  g.chart.relations g.labels circle {
-    display: none;
-  }
-
-  g.chart.relations line.link {
-    display: none;
-  }
-  g.chart.relations line.link.related {
-    display: inherit;
-  }
-
-  g.chart.relations g.label text {
-    display: none;
-    fill: white;
-  }
-
-  g.chart.relations g.label text.selected,
-  g.chart.relations g.label text.highlighted,
-  g.chart.relations g.label text.related {
-    display: inherit;
-  }
-
-  g.chart.relations g.label text.related {
-    font-size: 0.9em;
-    fill-opacity: 0.8;
-  }
-
-  g.chart.relations g.label text.highlighted,
-  g.chart.relations g.label text.selected {
-    font-size: 1em;
-    fill-opacity: 1;
-  }
 
   /* flows chart */
   g.chart.flows g.node .selectable.dimmed {
@@ -127,11 +129,10 @@ const ChannelRelationsStyles = styled.div`
   }
 
   div.footer > * {
-    padding-right: 2em;
+    padding: 0em 2em 0.5em 0.5em;
   }
 
   @media all and (min-width: 1200px) {
-
     div.footer {
       position: absolute;
       bottom: 1px;
@@ -145,6 +146,11 @@ const MainChartStyled = styled.div`
     padding: 0px;
   }
 
+  font-size: 11px;
+  @media (${media.width.medium}) {
+    font-size: 14px;
+  }
+
   display: flex;
   flex-flow: row wrap;
   align-items: stretch;
@@ -154,6 +160,7 @@ const MainChartStyled = styled.div`
   > .Relations {
     height: 50vh;
     min-height: 400px;
+    width: 100%;
     flex: 1 100%;
   }
 
@@ -162,8 +169,8 @@ const MainChartStyled = styled.div`
     height: 50vh;
     min-height: 800px;
     flex: 1 100%;
+    width: 100%;
   }
-
   
   @media all and (min-width: 1200px) {
     height: 100%;
@@ -269,40 +276,33 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
         />
 
         <MainChartStyled>
-          {model ?
-            <>
-              <div className={'Relations'}>
-                <ContainerDimensions>
-                  {({ height, width }) => (
-                    <ChannelRelations
-                      ref={r => (this.relations = r)}
-                      height={height}
-                      width={width}
-                      model={model}
-                      onSelection={this.onSelection.bind(this)}
-                    />
-                  )}
-                </ContainerDimensions>
-              </div>
-              <div className={'Flows'}>
-                <ContainerDimensions>
-                  {({ height, width }) => (
-                    <RecFlows
-                      ref={r => (this.flows = r)}
-                      height={height}
-                      width={width}
-                      model={model}
-                      onSelection={this.onSelection.bind(this)}
-                    />
-                  )}
-                </ContainerDimensions>
-              </div>
-            </>
-            :
+          <div className='Relations'>
+            {model &&
+              <ContainerDimensions>
+                {({ height, width }) => (
+                  <ChannelRelations
+                    ref={r => (this.relations = r)}
+                    height={height}
+                    width={width}
+                    model={model}
+                    onSelection={this.onSelection.bind(this)}
+                  />
+                )}
+              </ContainerDimensions>}
+          </div>
+          <div className='Flows'>
+            {model && <ContainerDimensions>
+              {({ height, width }) => {
+                console.log('Flows size: ', width, height)
+                return (<RecFlows ref={r => (this.flows = r)} height={height} width={width} model={model} onSelection={this.onSelection.bind(this)} />)
+              }}
+            </ContainerDimensions>
+            }
+          </div>
+          {!model &&
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
               <img src='spinner.png'></img>
-            </div>
-          }
+            </div>}
         </MainChartStyled>
         <div className={'footer'}>
           <a href={'https://twitter.com/mark_ledwich'}>@mark_ledwich</a>

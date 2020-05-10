@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, CSSProperties, useContext } from "react"
+import React, { useState, useEffect, useRef, CSSProperties, useContext, KeyboardEvent } from "react"
 import { RouteComponentProps as CProps } from "@reach/router"
 import { ReactiveBase, ReactiveList, DataSearch, MultiList, SelectedFilters, SingleRange, SingleDataList, StateProvider, DateRange } from '@appbaseio/reactivesearch'
 import { theme, media, isGatsbyServer, CenterDiv } from "../MainLayout"
@@ -32,12 +32,10 @@ const ContentPane = styled.div`
 `
 
 const SearchTextBoxStyle = styled.div`
-    display:flex;
     width:100%;
     input {
-        font-size:1.5rem;
-        box-sizing:border-box;
-        border-radius:5px;
+      width:100%;
+      font-size:1.5rem;
     }
 `
 
@@ -174,12 +172,11 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
               <StateProvider strict={false} >
                 {({ searchState }) => {
                   const query = searchState?.q?.value
-                  return query ? <ReactiveList
+                  if (!query) return SearchHelp
+
+                  return <ReactiveList
                     componentId="result"
                     react={{ and: ['q', 'views', 'sort', 'ideology', 'channel', 'upload'] }}
-                    render={({ data, error, loading }) =>
-                      <VideoSearchResults data={data} query={query} error={error} loading={loading} />
-                    }
                     infiniteScroll
                     scrollTarget="results"
                     size={30}
@@ -189,7 +186,9 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
                     showLoader={false}
                     renderNoResults={() => <NoResult />}
                     onError={e => console.log("search error:", e)}
-                  /> : SearchHelp
+                  >
+                    {(renderState) => <VideoSearchResults renderState={renderState} query={query} />}
+                  </ReactiveList>
                 }}
               </StateProvider>
             </ResultsPane>
@@ -203,28 +202,38 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
 
 const SearchTexBox: React.FunctionComponent = () => {
   const [query, setQuery] = useState<string>("")
-  return (
-    <SearchTextBoxStyle>
-      <DataSearch
-        componentId="q"
-        filterLabel="Search"
-        dataField={["caption"]}
-        placeholder="Search video captions"
-        autosuggest={false}
-        showIcon={false}
-        searchOperators
-        queryFormat='and'
-        style={{ fontSize: "2em", flex: '100%' }}
-        URLParams
-        onKeyPress={(e: KeyboardEvent, triggerQuery: Function) => {
-          if (e.key === "Enter") triggerQuery()
-        }}
-        onChange={(value: string, triggerQuery: Function) => setQuery(value)}
-        value={query}
-        autoFocus={true}
-      />
-    </SearchTextBoxStyle >
-  )
+  return <SearchTextBoxStyle>
+
+    {/* the default behavior of DataSearch is to show results as you type. We can override thi behavior by using a
+       controlled component, but this prevents smooth typing on mobile. 
+       
+       Out solution is to use an invisible controlled DataSearch component and let users type in a vanilla input.
+      */}
+
+    <input type='text' autoFocus placeholder="search..."
+      onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter")
+          setQuery(e.currentTarget.value)
+      }} />
+
+    <DataSearch
+      componentId="q"
+      filterLabel="Search"
+      dataField={["caption"]}
+      placeholder="Search video captions"
+      autosuggest={false}
+      showIcon={false}
+      searchOperators
+      queryFormat='and'
+      style={{ display: 'none' }}
+      URLParams
+      onKeyPress={(e: KeyboardEvent, triggerQuery: Function) => {
+        if (e.key === "Enter") triggerQuery()
+      }}
+      //onChange={(value: string, triggerQuery: Function) => setQuery(value)}
+      value={query}
+    />
+  </SearchTextBoxStyle >
 }
 
 const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatch<React.SetStateAction<SortValue>>, sort: SortValue, style: CSSProperties }) =>

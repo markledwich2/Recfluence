@@ -62,7 +62,7 @@ interface EsCaptionVideoCommon {
     channel_title: string
     thumb_high: string
     keywords: string
-    upload_date: string
+    upload_date: Date
     updated: string
     pcd_ads: number
     views: number
@@ -78,6 +78,7 @@ export interface EsCaption extends EsCaptionVideoCommon {
     channel_id: string
     caption: string
     offset_seconds: number
+    part: CaptionPart
 }
 
 export interface EsVideo extends EsCaptionVideoCommon {
@@ -86,3 +87,4 @@ export interface EsVideo extends EsCaptionVideoCommon {
     dislikes: number
 }
 
+export type CaptionPart = 'Caption' | 'Title' | 'Description' | 'Keywords'

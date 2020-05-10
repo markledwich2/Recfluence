@@ -12,9 +12,10 @@ import ReactMarkdown from 'react-markdown/with-html'
 import { Spinner } from '../Spinner'
 import { SadTear as IconSad } from '@styled-icons/fa-solid'
 import { UserContext } from '../UserContext'
+import { EsCaption, CaptionPart } from '../../common/DbModel'
 
-interface CaptionSearchResult extends CaptionDocument {
-  _doc_count: number
+
+interface CaptionSearchResult extends EsCaption {
   captions: TimedCaption[]
 }
 
@@ -25,28 +26,6 @@ interface TimedCaption {
   part: CaptionPart
 }
 
-export interface CaptionDocument {
-  caption_id: string
-  video_id: string
-  ideology: string
-  media: string
-  country: string
-  lr: string
-  video_title: string
-  channel_title: string
-  channel_id: string
-  keywords: string
-  description: string
-  thumb_high: string
-  offset_seconds: number
-  caption: string
-  upload_date: Date
-  views: number
-  url: string
-  part: CaptionPart
-}
-
-type CaptionPart = 'Caption' | 'Title' | 'Description' | 'Keywords'
 
 const HelpStyle = styled.div`
   padding:1em;
@@ -100,6 +79,18 @@ const BlurOverlay = styled.div`
   }
 `
 
+const NoMoreResults = styled.div`
+  color:${theme.fontColorSubtler};
+  text-align:center;
+  border-bottom: 1px solid ${theme.backColorBolder};
+  margin: 10px 0 20px;
+  line-height: 0.1em;
+  > span {
+    background:${theme.backColor}; 
+    padding:0 10px; 
+  }
+`
+
 const searchMd = `
 Search titles and captions of political YouTube videos created since Jan 2019. 
 
@@ -139,14 +130,31 @@ const captionPartOrder: { [P in CaptionPart]: number } = {
   Caption: 3,
 }
 
-export const VideoSearchResults = ({ data, query, error, loading }: { data: CaptionSearchResult[], query: string, error: string, loading: any }) => {
-  if (!query) return <></> // don't show empty results
 
+
+interface RenderState<T> {
+  loading: boolean
+  error: any
+  data: T[]
+  streamData: any
+  promotedData: any
+  rawData: any
+  resultStats: { numberOfResults: number, numberOfPages: number, time: number, hidden: number, promoted: number, currentPage: number, displayedResults: number }
+  handleLoadMore: any
+  triggerAnalytics: any
+}
+
+
+export const VideoSearchResults = ({ renderState, query }: { renderState: RenderState<EsCaption>, query: string }) => {
+  var { data, loading, resultStats } = renderState
+  if (!query) return <></> // don't show empty results
 
   const { user, logIn } = useContext(UserContext)
 
   if (!user)
     data = data.slice(0, 5)
+
+
 
   const byVid = _(data).groupBy(c => c.video_id).map(g => {
     const first = g[0]
@@ -181,6 +189,10 @@ export const VideoSearchResults = ({ data, query, error, loading }: { data: Capt
 
         Please use responsibly.
         </div></LoginOverlay>}
+
+    {!loading && resultStats.numberOfResults <= resultStats.displayedResults &&
+      <NoMoreResults><span>the end</span></NoMoreResults>}
+
     {loading && data.length > 0 && <Spinner size="80px" />}
   </ResultsPane>
 }
@@ -193,9 +205,9 @@ const ResultsRow = styled.div`
         flex-direction: row;  /* images to left */
     }
     > * {
-        padding: 0.5em 0em;
+        padding: 0.3em 0em;
         @media (${media.width.large}) {
-            padding: 0.5em 0.5em;
+            padding: 0.3em 0.5em;
         }
     }
 `
@@ -226,6 +238,13 @@ const CaptionP = styled.p`
   }
 `
 
+const VideoImage = styled.img`
+  width: 300px;
+  height: 160px;
+  object-fit: cover;
+  padding: 0px;
+`
+
 const VideoA: FunctionComponent<{ id: string, offset: number, className?: string }> = ({ id, offset, children, className }) =>
   <Link to={`/video/${id}?t=${offset}`} className={className}>{children}</Link>
 
@@ -240,7 +259,7 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
   var maxCaptions = 4
   return (
     <ResultsRow key={c.caption_id}>
-      <VideoA id={c.video_id} offset={c.offset_seconds}><img src={c.thumb_high} style={{ verticalAlign: "text-top", width: "300px" }} /></VideoA>
+      <VideoA id={c.video_id} offset={c.offset_seconds}><VideoImage src={c.thumb_high} /></VideoA>
       <div style={{ width: "100%" }}>
         <h2>
           <Highlighter

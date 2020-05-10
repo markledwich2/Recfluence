@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import * as _ from 'lodash'
-import { capitalCase, merge, toRecord } from '../common/Utils'
+import { capitalCase, merge, toRecord, delay } from '../common/Utils'
 import { SelectionState } from './Chart'
 import { Col, Dim } from './Dim'
 import { DbModel } from './DbModel'
@@ -98,8 +98,10 @@ export class YtModel {
     const channelsTask = d3.csv(path + 'vis_channel_stats.csv.gz')
     const recTask = d3.csv(path + 'vis_channel_recs.csv.gz')
     const recCatTask = d3.csv(path + 'vis_category_recs.csv.gz')
+    await delay(1)
     const channels = (await channelsTask).map((c: any) => DbModel.ChannelData(c))
     const channelDic = _(channels).keyBy(c => c.channelId).value()
+    await delay(1)
 
     let recCol = (dir: RecDir, c: keyof ChannelData) => ({ recCol: RecEx.recCol(dir, c), channelCol: c, dir })
 
@@ -122,6 +124,7 @@ export class YtModel {
     }
 
     let recs = (await recTask).map((r: any) => r as VIS_CHANNEL_REC).map(r => createRec(r))
+    await delay(1)
 
     let recCats = (await recCatTask).map(r => {
       let recCols = _(YtModel.categoryCols)
@@ -132,6 +135,7 @@ export class YtModel {
       }, toRecord(recCols, c => c, c => r[capitalCase(c)]?.toString()))
       return rec
     })
+    await delay(1)
 
     const m = new YtModel()
     m.channels = new Dim(this.channelDimStatic.meta, channels)

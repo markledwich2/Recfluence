@@ -91,6 +91,37 @@ const MainStyleDiv = styled.div`
       color: ${theme.themeColorBolder};
       text-shadow: ${theme.fontThemeShadow};
     }
+
+  input {
+    border:solid 1px ${theme.backColorBolder2};
+    padding: 0.3em 0.8em 0.5em;
+    border-radius:5px;
+
+    :focus {
+      border:solid 1px ${theme.themeColorSubtler};
+      outline:none;
+    }
+  }
+
+  background-color: ${theme.backColor};
+  color: ${theme.fontColor};
+
+  *::-webkit-scrollbar {
+    width: 0.5em;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: ${theme.backColorBolder};
+  }
+
+  select option, input {
+    background-color: ${theme.backColorBolder};
+    color: ${theme.fontColor};
+  }
+
+  b, h1, h2, h3 {
+    color: ${theme.fontColorBolder};
+  }
 `
 
 export const CenterDiv = styled.div`
@@ -136,7 +167,7 @@ function makeTheme(intent: ThemeIntent): Theme {
   const subtler = (color: string, k: number) => dark ? hsl(color).darker(k).toString() : hsl(color).brighter(k).toString()
   const bolder = (color: string, k: number) => dark ? hsl(color).brighter(k).toString() : hsl(color).darker(k).toString()
   const withOpacity = (color: string, opacity: number) => Object.assign(rgb(color), { opacity: opacity })
-  const backColor = dark ? '#111' : `#fff`
+  const backColor = dark ? '#111' : `#eee`
   const themeColor = intent.themeColor
   const themeColorBolder = bolder(themeColor, 2)
   return {

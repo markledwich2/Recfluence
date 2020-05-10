@@ -6,7 +6,7 @@ import YouTube from 'react-youtube'
 import styled from 'styled-components'
 import { FuncClient, EsCaption, VideoData } from '../../common/DbModel'
 import '../../types/NodeTypings.d.ts'
-import { dateFormat, secondsToHHMMSS } from '../../common/Utils'
+import { dateFormat, secondsToHHMMSS, delay } from '../../common/Utils'
 import { theme } from '../MainLayout'
 import { ChannelData } from '../../common/YtModel'
 import { useLocation } from '@reach/router'
@@ -98,8 +98,7 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
   // get data for video from function
   useEffect(() => {
     async function renderVideo() {
-      //esMatch<EsCaption>(esCfg, { video_id: 'sgNEtq_b2dY' }).then(({ items }) => setCaptions(items))
-      FuncClient.getCaptions(videoId).then(c => setCaptions(c)).then(() => scrollToCurrentTime())
+      FuncClient.getCaptions(videoId).then(c => setCaptions(c)).then(() => delay(200)).then(() => scrollToCurrentTime())
       FuncClient.getVideo(videoId).then(v => setVideoData(v))
     }
     renderVideo()
