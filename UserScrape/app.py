@@ -5,8 +5,12 @@ from selenium.common.exceptions import NoSuchElementException
 from data import load_all_seeds, seeds_for_user
 import asyncio
 
+
 cfg = load_cfg()
 video_seeds_df = load_all_seeds()
+repetitions = 2 # 100
+# todo: this list of videos needs to be sampled
+test_videos = ['uo9dAIQR3g8'] #, 'CH50zuS8DD0', '9_R3_CThc38']
 
 for user in cfg.users:
     print(f'scraping for user {user.email}')
@@ -16,13 +20,19 @@ for user in cfg.users:
     user_seed_videos = seeds_for_user(user, video_seeds_df)
 
     try:
-        crawler.load_home_and_login()
-        # crawler.login()
-        # for video in user_seed_videos:
-        #     crawler.get_recommendations_for_video(video.video_id)
+        # crawler.load_home_and_login()
+        crawler.login()
+        crawler.delete_history()
+        for repetition in range(1,repetitions):
+            asyncio.run(crawler.watch_videos([video.video_id for video in user_seed_videos[0:5]]))
+            crawler.scan_feed()
+            # 115 test videos
+            for video in test_videos:
+                crawler.get_recommendations_for_video(video)
+                crawler.delete_last_video_from_history()
+            crawler.delete_history()
+            crawler.update_trial()
         
-        # video with ads for testing: 'Pn9TWf3wNaQ'
-        asyncio.run(crawler.watch_videos(['uo9dAIQR3g8', 'CH50zuS8DD0', '9_R3_CThc38']))
 
         crawler.shutdown()
     except NoSuchElementException as e:

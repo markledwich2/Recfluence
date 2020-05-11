@@ -5,7 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException, ElementNotVisibleException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium import webdriver
@@ -22,6 +22,7 @@ from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath
 import tempfile
 import asyncio
 import discord_bot
+
 
 @dataclass
 class CrawlResult:
@@ -57,6 +58,7 @@ class Crawler:
         self.tel_nr = tel_nr
         self.init_time = datetime.now()
         self.lang = lang
+        self.trial_nr = 1
 
     def test_ip(self):
         wd = self.driver
@@ -184,7 +186,7 @@ class Crawler:
 
     def delete_last_video_from_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
-        
+        # self.__log_info(f'before_deleting_last_video_{random_number}')
         delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Remove from Watch history']")
         # delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Aus \"Wiedergabeverlauf\" entfernen']")
         
@@ -194,11 +196,11 @@ class Crawler:
         # 3. The ui is in the wrong language
         if len(delete_buttons)>0:
             delete_buttons[0].click()
-
+        # self.__log_info(f'after_deleting_last_video_{random_number}')
 
     def delete_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
-
+        # self.__log_info('before_history_deletion')
         messages = self.driver.find_elements_by_xpath("//*[@id='message']")
         # if there are not videos in the history a text appears that says 'no videos here' but apparently there is a second, hidden, message with the same
         # id on the page. So instead of checking whether this element exists we differentiate between 1 message (there are videos in the history) and 
@@ -210,6 +212,7 @@ class Crawler:
             confirm_button = self.driver.find_element_by_xpath("//*[@aria-label = 'CLEAR WATCH HISTORY']").click()
             # confirm_button = self.driver.find_element_by_xpath("//*[@aria-label = 'WIEDERGABEVERLAUF LÖSCHEN']").click()
 
+        # self.__log_info('after_history_deletion')
 
     def _get_seconds(self, duration: str):
         # helper function to correctly parse the time from the info bar
@@ -248,7 +251,7 @@ class Crawler:
         advertisements = {videoId: []}
         filename = 'output/advertisements/' + self.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
-        self.__log_info("video opened")
+        # self.__log_info(f"{videoId}_opened")
         # todo: surveys
         # we check whether a skip button is present
         if len(self.driver.find_elements_by_xpath("//*[@class='ytp-ad-preview-container countdown-next-to-thumbnail']")) != 0:
@@ -285,8 +288,9 @@ class Crawler:
         duration = time_element.text
         duration = self._get_seconds(duration)
         # to make sure that every video is watched long enough
-        watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
-
+        # watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
+        watch_time = duration if duration < 300 else 300 
+        print(watch_time)
         # let the asynchronous manager know that now other videos can be started
         await asyncio.sleep(watch_time)
         #todo replace with seq logging
@@ -299,10 +303,11 @@ class Crawler:
         }
         self.__save_file(seshPath / watch_time_log_file, str(watch_time))
         self.driver.switch_to.window(current_tab)
+        # self.__log_info(f'{videoId}_watched')
         self.driver.close()
         self.driver.switch_to.window(main_tab)
 
-    async def watch_videos(self, videos: list[str]):
+    async def watch_videos(self, videos: list):
         """
         This methods starts watching multiple videos in different tabs asynchronously, I.e. while one watch_video method is in the
         state of just sleeping, it already opens the next tab with another video.
@@ -321,6 +326,69 @@ class Crawler:
             )
         await asyncio.gather(*tasks)
 
+    def scan_feed(self):
+        seshPath = self.path_session()
+        
+        # especially during the corona crisis, YouTube is offering a lot of extra information
+        # they add noise to our data aquisition, because they influence how many videos are shown
+        # on the home page, so we have to get rid of them
+        # if we close these extra sections, YouTube remembers and doesnt show them again
+        # ideally, this loop is only run once per account
+        feed_is_bannerfree = False
+        while not feed_is_bannerfree:
+            # refresh the feed everytime we had to close something until we finally get a completely clean feed
+            self.driver.get("https://www.youtube.com")
+            # set the stop condition to True unless any 'banners' are detected
+            feed_is_bannerfree = True
+            try:
+                # this is the link to the WHO
+                # there are 3 other buttons with the same aria-label, which cannot be clicked, so I simply try to click them all and catch the exception
+                # unfortunately there is no other way to uniquely identify that button
+                extra_content = WebDriverWait(self.driver, 2).until(  # Schließen
+                    EC.presence_of_all_elements_located((By.XPATH, '//*[@aria-label="Close"]')))
+                for button in extra_content:
+                    try:
+                        button.click()
+                        feed_is_bannerfree = False
+                        print("information closed")
+                    except ElementNotInteractableException:
+                        pass
+                    except ElementNotVisibleException:
+                        pass
+            except TimeoutException:
+                # print("no extra covid information")
+                pass
+
+            # these kinds of banners are partly corona specific (like #fitnessathome) or not (#trendingmovies)
+            themed_content = None
+            try:
+                themed_content = WebDriverWait(self.driver,2).until(  # Kein Interesse
+                    EC.presence_of_all_elements_located((By.XPATH, '//*[@aria-label="Not interested"]')))
+            except TimeoutException:
+                # print("No themed content")
+                pass
+
+            if themed_content is not None:
+                feed_is_bannerfree = False
+                for button in themed_content:
+                    button.click()
+                    print("banner closed")
+
+        all_videos = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_all_elements_located((By.XPATH, '//*[@id="video-title-link"]'))
+        )
+
+        feed_videos = []
+        for video in all_videos:
+            # take the link and remove everything except for the id of the video that the link leads to
+            recommendation_id = video.get_attribute('href').replace('https://www.youtube.com/watch?v=', '')
+            feed_videos.append(recommendation_id)
+
+        filename = 'output/feed/' + self.email + '_' + \
+        str(self.init_time).replace(':', '-').replace(' ', '_') + '.txt'
+        # upload the information as a blob
+        self.__save_file(seshPath / filename, str(feed_videos))
+        
 
     def __save_cookies(self):
         """saves all cookies
@@ -392,7 +460,10 @@ class Crawler:
         return PurePosixPath(f'session_logs/{self.email}')
 
     def path_session(self) -> PurePath:
-        return PurePosixPath(f'session_logs/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.{self.driver.session_id}')
+        return PurePosixPath(f'session_logs/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.trial_{self.trial_nr}')
+
+    def update_trial(self):
+        self.trial_nr += 1
 
     def shutdown(self):
         self.driver.quit()
