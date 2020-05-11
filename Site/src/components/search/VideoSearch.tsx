@@ -35,7 +35,7 @@ const SearchTextBoxStyle = styled.div`
     width:100%;
     input {
       width:100%;
-      font-size:1.5rem;
+      font-size:1.5em;
     }
 `
 
@@ -47,18 +47,25 @@ const SearchSelectionPane = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 0.5em 0 0;
+
 `
 
 const FiltersPane = styled.div`
     display:none; 
-    flex-flow:column wrap; 
+    flex-flow:column;
+    overflow-y: auto;
     justify-content:start;
+    align-content:start;
     background-color: ${theme.backColorBolder};
     min-height:0px; /*needed for column wrap to kick in*/
     padding:0.5em 0.5em;
+
+    @media (min-width: 580px) {
+      flex-flow: column wrap;
+    }
     
     @media (${media.width.medium}) {
-      flex-flow:column;
+      flex-flow: column;
       width:350px;
     }
 
@@ -133,13 +140,11 @@ const sortOptions: Dictionary<string> = {
 export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
   const [sort, setSort] = useState<SortValue>({ field: '_score', sort: 'desc' })
   const [filterOpened, setFilterOpened] = useState(false)
-  const [user, setUser] = useState<IdToken>(null)
   const filterOnRight = useMediaQuery({ query: `(${media.width.medium})` })
   const filterVisible = filterOnRight || filterOpened
   const resultsVisible = filterOnRight || !filterOpened
 
   if (isGatsbyServer()) return <div></div>
-
 
   return (
     <ReactiveBase
@@ -154,7 +159,7 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
     >
       <Page>
         <TopSiteBar showLogin style={{ flex: '0 0 auto' }} />
-        <SearchAndFilterPane style={{ flex: '1 1 auto', flexDirection: filterOpened ? 'column' : 'row' }}>
+        <SearchAndFilterPane style={{ flex: '1 1 auto', flexDirection: filterOpened && !filterOnRight ? 'column' : 'row' }}>
           <ContentPane>
             <SearchPane>
               <SearchTexBox />
@@ -179,7 +184,7 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
                     react={{ and: ['q', 'views', 'sort', 'ideology', 'channel', 'upload'] }}
                     infiniteScroll
                     scrollTarget="results"
-                    size={30}
+                    size={50}
                     dataField={sort.field}
                     sortBy={sort.sort}
                     showResultStats={false}
@@ -202,6 +207,7 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
 
 const SearchTexBox: React.FunctionComponent = () => {
   const [query, setQuery] = useState<string>("")
+  const ref = useRef<HTMLInputElement>()
   return <SearchTextBoxStyle>
 
     {/* the default behavior of DataSearch is to show results as you type. We can override thi behavior by using a
@@ -210,7 +216,7 @@ const SearchTexBox: React.FunctionComponent = () => {
        Out solution is to use an invisible controlled DataSearch component and let users type in a vanilla input.
       */}
 
-    <input type='text' autoFocus placeholder="search..."
+    <input ref={ref} type='text' autoFocus placeholder="search..."
       onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter")
           setQuery(e.currentTarget.value)
@@ -227,10 +233,10 @@ const SearchTexBox: React.FunctionComponent = () => {
       queryFormat='and'
       style={{ display: 'none' }}
       URLParams
-      onKeyPress={(e: KeyboardEvent, triggerQuery: Function) => {
-        if (e.key === "Enter") triggerQuery()
+      onChange={(value: string, triggerQuery: Function) => {
+        const e = ref.current
+        if (e) e.value = value
       }}
-      //onChange={(value: string, triggerQuery: Function) => setQuery(value)}
       value={query}
     />
   </SearchTextBoxStyle >
