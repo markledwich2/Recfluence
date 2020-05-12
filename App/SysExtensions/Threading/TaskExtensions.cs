@@ -73,11 +73,11 @@ namespace SysExtensions.Threading {
       return sw.Elapsed;
     }
 
-    public static async Task<TimedResult<T>> WithDuration<T>(this Task<T> task) {
+    public static async Task<(T Result, TimeSpan Duration)> WithDuration<T>(this Task<T> task) {
       var sw = Stopwatch.StartNew();
       var result = await task;
       sw.Stop();
-      return new TimedResult<T> {Duration = sw.Elapsed, Result = result};
+      return (Result: result, Duration: sw.Elapsed);
     }
 
     public static void Wait(this Task task) => task.GetAwaiter().GetResult();
@@ -129,10 +129,5 @@ namespace SysExtensions.Threading {
         throw new InvalidOperationException(msg, ex);
       }
     }
-  }
-
-  public class TimedResult<T> {
-    public TimeSpan Duration { get; set; }
-    public T        Result   { get; set; }
   }
 }

@@ -35,6 +35,7 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 using YtReader.Search;
+using YtReader.Store;
 using YtReader.Yt;
 
 namespace YtReader {
@@ -217,6 +218,7 @@ namespace YtReader {
 
       b.Register(_ => cfg.Pipe).SingleInstance();
       b.Register(_ => cfg.Elastic).SingleInstance();
+      b.Register(_ => cfg.Snowflake).SingleInstance();
 
       b.Register<Func<Task<DbConnection>>>(_ => async () => await cfg.Snowflake.OpenConnection());
       b.RegisterType<AppDb>().SingleInstance();
@@ -238,15 +240,17 @@ namespace YtReader {
           var cs = new ConnectionSettings(
             cfg.Elastic.CloudId,
             new BasicAuthenticationCredentials(cfg.Elastic.Creds.Name, cfg.Elastic.Creds.Secret)
-            ).DefaultMappingFor(clrMap);
+          ).DefaultMappingFor(clrMap);
           return new ElasticClient(cs);
         }
       ).SingleInstance();
 
-      b.RegisterType<YtStore>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<YtStore>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
       b.RegisterType<YtResults>().WithKeyedParam(StoreType.Results, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<StoreUpgrader>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>());
       b.RegisterType<YtSearch>();
       b.RegisterType<YtDataUpdater>();
+      b.RegisterType<WarehouseUpdater>();
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().As<IPipeCtx>().SingleInstance();

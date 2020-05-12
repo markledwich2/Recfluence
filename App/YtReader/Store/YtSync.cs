@@ -6,7 +6,7 @@ using Serilog;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
-namespace YtReader {
+namespace YtReader.Store {
   public class YtSync {
     readonly SnowflakeCfg SnowflakeCfg;
     readonly SqlServerCfg SqlServerCfg;

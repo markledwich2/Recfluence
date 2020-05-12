@@ -26,7 +26,7 @@ namespace YtReader {
 
       var appendStore = new AppendCollectionStore<TrafficSourceRow>(store, "rec_exports_processed", r => r.FileUpdated.FileSafeTimestamp(), log);
 
-      var md = await appendStore.LatestFileMetadata();
+      var md = await appendStore.LatestFile();
       var latestModified = md?.Ts.ParseFileSafeTimestamp();
 
       var newBlobs = latestModified != null

@@ -19,40 +19,38 @@ using SysExtensions.Net;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
-class ResQuery {
-  public ResQuery(string name, string query = null, string desc = null, object parameters = null) {
-    Name = name;
-    Query = query;
-    Desc = desc;
-    Parameters = parameters;
+namespace YtReader.Store {
+  class ResQuery {
+    public ResQuery(string name, string query = null, string desc = null, object parameters = null) {
+      Name = name;
+      Query = query;
+      Desc = desc;
+      Parameters = parameters;
+    }
+
+    public string Name       { get; }
+    public string Query      { get; }
+    public string Desc       { get; }
+    public object Parameters { get; }
   }
 
-  public string Name       { get; }
-  public string Query      { get; }
-  public string Desc       { get; }
-  public object Parameters { get; }
-}
+  class FileQuery : ResQuery {
+    public FileQuery(string name, StringPath path, string desc = null, object parameters = null) : base(name, desc: desc, parameters: parameters) =>
+      Path = path;
 
-class FileQuery : ResQuery {
-  public FileQuery(string name, StringPath path, string desc = null, object parameters = null) : base(name, desc: desc, parameters: parameters) =>
-    Path = path;
+    public StringPath Path { get; set; }
+  }
 
-  public StringPath Path { get; set; }
-}
-
-namespace YtReader {
   public class YtResults {
-    const    string           Version = "v2.3";
+    const    string           Version = "v2.4";
     readonly HttpClient       Http    = new HttpClient();
     readonly ILogger          Log;
     readonly ResultsCfg       ResCfg;
     readonly SnowflakeCfg     SnowflakeCfg;
-    readonly SqlServerCfg     SqlServerCfg;
     readonly ISimpleFileStore Store;
 
-    public YtResults(SnowflakeCfg snowflakeCfg, SqlServerCfg sqlServerCfg, ResultsCfg resCfg, ISimpleFileStore store, ILogger log) {
+    public YtResults(SnowflakeCfg snowflakeCfg, ResultsCfg resCfg, ISimpleFileStore store, ILogger log) {
       SnowflakeCfg = snowflakeCfg;
-      SqlServerCfg = sqlServerCfg;
       ResCfg = resCfg;
       Store = store;
       Log = log;

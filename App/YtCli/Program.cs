@@ -17,26 +17,28 @@ using SysExtensions.Text;
 using Troschuetz.Random;
 using YtReader;
 using YtReader.Search;
+using YtReader.Store;
 using YtReader.YtWebsite;
 
 namespace YtCli {
   class Program {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
-        .ParseArguments<PipeCmd, UpdateCmd, SyncBlobCmd, ChannelInfoOption, FixCmd, ResultsCmd, TrafficCmd,
-          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd>(args)
+        .ParseArguments<PipeCmd, UpdateCmd, SyncBlobCmd, ChannelInfoOption, UpgradeStoreCmd, ResultsCmd, TrafficCmd,
+          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd, WarehouseCmd>(args)
         .MapResult(
           (PipeCmd p) => Run(p, args, PipeCmd.RunPipe),
           (UpdateCmd u) => Run(u, args, UpdateCmd.Update),
           (SyncBlobCmd s) => Run(s, args, SyncBlobCmd.Sync),
           (ChannelInfoOption v) => Run(v, args, ChannelInfoOption.ChannelInfo),
-          (FixCmd f) => Run(f, args, FixCmd.Fix),
+          (UpgradeStoreCmd f) => Run(f, args, UpgradeStoreCmd.Fix),
           (ResultsCmd f) => Run(f, args, ResultsCmd.Results),
           (TrafficCmd t) => Run(t, args, TrafficCmd.Traffic),
           (PublishContainerCmd p) => Run(p, args, PublishContainerCmd.PublishContainer),
           (VersionCmd v) => VersionCmd.Verson(),
           (UpdateSearchIndexCmd s) => Run(s, args, UpdateSearchIndexCmd.UpdateSearchIndex),
           (SyncDbCmd s) => Run(s, args, SyncDbCmd.Sync),
+          (WarehouseCmd w) => Run(w, args, WarehouseCmd.Update),
           errs => Task.FromResult(ExitCode.Error)
         );
       return (int) await res;
@@ -106,10 +108,11 @@ namespace YtCli {
     }
   }
 
-  [Verb("fix", HelpText = "try to fix missing/inconsistent data")]
-  public class FixCmd : ICommonCmd {
-    public static async Task<ExitCode> Fix(CmdCtx<FixCmd> ctx) {
-      await new StoreUpgrader(ctx.Cfg, ctx.Cfg.DataStore(ctx.Log), ctx.Log).UpgradeStore();
+  [Verb("upgrade-store", HelpText = "try to fix missing/inconsistent data")]
+  public class UpgradeStoreCmd : ICommonCmd {
+    public static async Task<ExitCode> Fix(CmdCtx<UpgradeStoreCmd> ctx) {
+      var upgrader = ctx.Scope.Resolve<StoreUpgrader>();
+      await upgrader.UpgrateStoreIfNeeded();
       return ExitCode.Success;
     }
   }
@@ -167,6 +170,15 @@ namespace YtCli {
     public static async Task<ExitCode> Results(CmdCtx<ResultsCmd> ctx) {
       var result = ctx.Scope.Resolve<YtResults>();
       await result.SaveBlobResults(ctx.Option.QueryNames.NotNull().ToList());
+      return ExitCode.Success;
+    }
+  }
+
+  [Verb("warehouse")]
+  public class WarehouseCmd : ICommonCmd {
+    public static async Task<ExitCode> Update(CmdCtx<WarehouseCmd> ctx) {
+      var wh = ctx.Scope.Resolve<WarehouseUpdater>();
+      await wh.WarehouseUpdate();
       return ExitCode.Success;
     }
   }

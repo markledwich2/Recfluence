@@ -96,7 +96,7 @@ const MainStyleDiv = styled.div`
 
   input {
     border:solid 1px ${theme.backColorBolder2};
-    padding: 0.6em 0.8em;
+    padding: 0.4em 0.6em;
     border-radius:5px;
 
     :focus {

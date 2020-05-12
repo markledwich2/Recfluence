@@ -12,6 +12,7 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Store;
 using YtReader.Yt;
 using YtReader.YtWebsite;
 using static Mutuo.Etl.Pipe.PipeArg;
@@ -63,7 +64,7 @@ namespace YtReader {
     }
 
     async Task<IEnumerable<ChannelStored2>> UpdateAllChannels(ILogger log) {
-      var store = Store.ChannelStore;
+      var store = Store.Channels;
       log.Information("Starting channels update. Limited to ({Included})",
         Cfg.LimitedToSeedChannels?.HasItems() == true ? Cfg.LimitedToSeedChannels.Join("|") : "All");
 
@@ -161,9 +162,8 @@ namespace YtReader {
       log.Information("{Channel} - Starting channel update of videos/recs/captions", c.ChannelTitle);
 
       // fix updated if missing. Remove once all records have been updated
-      var vidStore = Store.VideoStore(c.ChannelId);
 
-      var md = await vidStore.LatestFileMetadata();
+      var md = await Store.Videos.LatestFile(c.ChannelId);
       var lastUpload = md?.Ts?.ParseFileSafeTimestamp();
       var lastModified = md?.Modified;
       var recentlyUpdated = lastModified != null && lastModified.Value.IsYoungerThan(RCfg.RefreshAllAfter);
@@ -177,7 +177,7 @@ namespace YtReader {
       var vids = recentlyUpdated ? null : await ChannelVidItems(c, uploadedFrom, log).ToListAsync();
 
       if (vids != null)
-        await SaveVids(c, vids, vidStore, lastUpload, log);
+        await SaveVids(c, vids, Store.Videos, lastUpload, log);
       if (vids != null || updateType == UpdateType.AllWithMissingRecs)
         await SaveRecsAndExtra(c, vids, conn, updateType, log);
       if (vids != null)
@@ -219,8 +219,8 @@ namespace YtReader {
 
     /// <summary>Saves captions for all new videos from the vids list</summary>
     async Task SaveNewCaptions(ChannelStored2 channel, IEnumerable<VideoItem> vids, ILogger log) {
-      var store = Store.CaptionStore(channel.ChannelId);
-      var lastUpload = (await store.LatestFileMetadata())?.Ts.ParseFileSafeTimestamp(); // last video upload we have captions for
+      var lastUpload =
+        (await Store.Captions.LatestFile(channel.ChannelId))?.Ts.ParseFileSafeTimestamp(); // last video upload in this channel partition we have captions for
 
       async Task<VideoCaptionStored2> GetCaption(VideoItem v) {
         var videoLog = log.ForContext("VideoId", v.Id);
@@ -238,6 +238,7 @@ namespace YtReader {
         }
 
         return new VideoCaptionStored2 {
+          ChannelId = channel.ChannelId,
           VideoId = v.Id,
           UploadDate = v.UploadDate.UtcDateTime,
           Updated = DateTime.Now,
@@ -251,19 +252,16 @@ namespace YtReader {
           .BlockTransform(GetCaption, Cfg.DefaultParallel)).NotNull().ToList();
 
       if (captionsToStore.Any())
-        await store.Append(captionsToStore, log);
+        await Store.Captions.Append(captionsToStore, log);
 
       log.Information("{Channel} - Saved {Captions} captions", channel.ChannelTitle, captionsToStore.Count);
     }
 
     /// <summary>Saves recs for all of the given vids</summary>
     async Task SaveRecsAndExtra(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AsyncLazy<DbConnection> conn, UpdateType updateType, ILogger log) {
-      var recStore = Store.RecStore(c.ChannelId);
-      var videoExStore = Store.VideoExtraStore();
-
       var toUpdate = updateType switch {
         UpdateType.AllWithMissingRecs => await VideosWithNoRecs(c, await conn.GetOrCreate(), log),
-        _ => await VideoToUpdateRecs(vids, recStore)
+        _ => await VideoToUpdateRecs(c, vids)
       };
 
       var recs = await toUpdate.BlockTransform(
@@ -314,11 +312,11 @@ namespace YtReader {
         })).ToList();
 
       if (recsStored.Any())
-        await recStore.Append(recsStored, log);
+        await Store.Recs.Append(recsStored, log);
 
       var extraStored = recs.Select(r => r.recs.extra).NotNull().ToArray();
       if (extraStored.Any())
-        await videoExStore.Append(extraStored, log);
+        await Store.VideoExtra.Append(extraStored, log);
 
       log.Information("{Channel} - Recorded {RecCount} recs: {Recs}",
         c.ChannelTitle, recsStored.Count, recs.Select(v => new {Id = v.fromId, v.recs.recs.Count}).ToList());
@@ -343,8 +341,8 @@ namespace YtReader {
       return ids;
     }
 
-    async Task<IReadOnlyCollection<(string Id, string Title)>> VideoToUpdateRecs(IEnumerable<VideoItem> vids, AppendCollectionStore<RecStored2> recStore) {
-      var prevUpdateMeta = await recStore.LatestFileMetadata();
+    async Task<IReadOnlyCollection<(string Id, string Title)>> VideoToUpdateRecs(ChannelStored2 c, IEnumerable<VideoItem> vids) {
+      var prevUpdateMeta = await Store.Recs.LatestFile(c.ChannelId);
       var prevUpdate = prevUpdateMeta?.Ts.ParseFileSafeTimestamp();
       var vidsDesc = vids.OrderByDescending(v => v.UploadDate).ToList();
 
@@ -409,12 +407,10 @@ where num <= 50 -- most recent for each channel
       var batch = await videos.BatchGreedy(2000).BlockTransform(async b => {
         var recsAndExtra = await b.NotNull().BlockTransform(async v => await Scraper.GetRecsAndExtra(v.VideoId, log), Cfg.DefaultParallel);
         var extra = recsAndExtra.Select(r => r.extra).ToArray();
-        var store = Store.VideoExtraStore();
-        var file = await store.Append(extra, log);
-        log.Information("Recorded {VideoExtra} video_extra records to {Path}", extra.Length, file);
+        await Store.VideoExtra.Append(extra, log);
+        log.Information("Recorded {VideoExtra} video_extra records", extra.Length);
         return new ProcessVideoExtraBatch {
-          Updated = extra.Length,
-          Path = file
+          Updated = extra.Length
         };
       });
       return batch;
@@ -444,8 +440,7 @@ where num <= 50 -- most recent for each channel
     }
 
     public class ProcessVideoExtraBatch {
-      public int        Updated { get; set; }
-      public StringPath Path    { get; set; }
+      public int Updated { get; set; }
     }
   }
 }

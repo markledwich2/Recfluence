@@ -10,7 +10,7 @@ namespace SysExtensions.Collections {
     ///   and still re-use collections</summary>
     public static ICollection<T> AsCollection<T>(this IEnumerable<T> items) => items as ICollection<T> ?? items.ToList();
 
-    public static IEnumerable<T> AsEnumerable<T>(this T o) => new[] {o};
+    public static T[] InArray<T>(this T o) => new[] {o};
 
     /// <summary>Sames as Enumerable.Concat but makes it nicer when you just have a single item</summary>
     /// <typeparam name="T"></typeparam>

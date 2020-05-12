@@ -13,6 +13,7 @@ using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Store;
 
 namespace YtReader {
   public static class ChannelSheets {
@@ -133,7 +134,7 @@ namespace YtReader {
         "L" => -1,
         "R" => 1,
         "C" => 0,
-        _ => (double?) null
+        _ => null
       };
 
       if (!lrs.Any()) return null;

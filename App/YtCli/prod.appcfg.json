@@ -6,5 +6,8 @@
   },
   "pipe": {
     "location": "Container"
+  },
+  "snowflake": {
+    "stage": "@yt/db2"
   }
 }

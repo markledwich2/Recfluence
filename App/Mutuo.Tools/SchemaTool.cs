@@ -46,7 +46,7 @@ namespace Mutuo.Tools {
         };
         var schema = g.Generate(t);
         if (ignoreRequired)
-          foreach (var s in schema.AsEnumerable().WithDescendants(s => s.Properties.Values.Concat(s.Items)))
+          foreach (var s in schema.InArray().WithDescendants(s => s.Properties.Values.Concat(s.Items)))
             s.Required.Clear();
         await File.WriteAllTextAsync($"{dir.FullName}/{t.Name}.schema.json", schema.ToString());
       });

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.Azure.Storage;
@@ -15,8 +16,6 @@ using SysExtensions.Text;
 
 namespace Mutuo.Etl.Blob {
   public class AzureBlobFileStore : ISimpleFileStore {
-     ILogger Log { get; }
-
     public AzureBlobFileStore(Uri sas, ILogger log, StringPath pathSansContainer = null)
       : this(pathSansContainer, log) => Container = new CloudBlobContainer(sas);
 
@@ -34,6 +33,8 @@ namespace Mutuo.Etl.Blob {
       };
       BasePath = path ?? StringPath.Emtpy;
     }
+
+    ILogger Log { get; }
 
     CloudBlobContainer Container { get; }
 
@@ -58,8 +59,6 @@ namespace Mutuo.Etl.Blob {
       }
     }
 
-    public CloudBlockBlob BlobRef(StringPath path) => Container.GetBlockBlobReference(BasePathSansContainer.Add(path));
-
     public async Task Save(StringPath path, FPath file, ILogger log = null) {
       log ??= Log;
       var blob = BlobRef(path);
@@ -83,18 +82,32 @@ namespace Mutuo.Etl.Blob {
       return await blob.OpenWriteAsync();
     }
 
+    /// <summary>Gets metadata for the given file. Returns null if it doesn't exist</summary>
+    public async Task<FileListItem> Info(StringPath path) {
+      var blob = BlobRef(path);
+      var exists = await blob.ExistsAsync();
+      if (!exists) return null;
+      await blob.FetchAttributesAsync();
+      return new FileListItem {
+        Path = path,
+        Modified = blob.Properties.LastModified,
+        Bytes = blob.Properties.Length
+      };
+    }
+
     public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) {
       log ??= Log;
       BlobContinuationToken token = null;
       do {
         var p = path != null ? BasePathSansContainer.Add(path) : BasePathSansContainer;
         var res = await Container.ListBlobsSegmentedAsync(p + "/", allDirectories, BlobListingDetails.None,
-          null, token, null, null);
+          5000, token, null, null, CancellationToken.None);
 
         var items = res.Results.OfType<ICloudBlob>().Select(r =>
           new FileListItem {
             Path = new StringPath(r.Uri.LocalPath).RelativePath(BasePath),
-            Modified = r.Properties.LastModified
+            Modified = r.Properties.LastModified,
+            Bytes = r.Properties.Length
           });
 
         yield return items.ToReadOnly();
@@ -102,6 +115,13 @@ namespace Mutuo.Etl.Blob {
         token = res.ContinuationToken;
       } while (token != null);
     }
+
+    public async Task<bool> Delete(StringPath path, ILogger log = null) {
+      var blob = BlobRef(path);
+      return await blob.DeleteIfExistsAsync();
+    }
+
+    CloudBlockBlob BlobRef(StringPath path) => Container.GetBlockBlobReference(BasePathSansContainer.Add(path));
 
     /// <summary>autoamtically work set the blob properties based on the extenions. Assumes the format ContentType[.Encoding]
     ///   (e.g. csv.gz or csv)</summary>
@@ -120,15 +140,11 @@ namespace Mutuo.Etl.Blob {
           _ => null
         };
     }
-
-    public async Task<bool> Delete(StringPath path, ILogger log = null) {
-      var blob = BlobRef(path);
-      return await blob.DeleteIfExistsAsync();
-    }
   }
 
   public class FileListItem {
     public StringPath      Path     { get; set; }
     public DateTimeOffset? Modified { get; set; }
+    public long            Bytes    { get; set; }
   }
 }

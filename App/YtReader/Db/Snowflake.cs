@@ -9,6 +9,8 @@ namespace YtReader {
     public string     Warehouse { get; set; } = "YT";
     public string     Db        { get; set; } = "YT";
     public string     Schema    { get; set; } = "PUBLIC";
+
+    public string Stage { get; set; } = "yt_testdata";
   }
 
   public static class SnowflakeEx {

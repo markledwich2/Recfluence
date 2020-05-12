@@ -12,7 +12,7 @@ import ReactMarkdown from 'react-markdown/with-html'
 import { Spinner } from '../Spinner'
 import { SadTear as IconSad } from '@styled-icons/fa-solid'
 import { UserContext } from '../UserContext'
-import { EsCaption, CaptionPart } from '../../common/DbModel'
+import { EsCaption, CaptionPart } from '../../common/YtApi'
 
 
 interface CaptionSearchResult extends EsCaption {
@@ -190,7 +190,7 @@ export const VideoSearchResults = ({ renderState, query }: { renderState: Render
         Please use responsibly.
         </div></LoginOverlay>}
 
-    {!loading && resultStats.numberOfResults <= resultStats.displayedResults &&
+    {!loading && resultStats.numberOfResults > 0 && resultStats.numberOfResults <= resultStats.displayedResults &&
       <NoMoreResults><span>the end</span></NoMoreResults>}
 
     {loading && data.length > 0 && <Spinner size="80px" />}

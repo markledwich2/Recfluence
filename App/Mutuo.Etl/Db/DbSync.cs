@@ -31,7 +31,7 @@ namespace Mutuo.Etl.Db {
       if (syncType.IsIncremental() && tableCfg.TsCol.NullOrEmpty())
         throw new InvalidOperationException("table configured for incremental, but no ts column was found");
       var maxTs = syncType.IsIncremental()
-        ? await Dest.Connection.ExecuteScalar<object>(nameof(UpdateTable), $"select max({Dest.Sql(tableCfg.TsCol)}) from {Dest.Sql(destTable)}")
+        ? await Dest.Connection.ExecuteScalarAsync<object>(nameof(UpdateTable), $"select max({Dest.Sql(tableCfg.TsCol)}) from {Dest.Sql(destTable)}")
         : null;
 
       // start reading and get schema

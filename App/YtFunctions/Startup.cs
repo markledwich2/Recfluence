@@ -21,8 +21,8 @@ namespace YtFunctions {
     public override void Configure(IFunctionsHostBuilder builder) =>
       builder.UseAutofacServiceProviderFactory(c => {
         c.Register(_ => new AsyncLazy<FuncCtx, ExecutionContext>(FuncCtx.LoadCtx)).SingleInstance();
-        c.RegisterType<YtFunctions>();
-        c.RegisterType<YtData>();
+        c.RegisterType<ApiBackend>();
+        c.RegisterType<ApiSearch>();
       });
   }
 

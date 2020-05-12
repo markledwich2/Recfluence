@@ -48,9 +48,6 @@
         },
         "creds": {
           "type": "string"
-        },
-        "fullLoad": {
-          "type": "boolean"
         }
       }
     },
@@ -231,6 +228,9 @@
           "type": "string"
         },
         "schema": {
+          "type": "string"
+        },
+        "stage": {
           "type": "string"
         }
       }
