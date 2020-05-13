@@ -22,7 +22,7 @@
     },
     "headless": {
       "type": "boolean",
-      "description": "When true, selenium will run without an interactive browser showing. Must be true when running in a ocntainer"
+      "description": "When true, selenium will run without an interactive browser showing. Must be true when running in a container"
     }
   },
   "description": "UserScrape configuration",
@@ -33,6 +33,7 @@
       "required": [
         "email",
         "password",
+        "telephone_number",
         "ideology"
       ],
       "properties": {
@@ -43,6 +44,10 @@
         "password": {
           "type": "string",
           "description": "password for the user "
+        },
+        "telephone_number": {
+          "type": "string",
+          "description": "telephone number to verify account "
         },
         "ideology": {
           "type": "string",
@@ -64,7 +69,7 @@
           "description": "The users ideology, expected to be unique between users"
         }
       },
-      "description": "UserCfg(email: str, password: str, ideology: str)"
+      "description": "UserCfg(email: str, password: str, telephone_number: str, ideology: str)"
     }
   }
 }
