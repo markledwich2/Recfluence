@@ -265,7 +265,7 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
           <Highlighter
             searchWords={p.searchWords}
             autoEscape
-            textToHighlight={c.video_title}
+            textToHighlight={c.video_title ?? ""}
           />
         </h2>
         <div style={{ display: "flex", justifyContent: "space-between" }}>

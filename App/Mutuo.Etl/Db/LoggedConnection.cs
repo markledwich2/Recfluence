@@ -28,23 +28,23 @@ namespace Mutuo.Etl.Db {
       if (CloseConnection) Conn?.Dispose();
     }
 
-    public async Task Execute(string operation, string sql, DbTransaction transaction = null) =>
-      await ExecWithLog(() => Conn.ExecuteAsync(sql, transaction: transaction), sql, operation);
+    public async Task<int> Execute(string operation, string sql, object param = null, DbTransaction transaction = null) =>
+      await ExecWithLog(() => Conn.ExecuteAsync(sql, param: param, transaction: transaction), sql, operation);
 
-    public IEnumerable<T> Query<T>(string operation, string sql,
+    public IEnumerable<T> QueryBlocking<T>(string operation, string sql,
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = true) =>
       ExecWithLog(() => Conn.Query<T>(sql, param, transaction, commandTimeout: timeout?.TotalSeconds.RoundToInt(), buffered: buffered), sql, operation);
 
-    public async Task<IEnumerable<T>> QueryAsync<T>(string operation, string sql,
+    public async Task<IEnumerable<T>> Query<T>(string operation, string sql,
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
       await ExecWithLog(() => Conn.QueryAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation);
 
     /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
     /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>
-    public async Task<T> ExecuteScalarAsync<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
+    public async Task<T> ExecuteScalar<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
       await ExecWithLog(() => Conn.ExecuteScalarAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation);
 
-    public async Task<DbDataReader> ExecuteReaderAsync(string operation, string sql, object param, DbTransaction transaction = null) =>
+    public async Task<DbDataReader> ExecuteReader(string operation, string sql, object param, DbTransaction transaction = null) =>
       await ExecWithLog(() => Conn.ExecuteReaderAsync(sql, param, transaction), sql, operation);
 
     T ExecWithLog<T>(Func<T> exec, string sql, string operation) {

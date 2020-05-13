@@ -24,7 +24,7 @@ namespace YtReader {
 
       var fileInfoRegex = new Regex("^Traffic source (?'from'\\d+-\\d+-\\d+)_(?'to'\\d+-\\d+-\\d+) (?'channel'[^.]+)", RegexOptions.Compiled);
 
-      var appendStore = new AppendCollectionStore<TrafficSourceRow>(store, "rec_exports_processed", r => r.FileUpdated.FileSafeTimestamp(), log);
+      var appendStore = new JsonlStore<TrafficSourceRow>(store, "rec_exports_processed", r => r.FileUpdated.FileSafeTimestamp(), log);
 
       var md = await appendStore.LatestFile();
       var latestModified = md?.Ts.ParseFileSafeTimestamp();
@@ -55,7 +55,7 @@ namespace YtReader {
         using var csvReader = new CsvReader(csvStream, CsvExtensions.DefaultConfig);
 
         var records = csvReader.GetRecords<TrafficSourceExportRow>().ToList();
-        var rows = (await records.BlockTransform(Process, cfg.DefaultParallel,
+        var rows = (await records.BlockFunc(Process,
             progressUpdate: p => log.Debug("Processing traffic sources for {Path}: {Rows}/{TotalRows}", b.Path, p.Completed, records.Count)))
           .NotNull().ToList();
 

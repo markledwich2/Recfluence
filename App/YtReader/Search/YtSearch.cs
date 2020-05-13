@@ -22,11 +22,11 @@ using Policy = Polly.Policy;
 
 namespace YtReader.Search {
   public class YtSearch {
-    readonly AppDb         Db;
+    readonly ConnectionProvider         Db;
     readonly ElasticClient Es;
     readonly ILogger       Log;
 
-    public YtSearch(AppDb db, ElasticClient es, ILogger log) {
+    public YtSearch(ConnectionProvider db, ElasticClient es, ILogger log) {
       Db = db;
       Es = es;
       Log = log;
@@ -139,7 +139,7 @@ namespace YtReader.Search {
     }
 
     IEnumerable<T> Query<T>((string sql, object param) sql, LoggedConnection conn) where T : class => 
-      conn.Query<T>(nameof(SyncToElastic), sql.sql, sql.param, buffered: false);
+      conn.QueryBlocking<T>(nameof(SyncToElastic), sql.sql, sql.param, buffered: false);
   }
 
   public static class EsExtensions {

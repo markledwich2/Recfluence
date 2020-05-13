@@ -1,51 +1,84 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Mutuo.Etl.Blob;
+using Mutuo.Etl.Db;
 using Serilog;
+using SysExtensions;
+using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
-using YtReader.Store;
 
 namespace YtReader {
-  public class WarehouseUpdater {
-    readonly AppDb        Db;
-    readonly ILogger      Log;
-    readonly SnowflakeCfg Snowflake;
-    readonly YtStore      Store;
+  public class WarehouseCfg {
+    [Required] public string      Stage    { get; set; }
+    [Required] public OptimiseCfg Optimise { get; set; } = new OptimiseCfg();
+    [Required] public int LoadTablesParallel { get; set; } = 4;
+  }
 
-    public WarehouseUpdater(AppDb db, SnowflakeCfg snowflake, YtStore store, ILogger log) {
-      Db = db;
-      Snowflake = snowflake;
+  public class WarehouseUpdater {
+    readonly ISimpleFileStore   Store;
+    readonly StorageCfg StorageCfg;
+    readonly ConnectionProvider Conn;
+    readonly ILogger            Log;
+    readonly WarehouseCfg       Cfg;
+
+    public WarehouseUpdater(ISimpleFileStore store, StorageCfg storageCfg, ConnectionProvider conn, WarehouseCfg cfg, ILogger log) {
       Store = store;
-      Log = log;
+      StorageCfg = storageCfg;
+      Conn = conn;
+      Cfg = cfg;
+      Log = log.ForContext("db", conn.Name);
     }
 
-    public async Task WarehouseUpdate() {
-      await Store.AllStores.BlockAction(s => s.Optimise(Log));
+    public async Task WarehouseUpdate(bool fullLoad = false, string[] tableNames = null) {
+      var sw = Stopwatch.StartNew();
+      var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table) == true).ToArray();
+      await tables.BlockAction(async t => {
+        var table = t.Table;
+        //var files = await Store.Files(t.Dir, true);
+        using var db = await Conn.OpenLoggedConnection(Log);
+        await db.Execute("create table", $"create table if not exists {table} (v Variant)");
+        Log.Information("WarehouseUpdate {Table} - ({LoadType})", table, fullLoad ? "full" : "incremental");
+        var latestTs = fullLoad ? null : await db.ExecuteScalar<DateTime?>("latest timestamp", $"select max(v:{t.TsColumn}::timestamp_ntz) from {table}");
+        if (latestTs == null) 
+          await FullLoad(db, table, t);
+        else
+          await Incremental(db, table, t, latestTs.Value);
+      }, Cfg.LoadTablesParallel);
+      Log.Information("WarehouseUpdate - {Tables} updated in {Duration}", tables.Join("|", t => t.Table), sw.Elapsed.HumanizeShort());
+    }
 
-      await YtWarehouse.AllTables.BlockAction(async t => {
-        var table = t.Table + "2";
-        var files = await Store.Store.List(t.Dir, true, Log).SelectManyList();
-        using var db = await Db.OpenLoggedConnection(Log);
-        await db.ExecuteScalarAsync<int>("create table", $"create table if not exists {table} (v Variant)");
-        var latestTs = await db.ExecuteScalarAsync<string>("latest timestamp", $"select max({t.TsColumn}) from {table}");
+    async Task Incremental(LoggedConnection db, string table, StageTableCfg t, DateTime latestTs) {
+      await Store.Optimise(Cfg.Optimise, t.Dir, latestTs.FileSafeTimestamp(), Log); // optimise files newer than the last load
+      var (rows, dur) = await CopyInto(db, table, t).WithDuration();
+      Log.Information("WarehouseUpdate {Table} - incremental load of {Rows} rows took {Duration}",
+        table, rows, dur.HumanizeShort());
+    }
 
-        if (latestTs == null) {
-          await db.ExecuteScalarAsync<int>("full load copy into", $"copy into {table} from {Snowflake.Stage}/{t.Dir}/ file_format=(type=json)");
-        }
-        else {
-          // filter to later files and records. We cna't rely on the default copy to because we are changing/optimisng files
-          // its worth it because we want our blob storage to be performant/neat, and the incremental to be explicit
-          var newerFiles = files.Select(StoreFileMd.FromFileItem).Where(f => string.Compare(f.Ts, latestTs, StringComparison.Ordinal) > 0).ToArray();
-          await newerFiles.GroupBy(l => l.Path.Parent).BlockAction(async g => {
-            var selectSql = $"select * from {Snowflake.Stage}/{g.Key} where v{t.TsColumn} > :latestTs) \n" +
-                            $"file_format=(type=json) files({newerFiles.Join("\n ", f => f.Path.Name)})";
-            await db.ExecuteScalarAsync<int>("incremental new data", $"copy into {table} from ({selectSql})", new {latestTs});
-          });
-        }
-      });
+    async Task FullLoad(LoggedConnection db, string table, StageTableCfg t) {
+      var trans = await db.Conn.BeginTransactionAsync();
+      try {
+        var sw = Stopwatch.StartNew();
+        await db.Execute("truncate table", $"truncate table {table}", transaction: trans);
+        await Store.Optimise(Cfg.Optimise, t.Dir, null, Log); // optimise all files when performing a full load
+        var rows = await CopyInto(db, table, t, trans);
+        await trans.CommitAsync();
+        Log.Information("WarehouseUpdate {Table} - full load of {Rows} took {Duration}", table, rows, sw.Elapsed.HumanizeShort());
+      }
+      catch {
+        await trans.RollbackAsync();
+        throw;
+      }
+    }
+
+    async Task<int> CopyInto(LoggedConnection db, string table, StageTableCfg t, DbTransaction trans = null) {
+      var sql = $"copy into {table} from @{Cfg.Stage}/{StorageCfg.DbPath}/{t.Dir}/ file_format=(type=json)";
+      return await db.Execute("copy into", sql, transaction: trans);
     }
   }
 
@@ -70,6 +103,6 @@ namespace YtReader {
 
     public string Dir      { get; }
     public string Table    { get; }
-    public string TsColumn { get; set; } = "updated";
+    public string TsColumn { get; set; } = "Updated";
   }
 }

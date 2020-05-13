@@ -4,7 +4,6 @@ import { compactInteger } from 'humanize-plus'
 import React, { useEffect, useState } from 'react'
 import YouTube from 'react-youtube'
 import styled from 'styled-components'
-import { FuncClient, EsCaption, VideoData } from '../../common/DbModel'
 import '../../types/NodeTypings.d.ts'
 import { dateFormat, secondsToHHMMSS, delay } from '../../common/Utils'
 import { theme } from '../MainLayout'
@@ -14,6 +13,7 @@ import queryString from 'query-string'
 import scrollIntoView from 'scroll-into-view-if-needed'
 import { TopSiteBar } from '../SiteMenu'
 import { EsCfg } from '../../common/Elastic'
+import { getCaptions, getVideo } from '../../common/YtApi'
 
 const MainPageDiv = styled.div`
   height:100vh;
@@ -98,8 +98,8 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
   // get data for video from function
   useEffect(() => {
     async function renderVideo() {
-      FuncClient.getCaptions(videoId).then(c => setCaptions(c)).then(() => delay(200)).then(() => scrollToCurrentTime())
-      FuncClient.getVideo(videoId).then(v => setVideoData(v))
+      getCaptions(videoId).then(c => setCaptions(c)).then(() => delay(200)).then(() => scrollToCurrentTime())
+      getVideo(videoId).then(v => setVideoData(v))
     }
     renderVideo()
   }, [])

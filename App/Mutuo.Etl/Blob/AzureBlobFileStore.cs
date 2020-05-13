@@ -20,9 +20,9 @@ namespace Mutuo.Etl.Blob {
       : this(pathSansContainer, log) => Container = new CloudBlobContainer(sas);
 
     public AzureBlobFileStore(string cs, StringPath path, ILogger log) : this(path, log) {
+      var containerName = path?.Tokens.FirstOrDefault() ?? throw new InvalidOperationException("path needs to be provided and start with a container name");
       var storage = CloudStorageAccount.Parse(cs);
       var client = new CloudBlobClient(storage.BlobEndpoint, storage.Credentials);
-      var containerName = path.Tokens.FirstOrDefault() ?? throw new InvalidOperationException("path needs to at least have a container");
       Container = client.GetContainerReference(containerName);
     }
 
@@ -38,7 +38,7 @@ namespace Mutuo.Etl.Blob {
 
     CloudBlobContainer Container { get; }
 
-    /// <summary>the Working directory of this storage wrapper. The first part of the bath is the container</summary>
+    /// <summary>the Working directory of this storage wrapper. The first part of the path is the container</summary>
     public StringPath BasePath { get; }
 
     StringPath BasePathSansContainer => new StringPath(BasePath.Tokens.Skip(1));

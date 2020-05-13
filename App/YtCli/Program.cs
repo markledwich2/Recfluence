@@ -90,6 +90,9 @@ namespace YtCli {
     [Option('t', "type", HelpText = "Control what parts of the update process to run")]
     public UpdateType UpdateType { get; set; }
 
+    [Option('f', "force", HelpText = "Force update of channels, so stats are refreshed even if they ahve bene updated recently")]
+    public bool ForceUpdate { get; set; }
+
     public static async Task<ExitCode> Update(CmdCtx<UpdateCmd> ctx) {
       if (ctx.Option.ChannelIds.HasValue())
         ctx.Cfg.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
@@ -101,8 +104,8 @@ namespace YtCli {
       // run the work in this process
       var cfg = standardPipeCtx.Cfg.JsonClone();
       cfg.Location = PipeRunLocation.Local;
-      var pipeCtx = new PipeCtx(cfg, appCtx, standardPipeCtx.Log);
-      await pipeCtx.Run((YtDataUpdater d) => d.Update(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType));
+      var pipeCtx = new PipeCtx(cfg, appCtx, standardPipeCtx.Store, standardPipeCtx.Log);
+      await pipeCtx.Run((YtDataUpdater d) => d.Update(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType, ctx.Option.ForceUpdate));
       //await pipeCtx.DoPipeWork(PipeRunId.FromName("Update"));
       return ExitCode.Success;
     }
@@ -112,7 +115,7 @@ namespace YtCli {
   public class UpgradeStoreCmd : ICommonCmd {
     public static async Task<ExitCode> Fix(CmdCtx<UpgradeStoreCmd> ctx) {
       var upgrader = ctx.Scope.Resolve<StoreUpgrader>();
-      await upgrader.UpgrateStoreIfNeeded();
+      await upgrader.UpgradeIfNeeded();
       return ExitCode.Success;
     }
   }
@@ -176,9 +179,15 @@ namespace YtCli {
 
   [Verb("warehouse")]
   public class WarehouseCmd : ICommonCmd {
+    [Option('t', HelpText = "list of tables to restrict warehouse update to")]
+    public IEnumerable<string> Tables { get; set; }
+    
+    [Option('f', HelpText = "if true, will clear and load data")]
+    public bool FullLoad { get; set; }
+    
     public static async Task<ExitCode> Update(CmdCtx<WarehouseCmd> ctx) {
       var wh = ctx.Scope.Resolve<WarehouseUpdater>();
-      await wh.WarehouseUpdate();
+      await wh.WarehouseUpdate(ctx.Option.FullLoad, ctx.Option.Tables?.ToArray());
       return ExitCode.Success;
     }
   }

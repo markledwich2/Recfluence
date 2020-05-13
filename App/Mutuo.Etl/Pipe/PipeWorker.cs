@@ -72,7 +72,7 @@ namespace Mutuo.Etl.Pipe {
 
   public class LocalPipeWorker : IPipeWorker {
     public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) =>
-      await ids.BlockTransform(async id => {
+      await ids.BlockFunc(async id => {
         var runCfg = id.PipeCfg(ctx);
         var image = runCfg.Container.ContainerImageName();
         var args = new[] {"run"}
@@ -98,7 +98,7 @@ namespace Mutuo.Etl.Pipe {
 
   public class ThreadPipeWorker : IPipeWorker {
     public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) {
-      var res = await ids.BlockTransform(async id => {
+      var res = await ids.BlockFunc(async id => {
         await ctx.DoPipeWork(id);
         var md = new PipeRunMetadata {
           Id = id
@@ -137,7 +137,7 @@ namespace Mutuo.Etl.Pipe {
     ///   returns the status.</summary>
     public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log) {
       var azure = Az.Value;
-      var res = await ids.BlockTransform(async runId => {
+      var res = await ids.BlockFunc(async runId => {
         var runCfg = runId.PipeCfg(ctx); // id is for the sub-pipe, ctx is for the root
         var groupName = runId.ContainerGroupName();
         await EnsureNotRunning(groupName, azure, ctx.Cfg.Azure.ResourceGroup);
@@ -146,7 +146,7 @@ namespace Mutuo.Etl.Pipe {
           ctx.AppCtx.CustomRegion);
         var pipeLog = log.ForContext("Image", runCfg.Container.ContainerImageName()).ForContext("Pipe", runId.Name);
         var group = await Create(groupDef, pipeLog);
-        var run = await Run(group, returnOnRunning, pipeLog).WithDuration();
+        var run = await Run(@group, returnOnRunning, pipeLog).WithDuration();
 
         var logTxt = await run.Result.GetLogContentAsync(runId.ContainerName());
         var logPath = new StringPath($"{runId.StatePath()}.log.txt");
@@ -174,7 +174,7 @@ namespace Mutuo.Etl.Pipe {
         if (run.Result.State() == ContainerState.Succeeded) await DeleteContainer(ctx, log, runId, azure);
 
         return md;
-      }, 10);
+      });
 
       return res;
     }

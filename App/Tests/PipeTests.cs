@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
 using FluentAssertions;
+using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using NUnit.Framework;
 using Serilog;
@@ -18,8 +19,8 @@ namespace Tests {
       b.RegisterType<PipeApp>();
       b.Register(_ => log).As<ILogger>();
       var scope = b.Build();
-
-      var pipeCtx = new PipeCtx(new PipeAppCfg(), new PipeAppCtx(scope, typeof(PipeApp)), log);
+      var store = new AzureBlobFileStore("UseDevelopmentStorage=true", "pipe", log);
+      var pipeCtx = new PipeCtx(new PipeAppCfg(), new PipeAppCtx(scope, typeof(PipeApp)), store, log);
       var res = await pipeCtx.Run((PipeApp app) => app.MakeAndSum(200), location: PipeRunLocation.Local);
       res.Metadata.Error.Should().BeFalse();
     }

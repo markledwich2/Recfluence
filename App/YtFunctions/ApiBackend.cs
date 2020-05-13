@@ -80,7 +80,7 @@ Discovered ${GitVersionInfo.DiscoverSemVer(typeof(YtDataUpdater))}";
 
     Task<string> RunUpdate(ExecutionContext exec) => Ctx.Run(exec, async c => {
       var pipeCtx = c.Scope.Resolve<IPipeCtx>();
-      var res = await pipeCtx.Run((YtDataUpdater u) => u.Update(PipeArg.Inject<ILogger>(), UpdateType.All), c.Log, true);
+      var res = await pipeCtx.Run((YtDataUpdater u) => u.Update(PipeArg.Inject<ILogger>(), UpdateType.All, false), c.Log, true);
       return res.Error
         ? $"Error starting pipe work: {res.ErrorMessage}"
         : $"Started work on containers(s): {res.Containers.Join(", ", c => $"{c.Image} -> {c.Name}")}";

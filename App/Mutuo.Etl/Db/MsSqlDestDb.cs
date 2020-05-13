@@ -63,13 +63,13 @@ namespace Mutuo.Etl.Db {
       await Connection.Execute(nameof(DropTable), $"drop table {this.Sql(table)}", transaction);
 
     public async Task<TableSchema> Schema(TableId table) {
-      var exists = await Connection.ExecuteScalarAsync<int>(nameof(Schema), @$"select count(*) from information_schema.tables 
+      var exists = await Connection.ExecuteScalar<int>(nameof(Schema), @$"select count(*) from information_schema.tables 
         where table_name='{table.Table}' and table_schema='{table.Schema}'");
 
       if (exists == 0)
         return null;
 
-      var cols = await Connection.QueryAsync<(string name, string type)>(nameof(Schema),
+      var cols = await Connection.Query<(string name, string type)>(nameof(Schema),
         @$"select column_name, data_type from information_schema.columns 
         where table_name='{table.Table}' and table_schema='{table.Schema}'");
 
@@ -97,7 +97,7 @@ namespace Mutuo.Etl.Db {
     public async Task CreateIndex(TableId table, IndexType type, string[] cols) {
       if (type == IndexType.FullText) {
         if (TextCatalog.NullOrEmpty()) throw new InvalidOperationException($"text index on {table.Table}, but no text catalog specified");
-        if (await Connection.ExecuteScalarAsync<int>(nameof(CreateIndex),
+        if (await Connection.ExecuteScalar<int>(nameof(CreateIndex),
           "select count(*) from sys.fulltext_catalogs where name= @name", new {name = TextCatalog}) == 0)
           await Connection.Execute(nameof(CreateIndex), $"create fulltext catalog {TextCatalog} as default");
       }
@@ -123,7 +123,7 @@ insert ({cols.Join(",", c => this.Sql(c))})
 values ({cols.Join(",", c => $"s.{this.Sql(c)}")})
 ;";
       // mege operations can take a v long time when large
-      return await Connection.ExecuteScalarAsync<int>(nameof(Merge), mergeSql, timeout: 2.Hours());
+      return await Connection.ExecuteScalar<int>(nameof(Merge), mergeSql, timeout: 2.Hours());
     }
 
     public async Task<long> BulkCopy(IDataReader reader, TableId table, ILogger log) {

@@ -24,17 +24,17 @@ namespace YtReader.Store {
 
     public ISimpleFileStore Store { get; }
 
-    public AppendCollectionStore<ChannelStored2>        Channels   { get; }
-    public AppendCollectionStore<UserSearchWithUpdated> Searches   { get; }
-    public AppendCollectionStore<VideoStored2>          Videos     { get; }
-    public AppendCollectionStore<VideoExtraStored2>     VideoExtra { get; }
-    public AppendCollectionStore<RecStored2>            Recs       { get; }
-    public AppendCollectionStore<VideoCaptionStored2>   Captions   { get; }
+    public JsonlStore<ChannelStored2>        Channels   { get; }
+    public JsonlStore<UserSearchWithUpdated> Searches   { get; }
+    public JsonlStore<VideoStored2>          Videos     { get; }
+    public JsonlStore<VideoExtraStored2>     VideoExtra { get; }
+    public JsonlStore<RecStored2>            Recs       { get; }
+    public JsonlStore<VideoCaptionStored2>   Captions   { get; }
 
-    public IAppendCollectionStore[] AllStores => new IAppendCollectionStore[] {Channels, Searches, Videos, VideoExtra, Recs, Captions};
+    public IJsonlStore[] AllStores => new IJsonlStore[] {Channels, Searches, Videos, VideoExtra, Recs, Captions};
 
-    AppendCollectionStore<T> CreateStore<T>(string name, Func<T, string> getPartition = null) where T : IHasUpdated =>
-      new AppendCollectionStore<T>(Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);
+    JsonlStore<T> CreateStore<T>(string name, Func<T, string> getPartition = null) where T : IHasUpdated =>
+      new JsonlStore<T>(Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);
   }
 
   public class ChannelStored2 : WithUpdatedItem {

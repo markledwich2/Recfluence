@@ -209,7 +209,7 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
 
 const SearchTexBox: React.FunctionComponent = () => {
   const [query, setQuery] = useState<string>()
-  const [inputValue, setInputValue] = useState<string>()
+  const [inputValue, setInputValue] = useState<string>("")
   const ref = useRef<HTMLInputElement>()
 
   const userCtx = useContext(UserContext)

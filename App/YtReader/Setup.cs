@@ -215,18 +215,19 @@ namespace YtReader {
       b.Register(_ => log).SingleInstance();
       b.Register(_ => cfg).SingleInstance();
       b.Register(_ => rootCfg).SingleInstance();
-
       b.Register(_ => cfg.Pipe).SingleInstance();
       b.Register(_ => cfg.Elastic).SingleInstance();
       b.Register(_ => cfg.Snowflake).SingleInstance();
+      b.Register(_ => cfg.Warehouse).SingleInstance();
+      b.Register(_ => cfg.Storage).SingleInstance();
 
       b.Register<Func<Task<DbConnection>>>(_ => async () => await cfg.Snowflake.OpenConnection());
-      b.RegisterType<AppDb>().SingleInstance();
+      b.Register(_ => new ConnectionProvider(async () => await cfg.Snowflake.OpenConnection(), cfg.Snowflake.Db)).SingleInstance();
       b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();
-      b.Register(_ => cfg.DataStore(log, cfg.Storage.ResultsPath)).Keyed<ISimpleFileStore>(StoreType.Results).SingleInstance();
-      b.Register(_ => cfg.DataStore(log, cfg.Storage.DbPath)).Keyed<ISimpleFileStore>(StoreType.Db).SingleInstance();
-      b.Register(_ => cfg.DataStore(log, cfg.Storage.PrivatePath)).Keyed<ISimpleFileStore>(StoreType.Private).SingleInstance();
-
+      
+      foreach (var storeType in EnumExtensions.Values<StoreType>())
+        b.Register(_ => cfg.DataStore(log, cfg.Storage.StoragePath(storeType))).Keyed<ISimpleFileStore>(storeType).SingleInstance();
+      
       b.RegisterType<YtClient>();
 
       b.Register(_ => {
@@ -246,14 +247,14 @@ namespace YtReader {
       ).SingleInstance();
 
       b.RegisterType<YtStore>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
-      b.RegisterType<YtResults>().WithKeyedParam(StoreType.Results, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<StoreUpgrader>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<YtResults>().WithKeyedParam(StoreType.Results, Typ.Of<ISimpleFileStore>()).SingleInstance();
+      b.RegisterType<StoreUpgrader>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
       b.RegisterType<YtSearch>();
       b.RegisterType<YtDataUpdater>();
-      b.RegisterType<WarehouseUpdater>();
+      b.RegisterType<WarehouseUpdater>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
 
       b.Register(_ => pipeAppCtx);
-      b.RegisterType<PipeCtx>().As<IPipeCtx>().SingleInstance();
+      b.RegisterType<PipeCtx>().WithKeyedParam(StoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>().SingleInstance();
 
       return b;
     }
@@ -269,11 +270,20 @@ namespace YtReader {
     public static Task<IContainerGroup> SeqGroup(this IAzure azure, AppCfg cfg) =>
       azure.ContainerGroups.GetByResourceGroupAsync(cfg.ResourceGroup, cfg.SeqHost.ContainerGroupName);
 
-    public static ISimpleFileStore DataStore(this AppCfg cfg, ILogger log, StringPath path = null) =>
-      new AzureBlobFileStore(cfg.Storage.DataStorageCs, path ?? cfg.Storage.DbPath, log);
+    public static ISimpleFileStore DataStore(this AppCfg cfg, ILogger log, StringPath path) =>
+      new AzureBlobFileStore(cfg.Storage.DataStorageCs, path, log);
 
     public static YtClient YtClient(this AppCfg cfg, ILogger log) => new YtClient(cfg.YTApiKeys, log);
     public static bool IsProd(this RootCfg root) => root.Env.ToLowerInvariant() == "prod";
+    
+    static StringPath StoragePath(this StorageCfg cfg, StoreType type) =>
+      cfg.RootPath + "/" + type switch {
+        StoreType.Pipe => cfg.PipePath,
+        StoreType.Db => cfg.DbPath,
+        StoreType.Private => cfg.PrivatePath,
+        StoreType.Results => cfg.ResultsPath,
+        _ => throw new NotImplementedException($"StoryType {type} not supported")
+      };
   }
 
   public enum StoreType {
