@@ -8,6 +8,9 @@ FROM debian:9
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
 
+ENV AZCOPY_STAMP=20200501
+ENV AZCOPY_VERSION=10.4.3
+
 # This Dockerfile adds a non-root user with sudo access. Use the "remoteUser"
 # property in devcontainer.json to use it. On Linux, the container user's GID/UIDs
 # will be updated to match your local UID/GID (when using the dockerFile property).
@@ -15,6 +18,19 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG USERNAME=vscode
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+         ca-certificates \
+         curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN set -ex \
+    && curl -L -o azcopy.tar.gz https://azcopyvnext.azureedge.net/release${RELEASE_STAMP}/azcopy_linux_amd64_${RELEASE_VERSION}.tar.gz \
+    && tar -xzf azcopy.tar.gz && rm -f azcopy.tar.gz \
+    && cp ./azcopy_linux_amd64_*/azcopy /usr/local/bin/. \
+    && chmod +x /usr/local/bin/azcopy \
+    && rm -rf azcopy_linux_amd64_*
 
 # Configure apt and install packages
 RUN apt-get update \
@@ -29,19 +45,31 @@ RUN apt-get update \
     && curl -sL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - 2>/dev/null \
     && apt-get update \
     && apt-get install -y azure-cli \
-    #
-    # Create a non-root user to use if preferred - see https://aka.ms/vscode-remote/containers/non-root-user.
-    && groupadd --gid $USER_GID $USERNAME \
+
+#
+# Instll Az Copy (ML)
+RUN set -ex \
+    && curl -L -o azcopy.tar.gz https://azcopyvnext.azureedge.net/release${AZCOPY_STAMP}/azcopy_linux_amd64_${AZCOPY_VERSION}.tar.gz \
+    && tar -xzf azcopy.tar.gz && rm -f azcopy.tar.gz \
+    && cp ./azcopy_linux_amd64_*/azcopy /usr/local/bin/. \
+    && chmod +x /usr/local/bin/azcopy \
+    && rm -rf azcopy_linux_amd64_*
+
+# Clean up
+RUN apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
+#
+# Create a non-root user to use if preferred - see https://aka.ms/vscode-remote/containers/non-root-user.
+RUN groupadd --gid $USER_GID $USERNAME \
     && useradd -s /bin/bash --uid $USER_UID --gid $USER_GID -m $USERNAME \
     # [Optional] Add sudo support for the non-root user
     && apt-get install -y sudo \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME\
     && chmod 0440 /etc/sudoers.d/$USERNAME \
-    #
-    # Clean up
-    && apt-get autoremove -y \
-    && apt-get clean -y \
-    && rm -rf /var/lib/apt/lists/*
+
+
 
 # Switch back to dialog for any ad-hoc use of apt-get
 ENV DEBIAN_FRONTEND=dialog
