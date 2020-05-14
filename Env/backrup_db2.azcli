@@ -1,0 +1,48 @@
+
+# ML 2020-05-14 Not in prod use. 
+
+
+# get SAS uri's for source and dest
+
+az login 
+
+
+from_group=ytnetworks
+from_account=pyt
+from_container=testdata
+from_path="db2/*"
+
+to_group=dev
+to_account=mutuodev
+to_container=backup
+date=`date +%Y-%m-%dT%H:%MZ`
+to_path="db2/${date}"
+
+now=`date +"%Y-%m-%dT%H:%M:00Z"`
+expiry=`date -d "$now + 3 days" +"%Y-%m-%dT%H:%M:00Z"`
+
+
+
+#SASa=`az storage container generate-sas --name $srcCon --start $NOW --expiry $EXPIRY --permissions rl --account-name $srcAcc --account-key $srcKey --output tsv`
+
+expiry=`date -u -d "4 days" '+%Y-%m-%dT%H:%M:%SZ'`
+
+backupdir=`date +%Y-%m-%dT%H:%MZ`
+
+
+from_cs=`az storage account show-connection-string --name $from_account --resource-group $from_group --output tsv`
+from_sas=`az storage container generate-sas --connection-string $from_cs --name $from_container --permissions rl --expiry $expiry --start $now  --output tsv`
+
+to_cs=`az storage account show-connection-string --name $to_account --resource-group $to_group --output tsv`
+to_sas=`az storage container generate-sas --connection-string $to_cs --name $to_container --permissions acdrw  --expiry $expiry  --start $now --output tsv`
+
+
+#azcopy copy --help
+from_url="https://${from_account}.blob.core.windows.net/${from_container}/${from_path}?${from_sas}"
+to_url="https://${to_account}.blob.core.windows.net/${to_container}/${to_path}?${to_sas}"
+
+azcopy copy $from_url $to_url --overwrite=prompt --recursive
+
+
+azcopy copy "https://pyt.blob.core.windows.net/testdata/db2/*?sv=2018-03-28&ss=b&srt=co&sp=rl&se=2020-05-21T00%3A38%3A35Z&sig=jRygPycCgpVMPBEF3%2FxT7OAe4yuuvjsXgEoqT4zPg2U%3D" "https://mutuodev.blob.core.windows.net/backup/2020-05-14-manual/db2?se=2020-06-13T00%3A39%3A13Z&sp=rwl&sv=2018-03-28&sr=c&sig=SXzFVugUkGwRnrQC0Dhrtk%2B5GsZDEhgWpF7K8tvyPWI%3D" --overwrite=prompt --recursive --s2s-preserve-access-tier=false;
+
