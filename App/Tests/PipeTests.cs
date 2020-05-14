@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
@@ -23,6 +24,12 @@ namespace Tests {
       var pipeCtx = new PipeCtx(new PipeAppCfg(), new PipeAppCtx(scope, typeof(PipeApp)), store, log);
       var res = await pipeCtx.Run((PipeApp app) => app.MakeAndSum(200), location: PipeRunLocation.Local);
       res.Metadata.Error.Should().BeFalse();
+    }
+
+    [Test]
+    public static void TestContainerStateUnknown() {
+      var state = "PendingX".ToEnum<ContainerState>(false);
+      state.Should().Be(ContainerState.Unknown);
     }
   }
 

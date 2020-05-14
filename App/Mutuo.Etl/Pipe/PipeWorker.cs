@@ -28,6 +28,7 @@ namespace Mutuo.Etl.Pipe {
 
   public enum ContainerState {
     Unknown,
+    Pending,
     Running,
     Succeeded,
     Failed,

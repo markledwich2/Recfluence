@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using SysExtensions.Reflection;
 
 //using Mutuo.SystemExtensions.Collections;
 
@@ -69,6 +70,7 @@ namespace SysExtensions {
       }
 
       if (ensureFound && !found) throw new InvalidCastException($"Unable to cast ({s}) to {t.Name}");
+      if(enumValue == null) enumValue = (Enum)t.DefaultForType(); // enumCache.TryGetValue will set to null instead of the default enum value when not found
       return enumValue;
     }
 
