@@ -9,12 +9,14 @@ using SysExtensions.Security;
 
 namespace YtReader {
   public class RootCfg {
+    /*
     /// <summary>The azure blobl SAS Uri to the blob container hosting secrets.rootCfg.json</summary>
     [Required]
     public Uri AppCfgSas { get; set; }
+    */
 
     // connection string to the configuration directory
-    [Required] public string AzureStorageCs { get; set; }
+    [Required] public string AppStoreCs { get; set; }
 
     // name of environment (Prod/Dev etc..). used to choose appropreate cfg
     [Required] public string Env { get; set; }
@@ -42,6 +44,7 @@ namespace YtReader {
     [Required] public SheetsCfg           Sheets                { get; set; } = new SheetsCfg();
     [Required] public ScraperCfg          Scraper               { get; set; } = new ScraperCfg();
     [Required] public SnowflakeCfg        Snowflake             { get; set; } = new SnowflakeCfg();
+    [Required] public WarehouseCfg        Warehouse             { get; set; } = new WarehouseCfg();
     [Required] public SqlServerCfg        AppDb                 { get; set; } = new SqlServerCfg();
     [Required] public ResultsCfg          Results               { get; set; } = new ResultsCfg();
     [Required] public PipeAppCfg          Pipe                  { get; set; } = new PipeAppCfg();
@@ -107,11 +110,15 @@ namespace YtReader {
   }
 
   public class StorageCfg {
+    [Required] public string RootPath { get; set; }
     [Required] public string DataStorageCs { get; set; }
-    [Required] public string DbPath        { get; set; }
-    [Required] public string ResultsPath   { get; set; }
-    [Required] public string PrivatePath   { get; set; }
-    [Required] public string PipePath      { get; set; }
+    [Required] public string DbPath { get; set; } = "db2";
+    [Required] public string ResultsPath { get; set; } = "results";
+    [Required] public string PrivatePath { get; set; } = "private";
+    [Required] public string PipePath { get; set; } = "pipe";
+
+    [Required] public string BackupCs { get; set; }
+    [Required] public string BackupRootPath { get; set; }
   }
 
   public class SeqHostCfg {

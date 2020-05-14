@@ -18,6 +18,7 @@ namespace Mutuo.Etl.Blob {
     IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null);
     Task<bool> Delete(StringPath path, ILogger log = null);
     Task<Stream> OpenForWrite(StringPath path, ILogger log = null);
+    Task<FileListItem> Info(StringPath path);
   }
 
   public static class SimpleStoreExtensions {

@@ -42,10 +42,10 @@ namespace Mutuo.Etl.Pipe {
   public class PipeCtx : IPipeCtx, IDisposable {
     public PipeCtx() { }
 
-    public PipeCtx(PipeAppCfg cfg, PipeAppCtx appCtx, ILogger log) {
+    public PipeCtx(PipeAppCfg cfg, PipeAppCtx appCtx, ISimpleFileStore store, ILogger log) {
       AppCtx = appCtx;
       Cfg = cfg;
-      Store = new AzureBlobFileStore(cfg.Store.Cs, cfg.Store.Path, log);
+      Store = store;
       Log = log;
       Scope = appCtx.Scope.BeginLifetimeScope(b => b.Register(_ => this).As<IPipeCtx>());
     }

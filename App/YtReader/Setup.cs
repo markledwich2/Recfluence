@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Common;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using Autofac;
@@ -35,6 +36,7 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 using YtReader.Search;
+using YtReader.Store;
 using YtReader.Yt;
 
 namespace YtReader {
@@ -119,7 +121,7 @@ namespace YtReader {
     public static (string name, string value)[] PipeEnv(RootCfg rootCfg, AppCfg appCfg) =>
       new[] {
         (nameof(RootCfg.Env), rootCfg.Env),
-        (nameof(RootCfg.AppCfgSas), rootCfg.AppCfgSas.ToString())
+        (nameof(RootCfg.AppStoreCs), rootCfg.AppStoreCs)
       };
 
     public static Task<SemVersion> GetVersion() => Version.GetOrCreate();
@@ -128,6 +130,9 @@ namespace YtReader {
       Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
       ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
 
+    /// <summary>
+    /// Loads applicaiotn configuration, and sets global config for .net
+    /// </summary>
     public static async Task<(AppCfg App, RootCfg Root)> LoadCfg(string basePath = null, ILogger rootLogger = null) {
       rootLogger ??= Log.Logger ?? Logger.None;
       basePath ??= Environment.CurrentDirectory;
@@ -137,11 +142,11 @@ namespace YtReader {
         .AddJsonFile("local.rootcfg.json", true)
         .Build().Get<RootCfg>();
 
-      if (cfgRoot.AppCfgSas == null)
-        throw new InvalidOperationException("AppCfgSas not provided in local.rootcfg.json or environment variables");
+      if (cfgRoot.AppStoreCs == null)
+        throw new InvalidOperationException("AppStoreCs not provided in local.rootcfg.json or environment variables");
 
       var envLower = cfgRoot.Env.ToLowerInvariant();
-      var blob = new AzureBlobFileStore(cfgRoot.AppCfgSas, Logger.None);
+      var blob = new AzureBlobFileStore(cfgRoot.AppStoreCs, cfgRoot.Env, Logger.None);
       var secrets = (await blob.Load($"{envLower}.appcfg.json")).AsString();
 
       var cfg = new ConfigurationBuilder()
@@ -153,6 +158,9 @@ namespace YtReader {
         .AddEnvironmentVariables().Build();
       var appCfg = cfg.Get<AppCfg>();
 
+      // by default, backup to the app/root storage location
+      appCfg.Storage.BackupCs ??= cfgRoot.AppStoreCs;
+      
       if (appCfg.Sheets != null)
         appCfg.Sheets.CredJson = secrets.ParseJToken().SelectToken("sheets.credJson") as JObject;
       appCfg.Pipe = await PipeAppCfg(appCfg);
@@ -168,6 +176,10 @@ namespace YtReader {
         throw new InvalidOperationException($"validation errors with app cfg {validation.Join(", ")}");
       }
 
+      // as recommended here https://github.com/Azure/azure-storage-net-data-movement, also should be good for performance of our other Http interactions
+      ServicePointManager.Expect100Continue = false;
+      ServicePointManager.DefaultConnectionLimit = Environment.ProcessorCount * 8;
+      
       return (appCfg, cfgRoot);
     }
 
@@ -214,17 +226,21 @@ namespace YtReader {
       b.Register(_ => log).SingleInstance();
       b.Register(_ => cfg).SingleInstance();
       b.Register(_ => rootCfg).SingleInstance();
-
       b.Register(_ => cfg.Pipe).SingleInstance();
       b.Register(_ => cfg.Elastic).SingleInstance();
+      b.Register(_ => cfg.Snowflake).SingleInstance();
+      b.Register(_ => cfg.Warehouse).SingleInstance();
+      b.Register(_ => cfg.Storage).SingleInstance();
 
       b.Register<Func<Task<DbConnection>>>(_ => async () => await cfg.Snowflake.OpenConnection());
-      b.RegisterType<AppDb>().SingleInstance();
+      b.Register(_ => new ConnectionProvider(async () => await cfg.Snowflake.OpenConnection(), cfg.Snowflake.Db)).SingleInstance();
       b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();
-      b.Register(_ => cfg.DataStore(log, cfg.Storage.ResultsPath)).Keyed<ISimpleFileStore>(StoreType.Results).SingleInstance();
-      b.Register(_ => cfg.DataStore(log, cfg.Storage.DbPath)).Keyed<ISimpleFileStore>(StoreType.Db).SingleInstance();
-      b.Register(_ => cfg.DataStore(log, cfg.Storage.PrivatePath)).Keyed<ISimpleFileStore>(StoreType.Private).SingleInstance();
-
+      
+      b.RegisterType<YtStores>().SingleInstance();
+      
+      foreach (var storeType in EnumExtensions.Values<DataStoreType>())
+        b.Register(_ => _.Resolve<YtStores>().Store(storeType)).Keyed<ISimpleFileStore>(storeType).SingleInstance();
+      
       b.RegisterType<YtClient>();
 
       b.Register(_ => {
@@ -238,18 +254,21 @@ namespace YtReader {
           var cs = new ConnectionSettings(
             cfg.Elastic.CloudId,
             new BasicAuthenticationCredentials(cfg.Elastic.Creds.Name, cfg.Elastic.Creds.Secret)
-            ).DefaultMappingFor(clrMap);
+          ).DefaultMappingFor(clrMap);
           return new ElasticClient(cs);
         }
       ).SingleInstance();
-
-      b.RegisterType<YtStore>().WithKeyedParam(StoreType.Db, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<YtResults>().WithKeyedParam(StoreType.Results, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<YtSearch>();
-      b.RegisterType<YtDataUpdater>();
+      
+      b.RegisterType<YtStore>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
+      b.RegisterType<YtResults>().WithKeyedParam(DataStoreType.Results, Typ.Of<ISimpleFileStore>()).SingleInstance();
+      b.RegisterType<StoreUpgrader>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
+      b.RegisterType<YtSearch>().SingleInstance();
+      b.RegisterType<YtDataUpdater>().SingleInstance();
+      b.RegisterType<WarehouseUpdater>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
+      b.RegisterType<YtBackup>().SingleInstance();
 
       b.Register(_ => pipeAppCtx);
-      b.RegisterType<PipeCtx>().As<IPipeCtx>().SingleInstance();
+      b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>().SingleInstance();
 
       return b;
     }
@@ -265,17 +284,14 @@ namespace YtReader {
     public static Task<IContainerGroup> SeqGroup(this IAzure azure, AppCfg cfg) =>
       azure.ContainerGroups.GetByResourceGroupAsync(cfg.ResourceGroup, cfg.SeqHost.ContainerGroupName);
 
-    public static ISimpleFileStore DataStore(this AppCfg cfg, ILogger log, StringPath path = null) =>
-      new AzureBlobFileStore(cfg.Storage.DataStorageCs, path ?? cfg.Storage.DbPath, log);
+    public static ISimpleFileStore DataStore(this AppCfg cfg, ILogger log, StringPath path) =>
+      new AzureBlobFileStore(cfg.Storage.DataStorageCs, path, log);
 
     public static YtClient YtClient(this AppCfg cfg, ILogger log) => new YtClient(cfg.YTApiKeys, log);
     public static bool IsProd(this RootCfg root) => root.Env.ToLowerInvariant() == "prod";
+    
+
   }
 
-  public enum StoreType {
-    Pipe,
-    Db,
-    Results,
-    Private
-  }
+
 }

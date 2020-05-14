@@ -48,9 +48,6 @@
         },
         "creds": {
           "type": "string"
-        },
-        "fullLoad": {
-          "type": "boolean"
         }
       }
     },
@@ -71,6 +68,17 @@
         },
         "container": {
           "$ref": "#/definitions/ContainerCfg"
+        }
+      }
+    },
+    "OptimiseCfg": {
+      "type": "object",
+      "properties": {
+        "targetBytes": {
+          "type": "integer"
+        },
+        "parallel": {
+          "type": "integer"
         }
       }
     },
@@ -264,6 +272,9 @@
     "StorageCfg": {
       "type": "object",
       "properties": {
+        "rootPath": {
+          "type": "string"
+        },
         "dataStorageCs": {
           "type": "string"
         },
@@ -277,6 +288,12 @@
           "type": "string"
         },
         "pipePath": {
+          "type": "string"
+        },
+        "backupCs": {
+          "type": "string"
+        },
+        "backupRootPath": {
           "type": "string"
         }
       }
@@ -360,6 +377,20 @@
         },
         "fullTextCatalog": {
           "type": "string"
+        }
+      }
+    },
+    "WarehouseCfg": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "type": "string"
+        },
+        "optimise": {
+          "$ref": "#/definitions/OptimiseCfg"
+        },
+        "loadTablesParallel": {
+          "type": "integer"
         }
       }
     },
@@ -448,6 +479,9 @@
     },
     "snowflake": {
       "$ref": "#/definitions/SnowflakeCfg"
+    },
+    "warehouse": {
+      "$ref": "#/definitions/WarehouseCfg"
     },
     "appDb": {
       "$ref": "#/definitions/SqlServerCfg"

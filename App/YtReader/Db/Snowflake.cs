@@ -1,15 +1,20 @@
-﻿using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Threading.Tasks;
 using Snowflake.Data.Client;
 using SysExtensions.Security;
 
 namespace YtReader {
   public class SnowflakeCfg {
     public NameSecret Creds     { get; set; } = new NameSecret();
-    public string     Account   { get; set; } = "MUTUO";
-    public string     Warehouse { get; set; } = "YT";
-    public string     Db        { get; set; } = "YT";
-    public string     Schema    { get; set; } = "PUBLIC";
+    [Required] public string     Account   { get; set; }
+    [Required] public string     Warehouse { get; set; }
+    [Required] public string     Db        { get; set; }
+    [Required] public string     Schema    { get; set; }
+    
+    
   }
+  
+  
 
   public static class SnowflakeEx {
     public static async Task<SnowflakeDbConnection> OpenConnection(this SnowflakeCfg cfg) {

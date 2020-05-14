@@ -96,7 +96,7 @@ namespace Mutuo.Etl.Pipe {
 
       var batches = await items.Batch(runCfg.MinWorkItems, runCfg.MaxParallel)
         .Select((g, i) => (Id: new PipeRunId(pipeNme, group, i), In: g.ToArray()))
-        .BlockTransform(async b => {
+        .BlockFunc(async b => {
           await ctx.SaveInRows(b.In, b.Id, log);
           return b.Id;
         });
@@ -124,7 +124,7 @@ namespace Mutuo.Etl.Pipe {
       return outState;
 
       async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> GetOutState() =>
-        await res.BlockTransform(async b => await GetOutState<TOut>(ctx, log, b, runCfg.ReturnOnStart));
+        await res.BlockFunc(async b => await GetOutState<TOut>(ctx, log, b, runCfg.ReturnOnStart));
     }
 
     static async Task<(PipeRunMetadata Metadata, TOut OutState)> GetOutState<TOut>(IPipeCtx ctx, ILogger log, PipeRunMetadata b, bool returnOnStart) {
@@ -159,7 +159,7 @@ namespace Mutuo.Etl.Pipe {
       var loadInArgs = await LoadInArgs(ctx, id);
       var args = loadInArgs.ToDictionary(a => a.Name);
 
-      var pipeParams = await method.GetParameters().BlockTransform(async p => {
+      var pipeParams = await method.GetParameters().BlockFunc(async p => {
         if (args.TryGetValue(p.Name ?? throw new NotImplementedException("parameters must have names"), out var arg)) {
           if (arg.ArgMode == ArgMode.SerializableValue) return ChangeToType(arg.Value, p.ParameterType);
           if (arg.ArgMode == ArgMode.InRows) {

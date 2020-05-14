@@ -3,7 +3,7 @@
   "inputs": [
     {
       "id": "ytcli_verb",
-      "options": ["index", "update", "results", "sunc-db", "version"],
+      "options": ["index", "update", "results", "sunc-db", "version", "warehouse"],
       "type": "pickString",
       "description": "Choose the YtCli command to debug"
     }

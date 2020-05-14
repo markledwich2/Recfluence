@@ -17,26 +17,29 @@ using SysExtensions.Text;
 using Troschuetz.Random;
 using YtReader;
 using YtReader.Search;
+using YtReader.Store;
 using YtReader.YtWebsite;
 
 namespace YtCli {
   class Program {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
-        .ParseArguments<PipeCmd, UpdateCmd, SyncBlobCmd, ChannelInfoOption, FixCmd, ResultsCmd, TrafficCmd,
-          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd>(args)
+        .ParseArguments<PipeCmd, UpdateCmd, SyncBlobCmd, ChannelInfoOption, UpgradeStoreCmd, ResultsCmd, TrafficCmd,
+          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd, WarehouseCmd, BackupCmd>(args)
         .MapResult(
           (PipeCmd p) => Run(p, args, PipeCmd.RunPipe),
           (UpdateCmd u) => Run(u, args, UpdateCmd.Update),
           (SyncBlobCmd s) => Run(s, args, SyncBlobCmd.Sync),
           (ChannelInfoOption v) => Run(v, args, ChannelInfoOption.ChannelInfo),
-          (FixCmd f) => Run(f, args, FixCmd.Fix),
+          (UpgradeStoreCmd f) => Run(f, args, UpgradeStoreCmd.Fix),
           (ResultsCmd f) => Run(f, args, ResultsCmd.Results),
           (TrafficCmd t) => Run(t, args, TrafficCmd.Traffic),
           (PublishContainerCmd p) => Run(p, args, PublishContainerCmd.PublishContainer),
           (VersionCmd v) => VersionCmd.Verson(),
           (UpdateSearchIndexCmd s) => Run(s, args, UpdateSearchIndexCmd.UpdateSearchIndex),
           (SyncDbCmd s) => Run(s, args, SyncDbCmd.Sync),
+          (WarehouseCmd w) => Run(w, args, WarehouseCmd.Update),
+          (BackupCmd b) => Run(b, args, BackupCmd.Backup),
           errs => Task.FromResult(ExitCode.Error)
         );
       return (int) await res;
@@ -88,6 +91,9 @@ namespace YtCli {
     [Option('t', "type", HelpText = "Control what parts of the update process to run")]
     public UpdateType UpdateType { get; set; }
 
+    [Option('f', "force", HelpText = "Force update of channels, so stats are refreshed even if they ahve bene updated recently")]
+    public bool ForceUpdate { get; set; }
+
     public static async Task<ExitCode> Update(CmdCtx<UpdateCmd> ctx) {
       if (ctx.Option.ChannelIds.HasValue())
         ctx.Cfg.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
@@ -99,17 +105,18 @@ namespace YtCli {
       // run the work in this process
       var cfg = standardPipeCtx.Cfg.JsonClone();
       cfg.Location = PipeRunLocation.Local;
-      var pipeCtx = new PipeCtx(cfg, appCtx, standardPipeCtx.Log);
-      await pipeCtx.Run((YtDataUpdater d) => d.Update(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType));
+      var pipeCtx = new PipeCtx(cfg, appCtx, standardPipeCtx.Store, standardPipeCtx.Log);
+      await pipeCtx.Run((YtDataUpdater d) => d.Update(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType, ctx.Option.ForceUpdate));
       //await pipeCtx.DoPipeWork(PipeRunId.FromName("Update"));
       return ExitCode.Success;
     }
   }
 
-  [Verb("fix", HelpText = "try to fix missing/inconsistent data")]
-  public class FixCmd : ICommonCmd {
-    public static async Task<ExitCode> Fix(CmdCtx<FixCmd> ctx) {
-      await new StoreUpgrader(ctx.Cfg, ctx.Cfg.DataStore(ctx.Log), ctx.Log).UpgradeStore();
+  [Verb("upgrade-store", HelpText = "try to fix missing/inconsistent data")]
+  public class UpgradeStoreCmd : ICommonCmd {
+    public static async Task<ExitCode> Fix(CmdCtx<UpgradeStoreCmd> ctx) {
+      var upgrader = ctx.Scope.Resolve<StoreUpgrader>();
+      await upgrader.UpgradeIfNeeded();
       return ExitCode.Success;
     }
   }
@@ -171,6 +178,21 @@ namespace YtCli {
     }
   }
 
+  [Verb("warehouse")]
+  public class WarehouseCmd : ICommonCmd {
+    [Option('t', HelpText = "list of tables to restrict warehouse update to")]
+    public IEnumerable<string> Tables { get; set; }
+    
+    [Option('f', HelpText = "if true, will clear and load data")]
+    public bool FullLoad { get; set; }
+    
+    public static async Task<ExitCode> Update(CmdCtx<WarehouseCmd> ctx) {
+      var wh = ctx.Scope.Resolve<WarehouseUpdater>();
+      await wh.WarehouseUpdate(ctx.Option.FullLoad, ctx.Option.Tables?.ToArray());
+      return ExitCode.Success;
+    }
+  }
+
   [Verb("sync-db")]
   public class SyncDbCmd : ICommonCmd {
     [Option('t', HelpText = "list of tables to sync")]
@@ -212,6 +234,15 @@ namespace YtCli {
     public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
       var pipeCtx = ctx.Scope.Resolve<IPipeCtx>();
       await pipeCtx.Run((YtSearch s) => s.SyncToElastic(ctx.Option.FullLoad, ctx.Option.Limit), location: ctx.Option.Location, log: ctx.Log);
+      return ExitCode.Success;
+    }
+  }
+  
+  [Verb("backup", HelpText = "Backup database")]
+  public class BackupCmd : ICommonCmd {
+    public static async Task<ExitCode> Backup(CmdCtx<BackupCmd> ctx) {
+      var back = ctx.Scope.Resolve<YtBackup>();
+      await back.Backup();
       return ExitCode.Success;
     }
   }

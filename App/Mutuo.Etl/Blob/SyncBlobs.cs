@@ -38,12 +38,11 @@ namespace Mutuo.Etl.Blob {
       var toUpdate = filesA.Values.Where(f => filesB.TryGet(f.Path)?.Modified < f.Modified).ToList();
 
       async Task<IReadOnlyCollection<StringPath>> SaveAll(IEnumerable<FileListItem> files, string action) =>
-        await files.BlockTransform(async f => {
+        await files.BlockFunc(async f => {
             using (var content = await storeA.Load(f.Path, log))
               await storeB.Save(f.Path, content);
             return f.Path;
           },
-          parallel,
           progressUpdate: p => log.Debug("{Action} {Files} at {Speed}", action, p.CompletedTotal, p.Speed("files")));
 
       sw.Restart();
