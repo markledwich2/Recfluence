@@ -131,7 +131,7 @@ namespace YtReader {
       ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
 
     /// <summary>
-    /// Loads applicaiotn configuration, and sets global config for .net
+    /// Loads application configuration, and sets global config for .net
     /// </summary>
     public static async Task<(AppCfg App, RootCfg Root)> LoadCfg(string basePath = null, ILogger rootLogger = null) {
       rootLogger ??= Log.Logger ?? Logger.None;
@@ -146,8 +146,8 @@ namespace YtReader {
         throw new InvalidOperationException("AppStoreCs not provided in local.rootcfg.json or environment variables");
 
       var envLower = cfgRoot.Env.ToLowerInvariant();
-      var blob = new AzureBlobFileStore(cfgRoot.AppStoreCs, cfgRoot.Env, Logger.None);
-      var secrets = (await blob.Load($"{envLower}.appcfg.json")).AsString();
+      var secretStore = new AzureBlobFileStore(cfgRoot.AppStoreCs, "cfg", Logger.None);
+      var secrets = (await secretStore.Load($"{envLower}.appcfg.json")).AsString();
 
       var cfg = new ConfigurationBuilder()
         .SetBasePath(basePath)

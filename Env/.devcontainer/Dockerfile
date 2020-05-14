@@ -37,8 +37,9 @@ RUN apt-get update \
     && apt-get install -y apt-transport-https curl gnupg2 lsb-release \
     && echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list \
     && curl -sL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - 2>/dev/null \
-    && apt-get update \
-    && apt-get install -y azure-cli
+    && apt-get install -y azure-cli \
+    # install jq (for parsing results from akv)
+    && apt-get -y install jq
 
 #
 # Instll Az Copy. see https://hub.docker.com/r/datenbetrieb/azcopy/dockerfile

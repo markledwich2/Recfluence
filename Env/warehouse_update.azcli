@@ -1,0 +1,16 @@
+az login
+
+rg=ytnetworks
+container=update-warehouse-search
+
+registryPass=`az keyvault secret show --name "ytnetworks-registry-password" --vault-name "recfluence" --output json | jq -r '.value'`
+
+cs=`az storage account show-connection-string --name ytapp --resource-group ytnetworks --output tsv`
+
+echo $cs
+az container create --help
+az container create -g $rg --name $container --image ytnetworks.azurecr.io/ytnetworks:0.5.0 --cpu 4 --memory 8 --command-line "./ytnetworks warehouse -f" --environment-variables env=prod appStoreCs=$cs warehouse__stage=yt_data --registry-username ytnetworks  --registry-password $registryPass --restart-policy Never
+
+az container show -g $rg -n $container
+az container attach -g $rg -n $container
+az container delete -g $rg -n $container
