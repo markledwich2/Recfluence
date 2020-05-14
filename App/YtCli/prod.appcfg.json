@@ -1,6 +1,7 @@
 {
   "storage": {
-    "rootPath": "data"
+    "rootPath": "data",
+    "backupRootPath": "backup"
   },
   "pipe": {
     "location": "Container"

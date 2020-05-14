@@ -9,12 +9,14 @@ using SysExtensions.Security;
 
 namespace YtReader {
   public class RootCfg {
+    /*
     /// <summary>The azure blobl SAS Uri to the blob container hosting secrets.rootCfg.json</summary>
     [Required]
     public Uri AppCfgSas { get; set; }
+    */
 
     // connection string to the configuration directory
-    [Required] public string AzureStorageCs { get; set; }
+    [Required] public string AppStoreCs { get; set; }
 
     // name of environment (Prod/Dev etc..). used to choose appropreate cfg
     [Required] public string Env { get; set; }
@@ -114,6 +116,9 @@ namespace YtReader {
     [Required] public string ResultsPath { get; set; } = "results";
     [Required] public string PrivatePath { get; set; } = "private";
     [Required] public string PipePath { get; set; } = "pipe";
+
+    [Required] public string BackupCs { get; set; }
+    [Required] public string BackupRootPath { get; set; }
   }
 
   public class SeqHostCfg {

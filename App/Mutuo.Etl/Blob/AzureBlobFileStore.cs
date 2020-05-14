@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.File;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
@@ -121,7 +122,10 @@ namespace Mutuo.Etl.Blob {
       return await blob.DeleteIfExistsAsync();
     }
 
-    CloudBlockBlob BlobRef(StringPath path) => Container.GetBlockBlobReference(BasePathSansContainer.Add(path));
+    string ContainerRelativePath(StringPath path = null) => path == null ? BasePathSansContainer : BasePathSansContainer.Add(path);
+
+    public CloudBlockBlob BlobRef(StringPath path = null) => Container.GetBlockBlobReference(ContainerRelativePath(path));
+    public CloudBlobDirectory DirectoryRef(StringPath path = null) => Container.GetDirectoryReference(ContainerRelativePath(path));
 
     /// <summary>autoamtically work set the blob properties based on the extenions. Assumes the format ContentType[.Encoding]
     ///   (e.g. csv.gz or csv)</summary>

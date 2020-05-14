@@ -1,6 +1,7 @@
 ﻿{
   "storage": {
-    "rootPath": "testdata"
+    "rootPath": "testdata",
+    "backupRootPath": "backuptest"
   },
   "snowflake": {
     "Db": "YT_DEV"

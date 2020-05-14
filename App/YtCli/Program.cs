@@ -25,7 +25,7 @@ namespace YtCli {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
         .ParseArguments<PipeCmd, UpdateCmd, SyncBlobCmd, ChannelInfoOption, UpgradeStoreCmd, ResultsCmd, TrafficCmd,
-          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd, WarehouseCmd>(args)
+          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd, WarehouseCmd, BackupCmd>(args)
         .MapResult(
           (PipeCmd p) => Run(p, args, PipeCmd.RunPipe),
           (UpdateCmd u) => Run(u, args, UpdateCmd.Update),
@@ -39,6 +39,7 @@ namespace YtCli {
           (UpdateSearchIndexCmd s) => Run(s, args, UpdateSearchIndexCmd.UpdateSearchIndex),
           (SyncDbCmd s) => Run(s, args, SyncDbCmd.Sync),
           (WarehouseCmd w) => Run(w, args, WarehouseCmd.Update),
+          (BackupCmd b) => Run(b, args, BackupCmd.Backup),
           errs => Task.FromResult(ExitCode.Error)
         );
       return (int) await res;
@@ -233,6 +234,15 @@ namespace YtCli {
     public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
       var pipeCtx = ctx.Scope.Resolve<IPipeCtx>();
       await pipeCtx.Run((YtSearch s) => s.SyncToElastic(ctx.Option.FullLoad, ctx.Option.Limit), location: ctx.Option.Location, log: ctx.Log);
+      return ExitCode.Success;
+    }
+  }
+  
+  [Verb("backup", HelpText = "Backup database")]
+  public class BackupCmd : ICommonCmd {
+    public static async Task<ExitCode> Backup(CmdCtx<BackupCmd> ctx) {
+      var back = ctx.Scope.Resolve<YtBackup>();
+      await back.Backup();
       return ExitCode.Success;
     }
   }

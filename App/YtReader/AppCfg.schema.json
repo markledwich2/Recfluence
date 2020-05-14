@@ -289,6 +289,12 @@
         },
         "pipePath": {
           "type": "string"
+        },
+        "backupCs": {
+          "type": "string"
+        },
+        "backupRootPath": {
+          "type": "string"
         }
       }
     },
@@ -382,6 +388,9 @@
         },
         "optimise": {
           "$ref": "#/definitions/OptimiseCfg"
+        },
+        "loadTablesParallel": {
+          "type": "integer"
         }
       }
     },

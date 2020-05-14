@@ -3,10 +3,45 @@ using System.Collections.Generic;
 using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
+using SysExtensions.Text;
 using YtReader.Yt;
 using YtReader.YtWebsite;
 
 namespace YtReader.Store {
+  public enum DataStoreType {
+    Pipe,
+    Db,
+    Results,
+    Private,
+    Backup
+  }
+
+  /// <summary>Access to any of the stores</summary>
+  public class YtStores {
+    readonly StorageCfg Cfg;
+    readonly ILogger    Log;
+
+    public YtStores(StorageCfg cfg, ILogger log) {
+      Cfg = cfg;
+      Log = log;
+    }
+
+    public AzureBlobFileStore Store(DataStoreType type) => type switch {
+      DataStoreType.Backup => new AzureBlobFileStore(Cfg.BackupCs, Cfg.BackupRootPath, Log),
+      _ => new AzureBlobFileStore(Cfg.DataStorageCs, StoragePath(type), Log)
+    };
+
+    StringPath StoragePath(DataStoreType type) =>
+      Cfg.RootPath + "/" + type switch {
+        DataStoreType.Pipe => Cfg.PipePath,
+        DataStoreType.Db => Cfg.DbPath,
+        DataStoreType.Private => Cfg.PrivatePath,
+        DataStoreType.Results => Cfg.ResultsPath,
+        _ => throw new NotImplementedException($"StoryType {type} not supported")
+      };
+  }
+
+  /// <summary>Typed access to jsonl blob collections</summary>
   public class YtStore {
     public static readonly int     StoreVersion = 1;
     readonly               ILogger Log;
