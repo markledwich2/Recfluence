@@ -69,7 +69,7 @@ namespace Mutuo.Etl.Db {
       if (exists == 0)
         return null;
 
-      var cols = await Connection.QueryAsync<(string name, string type)>(nameof(Schema),
+      var cols = await Connection.Query<(string name, string type)>(nameof(Schema),
         @$"select column_name, data_type from information_schema.columns 
         where table_name='{table.Table}' and table_schema='{table.Schema}'");
 

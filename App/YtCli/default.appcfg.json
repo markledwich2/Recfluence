@@ -3,15 +3,15 @@
   "seqHost": {
     "containerGroupName": "seq"
   },
+  "snowflake": {
+    "Account": "MUTUO",
+    "Warehouse": "YT",
+    "Schema": "PUBLIC"
+  },
   "parallelChannels": 4,
   "defaultParallel": 8,
   "channelsPerContainer": 300,
   "resourceGroup": "ytnetworks",
-  "storage": {
-    "dbPath": "testdata/db2",
-    "resultsPath": "testdata/results",
-    "pipePath": "testdata/pipe"
-  },
   "subscriptionId": "93ef8661-3e11-4fcc-92ae-d0383e7e4ad3",
   "servicePrincipal": {
     "clientId": "664f7796-ecbf-4244-ba6b-b4d76e1c1037",
@@ -28,12 +28,6 @@
   },
   "scraper": {
     "url": "us.smartproxy.com:10000"
-  },
-  "snowflake": {
-    "Account": "MUTUO",
-    "Warehouse": "YT",
-    "Db": "YT",
-    "Schema": "PUBLIC"
   },
   "pipe": {
     "default": {

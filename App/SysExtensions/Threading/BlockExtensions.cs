@@ -19,7 +19,7 @@ namespace SysExtensions.Threading {
     }
 
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
-    public static async Task<IReadOnlyCollection<R>> BlockTransform<T, R>(this IEnumerable<T> source,
+    public static async Task<IReadOnlyCollection<R>> BlockFunc<T, R>(this IEnumerable<T> source,
       Func<T, Task<R>> transform, int parallelism = 1, int? capacity = null,
       Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default) {
       progressPeriod = progressPeriod == default ? 60.Seconds() : progressPeriod;

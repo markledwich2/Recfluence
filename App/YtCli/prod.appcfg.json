@@ -1,10 +1,15 @@
 {
   "storage": {
-    "dbPath": "data/db2",
-    "resultsPath": "data/results",
-    "pipePath": "data/pipe"
+    "rootPath": "data",
+    "backupRootPath": "backup"
   },
   "pipe": {
     "location": "Container"
+  },
+  "snowflake": {
+    "Db": "YT"
+  },
+  "warehouse": {
+    "stage": "@yt_data"
   }
 }

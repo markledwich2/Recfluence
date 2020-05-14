@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -8,6 +9,11 @@ namespace SysExtensions.Collections {
     public static void AddRange<T>(this ICollection<T> list, IEnumerable<T> items) {
       foreach (var item in items)
         list.Add(item);
+    }
+
+    public static void AddRange<T>(this IProducerConsumerCollection<T> list, IEnumerable<T> items) {
+      foreach (var item in items)
+        list.TryAdd(item);
     }
 
     public static void AddRange<T>(this ICollection<T> list, params T[] items) => list.AddRange((IEnumerable<T>) items);

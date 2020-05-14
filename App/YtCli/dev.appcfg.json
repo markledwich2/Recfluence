@@ -1,8 +1,18 @@
 ﻿{
-  "limitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCfrlXVXz-pT9AmmDELhpyOw", "UCgRvm1yLFoaQKhmaTqXk9SA"],
+  "storage": {
+    "rootPath": "testdata",
+    "backupRootPath": "backuptest"
+  },
+  "snowflake": {
+    "Db": "YT_DEV"
+  },
+  "limitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCupvZG-5ko_eiXAupbDfxWw"],
   "ytReader": {
     "from": "2019-10-01",
     "to": null,
     "refreshRecsWithin": "20.00:00:00.0"
+  },
+  "warehouse": {
+    "stage": "yt_testdata"
   }
 }

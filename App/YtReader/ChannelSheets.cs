@@ -13,6 +13,7 @@ using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Store;
 
 namespace YtReader {
   public static class ChannelSheets {
@@ -75,12 +76,12 @@ namespace YtReader {
       var userChannelSheets = await sheetsCfg.UserChannelSheetIds
         .Select((v, i) => new
           {SheetId = v, Weight = 1}) // I used to weight some users higher (that's why there is that logic). Now we weight them all the same (1)
-        .BlockTransform(async s => new {
+        .BlockFunc(async s => new {
           Channels = await SheetValues<UserChannelSheet>(service, s.SheetId, "Channels", log)
             .WithWrappedException($"eror reading user sheet {s.SheetId}", log),
           s.SheetId,
           s.Weight
-        }, 4);
+        });
 
       var userChannelsById = userChannelSheets
         .SelectMany(u => u.Channels.Select(c => new {u.SheetId, u.Weight, Channel = c}))
@@ -133,7 +134,7 @@ namespace YtReader {
         "L" => -1,
         "R" => 1,
         "C" => 0,
-        _ => (double?) null
+        _ => null
       };
 
       if (!lrs.Any()) return null;
