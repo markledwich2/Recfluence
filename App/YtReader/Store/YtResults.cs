@@ -87,7 +87,7 @@ namespace YtReader.Store {
 
       var tmpDir = TempDir();
 
-      var results = await queries.BlockFunc(async q => (file: await SaveResult(db, tmpDir, q), query: q));
+      var results = await queries.BlockFunc(async q => (file: await SaveResult(db, tmpDir, q), query: q), ResCfg.Parallel);
 
       if (!queryNames.Any()) await SaveResultsZip(results);
     }

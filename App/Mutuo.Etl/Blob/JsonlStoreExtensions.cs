@@ -45,7 +45,7 @@ namespace Mutuo.Etl.Blob {
       log.Debug("Optimise {Path} - read {Files} files across {Partitions} partitions in {Duration}",
         rootPath, byDir.Sum(p => p.Count()), byDir.Length, duration.HumanizeShort());
 
-      var optimiseRes = await byDir.BlockFunc(p => Optimise(store, p.Key, p, cfg, log));
+      var optimiseRes = await byDir.BlockFunc(p => Optimise(store, p.Key, p, cfg, log), cfg.Parallel);
       var res = (
         optimiseIn: optimiseRes.Sum(r => r.optimisedIn), 
         optimiseOut: optimiseRes.Sum(r => r.optimisedOut), 
@@ -120,10 +120,10 @@ namespace Mutuo.Etl.Blob {
             log.Debug("Optimise {Path} - loaded file {SourceFile} to be optimised in {Duration}",
               destPath, s.Path, inStream.Duration.HumanizeShort(2, TimeUnit.Millisecond));
             return inStream.Result;
-          });
+          }, parallel);
           foreach (var s in inStreams) {
             using var zr = new GZipStream(s, CompressionMode.Decompress, false);
-            zr.CopyTo(zipWriter);
+            await zr.CopyToAsync(zipWriter);
           }
         }
         joinedStream.Seek(0, SeekOrigin.Begin);

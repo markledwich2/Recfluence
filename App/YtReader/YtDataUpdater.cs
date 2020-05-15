@@ -55,7 +55,8 @@ namespace YtReader {
     [Pipe]
     public async Task Update(ILogger log, UpdateType updateType = UpdateType.All, bool forceUpdate = false) {
       var channels = await UpdateAllChannels(log);
-      var processRes = await channels.Process(PipeCtx, b => ProcessChannels(b, updateType, forceUpdate, Inject<ILogger>()), PipeCtx.Cfg.Default).WithDuration();
+      var processRes = await channels.Process(PipeCtx, 
+        b => ProcessChannels(b, updateType, forceUpdate, Inject<ILogger>())).WithDuration();
 
       var allChannelResults = processRes.Result.SelectMany(r => r.OutState.Channels).ToArray();
       log.Information("{Pipe} Complete - {Success}/{Total} channels updated in {Duration}",
@@ -70,7 +71,7 @@ namespace YtReader {
       var seeds = await ChannelSheets.Channels(Cfg.Sheets, log);
 
       var channels = await seeds.Where(c => Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(c.Id))
-        .BlockFunc(UpdateChannel,
+        .BlockFunc(UpdateChannel, Cfg.DefaultParallel,
           progressUpdate: p => log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count)).WithDuration();
 
       if (channels.Result.Any())
@@ -138,7 +139,7 @@ namespace YtReader {
             log.Error(ex, "Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
             return (c, Success: false);
           }
-        });
+        }, Cfg.ParallelChannels);
 
       var res = new ProcessChannelResults {
         Channels = channelResults.Select(r => new ProcessChannelResult {ChannelId = r.c.ChannelId, Success = r.Success}).ToArray(),
@@ -250,7 +251,7 @@ namespace YtReader {
 
       var captionsToStore =
         (await vids.Where(v => lastUpload == null || v.UploadDate.UtcDateTime > lastUpload)
-          .BlockFunc(GetCaption)).NotNull().ToList();
+          .BlockFunc(GetCaption, Cfg.DefaultParallel)).NotNull().ToList();
 
       if (captionsToStore.Any())
         await Store.Captions.Append(captionsToStore, log);
@@ -266,7 +267,8 @@ namespace YtReader {
       };
 
       var recs = await toUpdate.BlockFunc(
-        async v => (fromId: v.Id, fromTitle: v.Title, recs: await Scraper.GetRecsAndExtra(v.Id, log)));
+        async v => (fromId: v.Id, fromTitle: v.Title, recs: await Scraper.GetRecsAndExtra(v.Id, log)), 
+        Cfg.DefaultParallel);
 
       // read failed recs from the API (either because of an error, or because the video is 18+ restricted)
       var restricted = recs.Where(v => v.recs.extra.Error == YtScraper.RestrictedVideoError).ToList();
@@ -405,7 +407,7 @@ where num <= 50 -- most recent for each channel
     [Pipe]
     public async Task<IReadOnlyCollection<ProcessVideoExtraBatch>> ProcessVideoExtra(IEnumerable<ChannelVideoItem> videos, ILogger log) {
       var batch = await videos.BatchGreedy(2000).BlockFunc(async b => {
-        var recsAndExtra = await BlockExtensions.BlockFunc(b.NotNull(), async v => await Scraper.GetRecsAndExtra(v.VideoId, log));
+        var recsAndExtra = await b.NotNull().BlockFunc(async v => await Scraper.GetRecsAndExtra(v.VideoId, log), Cfg.DefaultParallel);
         var extra = recsAndExtra.Select(r => r.extra).ToArray();
         await Store.VideoExtra.Append(extra, log);
         log.Information("Recorded {VideoExtra} video_extra records", extra.Length);

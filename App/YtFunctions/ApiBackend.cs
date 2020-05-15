@@ -34,7 +34,7 @@ namespace YtFunctions {
       await StopIdleSeqInner(exec);
 
     [FunctionName("StopIdleSeq")]
-    public async Task<IActionResult> StopIdleSeq([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
+    public async Task<IActionResult> StopIdleSeq([HttpTrigger(AuthorizationLevel.Function, "get", "post")]
       HttpRequest req, ExecutionContext exec) => new OkObjectResult(await StopIdleSeqInner(exec));
 
     [FunctionName("Version")]
@@ -72,7 +72,7 @@ Discovered ${GitVersionInfo.DiscoverSemVer(typeof(YtDataUpdater))}";
       RunUpdate(exec);
 
     [FunctionName("Update")]
-    public async Task<IActionResult> Update([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
+    public async Task<IActionResult> Update([HttpTrigger(AuthorizationLevel.Function, "get", "post")]
       HttpRequestMessage req, ExecutionContext exec) {
       var update = await RunUpdate(exec);
       return new OkObjectResult(update);

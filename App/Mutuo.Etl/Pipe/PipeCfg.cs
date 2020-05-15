@@ -22,6 +22,10 @@ namespace Mutuo.Etl.Pipe {
     public            string              SubscriptionId   { get; set; }
     [Required] public ServicePrincipalCfg ServicePrincipal { get; set; } = new ServicePrincipalCfg();
     public            string              ResourceGroup    { get; set; }
+    
+    /// <summary>The default parallelism when working with azure</summary>
+    [Required]
+    public int Parallel { get; set; } = 8;
   }
 
   public class ServicePrincipalCfg {
@@ -45,6 +49,10 @@ namespace Mutuo.Etl.Pipe {
   public class PipeAppStorageCfg {
     [Required] public string     Cs   { get; set; } = "UseDevelopmentStorage=true";
     [Required] public StringPath Path { get; set; } = "pipe";
+
+    /// <summary>The default parallelism when working with pipe storage</summary>
+    [Required]
+    public int Parallel { get; set; } = 8;
   }
 
   public class NamedPipeRunCfg : PipeRunCfg {

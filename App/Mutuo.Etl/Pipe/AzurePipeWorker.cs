@@ -68,7 +68,7 @@ namespace Mutuo.Etl.Pipe {
         if (run.Result.State() == ContainerState.Succeeded) await DeleteContainer(ctx, log, runId, azure);
 
         return md;
-      });
+      }, ctx.Cfg.Azure.Parallel);
 
       return res;
     }

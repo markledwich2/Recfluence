@@ -24,12 +24,11 @@ namespace YtCli {
   class Program {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
-        .ParseArguments<PipeCmd, UpdateCmd, SyncBlobCmd, ChannelInfoOption, UpgradeStoreCmd, ResultsCmd, TrafficCmd,
+        .ParseArguments<PipeCmd, UpdateCmd, ChannelInfoOption, UpgradeStoreCmd, ResultsCmd, TrafficCmd,
           PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd, WarehouseCmd, BackupCmd>(args)
         .MapResult(
           (PipeCmd p) => Run(p, args, PipeCmd.RunPipe),
           (UpdateCmd u) => Run(u, args, UpdateCmd.Update),
-          (SyncBlobCmd s) => Run(s, args, SyncBlobCmd.Sync),
           (ChannelInfoOption v) => Run(v, args, ChannelInfoOption.ChannelInfo),
           (UpgradeStoreCmd f) => Run(f, args, UpgradeStoreCmd.Fix),
           (ResultsCmd f) => Run(f, args, ResultsCmd.Results),
@@ -117,26 +116,6 @@ namespace YtCli {
     public static async Task<ExitCode> Fix(CmdCtx<UpgradeStoreCmd> ctx) {
       var upgrader = ctx.Scope.Resolve<StoreUpgrader>();
       await upgrader.UpgradeIfNeeded();
-      return ExitCode.Success;
-    }
-  }
-
-  [Verb("sync-blob", HelpText = "synchronize two blobs")]
-  public class SyncBlobCmd : ICommonCmd {
-    [Option('a', Required = true, HelpText = "SAS Uri to source storage service a")]
-    public Uri SasA { get; set; }
-
-    [Option(Required = true, HelpText = "The path in the form container/dir1/dir2 for a ")]
-    public string PathA { get; set; }
-
-    [Option('b', Required = true, HelpText = "SAS Uri destination storage b")]
-    public Uri SasB { get; set; }
-
-    [Option(Required = false, HelpText = "The path in the form container/dir1/dir2 for b (if different to a)")]
-    public string PathB { get; set; }
-
-    public static async Task<ExitCode> Sync(CmdCtx<SyncBlobCmd> ctx) {
-      await SyncBlobs.Sync(ctx.Option.SasA, ctx.Option.SasB, ctx.Option.PathA, ctx.Option.PathB, ctx.Cfg.DefaultParallel, ctx.Log);
       return ExitCode.Success;
     }
   }

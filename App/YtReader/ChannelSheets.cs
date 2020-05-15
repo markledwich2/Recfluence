@@ -81,7 +81,7 @@ namespace YtReader {
             .WithWrappedException($"eror reading user sheet {s.SheetId}", log),
           s.SheetId,
           s.Weight
-        });
+        }, sheetsCfg.Parallel);
 
       var userChannelsById = userChannelSheets
         .SelectMany(u => u.Channels.Select(c => new {u.SheetId, u.Weight, Channel = c}))
