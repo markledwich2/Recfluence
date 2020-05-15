@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using Humanizer.Localisation;
@@ -28,16 +29,18 @@ namespace Mutuo.Etl.Db {
       if (CloseConnection) Conn?.Dispose();
     }
 
-    public async Task<int> Execute(string operation, string sql, object param = null, DbTransaction transaction = null) =>
-      await ExecWithLog(() => Conn.ExecuteAsync(sql, param: param, transaction: transaction), sql, operation);
+    public async Task<long> Execute(string operation, string sql, object param = null, DbTransaction transaction = null) =>
+      await ExecWithLog(() => Conn.ExecuteAsync(sql, param, transaction), sql, operation);
 
+    /// <summary>Liek the dapper Query function. use when you need to stream the rows non-greedily</summary>
     public IEnumerable<T> QueryBlocking<T>(string operation, string sql,
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = true) =>
       ExecWithLog(() => Conn.Query<T>(sql, param, transaction, commandTimeout: timeout?.TotalSeconds.RoundToInt(), buffered: buffered), sql, operation);
 
-    public async Task<IEnumerable<T>> Query<T>(string operation, string sql,
+    public async Task<IReadOnlyCollection<T>> Query<T>(string operation, string sql,
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
-      await ExecWithLog(() => Conn.QueryAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation);
+      (await ExecWithLog(() => Conn.QueryAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation))
+      .ToArray(); // make greedy load explicit load because that is what dapper does under the covers for async anyway.
 
     /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
     /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>

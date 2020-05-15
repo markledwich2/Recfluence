@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
+using Humanizer.Localisation;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using Serilog;
@@ -55,12 +56,15 @@ namespace YtReader {
     [Pipe]
     public async Task Update(ILogger log, UpdateType updateType = UpdateType.All, bool forceUpdate = false) {
       var channels = await UpdateAllChannels(log);
-      var processRes = await channels.Process(PipeCtx, 
-        b => ProcessChannels(b, updateType, forceUpdate, Inject<ILogger>())).WithDuration();
+      var (result, dur) = await channels
+        .Randomize() // randomize to even the load. Without this the large channels at the beginning make the first batch go way slower
+        .Process(PipeCtx, 
+          b => ProcessChannels(b, updateType, forceUpdate, Inject<ILogger>()))
+        .WithDuration();
 
-      var allChannelResults = processRes.Result.SelectMany(r => r.OutState.Channels).ToArray();
+      var allChannelResults = result.SelectMany(r => r.OutState.Channels).ToArray();
       log.Information("{Pipe} Complete - {Success}/{Total} channels updated in {Duration}",
-        nameof(Update), allChannelResults.Count(c => c.Success), allChannelResults.Length, processRes.Duration.HumanizeShort());
+        nameof(Update), allChannelResults.Count(c => c.Success), allChannelResults.Length, dur.HumanizeShort());
     }
 
     async Task<IEnumerable<ChannelStored2>> UpdateAllChannels(ILogger log) {
@@ -132,7 +136,7 @@ namespace YtReader {
           try {
             await UpdateAllInChannel(c, conn, updateType, forceUpdate, log);
             log.Information("{Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
-              c.ChannelTitle, sw.Elapsed, i + 1, channels.Count);
+              c.ChannelTitle, sw.Elapsed.HumanizeShort(2, TimeUnit.Millisecond), i + 1, channels.Count);
             return (c, Success: true);
           }
           catch (Exception ex) {

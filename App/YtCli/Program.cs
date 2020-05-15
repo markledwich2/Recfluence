@@ -159,15 +159,15 @@ namespace YtCli {
 
   [Verb("warehouse")]
   public class WarehouseCmd : ICommonCmd {
-    [Option('t', HelpText = "list of tables to restrict warehouse update to")]
-    public IEnumerable<string> Tables { get; set; }
+    [Option('t', HelpText = "| delimited list of tables to restrict warehouse update to")]
+    public string Tables { get; set; }
     
     [Option('f', HelpText = "if true, will clear and load data")]
     public bool FullLoad { get; set; }
     
     public static async Task<ExitCode> Update(CmdCtx<WarehouseCmd> ctx) {
       var wh = ctx.Scope.Resolve<WarehouseUpdater>();
-      await wh.WarehouseUpdate(ctx.Option.FullLoad, ctx.Option.Tables?.ToArray());
+      await wh.WarehouseUpdate(ctx.Option.FullLoad, ctx.Option.Tables?.Split('|').ToArray());
       return ExitCode.Success;
     }
   }
