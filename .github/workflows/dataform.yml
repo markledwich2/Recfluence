@@ -32,8 +32,14 @@ jobs:
         login-server: ytnetworks.azurecr.io
         username: ${{ secrets.acr_user }}
         password: ${{ secrets.acr_pass }}
+
+    - name: 'Branch name'
+      shell: bash
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+      id: extract_branch
+
     - name:  'Docker build & Publish'
       working-directory: Dataform
       run: |
-        docker build -f DockerFile $image:$(ref=${GITHUB_REF%refs/heads/master};echo ${ref:=latest})
-        docker push $image:$(ref=${GITHUB_REF%refs/heads/master};echo ${ref:=latest})
+        docker build -f DockerFile $image:${{ steps.extract_branch.outputs.branch }}
+        docker push $image:${{ steps.extract_branch.outputs.branch }}
