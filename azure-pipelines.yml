@@ -1,3 +1,11 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pr:
+  - master
+
 variables:
   acr: ytnetworks.azurecr.io
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
@@ -46,25 +54,18 @@ stages:
   - job: DataformContainer
     pool:
       vmImage: ubuntu-latest
-
+      
     steps:
 
     - task: Docker@2
-      displayName: Dataform Docker Build
+      displayName: Dataform Docker Build & Push
       inputs:
-        command: build
+        command: buildAndPush
         containerRegistry: ytnetworks
         repository: dataform
         tags: latest
-        buildContext: ./Dataform
-
-    - task: Docker@2
-      displayName: Dataform Docker Push
-      inputs:
-        command: push
-        containerRegistry: ytnetworks
-        repository: dataform
-        tags: latest
+        buildContext: Dataform
+        Dockerfile: Dataform/Dockerfile
 
 - stage: YtFunction
   dependsOn: []
