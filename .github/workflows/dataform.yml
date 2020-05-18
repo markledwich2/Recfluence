@@ -33,6 +33,5 @@ jobs:
         username: ${{ secrets.acr_user }}
         password: ${{ secrets.acr_pass }}
     - run: |
-        tag = $(ref=${GITHUB_REF%refs/heads/master};echo ${ref:=latest})
-        docker build .t $image:$tag
-        docker push $image:$tag
+        docker build .t $image:$(ref=${GITHUB_REF%refs/heads/master};echo ${ref:=latest})
+        docker push $image:$(ref=${GITHUB_REF%refs/heads/master};echo ${ref:=latest})
