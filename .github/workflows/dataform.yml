@@ -24,7 +24,7 @@ jobs:
       with:
         creds: ${{ secrets.az_creds }}
 
-    - name: 'Build & Publish Docker Image'
+    - name: 'ACR Login'
       uses: azure/docker-login@v1
       env:
         image: ytnetworks.azurecr.io/dataform
@@ -32,6 +32,8 @@ jobs:
         login-server: ytnetworks.azurecr.io
         username: ${{ secrets.acr_user }}
         password: ${{ secrets.acr_pass }}
-    - run: |
-        docker build .t $image:$(ref=${GITHUB_REF%refs/heads/master};echo ${ref:=latest})
+    - name:  'Docker build & Publish'
+      working-directory: Dataform
+      run: |
+        docker build -f DockerFile $image:$(ref=${GITHUB_REF%refs/heads/master};echo ${ref:=latest})
         docker push $image:$(ref=${GITHUB_REF%refs/heads/master};echo ${ref:=latest})
