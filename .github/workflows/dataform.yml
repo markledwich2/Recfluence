@@ -1,0 +1,38 @@
+name: Dataform Container
+
+on:
+  push:
+    branches: [ master ]
+    paths: 
+    - 'Dataform/**'
+  pull_request:
+    branches: [ master ]
+    paths: 
+    - 'Dataform/**'
+    
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    # checkout the repo
+    - name: 'Checkout'
+      uses: actions/checkout@master
+
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.az_creds }}
+
+    - name: 'Build & Publish Docker Image'
+      uses: azure/docker-login@v1
+      env:
+        image: ytnetworks.azurecr.io/dataform
+      with:
+        login-server: ytnetworks.azurecr.io
+        username: ${{ secrets.acr_user }}
+        password: ${{ secrets.acr_pass }}
+    - run: |
+        tag = $(ref=${GITHUB_REF%refs/heads/master};echo ${ref:=latest})
+        docker build .t $image:$tag
+        docker push $image:$tag
