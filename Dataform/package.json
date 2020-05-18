@@ -1,0 +1,30 @@
+{
+  "name": "dataform",
+  "version": "1.0.0",
+  "description": "run a dataform update from a repo",
+  "main": "run.ts",
+  "scripts": {
+    "build": "tsc --skipLibCheck",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mark Ledwich",
+  "license": "MIT",
+  "dependencies": {
+    "@dataform/cli": "^1.6.7",
+    "bunyan": "^1.8.12",
+    "bunyan-debug-stream": "^2.0.0",
+    "bunyan-seq": "^0.4.0",
+    "dateformat": "^3.0.3",
+    "dotenv": "^8.2.0",
+    "humanize-duration": "^3.22.0",
+    "promisify-child-process": "^4.1.0",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.9.2"
+  },
+  "devDependencies": {
+    "@types/bunyan": "^1.8.6",
+    "@types/bunyan-seq": "^0.2.2",
+    "@types/dateformat": "^3.0.1",
+    "@types/humanize-duration": "^3.18.0"
+  }
+}

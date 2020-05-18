@@ -92,7 +92,7 @@ namespace Mutuo.Etl.Pipe {
       // batch and create state for containers to read
       var groupRunId = PipeRunId.FromName(pipeName);
       runCfg ??= groupRunId.PipeCfg(ctx);
-      
+
       await ctx.SaveInArg(args, groupRunId, log);
 
       var batches = await items.Batch(runCfg.MinWorkItems, runCfg.MaxParallel)
@@ -136,7 +136,7 @@ namespace Mutuo.Etl.Pipe {
     static IPipeWorker PipeWorker(IPipeCtx ctx, PipeRunLocation? location = null) {
       location ??= ctx.Cfg.Location;
       IPipeWorker pipeWorker = location switch {
-        PipeRunLocation.Container => new AzurePipeWorker(ctx.Cfg),
+        PipeRunLocation.Container => new AzureContainers(ctx.Cfg),
         PipeRunLocation.LocalContainer => new LocalPipeWorker(),
         _ => new ThreadPipeWorker()
       };
@@ -161,7 +161,7 @@ namespace Mutuo.Etl.Pipe {
       var args = loadInArgs.ToDictionary(a => a.Name);
 
       var pipeParams = await method.GetParameters().BlockFunc(async p => {
-        if (args.TryGetValue(p.Name ?? throw new NotImplementedException("parameters must have names"), out var arg)) {
+        if (args.TryGetValue(p.Name ?? throw new NotImplementedException("parameters must have names"), out var arg))
           switch (arg.ArgMode) {
             case ArgMode.SerializableValue:
               return ChangeToType(arg.Value, p.ParameterType);
@@ -174,7 +174,6 @@ namespace Mutuo.Etl.Pipe {
               return rows;
             }
           }
-        }
         return ctx.Scope.Resolve(p.ParameterType);
       });
 

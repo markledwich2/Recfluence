@@ -1,0 +1,61 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build docker",
+            "type": "shell",
+            "command": "docker",
+            "args": [
+                "build",
+                "--pull",
+                "--rm",
+                "-f",
+                "Dockerfile",
+                "-t",
+                "yt_dataform:latest",
+                "."
+            ],
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "run docker -it",
+            "type": "shell",
+            "command": "docker",
+            "args": [
+                "run",
+                "-it",
+                "--env-file",
+                ".env",
+                "yt_dataform:latest",
+                "bin/bash"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "run docker",
+            "type": "shell",
+            "command": "docker",
+            "args": [
+                "run",
+                "-it",
+                "--env-file",
+                ".env",
+                "yt_dataform:latest",
+                "ts-node-script",
+                "./src/run.ts"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "build tsc",
+            "group": "build",
+            "type": "shell",
+            "command": "tsc",
+            "args": ["--skipLibCheck"],
+            "problemMatcher": [ "$tsc" ]
+        }
+    ]
+}

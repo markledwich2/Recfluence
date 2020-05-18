@@ -48,10 +48,9 @@ namespace YtReader {
     [Required] public SqlServerCfg        AppDb                 { get; set; } = new SqlServerCfg();
     [Required] public ResultsCfg          Results               { get; set; } = new ResultsCfg();
     [Required] public PipeAppCfg          Pipe                  { get; set; } = new PipeAppCfg();
-    public            SolrCfg             Solr                  { get; set; } = new SolrCfg();
-    public            AlgoliaCfg          Algolia               { get; set; } = new AlgoliaCfg();
-    public            ElasticCfg          Elastic               { get; set; }
-    public            SyncDbCfg           SyncDb                { get; set; } = new SyncDbCfg();
+    [Required] public DataformCfg         Dataform              { get; set; } = new DataformCfg();
+    [Required] public ElasticCfg          Elastic               { get; set; }
+    [Required] public SyncDbCfg           SyncDb                { get; set; } = new SyncDbCfg();
   }
 
   public class ElasticCfg {
@@ -72,7 +71,7 @@ namespace YtReader {
 
   public class ResultsCfg {
     [Required] public string FileQueryUri { get; set; } = "https://raw.githubusercontent.com/markledwich2/YouTubeNetworks_Dataform/master";
-    [Required] public int Parallel { get; set; } = 4;
+    [Required] public int    Parallel     { get; set; } = 4;
   }
 
   public class ScraperCfg {
@@ -87,7 +86,7 @@ namespace YtReader {
     [Required] public JObject             CredJson            { get; set; }
     [Required] public string              MainChannelSheetId  { get; set; }
     [Required] public ICollection<string> UserChannelSheetIds { get; set; }
-    [Required] public int Parallel { get; set; } = 4;
+    [Required] public int                 Parallel            { get; set; } = 4;
   }
 
   public class YtReaderCfg {
@@ -112,27 +111,20 @@ namespace YtReader {
   }
 
   public class StorageCfg {
-    [Required] public string RootPath { get; set; }
+    [Required] public string RootPath      { get; set; }
     [Required] public string DataStorageCs { get; set; }
-    [Required] public string DbPath { get; set; } = "db2";
-    [Required] public string ResultsPath { get; set; } = "results";
-    [Required] public string PrivatePath { get; set; } = "private";
-    [Required] public string PipePath { get; set; } = "pipe";
+    [Required] public string DbPath        { get; set; } = "db2";
+    [Required] public string ResultsPath   { get; set; } = "results";
+    [Required] public string PrivatePath   { get; set; } = "private";
+    [Required] public string PipePath      { get; set; } = "pipe";
 
-    [Required] public string BackupCs { get; set; }
+    [Required] public string BackupCs       { get; set; }
     [Required] public string BackupRootPath { get; set; }
   }
 
   public class SeqHostCfg {
+    public Uri    SeqUrl             { get; set; }
     public string IdleQuery          { get; set; } = "@Timestamp > Now() - 1h and App != 'YtFunctions'";
     public string ContainerGroupName { get; set; } = "seq";
-  }
-
-  public class AlgoliaCfg {
-    public NameSecret Creds { get; set; }
-  }
-
-  public class SolrCfg {
-    public Uri Url { get; set; }
   }
 }

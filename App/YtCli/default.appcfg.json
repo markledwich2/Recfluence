@@ -33,7 +33,6 @@
     "default": {
       "container": {
         "registry": "ytnetworks.azurecr.io",
-        "name": "ytnetworks",
         "imageName": "ytnetworks",
         "cores": 2,
         "mem": 2,

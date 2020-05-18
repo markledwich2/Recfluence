@@ -16,8 +16,8 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Pipe {
-  public class AzurePipeWorker : IPipeWorkerStartable {
-    public AzurePipeWorker(PipeAppCfg cfg) {
+  public class AzureContainers : IPipeWorkerStartable {
+    public AzureContainers(PipeAppCfg cfg) {
       Cfg = cfg;
       Az = new Lazy<IAzure>(() => Cfg.Azure.GetAzure());
     }
@@ -30,33 +30,29 @@ namespace Mutuo.Etl.Pipe {
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
     public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log) {
-      var azure = Az.Value;
       var res = await ids.BlockFunc(async runId => {
         var runCfg = runId.PipeCfg(ctx); // id is for the sub-pipe, ctx is for the root
-        var groupName = runId.ContainerGroupName();
-        await EnsureNotRunning(groupName, azure, ctx.Cfg.Azure.ResourceGroup);
-        var groupDef = await ContainerGroup(runCfg.Container, runId.ContainerGroupName(), runId.ContainerName(), ctx.AppCtx.EnvironmentVariables,
-          runId.PipeArgs(),
-          ctx.AppCtx.CustomRegion);
-        var pipeLog = log.ForContext("Image", runCfg.Container.ContainerImageName()).ForContext("Pipe", runId.Name);
-        var group = await Create(groupDef, pipeLog);
-        var run = await Run(@group, returnOnRunning, pipeLog).WithDuration();
 
-        var logTxt = await run.Result.GetLogContentAsync(runId.ContainerName());
+        var pipeLog = log.ForContext("Image", runCfg.Container.ContainerImageName()).ForContext("Pipe", runId.Name);
+
+        var (launch, launchDur) = await Launch(runCfg.Container, runId.ContainerGroupName(), ctx.AppCtx.EnvironmentVariables,
+          runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog).WithDuration();
+
+        var logTxt = await launch.GetLogContentAsync(runId.ContainerName());
         var logPath = new StringPath($"{runId.StatePath()}.log.txt");
 
-        var errorMsg = run.Result.State().In(ContainerState.Failed, ContainerState.Unknown)
-          ? $"The container is in an error state '{run.Result.State}', see {logPath}"
+        var errorMsg = launch.State().In(ContainerState.Failed, ContainerState.Unknown)
+          ? $"The container is in an error state '{launch.State}', see {logPath}"
           : null;
         if (errorMsg.HasValue())
           pipeLog.Error("{RunId} - failed: {Log}", runId.ToString(), logTxt);
 
         var md = new PipeRunMetadata {
           Id = runId,
-          Duration = run.Duration,
-          Containers = run.Result.Containers.Select(c => c.Value).ToArray(),
-          RawState = run.Result.State,
-          State = run.Result.State(),
+          Duration = launchDur,
+          Containers = launch.Containers.Select(c => c.Value).ToArray(),
+          RawState = launch.State,
+          State = launch.State(),
           RunCfg = runCfg,
           ErrorMessage = errorMsg
         };
@@ -65,7 +61,7 @@ namespace Mutuo.Etl.Pipe {
           md.Save(ctx.Store, pipeLog));
 
         // delete succeeded containers. Failed, and rutned on running will be cleaned up by another process
-        if (run.Result.State() == ContainerState.Succeeded) await DeleteContainer(ctx, log, runId, azure);
+        if (launch.State() == ContainerState.Succeeded) await DeleteContainer(runId.ContainerGroupName(), log);
 
         return md;
       }, ctx.Cfg.Azure.Parallel);
@@ -73,10 +69,19 @@ namespace Mutuo.Etl.Pipe {
       return res;
     }
 
-    static async Task DeleteContainer(IPipeCtx ctx, ILogger log, PipeRunId c, IAzure azure) {
-      var groupName = c.ContainerGroupName();
-      await azure.ContainerGroups.DeleteByResourceGroupAsync(ctx.Cfg.Azure.ResourceGroup, groupName);
-      log.Debug("Deleted container {Container} for {Pipe}", groupName, c.Name);
+    public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, (string name, string value)[] envVars, string[] args,
+      bool returnOnStart = false, Func<Region> customRegion = null, ILogger log = null) {
+      var azure = Az.Value;
+      await EnsureNotRunning(groupName, azure, Cfg.Azure.ResourceGroup);
+      var groupDef = await ContainerGroup(cfg, groupName, groupName, envVars, args, customRegion);
+      var group = await Create(groupDef, log);
+      var run = await Run(group, returnOnStart, log);
+      return run;
+    }
+
+    async Task DeleteContainer(string groupName, ILogger log) {
+      await Az.Value.ContainerGroups.DeleteByResourceGroupAsync(Cfg.Azure.ResourceGroup, groupName);
+      log.Debug("Deleted container {Container}", groupName);
     }
 
     static async Task<IContainerGroup> Create(IWithCreate groupDef, ILogger log) {

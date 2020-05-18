@@ -1,0 +1,19 @@
+   az account show --subscription
+
+   az ad sp list
+   
+az ad sp create-for-rbac --name "recfluence-github" --role contributor \
+                        --scopes /subscriptions/93ef8661-3e11-4fcc-92ae-d0383e7e4ad3/resourceGroups/ytnetworks \
+                        --sdk-auth
+                            
+  # Replace {subscription-id}, {resource-group} with the subscription, resource group details
+
+  # The command should output a JSON object similar to this:
+
+  {
+    "clientId": "<GUID>",
+    "clientSecret": "<GUID>",
+    "subscriptionId": "<GUID>",
+    "tenantId": "<GUID>",
+    (...)
+  }

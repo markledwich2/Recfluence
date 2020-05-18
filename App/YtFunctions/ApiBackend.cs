@@ -41,8 +41,8 @@ namespace YtFunctions {
     public Task<IActionResult> Version([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
       HttpRequest req) {
       var versionText = @$"Version: 
-Runtime ${GitVersionInfo.RuntimeSemVer(typeof(YtDataUpdater))}
-Discovered ${GitVersionInfo.DiscoverSemVer(typeof(YtDataUpdater))}";
+Runtime ${GitVersionInfo.RuntimeSemVer(typeof(YtDataCollector))}
+Discovered ${GitVersionInfo.DiscoverSemVer(typeof(YtDataCollector))}";
       return Task.FromResult((IActionResult) new OkObjectResult(versionText));
     }
 
@@ -80,7 +80,7 @@ Discovered ${GitVersionInfo.DiscoverSemVer(typeof(YtDataUpdater))}";
 
     Task<string> RunUpdate(ExecutionContext exec) => Ctx.Run(exec, async c => {
       var pipeCtx = c.Scope.Resolve<IPipeCtx>();
-      var res = await pipeCtx.Run((YtDataUpdater u) => u.Update(PipeArg.Inject<ILogger>(), UpdateType.All, false), c.Log, true);
+      var res = await pipeCtx.Run((YtDataCollector u) => u.Update(PipeArg.Inject<ILogger>(), CollectorMode.All, false), c.Log, true);
       return res.Error
         ? $"Error starting pipe work: {res.ErrorMessage}"
         : $"Started work on containers(s): {res.Containers.Join(", ", c => $"{c.Image} -> {c.Name}")}";

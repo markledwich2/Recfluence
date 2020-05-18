@@ -6,7 +6,6 @@ using Autofac;
 using CommandLine;
 using Google.Apis.Util;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
-using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using Serilog.Core;
@@ -24,11 +23,11 @@ namespace YtCli {
   class Program {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
-        .ParseArguments<PipeCmd, UpdateCmd, ChannelInfoOption, UpgradeStoreCmd, ResultsCmd, TrafficCmd,
+        .ParseArguments<PipeCmd, CollectCmd, ChannelInfoOption, UpgradeStoreCmd, ResultsCmd, TrafficCmd,
           PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd, WarehouseCmd, BackupCmd>(args)
         .MapResult(
           (PipeCmd p) => Run(p, args, PipeCmd.RunPipe),
-          (UpdateCmd u) => Run(u, args, UpdateCmd.Update),
+          (CollectCmd u) => Run(u, args, CollectCmd.Update),
           (ChannelInfoOption v) => Run(v, args, ChannelInfoOption.ChannelInfo),
           (UpgradeStoreCmd f) => Run(f, args, UpgradeStoreCmd.Fix),
           (ResultsCmd f) => Run(f, args, ResultsCmd.Results),
@@ -80,20 +79,20 @@ namespace YtCli {
     }
   }
 
-  [Verb("update", HelpText = "refresh new data from YouTube and collects it into results")]
-  public class UpdateCmd : ICommonCmd {
+  [Verb("collect", HelpText = "refresh new data from YouTube and collects it into results")]
+  public class CollectCmd : ICommonCmd {
     static readonly Region[] Regions = {Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral};
     static readonly TRandom  Rand    = new TRandom();
     [Option('c', "channels", HelpText = "optional '|' separated list of channels to process")]
     public string ChannelIds { get; set; }
 
     [Option('t', "type", HelpText = "Control what parts of the update process to run")]
-    public UpdateType UpdateType { get; set; }
+    public CollectorMode UpdateType { get; set; }
 
     [Option('f', "force", HelpText = "Force update of channels, so stats are refreshed even if they ahve bene updated recently")]
     public bool ForceUpdate { get; set; }
 
-    public static async Task<ExitCode> Update(CmdCtx<UpdateCmd> ctx) {
+    public static async Task<ExitCode> Update(CmdCtx<CollectCmd> ctx) {
       if (ctx.Option.ChannelIds.HasValue())
         ctx.Cfg.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
 
@@ -105,7 +104,7 @@ namespace YtCli {
       var cfg = standardPipeCtx.Cfg.JsonClone();
       cfg.Location = PipeRunLocation.Local;
       var pipeCtx = new PipeCtx(cfg, appCtx, standardPipeCtx.Store, standardPipeCtx.Log);
-      await pipeCtx.Run((YtDataUpdater d) => d.Update(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType, ctx.Option.ForceUpdate));
+      await pipeCtx.Run((YtDataCollector d) => d.Update(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType, ctx.Option.ForceUpdate));
       //await pipeCtx.DoPipeWork(PipeRunId.FromName("Update"));
       return ExitCode.Success;
     }
@@ -161,10 +160,10 @@ namespace YtCli {
   public class WarehouseCmd : ICommonCmd {
     [Option('t', HelpText = "| delimited list of tables to restrict warehouse update to")]
     public string Tables { get; set; }
-    
+
     [Option('f', HelpText = "if true, will clear and load data")]
     public bool FullLoad { get; set; }
-    
+
     public static async Task<ExitCode> Update(CmdCtx<WarehouseCmd> ctx) {
       var wh = ctx.Scope.Resolve<WarehouseUpdater>();
       await wh.WarehouseUpdate(ctx.Option.FullLoad, ctx.Option.Tables?.Split('|').ToArray());
@@ -216,7 +215,7 @@ namespace YtCli {
       return ExitCode.Success;
     }
   }
-  
+
   [Verb("backup", HelpText = "Backup database")]
   public class BackupCmd : ICommonCmd {
     public static async Task<ExitCode> Backup(CmdCtx<BackupCmd> ctx) {

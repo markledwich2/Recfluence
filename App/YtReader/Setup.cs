@@ -130,9 +130,7 @@ namespace YtReader {
       Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
       ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
 
-    /// <summary>
-    /// Loads application configuration, and sets global config for .net
-    /// </summary>
+    /// <summary>Loads application configuration, and sets global config for .net</summary>
     public static async Task<(AppCfg App, RootCfg Root)> LoadCfg(string basePath = null, ILogger rootLogger = null) {
       rootLogger ??= Log.Logger ?? Logger.None;
       basePath ??= Environment.CurrentDirectory;
@@ -158,17 +156,7 @@ namespace YtReader {
         .AddEnvironmentVariables().Build();
       var appCfg = cfg.Get<AppCfg>();
 
-      // by default, backup to the app/root storage location
-      appCfg.Storage.BackupCs ??= cfgRoot.AppStoreCs;
-      
-      if (appCfg.Sheets != null)
-        appCfg.Sheets.CredJson = secrets.ParseJToken().SelectToken("sheets.credJson") as JObject;
-      appCfg.Pipe = await PipeAppCfg(appCfg);
-
-      appCfg.SyncDb.Tables = appCfg.SyncDb.Tables.JsonClone();
-      foreach (var table in appCfg.SyncDb.Tables)
-        if (table.TsCol == null && table.SyncType != SyncType.Full)
-          table.Cols.Add(new SyncColCfg {Name = appCfg.SyncDb.DefaultTsCol, Ts = true});
+      await SetFallbacks(appCfg, cfgRoot, secrets);
 
       var validation = Validate(appCfg);
       if (validation.Any()) {
@@ -179,8 +167,28 @@ namespace YtReader {
       // as recommended here https://github.com/Azure/azure-storage-net-data-movement, also should be good for performance of our other Http interactions
       ServicePointManager.Expect100Continue = false;
       ServicePointManager.DefaultConnectionLimit = Environment.ProcessorCount * 8;
-      
+
       return (appCfg, cfgRoot);
+    }
+
+    static async Task SetFallbacks(AppCfg appCfg, RootCfg cfgRoot, string secrets) {
+      appCfg.SeqHost.SeqUrl ??= appCfg.SeqUrl;
+
+      // by default, backup to the app/root storage location
+      appCfg.Storage.BackupCs ??= cfgRoot.AppStoreCs;
+
+      if (appCfg.Sheets != null)
+        appCfg.Sheets.CredJson = secrets.ParseJToken().SelectToken("sheets.credJson") as JObject;
+      appCfg.Pipe = await PipeAppCfg(appCfg);
+
+
+      appCfg.SyncDb.Tables = appCfg.SyncDb.Tables.JsonClone();
+      foreach (var table in appCfg.SyncDb.Tables)
+        if (table.TsCol == null && table.SyncType != SyncType.Full)
+          table.Cols.Add(new SyncColCfg {Name = appCfg.SyncDb.DefaultTsCol, Ts = true});
+
+      // merge default properties from the pipe config
+      appCfg.Dataform.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.Dataform.Container);
     }
 
     public static IReadOnlyCollection<ValidationResult> Validate(object cfgObject) {
@@ -191,7 +199,7 @@ namespace YtReader {
     }
 
     public static PipeAppCtx PipeAppCtxEmptyScope(RootCfg root, AppCfg appCfg) =>
-      new PipeAppCtx(new ContainerBuilder().Build().BeginLifetimeScope(), typeof(YtDataUpdater)) {
+      new PipeAppCtx(new ContainerBuilder().Build().BeginLifetimeScope(), typeof(YtDataCollector)) {
         EnvironmentVariables = PipeEnv(root, appCfg)
       };
 
@@ -235,12 +243,12 @@ namespace YtReader {
       b.Register<Func<Task<DbConnection>>>(_ => async () => await cfg.Snowflake.OpenConnection());
       b.Register(_ => new ConnectionProvider(async () => await cfg.Snowflake.OpenConnection(), cfg.Snowflake.Db)).SingleInstance();
       b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();
-      
+
       b.RegisterType<YtStores>().SingleInstance();
-      
+
       foreach (var storeType in EnumExtensions.Values<DataStoreType>())
         b.Register(_ => _.Resolve<YtStores>().Store(storeType)).Keyed<ISimpleFileStore>(storeType).SingleInstance();
-      
+
       b.RegisterType<YtClient>();
 
       b.Register(_ => {
@@ -258,12 +266,12 @@ namespace YtReader {
           return new ElasticClient(cs);
         }
       ).SingleInstance();
-      
+
       b.RegisterType<YtStore>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
       b.RegisterType<YtResults>().WithKeyedParam(DataStoreType.Results, Typ.Of<ISimpleFileStore>()).SingleInstance();
       b.RegisterType<StoreUpgrader>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
       b.RegisterType<YtSearch>().SingleInstance();
-      b.RegisterType<YtDataUpdater>().SingleInstance();
+      b.RegisterType<YtDataCollector>().SingleInstance();
       b.RegisterType<WarehouseUpdater>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
       b.RegisterType<YtBackup>().SingleInstance();
 
@@ -289,9 +297,5 @@ namespace YtReader {
 
     public static YtClient YtClient(this AppCfg cfg, ILogger log) => new YtClient(cfg.YTApiKeys, log);
     public static bool IsProd(this RootCfg root) => root.Env.ToLowerInvariant() == "prod";
-    
-
   }
-
-
 }

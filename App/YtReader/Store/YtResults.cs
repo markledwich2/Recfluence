@@ -56,7 +56,7 @@ namespace YtReader.Store {
       Log = log;
     }
 
-    public async Task SaveBlobResults(IReadOnlyCollection<string> queryNames) {
+    public async Task SaveBlobResults(IReadOnlyCollection<string> queryNames = null) {
       using var db = await SnowflakeCfg.OpenConnection();
 
       var now = DateTime.Now;
@@ -82,7 +82,7 @@ namespace YtReader.Store {
           /*("video_latest", @"select video_id, video_title, channel_id, channel_title,
            upload_date, avg_rating, likes, dislikes, views, thumb_standard from video_latest")*/
         }
-        .Where(q => !queryNames.Any() || queryNames.Contains(q.Name))
+        .Where(q => queryNames == null || !queryNames.Any() || queryNames.Contains(q.Name))
         .ToList();
 
       var tmpDir = TempDir();

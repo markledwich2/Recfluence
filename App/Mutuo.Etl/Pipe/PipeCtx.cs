@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Autofac;
@@ -33,10 +32,10 @@ namespace Mutuo.Etl.Pipe {
     }
 
     /// <summary>Context to resolve pipe instances</summary>
-    public ILifetimeScope Scope { get;                                                  set; }
-    public IReadOnlyCollection<Assembly>                    Assemblies           { get; set; } = new List<Assembly>();
-    public IReadOnlyCollection<(string name, string value)> EnvironmentVariables { get; set; } = new List<(string, string)>();
-    public Func<Region>                                     CustomRegion         { get; set; }
+    public ILifetimeScope Scope { get;                               set; }
+    public Assembly[]                    Assemblies           { get; set; }
+    public (string name, string value)[] EnvironmentVariables { get; set; } = { };
+    public Func<Region>                  CustomRegion         { get; set; }
   }
 
   public class PipeCtx : IPipeCtx, IDisposable {
