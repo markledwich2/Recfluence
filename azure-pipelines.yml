@@ -49,23 +49,13 @@ stages:
 
     steps:
 
-    - script: |
-          echo GitVersion
-          dotnet tool restore
-          dotnet dotnet-gitversion /output buildserver /nofetch
-      failOnStderr: true
-      workingDirectory: ./App
-
     - task: Docker@2
       displayName: Dataform Docker Build
       inputs:
         command: build
         containerRegistry: ytnetworks
         repository: dataform
-        tags: 
-          $(GitVersion.SemVer)
-          latest
-        arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
+        tags: latest
         buildContext: ./Dataform
 
     - task: Docker@2
@@ -74,9 +64,7 @@ stages:
         command: push
         containerRegistry: ytnetworks
         repository: dataform
-        tags:          
-          $(GitVersion.SemVer)
-          latest
+        tags: latest
 
 - stage: YtFunction
   dependsOn: []
