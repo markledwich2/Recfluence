@@ -1,6 +1,5 @@
 variables:
   acr: ytnetworks.azurecr.io
-  image: ytnetworks
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     env: prod
   ${{ if ne( variables['Build.SourceBranchName'], 'master') }}:
@@ -8,9 +7,9 @@ variables:
     
 
 stages:
-- stage: App
+- stage: YtNetworksContainer
   jobs:
-  - job: Docker
+  - job: YtNetworksContainer
     pool:
       vmImage: ubuntu-latest
 
@@ -28,7 +27,7 @@ stages:
       inputs:
         command: build
         containerRegistry: ytnetworks
-        repository: $(image)
+        repository: ytnetworks
         tags: $(GitVersion.SemVer)
         arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
         buildContext: ./App
@@ -38,10 +37,49 @@ stages:
       inputs:
         command: push
         containerRegistry: ytnetworks
-        repository: $(image)
+        repository: ytnetworks
         tags: $(GitVersion.SemVer)
 
-  - job: App
+- stage: Dataform
+  jobs:
+  - job: DataformContainer
+    pool:
+      vmImage: ubuntu-latest
+
+    steps:
+
+    - script: |
+          echo GitVersion
+          dotnet tool restore
+          dotnet dotnet-gitversion /output buildserver /nofetch
+      failOnStderr: true
+      workingDirectory: ./App
+
+    - task: Docker@2
+      displayName: Dataform Docker Build
+      inputs:
+        command: build
+        containerRegistry: ytnetworks
+        repository: dataform
+        tags: 
+          $(GitVersion.SemVer)
+          latest
+        arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
+        buildContext: ./Dataform
+
+    - task: Docker@2
+      displayName: Dataform Docker Push
+      inputs:
+        command: push
+        containerRegistry: ytnetworks
+        repository: dataform
+        tags:          
+          $(GitVersion.SemVer)
+          latest
+
+- stage: YtFunction
+  jobs:
+  - job: YtFunction
     pool:
       vmImage: ubuntu-latest
 
