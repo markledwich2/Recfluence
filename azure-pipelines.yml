@@ -41,6 +41,7 @@ stages:
         tags: $(GitVersion.SemVer)
 
 - stage: Dataform
+  dependsOn: []
   jobs:
   - job: DataformContainer
     pool:
@@ -78,6 +79,7 @@ stages:
           latest
 
 - stage: YtFunction
+  dependsOn: []
   jobs:
   - job: YtFunction
     pool:
