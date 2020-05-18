@@ -64,7 +64,8 @@ stages:
         containerRegistry: ytnetworks
         repository: dataform
         tags: latest
-        buildContext: ./Dataform
+        buildContext: Dataform
+        Dockerfile: Dataform/Dockerfile
 
 - stage: YtFunction
   dependsOn: []
