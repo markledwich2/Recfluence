@@ -11,6 +11,9 @@ import { FilterList as IconFilter, Close as IconClose, List as IconList } from '
 import { TopSiteBar } from '../SiteMenu'
 import { IdToken } from '@auth0/auth0-spa-js'
 import { EsCfg } from '../../common/Elastic'
+import queryString from 'query-string'
+import { saveSearch } from '../../common/YtApi'
+import { UserContext } from '../UserContext'
 
 const Page = styled.div`
   display:flex; flex-direction:column;
@@ -26,40 +29,28 @@ const SearchAndFilterPane = styled.div`
 const ContentPane = styled.div`
     padding:0;
     display:flex; flex-direction:column;
-    width:100%;
     max-width:1100px;
     margin:0 auto;
-`
-
-const SearchTextBoxStyle = styled.div`
-    width:100%;
-    input {
-      width:100%;
-      font-size:1.5rem;
-    }
-`
-
-const SearchPane = styled.div`
-  padding: 0.5em 1em;
-`
-
-const SearchSelectionPane = styled.div`
-  display: flex;
-  justify-content: space-between;
-  padding: 0.5em 0 0;
+    flex: 1 100%;
 `
 
 const FiltersPane = styled.div`
     display:none; 
-    flex-flow:column wrap; 
+    flex-flow:column;
+    overflow-y: auto;
     justify-content:start;
+    align-content:start;
     background-color: ${theme.backColorBolder};
     min-height:0px; /*needed for column wrap to kick in*/
     padding:0.5em 0.5em;
+
+    @media (min-width: 580px) {
+      flex-flow: column wrap;
+    }
     
     @media (${media.width.medium}) {
-      flex-flow:column;
-      width:350px;
+      flex-flow: column;
+      min-width:310px;
     }
 
     > * {
@@ -106,6 +97,24 @@ const FiltersPane = styled.div`
     }
 `
 
+const SearchTextBoxStyle = styled.div`
+    width:100%;
+    input {
+      width:100%;
+      font-size:1.5em;
+    }
+`
+
+const SearchPane = styled.div`
+  padding: 0.5em 1em;
+`
+
+const SearchSelectionPane = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5em 0 0;
+`
+
 const ResultsPane = styled.div`
     position:relative;
     height:100%; width:100%;
@@ -133,17 +142,15 @@ const sortOptions: Dictionary<string> = {
 export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
   const [sort, setSort] = useState<SortValue>({ field: '_score', sort: 'desc' })
   const [filterOpened, setFilterOpened] = useState(false)
-  const [user, setUser] = useState<IdToken>(null)
   const filterOnRight = useMediaQuery({ query: `(${media.width.medium})` })
   const filterVisible = filterOnRight || filterOpened
   const resultsVisible = filterOnRight || !filterOpened
 
   if (isGatsbyServer()) return <div></div>
 
-
   return (
     <ReactiveBase
-      app="caption2"
+      app={esCfg.indexes.caption}
       url={esCfg.url}
       credentials={esCfg.creds}
       themePreset="dark"
@@ -154,7 +161,7 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
     >
       <Page>
         <TopSiteBar showLogin style={{ flex: '0 0 auto' }} />
-        <SearchAndFilterPane style={{ flex: '1 1 auto', flexDirection: filterOpened ? 'column' : 'row' }}>
+        <SearchAndFilterPane style={{ flex: '1 1 auto', flexDirection: filterOpened && !filterOnRight ? 'column' : 'row' }}>
           <ContentPane>
             <SearchPane>
               <SearchTexBox />
@@ -201,7 +208,13 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
 }
 
 const SearchTexBox: React.FunctionComponent = () => {
-  const [query, setQuery] = useState<string>("")
+  const [query, setQuery] = useState<string>()
+  const [inputValue, setInputValue] = useState<string>("")
+  const ref = useRef<HTMLInputElement>()
+
+  const userCtx = useContext(UserContext)
+  const user = userCtx?.user
+
   return <SearchTextBoxStyle>
 
     {/* the default behavior of DataSearch is to show results as you type. We can override thi behavior by using a
@@ -210,11 +223,25 @@ const SearchTexBox: React.FunctionComponent = () => {
        Out solution is to use an invisible controlled DataSearch component and let users type in a vanilla input.
       */}
 
-    <input type='text' autoFocus placeholder="search..."
-      onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter")
-          setQuery(e.currentTarget.value)
-      }} />
+    <StateProvider strict={false} >
+      {({ searchState }) => <input ref={ref} type='text' autoFocus placeholder="search..."
+        value={inputValue} onChange={e => setInputValue(e.currentTarget.value)}
+        onKeyPress={(e: KeyboardEvent<HTMLInputElement>) => {
+          if (e.key === "Enter") {
+            const q = e.currentTarget.value
+            setQuery(q)
+            saveSearch({
+              origin: location.origin,
+              email: user.email,
+              query: q,
+              channels: searchState.channel.value,
+              ideologies: searchState.ideology.value,
+              updated: new Date()
+            })
+          }
+        }} />
+      }
+    </StateProvider>
 
     <DataSearch
       componentId="q"
@@ -227,12 +254,14 @@ const SearchTexBox: React.FunctionComponent = () => {
       queryFormat='and'
       style={{ display: 'none' }}
       URLParams
-      onKeyPress={(e: KeyboardEvent, triggerQuery: Function) => {
-        if (e.key === "Enter") triggerQuery()
+      onChange={(value: string) => {
+        setInputValue(value)
+        setQuery(value)
       }}
-      //onChange={(value: string, triggerQuery: Function) => setQuery(value)}
       value={query}
     />
+
+
   </SearchTextBoxStyle >
 }
 

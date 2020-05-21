@@ -4,7 +4,6 @@ import { compactInteger } from 'humanize-plus'
 import React, { useEffect, useState } from 'react'
 import YouTube from 'react-youtube'
 import styled from 'styled-components'
-import { FuncClient, EsCaption, VideoData } from '../../common/DbModel'
 import '../../types/NodeTypings.d.ts'
 import { dateFormat, secondsToHHMMSS, delay } from '../../common/Utils'
 import { theme } from '../MainLayout'
@@ -14,6 +13,7 @@ import queryString from 'query-string'
 import scrollIntoView from 'scroll-into-view-if-needed'
 import { TopSiteBar } from '../SiteMenu'
 import { EsCfg } from '../../common/Elastic'
+import { getCaptions, getVideo, VideoData, EsCaption } from '../../common/YtApi'
 
 const MainPageDiv = styled.div`
   height:100vh;
@@ -98,8 +98,8 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
   // get data for video from function
   useEffect(() => {
     async function renderVideo() {
-      FuncClient.getCaptions(videoId).then(c => setCaptions(c)).then(() => delay(200)).then(() => scrollToCurrentTime())
-      FuncClient.getVideo(videoId).then(v => setVideoData(v))
+      getCaptions(esCfg, videoId).then(c => setCaptions(c)).then(() => delay(200)).then(() => scrollToCurrentTime())
+      getVideo(esCfg, videoId).then(v => setVideoData(v))
     }
     renderVideo()
   }, [])
@@ -148,7 +148,7 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
           <VideoStatsDiv>
             {video && <>
               <span><b>{fInt(v?.views)}</b> views</span>
-              <span>{fDate(v?.upload_date)}</span>
+              <span>{dateFormat(v?.upload_date)}</span>
               <span style={{ marginLeft: 'auto' }}>
                 <span><b>{fInt(v?.likes)}</b> likes</span>
                 <span><b>{fInt(v?.dislikes)}</b> dislikes</span>

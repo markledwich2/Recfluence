@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 using SysExtensions.Collections;
 using YtReader.Yt;
 
-namespace YtReader {
+namespace YtReader.Store {
   public class RecommendedVideoStored {
     public string                         VideoId     { get; set; }
     public string                         VideoTitle  { get; set; }

@@ -1,7 +1,6 @@
 # ignore all directories starting with "." with some exceptions
-.*/ 
-!.vscode/
-!.devcontainer/
+.idea/
+.Data/
 *local.*.json
 
 

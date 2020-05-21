@@ -85,7 +85,7 @@ export class YtModel {
   channels: Dim<ChannelData>
   selectionState: SelectionState
 
-  static version = 'v2.3'
+  static version = 'v2.4'
 
   constructor() {
     this.recs = new Dim<RecData>(YtModel.recDimStatic.meta)

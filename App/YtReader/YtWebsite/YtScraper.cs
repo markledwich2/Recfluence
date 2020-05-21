@@ -18,15 +18,21 @@ using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Store;
 
 //// a modified version of https://github.com/Tyrrrz/YoutubeExplode
 
 namespace YtReader.YtWebsite {
   public class YtScraper {
+    const    string     MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
     readonly ScraperCfg Cfg;
 
     readonly HttpClient DirectHttp;
     readonly HttpClient ProxyHttp;
+    long                _directRequests;
+    long                _proxyRequests;
+
+    long DirectHttpFailures;
 
     public YtScraper(ScraperCfg scraperCfg) {
       Cfg = scraperCfg;
@@ -34,8 +40,10 @@ namespace YtReader.YtWebsite {
       ProxyHttp = CreateHttpClient(true);
     }
 
-    HttpClient CreateHttpClient(bool useProxy) {
-      return new HttpClient(new HttpClientHandler {
+    public (long direct, long proxy) RequestStats => (_directRequests, _proxyRequests);
+
+    HttpClient CreateHttpClient(bool useProxy) =>
+      new HttpClient(new HttpClientHandler {
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         UseCookies = false,
         Proxy = useProxy ? new WebProxy(Cfg.Url, true, new string[] { }, new NetworkCredential(Cfg.Creds.Name, Cfg.Creds.Secret)) : null,
@@ -43,14 +51,6 @@ namespace YtReader.YtWebsite {
       }) {
         Timeout = Cfg.TimeoutSeconds.Seconds()
       };
-    }
-
-    long         DirectHttpFailures;
-    const string MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
-    long         _directRequests;
-    long         _proxyRequests;
-
-    public (long direct, long proxy) RequestStats => (_directRequests, _proxyRequests);
 
     async Task<string> GetRaw(string url, string desc, ILogger log) {
       log.Debug("Scraping {Desc} {Url}", desc, url);
@@ -379,7 +379,7 @@ namespace YtReader.YtWebsite {
       else {
         extra.SubError = html.QueryElements("#unavailable-submessage").FirstOrDefault()?.GetInnerText();
         if (extra.SubError == "") extra.SubError = null;
-        if(extra.SubError.HasValue()) // all pages have the error, but not a suberror
+        if (extra.SubError.HasValue()) // all pages have the error, but not a suberror
           extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
       }
       if (extra.Error != null) return (new Rec[] { }, extra);

@@ -1,5 +1,8 @@
 ﻿{
-  "limitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCfrlXVXz-pT9AmmDELhpyOw", "UCgRvm1yLFoaQKhmaTqXk9SA"],
+  "storage": {
+    "backupRootPath": "backuptest"
+  },
+  "limitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCvixJtaXuNdMPUGdOPcY8Ag", "UCfrlXVXz-pT9AmmDELhpyOw"],
   "ytReader": {
     "from": "2019-10-01",
     "to": null,

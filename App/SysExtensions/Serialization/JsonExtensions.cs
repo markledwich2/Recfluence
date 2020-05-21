@@ -20,10 +20,9 @@ namespace SysExtensions.Serialization {
 
     public static JsonLoadSettings DefaultLoadSettings => new JsonLoadSettings();
 
-    /// <summary>Compile time defaults. To override use the overloads</summary>
-    public static JsonSerializerSettings DefaultSettings() {
+    public static JsonSerializerSettings DefaultSettings(Formatting formatting = Formatting.Indented) {
       var settings = new JsonSerializerSettings {
-        NullValueHandling = NullValueHandling.Ignore, Formatting = Formatting.Indented, DefaultValueHandling = DefaultValueHandling.Ignore
+        NullValueHandling = NullValueHandling.Ignore, Formatting = formatting, DefaultValueHandling = DefaultValueHandling.Ignore
       };
       settings.Converters.AddRange(new StringEnumConverter(new CamelCaseNamingStrategy(false, false), false));
       settings.ContractResolver = new CoreSerializeContractResolver {NamingStrategy = new CamelCaseNamingStrategy(false, false)};
@@ -70,6 +69,14 @@ namespace SysExtensions.Serialization {
 
     public static JObject ToJObject(this object o, JsonSerializerSettings settings = null)
       => (JObject) SerializeToJToken(o, settings);
+
+    /// <summary>Returns a new instance of T with targets values overriden by newValues non-null values
+    // Relies entirely on the Newtonsoft.Json merging feature</summary>
+    public static T JsonMerge<T>(this T target, T newValues, JsonSerializerSettings settings = null) {
+      var aJ = target.ToJObject(settings);
+      aJ.Merge(newValues.ToJObject(settings), new JsonMergeSettings {MergeNullValueHandling = MergeNullValueHandling.Ignore});
+      return aJ.ToObject<T>(settings);
+    }
 
     public static string ToJson<T>(this T o, JsonSerializerSettings settings = null) {
       settings ??= DefaultSettings();

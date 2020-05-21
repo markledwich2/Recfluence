@@ -2,9 +2,6 @@ ARG SEMVER
 ARG ASSEMBLY_SEMVER
 
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1-alpine AS build-env
-ARG SEMVER
-ARG ASSEMBLY_SEMVER
-
 
 # restore all csproj frst and docker wil cache thislayer nicely
 COPY */*.csproj ./
@@ -16,6 +13,8 @@ COPY SysExtensions SysExtensions/
 COPY Mutuo.Etl Mutuo.Etl/
 COPY Mutuo.Tools Mutuo.Tools/
 
+ARG SEMVER
+ARG ASSEMBLY_SEMVER
 RUN echo SemVer={$SEMVER} AssemblySemVer={$ASSEMBLY_SEMVER}
 
 # publish YtCli

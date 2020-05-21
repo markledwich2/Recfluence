@@ -59,6 +59,8 @@ namespace SysExtensions.Reflection {
       return clone;
     }
 
+    public static bool NullOrDefault<T>(this T value) => EqualityComparer<T>.Default.Equals(value, default);
+
     public static object DefaultForType(this Type type) => type.GetTypeInfo().IsValueType ? Activator.CreateInstance(type) : null;
 
     public static IEnumerable<Type> ImplementingTypes<T>(this Assembly assembly) where T : class =>

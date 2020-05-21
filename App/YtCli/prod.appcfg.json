@@ -1,8 +1,6 @@
 {
   "storage": {
-    "dbPath": "data/db2",
-    "resultsPath": "data/results",
-    "pipePath": "data/pipe"
+    "backupRootPath": "backup"
   },
   "pipe": {
     "location": "Container"

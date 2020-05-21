@@ -1,11 +1,7 @@
 {
   "type": "object",
   "properties": {
-    "appCfgSas": {
-      "type": "string",
-      "format": "uri"
-    },
-    "azureStorageCs": {
+    "appStoreCs": {
       "type": "string"
     },
     "env": {

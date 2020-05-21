@@ -23,8 +23,9 @@ namespace SysExtensions.Build {
     public int Minor { get; set; }
     public int Path  { get; set; }
 
-    /// <summary>Use github to work out the current version in dev, will use the curerent machine as the branch name</summary>
-    public static async Task<SemVersion> DiscoverSemVer(Type typeToDetectVersion, ILogger log = null) {
+    /// <summary>Use github to work out the current version in dev, will use the curerent machine as the branch name.
+    ///   devVersionInfo will be null when not run in a dev environment </summary>
+    public static async Task<(SemVersion version, GitVersionInfo info)> DiscoverVersion(Type typeToDetectVersion, ILogger log = null) {
       log = log ?? Log.Logger ?? Logger.None;
       var rootPath = FPath.Current.DirOfParent(".git")?.Parent();
       if (rootPath?.Exists == true) {
@@ -39,7 +40,8 @@ namespace SysExtensions.Build {
           var gitVersion = jVersion.ToObject<GitVersionInfo>();
 
           log.Debug("{Noun} - '.git/' detected. Discovered version: {Version}", nameof(GitVersionInfo), gitVersion.SemVer);
-          return SemVersion.Parse(gitVersion.SemVer);
+
+          return (SemVersion.Parse(gitVersion.SemVer), gitVersion);
         }
         catch (Exception ex) {
           throw new InvalidOperationException($"Unable to parse result from gitversion: {outputLines.Join(" ")}", ex);
@@ -47,7 +49,7 @@ namespace SysExtensions.Build {
       }
       var assemblyVersion = RuntimeSemVer(typeToDetectVersion);
       log.Debug("{Noun} - Using assembly version: {Version}", nameof(GitVersionInfo), assemblyVersion);
-      return assemblyVersion;
+      return (assemblyVersion, null);
     }
 
     public static SemVersion RuntimeSemVer(Type type) =>
@@ -56,6 +58,6 @@ namespace SysExtensions.Build {
   }
 
   public static class SemVerEx {
-    public static string AssemblyVersion(this SemVersion v) => $"{v.Major}.{v.Minor}.{v.Patch}";
+    public static string MajorMinorPatch(this SemVersion v) => $"{v.Major}.{v.Minor}.{v.Patch}";
   }
 }

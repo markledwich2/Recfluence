@@ -1,6 +1,13 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pr:
+  - master
+
 variables:
   acr: ytnetworks.azurecr.io
-  image: ytnetworks
   ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
     env: prod
   ${{ if ne( variables['Build.SourceBranchName'], 'master') }}:
@@ -8,9 +15,9 @@ variables:
     
 
 stages:
-- stage: App
+- stage: YtNetworksContainer
   jobs:
-  - job: Docker
+  - job: YtNetworksContainer
     pool:
       vmImage: ubuntu-latest
 
@@ -28,7 +35,7 @@ stages:
       inputs:
         command: build
         containerRegistry: ytnetworks
-        repository: $(image)
+        repository: ytnetworks
         tags: $(GitVersion.SemVer)
         arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
         buildContext: ./App
@@ -38,10 +45,32 @@ stages:
       inputs:
         command: push
         containerRegistry: ytnetworks
-        repository: $(image)
+        repository: ytnetworks
         tags: $(GitVersion.SemVer)
 
-  - job: App
+- stage: Dataform
+  dependsOn: []
+  jobs:
+  - job: DataformContainer
+    pool:
+      vmImage: ubuntu-latest
+      
+    steps:
+
+    - task: Docker@2
+      displayName: Dataform Docker Build & Push
+      inputs:
+        command: buildAndPush
+        containerRegistry: ytnetworks
+        repository: dataform
+        tags: latest
+        buildContext: Dataform
+        Dockerfile: Dataform/Dockerfile
+
+- stage: YtFunction
+  dependsOn: []
+  jobs:
+  - job: YtFunction
     pool:
       vmImage: ubuntu-latest
 
@@ -63,42 +92,3 @@ stages:
       inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)/YtFunctions
           artifactName: YtFunctions
-
-- stage: Site
-  variables:
-    npm_config_cache: $(Pipeline.Workspace)/.npm
-  dependsOn: []
-  jobs:
-  - job: Site
-    pool:
-      vmImage: ubuntu-latest
-      
-    steps:
-    - task: Cache@2
-      inputs:
-        key: 'npm | "$(Agent.OS)" | ./Site/package-lock.json'
-        restoreKeys: |
-          npm | "$(Agent.OS)"
-        path: $(npm_config_cache)
-      displayName: Cache npm
-
-    - script: npm ci
-      workingDirectory: ./Site      
-      
-    - script: npm run build
-      env:
-        NODE_ENV: ${env}
-      displayName: npm build
-      workingDirectory: ./Site
-
-    - task: CopyFiles@2
-      displayName: Copy site
-      inputs:
-          SourceFolder: ./Site/public/
-          TargetFolder: $(Build.ArtifactStagingDirectory)/public
-
-    - task: PublishBuildArtifacts@1
-      displayName: Pubish artifacts
-      inputs:
-          pathtoPublish: $(Build.ArtifactStagingDirectory)/public
-          artifactName: web

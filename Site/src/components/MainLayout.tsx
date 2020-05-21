@@ -1,10 +1,10 @@
 import { StaticQuery, graphql } from "gatsby"
-import React from "react"
+import React, { FunctionComponent, useEffect } from "react"
 import Helmet from "react-helmet"
 import '../styles/main.css'
 import styled from 'styled-components'
 import { hsl, rgb } from "d3"
-import { RouteComponentProps as CP } from "@reach/router"
+import { RouteComponentProps } from "@reach/router"
 import { UserContextProvider } from './UserContext'
 
 export function isGatsbyServer() { return typeof window === 'undefined' }
@@ -19,13 +19,16 @@ const themeIntent: ThemeIntent = {
 
 export const theme = makeTheme(themeIntent)
 
-export class MainLayout extends React.Component<CP<{}>, {}> {
-  render() {
-    const { children } = this.props
+export const MainLayout: FunctionComponent<RouteComponentProps> = ({ children }) => {
+  useEffect(() => {
 
-    return (
-      <StaticQuery
-        query={graphql`
+    // incase any elements expand beyond the root div, style the nody background
+    const s = document.body.style
+    s.background = theme.backColor
+  })
+  return (
+    <StaticQuery
+      query={graphql`
           query SiteTitleQuery {
             site {
               siteMetadata {
@@ -34,25 +37,24 @@ export class MainLayout extends React.Component<CP<{}>, {}> {
             }
           }
         `}
-        render={data => (
-          <UserContextProvider authOptions={{
-            domain: process.env.AUTH0_DOMAIN,
-            client_id: process.env.AUTH0_CLIENTID,
-            responseType: "token id_token",
-            scope: "openid profile email",
-            cacheLocation: 'localstorage'
-          }}>
-            <Helmet>
-              <title>{data.site.siteMetadata.title}</title>
-            </Helmet>
-            <MainStyleDiv>
-              {children}
-            </MainStyleDiv>
-          </UserContextProvider>
-        )}
-      />
-    )
-  }
+      render={data => (
+        <UserContextProvider authOptions={{
+          domain: process.env.AUTH0_DOMAIN,
+          client_id: process.env.AUTH0_CLIENTID,
+          responseType: "token id_token",
+          scope: "openid profile email",
+          cacheLocation: 'localstorage'
+        }}>
+          <Helmet>
+            <title>{data.site.siteMetadata.title}</title>
+          </Helmet>
+          <MainStyleDiv>
+            {children}
+          </MainStyleDiv>
+        </UserContextProvider>
+      )}
+    />
+  )
 }
 
 export const size = {
@@ -94,7 +96,7 @@ const MainStyleDiv = styled.div`
 
   input {
     border:solid 1px ${theme.backColorBolder2};
-    padding: 0.3em 0.8em 0.5em;
+    padding: 0.4em 0.6em;
     border-radius:5px;
 
     :focus {
@@ -111,7 +113,7 @@ const MainStyleDiv = styled.div`
   }
 
   *::-webkit-scrollbar-thumb {
-    background-color: ${theme.backColorBolder};
+    background-color: ${theme.backColorBolder2};
   }
 
   select option, input {
@@ -180,9 +182,9 @@ function makeTheme(intent: ThemeIntent): Theme {
     themeColorSubtler: subtler(themeColor, 2),
     themeColorBolder: themeColorBolder,
     backColor: backColor,
-    backColorBolder: bolder(backColor, 2),
-    backColorBolder2: bolder(backColor, 5),
-    backColorBolder3: bolder(backColor, 6),
+    backColorBolder: bolder(backColor, 1.5),
+    backColorBolder2: bolder(backColor, 3),
+    backColorBolder3: bolder(backColor, 4),
     backColorTransparent: Object.assign(rgb(backColor), { opacity: 0.5 }).toString(),
     fontThemeShadow: `0 0 0.2em ${withOpacity(themeColorBolder, 0.99)}, 0 0 1em ${withOpacity(themeColor, 0.3)}, 0 0 0.4em ${withOpacity(themeColorBolder, 0.7)}`,
   }

@@ -27,6 +27,7 @@ namespace SysExtensions.Net {
     public static HttpRequestMessage Get(this UriBuilder uri) => new HttpRequestMessage(HttpMethod.Get, uri.ToString());
     public static HttpRequestMessage Put(this UriBuilder uri) => new HttpRequestMessage(HttpMethod.Put, uri.ToString());
     public static HttpRequestMessage Delete(this UriBuilder uri) => new HttpRequestMessage(HttpMethod.Delete, uri.ToString());
+    public static HttpRequestMessage Request(this UriBuilder uri, HttpMethod method) => new HttpRequestMessage(method, uri.ToString());
 
     public static HttpClient AcceptJson(this HttpClient client) => client.Accept("application/json");
 
@@ -48,10 +49,17 @@ namespace SysExtensions.Net {
     }
 
     public static HttpClient BasicAuth(this HttpClient client, NameSecret credentials) {
-      client.DefaultRequestHeaders.Authorization =
-        new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{credentials.Name}:{credentials.Secret}")));
+      client.DefaultRequestHeaders.Authorization = Authorization(credentials);
       return client;
     }
+
+    public static HttpRequestMessage BasicAuth(this HttpRequestMessage request, NameSecret credentials) {
+      request.Headers.Authorization = Authorization(credentials);
+      return request;
+    }
+
+    static AuthenticationHeaderValue Authorization(NameSecret credentials) =>
+      new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{credentials.Name}:{credentials.Secret}")));
 
     public static HttpRequestMessage Auth(this HttpRequestMessage request, string scheme, string value) {
       request.Headers.Authorization = new AuthenticationHeaderValue(scheme, value);

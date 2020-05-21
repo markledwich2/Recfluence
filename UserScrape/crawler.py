@@ -5,7 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException, ElementNotVisibleException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium import webdriver
@@ -22,6 +22,8 @@ from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath
 import tempfile
 import asyncio
 import discord_bot
+from typing import List
+
 
 @dataclass
 class CrawlResult:
@@ -48,7 +50,6 @@ def create_driver(headless: bool) -> WebDriver:
 
 class Crawler:
     def __init__(self, data_storage_cs:str, email:str, password:str, tel_nr:str, headless:bool, lang = 'en'):
-        self._video_infos = {}
         self.container = ContainerClient.from_connection_string(data_storage_cs, "userscrape")
         self.driver = create_driver(headless)
         self.wait = WebDriverWait(self.driver, 10)
@@ -57,6 +58,7 @@ class Crawler:
         self.tel_nr = tel_nr
         self.init_time = datetime.now()
         self.lang = lang
+        self.trial_nr = 1
 
     def test_ip(self):
         wd = self.driver
@@ -115,15 +117,27 @@ class Crawler:
 
         time.sleep(1)
         phone_input = self.driver.find_elements_by_xpath("//input[@type='tel']")
-
+        revalidation = self.driver.find_elements_by_xpath("//*[@data-sendmethod='SMS']")
         if len(phone_input) != 0:
             phone_input[0].send_keys(self.tel_nr)
+            self.__log_info('phone_number_entered')
             tel_next_button = self.driver.find_element_by_id('idvanyphonecollectNext').click()
             code_bot = discord_bot.DiscordBot()
             code = code_bot.get_code()
             code_input = WebDriverWait(self.driver, 5).until(
                 EC.element_to_be_clickable((By.XPATH, "//input[@type='tel']"))
             ).send_keys(code)
+            self.__log_info('code_entered')
+            code_next_button = self.driver.find_element_by_id('idvanyphoneverifyNext').click()
+        elif len(revalidation) != 0:
+            # revalidation
+            revalidation.click()  # select sms option
+            code_bot = discord_bot.DiscordBot()
+            code = code_bot.get_code()
+            code_input = WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//input[@type='tel']"))
+            ).send_keys(code)
+            self.__log_info('code_entered')
             code_next_button = self.driver.find_element_by_id('idvanyphoneverifyNext').click()
         feed = self.wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="grid-title"]')))
         self.__log_info('home')
@@ -131,13 +145,15 @@ class Crawler:
 
         return CrawlResult()
 
-    def get_video_features(self, videoId, recommendations: list, personalized_count: int):
+    def get_video_features(self, videoId, recommendations: List[dict], personalized_count: int):
         seshPath = self.path_session()
         filename = 'output/recommendations/' + self.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
         
         video_info = {
-            'id': id,
+            'account': self.email,
+            'trial': self.trial_nr,
+            'id': videoId,
             'title': self.wait.until(EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "#container > h1 > yt-formatted-string"))).text,
             'channel': self.wait.until(EC.presence_of_element_located(
@@ -161,7 +177,7 @@ class Crawler:
         # it does not always load all recommendations at the same time, therefore the loop
         all_recs = []
         while len(all_recs) < 19:
-            all_recs = WebDriverWait(self.driver, 10).until(
+            all_recs = self.wait.until(
                 EC.visibility_of_all_elements_located(
                     (By.XPATH, '//*[@id="dismissable"]/div/div[1]/a'))
             )
@@ -175,44 +191,68 @@ class Crawler:
             # take the link and remove everything except for the id of the video that the link leads to
             recommendation_id = i.get_attribute('href').replace(
                 'https://www.youtube.com/watch?v=', '')
+            title = i.find_element_by_xpath('//*[@id="video-title"]').get_attribute('title')
+            full_info = i.find_element_by_xpath('//*[@id="video-title"]').get_attribute('aria-label')
             recos.append({
-                'id': recommendation_id, 'personalized': personalized})
+                'id': recommendation_id,
+                'personalized': personalized,
+                'title': title,
+                'full_info': full_info})
         # store the information about the current video plus the corresponding recommendations
         self.get_video_features(source, recos, personalized_counter)
         # return the recommendations 
         return recos
 
-    def delete_last_video_from_history(self):
+    def delete_last_video_from_history(self, video_id: str):
         self.driver.get('https://www.youtube.com/feed/history')
-        
-        delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Remove from Watch history']")
+        # self.__log_info(f'before_deleting_last_video_{video_id}')
+        first_video = self.wait.until(
+            EC.presence_of_element_located((By.XPATH,
+                                            '//*[@id="video-title"]'))
+        )
+        # the link might contain a time stamp so we we need to use split to only get the video id
+        first_video_id = first_video.get_attribute('href').replace('https://www.youtube.com/watch?v=', '').split('&')[0]
+        delete_buttons = self.wait.until(
+                EC.presence_of_all_elements_located(
+                    (By.XPATH, "//*[@aria-label = 'Remove from Watch history']"))
+            )
         # delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Aus \"Wiedergabeverlauf\" entfernen']")
         
         # reasons why there are no videos in the history:
         # 1. the history is empty
         # 2. we are actually not logged in
         # 3. The ui is in the wrong language
-        if len(delete_buttons)>0:
+        if len(delete_buttons)>0 and first_video_id == video_id: # checking if the most recent video is actually the video we want to delete 
             delete_buttons[0].click()
-
+        # self.__log_info(f'after_deleting_last_video_{video_id}')
 
     def delete_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
-
+        # self.__log_info('before_history_deletion')
         messages = self.driver.find_elements_by_xpath("//*[@id='message']")
         # if there are not videos in the history a text appears that says 'no videos here' but apparently there is a second, hidden, message with the same
         # id on the page. So instead of checking whether this element exists we differentiate between 1 message (there are videos in the history) and 
         # two messages (there are no videos in the history)
         if len(messages)==1:
-            delete_buttons = self.driver.find_element_by_xpath("//*[@aria-label = 'Clear all watch history']").click()
+            delete_buttons =  self.wait.until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//*[@aria-label = 'Clear all watch history']")) 
+            ).click()
             # delete_buttons = self.driver.find_element_by_xpath("//*[@aria-label = 'Gesamten Wiedergabeverlauf löschen']").click()
 
-            confirm_button = self.driver.find_element_by_xpath("//*[@aria-label = 'CLEAR WATCH HISTORY']").click()
+            confirm_button = self.wait.until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//*[@aria-label = 'CLEAR WATCH HISTORY']"))
+            ).click()
             # confirm_button = self.driver.find_element_by_xpath("//*[@aria-label = 'WIEDERGABEVERLAUF LÖSCHEN']").click()
 
+        # self.__log_info('after_history_deletion')
 
     def _get_seconds(self, duration: str):
         # helper function to correctly parse the time from the info bar
+        if duration == '':
+            print("Duration of video couldn't be read")
+            return 0
         if len(duration) > 5:
             duration_time = datetime.strptime(duration, "%H:%M:%S")
         else:
@@ -235,7 +275,7 @@ class Crawler:
         self.driver.switch_to.window(current_tab)
         self.driver.get("https://www.youtube.com/watch?v=" + videoId)
         # wait until video is loaded
-        playbutton = WebDriverWait(self.driver, 10).until(
+        playbutton = self.wait.until(
             EC.presence_of_element_located((By.XPATH,
                                             '//*[@class="ytp-play-button ytp-button"]'))
         )
@@ -248,8 +288,7 @@ class Crawler:
         advertisements = {videoId: []}
         filename = 'output/advertisements/' + self.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
-        self.__log_info("video opened")
-        # todo: surveys
+        # self.__log_info(f"{videoId}_opened")
         # we check whether a skip button is present
         if len(self.driver.find_elements_by_xpath("//*[@class='ytp-ad-preview-container countdown-next-to-thumbnail']")) != 0:
             # store the advertiser
@@ -285,24 +324,29 @@ class Crawler:
         duration = time_element.text
         duration = self._get_seconds(duration)
         # to make sure that every video is watched long enough
-        watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
-
+        # watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
+        watch_time = duration if duration < 300 else 300 
+        print(watch_time)
         # let the asynchronous manager know that now other videos can be started
         await asyncio.sleep(watch_time)
         #todo replace with seq logging
         watch_time_log_file = 'output/watch_times/' + self.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
         watch_time = {
+            'account': self.email,
+            'trial': self.trial_nr,
+            'video_id': videoId,
             'video_length': duration,
             'goal_watch_time': watch_time,
             'watch_time': time.time()-start_time
         }
         self.__save_file(seshPath / watch_time_log_file, str(watch_time))
         self.driver.switch_to.window(current_tab)
+        # self.__log_info(f'{videoId}_watched')
         self.driver.close()
         self.driver.switch_to.window(main_tab)
 
-    async def watch_videos(self, videos: list[str]):
+    async def watch_videos(self, videos: List[str]):
         """
         This methods starts watching multiple videos in different tabs asynchronously, I.e. while one watch_video method is in the
         state of just sleeping, it already opens the next tab with another video.
@@ -321,6 +365,77 @@ class Crawler:
             )
         await asyncio.gather(*tasks)
 
+    def scan_feed(self):
+        seshPath = self.path_session()
+        
+        # especially during the corona crisis, YouTube is offering a lot of extra information
+        # they add noise to our data aquisition, because they influence how many videos are shown
+        # on the home page, so we have to get rid of them
+        # if we close these extra sections, YouTube remembers and doesnt show them again
+        # ideally, this loop is only run once per account
+        feed_is_bannerfree = False
+        while not feed_is_bannerfree:
+            # refresh the feed everytime we had to close something until we finally get a completely clean feed
+            self.driver.get("https://www.youtube.com")
+            # set the stop condition to True unless any 'banners' are detected
+            feed_is_bannerfree = True
+            try:
+                # this is the link to the WHO
+                # there are 3 other buttons with the same aria-label, which cannot be clicked, so I simply try to click them all and catch the exception
+                # unfortunately there is no other way to uniquely identify that button
+                extra_content = WebDriverWait(self.driver, 2).until(  # Schließen
+                    EC.presence_of_all_elements_located((By.XPATH, '//*[@aria-label="Close"]')))
+                for button in extra_content:
+                    try:
+                        button.click()
+                        feed_is_bannerfree = False
+                        print("information closed")
+                    except ElementNotInteractableException:
+                        pass
+                    except ElementNotVisibleException:
+                        pass
+            except TimeoutException:
+                # print("no extra covid information")
+                pass
+
+            # these kinds of banners are partly corona specific (like #fitnessathome) or not (#trendingmovies)
+            themed_content = None
+            try:
+                themed_content = WebDriverWait(self.driver,2).until(  # Kein Interesse
+                    EC.presence_of_all_elements_located((By.XPATH, '//*[@aria-label="Not interested"]')))
+            except TimeoutException:
+                # print("No themed content")
+                pass
+
+            if themed_content is not None:
+                feed_is_bannerfree = False
+                for button in themed_content:
+                    button.click()
+                    print("banner closed")
+
+        all_videos = self.wait.until(
+            EC.presence_of_all_elements_located((By.XPATH, '//*[@id="video-title-link"]'))
+        )
+
+        feed_info = dict(
+            account = self.email,
+            trial = self.trial_nr,
+            feed_videos = []
+        )
+        for video in all_videos:
+            # take the link and remove everything except for the id of the video that the link leads to
+            vid_dict = dict(
+                vid_id = video.get_attribute('href').replace('https://www.youtube.com/watch?v=', ''),
+                title = video.get_attribute('title'),
+                full_info = video.get_attribute('aria-label')
+            )
+            feed_info['feed_videos'].append(vid_dict)
+
+        filename = 'output/feed/' + self.email + '_' + \
+        str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
+        # upload the information as a blob
+        self.__save_file(seshPath / filename, str(feed_info))
+        
 
     def __save_cookies(self):
         """saves all cookies
@@ -392,7 +507,10 @@ class Crawler:
         return PurePosixPath(f'session_logs/{self.email}')
 
     def path_session(self) -> PurePath:
-        return PurePosixPath(f'session_logs/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.{self.driver.session_id}')
+        return PurePosixPath(f'session_logs/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.trial_{self.trial_nr}')
+
+    def update_trial(self):
+        self.trial_nr += 1
 
     def shutdown(self):
         self.driver.quit()

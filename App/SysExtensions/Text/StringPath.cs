@@ -48,8 +48,7 @@ namespace SysExtensions.Text {
     /// <summary>A name minus a file extension, except anything after the first "." is considered part of the extension</summary>
     public string NameSansExtension => Name?.Split('.').FirstOrDefault();
 
-    public StringPath WithExtension(string extension) => Parent.Add(NameSansExtension + extension);
-    public StringPath WithoutExtension() => Parent.Add(NameSansExtension);
+    public bool HasTailSeparator => Tokens.Count > 0 && Tokens.Last() == "";
 
     public string StringValue {
       get => (IsAbsolute ? Seperator.ToString() : "") + Tokens.Join(Seperator.ToString(), null, EscapeChar);
@@ -71,6 +70,11 @@ namespace SysExtensions.Text {
       }
     }
 
+    public override string ToString() => StringValue;
+
+    public StringPath WithExtension(string extension) => Parent.Add(NameSansExtension + extension);
+    public StringPath WithoutExtension() => Parent.Add(NameSansExtension);
+
     public StringPath ToAbsolute() => IsAbsolute ? this : Absolute(Tokens);
     public static StringPath Absolute(IEnumerable<string> tokens) => new StringPath(tokens) {IsAbsolute = true};
     public static StringPath Absolute(params string[] tokens) => new StringPath(tokens) {IsAbsolute = true};
@@ -79,10 +83,8 @@ namespace SysExtensions.Text {
 
     public StringPath Add(IEnumerable<string> path) => new StringPath(Tokens.Concat(path.NotNull())) {IsAbsolute = IsAbsolute};
     public StringPath Add(StringPath path) => Add(path.Tokens);
-    public StringPath Add(string token) => Add(token.AsEnumerable());
+    public StringPath Add(string token) => Add(token.InArray());
     public StringPath Add(params string[] path) => Add((IEnumerable<string>) path);
-
-    public bool HasTailSeparator => Tokens.Count > 0 && Tokens.Last() == "";
     public StringPath WithoutTailSeparator() => HasTailSeparator ? new StringPath(Tokens.Take(Tokens.Count - 1)) : this;
     public StringPath WithTailSeparator() => HasTailSeparator ? this : new StringPath(Tokens.Concat(""));
 
@@ -136,7 +138,5 @@ namespace SysExtensions.Text {
       var downTokens = Tokens.Skip(commonRoot.Count).Select(t => t);
       return new StringPath(upTokens.Concat(downTokens));
     }
-
-    public override string ToString() => StringValue;
   }
 }
