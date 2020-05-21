@@ -15,10 +15,28 @@ export function queryHighlights(query: string): string[] {
 }
 
 export function esCfgFromEnv(): EsCfg {
-  return { url: process.env.ES_URL, creds: process.env.ES_CREDS }
+  const prefix = process.env.BRANCH_ENV ? `${process.env.BRANCH_ENV}-` : ''
+  return {
+    url: process.env.ES_URL,
+    creds: process.env.ES_CREDS,
+    prefix: process.env.ES_PREFIX,
+    indexes: {
+      caption: `${prefix}caption2`,
+      channel: `${prefix}channel`,
+      video: `${prefix}video`
+    }
+  }
 }
 
 export interface EsCfg {
   url: string
   creds: string
+  prefix: string
+  indexes: EsIndexes
+}
+
+export interface EsIndexes {
+  caption: string
+  video: string
+  channel: string
 }

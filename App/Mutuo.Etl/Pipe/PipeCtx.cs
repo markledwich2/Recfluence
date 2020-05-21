@@ -1,22 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Autofac;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.Blob;
 using Serilog;
+using Serilog.Core;
 using SysExtensions;
 using SysExtensions.Text;
 
 namespace Mutuo.Etl.Pipe {
   /// <summary>Context & Cfg for running a pipe commands</summary>
   public interface IPipeCtx {
-    ILogger          Log    { get; }
-    ISimpleFileStore Store  { get; }
-    PipeAppCfg       Cfg    { get; }
-    PipeAppCtx       AppCtx { get; }
-    ILifetimeScope   Scope  { get; }
+    ILogger          Log     { get; }
+    ISimpleFileStore Store   { get; }
+    PipeAppCtx       AppCtx  { get; }
+    ILifetimeScope   Scope   { get; }
+    PipeAppCfg       PipeCfg { get; }
   }
 
   public class PipeAppCtx {
@@ -33,35 +33,36 @@ namespace Mutuo.Etl.Pipe {
     }
 
     /// <summary>Context to resolve pipe instances</summary>
-    public ILifetimeScope Scope { get;                                                  set; }
-    public IReadOnlyCollection<Assembly>                    Assemblies           { get; set; } = new List<Assembly>();
-    public IReadOnlyCollection<(string name, string value)> EnvironmentVariables { get; set; } = new List<(string, string)>();
-    public Func<Region>                                     CustomRegion         { get; set; }
+    public ILifetimeScope Scope { get;                               set; }
+    public Assembly[]                    Assemblies           { get; set; }
+    public (string name, string value)[] EnvironmentVariables { get; set; } = { };
+    public Func<Region>                  CustomRegion         { get; set; }
   }
 
   public class PipeCtx : IPipeCtx, IDisposable {
     public PipeCtx() { }
 
-    public PipeCtx(PipeAppCfg cfg, PipeAppCtx appCtx, ISimpleFileStore store, ILogger log) {
+    public PipeCtx(PipeAppCfg cfg, PipeAppCtx appCtx, ISimpleFileStore store, ILogger log = null) {
       AppCtx = appCtx;
-      Cfg = cfg;
+      PipeCfg = cfg;
       Store = store;
-      Log = log;
+      Log = log ?? Logger.None;
       Scope = appCtx.Scope.BeginLifetimeScope(b => b.Register(_ => this).As<IPipeCtx>());
     }
 
-    public PipeCtx(IPipeCtx ctx) {
+    public PipeAppCfg PipeCfg { get; }
+
+    /*public PipeCtx(IPipeCtx ctx) {
       Log = ctx.Log;
       Store = ctx.Store;
-      Cfg = ctx.Cfg;
-    }
+      BasePipeCfg = ctx.Cfg;
+    }*/
 
     public void Dispose() => Scope.Dispose();
 
     public ILogger          Log    { get; }
     public ISimpleFileStore Store  { get; }
     public PipeAppCtx       AppCtx { get; }
-    public PipeAppCfg       Cfg    { get; }
     public ILifetimeScope   Scope  { get; }
   }
 

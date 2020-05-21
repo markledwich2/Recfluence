@@ -150,7 +150,7 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
 
   return (
     <ReactiveBase
-      app="caption2"
+      app={esCfg.indexes.caption}
       url={esCfg.url}
       credentials={esCfg.creds}
       themePreset="dark"
@@ -186,7 +186,7 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
                     react={{ and: ['q', 'views', 'sort', 'ideology', 'channel', 'upload'] }}
                     infiniteScroll
                     scrollTarget="results"
-                    size={50}
+                    size={30}
                     dataField={sort.field}
                     sortBy={sort.sort}
                     showResultStats={false}

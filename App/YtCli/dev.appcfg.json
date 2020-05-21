@@ -1,18 +1,11 @@
 ﻿{
   "storage": {
-    "rootPath": "testdata",
     "backupRootPath": "backuptest"
   },
-  "snowflake": {
-    "Db": "YT_DEV"
-  },
-  "limitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCupvZG-5ko_eiXAupbDfxWw"],
+  "limitedToSeedChannels": ["UCJm5yR1KFcysl_0I3x-iReg", "UCvixJtaXuNdMPUGdOPcY8Ag", "UCfrlXVXz-pT9AmmDELhpyOw"],
   "ytReader": {
     "from": "2019-10-01",
     "to": null,
     "refreshRecsWithin": "20.00:00:00.0"
-  },
-  "warehouse": {
-    "stage": "yt_testdata"
   }
 }

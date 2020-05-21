@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Dapper;
 using Humanizer.Localisation;
 using Mutuo.Etl.Blob;
+using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using Serilog.Core;
@@ -21,10 +20,9 @@ using static Mutuo.Etl.Pipe.PipeArg;
 using VideoItem = YtReader.YtWebsite.VideoItem;
 
 namespace YtReader {
-  public enum UpdateType {
+  public enum CollectorMode {
     All,
     Channels,
-
     // go back and populate recommendations for videos that are missing any recorded recs
     AllWithMissingRecs
   }
@@ -34,18 +32,18 @@ namespace YtReader {
     public static bool IsYoungerThan(this DateTime updated, TimeSpan age, DateTime? now = null) => !updated.IsOlderThan(age, now);
   }
 
-  public class YtDataUpdater {
-    readonly YtClient                 Api;
-    readonly AppCfg                   Cfg;
-    readonly Func<Task<DbConnection>> GetConnection;
-    readonly IPipeCtx                 PipeCtx;
-    readonly YtScraper                Scraper;
-    readonly YtStore                  Store;
+  public class YtCollector {
+    readonly YtClient                    Api;
+    readonly AppCfg                      Cfg;
+    readonly SnowflakeConnectionProvider Sf;
+    readonly IPipeCtx                    PipeCtx;
+    readonly YtScraper                   Scraper;
+    readonly YtStore                     Store;
 
-    public YtDataUpdater(YtStore store, AppCfg cfg, Func<Task<DbConnection>> getConnection, IPipeCtx pipeCtx, ILogger log) {
+    public YtCollector(YtStore store, AppCfg cfg, SnowflakeConnectionProvider sf, IPipeCtx pipeCtx, ILogger log) {
       Store = store;
       Cfg = cfg;
-      GetConnection = getConnection;
+      Sf = sf;
       PipeCtx = pipeCtx;
       Scraper = new YtScraper(cfg.Scraper);
       Api = new YtClient(cfg.YTApiKeys, log);
@@ -53,18 +51,17 @@ namespace YtReader {
 
     YtReaderCfg RCfg => Cfg.YtReader;
 
-    [Pipe]
-    public async Task Update(ILogger log, UpdateType updateType = UpdateType.All, bool forceUpdate = false) {
+    public async Task Collect(ILogger log, CollectorMode mode = CollectorMode.All, bool forceUpdate = false) {
       var channels = await UpdateAllChannels(log);
       var (result, dur) = await channels
         .Randomize() // randomize to even the load. Without this the large channels at the beginning make the first batch go way slower
-        .Process(PipeCtx, 
-          b => ProcessChannels(b, updateType, forceUpdate, Inject<ILogger>()))
+        .Process(PipeCtx,
+          b => ProcessChannels(b, mode, forceUpdate, Inject<ILogger>()))
         .WithDuration();
 
       var allChannelResults = result.SelectMany(r => r.OutState.Channels).ToArray();
       log.Information("{Pipe} Complete - {Success}/{Total} channels updated in {Duration}",
-        nameof(Update), allChannelResults.Count(c => c.Success), allChannelResults.Length, dur.HumanizeShort());
+        nameof(Collect), allChannelResults.Count(c => c.Success), allChannelResults.Length, dur.HumanizeShort());
     }
 
     async Task<IEnumerable<ChannelStored2>> UpdateAllChannels(ILogger log) {
@@ -120,11 +117,11 @@ namespace YtReader {
     }
 
     [Pipe]
-    public async Task<ProcessChannelResults> ProcessChannels(IReadOnlyCollection<ChannelStored2> channels, 
-      UpdateType updateType, bool forceUpdate, ILogger log = null) {
+    public async Task<ProcessChannelResults> ProcessChannels(IReadOnlyCollection<ChannelStored2> channels,
+      CollectorMode mode, bool forceUpdate, ILogger log = null) {
       log ??= Logger.None;
       var workSw = Stopwatch.StartNew();
-      var conn = new AsyncLazy<DbConnection>(() => GetConnection());
+      var conn = new AsyncLazy<LoggedConnection>(() => Sf.OpenConnection(log));
       var channelResults = await channels
         .Where(c => c.Status == ChannelStatus.Alive)
         .Select((c, i) => (c, i)).BlockFunc(async item => {
@@ -134,7 +131,7 @@ namespace YtReader {
             .ForContext("ChannelId", c.ChannelId)
             .ForContext("Channel", c.ChannelTitle);
           try {
-            await UpdateAllInChannel(c, conn, updateType, forceUpdate, log);
+            await UpdateAllInChannel(c, conn, mode, forceUpdate, log);
             log.Information("{Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
               c.ChannelTitle, sw.Elapsed.HumanizeShort(2, TimeUnit.Millisecond), i + 1, channels.Count);
             return (c, Success: true);
@@ -159,7 +156,7 @@ namespace YtReader {
       return res;
     }
 
-    async Task UpdateAllInChannel(ChannelStored2 c, AsyncLazy<DbConnection> conn, UpdateType updateType, bool forceUpdate, ILogger log) {
+    async Task UpdateAllInChannel(ChannelStored2 c, AsyncLazy<LoggedConnection> conn, CollectorMode mode, bool forceUpdate, ILogger log) {
       if (c.StatusMessage.HasValue()) {
         log.Information("{Channel} - Not updating videos/recs/captions because it has a status msg: {StatusMessage} ",
           c.ChannelTitle, c.StatusMessage);
@@ -184,8 +181,8 @@ namespace YtReader {
 
       if (vids != null)
         await SaveVids(c, vids, Store.Videos, lastUpload, log);
-      if (vids != null || updateType == UpdateType.AllWithMissingRecs)
-        await SaveRecsAndExtra(c, vids, conn, updateType, log);
+      if (vids != null || mode == CollectorMode.AllWithMissingRecs)
+        await SaveRecsAndExtra(c, vids, conn, mode, log);
       if (vids != null)
         await SaveNewCaptions(c, vids, log);
     }
@@ -264,14 +261,15 @@ namespace YtReader {
     }
 
     /// <summary>Saves recs for all of the given vids</summary>
-    async Task SaveRecsAndExtra(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AsyncLazy<DbConnection> conn, UpdateType updateType, ILogger log) {
+    async Task SaveRecsAndExtra(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, AsyncLazy<LoggedConnection> conn, CollectorMode updateType,
+      ILogger log) {
       var toUpdate = updateType switch {
-        UpdateType.AllWithMissingRecs => await VideosWithNoRecs(c, await conn.GetOrCreate(), log),
+        CollectorMode.AllWithMissingRecs => await VideosWithNoRecs(c, await conn.GetOrCreate(), log),
         _ => await VideoToUpdateRecs(c, vids)
       };
 
       var recs = await toUpdate.BlockFunc(
-        async v => (fromId: v.Id, fromTitle: v.Title, recs: await Scraper.GetRecsAndExtra(v.Id, log)), 
+        async v => (fromId: v.Id, fromTitle: v.Title, recs: await Scraper.GetRecsAndExtra(v.Id, log)),
         Cfg.DefaultParallel);
 
       // read failed recs from the API (either because of an error, or because the video is 18+ restricted)
@@ -331,18 +329,11 @@ namespace YtReader {
         c.ChannelTitle, extraStored.Length);
     }
 
-    async Task<IReadOnlyCollection<(string Id, string Title)>> VideosWithNoRecs(ChannelStored2 c, DbConnection connection, ILogger log) {
-      var cmd = connection.CreateCommand();
-      cmd.CommandText = $@"select v.video_id, v.video_title
-      from video_latest v
-        where
-      v.channel_id = '{c.ChannelId}'
-      and not exists(select * from rec r where r.from_video_id = v.video_id)
-                     group by v.video_id, v.video_title";
-      var reader = await cmd.ExecuteReaderAsync();
-      var ids = new List<(string, string)>();
-      while (await reader.ReadAsync()) ids.Add((reader["VIDEO_ID"].ToString(), reader["VIDEO_TITLE"].ToString()));
-
+    async Task<IReadOnlyCollection<(string Id, string Title)>> VideosWithNoRecs(ChannelStored2 c, LoggedConnection connection, ILogger log) {
+      var ids = await connection.Query<(string Id, string Title)>("videos sans-recs", $@"select v.video_id, v.video_title
+        from video_latest v where v.channel_id = '{c.ChannelId}'
+        and not exists(select * from rec r where r.from_video_id = v.video_id)
+                       group by v.video_id, v.video_title");
       log.Information("{Channel} - found {Recommendations} video's missing recommendations", c.ChannelTitle, ids.Count);
       return ids;
     }
@@ -368,10 +359,10 @@ namespace YtReader {
     [Pipe]
     public async Task BackfillVideoExtra(ILogger log, string videoIds = null, int? limit = null) {
       if (videoIds == null) {
-        using var conn = await GetConnection();
+        using var conn = await Sf.OpenConnection(log);
 
         var limitString = limit == null ? "" : $"limit {limit}";
-        var toUpdate = (await conn.QueryAsync<ChannelVideoItem>(@$"
+        var toUpdate = (await conn.Query<ChannelVideoItem>("videos sans-extra", @$"
 select video_id as VideoId, channel_id as ChannelId, channel_title as ChannelTitle
 from (select video_id, channel_id, channel_title
            , upload_date
@@ -435,7 +426,7 @@ where num <= 50 -- most recent for each channel
     //bool Expired(DateTime updated, TimeSpan refreshAge) => (RCfg.To ?? DateTime.UtcNow) - updated > refreshAge;
 
     public class UpdateChannelWork {
-      public ChannelStored2 Channel    { get; set; }
+      public ChannelStored2 Channel { get; set; }
     }
 
     public class ChannelVideoItem {

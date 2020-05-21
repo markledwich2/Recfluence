@@ -22,7 +22,7 @@ namespace Mutuo.Etl.Pipe {
     public            string              SubscriptionId   { get; set; }
     [Required] public ServicePrincipalCfg ServicePrincipal { get; set; } = new ServicePrincipalCfg();
     public            string              ResourceGroup    { get; set; }
-    
+
     /// <summary>The default parallelism when working with azure</summary>
     [Required]
     public int Parallel { get; set; } = 8;
@@ -35,10 +35,9 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class ContainerCfg {
-    public string     Registry      { get; set; }
-    public string     Name          { get; set; }
-    public string     ImageName     { get; set; }
-    public string     Tag           { get; set; }
+    public string Registry  { get; set; }
+    public string ImageName { get; set; }
+    //public string     BaseTag           { get; set; }
     public int        Cores         { get; set; }
     public double     Mem           { get; set; }
     public NameSecret RegistryCreds { get; set; }

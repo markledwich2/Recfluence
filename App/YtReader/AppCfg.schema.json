@@ -1,9 +1,26 @@
 {
   "definitions": {
-    "AlgoliaCfg": {
+    "AzureCleanerCfg": {
       "type": "object",
       "properties": {
-        "creds": {
+        "parallel": {
+          "type": "integer"
+        },
+        "expires": {
+          "type": "string"
+        }
+      }
+    },
+    "BranchEnvCfg": {
+      "type": "object",
+      "properties": {
+        "prefix": {
+          "type": "string"
+        },
+        "expiry": {
+          "type": "string"
+        },
+        "email": {
           "type": "string"
         }
       }
@@ -12,9 +29,6 @@
       "type": "object",
       "properties": {
         "registry": {
-          "type": "string"
-        },
-        "name": {
           "type": "string"
         },
         "imageName": {
@@ -40,6 +54,14 @@
         }
       }
     },
+    "DataformCfg": {
+      "type": "object",
+      "properties": {
+        "container": {
+          "$ref": "#/definitions/ContainerCfg"
+        }
+      }
+    },
     "ElasticCfg": {
       "type": "object",
       "properties": {
@@ -47,6 +69,9 @@
           "type": "string"
         },
         "creds": {
+          "type": "string"
+        },
+        "indexPrefix": {
           "type": "string"
         }
       }
@@ -121,6 +146,9 @@
         },
         "path": {
           "type": "string"
+        },
+        "parallel": {
+          "type": "integer"
         }
       }
     },
@@ -135,6 +163,9 @@
         },
         "resourceGroup": {
           "type": "string"
+        },
+        "parallel": {
+          "type": "integer"
         }
       }
     },
@@ -160,6 +191,9 @@
       "properties": {
         "fileQueryUri": {
           "type": "string"
+        },
+        "parallel": {
+          "type": "integer"
         }
       }
     },
@@ -186,6 +220,10 @@
     "SeqHostCfg": {
       "type": "object",
       "properties": {
+        "seqUrl": {
+          "type": "string",
+          "format": "uri"
+        },
         "idleQuery": {
           "type": "string"
         },
@@ -220,6 +258,9 @@
           "items": {
             "type": "string"
           }
+        },
+        "parallel": {
+          "type": "integer"
         }
       }
     },
@@ -243,15 +284,6 @@
         }
       }
     },
-    "SolrCfg": {
-      "type": "object",
-      "properties": {
-        "url": {
-          "type": "string",
-          "format": "uri"
-        }
-      }
-    },
     "SqlServerCfg": {
       "type": "object",
       "properties": {
@@ -272,7 +304,7 @@
     "StorageCfg": {
       "type": "object",
       "properties": {
-        "rootPath": {
+        "container": {
           "type": "string"
         },
         "dataStorageCs": {
@@ -437,6 +469,9 @@
     "channelsPerContainer": {
       "type": "integer"
     },
+    "env": {
+      "$ref": "#/definitions/BranchEnvCfg"
+    },
     "resourceGroup": {
       "type": "string"
     },
@@ -492,17 +527,17 @@
     "pipe": {
       "$ref": "#/definitions/PipeAppCfg"
     },
-    "solr": {
-      "$ref": "#/definitions/SolrCfg"
-    },
-    "algolia": {
-      "$ref": "#/definitions/AlgoliaCfg"
+    "dataform": {
+      "$ref": "#/definitions/DataformCfg"
     },
     "elastic": {
       "$ref": "#/definitions/ElasticCfg"
     },
     "syncDb": {
       "$ref": "#/definitions/SyncDbCfg"
+    },
+    "cleaner": {
+      "$ref": "#/definitions/AzureCleanerCfg"
     }
   }
 }

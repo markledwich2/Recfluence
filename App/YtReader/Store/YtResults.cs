@@ -9,8 +9,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using CsvHelper;
-using Dapper;
 using Mutuo.Etl.Blob;
+using Mutuo.Etl.Db;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Fluent.IO;
@@ -42,25 +42,23 @@ namespace YtReader.Store {
   }
 
   public class YtResults {
-    const    string           Version = "v2.4";
-    readonly HttpClient       Http    = new HttpClient();
-    readonly ILogger          Log;
-    readonly ResultsCfg       ResCfg;
-    readonly SnowflakeCfg     SnowflakeCfg;
-    readonly ISimpleFileStore Store;
+    const    string                      Version = "v2.4";
+    readonly HttpClient                  Http    = new HttpClient();
+    readonly SnowflakeConnectionProvider Sf;
+    readonly ResultsCfg                  ResCfg;
+    readonly ISimpleFileStore            Store;
 
-    public YtResults(SnowflakeCfg snowflakeCfg, ResultsCfg resCfg, ISimpleFileStore store, ILogger log) {
-      SnowflakeCfg = snowflakeCfg;
+    public YtResults(SnowflakeConnectionProvider sf, ResultsCfg resCfg, ISimpleFileStore store) {
+      Sf = sf;
       ResCfg = resCfg;
       Store = store;
-      Log = log;
     }
 
-    public async Task SaveBlobResults(IReadOnlyCollection<string> queryNames) {
-      using var db = await SnowflakeCfg.OpenConnection();
+    public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null) {
+      using var db = await Sf.OpenConnection(log);
 
       var now = DateTime.Now;
-      var dateRangeParams = new {from = "2019-11-01", to = $"{now.Year}-{now.Month - 1}-1"};
+      var dateRangeParams = new {from = "2019-11-01", to = now.ToString("yyyy-MM-01")};
       var queries = new[] {
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams),
@@ -73,26 +71,25 @@ namespace YtReader.Store {
 
           new ResQuery("channel_classification",
             desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)"),
-          new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
+          /*new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
           new ResQuery("icc_lr", desc: "channel classifications in a format used to calculate how consistent reviewers are when deciding left/right/center"),
-
-          new FileQuery("rec_accuracy", "sql/rec_accuracy.sql", "Calculates the accuracy of our estimates vs exported recommendations")
+          new FileQuery("rec_accuracy", "sql/rec_accuracy.sql", "Calculates the accuracy of our estimates vs exported recommendations")*/
 
           // videos & recs are too large to share in a file. Use snowflake directly to share this data at-cost.
           /*("video_latest", @"select video_id, video_title, channel_id, channel_title,
            upload_date, avg_rating, likes, dislikes, views, thumb_standard from video_latest")*/
         }
-        .Where(q => !queryNames.Any() || queryNames.Contains(q.Name))
+        .Where(q => queryNames == null || !queryNames.Any() || queryNames.Contains(q.Name))
         .ToList();
 
       var tmpDir = TempDir();
 
-      var results = await queries.BlockFunc(async q => (file: await SaveResult(db, tmpDir, q), query: q), ResCfg.Parallel);
+      var results = await queries.BlockFunc(async q => (file: await SaveResult(log, db, tmpDir, q), query: q), ResCfg.Parallel);
 
-      if (!queryNames.Any()) await SaveResultsZip(results);
+      if (queryNames?.Any() != true) await SaveResultsZip(log, results);
     }
 
-    async Task SaveResultsZip(IReadOnlyCollection<(FPath file, ResQuery query)> results) {
+    async Task SaveResultsZip(ILogger log, IReadOnlyCollection<(FPath file, ResQuery query)> results) {
       var sw = Stopwatch.StartNew();
       var zipPath = results.First().file.Parent().Combine("recfluence_shared_data.zip");
       using (var zipFile = ZipFile.Open(zipPath.FullPath, ZipArchiveMode.Create)) {
@@ -112,7 +109,7 @@ namespace YtReader.Store {
         }
       }
 
-      await SaveToLatestAndDateDirs(zipPath.FileName, zipPath);
+      await SaveToLatestAndDateDirs(log, zipPath.FileName, zipPath);
       Log.Information("Complete saving zip {Name} in {Duration}", zipPath.FileName, sw.Elapsed);
     }
 
@@ -124,22 +121,22 @@ namespace YtReader.Store {
     }
 
     /// <summary>Saves the result for the given query to Storage and a local tmp file</summary>
-    async Task<FPath> SaveResult(IDbConnection db, FPath tempDir, ResQuery q) {
+    async Task<FPath> SaveResult(ILogger log, LoggedConnection db, FPath tempDir, ResQuery q) {
       var sw = Stopwatch.StartNew();
       var reader = await ResQuery(db, q);
       var fileName = $"{q.Name}.csv.gz";
       var tempFile = tempDir.Combine(fileName);
       using (var fileWriter = tempFile.Open(FileMode.Create, FileAccess.Write))
-        await reader.WriteCsvGz(fileWriter, fileName, Log);
+        await reader.WriteCsvGz(fileWriter, fileName, log);
 
       // save to both latest and the current date 
-      await SaveToLatestAndDateDirs(fileName, tempFile);
+      await SaveToLatestAndDateDirs(log, fileName, tempFile);
 
       Log.Information("Complete saving result {Name} in {Duration}", q.Name, sw.Elapsed);
       return tempFile;
     }
 
-    async Task<IDataReader> ResQuery(IDbConnection db, ResQuery q) {
+    async Task<IDataReader> ResQuery(LoggedConnection db, ResQuery q) {
       var query = q.Query ?? $"select * from {q.Name}";
       if (q is FileQuery f) {
         var req = new Uri(ResCfg.FileQueryUri + "/" + f.Path.StringValue).Get()
@@ -150,7 +147,7 @@ namespace YtReader.Store {
       }
       Log.Information("Saving result {Name}: {Query}", q.Name, query);
       try {
-        var reader = await db.ExecuteReaderAsync(query, q.Parameters, commandType: CommandType.Text);
+        var reader = await db.ExecuteReader("save result", query, q.Parameters);
         return reader;
       }
       catch (Exception ex) {
@@ -158,11 +155,11 @@ namespace YtReader.Store {
       }
     }
 
-    async Task SaveToLatestAndDateDirs(string fileName, FPath tempFile) =>
+    async Task SaveToLatestAndDateDirs(ILogger log, string fileName, FPath tempFile) =>
       await Task.WhenAll(
-        Store.Save(StringPath.Relative(Version, DateTime.UtcNow.ToString("yyyy-MM-dd")).Add(fileName), tempFile, Log),
-        Store.Save(StringPath.Relative(Version, "latest").Add(fileName), tempFile, Log),
-        Store.Save(StringPath.Relative("latest").Add(fileName), tempFile, Log)
+        Store.Save(StringPath.Relative(Version, DateTime.UtcNow.ToString("yyyy-MM-dd")).Add(fileName), tempFile, log),
+        Store.Save(StringPath.Relative(Version, "latest").Add(fileName), tempFile, log),
+        Store.Save(StringPath.Relative("latest").Add(fileName), tempFile, log)
       );
   }
 

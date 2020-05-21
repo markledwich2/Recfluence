@@ -13,7 +13,7 @@ import queryString from 'query-string'
 import scrollIntoView from 'scroll-into-view-if-needed'
 import { TopSiteBar } from '../SiteMenu'
 import { EsCfg } from '../../common/Elastic'
-import { getCaptions, getVideo } from '../../common/YtApi'
+import { getCaptions, getVideo, VideoData, EsCaption } from '../../common/YtApi'
 
 const MainPageDiv = styled.div`
   height:100vh;
@@ -98,8 +98,8 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
   // get data for video from function
   useEffect(() => {
     async function renderVideo() {
-      getCaptions(videoId).then(c => setCaptions(c)).then(() => delay(200)).then(() => scrollToCurrentTime())
-      getVideo(videoId).then(v => setVideoData(v))
+      getCaptions(esCfg, videoId).then(c => setCaptions(c)).then(() => delay(200)).then(() => scrollToCurrentTime())
+      getVideo(esCfg, videoId).then(v => setVideoData(v))
     }
     renderVideo()
   }, [])
@@ -148,7 +148,7 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
           <VideoStatsDiv>
             {video && <>
               <span><b>{fInt(v?.views)}</b> views</span>
-              <span>{fDate(v?.upload_date)}</span>
+              <span>{dateFormat(v?.upload_date)}</span>
               <span style={{ marginLeft: 'auto' }}>
                 <span><b>{fInt(v?.likes)}</b> likes</span>
                 <span><b>{fInt(v?.dislikes)}</b> dislikes</span>
