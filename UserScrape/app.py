@@ -14,12 +14,17 @@ def experiment(initialization: bool, accounts: List[int]):
 
 
     cfg = load_cfg()
-    video_seeds_df = load_all_seeds()
+    if initialization:
+        video_seeds_df = load_all_seeds()
+    else:
+        # todo: function that returns only 5 sampled videos
+        video_seeds_df = load_all_seeds()[0:5]
+
     repetitions = 2 # 100
     # todo: this list of videos needs to be sampled
     test_videos = ['uo9dAIQR3g8', 'CH50zuS8DD0', '9_R3_CThc38']
 
-    for user in cfg.users:
+    for user in [cfg.users[i] for i in accounts]:
         print(f'scraping for user {user.email}')
         crawler = Crawler(cfg.data_storage_cs, user.email, user.password, user.telephone_number, cfg.headless)
         crawler.test_ip()
@@ -47,33 +52,35 @@ def experiment(initialization: bool, accounts: List[int]):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='Start one iteration of the experiment. If you run this for the first time \
+        set --init. If you do not want to run the experiment with all accounts, specifiy the list with --accounts')
     parser.add_argument("--init", "-i", 
     help="Provide this argument if the experiment shall start from the beginning. Each account will start with a clear history and will watch 50 initial videos",
-    default=False)
+    action='store_true')
     parser.add_argument("--accounts", "-a", 
     help="A list of numbers for which the corresponding accounts will be included in this run of the experiment. \
      Possible options are \n \
-        1. White Identitarian \n \
-        2. MRA \n \
-        3. Conspiracy \n \
-        4. Libertarian \n \
-        5. Provocative Anti-SJW \n \
-        6. Anti-SJW \n \
-        7. Socialist \n \
-        8. Religious Conservative \n \
-        9. Social Justice \n \
-        10. Center/Left MSM \n \
-        11. Partisan Left \n \
-        12. Partisan Right \n \
-        13. Anti-Theist \n \
-        14. Uniform (An equal number of videos from each class) \n \
-        15. Videos are watched proportional to their Viewcount \n \
-        16. Non-Political (Non-political videos) \n \
-        17. A fresh account without viewing history ",
-        default=list(range(1,18)))
+        0. White Identitarian \n \
+        1. MRA \n \
+        2. Conspiracy \n \
+        3. Libertarian \n \
+        4. Provocative Anti-SJW \n \
+        5. Anti-SJW \n \
+        6. Socialist \n \
+        7. Religious Conservative \n \
+        8. Social Justice \n \
+        9. Center/Left MSM \n \
+        10. Partisan Left \n \
+        11. Partisan Right \n \
+        12. Anti-Theist \n \
+        13. Uniform (An equal number of videos from each class) \n \
+        14. Videos are watched proportional to their Viewcount \n \
+        15. Non-Political (Non-political videos) \n \
+        16. A fresh account without viewing history ",
+        default=list(range(0,17)),
+        nargs="+", type=int,
+        choices=list(range(0,17))
+        )
     args = parser.parse_args()
-    initialization = False
-    if args.init:
-        initialization = True
-    experiment(initialization, args.accounts)
+
+    experiment(args.init, args.accounts)
