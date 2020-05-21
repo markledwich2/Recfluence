@@ -3,7 +3,11 @@
 # Licensed under the MIT License. See https://go.microsoft.com/fwlink/?linkid=2090316 for license information.
 #-------------------------------------------------------------------------------------------------------------
 
-FROM debian:9
+FROM debian:stretch-slim
+
+# curl -v https://aka.ms/downloadazcopy-v10-linux
+ENV RELEASE_STAMP=20200501
+ENV RELEASE_VERSION=10.4.3
 
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,32 +20,46 @@ ARG USERNAME=vscode
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+         ca-certificates \
+         curl
+
+
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
 # Configure apt and install packages
 RUN apt-get update \
     && apt-get -y install --no-install-recommends apt-utils dialog 2>&1 \
-    #
     # Verify git, process tools installed
     && apt-get -y install git openssh-client less iproute2 procps \
-    #
-    # Install the Azure CLI
-    && apt-get install -y apt-transport-https curl gnupg2 lsb-release \
-    && echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" > /etc/apt/sources.list.d/azure-cli.list \
-    && curl -sL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - 2>/dev/null \
-    && apt-get update \
-    && apt-get install -y azure-cli \
-    #
-    # Create a non-root user to use if preferred - see https://aka.ms/vscode-remote/containers/non-root-user.
-    && groupadd --gid $USER_GID $USERNAME \
-    && useradd -s /bin/bash --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    # [Optional] Add sudo support for the non-root user
-    && apt-get install -y sudo \
-    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME\
-    && chmod 0440 /etc/sudoers.d/$USERNAME \
-    #
-    # Clean up
-    && apt-get autoremove -y \
+    # install jq (for parsing results from akv)
+    && apt-get -y install jq
+
+#
+# Instll Az Copy. see https://hub.docker.com/r/datenbetrieb/azcopy/dockerfile
+RUN set -ex \
+    && curl -L -o azcopy.tar.gz https://azcopyvnext.azureedge.net/release${RELEASE_STAMP}/azcopy_linux_amd64_${RELEASE_VERSION}.tar.gz \
+    && tar -xzf azcopy.tar.gz && rm -f azcopy.tar.gz \
+    && cp ./azcopy_linux_amd64_*/azcopy /usr/local/bin/. \
+    && chmod +x /usr/local/bin/azcopy \
+    && rm -rf azcopy_linux_amd64_*
+
+# Clean up
+RUN apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
+
+# #
+# # Create a non-root user to use if preferred - see https://aka.ms/vscode-remote/containers/non-root-user.
+# RUN groupadd --gid $USER_GID $USERNAME \
+#     && useradd -s /bin/bash --uid $USER_UID --gid $USER_GID -m $USERNAME \
+#     # [Optional] Add sudo support for the non-root user
+#     && apt-get install -y sudo \
+#     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME\
+#     && chmod 0440 /etc/sudoers.d/$USERNAME \
+
+
 
 # Switch back to dialog for any ad-hoc use of apt-get
 ENV DEBIAN_FRONTEND=dialog

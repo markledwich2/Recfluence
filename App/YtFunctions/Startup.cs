@@ -6,6 +6,7 @@ using Humanizer.Localisation;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Azure.WebJobs;
 using Mutuo.Etl.Pipe;
+using Semver;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.ApplicationInsights.Sinks.ApplicationInsights.TelemetryConverters;
@@ -21,8 +22,8 @@ namespace YtFunctions {
     public override void Configure(IFunctionsHostBuilder builder) =>
       builder.UseAutofacServiceProviderFactory(c => {
         c.Register(_ => new AsyncLazy<FuncCtx, ExecutionContext>(FuncCtx.LoadCtx)).SingleInstance();
-        c.RegisterType<YtFunctions>();
-        c.RegisterType<YtData>();
+        c.RegisterType<ApiBackend>();
+        c.RegisterType<ApiSearch>();
       });
   }
 
@@ -44,22 +45,22 @@ namespace YtFunctions {
     public FuncCtx WithLog(ILogger log) => new FuncCtx(log, PipeCtx, Root, Cfg, Scope);
 
     public static async Task<FuncCtx> LoadCtx(ExecutionContext exec) {
-      var cfg = await Setup.LoadCfg(exec.FunctionAppDirectory);
-      var log = await Logger(cfg.Root, cfg.App);
-      var appCtx = Setup.PipeAppCtxEmptyScope(cfg.Root, cfg.App);
-      var scope = Setup.BaseScope(cfg.Root, cfg.App, appCtx, log);
-      return new FuncCtx(log, appCtx, cfg.Root, cfg.App, scope);
+      var (app, root, version) = await Setup.LoadCfg(exec.FunctionAppDirectory);
+      var log = Logger(root, app, version.Version);
+      var appCtx = Setup.PipeAppCtxEmptyScope(root, app);
+      var scope = Setup.MainScope(root, app, appCtx, version, log);
+      return new FuncCtx(scope.Resolve<ILogger>(), appCtx, root, app, scope);
     }
 
-    static async Task<ILogger> Logger(RootCfg root, AppCfg cfg) {
+    static ILogger Logger(RootCfg root, AppCfg cfg, SemVersion version) {
       var logCfg = new LoggerConfiguration();
       logCfg.WriteTo.Console(LogEventLevel.Information);
       if (cfg.AppInsightsKey.HasValue())
         logCfg = logCfg.WriteTo.ApplicationInsights(cfg.AppInsightsKey, new TraceTelemetryConverter());
-      if (cfg.SeqUrl != null)
-        logCfg = logCfg.WriteTo.Seq(cfg.SeqUrl.OriginalString, LogEventLevel.Debug);
-      logCfg = logCfg.YtEnrich(root.Env, nameof(YtFunctions), await Setup.GetVersion());
-      var startSeqTask = Setup.StartSeqIfNeeded(cfg);
+      if (cfg.Seq.SeqUrl != null)
+        logCfg = logCfg.WriteTo.Seq(cfg.Seq.SeqUrl.OriginalString, LogEventLevel.Debug);
+      logCfg = logCfg.YtEnrich(root.Env, nameof(YtFunctions), version);
+      new SeqHost(cfg.Seq, cfg.Pipe.Azure).StartSeqIfNeeded();
       return logCfg.MinimumLevel.Debug().CreateLogger();
     }
   }

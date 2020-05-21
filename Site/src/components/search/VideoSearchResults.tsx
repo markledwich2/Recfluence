@@ -12,7 +12,7 @@ import ReactMarkdown from 'react-markdown/with-html'
 import { Spinner } from '../Spinner'
 import { SadTear as IconSad } from '@styled-icons/fa-solid'
 import { UserContext } from '../UserContext'
-import { EsCaption, CaptionPart } from '../../common/DbModel'
+import { EsCaption, CaptionPart } from '../../common/YtApi'
 
 
 interface CaptionSearchResult extends EsCaption {
@@ -152,9 +152,7 @@ export const VideoSearchResults = ({ renderState, query }: { renderState: Render
   const { user, logIn } = useContext(UserContext)
 
   if (!user)
-    data = data.slice(0, 5)
-
-
+    data = data.slice(0, 20)
 
   const byVid = _(data).groupBy(c => c.video_id).map(g => {
     const first = g[0]
@@ -190,7 +188,7 @@ export const VideoSearchResults = ({ renderState, query }: { renderState: Render
         Please use responsibly.
         </div></LoginOverlay>}
 
-    {!loading && resultStats.numberOfResults <= resultStats.displayedResults &&
+    {!loading && resultStats.numberOfResults > 0 && resultStats.numberOfResults <= resultStats.displayedResults &&
       <NoMoreResults><span>the end</span></NoMoreResults>}
 
     {loading && data.length > 0 && <Spinner size="80px" />}
@@ -265,7 +263,7 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
           <Highlighter
             searchWords={p.searchWords}
             autoEscape
-            textToHighlight={c.video_title}
+            textToHighlight={c.video_title ?? ""}
           />
         </h2>
         <div style={{ display: "flex", justifyContent: "space-between" }}>

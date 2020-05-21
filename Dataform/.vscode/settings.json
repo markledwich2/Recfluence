@@ -1,0 +1,11 @@
+{
+    "files.exclude": {
+        ".run/**": true,
+        "node_modules/**": true
+    },
+    "cSpell.words": [
+        "Dataform",
+        "Dataform's",
+        "promisify"
+    ]
+}

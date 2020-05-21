@@ -3,16 +3,17 @@ using System.Linq;
 using System.Threading.Tasks;
 using Mutuo.Etl.Db;
 using Serilog;
+using Snowflake.Data.Client;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
-namespace YtReader {
+namespace YtReader.Store {
   public class YtSync {
-    readonly SnowflakeCfg SnowflakeCfg;
-    readonly SqlServerCfg SqlServerCfg;
+    readonly SnowflakeConnectionProvider Snowflake;
+    readonly SqlServerCfg                SqlServerCfg;
 
-    public YtSync(SnowflakeCfg snowflakeCfg, SqlServerCfg sqlServerCfg, ILogger log) {
-      SnowflakeCfg = snowflakeCfg;
+    public YtSync(SnowflakeConnectionProvider snowflake, SqlServerCfg sqlServerCfg, ILogger log) {
+      Snowflake = snowflake;
       SqlServerCfg = sqlServerCfg;
     }
 
@@ -22,10 +23,10 @@ namespace YtReader {
         var tableLog = log.ForContext("Table", t.Name);
 
         tableLog.Information("Table Sync {Table} - started", t.Name);
-        using var sourceConn = await SnowflakeCfg.OpenConnection();
+        using var sourceConn = await Snowflake.OpenConnection(log);
         using var destConn = await SqlServerCfg.OpenConnection(tableLog);
         var sync = new DbSync(
-          new SnowflakeSourceDb(sourceConn, SnowflakeCfg.Schema, tableLog),
+          new SnowflakeSourceDb((SnowflakeDbConnection) sourceConn.Conn, Snowflake.Cfg.Schema, tableLog),
           new MsSqlDestDb(destConn, SqlServerCfg.DefaultSchema, t.FullTextCatalog, tableLog));
 
         var res = await sync.UpdateTable(t, tableLog, fullLoad, optionLimit)

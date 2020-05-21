@@ -8,9 +8,14 @@ import { MainLayout } from "../components/MainLayout"
 // i think I should use a static page 
 // https://stackoverflow.com/questions/52051090/gatsbyjs-client-only-paths-goes-to-404-page-when-the-url-is-directly-accessed-in
 
+function resultUrl() {
+  const suffix = process.env.BRANCH_ENV ? `-${process.env.BRANCH_ENV}` : ''
+  return `${process.env.RESULTS_HOST}/${process.env.RESULTS_CONTAINER}${suffix}/${process.env.RESULTS_PATH}`
+}
+
 const App = () => (
   <MainLayout>
-    <ChannelRelationsPage dataUrl={process.env.RESULTS_URL} />
+    <ChannelRelationsPage dataUrl={resultUrl()} />
   </MainLayout>
 )
 

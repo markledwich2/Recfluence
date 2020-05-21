@@ -44,6 +44,17 @@ namespace SysExtensions.Serialization {
       return tr.LoadJsonlGz<T>(settings).ToList();
     }
 
+    public static IEnumerable<string> LoadJsonlGzLines(this Stream stream) {
+      using var zr = new GZipStream(stream, CompressionMode.Decompress);
+      using var tr = new StreamReader(zr);
+      while (true) {
+        var line = tr.ReadLine();
+        if (line == null)
+          break;
+        yield return line;
+      }
+    }
+
     public static Stream ToJsonlGzStream<T>(this IEnumerable<T> items, JsonSerializerSettings settings = null) {
       var memStream = new MemoryStream();
       using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true)) {

@@ -22,6 +22,7 @@ from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath
 import tempfile
 import asyncio
 import discord_bot
+from typing import List
 
 
 @dataclass
@@ -345,7 +346,7 @@ class Crawler:
         self.driver.close()
         self.driver.switch_to.window(main_tab)
 
-    async def watch_videos(self, videos: list):
+    async def watch_videos(self, videos: List[str]):
         """
         This methods starts watching multiple videos in different tabs asynchronously, I.e. while one watch_video method is in the
         state of just sleeping, it already opens the next tab with another video.

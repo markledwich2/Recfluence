@@ -16,7 +16,7 @@
             "fileMatch": [
                 "userscrape.json"
             ],
-            "url": "./userscrape.schema.json"
+            "url": "/userscrape.schema.json"
         }
     ],
     "files.exclude": {
