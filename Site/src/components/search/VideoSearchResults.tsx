@@ -152,9 +152,7 @@ export const VideoSearchResults = ({ renderState, query }: { renderState: Render
   const { user, logIn } = useContext(UserContext)
 
   if (!user)
-    data = data.slice(0, 5)
-
-
+    data = data.slice(0, 20)
 
   const byVid = _(data).groupBy(c => c.video_id).map(g => {
     const first = g[0]
