@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Humanizer;
+using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
+using SysExtensions.Configuration;
 using SysExtensions.Security;
 
 namespace YtReader {
@@ -32,15 +34,12 @@ namespace YtReader {
     public            int                 ParallelChannels      { get; set; } = 4;
     public            int                 DefaultParallel       { get; set; } = 8;
     public            int                 ChannelsPerContainer  { get; set; } = 150;
-    [Required] public string              ResourceGroup         { get; set; }
+    [Required] public BranchEnvCfg        Env                   { get; set; } = new BranchEnvCfg();
     [Required] public YtReaderCfg         YtReader              { get; set; } = new YtReaderCfg();
     [Required] public StorageCfg          Storage               { get; set; } = new StorageCfg();
     [Required] public ICollection<string> YTApiKeys             { get; set; } = new List<string>();
     [Required] public HashSet<string>     LimitedToSeedChannels { get; set; } = new HashSet<string>();
-    [Required] public string              SubscriptionId        { get; set; }
-    [Required] public ServicePrincipalCfg ServicePrincipal      { get; set; } = new ServicePrincipalCfg();
-    [Required] public Uri                 SeqUrl                { get; set; }
-    [Required] public SeqHostCfg          SeqHost               { get; set; } = new SeqHostCfg();
+    [Required] public SeqCfg              Seq                   { get; set; } = new SeqCfg();
     [Required] public SheetsCfg           Sheets                { get; set; } = new SheetsCfg();
     [Required] public ScraperCfg          Scraper               { get; set; } = new ScraperCfg();
     [Required] public SnowflakeCfg        Snowflake             { get; set; } = new SnowflakeCfg();
@@ -51,11 +50,14 @@ namespace YtReader {
     [Required] public DataformCfg         Dataform              { get; set; } = new DataformCfg();
     [Required] public ElasticCfg          Elastic               { get; set; }
     [Required] public SyncDbCfg           SyncDb                { get; set; } = new SyncDbCfg();
+    [Required] public AzureCleanerCfg     Cleaner               { get; set; } = new AzureCleanerCfg();
+    [Required] public YtUpdaterCfg        Updater               { get; set; } = new YtUpdaterCfg();
   }
 
   public class ElasticCfg {
-    public string     CloudId { get; set; }
-    public NameSecret Creds   { get; set; }
+    public string     CloudId     { get; set; }
+    public NameSecret Creds       { get; set; }
+    public string     IndexPrefix { get; set; }
   }
 
   public class SyncDbCfg {
@@ -83,10 +85,10 @@ namespace YtReader {
   }
 
   public class SheetsCfg {
-    [Required] public JObject             CredJson            { get; set; }
-    [Required] public string              MainChannelSheetId  { get; set; }
-    [Required] public ICollection<string> UserChannelSheetIds { get; set; }
-    [Required] public int                 Parallel            { get; set; } = 4;
+    [Required] [SkipRecursiveValidation] public JObject             CredJson            { get; set; }
+    [Required]                           public string              MainChannelSheetId  { get; set; }
+    [Required]                           public ICollection<string> UserChannelSheetIds { get; set; }
+    [Required]                           public int                 Parallel            { get; set; } = 4;
   }
 
   public class YtReaderCfg {
@@ -111,7 +113,7 @@ namespace YtReader {
   }
 
   public class StorageCfg {
-    [Required] public string RootPath      { get; set; }
+    [Required] public string Container     { get; set; } = "data";
     [Required] public string DataStorageCs { get; set; }
     [Required] public string DbPath        { get; set; } = "db2";
     [Required] public string ResultsPath   { get; set; } = "results";
@@ -122,7 +124,7 @@ namespace YtReader {
     [Required] public string BackupRootPath { get; set; }
   }
 
-  public class SeqHostCfg {
+  public class SeqCfg {
     public Uri    SeqUrl             { get; set; }
     public string IdleQuery          { get; set; } = "@Timestamp > Now() - 1h and App != 'YtFunctions'";
     public string ContainerGroupName { get; set; } = "seq";

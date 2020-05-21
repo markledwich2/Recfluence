@@ -10,20 +10,29 @@ using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
 using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.AzureManagement;
+using Mutuo.Etl.DockerRegistry;
+using Semver;
 using Serilog;
 using SysExtensions;
+using SysExtensions.Build;
+using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Pipe {
   public class AzureContainers : IPipeWorkerStartable {
-    public AzureContainers(PipeAppCfg cfg) {
-      Cfg = cfg;
-      Az = new Lazy<IAzure>(() => Cfg.Azure.GetAzure());
+    readonly PipeAzureCfg   AzureCfg;
+    readonly SemVersion     Version;
+    readonly RegistryClient RegistryClient;
+
+    public AzureContainers(PipeAzureCfg azureCfg, SemVersion version, RegistryClient registryClient) {
+      AzureCfg = azureCfg;
+      Version = version;
+      RegistryClient = registryClient;
+      Az = new Lazy<IAzure>(azureCfg.GetAzure);
     }
 
-    PipeAppCfg   Cfg { get; }
-    Lazy<IAzure> Az  { get; }
+    Lazy<IAzure> Az { get; }
 
     public Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) => Launch(ctx, ids, false, log);
 
@@ -31,14 +40,17 @@ namespace Mutuo.Etl.Pipe {
     ///   returns the status.</summary>
     public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log) {
       var res = await ids.BlockFunc(async runId => {
-        var runCfg = runId.PipeCfg(ctx); // id is for the sub-pipe, ctx is for the root
+        var runCfg = runId.PipeCfg(ctx.PipeCfg); // id is for the sub-pipe, ctx is for the root
 
-        var pipeLog = log.ForContext("Image", runCfg.Container.ContainerImageName()).ForContext("Pipe", runId.Name);
+        var tag = await FindPipeTag(runCfg.Container.ImageName);
+        var fullImageName = runCfg.Container.FullContainerImageName(tag);
+        var pipeLog = log.ForContext("Image", fullImageName).ForContext("Pipe", runId.Name);
 
-        var (launch, launchDur) = await Launch(runCfg.Container, runId.ContainerGroupName(), ctx.AppCtx.EnvironmentVariables,
+        var containerGroup = runId.ContainerGroupName();
+        var (launch, launchDur) = await Launch(runCfg.Container, containerGroup, fullImageName, ctx.AppCtx.EnvironmentVariables,
           runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog).WithDuration();
 
-        var logTxt = await launch.GetLogContentAsync(runId.ContainerName());
+        var logTxt = await launch.GetLogContentAsync(containerGroup);
         var logPath = new StringPath($"{runId.StatePath()}.log.txt");
 
         var errorMsg = launch.State().In(ContainerState.Failed, ContainerState.Unknown)
@@ -64,23 +76,21 @@ namespace Mutuo.Etl.Pipe {
         if (launch.State() == ContainerState.Succeeded) await DeleteContainer(runId.ContainerGroupName(), log);
 
         return md;
-      }, ctx.Cfg.Azure.Parallel);
+      }, ctx.PipeCfg.Azure.Parallel);
 
       return res;
     }
 
-    public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, (string name, string value)[] envVars, string[] args,
+    public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string fullImageName, (string name, string value)[] envVars, string[] args,
       bool returnOnStart = false, Func<Region> customRegion = null, ILogger log = null) {
-      var azure = Az.Value;
-      await EnsureNotRunning(groupName, azure, Cfg.Azure.ResourceGroup);
-      var groupDef = await ContainerGroup(cfg, groupName, groupName, envVars, args, customRegion);
+      var groupDef = await ContainerGroup(cfg, groupName, groupName, fullImageName, envVars, args, customRegion);
       var group = await Create(groupDef, log);
       var run = await Run(group, returnOnStart, log);
       return run;
     }
 
     async Task DeleteContainer(string groupName, ILogger log) {
-      await Az.Value.ContainerGroups.DeleteByResourceGroupAsync(Cfg.Azure.ResourceGroup, groupName);
+      await Az.Value.ContainerGroups.DeleteByResourceGroupAsync(AzureCfg.ResourceGroup, groupName);
       log.Debug("Deleted container {Container}", groupName);
     }
 
@@ -122,13 +132,23 @@ namespace Mutuo.Etl.Pipe {
       }
     }
 
-    async Task<IWithCreate> ContainerGroup(ContainerCfg container, string groupName, string containerName, IEnumerable<(string name, string value)> envVars,
+    async Task<string> FindPipeTag(string imageName) {
+      var findTags = Version.Prerelease.HasValue() ? new[] {Version.PipeTag(), Version.MajorMinorPatch()} : new[] {Version.MajorMinorPatch()};
+      var existingTags = (await RegistryClient.TagList(imageName)).Tags.ToHashSet();
+      var tag = findTags.Select(t => existingTags.Contains(t) ? t : null).NotNull().FirstOrDefault()
+                ?? throw new InvalidOperationException($"Could not find any of tags {findTags.Join("|")}");
+      return tag;
+    }
+
+    async Task<IWithCreate> ContainerGroup(ContainerCfg container, string groupName, string containerName, string fullImageName,
+      IEnumerable<(string name, string value)> envVars,
       string[] args, Func<Region> customRegion = null
     ) {
-      var rg = Cfg.Azure.ResourceGroup;
+      var rg = AzureCfg.ResourceGroup;
       await EnsureNotRunning(groupName, Az.Value, rg);
 
       var registryCreds = container.RegistryCreds ?? throw new InvalidOperationException("no registry credentials");
+
 
       var group = Az.Value.ContainerGroups.Define(groupName)
         .WithRegion(customRegion?.Invoke().Name ?? container.Region)
@@ -137,12 +157,14 @@ namespace Mutuo.Etl.Pipe {
         .WithPrivateImageRegistry(container.Registry, registryCreds.Name, registryCreds.Secret)
         .WithoutVolume()
         .DefineContainerInstance(containerName)
-        .WithImage(container.ContainerImageName())
+        .WithImage(fullImageName)
         .WithoutPorts()
         .WithCpuCoreCount(container.Cores)
         .WithMemorySizeInGB(container.Mem)
-        .WithEnvironmentVariables(envVars.ToDictionary(e => e.name, e => e.value))
-        .WithStartingCommandLine(container.Exe, args);
+        .WithEnvironmentVariables(envVars.ToDictionary(e => e.name, e => e.value));
+
+      if (container.Exe.HasValue())
+        group = group.WithStartingCommandLine(container.Exe, args);
 
       var createGroup = group
         .Attach()

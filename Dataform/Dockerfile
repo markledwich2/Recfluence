@@ -19,4 +19,4 @@ COPY src ./src
 RUN tsc --skipLibCheck
 
 #CMD ["bin/bash"]
-CMD ["ts-node-script", "run.ts"]
+CMD ["ts-node-script", "src/run.ts"]

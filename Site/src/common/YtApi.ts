@@ -2,16 +2,17 @@ import { ChannelData } from "./YtModel"
 import { getJson } from "./Utils"
 import _ from 'lodash'
 import { DbModel } from './DbModel'
+import { EsCfg } from './Elastic'
 
 const apiUrl = process.env.FUNC_URL
 
-export async function getVideo(videoId: string): Promise<{ video: EsVideo, channel: ChannelData }> {
-  var res = await getJson<EsVideoResponse>(`${apiUrl}/video/${videoId}`)
+export async function getVideo(cfg: EsCfg, videoId: string): Promise<{ video: EsVideo, channel: ChannelData }> {
+  var res = await getJson<EsVideoResponse>(`${apiUrl}/${cfg.indexes.video}/${videoId}`)
   return { video: res.video, channel: DbModel.ChannelData(res.channel) }
 }
 
-export async function getCaptions(videoId: string): Promise<EsCaption[]> {
-  var res = await getJson<EsCaption[]>(`${apiUrl}/captions/${videoId}`)
+export async function getCaptions(cfg: EsCfg, videoId: string): Promise<EsCaption[]> {
+  var res = await getJson<EsCaption[]>(`${apiUrl}/${cfg.indexes.caption}/${videoId}`)
   return res
 }
 

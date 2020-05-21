@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Mutuo.Etl.Blob;
+using Semver;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
@@ -19,26 +22,40 @@ namespace YtReader.Store {
   /// <summary>Access to any of the stores</summary>
   public class YtStores {
     readonly StorageCfg Cfg;
+    readonly SemVersion Version;
     readonly ILogger    Log;
 
-    public YtStores(StorageCfg cfg, ILogger log) {
+    public YtStores(StorageCfg cfg, SemVersion version, ILogger log) {
       Cfg = cfg;
+      Version = version;
       Log = log;
     }
 
     public AzureBlobFileStore Store(DataStoreType type) => type switch {
-      DataStoreType.Backup => new AzureBlobFileStore(Cfg.BackupCs, Cfg.BackupRootPath, Log),
+      DataStoreType.Backup => Version.Prerelease.HasValue() ? null : new AzureBlobFileStore(Cfg.BackupCs, Cfg.BackupRootPath, Log),
       _ => new AzureBlobFileStore(Cfg.DataStorageCs, StoragePath(type), Log)
     };
 
     StringPath StoragePath(DataStoreType type) =>
-      Cfg.RootPath + "/" + type switch {
+      Cfg.RootPath(Version) + "/" + type switch {
         DataStoreType.Pipe => Cfg.PipePath,
         DataStoreType.Db => Cfg.DbPath,
         DataStoreType.Private => Cfg.PrivatePath,
         DataStoreType.Results => Cfg.ResultsPath,
         _ => throw new NotImplementedException($"StoryType {type} not supported")
       };
+  }
+
+  public static class StoreEx {
+    public static CloudBlobContainer Container(this StorageCfg cfg, SemVersion version) {
+      var storage = CloudStorageAccount.Parse(cfg.DataStorageCs);
+      var client = new CloudBlobClient(storage.BlobEndpoint, storage.Credentials);
+      var container = client.GetContainerReference(cfg.RootPath(version.Prerelease));
+      return container;
+    }
+
+    public static string RootPath(this StorageCfg cfg, SemVersion version) => cfg.RootPath(version.Prerelease);
+    public static string RootPath(this StorageCfg cfg, string prefix) => prefix.HasValue() ? $"{cfg.Container}-{prefix}" : cfg.Container;
   }
 
   /// <summary>Typed access to jsonl blob collections</summary>

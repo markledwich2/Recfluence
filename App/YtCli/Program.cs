@@ -6,12 +6,12 @@ using Autofac;
 using CommandLine;
 using Google.Apis.Util;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
+using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using Serilog.Core;
 using SysExtensions.Build;
 using SysExtensions.Collections;
-using SysExtensions.Serialization;
 using SysExtensions.Text;
 using Troschuetz.Random;
 using YtReader;
@@ -24,42 +24,49 @@ namespace YtCli {
     static async Task<int> Main(string[] args) {
       var res = Parser.Default
         .ParseArguments<PipeCmd, CollectCmd, ChannelInfoOption, UpgradeStoreCmd, ResultsCmd, TrafficCmd,
-          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd, WarehouseCmd, BackupCmd>(args)
+          PublishContainerCmd, VersionCmd, UpdateSearchIndexCmd, SyncDbCmd, WarehouseCmd, BackupCmd, CleanCmd,
+          BranchEnvCmd, UpdateCmd>(args)
         .MapResult(
           (PipeCmd p) => Run(p, args, PipeCmd.RunPipe),
-          (CollectCmd u) => Run(u, args, CollectCmd.Update),
+          (CollectCmd u) => Run(u, args, CollectCmd.Collect),
           (ChannelInfoOption v) => Run(v, args, ChannelInfoOption.ChannelInfo),
           (UpgradeStoreCmd f) => Run(f, args, UpgradeStoreCmd.Fix),
           (ResultsCmd f) => Run(f, args, ResultsCmd.Results),
           (TrafficCmd t) => Run(t, args, TrafficCmd.Traffic),
           (PublishContainerCmd p) => Run(p, args, PublishContainerCmd.PublishContainer),
-          (VersionCmd v) => VersionCmd.Verson(),
+          async (VersionCmd v) => {
+            await VersionCmd.Verson();
+            return ExitCode.Success;
+          },
           (UpdateSearchIndexCmd s) => Run(s, args, UpdateSearchIndexCmd.UpdateSearchIndex),
           (SyncDbCmd s) => Run(s, args, SyncDbCmd.Sync),
           (WarehouseCmd w) => Run(w, args, WarehouseCmd.Update),
           (BackupCmd b) => Run(b, args, BackupCmd.Backup),
+          (CleanCmd c) => Run(c, args, CleanCmd.Clean),
+          (BranchEnvCmd b) => Run(b, args, BranchEnvCmd.CreateEnv),
+          (UpdateCmd u) => Run(u, args, UpdateCmd.Update),
           errs => Task.FromResult(ExitCode.Error)
         );
       return (int) await res;
     }
 
     static async Task<CmdCtx<TOption>> TaskCtx<TOption>(TOption option, string[] args) {
-      var (app, root) = await Setup.LoadCfg(rootLogger: Setup.ConsoleLogger());
-      var log = await Setup.CreateLogger(root.Env, option.GetType().Name, app);
+      var (app, root, version) = await Setup.LoadCfg(rootLogger: Setup.ConsoleLogger());
+      var log = await Setup.CreateLogger(root.Env, option.GetType().Name, version, app);
 
-      var scope = Setup.BaseScope(root, app, Setup.PipeAppCtxEmptyScope(root, app), log);
+      var scope = Setup.MainScope(root, app, Setup.PipeAppCtxEmptyScope(root, app), version, log);
       return new CmdCtx<TOption>(root, app, log, option, scope, args);
     }
 
-    static async Task<ExitCode> Run<TOption>(TOption option, string[] args, Func<CmdCtx<TOption>, Task<ExitCode>> task) {
+    static async Task<ExitCode> Run<TOption>(TOption option, string[] args, Func<CmdCtx<TOption>, Task> task) {
       using var ctx = await TaskCtx(option, args);
 
       try {
         var verb = option.GetType().GetCustomAttribute<VerbAttribute>()?.Name ?? option.GetType().Name;
         ctx.Log.Debug("Starting cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
-        var res = await task(ctx);
+        await task(ctx);
         ctx.Log.Debug("Completed cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
-        return res;
+        return ExitCode.Success;
       }
       catch (Exception ex) {
         var flatEx = ex switch {AggregateException a => a.Flatten(), _ => ex};
@@ -71,11 +78,10 @@ namespace YtCli {
 
   [Verb("version")]
   public class VersionCmd {
-    public static async Task<ExitCode> Verson() {
+    public static async Task Verson() {
       var log = Setup.ConsoleLogger();
-      var version = await GitVersionInfo.DiscoverSemVer(typeof(Program), log);
+      var version = await GitVersionInfo.DiscoverVersion(typeof(Program), log);
       log.Information("{Version}", version);
-      return ExitCode.Success;
     }
   }
 
@@ -89,10 +95,10 @@ namespace YtCli {
     [Option('t', "type", HelpText = "Control what parts of the update process to run")]
     public CollectorMode UpdateType { get; set; }
 
-    [Option('f', "force", HelpText = "Force update of channels, so stats are refreshed even if they ahve bene updated recently")]
+    [Option('f', "force", HelpText = "Force update of channels, so stats are refreshed even if they have been updated recently")]
     public bool ForceUpdate { get; set; }
 
-    public static async Task<ExitCode> Update(CmdCtx<CollectCmd> ctx) {
+    public static async Task Collect(CmdCtx<CollectCmd> ctx) {
       if (ctx.Option.ChannelIds.HasValue())
         ctx.Cfg.LimitedToSeedChannels = ctx.Option.ChannelIds.UnJoin('|').ToHashSet();
 
@@ -100,22 +106,19 @@ namespace YtCli {
       var appCtx = new PipeAppCtx(ctx.Scope.Resolve<PipeAppCtx>()) {CustomRegion = () => Rand.Choice(Regions)};
       var standardPipeCtx = ctx.Scope.Resolve<IPipeCtx>();
 
-      // run the work in this process
-      var cfg = standardPipeCtx.Cfg.JsonClone();
+      // run the work using the pipe entry point, forced to be local
+      var cfg = ctx.Scope.Resolve<PipeAppCfg>();
       cfg.Location = PipeRunLocation.Local;
       var pipeCtx = new PipeCtx(cfg, appCtx, standardPipeCtx.Store, standardPipeCtx.Log);
-      await pipeCtx.Run((YtDataCollector d) => d.Update(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType, ctx.Option.ForceUpdate));
-      //await pipeCtx.DoPipeWork(PipeRunId.FromName("Update"));
-      return ExitCode.Success;
+      await pipeCtx.Run((YtCollector d) => d.Collect(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType, ctx.Option.ForceUpdate));
     }
   }
 
   [Verb("upgrade-store", HelpText = "try to fix missing/inconsistent data")]
   public class UpgradeStoreCmd : ICommonCmd {
-    public static async Task<ExitCode> Fix(CmdCtx<UpgradeStoreCmd> ctx) {
+    public static async Task Fix(CmdCtx<UpgradeStoreCmd> ctx) {
       var upgrader = ctx.Scope.Resolve<StoreUpgrader>();
       await upgrader.UpgradeIfNeeded();
-      return ExitCode.Success;
     }
   }
 
@@ -127,7 +130,7 @@ namespace YtCli {
     [Option('c', HelpText = "the ID of a channel")]
     public string ChannelId { get; set; }
 
-    public static async Task<ExitCode> ChannelInfo(CmdCtx<ChannelInfoOption> ctx) {
+    public static async Task ChannelInfo(CmdCtx<ChannelInfoOption> ctx) {
       var yt = ctx.Cfg.YtClient(ctx.Log);
       if (ctx.Option.VideoId.HasValue()) {
         var v = await yt.VideoData(ctx.Option.VideoId);
@@ -137,8 +140,6 @@ namespace YtCli {
         var c = await yt.ChannelData(ctx.Option.ChannelId);
         ctx.Log.Information("{ChannelTitle},{Status}", c.Title, c.Status);
       }
-
-      return ExitCode.Success;
     }
   }
 
@@ -149,10 +150,9 @@ namespace YtCli {
     [Option('q', HelpText = "list of query names to run. All if empty")]
     public IEnumerable<string> QueryNames { get; set; }
 
-    public static async Task<ExitCode> Results(CmdCtx<ResultsCmd> ctx) {
+    public static async Task Results(CmdCtx<ResultsCmd> ctx) {
       var result = ctx.Scope.Resolve<YtResults>();
-      await result.SaveBlobResults(ctx.Option.QueryNames.NotNull().ToList());
-      return ExitCode.Success;
+      await result.SaveBlobResults(ctx.Log, ctx.Option.QueryNames.NotNull().ToList());
     }
   }
 
@@ -164,10 +164,9 @@ namespace YtCli {
     [Option('f', HelpText = "if true, will clear and load data")]
     public bool FullLoad { get; set; }
 
-    public static async Task<ExitCode> Update(CmdCtx<WarehouseCmd> ctx) {
-      var wh = ctx.Scope.Resolve<WarehouseUpdater>();
-      await wh.WarehouseUpdate(ctx.Option.FullLoad, ctx.Option.Tables?.Split('|').ToArray());
-      return ExitCode.Success;
+    public static async Task Update(CmdCtx<WarehouseCmd> ctx) {
+      var wh = ctx.Scope.Resolve<YtStage>();
+      await wh.WarehouseUpdate(ctx.Log, ctx.Option.FullLoad, ctx.Option.Tables?.Split('|').ToArray());
     }
   }
 
@@ -182,19 +181,17 @@ namespace YtCli {
     [Option('f', HelpText = "if true, will clear and load data")]
     public bool FullLoad { get; set; }
 
-    public static async Task<ExitCode> Sync(CmdCtx<SyncDbCmd> ctx) {
-      var result = new YtSync(ctx.Cfg.Snowflake, ctx.Cfg.AppDb, ctx.Log);
+    public static async Task Sync(CmdCtx<SyncDbCmd> ctx) {
+      var result = ctx.Scope.Resolve<YtSync>();
       await result.SyncDb(ctx.Cfg.SyncDb, ctx.Log, ctx.Option.Tables.ToReadOnly(), ctx.Option.FullLoad, ctx.Option.Limit);
-      return ExitCode.Success;
     }
   }
 
   [Verb("traffic", HelpText = "Process source traffic data for comparison")]
   public class TrafficCmd : ICommonCmd {
-    public static async Task<ExitCode> Traffic(CmdCtx<TrafficCmd> ctx) {
+    public static async Task Traffic(CmdCtx<TrafficCmd> ctx) {
       var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.PrivatePath);
       await TrafficSourceExports.Process(store, ctx.Cfg, new YtScraper(ctx.Cfg.Scraper), ctx.Log);
-      return ExitCode.Success;
     }
   }
 
@@ -209,19 +206,44 @@ namespace YtCli {
     [Option('f', HelpText = "If all captions should be re-indexed")]
     public bool FullLoad { get; set; }
 
-    public static async Task<ExitCode> UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
+    public static async Task UpdateSearchIndex(CmdCtx<UpdateSearchIndexCmd> ctx) {
       var pipeCtx = ctx.Scope.Resolve<IPipeCtx>();
-      await pipeCtx.Run((YtSearch s) => s.SyncToElastic(ctx.Option.FullLoad, ctx.Option.Limit), location: ctx.Option.Location, log: ctx.Log);
-      return ExitCode.Success;
+      await pipeCtx.Run((YtSearch s) => s.SyncToElastic(ctx.Log, ctx.Option.FullLoad, ctx.Option.Limit), location: ctx.Option.Location, log: ctx.Log);
     }
   }
 
   [Verb("backup", HelpText = "Backup database")]
   public class BackupCmd : ICommonCmd {
-    public static async Task<ExitCode> Backup(CmdCtx<BackupCmd> ctx) {
+    public static async Task Backup(CmdCtx<BackupCmd> ctx) {
       var back = ctx.Scope.Resolve<YtBackup>();
-      await back.Backup();
-      return ExitCode.Success;
+      await back.Backup(ctx.Log);
+    }
+  }
+
+  [Verb("clean", HelpText = "Clean expired resources")]
+  public class CleanCmd : ICommonCmd {
+    public static async Task Clean(CmdCtx<CleanCmd> ctx) {
+      var clean = ctx.Scope.Resolve<AzureCleaner>();
+      await clean.DeleteExpiredResources(ctx.Log);
+    }
+  }
+
+  [Verb("create-env", HelpText = "Create environment")]
+  public class BranchEnvCmd : ICommonCmd {
+    public static async Task CreateEnv(CmdCtx<BranchEnvCmd> ctx) {
+      var branchEnv = ctx.Scope.Resolve<BranchEnvCreator>();
+      await branchEnv.Create(ctx.Log);
+    }
+  }
+
+  [Verb("update", HelpText = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]
+  public class UpdateCmd : ICommonCmd {
+    [Option('a', HelpText = "| delimited list of action to run (empty for all)")]
+    public string Actions { get; set; }
+
+    public static async Task Update(CmdCtx<UpdateCmd> ctx) {
+      var updater = ctx.Scope.Resolve<YtUpdater>();
+      await updater.Update(ctx.Option.Actions?.Split("|"));
     }
   }
 

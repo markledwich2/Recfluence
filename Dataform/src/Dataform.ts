@@ -4,6 +4,7 @@ import dateformat from 'dateformat'
 import * as bunyan from 'bunyan'
 import formatMs from 'humanize-duration'
 import { performance } from 'perf_hooks'
+import stripAnsi from 'strip-ansi'
 
 
 /** Dataform's config to provide in .df-credentials.json */
@@ -20,9 +21,10 @@ export interface DataformSfCfg {
 export interface YtSfCfg {
     account: string
     creds: string
-    warehouse: string
-    db: string
-    schema: string
+    warehouse?: string
+    db?: string
+    schema?: string
+    role?: string
 }
 
 export async function writeDataformCreds(sfCfg:YtSfCfg, path:string): Promise<void> {
@@ -34,7 +36,7 @@ export async function writeDataformCreds(sfCfg:YtSfCfg, path:string): Promise<vo
         warehouse: sfCfg.warehouse,
         username: user,
         password: pass,
-        role: 'dataform'
+        role: sfCfg.role
     }
     await fsp.writeFile(`${path}/.df-credentials.json`, JSON.stringify(dfCfg))
 }
@@ -53,12 +55,11 @@ export async function run(branch: string, repo: string, sfCfg: YtSfCfg, runArgs:
     const exe = async (name:string, cmd:string) => {
         const execLog = log.child({cmdName:name})
         log.debug({cmd:cmd}, 'executing sub-process ')
-        const task = exec(cmd, { cwd: runPath })
-        task.stdout.on('data', (d:string) => execLog.debug({process:'dataform'}, d))
+        const task = exec(cmd, { cwd: runPath,  })
+        task.stdout.on('data', (d:string) => execLog.debug({process:'dataform'}, stripAnsi(d)))
         const res = await task
         return res
     }
-
 
     await fsp.mkdir(runPath, { recursive: true })
     await exe('git clone', `git clone -b ${branch} ${repo} .`)
@@ -69,7 +70,7 @@ export async function run(branch: string, repo: string, sfCfg: YtSfCfg, runArgs:
     const dfCmd = `dataform run ${runArgs ?? ''}`
     log.info({cmd: dfCmd, dir:runPath}, 'dataform update %s - starting > %s', runId, dfCmd)
     const res = await exe('dataform run', dfCmd)
-    
-    log.info({cmd: dfCmd, dir:runPath, stdout:res.stdout}, 'dataform update - complete in %s', fDuration(start))
+    const stdout = (res.stdout instanceof Buffer) ? "(buffer)" : stripAnsi(res.stdout)
+    log.info({cmd: dfCmd, dir:runPath, stdout}, 'dataform update - complete in %s', fDuration(start))
 }
 

@@ -1,22 +1,17 @@
 ﻿{
-  "seqUrl": "http://ytseq.westus2.azurecontainer.io",
-  "seqHost": {
+  "seq": {
+    "seqUrl": "http://ytseq.westus2.azurecontainer.io",
     "containerGroupName": "seq"
   },
   "snowflake": {
-    "Account": "MUTUO",
-    "Warehouse": "YT",
-    "Schema": "PUBLIC"
+    "Account": "mutuo",
+    "Warehouse": "yt",
+    "Schema": "public",
+    "db": "yt"
   },
   "parallelChannels": 4,
   "defaultParallel": 8,
   "channelsPerContainer": 300,
-  "resourceGroup": "ytnetworks",
-  "subscriptionId": "93ef8661-3e11-4fcc-92ae-d0383e7e4ad3",
-  "servicePrincipal": {
-    "clientId": "664f7796-ecbf-4244-ba6b-b4d76e1c1037",
-    "tennantId": "6084d3dc-3b42-4303-8568-314a3db26017"
-  },
   "sheets": {
     "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",
     "userChannelSheetIds": [
@@ -30,6 +25,14 @@
     "url": "us.smartproxy.com:10000"
   },
   "pipe": {
+    "azure": {
+      "subscriptionId": "93ef8661-3e11-4fcc-92ae-d0383e7e4ad3",
+      "servicePrincipal": {
+        "clientId": "664f7796-ecbf-4244-ba6b-b4d76e1c1037",
+        "tennantId": "6084d3dc-3b42-4303-8568-314a3db26017"
+      },
+      "resourceGroup": "ytnetworks"
+    },
     "default": {
       "container": {
         "registry": "ytnetworks.azurecr.io",
@@ -41,23 +44,21 @@
     },
     "pipes": [
       {
+        "pipeName": "Update",
+        "container": {
+          "mem": 8,
+          "cores": 2
+        }
+      },
+      {
         "pipeName": "ProcessChannels",
         "maxParallel": 8,
         "minWorkItems": 50,
         "container": {
           "mem": 4
         }
-      },
-      {
-        "pipeName": "CaptionIndex",
-        "container": {
-          "mem": 8
-        }
       }
     ]
-  },
-  "solr": {
-    "url": "https://ss225254-ank9au43-us-west-1-aws.searchstax.com/solr"
   },
   "elastic": {
     "cloudId": "Recfluence:d2VzdHVzMi5henVyZS5lbGFzdGljLWNsb3VkLmNvbTo5MjQzJDg5OTljNTUxYjkyYjRmYjA5YTRkZjYwMmVjYTQ3ZmJjJGJmOTFlMzE2YzNkZTQyOWE4Mzk3MDlhZjI0NTRlYzg0"

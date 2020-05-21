@@ -65,7 +65,7 @@ namespace Mutuo.Etl.Blob {
       var blob = BlobRef(path);
       AutoPopulateProps(path, blob);
       await blob.UploadFromFileAsync(file.FullPath);
-      log.Debug("Saved {Path}", path);
+      log.Debug("Saved {Path}", blob.Uri);
     }
 
     public async Task Save(StringPath path, Stream contents, ILogger log = null) {
@@ -73,7 +73,7 @@ namespace Mutuo.Etl.Blob {
       var blob = BlobRef(path);
       AutoPopulateProps(path, blob);
       await blob.UploadFromStreamAsync(contents);
-      log.Debug("Saved {Path}", path);
+      log.Debug("Saved {Path}", blob.Uri);
     }
 
     public async Task<Stream> OpenForWrite(StringPath path, ILogger log = null) {

@@ -7,6 +7,7 @@ using Medallion.Shell;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
 using Mutuo.Etl.Blob;
+using Semver;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
@@ -37,9 +38,11 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public static class PipeWorkerEx {
-    public static string ContainerName(this PipeRunId runId) => runId.Name.ToLowerInvariant();
     public static string ContainerGroupName(this PipeRunId runid) => $"{runid.Name}-{runid.GroupId}-{runid.Num}".ToLowerInvariant();
-    public static string ContainerImageName(this ContainerCfg cfg) => $"{cfg.Registry}/{cfg.ImageName}:{cfg.Tag}";
+
+    /// <summary>the container image name, with its registry and tag</summary>
+    public static string FullContainerImageName(this ContainerCfg cfg, string tag) => $"{cfg.Registry}/{cfg.ImageName}:{tag}";
+
     public static string[] PipeArgs(this PipeRunId runId) => new[] {"pipe", "-r", runId.ToString()};
 
     public static async Task Save(this PipeRunMetadata md, ISimpleFileStore store, ILogger log) =>
@@ -67,10 +70,14 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class LocalPipeWorker : IPipeWorker {
+    readonly SemVersion Version;
+
+    public LocalPipeWorker(SemVersion version) => Version = version;
+
     public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) =>
       await ids.BlockFunc(async id => {
-        var runCfg = id.PipeCfg(ctx);
-        var image = runCfg.Container.ContainerImageName();
+        var runCfg = id.PipeCfg(ctx.PipeCfg);
+        var image = runCfg.Container.FullContainerImageName(Version.PipeTag());
         var args = new[] {"run"}
           .Concat(ctx.AppCtx.EnvironmentVariables.SelectMany(e => new[] {"--env", $"{e.name}={e.value}"}))
           .Concat("--rm", "-i", image)

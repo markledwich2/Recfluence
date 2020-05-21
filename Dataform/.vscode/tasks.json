@@ -9,12 +9,10 @@
             "command": "docker",
             "args": [
                 "build",
-                "--pull",
-                "--rm",
                 "-f",
                 "Dockerfile",
                 "-t",
-                "yt_dataform:latest",
+                "ytnetworks.azurecr.io/dataform:latest",
                 "."
             ],
             "problemMatcher": [],
@@ -29,7 +27,7 @@
                 "-it",
                 "--env-file",
                 ".env",
-                "yt_dataform:latest",
+                "ytnetworks.azurecr.io/dataform:latest",
                 "bin/bash"
             ],
             "problemMatcher": []
@@ -40,12 +38,19 @@
             "command": "docker",
             "args": [
                 "run",
-                "-it",
                 "--env-file",
                 ".env",
-                "yt_dataform:latest",
-                "ts-node-script",
-                "./src/run.ts"
+                "ytnetworks.azurecr.io/dataform:latest"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "push docker",
+            "type": "shell",
+            "command": "docker",
+            "args": [
+                "push",
+                "ytnetworks.azurecr.io/dataform:latest"
             ],
             "problemMatcher": []
         },

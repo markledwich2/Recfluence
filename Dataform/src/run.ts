@@ -49,4 +49,5 @@ const dfRunArgs = process.env.DATAFORM_RUN_ARGS;
         log.error(e, e.message)
     else
         log.error(e)
+    throw e
 })

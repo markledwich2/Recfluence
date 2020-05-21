@@ -1,25 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using SysExtensions.Reflection;
 
 namespace SysExtensions.Threading {
   public class AsyncLazy<T> {
     readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
     public AsyncLazy(Func<Task<T>> creator) => Creator = creator;
     Func<Task<T>> Creator { get; }
-    public T      Value   { get; private set; }
+    T             Value;
 
     public async Task<T> GetOrCreate() {
-      if (!EqualityComparer<T>.Default.Equals(Value, default))
+      if (!Value.NullOrDefault())
         return Value;
-
       using (await _lock.LockAsync()) {
-        if (Value != null)
+        if (!Value.NullOrDefault())
           return Value; // check a second time within the lock to avoid race condition and needless locking
         Value = await Creator();
       }
-
       return Value;
     }
   }
@@ -28,14 +26,13 @@ namespace SysExtensions.Threading {
     readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
     public AsyncLazy(Func<TParam, Task<T>> creator) => Creator = creator;
     Func<TParam, Task<T>> Creator { get; }
-    public T              Value   { get; private set; }
+    T                     Value;
 
     public async Task<T> GetOrCreate(TParam param) {
-      if (!EqualityComparer<T>.Default.Equals(Value, default))
+      if (!Value.NullOrDefault())
         return Value;
-
       using (await _lock.LockAsync()) {
-        if (Value != null)
+        if (!Value.NullOrDefault())
           return Value; // check a second time within the lock to avoid race condition and needless locking
         Value = await Creator(param);
       }

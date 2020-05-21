@@ -20,10 +20,9 @@ namespace SysExtensions.Serialization {
 
     public static JsonLoadSettings DefaultLoadSettings => new JsonLoadSettings();
 
-    /// <summary>Compile time defaults. To override use the overloads</summary>
-    public static JsonSerializerSettings DefaultSettings() {
+    public static JsonSerializerSettings DefaultSettings(Formatting formatting = Formatting.Indented) {
       var settings = new JsonSerializerSettings {
-        NullValueHandling = NullValueHandling.Ignore, Formatting = Formatting.Indented, DefaultValueHandling = DefaultValueHandling.Ignore
+        NullValueHandling = NullValueHandling.Ignore, Formatting = formatting, DefaultValueHandling = DefaultValueHandling.Ignore
       };
       settings.Converters.AddRange(new StringEnumConverter(new CamelCaseNamingStrategy(false, false), false));
       settings.ContractResolver = new CoreSerializeContractResolver {NamingStrategy = new CamelCaseNamingStrategy(false, false)};

@@ -10,6 +10,7 @@ using CommandLine;
 using Mutuo.Etl.Blob;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Semver;
 using Serilog;
 using Serilog.Core;
 using SysExtensions;
@@ -70,7 +71,7 @@ namespace Mutuo.Etl.Pipe {
       ILogger log, PipeRunLocation? location) {
       var runId = PipeRunId.FromName(pipeName);
       await ctx.SaveInArg(args, runId, log);
-      var pipeWorker = PipeWorker(ctx, location);
+      var pipeWorker = await PipeWorker(ctx, location);
       var md = pipeWorker is IPipeWorkerStartable s
         ? await s.Launch(ctx, runId, returnOnStarted, log)
         : await pipeWorker.Launch(ctx, runId, log);
@@ -91,7 +92,7 @@ namespace Mutuo.Etl.Pipe {
 
       // batch and create state for containers to read
       var groupRunId = PipeRunId.FromName(pipeName);
-      runCfg ??= groupRunId.PipeCfg(ctx);
+      runCfg ??= groupRunId.PipeCfg(ctx.PipeCfg);
 
       await ctx.SaveInArg(args, groupRunId, log);
 
@@ -100,9 +101,9 @@ namespace Mutuo.Etl.Pipe {
         .BlockFunc(async b => {
           await ctx.SaveInRows(b.In, b.Id, log);
           return b.Id;
-        }, ctx.Cfg.Store.Parallel);
+        }, ctx.PipeCfg.Store.Parallel);
 
-      var pipeWorker = PipeWorker(ctx);
+      var pipeWorker = await PipeWorker(ctx);
       log.Debug("{PipeWorker} - launching batches {@batches}", pipeWorker.GetType().Name, batches);
       var res = pipeWorker is IPipeWorkerStartable s ? await s.Launch(ctx, batches, runCfg.ReturnOnStart, log) : await pipeWorker.Launch(ctx, batches, log);
 
@@ -125,7 +126,7 @@ namespace Mutuo.Etl.Pipe {
       return outState;
 
       async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> GetOutState() =>
-        await res.BlockFunc(async b => await GetOutState<TOut>(ctx, log, b, runCfg.ReturnOnStart), ctx.Cfg.Store.Parallel);
+        await res.BlockFunc(async b => await GetOutState<TOut>(ctx, log, b, runCfg.ReturnOnStart), ctx.PipeCfg.Store.Parallel);
     }
 
     static async Task<(PipeRunMetadata Metadata, TOut OutState)> GetOutState<TOut>(IPipeCtx ctx, ILogger log, PipeRunMetadata b, bool returnOnStart) {
@@ -133,11 +134,11 @@ namespace Mutuo.Etl.Pipe {
       return (b, state);
     }
 
-    static IPipeWorker PipeWorker(IPipeCtx ctx, PipeRunLocation? location = null) {
-      location ??= ctx.Cfg.Location;
+    static async Task<IPipeWorker> PipeWorker(IPipeCtx ctx, PipeRunLocation? location = null) {
+      location ??= ctx.PipeCfg.Location;
       IPipeWorker pipeWorker = location switch {
-        PipeRunLocation.Container => new AzureContainers(ctx.Cfg),
-        PipeRunLocation.LocalContainer => new LocalPipeWorker(),
+        PipeRunLocation.Container => ctx.Scope.Resolve<AzureContainers>(),
+        PipeRunLocation.LocalContainer => ctx.Scope.Resolve<LocalPipeWorker>(),
         _ => new ThreadPipeWorker()
       };
       return pipeWorker;
@@ -264,8 +265,6 @@ namespace Mutuo.Etl.Pipe {
       return mergedCfg;
     }
 
-    public static PipeRunCfg PipeCfg(this PipeRunId id, IPipeCtx ctx) => id.PipeCfg(ctx.Cfg);
-
     #endregion
 
     #region Args
@@ -304,6 +303,8 @@ namespace Mutuo.Etl.Pipe {
       expression.Body as MethodCallExpression ?? throw new InvalidOperationException("The expression must be a call to a pipe method");
 
     #endregion
+
+    public static string PipeTag(this SemVersion version) => version.ToString();
   }
 
   public class PipeArg {
