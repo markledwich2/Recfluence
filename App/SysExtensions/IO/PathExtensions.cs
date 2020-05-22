@@ -88,10 +88,8 @@ namespace SysExtensions.IO {
     public static FPath InAppData(this FPath relativePath, string appName) {
       if (relativePath.IsRooted)
         throw new InvalidOperationException("The given path must be relative");
-
-      return Environment.OSVersion.Platform.In(PlatformID.Unix)
-        ? new FPath("~", appName).Combine(relativePath)
-        : new FPath(Environment.GetEnvironmentVariable("LocalAppData")).Combine(appName).Combine(relativePath);
+      
+      return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData).AsPath().Combine(appName).Combine(relativePath);
     }
 
     public static FPath PathWithoutExtension(this FPath pathToMsql) => pathToMsql.Parent().Combine(pathToMsql.FileNameWithoutExtension);

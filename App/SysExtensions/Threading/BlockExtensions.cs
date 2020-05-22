@@ -98,7 +98,6 @@ namespace SysExtensions.Threading {
         .BlockFuncWith(async b => {
           var (batch, i) = b;
           var file = dir.Combine($"{id}.{i}.json.gz");
-          file.EnsureDirectoryExists();
           await batch.ToJsonlGz(file.FullPath, serializerSettings);
           return (file, i);
         }, fileParallel, fileParallel * 2) // by limiting capacity we put back-pressure on producer to save memory
