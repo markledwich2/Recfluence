@@ -35,17 +35,6 @@ namespace Tests {
           log.Information("Pretended to upload batch {Batch}", b.index);
           return b.item.Count;
         }, parallel: 2, capacity: 2);
-
-      /*var allItems = await conn
-        .QueryBlocking<DbCaption>("select all captions", sql)
-        .SelectMany(SelectCaptions)
-        .BlockBatch(async (b, i) => {
-            await 10.Seconds().Delay();
-            log.Information("Pretended to upload batch {Batch}", i);
-          },
-          5000, // lower mem pressure in smaller batches
-          8,
-          1); // low file parallelism to reduce mem*/
     }
 
     static IEnumerable<DbCaption> SelectCaptions(DbCaption dbCaption) {
