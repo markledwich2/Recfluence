@@ -29,12 +29,10 @@ namespace YtReader {
     readonly YtResults    _results;
     readonly YtDataform   YtDataform;
     readonly YtBackup     _backup;
-    readonly AzureCleaner _clean;
-    readonly SemVersion   Version;
     readonly string       _updated;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, YtStage warehouse, YtSearch search,
-      YtResults results, YtDataform ytDataform, YtBackup backup, AzureCleaner clean, SemVersion version) {
+      YtResults results, YtDataform ytDataform, YtBackup backup) {
       Cfg = cfg;
       _updated = Guid.NewGuid().ToShortString(6);
       Log = log.ForContext("UpdateId", _updated);
@@ -44,8 +42,6 @@ namespace YtReader {
       _results = results;
       YtDataform = ytDataform;
       _backup = backup;
-      _clean = clean;
-      Version = version;
     }
 
     Task Collect(bool fullLoad) => _collector.Collect(Log, forceUpdate: fullLoad);

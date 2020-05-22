@@ -274,6 +274,6 @@ namespace YtReader {
       new AzureBlobFileStore(cfg.Storage.DataStorageCs, path, log);
 
     public static YtClient YtClient(this AppCfg cfg, ILogger log) => new YtClient(cfg.YTApiKeys, log);
-    public static bool IsProd(this RootCfg root) => root.Env.ToLowerInvariant() == "prod";
+    public static bool IsProd(this RootCfg root) => root.Env?.ToLowerInvariant() == "prod";
   }
 }
