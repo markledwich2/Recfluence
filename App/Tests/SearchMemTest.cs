@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Autofac;
 using Humanizer;
 using NUnit.Framework;
+using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Threading;
 using YtReader;
@@ -22,11 +23,20 @@ namespace Tests {
       var scope = Setup.MainScope(root, app, Setup.PipeAppCtxEmptyScope(root, app), version, log);
       var db = scope.Resolve<SnowflakeConnectionProvider>();
       using var conn = await db.OpenConnection(log);
-
-      await conn.Execute("session", "alter session set CLIENT_PREFETCH_THREADS = 2"); // reduce mem usage (default 4)
+      await conn.SetSessionParams((SfParam.ClientPrefetchThreads, 2));
 
       var sql = "select * from caption";
-      var allItems = await conn
+
+      var res = await conn.QueryBlocking<DbCaption>("select all captions", sql)
+        .SelectMany(SelectCaptions)
+        .Batch(5_000).WithIndex()
+        .BlockFunc(async b => {
+          await 200.Milliseconds().Delay();
+          log.Information("Pretended to upload batch {Batch}", b.index);
+          return b.item.Count;
+        }, parallel: 2, capacity: 2);
+
+      /*var allItems = await conn
         .QueryBlocking<DbCaption>("select all captions", sql)
         .SelectMany(SelectCaptions)
         .BlockBatch(async (b, i) => {
@@ -35,7 +45,7 @@ namespace Tests {
           },
           5000, // lower mem pressure in smaller batches
           8,
-          1); // low file parallelism to reduce mem
+          1); // low file parallelism to reduce mem*/
     }
 
     static IEnumerable<DbCaption> SelectCaptions(DbCaption dbCaption) {

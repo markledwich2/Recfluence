@@ -127,10 +127,10 @@ namespace YtReader.Search {
 
     async Task BatchToEs<T>(ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy) where T : class =>
       await enumerable
-        .BlockBatch((b, i) => BatchToEs(b, i, esPolicy, log),
-          5_000, // goldylocs size after some experimentation
-          4, // 4 parallel, we don't get much improvements because its just one server/hard disk on the other end
-          1); // we are faster writing to disk than receiving form network. make sure capacity is low so it doesn't build up.
+        .Batch(5_000).WithIndex()
+        .BlockFunc(b => BatchToEs(b.item, b.index, esPolicy, log),
+          parallel: 2, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
+          capacity: 2);
 
     async Task<int> BatchToEs<T>(IReadOnlyCollection<T> items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {
       var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(items));

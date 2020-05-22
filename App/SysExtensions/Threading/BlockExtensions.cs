@@ -100,7 +100,7 @@ namespace SysExtensions.Threading {
           var file = dir.Combine($"{id}.{i}.json.gz");
           await batch.ToJsonlGz(file.FullPath, serializerSettings);
           return (file, i);
-        }, fileParallel, fileParallel * 2) // by limiting capacity we put back-pressure on producer to save memory
+        }, fileParallel, fileParallel * 2)
         .Then(async f => {
           IReadOnlyCollection<T> items;
           using (var stream = f.file.Open(FileMode.Open)) items = stream.LoadJsonlGz<T>();
@@ -112,12 +112,12 @@ namespace SysExtensions.Threading {
 
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
     public static async Task<IReadOnlyCollection<R>> BlockFunc<T, R>(this IEnumerable<T> source,
-      Func<T, Task<R>> transform, int parallelism = 1, int? capacity = null,
+      Func<T, Task<R>> func, int parallel = 1, int? capacity = null,
       Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default) {
       progressPeriod = progressPeriod == default ? 60.Seconds() : progressPeriod;
-      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
-      var block = new TransformBlock<T, R>(transform, options);
+      var block = new TransformBlock<T, R>(func, options);
 
       var swProgress = Stopwatch.StartNew();
 
