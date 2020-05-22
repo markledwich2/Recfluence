@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using Autofac.Util;
 using Elasticsearch.Net;
@@ -69,7 +68,7 @@ namespace YtReader.Search {
         return caps;
       });
 
-      await BatchToEs<EsCaption>(log, allItems);
+      await BatchToEs<EsCaption>(log, allItems, EsExtensions.EsPolicy(log));
 
       DbCaption CreatePart(DbCaption c, CaptionPart part) {
         var partCaption = c.JsonClone();
@@ -114,30 +113,28 @@ namespace YtReader.Search {
     static string SqlLimit(long? limit) => limit == null ? "" : $" limit {limit}";
 
     async Task BatchToEs<T>(ILogger log, (string sql, object param) sql) where T : class {
-      using (var conn = await Db.OpenConnection(log)) {
-        var allItems = Query<T>(sql, conn);
-        await BatchToEs(log, allItems);
-      }
+      var esPolicy = EsExtensions.EsPolicy(log);
+      using (var conn = await Db.OpenConnection(log)) await BatchToEs(log, Query<T>(sql, conn), esPolicy);
     }
 
-    async Task BatchToEs<T>(ILogger log, IEnumerable<T> allItems) where T : class {
-      var batchedItems = allItems.Batch(10000).WithIndex();
-      var esPolicy = EsExtensions.EsPolicy(log);
-      var docCount = 0;
-      await batchedItems.BlockAction(async b => {
-        var (item, i) = b;
-        var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(item));
-        Interlocked.Add(ref docCount, res.Items.Count);
-        if (res.ItemsWithErrors.Any())
-          log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch}). Top 5 Error items: {@ItemsWithErrors}",
-            res.Items.Count - res.ItemsWithErrors.Count(), item.Count, Es.GetIndexFor<T>(), i,
-            res.ItemsWithErrors.Select(r => r.Error).Take(5));
-        else
-          log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch})",
-            res.Items.Count, item.Count, Es.GetIndexFor<T>(), i);
-      }, 3, 8);
+    async Task BatchToEs<T>(ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy) where T : class =>
+      await enumerable
+        .BlockBatch((b, i) => BatchToEs(b, i, esPolicy, log),
+          5_000, // goldylocs size after some experimentation
+          4); // 4 parallel, we don't get much improvements because its just one server/hard disk on the other end
 
-      log.Information("Completed indexed {Documents} documents to {Index}", docCount, Es.GetIndexFor<T>());
+    async Task<int> BatchToEs<T>(T[] items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {
+      var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(items));
+
+      if (res.ItemsWithErrors.Any())
+        log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch}). Top 5 Error items: {@ItemsWithErrors}",
+          res.Items.Count - res.ItemsWithErrors.Count(), items.Length, Es.GetIndexFor<T>(), i,
+          res.ItemsWithErrors.Select(r => r.Error).Take(5));
+      else
+        log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch})",
+          res.Items.Count, items.Length, Es.GetIndexFor<T>(), i);
+
+      return items.Length;
     }
 
     IEnumerable<T> Query<T>((string sql, object param) sql, LoggedConnection conn) where T : class =>

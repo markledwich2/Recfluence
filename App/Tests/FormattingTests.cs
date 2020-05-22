@@ -10,10 +10,9 @@ namespace Tests {
     public static void TestTimestampHumanise() {
       120.Seconds().HumanizeShort().Should().Be("2m 0s");
       0.Seconds().HumanizeShort().Should().Be("0s");
-      12.Seconds().HumanizeShort().Should().Be("12s");
-      TimeSpan.FromMilliseconds(2040).HumanizeShort().Should().Be("2s");
+      (1.6).Seconds().HumanizeShort().Should().Be("1.6s");
+      (0.12).Seconds().HumanizeShort().Should().Be("120ms");
       new TimeSpan(1, 2, 3, 4).HumanizeShort().Should().Be("1d 2h");
-      new TimeSpan(1, 2, 3, 4).HumanizeShort(4).Should().Be("1d 2h 3m 4s");
     }
   }
 }

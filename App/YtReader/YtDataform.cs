@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using Mutuo.Etl.Pipe;
 using Serilog;
+using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
@@ -30,14 +32,21 @@ namespace YtReader {
       SeqCfg = seqCfg;
     }
 
-    public async Task Update(ILogger log) {
+    public async Task Update(ILogger log, bool fullLoad) {
       var sfCfg = SfCfg.JsonClone();
       sfCfg.Role = "dataform"; // ensure dataform run in its own lower-credentialed role
+
+      var args = new[] {
+        "--include-deps", 
+        fullLoad ? " --full-refresh " : null,
+        "--tags standard"
+      }.NotNull().ToArray();
+      
       var env = new (string name, string value)[] {
         ("SNOWFLAKE_JSON", sfCfg.ToJson()),
         ("REPO", "https://github.com/markledwich2/YouTubeNetworks_Dataform.git"),
         ("BRANCH", "master"),
-        ("DATAFORM_RUN_ARGS", "--include-deps --tags standard"),
+        ("DATAFORM_RUN_ARGS", args.Join(" ")),
         ("SEQ", SeqCfg.SeqUrl.ToString())
       };
 

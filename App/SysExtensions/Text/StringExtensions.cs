@@ -30,7 +30,7 @@ namespace SysExtensions.Text {
     /// <summary>Like string.Join. However also will escape the seperator and escape charachter so this is reversable using
     ///   Split</summary>
     public static string Join<T>(this IEnumerable<T> items, string separator, Func<T, string> format = null, char? escapeCharacter = null) {
-      format = format ?? (s => s.ToString());
+      format ??= (s => s.ToString());
       var escapeFormat = format;
       if (escapeCharacter != null)
         escapeFormat = s =>

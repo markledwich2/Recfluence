@@ -54,6 +54,7 @@ namespace Mutuo.Etl.Blob {
     public Task<bool> Delete(StringPath path, ILogger log = null) => throw new NotImplementedException();
     public Task<Stream> OpenForWrite(StringPath path, ILogger log = null) => throw new NotImplementedException();
     public Task<FileListItem> Info(StringPath path) => throw new NotImplementedException();
+    public Uri Url(StringPath path) => throw new NotImplementedException();
 
     string FilePath(StringPath path) => BasePath.Add(path).WithExtension(".json.gz");
 

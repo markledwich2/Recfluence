@@ -48,10 +48,10 @@ namespace YtReader {
       Version = version;
     }
 
-    Task Collect() => _collector.Collect(Log);
-    [DependsOn(nameof(Collect))] Task Stage() => _warehouse.WarehouseUpdate(Log);
+    Task Collect(bool fullLoad) => _collector.Collect(Log, forceUpdate:fullLoad);
+    [DependsOn(nameof(Collect))] Task Stage(bool fullLoad) => _warehouse.StageUpdate(Log, fullLoad);
 
-    [DependsOn(nameof(Stage))] Task Dataform() => YtDataform.Update(Log);
+    [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad) => YtDataform.Update(Log, fullLoad);
 
     [DependsOn(nameof(Dataform))] Task Search() => _search.SyncToElastic(Log);
 
@@ -60,16 +60,16 @@ namespace YtReader {
     [DependsOn(nameof(Collect))] Task Backup() => _backup.Backup(Log);
 
     [Pipe]
-    public async Task Update(string[] actions = null) {
+    public async Task Update(string[] actions = null, bool fullLoad = false) {
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
 
       var actionMethods = TaskGraph.FromMethods(
-        () => Collect(),
-        () => Stage(),
+        () => Collect(fullLoad),
+        () => Stage(fullLoad),
         () => Search(),
         () => Results(),
-        () => Dataform(),
+        () => Dataform(fullLoad),
         () => Backup());
 
       if (actions?.Any() == true) {

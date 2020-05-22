@@ -96,6 +96,8 @@ namespace Mutuo.Etl.Blob {
       };
     }
 
+    public Uri Url(StringPath path) => BlobRef(path).Uri;
+
     public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) {
       log ??= Log;
       BlobContinuationToken token = null;

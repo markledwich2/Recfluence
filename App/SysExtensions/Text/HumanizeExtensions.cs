@@ -27,14 +27,26 @@ namespace SysExtensions.Text {
       }
     }
 
-    public static string HumanizeShort(this TimeSpan t, int precision = 2, TimeUnit minUnit = Second) {
+    
+    
+    public static string HumanizeShort(this TimeSpan t) {
       var units = new (int v, string s, TimeUnit u)[]
         {(t.Days, "d", Day), (t.Hours, "h", Hour), (t.Minutes, "m", Minute), (t.Seconds, "s", Second), (t.Milliseconds, "ms", Millisecond)};
       var res = units
-        .SkipWhile(s => s.Item1 == 0 && s.u > minUnit)
-        .Take(precision).Where(s => s.u >= minUnit)
-        .Join(" ", s => $"{s.Item1}{s.Item2}");
-      return res;
+        .SkipWhile(s => s.v == 0)
+        .Take(2).ToArray();
+
+      var time = (
+        a: res.Length > 0 ? res[0] : default,
+        b: res.Length > 1 ? res[1] : default
+      );
+      static string Format((int v, string s, TimeUnit u) time) => $"{time.v}{time.s}";
+      
+      return time switch {
+        (a: (_, _, Second), _) => $"{t.TotalSeconds:0.##}s", // special case for seconds, because its shorter to use decimals
+        (a: (0,_,_), (0,_,_)) => "0s",
+        _ => res.Join(" ", Format)
+      };
     }
   }
 

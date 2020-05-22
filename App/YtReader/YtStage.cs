@@ -36,8 +36,9 @@ namespace YtReader {
       Cfg = cfg;
     }
 
-    public async Task WarehouseUpdate(ILogger log, bool fullLoad = false, string[] tableNames = null) {
+    public async Task StageUpdate(ILogger log, bool fullLoad = false, string[] tableNames = null) {
       log = log.ForContext("db", Conn.Cfg.Db);
+      log.Information("StageUpdate - started for db {Db}", Conn.Cfg.Db);
       var sw = Stopwatch.StartNew();
       var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table) == true).ToArray();
       await tables.BlockAction(async t => {
@@ -46,7 +47,7 @@ namespace YtReader {
         await db.Execute("create table", $"create table if not exists {table} (v Variant)");
 
         if (t.Dir.HasValue()) {
-          log.Information("WarehouseUpdate {Table} - ({LoadType})", table, fullLoad ? "full" : "incremental");
+          log.Information("StageUpdate - {Table} ({LoadType})", table, fullLoad ? "full" : "incremental");
           var latestTs = fullLoad ? null : await db.ExecuteScalar<DateTime?>("latest timestamp", $"select max(v:{t.TsColumn}::timestamp_ntz) from {table}");
           if (latestTs == null)
             await FullLoad(db, table, t);
@@ -54,13 +55,13 @@ namespace YtReader {
             await Incremental(db, table, t, latestTs.Value);
         }
       }, Cfg.LoadTablesParallel);
-      log.Information("WarehouseUpdate - {Tables} updated in {Duration}", tables.Join("|", t => t.Table), sw.Elapsed.HumanizeShort());
+      log.Information("StageUpdate - {Tables} updated in {Duration}", tables.Join("|", t => t.Table), sw.Elapsed.HumanizeShort());
     }
 
     async Task Incremental(LoggedConnection db, string table, StageTableCfg t, DateTime latestTs) {
       await Store.Optimise(Cfg.Optimise, t.Dir, latestTs.FileSafeTimestamp(), db.Log); // optimise files newer than the last load
       var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();
-      db.Log.Information("WarehouseUpdate {Table} - incremental load of {Rows} rows ({Size}) took {Duration}",
+      db.Log.Information("StageUpdate - {Table} incremental load of {Rows} rows ({Size}) took {Duration}",
         table, rows, size.Humanize("#.#"), dur.HumanizeShort());
     }
 
@@ -68,7 +69,7 @@ namespace YtReader {
       await Store.Optimise(Cfg.Optimise, t.Dir, null, db.Log); // optimise all files when performing a full load
       await db.Execute("truncate table", $"truncate table {table}"); // no transaction, stage tables aren't reported on so don't need to be available
       var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();
-      db.Log.Information("WarehouseUpdate {Table} - full load of {Rows} rows ({Size}) took {Duration}",
+      db.Log.Information("StageUpdate - {Table} full load of {Rows} rows ({Size}) took {Duration}",
         table, rows, size.Humanize("#.#"), dur.HumanizeShort());
     }
 

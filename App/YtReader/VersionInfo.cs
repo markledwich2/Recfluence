@@ -31,9 +31,9 @@ namespace YtReader {
     static readonly Regex NonAlphaNum = new Regex("[^a-zA-Z0-9]", RegexOptions.Compiled);
 
     public static string GetVersionPrefix(RootCfg rootCfg, SemVersion version,  GitVersionInfo info = null) {
-      if (rootCfg.IsProd()) return "";
+      if (rootCfg.IsProd()) return rootCfg.BranchEnv ?? "";
       var prerelease = version.Prerelease.HasValue() ? version.Prerelease : null;
-      var prefix = info?.BranchName ?? prerelease ?? rootCfg.Env.ToLower();
+      var prefix = rootCfg.BranchEnv ?? info?.BranchName ?? prerelease ?? rootCfg.Env.ToLower();
       prefix = NonAlphaNum.Replace(prefix, "");
       return prefix;
     }

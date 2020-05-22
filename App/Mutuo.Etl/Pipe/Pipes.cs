@@ -71,7 +71,7 @@ namespace Mutuo.Etl.Pipe {
       ILogger log, PipeRunLocation? location) {
       var runId = PipeRunId.FromName(pipeName);
       await ctx.SaveInArg(args, runId, log);
-      var pipeWorker = await PipeWorker(ctx, location);
+      var pipeWorker = PipeWorker(ctx, location);
       var md = pipeWorker is IPipeWorkerStartable s
         ? await s.Launch(ctx, runId, returnOnStarted, log)
         : await pipeWorker.Launch(ctx, runId, log);
@@ -103,7 +103,7 @@ namespace Mutuo.Etl.Pipe {
           return b.Id;
         }, ctx.PipeCfg.Store.Parallel);
 
-      var pipeWorker = await PipeWorker(ctx);
+      var pipeWorker = PipeWorker(ctx);
       log.Debug("{PipeWorker} - launching batches {@batches}", pipeWorker.GetType().Name, batches);
       var res = pipeWorker is IPipeWorkerStartable s ? await s.Launch(ctx, batches, runCfg.ReturnOnStart, log) : await pipeWorker.Launch(ctx, batches, log);
 
@@ -134,7 +134,7 @@ namespace Mutuo.Etl.Pipe {
       return (b, state);
     }
 
-    static async Task<IPipeWorker> PipeWorker(IPipeCtx ctx, PipeRunLocation? location = null) {
+    static IPipeWorker PipeWorker(IPipeCtx ctx, PipeRunLocation? location = null) {
       location ??= ctx.PipeCfg.Location;
       IPipeWorker pipeWorker = location switch {
         PipeRunLocation.Container => ctx.Scope.Resolve<AzureContainers>(),
@@ -246,7 +246,7 @@ namespace Mutuo.Etl.Pipe {
     }
 
     static async Task SaveInRows<T>(this IPipeCtx ctx, IEnumerable<T> rows, PipeRunId id, ILogger log) {
-      using var s = rows.ToJsonlGzStream();
+      using var s = await rows.ToJsonlGzStream();
       await ctx.Store.Save($"{id.InRowsPath()}.jsonl.gz", s, log);
     }
 
