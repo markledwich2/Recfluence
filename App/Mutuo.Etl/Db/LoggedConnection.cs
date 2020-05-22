@@ -60,7 +60,7 @@ namespace Mutuo.Etl.Db {
         Log.Error(ex, "{Operation} - Error ({Error}) with sql: {Sql}", operation, ex.Message, sql);
         throw;
       }
-      Log.Debug("{Operation} - completed in {Duration}: {Sql}", operation, sw.Elapsed.HumanizeShort(minUnit: TimeUnit.Millisecond), sql);
+      Log.Debug("{Operation} - completed in {Duration}: {Sql}", operation, sw.Elapsed.HumanizeShort(), sql);
       return res;
     }
 
@@ -75,7 +75,7 @@ namespace Mutuo.Etl.Db {
         Log.Error(ex, "{Operation} - Error ({Error}) with sql: {Sql}", operation, ex.Message, sql);
         throw;
       }
-      Log.Debug("{Operation} - completed in {Duration}: {Sql}", operation, duration.HumanizeShort(minUnit: TimeUnit.Millisecond), sql);
+      Log.Debug("{Operation} - completed in {Duration}: {Sql}", operation, duration.HumanizeShort(), sql);
       return res;
     }
   }

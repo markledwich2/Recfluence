@@ -42,12 +42,12 @@ namespace YtFunctions {
 
     [FunctionName("Version")]
     public Task<IActionResult> Version([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
-      HttpRequest req) {
+      HttpRequest req, ExecutionContext exec) => Ctx.Run(exec, c => {
       var versionText = @$"Version: 
 Runtime ${GitVersionInfo.RuntimeSemVer(typeof(YtCollector))}
 Discovered ${GitVersionInfo.DiscoverVersion(typeof(YtCollector))}";
       return Task.FromResult((IActionResult) new OkObjectResult(versionText));
-    }
+    });
 
     Task<string> StopIdleSeqInner(ExecutionContext exec) => Ctx.Run(exec, async c => {
       var azue = c.Scope.Resolve<IAzure>();
@@ -83,7 +83,7 @@ Discovered ${GitVersionInfo.DiscoverVersion(typeof(YtCollector))}";
 
     Task<string> RunUpdate(ExecutionContext exec) => Ctx.Run(exec, async c => {
       var pipeCtx = c.Scope.Resolve<IPipeCtx>();
-      var res = await pipeCtx.Run((YtUpdater u) => u.Update(null), c.Log, true);
+      var res = await pipeCtx.Run((YtUpdater u) => u.Update(null, false), c.Log, true);
       if (res.Error)
         Log.Error("ApiBackend - Error starting RunUpdate: {Message}", res.ErrorMessage);
       return res.Error

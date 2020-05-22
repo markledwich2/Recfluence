@@ -14,9 +14,6 @@
     "BranchEnvCfg": {
       "type": "object",
       "properties": {
-        "prefix": {
-          "type": "string"
-        },
         "expiry": {
           "type": "string"
         },
@@ -32,9 +29,6 @@
           "type": "string"
         },
         "imageName": {
-          "type": "string"
-        },
-        "tag": {
           "type": "string"
         },
         "cores": {
@@ -217,7 +211,7 @@
         }
       }
     },
-    "SeqHostCfg": {
+    "SeqCfg": {
       "type": "object",
       "properties": {
         "seqUrl": {
@@ -280,6 +274,9 @@
           "type": "string"
         },
         "schema": {
+          "type": "string"
+        },
+        "role": {
           "type": "string"
         }
       }
@@ -423,6 +420,15 @@
         },
         "loadTablesParallel": {
           "type": "integer"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadataParallel": {
+          "type": "integer"
         }
       }
     },
@@ -453,6 +459,14 @@
           "type": "boolean"
         }
       }
+    },
+    "YtUpdaterCfg": {
+      "type": "object",
+      "properties": {
+        "parallel": {
+          "type": "integer"
+        }
+      }
     }
   },
   "type": "object",
@@ -472,9 +486,6 @@
     "env": {
       "$ref": "#/definitions/BranchEnvCfg"
     },
-    "resourceGroup": {
-      "type": "string"
-    },
     "ytReader": {
       "$ref": "#/definitions/YtReaderCfg"
     },
@@ -493,18 +504,8 @@
         "type": "string"
       }
     },
-    "subscriptionId": {
-      "type": "string"
-    },
-    "servicePrincipal": {
-      "$ref": "#/definitions/ServicePrincipalCfg"
-    },
-    "seqUrl": {
-      "type": "string",
-      "format": "uri"
-    },
-    "seqHost": {
-      "$ref": "#/definitions/SeqHostCfg"
+    "seq": {
+      "$ref": "#/definitions/SeqCfg"
     },
     "sheets": {
       "$ref": "#/definitions/SheetsCfg"
@@ -538,6 +539,9 @@
     },
     "cleaner": {
       "$ref": "#/definitions/AzureCleanerCfg"
+    },
+    "updater": {
+      "$ref": "#/definitions/YtUpdaterCfg"
     }
   }
 }

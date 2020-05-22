@@ -118,7 +118,7 @@ namespace Mutuo.Etl.Blob {
           var inStreams = await toOptimise.BlockFunc(async s => {
             var inStream = await store.Load(s.Path, log).WithDuration();
             log.Debug("Optimise {Path} - loaded file {SourceFile} to be optimised in {Duration}",
-              destPath, s.Path, inStream.Duration.HumanizeShort(2, TimeUnit.Millisecond));
+              destPath, s.Path, inStream.Duration.HumanizeShort());
             return inStream.Result;
           }, parallel);
           foreach (var s in inStreams) {

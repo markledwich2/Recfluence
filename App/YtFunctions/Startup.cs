@@ -79,7 +79,7 @@ namespace YtFunctions {
       try {
         c.Log.Information("{Function} function - started", exec.FunctionName);
         var res = await func(c).WithDuration();
-        c.Log.Information("{Function} function - completed in {Duration}", exec.FunctionName, res.Duration.HumanizeShort(2, TimeUnit.Millisecond));
+        c.Log.Information("{Function} function - completed in {Duration}", exec.FunctionName, res.Duration.HumanizeShort());
         return res.Result;
       }
       catch (Exception ex) {

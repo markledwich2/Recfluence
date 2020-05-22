@@ -34,10 +34,7 @@ namespace YtCli {
           (ResultsCmd f) => Run(f, args, ResultsCmd.Results),
           (TrafficCmd t) => Run(t, args, TrafficCmd.Traffic),
           (PublishContainerCmd p) => Run(p, args, PublishContainerCmd.PublishContainer),
-          async (VersionCmd v) => {
-            await VersionCmd.Verson();
-            return ExitCode.Success;
-          },
+          (VersionCmd v) =>  Run(v, args, VersionCmd.Version),
           (UpdateSearchIndexCmd s) => Run(s, args, UpdateSearchIndexCmd.UpdateSearchIndex),
           (SyncDbCmd s) => Run(s, args, SyncDbCmd.Sync),
           (WarehouseCmd w) => Run(w, args, WarehouseCmd.Update),
@@ -63,9 +60,9 @@ namespace YtCli {
 
       try {
         var verb = option.GetType().GetCustomAttribute<VerbAttribute>()?.Name ?? option.GetType().Name;
-        ctx.Log.Debug("Starting cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
+        ctx.Log.Debug("Starting cmd {Command} in {Env}-{BranchEnv} env", verb, ctx.RootCfg.Env, ctx.RootCfg.BranchEnv);
         await task(ctx);
-        ctx.Log.Debug("Completed cmd {Command} in {Env} environment", verb, ctx.RootCfg.Env);
+        ctx.Log.Debug("Completed cmd {Command} in {Env}-{BranchEnv} env", verb, ctx.RootCfg.Env, ctx.RootCfg.BranchEnv);
         return ExitCode.Success;
       }
       catch (Exception ex) {
@@ -77,11 +74,11 @@ namespace YtCli {
   }
 
   [Verb("version")]
-  public class VersionCmd {
-    public static async Task Verson() {
-      var log = Setup.ConsoleLogger();
-      var version = await GitVersionInfo.DiscoverVersion(typeof(Program), log);
-      log.Information("{Version}", version);
+  public class VersionCmd : ICommonCmd {
+    public static Task Version(CmdCtx<VersionCmd> ctx) {
+      var version = ctx.Scope.Resolve<VersionInfoProvider>().Version();
+      ctx.Log.Information("{Version}", version);
+      return Task.CompletedTask;;
     }
   }
 
@@ -166,7 +163,7 @@ namespace YtCli {
 
     public static async Task Update(CmdCtx<WarehouseCmd> ctx) {
       var wh = ctx.Scope.Resolve<YtStage>();
-      await wh.WarehouseUpdate(ctx.Log, ctx.Option.FullLoad, ctx.Option.Tables?.Split('|').ToArray());
+      await wh.StageUpdate(ctx.Log, ctx.Option.FullLoad, ctx.Option.Tables?.Split('|').ToArray());
     }
   }
 
@@ -241,9 +238,12 @@ namespace YtCli {
     [Option('a', HelpText = "| delimited list of action to run (empty for all)")]
     public string Actions { get; set; }
 
+    [Option('f', HelpText = "will force a refresh of collect, and full load of staging files + warehouse. Does not impact search")]
+    public bool FullLoad { get; set; }
+
     public static async Task Update(CmdCtx<UpdateCmd> ctx) {
       var updater = ctx.Scope.Resolve<YtUpdater>();
-      await updater.Update(ctx.Option.Actions?.Split("|"));
+      await updater.Update(ctx.Option.Actions?.Split("|"), ctx.Option.FullLoad);
     }
   }
 

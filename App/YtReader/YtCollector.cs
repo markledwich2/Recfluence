@@ -133,7 +133,7 @@ namespace YtReader {
           try {
             await UpdateAllInChannel(c, conn, mode, forceUpdate, log);
             log.Information("{Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
-              c.ChannelTitle, sw.Elapsed.HumanizeShort(2, TimeUnit.Millisecond), i + 1, channels.Count);
+              c.ChannelTitle, sw.Elapsed.HumanizeShort(), i + 1, channels.Count);
             return (c, Success: true);
           }
           catch (Exception ex) {
@@ -322,8 +322,8 @@ namespace YtReader {
       if (extraStored.Any())
         await Store.VideoExtra.Append(extraStored, log);
 
-      log.Information("{Channel} - Recorded {RecCount} recs: {Recs}",
-        c.ChannelTitle, recsStored.Count, recs.Select(v => new {Id = v.fromId, v.recs.recs.Count}).ToList());
+      log.Information("{Channel} - Recorded {RecCount} form videos: {Videos}",
+        c.ChannelTitle, recsStored.Count, recs.Join("|", r => r.fromId));
 
       log.Information("{Channel} - Recorded {VideoExtra} extra info on video's",
         c.ChannelTitle, extraStored.Length);

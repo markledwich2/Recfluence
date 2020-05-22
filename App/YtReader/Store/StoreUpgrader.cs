@@ -123,7 +123,7 @@ namespace YtReader.Store {
     }
 
     async Task ReplaceJsonLFile(StoreFileMd f, StringPath newPath, IEnumerable<JToken> upgradedJs) {
-      await using var stream = upgradedJs.ToJsonlGzStream();
+      using var stream = await upgradedJs.ToJsonlGzStream();
       await Store.Save(newPath, stream);
       var deleted = await Store.Delete(f.Path);
       if (!deleted) throw new InvalidOperationException($"Didn't delete old file {f.Path}");

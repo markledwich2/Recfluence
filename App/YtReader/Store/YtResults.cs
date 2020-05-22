@@ -110,7 +110,7 @@ namespace YtReader.Store {
       }
 
       await SaveToLatestAndDateDirs(log, zipPath.FileName, zipPath);
-      Log.Information("Complete saving zip {Name} in {Duration}", zipPath.FileName, sw.Elapsed);
+      Log.Information("Result - saved zip {Name} in {Duration}", zipPath.FileName, sw.Elapsed);
     }
 
     static FPath TempDir() {
@@ -132,7 +132,7 @@ namespace YtReader.Store {
       // save to both latest and the current date 
       await SaveToLatestAndDateDirs(log, fileName, tempFile);
 
-      Log.Information("Complete saving result {Name} in {Duration}", q.Name, sw.Elapsed);
+      
       return tempFile;
     }
 
@@ -155,12 +155,20 @@ namespace YtReader.Store {
       }
     }
 
-    async Task SaveToLatestAndDateDirs(ILogger log, string fileName, FPath tempFile) =>
+    async Task SaveToLatestAndDateDirs(ILogger log, string fileName, FPath tempFile) {
+      async Task Save(StringPath dir) {
+        var path = dir.Add(fileName);
+        await Store.Save(path, tempFile, log);
+        var url = Store.Url(path);
+        Log.Information("Result - saved {Name} to {Url}", fileName, url);
+      }
+      
       await Task.WhenAll(
-        Store.Save(StringPath.Relative(Version, DateTime.UtcNow.ToString("yyyy-MM-dd")).Add(fileName), tempFile, log),
-        Store.Save(StringPath.Relative(Version, "latest").Add(fileName), tempFile, log),
-        Store.Save(StringPath.Relative("latest").Add(fileName), tempFile, log)
+        Save(StringPath.Relative(Version, DateTime.UtcNow.ToString("yyyy-MM-dd"))),
+        Save(StringPath.Relative(Version, "latest").Add(fileName)),
+        Save(StringPath.Relative("latest").Add(fileName))
       );
+    }
   }
 
   public static class SnowflakeResultHelper {
