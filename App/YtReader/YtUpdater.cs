@@ -48,12 +48,12 @@ namespace YtReader {
       Version = version;
     }
 
-    Task Collect(bool fullLoad) => _collector.Collect(Log, forceUpdate:fullLoad);
+    Task Collect(bool fullLoad) => _collector.Collect(Log, forceUpdate: fullLoad);
     [DependsOn(nameof(Collect))] Task Stage(bool fullLoad) => _warehouse.StageUpdate(Log, fullLoad);
 
     [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad) => YtDataform.Update(Log, fullLoad);
 
-    [DependsOn(nameof(Dataform))] Task Search() => _search.SyncToElastic(Log);
+    [DependsOn(nameof(Dataform))] Task Search(bool fullLoad) => _search.SyncToElastic(Log, fullLoad);
 
     [DependsOn(nameof(Dataform))] Task Results() => _results.SaveBlobResults(Log);
 
@@ -67,7 +67,7 @@ namespace YtReader {
       var actionMethods = TaskGraph.FromMethods(
         () => Collect(fullLoad),
         () => Stage(fullLoad),
-        () => Search(),
+        () => Search(fullLoad),
         () => Results(),
         () => Dataform(fullLoad),
         () => Backup());

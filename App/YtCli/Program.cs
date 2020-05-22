@@ -10,7 +10,6 @@ using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using Serilog.Core;
-using SysExtensions.Build;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using Troschuetz.Random;
@@ -34,7 +33,7 @@ namespace YtCli {
           (ResultsCmd f) => Run(f, args, ResultsCmd.Results),
           (TrafficCmd t) => Run(t, args, TrafficCmd.Traffic),
           (PublishContainerCmd p) => Run(p, args, PublishContainerCmd.PublishContainer),
-          (VersionCmd v) =>  Run(v, args, VersionCmd.Version),
+          (VersionCmd v) => Run(v, args, VersionCmd.Version),
           (UpdateSearchIndexCmd s) => Run(s, args, UpdateSearchIndexCmd.UpdateSearchIndex),
           (SyncDbCmd s) => Run(s, args, SyncDbCmd.Sync),
           (WarehouseCmd w) => Run(w, args, WarehouseCmd.Update),
@@ -50,7 +49,6 @@ namespace YtCli {
     static async Task<CmdCtx<TOption>> TaskCtx<TOption>(TOption option, string[] args) {
       var (app, root, version) = await Setup.LoadCfg(rootLogger: Setup.ConsoleLogger());
       var log = await Setup.CreateLogger(root.Env, option.GetType().Name, version, app);
-
       var scope = Setup.MainScope(root, app, Setup.PipeAppCtxEmptyScope(root, app), version, log);
       return new CmdCtx<TOption>(root, app, log, option, scope, args);
     }
@@ -78,7 +76,8 @@ namespace YtCli {
     public static Task Version(CmdCtx<VersionCmd> ctx) {
       var version = ctx.Scope.Resolve<VersionInfoProvider>().Version();
       ctx.Log.Information("{Version}", version);
-      return Task.CompletedTask;;
+      return Task.CompletedTask;
+      ;
     }
   }
 

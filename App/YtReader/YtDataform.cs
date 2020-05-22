@@ -1,8 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Mutuo.Etl.Pipe;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
@@ -37,11 +39,11 @@ namespace YtReader {
       sfCfg.Role = "dataform"; // ensure dataform run in its own lower-credentialed role
 
       var args = new[] {
-        "--include-deps", 
+        "--include-deps",
         fullLoad ? " --full-refresh " : null,
         "--tags standard"
       }.NotNull().ToArray();
-      
+
       var env = new (string name, string value)[] {
         ("SNOWFLAKE_JSON", sfCfg.ToJson()),
         ("REPO", "https://github.com/markledwich2/YouTubeNetworks_Dataform.git"),
@@ -54,13 +56,12 @@ namespace YtReader {
       var containerName = "dataform";
       var fullName = Cfg.Container.FullContainerImageName("latest");
       var (res, dur) = await Containers.Launch(Cfg.Container, containerName, fullName, env, new string[] { }, log: log).WithDuration();
-      if (res.State() == ContainerState.Failed) {
+      if (res.State().In(ContainerState.Failed, ContainerState.Terminated)) {
         var content = await res.GetLogContentAsync(containerName);
         log.Error("Dataform - container failed in {Duration}: {LogContent}", dur.HumanizeShort(), content);
+        throw new InvalidOperationException($"Dataform - container exited with error code: ${content}");
       }
-      else {
-        log.Information("Dataform - container completed in {Duration}", dur.HumanizeShort());
-      }
+      log.Information("Dataform - container completed in {Duration}", dur.HumanizeShort());
     }
   }
 }

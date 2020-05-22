@@ -62,32 +62,33 @@ namespace SysExtensions.Threading {
       last.LinkTo(batch, new DataflowLinkOptions {PropagateCompletion = true});
       return (source, first, batch);
     }*/
-    
+
     public static async Task<int> BlockBatch<T>(this IEnumerable<T> source,
-      Func<T[], Task> action, int batchSize = 10_000, int parallel = 1, int fileParallel = 4, JsonSerializerSettings serializerSettings = null) {
+      Func<IReadOnlyCollection<T>, Task> action, int batchSize = 10_000, int parallel = 1, int fileParallel = 4,
+      JsonSerializerSettings serializerSettings = null) {
       var res = await source.BlockBatch(async (b, i) => {
         await action(b).ConfigureAwait(false);
-        return b.Length;
-      }, batchSize, parallel, fileParallel, serializerSettings);
-      return res.Sum();
-    }
-    
-    public static async Task<int> BlockBatch<T>(this IEnumerable<T> source,
-      Func<T[], int, Task> action, int batchSize = 10_000, int parallel = 1, int fileParallel = 4, JsonSerializerSettings serializerSettings = null) {
-      var res = await source.BlockBatch(async (b, i) => {
-        await action(b, i).ConfigureAwait(false);
-        return b.Length;
+        return b.Count;
       }, batchSize, parallel, fileParallel, serializerSettings);
       return res.Sum();
     }
 
-    /// <summary>
-    /// Batches the source and uses temporary files to avoid memory usage.
-    /// To avoid the overhead of streaming objects though, they are batched. ensure oyu can fit batchSize objects * max(4, parallel) in memory.
-    /// This returns all result of the transform in memory, so don't return items from transform
-    /// </summary>
+    public static async Task<int> BlockBatch<T>(this IEnumerable<T> source,
+      Func<IReadOnlyCollection<T>, int, Task> action, int batchSize = 10_000, int parallel = 1, int fileParallel = 4,
+      JsonSerializerSettings serializerSettings = null) {
+      var res = await source.BlockBatch(async (b, i) => {
+        await action(b, i).ConfigureAwait(false);
+        return b.Count;
+      }, batchSize, parallel, fileParallel, serializerSettings);
+      return res.Sum();
+    }
+
+    /// <summary>Batches the source and uses temporary files to avoid memory usage. To avoid the overhead of streaming objects
+    ///   though, they are batched. ensure oyu can fit batchSize objects * max(4, parallel) in memory. This returns all result
+    ///   of the transform in memory, so don't return items from transform</summary>
     public static async Task<IReadOnlyCollection<R>> BlockBatch<T, R>(this IEnumerable<T> source,
-      Func<T[], int, Task<R>> transform, int batchSize = 10_000, int parallel = 1, int fileParallel = 4, JsonSerializerSettings serializerSettings = null) {
+      Func<IReadOnlyCollection<T>, int, Task<R>> transform, int batchSize = 10_000, int parallel = 1, int fileParallel = 4,
+      JsonSerializerSettings serializerSettings = null) {
       var id = Guid.NewGuid().ToShortString();
       var dir = "BlockFuncLarge".AsPath().InAppData("Mutuo.Etl");
       dir.EnsureDirectoryExists();
@@ -96,16 +97,14 @@ namespace SysExtensions.Threading {
         .WithIndex()
         .BlockFuncWith(async b => {
           var (batch, i) = b;
-          var file = dir.Combine($"{id}.{i}.json");
+          var file = dir.Combine($"{id}.{i}.json.gz");
           file.EnsureDirectoryExists();
-          await batch.ToJsonl(file.FullPath, serializerSettings);
+          await batch.ToJsonlGz(file.FullPath, serializerSettings);
           return (file, i);
-        }, fileParallel, capacity: fileParallel * 4) // by limiting capacity we put back-pressure on producer to save memory
+        }, fileParallel, fileParallel * 2) // by limiting capacity we put back-pressure on producer to save memory
         .Then(async f => {
-          T[] items;
-          using (var stream = f.file.OpenText()) {
-            items = stream.LoadJsonl<T>().ToArray();
-          }
+          IReadOnlyCollection<T> items;
+          using (var stream = f.file.Open(FileMode.Open)) items = stream.LoadJsonlGz<T>();
           f.file.Delete();
           return await transform(items, f.i).ConfigureAwait(false);
         }, parallel)

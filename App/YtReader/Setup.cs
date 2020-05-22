@@ -37,7 +37,7 @@ namespace YtReader {
   public static class Setup {
     public static string AppName = "YouTubeNetworks";
 
-    public static FPath SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("YouTubeNetworks.sln");
+    public static FPath SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("YtNetworks.sln");
     public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
     public static FPath LocalDataDir    => "Data".AsPath().InAppData(AppName);
 
