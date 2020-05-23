@@ -7,17 +7,17 @@ import { EsCfg } from './Elastic'
 const apiUrl = process.env.FUNC_URL
 
 export async function getVideo(cfg: EsCfg, videoId: string): Promise<{ video: EsVideo, channel: ChannelData }> {
-  var res = await getJson<EsVideoResponse>(`${apiUrl}/${cfg.indexes.video}/${videoId}`)
+  var res = await getJson<EsVideoResponse>(`${apiUrl}/video/${videoId}`)
   return { video: res.video, channel: DbModel.ChannelData(res.channel) }
 }
 
 export async function getCaptions(cfg: EsCfg, videoId: string): Promise<EsCaption[]> {
-  var res = await getJson<EsCaption[]>(`${apiUrl}/${cfg.indexes.caption}/${videoId}`)
+  var res = await getJson<EsCaption[]>(`${apiUrl}/captions/${videoId}`)
   return res
 }
 
 export async function saveSearch(search: UserSearch): Promise<void> {
-  var res = await fetch(`${apiUrl}/search`, { method: 'PUT', body: JSON.stringify(search) })
+  await fetch(`${apiUrl}/search`, { method: 'PUT', body: JSON.stringify(search) })
 }
 
 export interface UserSearch {
