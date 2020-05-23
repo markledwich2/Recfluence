@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, CSSProperties, useContext, KeyboardEvent } from "react"
 import { RouteComponentProps as CProps } from "@reach/router"
-import { ReactiveBase, ReactiveList, DataSearch, MultiList, SelectedFilters, SingleRange, SingleDataList, StateProvider, DateRange } from '@appbaseio/reactivesearch'
+import { ReactiveBase, ReactiveList, DataSearch, MultiList, SelectedFilters, SingleRange, SingleDataList, StateProvider, DateRange, MultiDataList } from '@appbaseio/reactivesearch'
 import { theme, media, isGatsbyServer, CenterDiv } from "../MainLayout"
 import styled from 'styled-components'
 import _, { Dictionary } from 'lodash'
@@ -29,9 +29,10 @@ const SearchAndFilterPane = styled.div`
 const ContentPane = styled.div`
     padding:0;
     display:flex; flex-direction:column;
+    width:100%;
     max-width:1100px;
     margin:0 auto;
-    flex: 1 100%;
+    position: relative;
 `
 
 const FiltersPane = styled.div`
@@ -44,9 +45,9 @@ const FiltersPane = styled.div`
     min-height:0px; /*needed for column wrap to kick in*/
     padding:0.5em 0.5em;
 
-    @media (min-width: 580px) {
+    /* @media (min-width: 580px) {
       flex-flow: column wrap;
-    }
+    } */
     
     @media (${media.width.medium}) {
       flex-flow: column;
@@ -55,10 +56,10 @@ const FiltersPane = styled.div`
 
     > * {
         padding:0.5em 1em;
-        max-width:250px;
-        @media (${media.width.medium}) {
+        /* max-width:250px; */
+        /* @media (${media.width.medium}) {
             max-width:none;
-        }
+        } */
     }
 
     > .multi-list {
@@ -82,7 +83,14 @@ const FiltersPane = styled.div`
                 padding:0px;
             }
         }
-        
+
+        li.active, li:hover {
+          span, label {
+            font-weight: normal;
+            color: ${theme.themeColorBolder};
+            text-shadow: ${theme.fontThemeShadow};
+          }
+        }
     }
 
     h2 {
@@ -183,7 +191,7 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
 
                   return <ReactiveList
                     componentId="result"
-                    react={{ and: ['q', 'views', 'sort', 'ideology', 'channel', 'upload'] }}
+                    react={{ and: ['q', 'views', 'sort', 'ideology', 'channel', 'upload', 'part'] }}
                     infiniteScroll
                     scrollTarget="results"
                     size={30}
@@ -268,6 +276,7 @@ const SearchTexBox: React.FunctionComponent = () => {
 const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatch<React.SetStateAction<SortValue>>, sort: SortValue, style: CSSProperties }) =>
   <FiltersPane style={style}>
     <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
+
       <SingleDataList componentId='sort' title='Sort' filterLabel='Sort'
         dataField={sort.field}
         data={_(sortOptions).keys().map(k => ({ label: k })).value()}
@@ -283,13 +292,27 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
         dataField="views"
         data={[
           // { start: null, end: null, label: 'any' },
-          { start: 0, end: 1000, label: '1k or less' },
-          { start: 1000, end: 10000, label: '1k - 10k' },
-          { start: 10000, end: 100000, label: '10k - 100k' },
-          { start: 100000, end: 1000000, label: '100k - 1M' },
-          { start: 1000000, end: null, label: '1M +' },
+          { start: 0, end: 1000, label: '<1k' },
+          { start: 1000, end: 10000, label: '1k-10k' },
+          { start: 10000, end: 100000, label: '10k-100k' },
+          { start: 100000, end: 1000000, label: '100k-1M' },
+          { start: 1000000, end: null, label: '1M+' },
         ]}
         showRadio={false}
+        URLParams
+      />
+
+      <MultiDataList componentId='part' title='Part' filterLabel='Part'
+        dataField={'part'}
+        data={[
+          { label: 'Title', value: 'Title' },
+          { label: 'Keywords', value: 'Keywords' },
+          { label: 'Caption', value: 'Caption' },
+          { label: 'Description', value: 'Description' },
+        ]}
+        defaultValue={['Title', 'Caption', 'Description']}
+        showCheckbox={false}
+        showSearch={false}
         URLParams
       />
     </div>
@@ -307,9 +330,10 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
       componentId="ideology"
       title="Ledwich & Zaitsev Group" filterLabel="Group"
       dataField="ideology"
-      showCheckbox showCount showMissing
+      showCheckbox={false}
+      showCount showMissing
       showSearch={false}
-      react={{ and: ['q', 'views', 'upload'] }}
+      react={{ and: ['q', 'views', 'upload', 'part'] }}
       style={FilteredListStyle}
       defaultQuery={_ => ({
         aggs: {
@@ -343,9 +367,10 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
       filterLabel="Channel"
       dataField="channel_title.keyword"
       title="Channel"
-      showCheckbox showCount
+      showCheckbox={false}
+      showCount
       showSearch={true}
-      react={{ and: ['q', 'views', 'ideology', 'upload'] }}
+      react={{ and: ['q', 'views', 'ideology', 'upload', 'part'] }}
       style={FilteredListStyle}
       defaultQuery={_ => ({
         aggs: {
