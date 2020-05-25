@@ -26,6 +26,7 @@ from store import BlobStore
 from discord_bot import DiscordBot
 from cfg import UserCfg
 
+
 @dataclass
 class CrawlResult:
     success: bool = True
@@ -50,7 +51,7 @@ def create_driver(headless: bool) -> WebDriver:
 
 
 class Crawler:
-    def __init__(self, store:BlobStore, bot:DiscordBot, user:UserCfg, headless:bool, lang = 'en'):
+    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, lang='en'):
         self.store = store
         self.bot = bot
         self.driver = create_driver(headless)
@@ -85,10 +86,10 @@ class Crawler:
         if(login != None):
             await self.login()
 
-    def wait_for_visible(self, cssSelector:str) -> WebElement:
+    def wait_for_visible(self, cssSelector: str) -> WebElement:
         return WebDriverWait(self.driver, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, cssSelector)))
 
-    def wait_for_clickable(self, cssSelector:str) -> WebElement:
+    def wait_for_clickable(self, cssSelector: str) -> WebElement:
         return WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, cssSelector)))
 
     async def login(self) -> CrawlResult:
@@ -126,9 +127,10 @@ class Crawler:
             captchaSelector = 'input[aria-label="Type the text you hear or see"]'
             homeSelector = '#grid-title'
 
-            authEl:WebElement = wfv(f'{telSelector}, {smsSelector}, {captchaSelector}, {homeSelector}')
+            authEl: WebElement = wfv(f'{telSelector}, {smsSelector}, {captchaSelector}, {homeSelector}')
             if authEl.get_attribute('id') == 'grid-title':
                 await onHome()
+                return CrawlResult()
             if authEl.get_attribute('type') == 'tel':
                 wfc(telSelector).send_keys(user.telephone_number)
                 phase = 'phone_number_entered'
@@ -136,22 +138,22 @@ class Crawler:
                 code = await self.bot.request_code(user)
                 wfc(telSelector).send_keys(code)
                 wfc('#idvanyphoneverifyNext').click()
-                await onHome()
             elif authEl.get_attribute('data-sendmethod') == 'SMS':
                 # revalidation
                 wfc(smsSelector).click()  # select sms option
                 code = await self.bot.request_code(user)
                 wfc(telSelector).send_keys(code)
                 wfc('#idvPreregisteredPhoneNext').click()
-                await onHome()
             elif authEl.get_attribute('aria-label') == 'Type the text you hear or see':
                 captchaPath = self.__save_image('captcha')
                 captcha = await self.bot.request_code(user, "enter the catpcha", captchaPath)
                 wfc(captchaSelector).send_keys(captcha)
                 wfc('#identifierNext').click()
-                await onHome()
             else:
                 raise WebDriverException('unable to find post-password element')
+
+            await onHome()
+            return CrawlResult()
 
         except WebDriverException as e:
             await self.__log_info(f'{phase}-exception', e.msg)
@@ -163,7 +165,7 @@ class Crawler:
         seshPath = self.path_session()
         filename = 'output/recommendations/' + self.user.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
-        
+
         video_info = {
             'account': self.user.email,
             'trial': self.trial_nr,
@@ -197,7 +199,7 @@ class Crawler:
             )
 
         recos = []
-        personalized_counter = 0 # how many of the recommendations are personalized?
+        personalized_counter = 0  # how many of the recommendations are personalized?
         for i in all_recs:
             personalized = 'Recommended for you' in i.text
             if personalized:
@@ -214,7 +216,7 @@ class Crawler:
                 'full_info': full_info})
         # store the information about the current video plus the corresponding recommendations
         self.get_video_features(source, recos, personalized_counter)
-        # return the recommendations 
+        # return the recommendations
         return recos
 
     def delete_last_video_from_history(self, video_id: str):
@@ -227,16 +229,17 @@ class Crawler:
         # the link might contain a time stamp so we we need to use split to only get the video id
         first_video_id = first_video.get_attribute('href').replace('https://www.youtube.com/watch?v=', '').split('&')[0]
         delete_buttons = self.wait.until(
-                EC.presence_of_all_elements_located(
-                    (By.XPATH, "//*[@aria-label = 'Remove from Watch history']"))
-            )
+            EC.presence_of_all_elements_located(
+                (By.XPATH, "//*[@aria-label = 'Remove from Watch history']"))
+        )
         # delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Aus \"Wiedergabeverlauf\" entfernen']")
-        
+
         # reasons why there are no videos in the history:
         # 1. the history is empty
         # 2. we are actually not logged in
         # 3. The ui is in the wrong language
-        if len(delete_buttons)>0 and first_video_id == video_id: # checking if the most recent video is actually the video we want to delete 
+        # checking if the most recent video is actually the video we want to delete
+        if len(delete_buttons) > 0 and first_video_id == video_id:
             delete_buttons[0].click()
         # self.__log_info(f'after_deleting_last_video_{video_id}')
 
@@ -245,12 +248,12 @@ class Crawler:
         # self.__log_info('before_history_deletion')
         messages = self.driver.find_elements_by_xpath("//*[@id='message']")
         # if there are not videos in the history a text appears that says 'no videos here' but apparently there is a second, hidden, message with the same
-        # id on the page. So instead of checking whether this element exists we differentiate between 1 message (there are videos in the history) and 
+        # id on the page. So instead of checking whether this element exists we differentiate between 1 message (there are videos in the history) and
         # two messages (there are no videos in the history)
-        if len(messages)==1:
-            delete_buttons =  self.wait.until(
+        if len(messages) == 1:
+            delete_buttons = self.wait.until(
                 EC.presence_of_element_located(
-                    (By.XPATH, "//*[@aria-label = 'Clear all watch history']")) 
+                    (By.XPATH, "//*[@aria-label = 'Clear all watch history']"))
             ).click()
             # delete_buttons = self.driver.find_element_by_xpath("//*[@aria-label = 'Gesamten Wiedergabeverlauf löschen']").click()
 
@@ -333,17 +336,18 @@ class Crawler:
 
         # detect the length of th actual video
         time_element = WebDriverWait(self.driver, 3).until(
-                EC.presence_of_element_located((By.CLASS_NAME, 'ytp-time-duration')))
-        ActionChains(self.driver).move_to_element(time_element).perform() # we need to hover over the bar or else the time is not visible
+            EC.presence_of_element_located((By.CLASS_NAME, 'ytp-time-duration')))
+        # we need to hover over the bar or else the time is not visible
+        ActionChains(self.driver).move_to_element(time_element).perform()
         duration = time_element.text
         duration = self._get_seconds(duration)
         # to make sure that every video is watched long enough
         # watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
-        watch_time = duration if duration < 300 else 300 
+        watch_time = duration if duration < 300 else 300
         print(watch_time)
         # let the asynchronous manager know that now other videos can be started
         await asyncio.sleep(watch_time)
-        #todo replace with seq logging
+        # todo replace with seq logging
         watch_time_log_file = 'output/watch_times/' + self.user.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
         watch_time = {
@@ -368,7 +372,7 @@ class Crawler:
 
         Arguments:
             videos {list[str]} -- a list with all the video id's that are supposed to be watched
-        """            
+        """
         tasks = []
         main_window = self.driver.window_handles[-1]
         for video in videos:
@@ -381,7 +385,7 @@ class Crawler:
 
     def scan_feed(self):
         seshPath = self.path_session()
-        
+
         # especially during the corona crisis, YouTube is offering a lot of extra information
         # they add noise to our data aquisition, because they influence how many videos are shown
         # on the home page, so we have to get rid of them
@@ -415,7 +419,7 @@ class Crawler:
             # these kinds of banners are partly corona specific (like #fitnessathome) or not (#trendingmovies)
             themed_content = None
             try:
-                themed_content = WebDriverWait(self.driver,2).until(  # Kein Interesse
+                themed_content = WebDriverWait(self.driver, 2).until(  # Kein Interesse
                     EC.presence_of_all_elements_located((By.XPATH, '//*[@aria-label="Not interested"]')))
             except TimeoutException:
                 # print("No themed content")
@@ -432,24 +436,23 @@ class Crawler:
         )
 
         feed_info = dict(
-            account = self.user.email,
-            trial = self.trial_nr,
-            feed_videos = []
+            account=self.user.email,
+            trial=self.trial_nr,
+            feed_videos=[]
         )
         for video in all_videos:
             # take the link and remove everything except for the id of the video that the link leads to
             vid_dict = dict(
-                vid_id = video.get_attribute('href').replace('https://www.youtube.com/watch?v=', ''),
-                title = video.get_attribute('title'),
-                full_info = video.get_attribute('aria-label')
+                vid_id=video.get_attribute('href').replace('https://www.youtube.com/watch?v=', ''),
+                title=video.get_attribute('title'),
+                full_info=video.get_attribute('aria-label')
             )
             feed_info['feed_videos'].append(vid_dict)
 
         filename = 'output/feed/' + self.user.email + '_' + \
-        str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
+            str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
         # upload the information as a blob
         self.store.save(seshPath / filename, feed_info)
-        
 
     def __save_cookies(self):
         """saves all cookies
@@ -475,7 +478,7 @@ class Crawler:
                 except BaseException as e:
                     print(f'could not load cookies from: {cookiePath}: {e}')
 
-    def __save_image(self, name:str):
+    def __save_image(self, name: str):
         seshPath = self.path_session()
         # save image
         imagePath = seshPath / f'{name}.png'
@@ -484,7 +487,7 @@ class Crawler:
         return localImagePath
 
     # easy method to save screenshots for headless mode
-    async def __log_info(self, name: str, error:str=None):
+    async def __log_info(self, name: str, error: str = None):
         wd = self.driver
 
         seshPath = self.path_session()
@@ -511,7 +514,7 @@ class Crawler:
 
         os.remove(localImagePath)
 
-    def path_user(self)-> PurePath: 
+    def path_user(self) -> PurePath:
         return PurePosixPath(f'session_logs/{self.user.email}')
 
     def path_session(self) -> PurePath:
