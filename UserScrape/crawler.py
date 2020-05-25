@@ -145,7 +145,7 @@ class Crawler:
 
         return CrawlResult()
 
-    def get_video_features(self, videoId, recommendations: list, personalized_count: int):
+    def get_video_features(self, videoId, recommendations: List[dict], personalized_count: int):
         seshPath = self.path_session()
         filename = 'output/recommendations/' + self.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
