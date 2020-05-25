@@ -1,12 +1,23 @@
 {
   "configurations": [
-    {"name":"start experiment","type":"python","request":"launch","program":"app.py","console":"integratedTerminal"},
+    {
+      "name": "start experiment",
+      "args": [
+        "--init",
+        "-a",
+        "0"
+      ],
+      "type": "python",
+      "request": "launch",
+      "program": "app.py",
+      "console": "integratedTerminal"
+    },
     {
       "name": "Python: current file",
       "type": "python",
       "request": "launch",
       "program": "app.py",
       "console": "integratedTerminal"
-    },
+    }
   ]
 }

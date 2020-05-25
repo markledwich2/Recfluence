@@ -47,7 +47,8 @@ namespace Mutuo.Etl.Pipe {
     public Exception       Exception   { get; set; }
     public TimeSpan        Duration    { get; set; } = TimeSpan.Zero;
 
-    public override string ToString() => $"{Name} ({FinalStatus}) took {Duration.HumanizeShort()}. {Exception?.Message}";
+    public override string ToString() => $"{Name} ({FinalStatus}) in {Duration.HumanizeShort()}"
+                                         + (Exception != null ? $". Error: {Exception.Message}" : "");
   }
 
   public static class JobProcessStatusExtensions {
