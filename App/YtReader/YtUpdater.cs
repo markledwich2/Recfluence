@@ -57,9 +57,10 @@ namespace YtReader {
 
     [Pipe]
     public async Task Update(string[] actions = null, bool fullLoad = false) {
+      actions ??= new string[]{};
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
-
+      
       var actionMethods = TaskGraph.FromMethods(
         () => Collect(fullLoad),
         () => Stage(fullLoad),
@@ -68,7 +69,7 @@ namespace YtReader {
         () => Dataform(fullLoad),
         () => Backup());
 
-      if (actions?.Any() == true) {
+      if (actions.Any()) {
         var missing = actions.Where(a => actionMethods[a] == null).ToArray();
         if (missing.Any())
           throw new InvalidOperationException($"no such action(s) ({missing.Join("|")}), available: {actionMethods.All.Join("|", a => a.Name)}");
@@ -76,14 +77,19 @@ namespace YtReader {
         foreach (var m in actionMethods.All.Where(m => !actions.Contains(m.Name)))
           m.Status = GraphTaskStatus.Ignored;
       }
-
+      
+      // TODO: tasks should have frequencies within a dependency graph. But for now, full backups only on sundays, or if explicit
+      var backup = actionMethods[nameof(Backup)];
+      if (!actions.Contains(nameof(Backup)) && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
+        backup.Status = GraphTaskStatus.Ignored;
+      
       var res = await actionMethods.Run(Cfg.Parallel, Log, CancellationToken.None);
 
       var errors = res.Where(r => r.Error).ToArray();
       if (errors.Any())
         Log.Error("Update {RunId} - failed in {Duration}: {@TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res);
       else
-        Log.Information("Update {RunId} - completed in {Duration}: {@TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res);
+        Log.Information("Update {RunId} - completed in {Duration}: {TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res.Join("\n"));
     }
   }
 }
