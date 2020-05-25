@@ -28,5 +28,6 @@ __pycache__/
 
 # Tableau & R
 *.twbr
-Analysis/.Rhistory
+.Rhistory
+.RData
 UserScrape/.env
