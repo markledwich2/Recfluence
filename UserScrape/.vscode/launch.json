@@ -5,7 +5,7 @@
       "name": "Python: current file",
       "type": "python",
       "request": "launch",
-      "program": "${file}",
+      "program": "app.py",
       "console": "integratedTerminal"
     },
   ]
