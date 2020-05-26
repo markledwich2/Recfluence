@@ -31,25 +31,24 @@ def experiment(initialization: bool, accounts: List[int]):
 
         user_seed_videos = seeds_for_user(user, video_seeds_df)
 
-    try:
-        # crawler.load_home_and_login()
-        crawler.login()
-        crawler.delete_history()
-        for repetition in range(1,repetitions):
-            asyncio.run(crawler.watch_videos([video.video_id for video in user_seed_videos[0:5]]))
-            crawler.scan_feed()
-            # 115 test videos
-            for video in test_videos:
-                crawler.get_recommendations_for_video(video)
-                crawler.delete_last_video_from_history(video)
+        try:
+            # crawler.load_home_and_login()
+            crawler.login()
             crawler.delete_history()
-            crawler.update_trial()
+            for repetition in range(0,repetitions):
+                asyncio.run(crawler.watch_videos([video.video_id for video in user_seed_videos[0:5]]))
+                crawler.scan_feed()
+                # 115 test videos
+                for video in test_videos:
+                    crawler.get_recommendations_for_video(video)
+                    crawler.delete_last_video_from_history(video)
+                crawler.delete_history()
+                crawler.update_trial()
+        except NoSuchElementException as e:
+            print(f'Not able to find a required element {e.msg}. {user.email}')
+        finally:
             crawler.shutdown()
-    except NoSuchElementException as e:
-        print(f'Not able to find a required element {e.msg}. {user.email}')
-    finally:
-        crawler.shutdown()
-
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Start one iteration of the experiment. If you run this for the first time \
