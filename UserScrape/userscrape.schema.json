@@ -4,7 +4,8 @@
     "data_storage_cs",
     "users",
     "headless",
-    "discord"
+    "discord",
+    "seqUrl"
   ],
   "properties": {
     "data_storage_cs": {
@@ -28,6 +29,14 @@
     "discord": {
       "$ref": "#/definitions/DiscordCfg",
       "description": "configuration for the discord bot used to request user validation"
+    },
+    "seqUrl": {
+      "type": "string",
+      "examples": [
+        "http://log.recfluence.net/",
+        "http://localhost:5341/"
+      ],
+      "description": "url of your seq instance"
     }
   },
   "description": "UserScrape configuration",

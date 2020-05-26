@@ -6,6 +6,9 @@
         "creds",
         "dotenv",
         "getenv",
+        "groupby",
+        "iterrows",
+        "nargs",
         "spawnl",
         "strftime"
     ],
