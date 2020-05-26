@@ -37,7 +37,7 @@ namespace YtReader {
   public static class Setup {
     public static string AppName = "YouTubeNetworks";
 
-    public static FPath SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("YouTubeNetworks.sln");
+    public static FPath SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("YtNetworks.sln");
     public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
     public static FPath LocalDataDir    => "Data".AsPath().InAppData(AppName);
 
@@ -274,6 +274,6 @@ namespace YtReader {
       new AzureBlobFileStore(cfg.Storage.DataStorageCs, path, log);
 
     public static YtClient YtClient(this AppCfg cfg, ILogger log) => new YtClient(cfg.YTApiKeys, log);
-    public static bool IsProd(this RootCfg root) => root.Env.ToLowerInvariant() == "prod";
+    public static bool IsProd(this RootCfg root) => root.Env?.ToLowerInvariant() == "prod";
   }
 }

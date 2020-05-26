@@ -22,6 +22,9 @@ namespace YtReader {
 
     // name of environment (Prod/Dev etc..). used to choose appropreate cfg
     [Required] public string Env { get; set; }
+    
+    // if specified, used to override default behavior (including when in prod) of the environment branch/prefix
+    public string BranchEnv { get; set; }
   }
 
   public class Cfg {

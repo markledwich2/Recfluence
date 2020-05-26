@@ -83,7 +83,7 @@ namespace Mutuo.Etl.Db {
         }
       }
 
-      log.Information("{Table} - completed loading {Rows} in {Duration}", tableCfg.Name, newRows, sw.Elapsed.HumanizeShort(minUnit: TimeUnit.Millisecond));
+      log.Information("{Table} - completed loading {Rows} in {Duration}", tableCfg.Name, newRows, sw.Elapsed.HumanizeShort());
     }
 
     async Task CreateTmpTable(TableId tmpTable, TableSchema querySchema) {

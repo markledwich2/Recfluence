@@ -19,6 +19,7 @@ namespace Mutuo.Etl.Blob {
     Task<bool> Delete(StringPath path, ILogger log = null);
     Task<Stream> OpenForWrite(StringPath path, ILogger log = null);
     Task<FileListItem> Info(StringPath path);
+    public Uri Url(StringPath path);
   }
 
   public static class SimpleStoreExtensions {

@@ -98,7 +98,10 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
   // get data for video from function
   useEffect(() => {
     async function renderVideo() {
-      getCaptions(esCfg, videoId).then(c => setCaptions(c)).then(() => delay(200)).then(() => scrollToCurrentTime())
+      getCaptions(esCfg, videoId)
+        .then(c => setCaptions(c))
+        .then(() => delay(200))
+        .then(() => scrollToCurrentTime())
       getVideo(esCfg, videoId).then(v => setVideoData(v))
     }
     renderVideo()
@@ -162,7 +165,7 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
           <div>
             {captions?.map((c, i) => {
               var cNext = captions[i + 1]
-              var currentCaption = c.offset_seconds <= time && cNext?.offset_seconds > time
+              var currentCaption = c.offset_seconds <= time && (cNext === undefined || cNext?.offset_seconds > time)
               return (
                 <div key={c.offset_seconds} id={c.offset_seconds.toString()} className={'caption' + (currentCaption ? ' current' : '')}>
                   <a onClick={() => onCaptionClick(c.offset_seconds)}>

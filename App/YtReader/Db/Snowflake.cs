@@ -1,9 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Mutuo.Etl.Db;
 using Serilog;
 using Snowflake.Data.Client;
+using SysExtensions;
 using SysExtensions.Security;
 using SysExtensions.Text;
 
@@ -45,5 +48,20 @@ namespace YtReader {
       }.Where(v => v.value.HasValue()).ToArray());
 
     public static string Cs(params (string name, string value)[] values) => values.Join(";", v => $"{v.name}={v.value}");
+
+    public static async Task SetSessionParams(this LoggedConnection db, params (SfParam param, object value)[] @params) => await db.Execute("alter session",
+      $"alter session set {@params.Join(" ", v => $"{v.param.EnumString()}={ValueSql(v.value)}")}"); // reduce mem usage (default 4)
+
+    static string ValueSql(object value) =>
+      value switch {
+        string s => $"'{s}'",
+        int i => i.ToString(),
+        _ => throw new NotImplementedException()
+      };
+  }
+
+  public enum SfParam {
+    [EnumMember(Value = "CLIENT_PREFETCH_THREADS")]
+    ClientPrefetchThreads
   }
 }

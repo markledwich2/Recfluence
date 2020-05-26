@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Humanizer;
+using Newtonsoft.Json;
+using SysExtensions.Collections;
+using SysExtensions.IO;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
 
 namespace SysExtensions.Threading {
@@ -18,14 +24,100 @@ namespace SysExtensions.Threading {
       return produced;
     }
 
-    /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
-    public static async Task<IReadOnlyCollection<R>> BlockFunc<T, R>(this IEnumerable<T> source,
-      Func<T, Task<R>> transform, int parallelism = 1, int? capacity = null,
-      Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default) {
-      progressPeriod = progressPeriod == default ? 60.Seconds() : progressPeriod;
+    /// <summary>Uses the type context of an enumerable to make a block, but does not touch it.</summary>
+    public static (IEnumerable<T> source, IPropagatorBlock<T, R> first, IPropagatorBlock<T, R> last) BlockFuncWith<T, R>
+      (this IEnumerable<T> source, Func<T, Task<R>> transform, int parallelism = 1, int? capacity = null) {
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
-      var block = new TransformBlock<T, R>(transform, options);
+      var trans = new TransformBlock<T, R>(transform, options);
+      return (source, trans, trans);
+    }
+
+    public static (IEnumerable<T> source, IPropagatorBlock<T, TFirstR> first, IPropagatorBlock<TLastR, R> last) Then<T, TFirstR, TLast, TLastR, R>(
+      this (IEnumerable<T> source, IPropagatorBlock<T, TFirstR> first, IPropagatorBlock<TLast, TLastR> last) withFunc, Func<TLastR, Task<R>> transform,
+      int parallelism = 1, int? capacity = null) {
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
+      if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
+      var last = new TransformBlock<TLastR, R>(transform, options);
+      withFunc.last.LinkTo(last, new DataflowLinkOptions {PropagateCompletion = true});
+      return (withFunc.source, withFunc.first, last);
+    }
+
+    public static async Task<IReadOnlyCollection<TLastR>> Run<T, TFirstR, TLast, TLastR>(
+      this (IEnumerable<T> source, IPropagatorBlock<T, TFirstR> first, IPropagatorBlock<TLast, TLastR> last) withFunc) {
+      var (source, first, last) = withFunc;
+      var produced = source.ProduceAsync(first);
+      var consume = last.ConsumeAsync();
+      await produced;
+      await first.Completion;
+      await last.Completion;
+      var res = await consume;
+      return res;
+    }
+
+    /*public static (IEnumerable<T> source, IPropagatorBlock<T, TFirstR> first, IReceivableSourceBlock<TLastR[]> batch) WithCollectAll<T, TFirstR, TLast, TLastR>(
+      this (IEnumerable<T> source, IPropagatorBlock<T, TFirstR> first, IPropagatorBlock<TLast, TLastR> last) withFunc) {
+      var (source, first, last) = withFunc;
+      var batch = new BatchBlock<TLastR>(int.MaxValue);
+      last.LinkTo(batch, new DataflowLinkOptions {PropagateCompletion = true});
+      return (source, first, batch);
+    }*/
+
+    public static async Task<int> BlockBatch<T>(this IEnumerable<T> source,
+      Func<IReadOnlyCollection<T>, Task> action, int batchSize = 10_000, int parallel = 1, int fileParallel = 4,
+      JsonSerializerSettings serializerSettings = null) {
+      var res = await source.BlockBatch(async (b, i) => {
+        await action(b).ConfigureAwait(false);
+        return b.Count;
+      }, batchSize, parallel, fileParallel, serializerSettings);
+      return res.Sum();
+    }
+
+    public static async Task<int> BlockBatch<T>(this IEnumerable<T> source,
+      Func<IReadOnlyCollection<T>, int, Task> action, int batchSize = 10_000, int parallel = 1, int fileParallel = 4,
+      JsonSerializerSettings serializerSettings = null) {
+      var res = await source.BlockBatch(async (b, i) => {
+        await action(b, i).ConfigureAwait(false);
+        return b.Count;
+      }, batchSize, parallel, fileParallel, serializerSettings);
+      return res.Sum();
+    }
+
+    /// <summary>Batches the source and uses temporary files to avoid memory usage. To avoid the overhead of streaming objects
+    ///   though, they are batched. ensure oyu can fit batchSize objects * max(4, parallel) in memory. This returns all result
+    ///   of the transform in memory, so don't return items from transform</summary>
+    public static async Task<IReadOnlyCollection<R>> BlockBatch<T, R>(this IEnumerable<T> source,
+      Func<IReadOnlyCollection<T>, int, Task<R>> transform, int batchSize = 10_000, int parallel = 1, int fileParallel = 4,
+      JsonSerializerSettings serializerSettings = null) {
+      var id = Guid.NewGuid().ToShortString();
+      var dir = "BlockFuncLarge".AsPath().InAppData("Mutuo.Etl");
+      dir.EnsureDirectoryExists();
+      return await source
+        .Batch(batchSize)
+        .WithIndex()
+        .BlockFuncWith(async b => {
+          var (batch, i) = b;
+          var file = dir.Combine($"{id}.{i}.json.gz");
+          await batch.ToJsonlGz(file.FullPath, serializerSettings);
+          return (file, i);
+        }, fileParallel, fileParallel * 2)
+        .Then(async f => {
+          IReadOnlyCollection<T> items;
+          using (var stream = f.file.Open(FileMode.Open)) items = stream.LoadJsonlGz<T>();
+          f.file.Delete();
+          return await transform(items, f.i).ConfigureAwait(false);
+        }, parallel)
+        .Run().ConfigureAwait(false);
+    }
+
+    /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
+    public static async Task<IReadOnlyCollection<R>> BlockFunc<T, R>(this IEnumerable<T> source,
+      Func<T, Task<R>> func, int parallel = 1, int? capacity = null,
+      Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default) {
+      progressPeriod = progressPeriod == default ? 60.Seconds() : progressPeriod;
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false};
+      if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
+      var block = new TransformBlock<T, R>(func, options);
 
       var swProgress = Stopwatch.StartNew();
 
@@ -63,11 +155,18 @@ namespace SysExtensions.Threading {
     static async Task<long> ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block) {
       var produced = 0;
       foreach (var item in source) {
-        await block.SendAsync(item);
+        await block.SendAsync(item).ConfigureAwait(false);
         produced++;
       }
       block.Complete();
       return produced;
+    }
+
+    static async Task<IReadOnlyCollection<T>> ConsumeAsync<T>(this ISourceBlock<T> block) {
+      var list = new List<T>();
+      while (await block.OutputAvailableAsync())
+        list.Add(await block.ReceiveAsync());
+      return list;
     }
   }
 

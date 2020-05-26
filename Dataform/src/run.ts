@@ -45,8 +45,10 @@ const dfRunArgs = process.env.DATAFORM_RUN_ARGS;
     await run(branch, repo, sfCfg, dfRunArgs, log)
 
 })().catch((e: any) => {
-    if (e instanceof Error)
+    if (e instanceof Error) {
         log.error(e, e.message)
+        process.exit(1) 
+    }
     else
         log.error(e)
     throw e

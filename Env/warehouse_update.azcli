@@ -7,7 +7,7 @@ cs=`az storage account show-connection-string --name ytapp --output tsv`
 
 
 
-az container create --name update-warehouse-search --image ytnetworks.azurecr.io/ytnetworks:0.5.0 --cpu 2 --memory 4 \
+az container create --name update-warehouse-search --image ytnetworks.azurecr.io/ytnetworks:0.5.2 --cpu 2 --memory 4 \
     --command-line "./ytnetworks warehouse" \
     --environment-variables env=prod appStoreCs=$cs \
     --registry-username ytnetworks  --registry-password $registryPass \
@@ -17,13 +17,11 @@ az container attach -n update-warehouse-search
 #az container delete -n update-warehouse-search
 
 
-az container create --name update-manual --image ytnetworks.azurecr.io/ytnetworks:0.5.0 --cpu 2 --memory 4 \
-    --command-line "./ytnetworks update -f" \
+actions="Search"
+az container create --name update-manual --image ytnetworks.azurecr.io/ytnetworks:0.5.2 --cpu 4 --memory 8 \
+    --command-line "./ytnetworks update -a ${actions} -f" \
     --environment-variables env=prod appStoreCs=$cs \
     --registry-username ytnetworks  --registry-password $registryPass \
     --restart-policy Never
-
+    
 az container attach -n update-manual
-
-
-

@@ -29,10 +29,12 @@ namespace SysExtensions.Serialization {
       return settings;
     }
 
+    static readonly JsonSerializerSettings _defaultSettings = DefaultSettings();
+
     public static JsonSerializer Serializer(this JsonSerializerSettings settings) => JsonSerializer.Create(settings);
 
     public static T JsonClone<T>(this T source, JsonSerializerSettings settings = null) {
-      settings ??= DefaultSettings();
+      settings ??= _defaultSettings;
       var serialized = JsonConvert.SerializeObject(source, settings);
       return JsonConvert.DeserializeObject<T>(serialized, settings);
     }
@@ -79,12 +81,12 @@ namespace SysExtensions.Serialization {
     }
 
     public static string ToJson<T>(this T o, JsonSerializerSettings settings = null) {
-      settings ??= DefaultSettings();
+      settings ??= _defaultSettings;
       return JsonConvert.SerializeObject(o, settings);
     }
 
     public static Stream ToJsonStream<T>(this T o, JsonSerializerSettings settings = null) {
-      settings ??= DefaultSettings();
+      settings ??= _defaultSettings;
       var ms = new MemoryStream();
       using (var sw = new StreamWriter(ms, leaveOpen: true))
       using (var jw = new JsonTextWriter(sw))
@@ -97,7 +99,7 @@ namespace SysExtensions.Serialization {
       => o.ToJsonFile(filePath.FullPath, settings);
 
     public static void ToJsonFile(this object o, string filePath, JsonSerializerSettings settings = null) {
-      settings ??= DefaultSettings();
+      settings ??= _defaultSettings;
       using (var fw = File.Open(filePath, FileMode.Create))
       using (var sw = new StreamWriter(fw))
       using (var jw = new JsonTextWriter(sw)) {
@@ -110,12 +112,12 @@ namespace SysExtensions.Serialization {
     public static JToken ParseJToken(this string s, JsonLoadSettings loadSettings = null) => JToken.Parse(s, loadSettings);
 
     public static JToken SerializeToJToken(this object o, JsonSerializerSettings settings = null) {
-      settings ??= DefaultSettings();
+      settings ??= _defaultSettings;
       return JToken.FromObject(o, JsonSerializer.Create(settings));
     }
 
     public static T ToObject<T>(this JToken j, JsonSerializerSettings settings = null) {
-      settings ??= DefaultSettings();
+      settings ??= _defaultSettings;
       return j.ToObject<T>(JsonSerializer.Create(settings));
     }
 
@@ -129,7 +131,7 @@ namespace SysExtensions.Serialization {
     }
 
     public static T ToObject<T>(this TextReader reader, JsonSerializerSettings settings = null, JsonLoadSettings loadSettings = null) {
-      settings ??= DefaultSettings();
+      settings ??= _defaultSettings;
       loadSettings ??= DefaultLoadSettings;
       var jsonReader = new JsonTextReader(reader);
       var serilaizer = JsonSerializer.Create(settings);
@@ -138,7 +140,7 @@ namespace SysExtensions.Serialization {
     }
 
     public static T ToObject<T>(this string json, JsonSerializerSettings settings = null) {
-      settings ??= DefaultSettings();
+      settings ??= _defaultSettings;
       return JsonConvert.DeserializeObject<T>(json, settings);
     }
 

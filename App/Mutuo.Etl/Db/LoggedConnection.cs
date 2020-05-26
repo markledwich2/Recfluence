@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
-using Humanizer.Localisation;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
@@ -34,7 +33,7 @@ namespace Mutuo.Etl.Db {
 
     /// <summary>Liek the dapper Query function. use when you need to stream the rows non-greedily</summary>
     public IEnumerable<T> QueryBlocking<T>(string operation, string sql,
-      object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = true) =>
+      object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = false) =>
       ExecWithLog(() => Conn.Query<T>(sql, param, transaction, commandTimeout: timeout?.TotalSeconds.RoundToInt(), buffered: buffered), sql, operation);
 
     public async Task<IReadOnlyCollection<T>> Query<T>(string operation, string sql,
@@ -60,7 +59,7 @@ namespace Mutuo.Etl.Db {
         Log.Error(ex, "{Operation} - Error ({Error}) with sql: {Sql}", operation, ex.Message, sql);
         throw;
       }
-      Log.Debug("{Operation} - completed in {Duration}: {Sql}", operation, sw.Elapsed.HumanizeShort(minUnit: TimeUnit.Millisecond), sql);
+      Log.Debug("{Operation} - completed in {Duration}: {Sql}", operation, sw.Elapsed.HumanizeShort(), sql);
       return res;
     }
 
@@ -75,7 +74,7 @@ namespace Mutuo.Etl.Db {
         Log.Error(ex, "{Operation} - Error ({Error}) with sql: {Sql}", operation, ex.Message, sql);
         throw;
       }
-      Log.Debug("{Operation} - completed in {Duration}: {Sql}", operation, duration.HumanizeShort(minUnit: TimeUnit.Millisecond), sql);
+      Log.Debug("{Operation} - completed in {Duration}: {Sql}", operation, duration.HumanizeShort(), sql);
       return res;
     }
   }

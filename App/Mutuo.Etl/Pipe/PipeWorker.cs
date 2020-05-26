@@ -34,7 +34,8 @@ namespace Mutuo.Etl.Pipe {
     Succeeded,
     Failed,
     Stopped,
-    Updating
+    Updating,
+    Terminated
   }
 
   public static class PipeWorkerEx {

@@ -29,12 +29,10 @@ namespace YtReader {
     readonly YtResults    _results;
     readonly YtDataform   YtDataform;
     readonly YtBackup     _backup;
-    readonly AzureCleaner _clean;
-    readonly SemVersion   Version;
     readonly string       _updated;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, YtStage warehouse, YtSearch search,
-      YtResults results, YtDataform ytDataform, YtBackup backup, AzureCleaner clean, SemVersion version) {
+      YtResults results, YtDataform ytDataform, YtBackup backup) {
       Cfg = cfg;
       _updated = Guid.NewGuid().ToShortString(6);
       Log = log.ForContext("UpdateId", _updated);
@@ -44,35 +42,34 @@ namespace YtReader {
       _results = results;
       YtDataform = ytDataform;
       _backup = backup;
-      _clean = clean;
-      Version = version;
     }
 
-    Task Collect() => _collector.Collect(Log);
-    [DependsOn(nameof(Collect))] Task Stage() => _warehouse.WarehouseUpdate(Log);
+    Task Collect(bool fullLoad) => _collector.Collect(Log, forceUpdate: fullLoad);
+    [DependsOn(nameof(Collect))] Task Stage(bool fullLoad) => _warehouse.StageUpdate(Log, fullLoad);
 
-    [DependsOn(nameof(Stage))] Task Dataform() => YtDataform.Update(Log);
+    [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad) => YtDataform.Update(Log, fullLoad);
 
-    [DependsOn(nameof(Dataform))] Task Search() => _search.SyncToElastic(Log);
+    [DependsOn(nameof(Dataform))] Task Search(bool fullLoad) => _search.SyncToElastic(Log, fullLoad);
 
     [DependsOn(nameof(Dataform))] Task Results() => _results.SaveBlobResults(Log);
 
     [DependsOn(nameof(Collect))] Task Backup() => _backup.Backup(Log);
 
     [Pipe]
-    public async Task Update(string[] actions = null) {
+    public async Task Update(string[] actions = null, bool fullLoad = false) {
+      actions ??= new string[]{};
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
-
+      
       var actionMethods = TaskGraph.FromMethods(
-        () => Collect(),
-        () => Stage(),
-        () => Search(),
+        () => Collect(fullLoad),
+        () => Stage(fullLoad),
+        () => Search(fullLoad),
         () => Results(),
-        () => Dataform(),
+        () => Dataform(fullLoad),
         () => Backup());
 
-      if (actions?.Any() == true) {
+      if (actions.Any()) {
         var missing = actions.Where(a => actionMethods[a] == null).ToArray();
         if (missing.Any())
           throw new InvalidOperationException($"no such action(s) ({missing.Join("|")}), available: {actionMethods.All.Join("|", a => a.Name)}");
@@ -80,14 +77,19 @@ namespace YtReader {
         foreach (var m in actionMethods.All.Where(m => !actions.Contains(m.Name)))
           m.Status = GraphTaskStatus.Ignored;
       }
-
+      
+      // TODO: tasks should have frequencies within a dependency graph. But for now, full backups only on sundays, or if explicit
+      var backup = actionMethods[nameof(Backup)];
+      if (!actions.Contains(nameof(Backup)) && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
+        backup.Status = GraphTaskStatus.Ignored;
+      
       var res = await actionMethods.Run(Cfg.Parallel, Log, CancellationToken.None);
 
       var errors = res.Where(r => r.Error).ToArray();
       if (errors.Any())
         Log.Error("Update {RunId} - failed in {Duration}: {@TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res);
       else
-        Log.Information("Update {RunId} - completed in {Duration}: {@TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res);
+        Log.Information("Update {RunId} - completed in {Duration}: {TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res.Join("\n"));
     }
   }
 }

@@ -50,26 +50,27 @@ namespace YtReader.Search {
       await UpdateIndex<EsCaption>(log, fullLoad);
       var lastUpdate = await Es.MaxDateField<EsCaption>(m => m.Field(p => p.updated));
       var sql = CreateSql("select * from caption", fullLoad, lastUpdate, limit, conditions);
-      using var conn = await Db.OpenConnection(log);
-      var allItems = Query<DbCaption>(sql, conn).SelectMany(c => {
-        // instead of searching across title, description, captions. We create new caption records for each part
-        var caps = c.caption_group == 0
-          ? new[] {
-            c,
-            CreatePart(c, CaptionPart.Title),
-            CreatePart(c, CaptionPart.Description),
-            CreatePart(c, CaptionPart.Keywords)
+      using var conn = await OpenConnection(log);
+      var allItems = Query<DbCaption>(sql, conn)
+        .SelectMany(c => {
+          // instead of searching across title, description, captions. We create new caption records for each part
+          var caps = c.caption_group == 0
+            ? new[] {
+              c,
+              CreatePart(c, CaptionPart.Title),
+              CreatePart(c, CaptionPart.Description),
+              CreatePart(c, CaptionPart.Keywords)
+            }
+            : new[] {c};
+          foreach (var newCap in caps) {
+            // even tho we use EsCaption  in the NEST api, it will still serialize and store instance properties. Remove the extra ones
+            newCap.keywords = null;
+            newCap.description = null;
           }
-          : new[] {c};
-        foreach (var newCap in caps) {
-          // even tho we use EsCaption  in the NEST api, it will still serialize and store instance properties. Remove the extra ones
-          newCap.keywords = null;
-          newCap.description = null;
-        }
-        return caps;
-      });
+          return caps;
+        });
 
-      await BatchToEs<EsCaption>(log, allItems);
+      await BatchToEs<EsCaption>(log, allItems, EsExtensions.EsPolicy(log));
 
       DbCaption CreatePart(DbCaption c, CaptionPart part) {
         var partCaption = c.JsonClone();
@@ -83,6 +84,12 @@ namespace YtReader.Search {
         partCaption.part = part;
         return partCaption;
       }
+    }
+
+    async Task<LoggedConnection> OpenConnection(ILogger log) {
+      var conn = await Db.OpenConnection(log);
+      await conn.SetSessionParams((SfParam.ClientPrefetchThreads, 2));
+      return conn;
     }
 
     (string sql, object param) CreateSql(string selectSql, bool fullLoad, DateTime? lastUpdate, long? limit, string[] conditions = null) {
@@ -100,44 +107,43 @@ namespace YtReader.Search {
       var index = Es.GetIndexFor<T>() ?? throw new InvalidOperationException("The ElasticClient must have default indexes created for types used");
       var exists = await Es.Indices.ExistsAsync(index);
 
-      if (fullLoad && exists.Exists) {
-        await Es.Indices.DeleteAsync(index);
-        log.Information("Deleted index {Index} (full load)", index);
-      }
-
-      if (fullLoad || !exists.Exists) {
+      if(!exists.Exists) {
         await Es.Indices.CreateAsync(index, c => c.Map<T>(m => m.AutoMap()));
         log.Information("Created ElasticSearch Index {Index}", index);
+      }
+      else if(fullLoad) {
+        await Es.MapAsync<T>(c => c.AutoMap());
+        log.Information("Updated index mapping {Index}", index);
       }
     }
 
     static string SqlLimit(long? limit) => limit == null ? "" : $" limit {limit}";
 
     async Task BatchToEs<T>(ILogger log, (string sql, object param) sql) where T : class {
-      using (var conn = await Db.OpenConnection(log)) {
-        var allItems = Query<T>(sql, conn);
-        await BatchToEs(log, allItems);
-      }
+      var esPolicy = EsExtensions.EsPolicy(log);
+      using var conn = await OpenConnection(log);
+      await BatchToEs(log, Query<T>(sql, conn), esPolicy);
     }
 
-    async Task BatchToEs<T>(ILogger log, IEnumerable<T> allItems) where T : class {
-      var batchedItems = allItems.Batch(10000).WithIndex();
-      var esPolicy = EsExtensions.EsPolicy(log);
-      var docCount = 0;
-      await batchedItems.BlockAction(async b => {
-        var (item, i) = b;
-        var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(item));
-        Interlocked.Add(ref docCount, res.Items.Count);
-        if (res.ItemsWithErrors.Any())
-          log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch}). Top 5 Error items: {@ItemsWithErrors}",
-            res.Items.Count - res.ItemsWithErrors.Count(), item.Count, Es.GetIndexFor<T>(), i,
-            res.ItemsWithErrors.Select(r => r.Error).Take(5));
-        else
-          log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch})",
-            res.Items.Count, item.Count, Es.GetIndexFor<T>(), i);
-      }, 3, 8);
+    async Task BatchToEs<T>(ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy) where T : class =>
+      await enumerable
+        .Batch(5_000).WithIndex()
+        .BlockFunc(b => BatchToEs(b.item, b.index, esPolicy, log),
+          parallel: 2, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
+          capacity: 2);
 
-      log.Information("Completed indexed {Documents} documents to {Index}", docCount, Es.GetIndexFor<T>());
+    async Task<int> BatchToEs<T>(IReadOnlyCollection<T> items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {
+      var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(items));
+
+      if (res.ItemsWithErrors.Any())
+        log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch}). Top 5 Error items: {@ItemsWithErrors}",
+          res.Items.Count - res.ItemsWithErrors.Count(), items.Count, Es.GetIndexFor<T>(), i,
+          res.ItemsWithErrors.Select(r => r.Error).Take(5));
+      else
+        log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch})",
+          res.Items.Count, items.Count, Es.GetIndexFor<T>(), i);
+
+      return items.Count;
     }
 
     IEnumerable<T> Query<T>((string sql, object param) sql, LoggedConnection conn) where T : class =>

@@ -15,7 +15,7 @@
       "request": "launch",
       "preLaunchTask": "build",
       "program": "${workspaceFolder}/YtCli/bin/Debug/netcoreapp3.1/ytnetworks.dll",
-      "args": ["${input:ytcli_verb}"],
+      "args": ["${input:ytcli_verb}"], //["update", "-a", "Search"],
       "cwd": "${workspaceFolder}/YtCli",
       "stopAtEntry": false,
       "console": "internalConsole"

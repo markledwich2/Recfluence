@@ -48,6 +48,7 @@ namespace SysExtensions.Collections {
       while (items.Count > 0) yield return items.Dequeue(size).ToArray();
     }
 
+    /// <summary>Batches items into batchsize or maxBatches batches, whatever has the last batches</summary>
     public static IEnumerable<IReadOnlyCollection<T>> Batch<T>(this IReadOnlyCollection<T> items, int batchSize, int maxBatches) =>
       items.Batch(Math.Max(items.Count / maxBatches, batchSize));
 

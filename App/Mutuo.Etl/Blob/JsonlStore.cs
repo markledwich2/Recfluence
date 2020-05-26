@@ -81,7 +81,7 @@ namespace Mutuo.Etl.Blob {
       await items.GroupBy(Partition).BlockAction(async g => {
         var ts = items.Max(GetTs);
         var path = JsonlStoreExtensions.FilePath(FilePath(g.Key), ts, Version);
-        await using var memStream = items.ToJsonlGzStream(new JsonSerializerSettings());
+        using var memStream = await items.ToJsonlGzStream(new JsonSerializerSettings());
         await Store.Save(path, memStream, log).WithDuration();
       }, Parallel);
     }

@@ -53,7 +53,9 @@ namespace Mutuo.Etl.Pipe {
         var logTxt = await launch.GetLogContentAsync(containerGroup);
         var logPath = new StringPath($"{runId.StatePath()}.log.txt");
 
-        var errorMsg = launch.State().In(ContainerState.Failed, ContainerState.Unknown)
+        var launchState = launch.State();
+
+        var errorMsg = launchState.In(ContainerState.Failed, ContainerState.Terminated, ContainerState.Unknown)
           ? $"The container is in an error state '{launch.State}', see {logPath}"
           : null;
         if (errorMsg.HasValue())
