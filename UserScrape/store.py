@@ -7,13 +7,14 @@ from typing import Union
 from azure.core.exceptions import ResourceNotFoundError
 from azure.storage.blob import PublicAccess
 
+
 class BlobStore:
     def __init__(self, cs: str, containerName: str):
         self.cs = cs
         self.container = ContainerClient.from_connection_string(
             cs, containerName)
 
-    def ensure_exits(self, public_access:PublicAccess = None):
+    def ensure_exits(self, public_access: PublicAccess = None):
         """creates the container if it doesn't exist"""
         try:
             props = self.container.get_container_properties()
@@ -21,7 +22,7 @@ class BlobStore:
             self.container.create_container(public_access=public_access)
         except BaseException as e:
             raise e
-    
+
     def save(self, path: PurePath, content: Union[str, dict]):
         """Saves text content to a blob with the given path. W
 
@@ -30,11 +31,11 @@ class BlobStore:
             content {Union[str, dict]} -- str content will be saved as is, dict will be serialized to json
         """
         txt = json.dumps(content) if isinstance(content, dict) else content
-            
+
         localPath = Path(tempfile.gettempdir()) / path
         localPath.parent.mkdir(parents=True, exist_ok=True)
         with open(localPath, "w", encoding="utf-8") as w:
-           w.write(txt)
+            w.write(txt)
         self.save_file(localPath, path)
         os.remove(localPath)
 
@@ -53,7 +54,4 @@ class BlobStore:
 
     def load_dic(self, path: PurePath):
         txt = self.load(path)
-        return json.loads(txt)
-
-
-        
+        return json.loads(txt) if txt else None

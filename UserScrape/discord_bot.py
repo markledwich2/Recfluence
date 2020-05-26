@@ -38,7 +38,7 @@ class DiscordBot():
             self.codes[email] = code
             await ctx.channel.send(f'Thanks for providing the validation code for {email}. Scraping resumes!')
 
-    async def request_code(self, user: UserCfg, msg:str=None, file:PurePath=None):
+    async def request_code(self, user: UserCfg, msg: str = None, file: PurePath = None):
         await self.bot.wait_until_ready()
         self.codes[user.email] = None
         channel = self.channel()
@@ -63,7 +63,7 @@ class DiscordBot():
             raise EnvironmentError(f'channel {self.channel_id} not found')
         return channel
 
-    async def msg(self, msg:str, localFile:PurePath=None):
+    async def msg(self, msg: str, localFile: PurePath = None):
         channel = self.channel()
         if(localFile != None):
             await channel.send(msg, file=discord.File(localFile.as_posix()))
@@ -71,8 +71,8 @@ class DiscordBot():
             await channel.send(msg)
 
     async def start_in_backround(self):
-        asyncio.create_task(self.bot.start(self.token)) # run as a background task and return once it has been started
+        asyncio.create_task(self.bot.start(self.token))  # run as a background task and return once it has been started
         await self.bot.wait_until_ready()
 
     async def close(self):
-        self.bot.close()
+        await self.bot.close()

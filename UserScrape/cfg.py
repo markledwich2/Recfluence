@@ -6,6 +6,7 @@ from dataclasses_json import dataclass_json
 from dataclasses_jsonschema import JsonSchemaMixin, SchemaType
 from dataclasses_jsonschema.type_defs import JsonSchemaMeta
 
+
 @dataclass_json
 @dataclass
 class UserCfg(JsonSchemaMixin):
@@ -29,13 +30,16 @@ class UserCfg(JsonSchemaMixin):
             "Conspiracy",
             "Social Justice"
         ]}))
-    notify_discord_user_id:Optional[int] = field(metadata=JsonSchemaMeta({"description": "the user id (e.g. 123465448467005488) in discord to notify", "required": False }))
+    notify_discord_user_id: Optional[int] = field(metadata=JsonSchemaMeta(
+        {"description": "the user id (e.g. 123465448467005488) in discord to notify", "required": False}))
+
 
 @dataclass_json
 @dataclass
 class DiscordCfg(JsonSchemaMixin):
-    bot_token:str = field(metadata={"description": "The auth token for the discord bot"})
-    channel_id:int  = field(metadata={"description":"The channel to ask for user validation codes"})
+    bot_token: str = field(metadata={"description": "The auth token for the discord bot"})
+    channel_id: int = field(metadata={"description": "The channel to ask for user validation codes"})
+
 
 @dataclass_json
 @dataclass
@@ -55,7 +59,11 @@ class Cfg(JsonSchemaMixin):
                            "description": "When true, selenium will run without an interactive browser showing. Must be true when running in a container"})
 
     discord: DiscordCfg = field(metadata={
-                                 "description": "configuration for the discord bot used to request user validation"})
+        "description": "configuration for the discord bot used to request user validation"})
+
+    seqUrl: str = field(metadata=JsonSchemaMeta({
+        "description": "url of your seq instance",
+        "examples": ["http://log.recfluence.net/", "http://localhost:5341/"]}))
 
 
 def load_cfg() -> Cfg:
@@ -64,3 +72,8 @@ def load_cfg() -> Cfg:
     with open('userscrape.json', "r") as r:
         cfg = Cfg.from_json(r.read())
     return cfg
+
+
+with open('./userscrape.schema.json', "w") as w:
+    schemaTxt = json.dumps(Cfg.json_schema(), indent='  ')
+    w.write(schemaTxt)

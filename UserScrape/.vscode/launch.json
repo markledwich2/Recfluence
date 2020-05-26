@@ -2,11 +2,7 @@
   "configurations": [
     {
       "name": "start experiment",
-      "args": [
-        "--init",
-        "-a",
-        "0"
-      ],
+      "args": [],
       "type": "python",
       "request": "launch",
       "program": "app.py",
