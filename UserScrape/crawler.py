@@ -140,10 +140,10 @@ class Crawler:
             telSelector = 'input[type="tel"]'
             smsSelector = '*[data-sendmethod="SMS"]'
             captchaSelector = 'input[aria-label="Type the text you hear or see"]'
-            homeSelector = '#grid-title'
+            homeSelector = '#primary'
 
             authEl: WebElement = wfv(f'{telSelector}, {smsSelector}, {captchaSelector}, {homeSelector}')
-            if authEl.get_attribute('id') == 'grid-title':
+            if authEl.get_attribute('id') == 'primary':
                 await onHome()
                 return CrawlResult()
             if authEl.get_attribute('type') == 'tel':
@@ -363,6 +363,7 @@ class Crawler:
             ad = self.driver.find_element_by_xpath(adXp).text
             self.log.info('{email} - saw ad ({ad}) when watching {video}', email=self.user.email, video=video_id, ad=ad)
             advertisements['advertisers'].append(ad)
+            time.sleep(5)
             try:
                 self.wait_for_visible('*.ytp-ad-skip-button.ytp-button').click()
             except TimeoutException:
