@@ -3,7 +3,8 @@
   "required": [
     "data_storage_cs",
     "users",
-    "headless"
+    "headless",
+    "discord"
   ],
   "properties": {
     "data_storage_cs": {
@@ -23,6 +24,10 @@
     "headless": {
       "type": "boolean",
       "description": "When true, selenium will run without an interactive browser showing. Must be true when running in a container"
+    },
+    "discord": {
+      "$ref": "#/definitions/DiscordCfg",
+      "description": "configuration for the discord bot used to request user validation"
     }
   },
   "description": "UserScrape configuration",
@@ -67,9 +72,31 @@
             "Social Justice"
           ],
           "description": "The users ideology, expected to be unique between users"
+        },
+        "notify_discord_user_id": {
+          "type": "integer",
+          "description": "the user id (e.g. 123465448467005488) in discord to notify"
         }
       },
-      "description": "UserCfg(email: str, password: str, telephone_number: str, ideology: str)"
+      "description": "UserCfg(email: str, password: str, telephone_number: str, ideology: str, notify_discord_user_id: Union[int, NoneType])"
+    },
+    "DiscordCfg": {
+      "type": "object",
+      "required": [
+        "bot_token",
+        "channel_id"
+      ],
+      "properties": {
+        "bot_token": {
+          "type": "string",
+          "description": "The auth token for the discord bot"
+        },
+        "channel_id": {
+          "type": "integer",
+          "description": "The channel to ask for user validation codes"
+        }
+      },
+      "description": "DiscordCfg(bot_token: str, channel_id: int)"
     }
   }
 }

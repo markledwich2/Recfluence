@@ -5,7 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException, ElementNotVisibleException
+from selenium.common.exceptions import ElementNotInteractableException, ElementNotVisibleException, NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium import webdriver
@@ -21,8 +21,10 @@ from dataclasses import dataclass
 from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath
 import tempfile
 import asyncio
-import discord_bot
 from typing import List
+from store import BlobStore
+from discord_bot import DiscordBot
+from cfg import UserCfg
 
 
 @dataclass
@@ -49,109 +51,123 @@ def create_driver(headless: bool) -> WebDriver:
 
 
 class Crawler:
-    def __init__(self, data_storage_cs:str, email:str, password:str, tel_nr:str, headless:bool, lang = 'en'):
-        self.container = ContainerClient.from_connection_string(data_storage_cs, "userscrape")
+    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, lang='en'):
+        self.store = store
+        self.bot = bot
         self.driver = create_driver(headless)
         self.wait = WebDriverWait(self.driver, 10)
-        self.email = email
-        self.password = password
-        self.tel_nr = tel_nr
+        self.user = user
         self.init_time = datetime.now()
         self.lang = lang
         self.trial_nr = 1
 
-    def test_ip(self):
+    async def test_ip(self):
         wd = self.driver
         wd.get('https://httpbin.org/ip')
         pre: WebElement = wd.find_element_by_css_selector('pre')
         print(f'Running with IP {json.loads(pre.text)["origin"]}')
-        self.__log_info('ip')
+        await self.__log_info('ip')
 
-    def load_home_and_login(self):
+    async def load_home_and_login(self):
         wd = self.driver
         # need to go to the domain to add cookies
         wd.get('https://www.youtube.com')
         self.__load_cookies()
 
         wd.get('https://www.youtube.com')
-        content = WebDriverWait(wd, 10).until(
-            EC.visibility_of_element_located((By.CSS_SELECTOR, '#contents')))
-
-        self.__log_info('home')
+        self.wait_for_visible('#contents')
+        await self.__log_info('home')
 
         try:
-            login = wd.find_element_by_css_selector(
-                'paper-button[aria-label="Sign in"]')
+            login = wd.find_element_by_css_selector('paper-button[aria-label="Sign in"]')
         except NoSuchElementException:
             login = None
 
         if(login != None):
-            self.login()
+            await self.login()
 
-    def login(self) -> CrawlResult:
+    def wait_for_visible(self, cssSelector: str) -> WebElement:
+        return WebDriverWait(self.driver, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, cssSelector)))
+
+    def wait_for_clickable(self, cssSelector: str) -> WebElement:
+        return WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, cssSelector)))
+
+    async def login(self) -> CrawlResult:
         wd = self.driver
+        user = self.user
 
         # this link is maybe too specific (e.g. it contains country codes)
         wd.get(
             f'https://accounts.google.com/signin/v2/identifier?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3D{self.lang}%26next%3D%252F&hl={self.lang}&ec=65620&flowName=GlifWebSignIn&flowEntry=ServiceLogin')
 
-        emailEl: WebElement = WebDriverWait(wd, 5).until(
-            EC.element_to_be_clickable(
-                (By.CSS_SELECTOR, 'input[type="email"]'))
-        )
-        self.__log_info(f'enter_email')
-        emailEl.send_keys(self.email)
-        # next_button = wd.find_element_by_id('next').click()
-        wd.find_element_by_css_selector('#identifierNext').click()
+        phase = 'email'
 
-        passwordEl: WebElement = WebDriverWait(wd, 5).until(
-            EC.element_to_be_clickable(
-                (By.CSS_SELECTOR, 'input[type="password"]'))
-        )
-        self.__log_info('email_entered')
-        passwordEl.send_keys(self.password)
-        passwordUrl = wd.current_url
-        wd.find_element_by_css_selector('#passwordNext').click()
+        wfc = self.wait_for_clickable
+        wfv = self.wait_for_visible
 
-        self.__log_info('password_entered')
+        async def onHome():
+            phase = 'home'
+            wfv(homeSelector)
+            await self.__log_info(phase)
+            self.__save_cookies()
 
-        time.sleep(1)
-        phone_input = self.driver.find_elements_by_xpath("//input[@type='tel']")
-        revalidation = self.driver.find_elements_by_xpath("//*[@data-sendmethod='SMS']")
-        if len(phone_input) != 0:
-            phone_input[0].send_keys(self.tel_nr)
-            self.__log_info('phone_number_entered')
-            tel_next_button = self.driver.find_element_by_id('idvanyphonecollectNext').click()
-            code_bot = discord_bot.DiscordBot()
-            code = code_bot.get_code()
-            code_input = WebDriverWait(self.driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, "//input[@type='tel']"))
-            ).send_keys(code)
-            self.__log_info('code_entered')
-            code_next_button = self.driver.find_element_by_id('idvanyphoneverifyNext').click()
-        elif len(revalidation) != 0:
-            # revalidation
-            revalidation.click()  # select sms option
-            code_bot = discord_bot.DiscordBot()
-            code = code_bot.get_code()
-            code_input = WebDriverWait(self.driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, "//input[@type='tel']"))
-            ).send_keys(code)
-            self.__log_info('code_entered')
-            code_next_button = self.driver.find_element_by_id('idvanyphoneverifyNext').click()
-        feed = self.wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="grid-title"]')))
-        self.__log_info('home')
-        self.__save_cookies()
+        try:
+            wfc('input[type="email"]').send_keys(user.email)
+            # next_button = wd.find_element_by_id('next').click()
+            wfc('#identifierNext').click()
+            phase = 'email entered'
+
+            wfc('input[type="password"]').send_keys(user.password)
+            wfc('#passwordNext').click()
+            await asyncio.sleep(2)
+
+            phase = 'password entered'
+            telSelector = 'input[type="tel"]'
+            smsSelector = '*[data-sendmethod="SMS"]'
+            captchaSelector = 'input[aria-label="Type the text you hear or see"]'
+            homeSelector = '#grid-title'
+
+            authEl: WebElement = wfv(f'{telSelector}, {smsSelector}, {captchaSelector}, {homeSelector}')
+            if authEl.get_attribute('id') == 'grid-title':
+                await onHome()
+                return CrawlResult()
+            if authEl.get_attribute('type') == 'tel':
+                wfc(telSelector).send_keys(user.telephone_number)
+                phase = 'phone_number_entered'
+                wfc('#idvanyphonecollectNext').click()
+                code = await self.bot.request_code(user)
+                wfc(telSelector).send_keys(code)
+                wfc('#idvanyphoneverifyNext').click()
+            elif authEl.get_attribute('data-sendmethod') == 'SMS':
+                # revalidation
+                wfc(smsSelector).click()  # select sms option
+                code = await self.bot.request_code(user)
+                wfc(telSelector).send_keys(code)
+                wfc('#idvPreregisteredPhoneNext').click()
+            elif authEl.get_attribute('aria-label') == 'Type the text you hear or see':
+                captchaPath = self.__save_image('captcha')
+                captcha = await self.bot.request_code(user, "enter the catpcha", captchaPath)
+                wfc(captchaSelector).send_keys(captcha)
+                wfc('#identifierNext').click()
+            else:
+                raise WebDriverException('unable to find post-password element')
+
+            await onHome()
+            return CrawlResult()
+
+        except WebDriverException as e:
+            await self.__log_info(f'{phase}-exception', e.msg)
+            raise e
 
         return CrawlResult()
 
     def get_video_features(self, videoId, recommendations: List[dict], personalized_count: int):
         seshPath = self.path_session()
-        filename = 'output/recommendations/' + self.email + '_' + videoId + '_' + \
+        filename = 'output/recommendations/' + self.user.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
-        
+
         video_info = {
-            'account': self.email,
+            'account': self.user.email,
             'trial': self.trial_nr,
             'id': videoId,
             'title': self.wait.until(EC.presence_of_element_located(
@@ -168,7 +184,7 @@ class Crawler:
         }
 
         # upload the information as a blob
-        self.__save_file(seshPath / filename, str(video_info))
+        self.store.save(seshPath / filename, video_info)
 
     def get_recommendations_for_video(self, source):
         self.driver.get("https://www.youtube.com/watch?v=" + source)
@@ -183,7 +199,7 @@ class Crawler:
             )
 
         recos = []
-        personalized_counter = 0 # how many of the recommendations are personalized?
+        personalized_counter = 0  # how many of the recommendations are personalized?
         for i in all_recs:
             personalized = 'Recommended for you' in i.text
             if personalized:
@@ -200,7 +216,7 @@ class Crawler:
                 'full_info': full_info})
         # store the information about the current video plus the corresponding recommendations
         self.get_video_features(source, recos, personalized_counter)
-        # return the recommendations 
+        # return the recommendations
         return recos
 
     def delete_last_video_from_history(self, video_id: str):
@@ -213,16 +229,17 @@ class Crawler:
         # the link might contain a time stamp so we we need to use split to only get the video id
         first_video_id = first_video.get_attribute('href').replace('https://www.youtube.com/watch?v=', '').split('&')[0]
         delete_buttons = self.wait.until(
-                EC.presence_of_all_elements_located(
-                    (By.XPATH, "//*[@aria-label = 'Remove from Watch history']"))
-            )
+            EC.presence_of_all_elements_located(
+                (By.XPATH, "//*[@aria-label = 'Remove from Watch history']"))
+        )
         # delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Aus \"Wiedergabeverlauf\" entfernen']")
-        
+
         # reasons why there are no videos in the history:
         # 1. the history is empty
         # 2. we are actually not logged in
         # 3. The ui is in the wrong language
-        if len(delete_buttons)>0 and first_video_id == video_id: # checking if the most recent video is actually the video we want to delete 
+        # checking if the most recent video is actually the video we want to delete
+        if len(delete_buttons) > 0 and first_video_id == video_id:
             delete_buttons[0].click()
         # self.__log_info(f'after_deleting_last_video_{video_id}')
 
@@ -231,12 +248,12 @@ class Crawler:
         # self.__log_info('before_history_deletion')
         messages = self.driver.find_elements_by_xpath("//*[@id='message']")
         # if there are not videos in the history a text appears that says 'no videos here' but apparently there is a second, hidden, message with the same
-        # id on the page. So instead of checking whether this element exists we differentiate between 1 message (there are videos in the history) and 
+        # id on the page. So instead of checking whether this element exists we differentiate between 1 message (there are videos in the history) and
         # two messages (there are no videos in the history)
-        if len(messages)==1:
-            delete_buttons =  self.wait.until(
+        if len(messages) == 1:
+            delete_buttons = self.wait.until(
                 EC.presence_of_element_located(
-                    (By.XPATH, "//*[@aria-label = 'Clear all watch history']")) 
+                    (By.XPATH, "//*[@aria-label = 'Clear all watch history']"))
             ).click()
             # delete_buttons = self.driver.find_element_by_xpath("//*[@aria-label = 'Gesamten Wiedergabeverlauf löschen']").click()
 
@@ -286,7 +303,7 @@ class Crawler:
         time.sleep(1)
         # we store any advertisements that appear
         advertisements = {videoId: []}
-        filename = 'output/advertisements/' + self.email + '_' + videoId + '_' + \
+        filename = 'output/advertisements/' + self.user.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
         # self.__log_info(f"{videoId}_opened")
         # we check whether a skip button is present
@@ -315,32 +332,33 @@ class Crawler:
         start_time = time.time()
 
         # upload the list of advertisers
-        self.__save_file(seshPath / filename, str(advertisements))
+        self.store.save(seshPath / filename, advertisements)
 
         # detect the length of th actual video
         time_element = WebDriverWait(self.driver, 3).until(
-                EC.presence_of_element_located((By.CLASS_NAME, 'ytp-time-duration')))
-        ActionChains(self.driver).move_to_element(time_element).perform() # we need to hover over the bar or else the time is not visible
+            EC.presence_of_element_located((By.CLASS_NAME, 'ytp-time-duration')))
+        # we need to hover over the bar or else the time is not visible
+        ActionChains(self.driver).move_to_element(time_element).perform()
         duration = time_element.text
         duration = self._get_seconds(duration)
         # to make sure that every video is watched long enough
         # watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
-        watch_time = duration if duration < 300 else 300 
+        watch_time = duration if duration < 300 else 300
         print(watch_time)
         # let the asynchronous manager know that now other videos can be started
         await asyncio.sleep(watch_time)
-        #todo replace with seq logging
-        watch_time_log_file = 'output/watch_times/' + self.email + '_' + videoId + '_' + \
+        # todo replace with seq logging
+        watch_time_log_file = 'output/watch_times/' + self.user.email + '_' + videoId + '_' + \
             str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
         watch_time = {
-            'account': self.email,
+            'account': self.user.email,
             'trial': self.trial_nr,
             'video_id': videoId,
             'video_length': duration,
             'goal_watch_time': watch_time,
             'watch_time': time.time()-start_time
         }
-        self.__save_file(seshPath / watch_time_log_file, str(watch_time))
+        self.store.save(seshPath / watch_time_log_file, watch_time)
         self.driver.switch_to.window(current_tab)
         # self.__log_info(f'{videoId}_watched')
         self.driver.close()
@@ -354,7 +372,7 @@ class Crawler:
 
         Arguments:
             videos {list[str]} -- a list with all the video id's that are supposed to be watched
-        """            
+        """
         tasks = []
         main_window = self.driver.window_handles[-1]
         for video in videos:
@@ -367,7 +385,7 @@ class Crawler:
 
     def scan_feed(self):
         seshPath = self.path_session()
-        
+
         # especially during the corona crisis, YouTube is offering a lot of extra information
         # they add noise to our data aquisition, because they influence how many videos are shown
         # on the home page, so we have to get rid of them
@@ -401,7 +419,7 @@ class Crawler:
             # these kinds of banners are partly corona specific (like #fitnessathome) or not (#trendingmovies)
             themed_content = None
             try:
-                themed_content = WebDriverWait(self.driver,2).until(  # Kein Interesse
+                themed_content = WebDriverWait(self.driver, 2).until(  # Kein Interesse
                     EC.presence_of_all_elements_located((By.XPATH, '//*[@aria-label="Not interested"]')))
             except TimeoutException:
                 # print("No themed content")
@@ -418,46 +436,40 @@ class Crawler:
         )
 
         feed_info = dict(
-            account = self.email,
-            trial = self.trial_nr,
-            feed_videos = []
+            account=self.user.email,
+            trial=self.trial_nr,
+            feed_videos=[]
         )
         for video in all_videos:
             # take the link and remove everything except for the id of the video that the link leads to
             vid_dict = dict(
-                vid_id = video.get_attribute('href').replace('https://www.youtube.com/watch?v=', ''),
-                title = video.get_attribute('title'),
-                full_info = video.get_attribute('aria-label')
+                vid_id=video.get_attribute('href').replace('https://www.youtube.com/watch?v=', ''),
+                title=video.get_attribute('title'),
+                full_info=video.get_attribute('aria-label')
             )
             feed_info['feed_videos'].append(vid_dict)
 
-        filename = 'output/feed/' + self.email + '_' + \
-        str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
+        filename = 'output/feed/' + self.user.email + '_' + \
+            str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
         # upload the information as a blob
-        self.__save_file(seshPath / filename, str(feed_info))
-        
+        self.store.save(seshPath / filename, feed_info)
 
     def __save_cookies(self):
         """saves all cookies
         """
         cookies = {'cookies': self.driver.get_cookies()}
-        self.__save_file(self.path_user() / 'cookies.json',
-                         json.dumps(cookies))
+        self.store.save(self.path_user() / 'cookies.json', cookies)
 
     def __load_cookies(self):
         """loads cookies for the current domain
         """
         cookiePath = self.path_user() / 'cookies.json'
 
-        try:
-            blob = self.container.download_blob(cookiePath.as_posix())
-        except BaseException as e:
-            blob = None
-
-        if(blob == None):
+        cookies = self.store.load_dic(cookiePath)
+        if(cookies == None):
             return
         currentUrl = urlparse(self.driver.current_url)
-        for c in json.loads(blob.content_as_text())['cookies']:
+        for c in cookies['cookies']:
             if currentUrl.netloc.endswith(c['domain']):
                 # not sure why, but this stops it being loaded.
                 c.pop('expiry', None)
@@ -466,48 +478,47 @@ class Crawler:
                 except BaseException as e:
                     print(f'could not load cookies from: {cookiePath}: {e}')
 
+    def __save_image(self, name: str):
+        seshPath = self.path_session()
+        # save image
+        imagePath = seshPath / f'{name}.png'
+        localImagePath = Path(tempfile.gettempdir()) / imagePath
+        self.driver.get_screenshot_as_file(str(localImagePath))
+        return localImagePath
+
     # easy method to save screenshots for headless mode
-    def __log_info(self, name: str):
+    async def __log_info(self, name: str, error: str = None):
         wd = self.driver
 
         seshPath = self.path_session()
 
         # save page source
-        self.__save_file(seshPath / f'{name}.html', wd.page_source)
+        self.store.save(seshPath / f'{name}.html', wd.page_source)
 
         # save metadata
         state = {
+            'name': name,
+            'error': error,
             'url': wd.current_url,
             'title': wd.title
         }
-        self.__save_file(seshPath / f'{name}.json', json.dumps(state))
+        self.store.save(seshPath / f'{name}.json', state)
 
         # save image
-        imagePath = seshPath / f'{name}.png'
-        localImagePath = Path(tempfile.gettempdir()) / imagePath
-        wd.get_screenshot_as_file(str(localImagePath))
-        self.__upload_file(localImagePath, imagePath)
+        localImagePath = self.__save_image(name)
+        self.store.save_file(localImagePath, seshPath / f'{name}.png')
 
-        print(f'scraped: {name} - {seshPath}')
+        print(f'driver {wd.current_url} - {name} - {seshPath}')
+        if(error != None):
+            await self.bot.msg(f'{self.user.email} expereinced error ({error}) at {wd.current_url} when ({name})', localImagePath)
 
-    def __save_file(self, relativePath: PurePath, content: str):
+        os.remove(localImagePath)
 
-        localPath = Path(tempfile.gettempdir()) / relativePath
-        localPath.parent.mkdir(parents=True, exist_ok=True)
-        with open(localPath, "w", encoding="utf-8") as w:
-            w.write(content)
-        self.__upload_file(localPath, relativePath)
-
-    def __upload_file(self, localFile: PurePath, remotePath: PurePath):
-        with open(localFile, 'rb') as f:
-            self.container.upload_blob(
-                remotePath.as_posix(), f, overwrite=True)
-
-    def path_user(self)-> PurePath: 
-        return PurePosixPath(f'session_logs/{self.email}')
+    def path_user(self) -> PurePath:
+        return PurePosixPath(f'session_logs/{self.user.email}')
 
     def path_session(self) -> PurePath:
-        return PurePosixPath(f'session_logs/{self.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.trial_{self.trial_nr}')
+        return PurePosixPath(f'session_logs/{self.user.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.trial_{self.trial_nr}')
 
     def update_trial(self):
         self.trial_nr += 1
