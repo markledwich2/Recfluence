@@ -6,6 +6,7 @@ from data import load_seed_videos, load_test_videos
 import asyncio
 import argparse
 from typing import List
+
 from store import BlobStore
 from azure.storage.blob import PublicAccess
 from discord_bot import DiscordBot
@@ -65,7 +66,6 @@ async def experiment(initialization: bool, accounts: List[str]):
                     crawler.delete_last_video_from_history(video.video_id)
                 crawler.delete_history()
                 crawler.update_trial()
-                crawler.shutdown()
 
                 log.info("{email} - complete in {duration}s", email=user.email, duration=time.time() - start)
 
@@ -75,6 +75,7 @@ async def experiment(initialization: bool, accounts: List[str]):
                 crawler.shutdown()
     finally:
         await bot.close()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Start one iteration of the experiment. If you run this for the first time \

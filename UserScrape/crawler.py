@@ -140,10 +140,10 @@ class Crawler:
             telSelector = 'input[type="tel"]'
             smsSelector = '*[data-sendmethod="SMS"]'
             captchaSelector = 'input[aria-label="Type the text you hear or see"]'
-            homeSelector = '#grid-title'
+            homeSelector = '#primary'
 
             authEl: WebElement = wfv(f'{telSelector}, {smsSelector}, {captchaSelector}, {homeSelector}')
-            if authEl.get_attribute('id') == 'grid-title':
+            if authEl.get_attribute('id') == 'primary':
                 await onHome()
                 return CrawlResult()
             if authEl.get_attribute('type') == 'tel':
@@ -175,15 +175,15 @@ class Crawler:
 
         return CrawlResult()
 
-    def get_video_features(self, videoId, rec_result: RecResult, personalized_count: int):
+    def get_video_features(self, video_id, rec_result: RecResult, personalized_count: int):
         seshPath = self.path_session()
-        filename = 'output/recommendations/' + self.user.email + '_' + videoId + '_' + \
-            str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
+        filename = 'output/recommendations/' + self.user.email + '_' + video_id + '_' + \
+            str(self.init_time).replace(':', '-').replace(' ', '_') + f'_trial_{self.trial_nr}' + '.json'
 
         video_info = {
             'account': self.user.email,
             'trial': self.trial_nr,
-            'id': videoId,
+            'video_id': video_id,
             'title': self.wait.until(EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "#container > h1 > yt-formatted-string"))).text,
             'channel': self.wait.until(EC.presence_of_element_located(
@@ -316,46 +316,54 @@ class Crawler:
             duration_time = datetime.strptime(duration, "%M:%S")
         return (duration_time-datetime(1900, 1, 1)).total_seconds()
 
-    async def watch_video(self, videoId: str, main_tab: str, current_tab: str):
+    async def watch_video(self, video_id: str, main_tab: str, current_tab: str):
         """[summary]
         starts video, skips any ads in the beginning and then watches video for an amount of time that is dependent on video length
         Currently we are ignoring ads that appear in the middle of the video. At the moment we are assuming that watching an ad also contributes
         to the watchtime of the video itself
 
         Arguments:
-            videoId {str} -- id of video
+            video_id {str} -- id of video
             main_tab {str} -- the selenium window handle of the main tab to switch back to after current tab is closed
             current_tab {str} -- the tab in which the video shall be watched
         """
         seshPath = self.path_session()
 
         self.driver.switch_to.window(current_tab)
-        self.driver.get("https://www.youtube.com/watch?v=" + videoId)
+        self.driver.get("https://www.youtube.com/watch?v=" + video_id)
         # wait until video is loaded
         playbutton = self.wait.until(
             EC.presence_of_element_located((By.XPATH,
                                             '//*[@class="ytp-play-button ytp-button"]'))
         )
 
-        self.log.info('{email} - started watching video {video}', email=self.user.email, video=videoId)
+        self.log.info('{email} - started watching video {video}', email=self.user.email, video=video_id)
 
         # todo: in the end this will be only english
         if playbutton.get_attribute('title') in ["Play (k)", "Wiedergabe (k)"]:
             playbutton.click()
         # unfortunately the ad loads slower than the player so we wait here to be sure we detect the ad if any appears
         time.sleep(1)
-        # we store any advertisements that appear
-        advertisements = {videoId: []}
-        filename = 'output/advertisements/' + self.user.email + '_' + videoId + '_' + \
-            str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
 
+        # we store any advertisements that appear
+        advertisements = dict(
+            account=self.user.email,
+            trial=self.trial_nr,
+            video_id=video_id,
+            advertisers=[]
+
+        )
+        filename = 'output/advertisements/' + self.user.email + '_' + video_id + '_' + \
+            str(self.init_time).replace(':', '-').replace(' ', '_') + f'_trial_{self.trial_nr}' + '.json'
+       
         async def handle_ad() -> bool:
             adXp = "//*[@class='ytp-ad-preview-container countdown-next-to-thumbnail']"
             if len(self.driver.find_elements_by_xpath(adXp)) == 0:
                 return False
             ad = self.driver.find_element_by_xpath(adXp).text
-            self.log.info('{email} - saw ad ({ad}) when watching {video}', email=self.user.email, video=videoId, ad=ad)
-            advertisements[videoId].append(ad)
+            self.log.info('{email} - saw ad ({ad}) when watching {video}', email=self.user.email, video=video_id, ad=ad)
+            advertisements['advertisers'].append(ad)
+            time.sleep(5)
             try:
                 self.wait_for_visible('*.ytp-ad-skip-button.ytp-button').click()
             except TimeoutException:
@@ -363,6 +371,8 @@ class Crawler:
 
         while await handle_ad():
             await asyncio.sleep(1)
+        # wait again, for second ad that might appear
+
 
         # measure for how long we are watching the actual video
         start_time = time.time()
@@ -383,13 +393,14 @@ class Crawler:
 
         # let the asynchronous manager know that now other videos can be started
         await asyncio.sleep(watch_time)
-        # todo replace with seq logging
-        watch_time_log_file = 'output/watch_times/' + self.user.email + '_' + videoId + '_' + \
-            str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
+        #todo replace with seq logging
+        watch_time_log_file = 'output/watch_times/' + self.user.email + '_' + video_id + '_' + \
+            str(self.init_time).replace(':', '-').replace(' ', '_') + f'_trial_{self.trial_nr}' + '.json'
+
         watch_time = {
             'account': self.user.email,
             'trial': self.trial_nr,
-            'video_id': videoId,
+            'video_id': video_id,
             'video_length': duration,
             'goal_watch_time': watch_time,
             'watch_time': time.time()-start_time
@@ -397,10 +408,10 @@ class Crawler:
         self.store.save(seshPath / watch_time_log_file, watch_time)
 
         self.log.info('{email} - finished watching {watch_time}s of video {video}',
-                      email=self.user.email, video=videoId, watch_time=watch_time['watch_time'])
+                      email=self.user.email, video=video_id, watch_time=watch_time['watch_time'])
 
         self.driver.switch_to.window(current_tab)
-        # self.__log_info(f'{videoId}_watched')
+        # self.__log_info(f'{video_id}_watched')
         self.driver.close()
         self.driver.switch_to.window(main_tab)
 
@@ -483,14 +494,14 @@ class Crawler:
         for video in all_videos:
             # take the link and remove everything except for the id of the video that the link leads to
             vid_dict = dict(
-                vid_id=video.get_attribute('href').replace('https://www.youtube.com/watch?v=', ''),
-                title=video.get_attribute('title'),
-                full_info=video.get_attribute('aria-label')
+                video_id = video.get_attribute('href').replace('https://www.youtube.com/watch?v=', ''),
+                title = video.get_attribute('title'),
+                full_info = video.get_attribute('aria-label')
             )
             feed_info['feed_videos'].append(vid_dict)
 
         filename = 'output/feed/' + self.user.email + '_' + \
-            str(self.init_time).replace(':', '-').replace(' ', '_') + '.json'
+        str(self.init_time).replace(':', '-').replace(' ', '_') + f'_trial_{self.trial_nr}' + '.json'
         # upload the information as a blob
         self.store.save(seshPath / filename, feed_info)
         self.log.info('{email} - scanned feed', email=self.user.email)
