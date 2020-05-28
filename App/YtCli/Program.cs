@@ -143,12 +143,12 @@ namespace YtCli {
 
   [Verb("results")]
   public class ResultsCmd : ICommonCmd {
-    [Option('q', HelpText = "list of query names to run. All if empty")]
-    public IEnumerable<string> QueryNames { get; set; }
+    [Option('q', HelpText = "| delimited list of query names to run. All if empty")]
+    public string QueryNames { get; set; }
 
     public static async Task Results(CmdCtx<ResultsCmd> ctx) {
       var result = ctx.Scope.Resolve<YtResults>();
-      await result.SaveBlobResults(ctx.Log, ctx.Option.QueryNames.NotNull().ToList());
+      await result.SaveBlobResults(ctx.Log, ctx.Option.QueryNames?.Split("|").ToArray());
     }
   }
 
@@ -239,10 +239,14 @@ namespace YtCli {
 
     [Option('f', HelpText = "will force a refresh of collect, and full load of staging files + warehouse. Does not impact search")]
     public bool FullLoad { get; set; }
+    
+    
+    [Option('t', HelpText = "| delimited list of tables to restrict updates to")]
+    public string Tables { get; set; }
 
     public static async Task Update(CmdCtx<UpdateCmd> ctx) {
       var updater = ctx.Scope.Resolve<YtUpdater>();
-      await updater.Update(ctx.Option.Actions?.Split("|"), ctx.Option.FullLoad);
+      await updater.Update(ctx.Option.Actions?.Split("|"), ctx.Option.FullLoad, ctx.Option.Tables?.Split("|"));
     }
   }
 

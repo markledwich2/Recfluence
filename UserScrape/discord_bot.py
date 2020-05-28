@@ -17,7 +17,7 @@ class DiscordBot():
 
         @self.bot.event
         async def on_ready():
-            print(f'{self.bot.user.name} has connected')
+            print(f'Decord bot ({self.bot.user.name}) has connected')
 
         @self.bot.command(name='code', help='Parses the validation code and passes it to the scraper')
         async def code(ctx: commands.Context, email: str = None, code: str = None):

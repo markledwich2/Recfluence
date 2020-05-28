@@ -43,14 +43,26 @@ class DiscordCfg(JsonSchemaMixin):
 
 @dataclass_json
 @dataclass
+class StoreCfg(JsonSchemaMixin):
+
+    cs: str = field(metadata=JsonSchemaMeta(
+        default="DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;",
+        description="connection string to the azure blob storage account storing the input, and output from scraping.",
+        examples=["DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"],
+        required=False
+    ))
+
+    container: str = field(default='userscrape', metadata=JsonSchemaMeta(
+        description="the name of the container to store data", required=False))
+
+    root_path: str = field(default='', metadata=JsonSchemaMeta(
+        description="the root folder path to store data (e.g. folder1/folder2", required=False))
+
+
+@dataclass_json
+@dataclass
 class Cfg(JsonSchemaMixin):
     '''UserScrape configuration'''
-
-    data_storage_cs: str = field(metadata=JsonSchemaMeta(
-        {
-            'description': "connection string to the azure blob storage account storing the input, and output from scraping.",
-            'examples': ["DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"]
-        }))
 
     users: List[UserCfg] = field(metadata={
                                  "description": "the YouTube viewing users in the experiment. Contains credentials and other information"})
@@ -65,6 +77,11 @@ class Cfg(JsonSchemaMixin):
         "description": "url of your seq instance",
         "examples": ["http://log.recfluence.net/", "http://localhost:5341/"]}))
 
+    store: StoreCfg = field(metadata=JsonSchemaMeta(description="storage configuration"))
+
+    feed_scans: int = field(default=20, metadata=JsonSchemaMeta(
+        description="number of times to collect the list of videos in the feed", required=False))
+
 
 def load_cfg() -> Cfg:
     '''loads application configuration from userscrape.json
@@ -72,8 +89,3 @@ def load_cfg() -> Cfg:
     with open('userscrape.json', "r") as r:
         cfg = Cfg.from_json(r.read())
     return cfg
-
-
-with open('./userscrape.schema.json', "w") as w:
-    schemaTxt = json.dumps(Cfg.json_schema(), indent='  ')
-    w.write(schemaTxt)

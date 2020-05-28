@@ -17,34 +17,39 @@ from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 from pathlib import Path
 import json
 from urllib.parse import urlparse
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from dataclasses_json import dataclass_json
 from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath
 import tempfile
 import asyncio
 from typing import Any, List, Dict
-from store import BlobStore
+from store import BlobStore, UserScrapePaths, file_date_str
 from discord_bot import DiscordBot
 from cfg import UserCfg
 import logging
 from logging import Logger
+from format import format_seconds
 
 
+@dataclass_json
 @dataclass
 class CrawlResult:
     success: bool = True
     res: str = None
 
 
+@dataclass_json
 @dataclass
 class VideoUnavailable:
     reason: str
     sub_reason: str
 
 
+@dataclass_json
 @dataclass
 class RecResult:
     recs: List[Dict[str, Any]]
-    video_error: VideoUnavailable = None
+    unavailable: VideoUnavailable = None
 
 
 def create_driver(headless: bool) -> WebDriver:
@@ -65,7 +70,7 @@ def create_driver(headless: bool) -> WebDriver:
 
 
 class Crawler:
-    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, log: Logger, lang='en'):
+    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, trial_id: str, log: Logger, lang='en'):
         self.store = store
         self.bot = bot
         self.driver = create_driver(headless)
@@ -74,7 +79,9 @@ class Crawler:
         self.init_time = datetime.now()
         self.log = log
         self.lang = lang
-        self.trial_nr = 1
+        self.trial_id = trial_id
+        self.session_id = file_date_str()
+        self.path = UserScrapePaths(store.cfg, trial_id, user, self.session_id)
 
     async def test_ip(self):
         wd = self.driver
@@ -176,32 +183,40 @@ class Crawler:
         return CrawlResult()
 
     def get_video_features(self, video_id, rec_result: RecResult, personalized_count: int):
-        seshPath = self.path_session()
-        filename = 'output/recommendations/' + self.user.email + '_' + video_id + '_' + \
-            str(self.init_time).replace(':', '-').replace(' ', '_') + f'_trial_{self.trial_nr}' + '.json'
-
+        available = rec_result.unavailable == None
         video_info = {
             'account': self.user.email,
-            'trial': self.trial_nr,
+            'trial': self.trial_id,
             'video_id': video_id,
             'title': self.wait.until(EC.presence_of_element_located(
-                (By.CSS_SELECTOR, "#container > h1 > yt-formatted-string"))).text,
+                (By.CSS_SELECTOR, "#container > h1 > yt-formatted-string"))).text if available else None,
             'channel': self.wait.until(EC.presence_of_element_located(
                 (By.CSS_SELECTOR,
                  "ytd-channel-name.ytd-video-owner-renderer > div:nth-child(1) > "
-                 "div:nth-child(1)"))).text,
+                 "div:nth-child(1)"))).text if available else None,
             'channel_id': self.wait.until(EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "#text > a"))).get_attribute('href').strip(
-                'https://www.youtube.com/channel/'),
-            'recommendations': rec_result.recs,
+                'https://www.youtube.com/channel/') if available else None,  # read this from our own data if we have it. unavailable video's don't show the channel
+            'recommendations': rec_result.recs if available else None,
             'personalization_count': personalized_count,
-            'unavailable': rec_result.video_error
+            'unavailable': asdict(rec_result.unavailable) if rec_result.unavailable else None,
+            'updated': datetime.utcnow().isoformat()
         }
+        self.store.save(self.path.rec_json(video_id), video_info)
 
-        # upload the information as a blob
-        self.store.save(seshPath / filename, video_info)
+    async def get_recommendations_for_video(self, video_id) -> bool:
+        """collects recommendations for a video.
 
-    def get_recommendations_for_video(self, video_id) -> RecResult:
+        Returns:
+            bool -- true if the video was watched, false if it was skipped
+        """
+
+        rec_path = self.path.rec_json(video_id)
+        rec_result = self.store.load_dic(rec_path)
+        if(rec_result):
+            self.log.info('{email} -skipping recommendation {video}', email=self.user.email, video=video_id)
+            return False
+
         self.driver.get("https://www.youtube.com/watch?v=" + video_id)
 
         # this is the list of elements from the recommendation sidebar
@@ -227,13 +242,13 @@ class Crawler:
 
             if(reason):
                 unavalable = VideoUnavailable(reason[0].text, subReason[0].text if subReason else None)
-
-            self.__log_driver_status('recommendations', findRecsEx.msg)
-            raise findRecsEx
+            else:
+                await self.__log_driver_status('recommendations', findRecsEx.msg)
+                raise findRecsEx
 
         recs = []
+        personalized_counter = 0  # how many of the recommendations are personalized?
         if unavalable == None:
-            personalized_counter = 0  # how many of the recommendations are personalized?
             for i in all_recs:
                 personalized = 'Recommended for you' in i.text
                 if personalized:
@@ -241,10 +256,11 @@ class Crawler:
                 # take the link and remove everything except for the id of the video that the link leads to
                 recommendation_id = i.get_attribute('href').replace(
                     'https://www.youtube.com/watch?v=', '')
-                title = i.find_element_by_xpath('//*[@id="video-title"]').get_attribute('title')
-                full_info = i.find_element_by_xpath('//*[@id="video-title"]').get_attribute('aria-label')
+
+                rec_el = i.find_element_by_css_selector('#video-title')
+                title = rec_el.get_attribute('title')
+                full_info = rec_el.get_attribute('aria-label')
                 recs.append({
-                    'video_id': video_id,
                     'id': recommendation_id,
                     'personalized': personalized,
                     'title': title,
@@ -257,31 +273,42 @@ class Crawler:
 
         self.log.info('{email} - recommendations collected for {video}', email=self.user.email, video=video_id)
         # return the recommendations
-        return rec_result
+        return True
 
-    def delete_last_video_from_history(self, video_id: str):
+    async def delete_last_video_from_history(self, video_id: str):
         self.driver.get('https://www.youtube.com/feed/history')
-        # self.__log_info(f'before_deleting_last_video_{video_id}')
-        first_video = self.wait.until(
-            EC.presence_of_element_located((By.XPATH,
-                                            '//*[@id="video-title"]'))
-        )
-        # the link might contain a time stamp so we we need to use split to only get the video id
-        first_video_id = first_video.get_attribute('href').replace('https://www.youtube.com/watch?v=', '').split('&')[0]
-        delete_buttons = self.wait.until(
-            EC.presence_of_all_elements_located(
-                (By.XPATH, "//*[@aria-label = 'Remove from Watch history']"))
-        )
-        # delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Aus \"Wiedergabeverlauf\" entfernen']")
 
-        # reasons why there are no videos in the history:
-        # 1. the history is empty
-        # 2. we are actually not logged in
-        # 3. The ui is in the wrong language
-        # checking if the most recent video is actually the video we want to delete
-        if len(delete_buttons) > 0 and first_video_id == video_id:
-            delete_buttons[0].click()
-        # self.__log_info(f'after_deleting_last_video_{video_id}')
+        first_video = None
+        try:
+            # self.__log_info(f'before_deleting_last_video_{video_id}')
+            first_video = self.wait.until(
+                EC.presence_of_element_located((By.XPATH,
+                                                '//*[@id="video-title"]'))
+            )
+        except WebDriverException as e:
+            self.log.warning('unable to find any video in history to delete')
+            return
+
+        try:
+            # the link might contain a time stamp so we we need to use split to only get the video id
+            first_video_id = first_video.get_attribute('href').replace(
+                'https://www.youtube.com/watch?v=', '').split('&')[0]
+            delete_buttons = self.wait.until(
+                EC.presence_of_all_elements_located(
+                    (By.XPATH, "//*[@aria-label = 'Remove from Watch history']"))
+            )
+            # delete_buttons = self.driver.find_elements_by_xpath("//*[@aria-label = 'Aus \"Wiedergabeverlauf\" entfernen']")
+
+            # reasons why there are no videos in the history:
+            # 1. the history is empty
+            # 2. we are actually not logged in
+            # 3. The ui is in the wrong language
+            # checking if the most recent video is actually the video we want to delete
+            if len(delete_buttons) > 0 and first_video_id == video_id:
+                delete_buttons[0].click()
+            # self.__log_info(f'after_deleting_last_video_{video_id}')
+        except WebDriverException as e:
+            await self.__log_driver_status('deleting last video', e.msg)
 
     def delete_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
@@ -327,7 +354,6 @@ class Crawler:
             main_tab {str} -- the selenium window handle of the main tab to switch back to after current tab is closed
             current_tab {str} -- the tab in which the video shall be watched
         """
-        seshPath = self.path_session()
 
         self.driver.switch_to.window(current_tab)
         self.driver.get("https://www.youtube.com/watch?v=" + video_id)
@@ -342,43 +368,42 @@ class Crawler:
         # todo: in the end this will be only english
         if playbutton.get_attribute('title') in ["Play (k)", "Wiedergabe (k)"]:
             playbutton.click()
-        # unfortunately the ad loads slower than the player so we wait here to be sure we detect the ad if any appears
-        time.sleep(1)
 
         # we store any advertisements that appear
         advertisements = dict(
             account=self.user.email,
-            trial=self.trial_nr,
+            trial=self.trial_id,
             video_id=video_id,
             advertisers=[]
-
         )
-        filename = 'output/advertisements/' + self.user.email + '_' + video_id + '_' + \
-            str(self.init_time).replace(':', '-').replace(' ', '_') + f'_trial_{self.trial_nr}' + '.json'
-       
-        async def handle_ad() -> bool:
-            adXp = "//*[@class='ytp-ad-preview-container countdown-next-to-thumbnail']"
-            if len(self.driver.find_elements_by_xpath(adXp)) == 0:
+
+        def handle_ad() -> bool:
+            """returns true when an add was found, false otherwise"""
+            # unfortunately the ad loads slower than the player so we wait here to be sure we detect the ad if any appears
+            time.sleep(2)  # blocking sleep (instead of await asyncio.sleep()) because we rely on the driver being on this tab
+            ads = self.driver.find_elements_by_css_selector('button[id^=visit-advertiser] > span.ytp-ad-button-text')
+            if len(ads) == 0:
                 return False
-            ad = self.driver.find_element_by_xpath(adXp).text
-            self.log.info('{email} - saw ad ({ad}) when watching {video}', email=self.user.email, video=video_id, ad=ad)
-            advertisements['advertisers'].append(ad)
+            ad_text = ads[0].text
+            self.log.info('{email} - saw ad ({ad}) when watching {video}',
+                          email=self.user.email, video=video_id, ad=ad_text)
+            advertisements['advertisers'].append(ad_text)
             time.sleep(5)
             try:
                 self.wait_for_visible('*.ytp-ad-skip-button.ytp-button').click()
+                return True
             except TimeoutException:
                 return False
 
-        while await handle_ad():
-            await asyncio.sleep(1)
+        while handle_ad():
+            time.sleep(1)
         # wait again, for second ad that might appear
-
 
         # measure for how long we are watching the actual video
         start_time = time.time()
 
         # upload the list of advertisers
-        self.store.save(seshPath / filename, advertisements)
+        self.store.save(self.path.ad_json(video_id), advertisements)
 
         # detect the length of th actual video
         time_element = WebDriverWait(self.driver, 3).until(
@@ -393,25 +418,22 @@ class Crawler:
 
         # let the asynchronous manager know that now other videos can be started
         await asyncio.sleep(watch_time)
-        #todo replace with seq logging
-        watch_time_log_file = 'output/watch_times/' + self.user.email + '_' + video_id + '_' + \
-            str(self.init_time).replace(':', '-').replace(' ', '_') + f'_trial_{self.trial_nr}' + '.json'
 
         watch_time = {
             'account': self.user.email,
-            'trial': self.trial_nr,
+            'trial': self.trial_id,
             'video_id': video_id,
             'video_length': duration,
             'goal_watch_time': watch_time,
-            'watch_time': time.time()-start_time
+            'watch_time': time.time()-start_time,
+            'updated': datetime.utcnow().isoformat()
         }
-        self.store.save(seshPath / watch_time_log_file, watch_time)
+        self.store.save(self.path.watch_time_json(video_id), watch_time)
 
-        self.log.info('{email} - finished watching {watch_time}s of video {video}',
-                      email=self.user.email, video=video_id, watch_time=watch_time['watch_time'])
+        self.log.info('{email} - finished watching {watch_time} of video {video}',
+                      email=self.user.email, video=video_id, watch_time=format_seconds(watch_time['watch_time']))
 
         self.driver.switch_to.window(current_tab)
-        # self.__log_info(f'{video_id}_watched')
         self.driver.close()
         self.driver.switch_to.window(main_tab)
 
@@ -426,22 +448,27 @@ class Crawler:
         """
         tasks = []
         main_window = self.driver.window_handles[-1]
-        for video in videos:
+        for video_id in videos:
+            if self.store.exists(self.path.watch_time_json(video_id)):
+                self.log.info('{email} - skipping watching video {video}', email=self.user.email, video=video_id)
+                continue
+
             self.driver.execute_script("window.open('');")
             new_tab = self.driver.window_handles[-1]
-            tasks.append(
-                self.watch_video(video, main_window, new_tab)
-            )
+            tasks.append(self.watch_video(video_id, main_window, new_tab))
         await asyncio.gather(*tasks)
 
-    def scan_feed(self):
-        seshPath = self.path_session()
-
+    def scan_feed(self, scan_num: int):
         # especially during the corona crisis, YouTube is offering a lot of extra information
         # they add noise to our data aquisition, because they influence how many videos are shown
         # on the home page, so we have to get rid of them
         # if we close these extra sections, YouTube remembers and doesnt show them again
         # ideally, this loop is only run once per account
+        feed_path = self.path.feed_json(scan_num)
+        if(self.store.exists(feed_path)):
+            self.log.info('{email} - skipping feed {scan_num}', email=self.user.email, scan_num=scan_num)
+            return
+
         feed_is_bannerfree = False
         while not feed_is_bannerfree:
             # refresh the feed everytime we had to close something until we finally get a completely clean feed
@@ -488,35 +515,32 @@ class Crawler:
 
         feed_info = dict(
             account=self.user.email,
-            trial=self.trial_nr,
-            feed_videos=[]
+            trial=self.trial_id,
+            feed_videos=[],
+            update=datetime.utcnow().isoformat()
         )
         for video in all_videos:
             # take the link and remove everything except for the id of the video that the link leads to
             vid_dict = dict(
-                video_id = video.get_attribute('href').replace('https://www.youtube.com/watch?v=', ''),
-                title = video.get_attribute('title'),
-                full_info = video.get_attribute('aria-label')
+                video_id=video.get_attribute('href').replace('https://www.youtube.com/watch?v=', ''),
+                title=video.get_attribute('title'),
+                full_info=video.get_attribute('aria-label')
             )
             feed_info['feed_videos'].append(vid_dict)
 
-        filename = 'output/feed/' + self.user.email + '_' + \
-        str(self.init_time).replace(':', '-').replace(' ', '_') + f'_trial_{self.trial_nr}' + '.json'
-        # upload the information as a blob
-        self.store.save(seshPath / filename, feed_info)
-        self.log.info('{email} - scanned feed', email=self.user.email)
+        self.store.save(feed_path, feed_info)
+        self.log.info('{email} - scanned feed {scan_num}', email=self.user.email, scan_num=scan_num)
 
     def __save_cookies(self):
         """saves all cookies
         """
         cookies = {'cookies': self.driver.get_cookies()}
-        self.store.save(self.path_user() / 'cookies.json', cookies)
+        self.store.save(self.path.cookies_json(), cookies)
 
     def __load_cookies(self):
         """loads cookies for the current domain
         """
-        cookiePath = self.path_user() / 'cookies.json'
-
+        cookiePath = self.path.cookies_json()
         cookies = self.store.load_dic(cookiePath)
         if(cookies == None):
             return
@@ -531,9 +555,7 @@ class Crawler:
                     print(f'could not load cookies from: {cookiePath}: {e}')
 
     def __save_image(self, name: str):
-        seshPath = self.path_session()
-        # save image
-        imagePath = seshPath / f'{name}.png'
+        imagePath = self.path.session_path() / f'{name}.png'
         localImagePath = Path(tempfile.gettempdir()) / imagePath
         self.driver.get_screenshot_as_file(str(localImagePath))
         return localImagePath
@@ -542,7 +564,7 @@ class Crawler:
     async def __log_driver_status(self, name: str, error: str = None):
         wd = self.driver
 
-        seshPath = self.path_session()
+        seshPath = self.path.session_path()
 
         # save page source
         self.store.save(seshPath / f'{name}.html', wd.page_source)
@@ -552,7 +574,8 @@ class Crawler:
             'name': name,
             'error': error,
             'url': wd.current_url,
-            'title': wd.title
+            'title': wd.title,
+            'updated': datetime.utcnow().isoformat()
         }
         self.store.save(seshPath / f'{name}.json', state)
 
@@ -560,22 +583,12 @@ class Crawler:
         localImagePath = self.__save_image(name)
         self.store.save_file(localImagePath, seshPath / f'{name}.png')
 
-        print(f'driver {wd.current_url} - {name} - {seshPath}')
         if(error != None):
             self.log.error('{email} - expereinced error ({error}) at {url} when ({phase})',
-                           email=self.user.email, error=error, url=wd.current_url, phase={name})
+                           email=self.user.email, error=error, url=wd.current_url, phase=name)
             await self.bot.msg(f'{self.user.email} expereinced error ({error}) at {wd.current_url} when ({name})', localImagePath)
 
         os.remove(localImagePath)
-
-    def path_user(self) -> PurePath:
-        return PurePosixPath(f'session_logs/{self.user.email}')
-
-    def path_session(self) -> PurePath:
-        return PurePosixPath(f'session_logs/{self.user.email}/{self.init_time.strftime("%Y%m%d-%H%M%S")}.trial_{self.trial_nr}')
-
-    def update_trial(self):
-        self.trial_nr += 1
 
     def shutdown(self):
         self.driver.quit()

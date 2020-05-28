@@ -1,20 +1,13 @@
 {
   "type": "object",
   "required": [
-    "data_storage_cs",
     "users",
     "headless",
     "discord",
-    "seqUrl"
+    "seqUrl",
+    "store"
   ],
   "properties": {
-    "data_storage_cs": {
-      "type": "string",
-      "examples": [
-        "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"
-      ],
-      "description": "connection string to the azure blob storage account storing the input, and output from scraping."
-    },
     "users": {
       "type": "array",
       "items": {
@@ -37,6 +30,15 @@
         "http://localhost:5341/"
       ],
       "description": "url of your seq instance"
+    },
+    "store": {
+      "$ref": "#/definitions/StoreCfg",
+      "description": "storage configuration"
+    },
+    "feed_scans": {
+      "type": "integer",
+      "default": 20,
+      "description": "number of times to collect the list of videos in the feed"
     }
   },
   "description": "UserScrape configuration",
@@ -106,6 +108,32 @@
         }
       },
       "description": "DiscordCfg(bot_token: str, channel_id: int)"
+    },
+    "StoreCfg": {
+      "type": "object",
+      "required": [
+        "cs"
+      ],
+      "properties": {
+        "cs": {
+          "type": "string",
+          "examples": [
+            "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"
+          ],
+          "description": "connection string to the azure blob storage account storing the input, and output from scraping."
+        },
+        "container": {
+          "type": "string",
+          "default": "userscrape",
+          "description": "the name of the container to store data"
+        },
+        "root_path": {
+          "type": "string",
+          "default": "",
+          "description": "the root folder path to store data (e.g. folder1/folder2"
+        }
+      },
+      "description": "StoreCfg(cs: str, container: str = 'userscrape', root_path: str = '')"
     }
   }
 }

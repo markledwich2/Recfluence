@@ -7,7 +7,7 @@ import asyncio
 import argparse
 from typing import List
 
-from store import BlobStore
+from store import BlobStore, new_trial_id
 from azure.storage.blob import PublicAccess
 from discord_bot import DiscordBot
 import logging
@@ -16,28 +16,29 @@ import time
 import seqlog
 from cfg import UserCfg
 import shortuuid
+from results import save_complete_trial
+from format import format_seconds
 
 
-async def experiment(initialization: bool, accounts: List[str]):
+async def experiment(initialization: bool, accounts: List[str], trial_id=None):
 
-    # cfg
     cfg = load_cfg()
-
-    experiment_id = shortuuid.random(8)
-    configure_log(cfg.seqUrl, experiment_id=experiment_id)
+    trial_id = trial_id if trial_id else new_trial_id()
+    configure_log(cfg.seqUrl, trial_id=trial_id)
 
     log = logging.getLogger('seq')
     users: List[UserCfg] = [u for u in cfg.users if accounts == None or u.ideology in accounts]
 
-    log.info("Experiment started. Init={initialization}, Accounts={accounts}",
-             initialization=initialization, accounts='|'.join([user.email for user in users]))
+    log.info("Trail {trial_id} started - Init={initialization}, Accounts={accounts}",
+             trial_id=trial_id, initialization=initialization, accounts='|'.join([user.email for user in users]))
 
-    videos_to_test = load_test_videos()
+    trial_start_time = time.time()
+
+    videos_to_test = load_test_videos()[0:10]  # todo: remove this range
     videos_to_seed = load_seed_videos(50 if initialization else 5)
 
-    # env
-    store = BlobStore(cfg.data_storage_cs, 'userscrape')
-    store.ensure_exits(PublicAccess.Container)
+    store = BlobStore(cfg.store)
+    store.ensure_container_exits(PublicAccess.Container)
     bot = DiscordBot(cfg.discord)
     await bot.start_in_backround()
 
@@ -46,7 +47,7 @@ async def experiment(initialization: bool, accounts: List[str]):
             log.info('{email} - started scraping', email=user.email)
             start = time.time()
 
-            crawler = Crawler(store, bot, user, cfg.headless, log)
+            crawler = Crawler(store, bot, user, cfg.headless, trial_id, log)
             user_seed_videos = videos_to_seed[user.ideology]
             user_seed_video_ids: List[str] = [video.video_id for video in user_seed_videos]
 
@@ -57,17 +58,17 @@ async def experiment(initialization: bool, accounts: List[str]):
 
                 log.info("{email} - seeding with {videos}", email=user.email, videos='|'.join(user_seed_video_ids))
                 await crawler.watch_videos(user_seed_video_ids)
-                crawler.scan_feed()
+                for i in range(cfg.feed_scans):
+                    crawler.scan_feed(i)
 
                 log.info("{email} - collecting recommendations for {video_number} videos",
-                         email=user.email, videos=len(videos_to_test))
+                         email=user.email, video_number=len(videos_to_test))
                 for video in videos_to_test:
-                    crawler.get_recommendations_for_video(video.video_id)
-                    crawler.delete_last_video_from_history(video.video_id)
-                crawler.delete_history()
-                crawler.update_trial()
-
-                log.info("{email} - complete in {duration}s", email=user.email, duration=time.time() - start)
+                    if await crawler.get_recommendations_for_video(video.video_id):
+                        await crawler.delete_last_video_from_history(video.video_id)
+                # crawler.delete_history()
+                log.info("{email} - complete in {duration}", email=user.email,
+                         duration=format_seconds(time.time() - start))
 
             except BaseException:
                 log.error('{email} - unhandled error. aborting scraping for this user', email=user.email, exc_info=1)
@@ -76,6 +77,11 @@ async def experiment(initialization: bool, accounts: List[str]):
     finally:
         await bot.close()
 
+    save_complete_trial(trial_id, store, log)
+
+    log.info("completed trial {trial_id} in {duration}", trial_id=trial_id,
+             duration=format_seconds(time.time() - trial_start_time))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Start one iteration of the experiment. If you run this for the first time \
@@ -83,6 +89,10 @@ if __name__ == "__main__":
     parser.add_argument("--init", "-i",
                         help="Provide this argument if the experiment shall start from the beginning. Each account will start with a clear history and will watch 50 initial videos",
                         action='store_true')
+
+    parser.add_argument("--trial", "-t",
+                        help="provide a trial ID if you want to continue an existing trial that is not complete")
+
     parser.add_argument("--accounts", "-a",
                         help="A | separeted list users for which the corresponding accounts will be included in this run of the experiment. \
      Possible options are \n \
@@ -106,4 +116,4 @@ if __name__ == "__main__":
                         default=None)
     args = parser.parse_args()
 
-    asyncio.run(experiment(args.init, args.accounts.split('|') if args.accounts else None))
+    asyncio.run(experiment(args.init, args.accounts.split('|') if args.accounts else None, args.trial))
