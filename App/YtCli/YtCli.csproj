@@ -28,7 +28,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="local.appcfg.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="prod.appcfg.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

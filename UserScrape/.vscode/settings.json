@@ -2,15 +2,20 @@
     "cSpell.words": [
         "Identitarian",
         "appcfg",
+        "asdict",
         "asyncio",
         "creds",
         "dotenv",
         "getenv",
         "groupby",
         "iterrows",
+        "jsonl",
+        "jsons",
         "nargs",
+        "sesh",
         "spawnl",
-        "strftime"
+        "strftime",
+        "userscrape"
     ],
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
@@ -28,7 +33,7 @@
         "**/.hg": true,
         "**/CVS": true,
         "**/.DS_Store": true,
-        "__*__":true,
+        "__*__": true,
         "__azurite_*.json": true
     },
     "editor.formatOnSave": true

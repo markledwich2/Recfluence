@@ -13,6 +13,7 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Store;
 
 namespace YtReader {
   public class WarehouseCfg {
@@ -24,13 +25,15 @@ namespace YtReader {
   }
 
   public class YtStage {
-    readonly ISimpleFileStore            Store;
+    readonly YtStores                    Stores;
     readonly StorageCfg                  StorageCfg;
     readonly SnowflakeConnectionProvider Conn;
     readonly WarehouseCfg                Cfg;
+    readonly AzureBlobFileStore          DbStore;
 
-    public YtStage(ISimpleFileStore store, StorageCfg storageCfg, SnowflakeConnectionProvider conn, WarehouseCfg cfg) {
-      Store = store;
+    public YtStage(YtStores stores, StorageCfg storageCfg, SnowflakeConnectionProvider conn, WarehouseCfg cfg) {
+      Stores = stores;
+      DbStore = stores.Store(DataStoreType.Db);
       StorageCfg = storageCfg;
       Conn = conn;
       Cfg = cfg;
@@ -40,15 +43,15 @@ namespace YtReader {
       log = log.ForContext("db", Conn.Cfg.Db);
       log.Information("StageUpdate - started for db {Db}", Conn.Cfg.Db);
       var sw = Stopwatch.StartNew();
-      var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table) == true).ToArray();
+      var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table, StringComparer.OrdinalIgnoreCase) == true).ToArray();
       await tables.BlockAction(async t => {
         var table = t.Table;
         using var db = await Conn.OpenConnection(log);
         await db.Execute("create table", $"create table if not exists {table} (v Variant)");
 
-        if (t.Dir.HasValue()) {
+        if (t.Dir != null) {
           log.Information("StageUpdate - {Table} ({LoadType})", table, fullLoad ? "full" : "incremental");
-          var latestTs = fullLoad ? null : await db.ExecuteScalar<DateTime?>("latest timestamp", $"select max(v:{t.TsColumn}::timestamp_ntz) from {table}");
+          var latestTs = fullLoad ? null : await db.ExecuteScalar<DateTime?>("latest timestamp", $"select max(v:{t.TsCol}::timestamp_ntz) from {table}");
           if (latestTs == null)
             await FullLoad(db, table, t);
           else
@@ -59,14 +62,15 @@ namespace YtReader {
     }
 
     async Task Incremental(LoggedConnection db, string table, StageTableCfg t, DateTime latestTs) {
-      await Store.Optimise(Cfg.Optimise, t.Dir, latestTs.FileSafeTimestamp(), db.Log); // optimise files newer than the last load
+      await DbStore.Optimise(Cfg.Optimise, t.Dir, latestTs.FileSafeTimestamp(), db.Log); // optimise files newer than the last load
       var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();
       db.Log.Information("StageUpdate - {Table} incremental load of {Rows} rows ({Size}) took {Duration}",
         table, rows, size.Humanize("#.#"), dur.HumanizeShort());
     }
 
     async Task FullLoad(LoggedConnection db, string table, StageTableCfg t) {
-      await Store.Optimise(Cfg.Optimise, t.Dir, null, db.Log); // optimise all files when performing a full load
+      if (t.IsNativeStore)
+        await DbStore.Optimise(Cfg.Optimise, t.Dir, null, db.Log); // optimise all files when performing a full load
       await db.Execute("truncate table", $"truncate table {table}"); // no transaction, stage tables aren't reported on so don't need to be available
       var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();
       db.Log.Information("StageUpdate - {Table} full load of {Rows} rows ({Size}) took {Duration}",
@@ -91,31 +95,38 @@ namespace YtReader {
   }
 
   public static class YtWarehouse {
-    public static string DbName(this SnowflakeCfg cfg, SemVersion version) => version.DbName(cfg);
+    public static string DbName(this SnowflakeCfg cfg, SemVersion version) => version.Prerelease.HasValue() ? $"{cfg.Db}_{version.Prerelease}" : "yt";
 
-    public static string DbName(this SemVersion version, SnowflakeCfg cfg) =>
-      version.Prerelease.HasValue() ? $"{cfg.Db}_{version.Prerelease}" : "yt";
+    static StageTableCfg UsTable(string name) =>
+      new StageTableCfg($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, tsCol: "updated");
 
     public static readonly StageTableCfg[] AllTables = {
+      UsTable("rec"),
+      UsTable("feed"),
+      UsTable("watch"),
+      UsTable("ad"),
       new StageTableCfg("channels", "channel_stage"),
       new StageTableCfg("videos", "video_stage"),
       new StageTableCfg("recs", "rec_stage"),
       new StageTableCfg("video_extra", "video_extra_stage"),
       new StageTableCfg("searches", "search_stage"),
       new StageTableCfg("captions", "caption_stage"),
-      new StageTableCfg(null, "dbv1_video_stage"),
-      new StageTableCfg(null, "dbv1_rec_stage")
+      new StageTableCfg(dir: null, "dbv1_video_stage", isNativeStore: false),
+      new StageTableCfg(dir: null, "dbv1_rec_stage", isNativeStore: false),
     };
   }
 
   public class StageTableCfg {
-    public StageTableCfg(string dir, string table) {
+    public StageTableCfg(string dir, string table, bool isNativeStore = true, string tsCol = null) {
       Dir = dir;
       Table = table;
+      IsNativeStore = isNativeStore;
+      TsCol = tsCol ?? (isNativeStore ? "Updated" : null);
     }
 
-    public string Dir      { get; }
-    public string Table    { get; }
-    public string TsColumn { get; set; } = "Updated";
+    public StringPath Dir           { get; }
+    public string     Table         { get; }
+    public bool       IsNativeStore { get; }
+    public string     TsCol         { get; }
   }
 }

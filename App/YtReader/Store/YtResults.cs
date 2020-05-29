@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 using CsvHelper;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Fluent.IO;
@@ -21,17 +23,27 @@ using SysExtensions.Threading;
 
 namespace YtReader.Store {
   class ResQuery {
-    public ResQuery(string name, string query = null, string desc = null, object parameters = null) {
+    public ResQuery(string name, string query = null, string desc = null, object parameters = null, bool onlyLatest = false,
+      ResFilType fileType = ResFilType.Csv) {
       Name = name;
       Query = query;
       Desc = desc;
       Parameters = parameters;
+      OnlyLatest = onlyLatest;
+      FileType = fileType;
     }
 
-    public string Name       { get; }
-    public string Query      { get; }
-    public string Desc       { get; }
-    public object Parameters { get; }
+    public string     Name       { get; }
+    public string     Query      { get; }
+    public string     Desc       { get; }
+    public object     Parameters { get; }
+    public bool       OnlyLatest { get; }
+    public ResFilType FileType   { get; }
+  }
+
+  enum ResFilType {
+    Csv,
+    Json
   }
 
   class FileQuery : ResQuery {
@@ -56,6 +68,7 @@ namespace YtReader.Store {
 
     public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null) {
       using var db = await Sf.OpenConnection(log);
+      queryNames ??= new string[] { };
 
       var now = DateTime.Now;
       var dateRangeParams = new {from = "2019-11-01", to = now.ToString("yyyy-MM-01")};
@@ -71,6 +84,21 @@ namespace YtReader.Store {
 
           new ResQuery("channel_classification",
             desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)"),
+
+          // classifier data 
+
+          new ResQuery("class_channels", "select * from channel_latest", onlyLatest: true, fileType: ResFilType.Json),
+
+          new ResQuery("class_videos", "select * from video_latest qualify rank() over (partition by channel_id order by views desc) <= 3",
+            onlyLatest: true, fileType: ResFilType.Json),
+
+          new ResQuery("class_captions", @"with v as (
+  select * from video_latest qualify rank() over (partition by channel_id order by views desc) <= 3
+)
+select c.* from caption c
+inner join v on v.video_id = c.video_id", onlyLatest: true, fileType: ResFilType.Json)
+
+
           /*new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
           new ResQuery("icc_lr", desc: "channel classifications in a format used to calculate how consistent reviewers are when deciding left/right/center"),
           new FileQuery("rec_accuracy", "sql/rec_accuracy.sql", "Calculates the accuracy of our estimates vs exported recommendations")*/
@@ -79,7 +107,7 @@ namespace YtReader.Store {
           /*("video_latest", @"select video_id, video_title, channel_id, channel_title,
            upload_date, avg_rating, likes, dislikes, views, thumb_standard from video_latest")*/
         }
-        .Where(q => queryNames == null || !queryNames.Any() || queryNames.Contains(q.Name))
+        .Where(q => !queryNames.Any() || queryNames.Contains(q.Name, StringComparer.OrdinalIgnoreCase))
         .ToList();
 
       var tmpDir = TempDir();
@@ -93,13 +121,13 @@ namespace YtReader.Store {
       var sw = Stopwatch.StartNew();
       var zipPath = results.First().file.Parent().Combine("recfluence_shared_data.zip");
       using (var zipFile = ZipFile.Open(zipPath.FullPath, ZipArchiveMode.Create)) {
-        var readmeFile = TempDir().CreateFile("readme.txt", $@"Recfluence data generated {DateTime.UtcNow.ToString("yyyy-MM-dd")}
+        var readmeFile = TempDir().CreateFile("readme.txt", $@"Recfluence data generated {DateTime.UtcNow:yyyy-MM-dd}
 
 {results.Join("\n\n", r => $"*{r.query.Name}*\n  {r.query.Desc}")}
         ");
         zipFile.CreateEntryFromFile(readmeFile.FullPath, readmeFile.FileName);
 
-        foreach (var f in results.Select(r => r.file)) {
+        foreach (var f in results.Where(r => !r.query.OnlyLatest).Select(r => r.file)) {
           var name = f.FileNameWithoutExtension;
           var e = zipFile.CreateEntry(name);
           using var ew = e.Open();
@@ -109,7 +137,7 @@ namespace YtReader.Store {
         }
       }
 
-      await SaveToLatestAndDateDirs(log, zipPath.FileName, zipPath);
+      await SaveToLatestAndDateDirs(log, zipPath.FileName, zipPath, false);
       Log.Information("Result - saved zip {Name} in {Duration}", zipPath.FileName, sw.Elapsed);
     }
 
@@ -122,17 +150,26 @@ namespace YtReader.Store {
 
     /// <summary>Saves the result for the given query to Storage and a local tmp file</summary>
     async Task<FPath> SaveResult(ILogger log, LoggedConnection db, FPath tempDir, ResQuery q) {
-      var sw = Stopwatch.StartNew();
       var reader = await ResQuery(db, q);
-      var fileName = $"{q.Name}.csv.gz";
+      var fileName = q.FileType switch {
+        ResFilType.Csv => $"{q.Name}.csv.gz",
+        ResFilType.Json => $"{q.Name}.jsonl.gz",
+        _ => throw new NotImplementedException()
+      };
       var tempFile = tempDir.Combine(fileName);
-      using (var fileWriter = tempFile.Open(FileMode.Create, FileAccess.Write))
-        await reader.WriteCsvGz(fileWriter, fileName, log);
+      using (var fw = tempFile.Open(FileMode.CreateNew, FileAccess.Write))
+      using (var zw = new GZipStream(fw, CompressionLevel.Optimal, leaveOpen: true))
+      using (var sw = new StreamWriter(zw)) {
+        var task = q.FileType switch {
+          ResFilType.Csv => reader.WriteCsvGz(sw, fileName, log),
+          ResFilType.Json => reader.WriteJsonGz(sw, fileName, log),
+          _ => throw new NotImplementedException()
+        };
+        await task;
+      }
 
       // save to both latest and the current date 
-      await SaveToLatestAndDateDirs(log, fileName, tempFile);
-
-      
+      await SaveToLatestAndDateDirs(log, fileName, tempFile, q.OnlyLatest);
       return tempFile;
     }
 
@@ -155,32 +192,28 @@ namespace YtReader.Store {
       }
     }
 
-    async Task SaveToLatestAndDateDirs(ILogger log, string fileName, FPath tempFile) {
+    async Task SaveToLatestAndDateDirs(ILogger log, string fileName, FPath tempFile, bool onlyLatest) {
       async Task Save(StringPath dir) {
         var path = dir.Add(fileName);
         await Store.Save(path, tempFile, log);
         var url = Store.Url(path);
         Log.Information("Result - saved {Name} to {Url}", fileName, url);
       }
-      
+
       await Task.WhenAll(
-        Save(StringPath.Relative(Version, DateTime.UtcNow.ToString("yyyy-MM-dd"))),
-        Save(StringPath.Relative(Version, "latest").Add(fileName)),
-        Save(StringPath.Relative("latest").Add(fileName))
+        onlyLatest ? Task.CompletedTask : Save(StringPath.Relative(Version, "latest")),
+        Save(StringPath.Relative("latest"))
       );
     }
   }
 
   public static class SnowflakeResultHelper {
-    public static async Task WriteCsvGz(this IDataReader reader, Stream stream, string desc, ILogger log) {
-      await using var zipWriter = new GZipStream(stream, CompressionLevel.Optimal);
-      await using var streamWriter = new StreamWriter(zipWriter);
-      using var csvWriter = new CsvWriter(streamWriter, CultureInfo.InvariantCulture);
+    public static async Task WriteCsvGz(this IDataReader reader, StreamWriter stream, string desc, ILogger log) {
+      using var csvWriter = new CsvWriter(stream, CultureInfo.InvariantCulture);
 
       foreach (var col in reader.FieldRange().Select(reader.GetName)) csvWriter.WriteField(col);
-      csvWriter.NextRecord();
+      await csvWriter.NextRecordAsync();
 
-      var lines = 0L;
       while (reader.Read()) {
         foreach (var i in reader.FieldRange()) {
           var o = reader[i];
@@ -189,10 +222,16 @@ namespace YtReader.Store {
           else
             csvWriter.WriteField(o);
         }
-        csvWriter.NextRecord();
-        if (lines > 0 && lines % 10000 == 0)
-          log.Debug("written {Rows} rows to {Desc} ", lines, desc);
-        lines++;
+        await csvWriter.NextRecordAsync();
+      }
+    }
+
+    public static async Task WriteJsonGz(this IDataReader reader, StreamWriter stream, string desc, ILogger log) {
+      while (reader.Read()) {
+        var j = new JObject();
+        foreach (var i in reader.FieldRange())
+          j.Add(reader.GetName(i), JToken.FromObject(reader[i]));
+        await stream.WriteLineAsync(j.ToString(Formatting.None));
       }
     }
 

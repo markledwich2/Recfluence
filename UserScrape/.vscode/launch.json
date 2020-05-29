@@ -2,18 +2,28 @@
   "configurations": [
     {
       "name": "start experiment",
-      "args": [],
+      "args": [
+        "-t",
+        "${input:pickTrial}"
+      ],
       "type": "python",
       "request": "launch",
       "program": "app.py",
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
     },
     {
       "name": "Python: current file",
       "type": "python",
       "request": "launch",
-      "program": "app.py",
+      "program": "${file}",
       "console": "integratedTerminal"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "pickTrial",
+      "description": "Enter a trail ID (blank for none)",
+      "type": "promptString"
     }
   ]
 }

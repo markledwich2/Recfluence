@@ -45,7 +45,7 @@ namespace YtReader {
     }
 
     Task Collect(bool fullLoad) => _collector.Collect(Log, forceUpdate: fullLoad);
-    [DependsOn(nameof(Collect))] Task Stage(bool fullLoad) => _warehouse.StageUpdate(Log, fullLoad);
+    [DependsOn(nameof(Collect))] Task Stage(bool fullLoad, string[] tables) => _warehouse.StageUpdate(Log, fullLoad, tables);
 
     [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad) => YtDataform.Update(Log, fullLoad);
 
@@ -56,14 +56,15 @@ namespace YtReader {
     [DependsOn(nameof(Collect))] Task Backup() => _backup.Backup(Log);
 
     [Pipe]
-    public async Task Update(string[] actions = null, bool fullLoad = false) {
+    public async Task Update(string[] actions = null, bool fullLoad = false, string[] tables = null) {
       actions ??= new string[]{};
+      tables ??= new string[]{};
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
       
       var actionMethods = TaskGraph.FromMethods(
         () => Collect(fullLoad),
-        () => Stage(fullLoad),
+        () => Stage(fullLoad, tables),
         () => Search(fullLoad),
         () => Results(),
         () => Dataform(fullLoad),
@@ -87,7 +88,7 @@ namespace YtReader {
 
       var errors = res.Where(r => r.Error).ToArray();
       if (errors.Any())
-        Log.Error("Update {RunId} - failed in {Duration}: {@TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res);
+        Log.Error("Update {RunId} - failed in {Duration}: {@TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res.Join("\n"));
       else
         Log.Information("Update {RunId} - completed in {Duration}: {TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res.Join("\n"));
     }
