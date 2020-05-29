@@ -51,7 +51,7 @@ namespace YtReader {
 
         if (t.Dir != null) {
           log.Information("StageUpdate - {Table} ({LoadType})", table, fullLoad ? "full" : "incremental");
-          var latestTs = fullLoad ? null : await db.ExecuteScalar<DateTime?>("latest timestamp", $"select max(v:{t.TsColumn}::timestamp_ntz) from {table}");
+          var latestTs = fullLoad ? null : await db.ExecuteScalar<DateTime?>("latest timestamp", $"select max(v:{t.TsCol}::timestamp_ntz) from {table}");
           if (latestTs == null)
             await FullLoad(db, table, t);
           else
@@ -69,7 +69,7 @@ namespace YtReader {
     }
 
     async Task FullLoad(LoggedConnection db, string table, StageTableCfg t) {
-      if(t.IsNativeStore)
+      if (t.IsNativeStore)
         await DbStore.Optimise(Cfg.Optimise, t.Dir, null, db.Log); // optimise all files when performing a full load
       await db.Execute("truncate table", $"truncate table {table}"); // no transaction, stage tables aren't reported on so don't need to be available
       var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();
@@ -97,11 +97,14 @@ namespace YtReader {
   public static class YtWarehouse {
     public static string DbName(this SnowflakeCfg cfg, SemVersion version) => version.Prerelease.HasValue() ? $"{cfg.Db}_{version.Prerelease}" : "yt";
 
+    static StageTableCfg UsTable(string name) =>
+      new StageTableCfg($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, tsCol: "updated");
+
     public static readonly StageTableCfg[] AllTables = {
-      new StageTableCfg("userscrape/results/rec", "us_rec_stage", isNativeStore: false),
-      new StageTableCfg("userscrape/results/feed", "us_feed_stage", isNativeStore: false),
-      new StageTableCfg("userscrape/results/watch", "us_watch_stage", isNativeStore: false),
-      new StageTableCfg("userscrape/results/ad", "us_ad_stage", isNativeStore: false),
+      UsTable("rec"),
+      UsTable("feed"),
+      UsTable("watch"),
+      UsTable("ad"),
       new StageTableCfg("channels", "channel_stage"),
       new StageTableCfg("videos", "video_stage"),
       new StageTableCfg("recs", "rec_stage"),
@@ -112,18 +115,18 @@ namespace YtReader {
       new StageTableCfg(dir: null, "dbv1_rec_stage", isNativeStore: false),
     };
   }
-  
 
   public class StageTableCfg {
-    public StageTableCfg(string dir, string table, bool isNativeStore = true) {
+    public StageTableCfg(string dir, string table, bool isNativeStore = true, string tsCol = null) {
       Dir = dir;
       Table = table;
       IsNativeStore = isNativeStore;
+      TsCol = tsCol ?? (isNativeStore ? "Updated" : null);
     }
 
-    public StringPath Dir      { get; }
-    public string     Table    { get; }
-    public bool IsNativeStore { get; }
-    public string     TsColumn { get; set; } = "Updated";
+    public StringPath Dir           { get; }
+    public string     Table         { get; }
+    public bool       IsNativeStore { get; }
+    public string     TsCol         { get; }
   }
 }

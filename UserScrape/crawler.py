@@ -517,7 +517,7 @@ class Crawler:
             account=self.user.email,
             trial=self.trial_id,
             feed_videos=[],
-            update=datetime.utcnow().isoformat()
+            updated=datetime.utcnow().isoformat()
         )
         for video in all_videos:
             # take the link and remove everything except for the id of the video that the link leads to

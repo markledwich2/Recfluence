@@ -121,7 +121,7 @@ inner join v on v.video_id = c.video_id", onlyLatest: true, fileType: ResFilType
       var sw = Stopwatch.StartNew();
       var zipPath = results.First().file.Parent().Combine("recfluence_shared_data.zip");
       using (var zipFile = ZipFile.Open(zipPath.FullPath, ZipArchiveMode.Create)) {
-        var readmeFile = TempDir().CreateFile("readme.txt", $@"Recfluence data generated {DateTime.UtcNow.ToString("yyyy-MM-dd")}
+        var readmeFile = TempDir().CreateFile("readme.txt", $@"Recfluence data generated {DateTime.UtcNow:yyyy-MM-dd}
 
 {results.Join("\n\n", r => $"*{r.query.Name}*\n  {r.query.Desc}")}
         ");
@@ -214,7 +214,6 @@ inner join v on v.video_id = c.video_id", onlyLatest: true, fileType: ResFilType
       foreach (var col in reader.FieldRange().Select(reader.GetName)) csvWriter.WriteField(col);
       await csvWriter.NextRecordAsync();
 
-      var lines = 0L;
       while (reader.Read()) {
         foreach (var i in reader.FieldRange()) {
           var o = reader[i];
@@ -224,22 +223,15 @@ inner join v on v.video_id = c.video_id", onlyLatest: true, fileType: ResFilType
             csvWriter.WriteField(o);
         }
         await csvWriter.NextRecordAsync();
-        if (lines > 0 && lines % 10000 == 0)
-          log.Debug("written {Rows} rows to {Desc} ", lines, desc);
-        lines++;
       }
     }
 
     public static async Task WriteJsonGz(this IDataReader reader, StreamWriter stream, string desc, ILogger log) {
-      var lines = 0L;
       while (reader.Read()) {
         var j = new JObject();
         foreach (var i in reader.FieldRange())
           j.Add(reader.GetName(i), JToken.FromObject(reader[i]));
         await stream.WriteLineAsync(j.ToString(Formatting.None));
-        if (lines > 0 && lines % 10000 == 0)
-          log.Debug("written {Rows} rows to {Desc} ", lines, desc);
-        lines++;
       }
     }
 
