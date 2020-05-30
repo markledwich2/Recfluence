@@ -9,8 +9,8 @@
     "Schema": "public",
     "db": "yt"
   },
-  "parallelChannels": 2,
-  "defaultParallel": 2,
+  "parallelChannels": 4,
+  "defaultParallel": 8,
   "channelsPerContainer": 300,
   "sheets": {
     "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",

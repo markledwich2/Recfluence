@@ -22,7 +22,7 @@ namespace YtReader {
 
     // name of environment (Prod/Dev etc..). used to choose appropreate cfg
     [Required] public string Env { get; set; }
-    
+
     // if specified, used to override default behavior (including when in prod) of the environment branch/prefix
     public string BranchEnv { get; set; }
   }
@@ -55,7 +55,7 @@ namespace YtReader {
     [Required] public SyncDbCfg           SyncDb                { get; set; } = new SyncDbCfg();
     [Required] public AzureCleanerCfg     Cleaner               { get; set; } = new AzureCleanerCfg();
     [Required] public YtUpdaterCfg        Updater               { get; set; } = new YtUpdaterCfg();
-    [Required] public UserScrapeCfg  UserScrape { get; set; } = new UserScrapeCfg();
+    [Required] public UserScrapeCfg       UserScrape            { get; set; } = new UserScrapeCfg();
   }
 
   public class ElasticCfg {
@@ -109,6 +109,9 @@ namespace YtReader {
     /// <summary>We want to keep monitoring YouTube influence even if no new videos have been created (min). Get at least this
     ///   number of recs per channel</summary>
     public int RefreshRecsMin { get; set; } = 2;
+
+    /// <summary>The maximum number of recs to collect from a channel on any given day</summary>
+    public int RefreshRecsMax { get; set; } = 30;
 
     /// <summary>How frequently to refresh channel & video stats</summary>
     public TimeSpan RefreshAllAfter { get; set; } = 23.Hours();

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Humanizer.Localisation;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
@@ -344,10 +343,12 @@ namespace YtReader {
       var vidsDesc = vids.OrderByDescending(v => v.UploadDate).ToList();
 
       var toUpdate = prevUpdate == null
-        ? vidsDesc
-        : //  all videos if this is the first time for this channel
+        ? vidsDesc //  all videos if this is the first time for this channel
+        :
         // new vids since the last rec update, or the vid was created in the last RefreshRecsWithin (e.g. 30d)
-        vidsDesc.Where(v => v.UploadDate > prevUpdate || v.UploadDate.UtcDateTime.IsYoungerThan(RCfg.RefreshRecsWithin)).ToList();
+        vidsDesc.Where(v => v.UploadDate > prevUpdate || v.UploadDate.UtcDateTime.IsYoungerThan(RCfg.RefreshRecsWithin))
+          .Take(RCfg.RefreshRecsMax)
+          .ToList();
       var deficit = RCfg.RefreshRecsMin - toUpdate.Count;
       if (deficit > 0)
         toUpdate.AddRange(vidsDesc.Where(v => toUpdate.All(u => u.Id != v.Id))
