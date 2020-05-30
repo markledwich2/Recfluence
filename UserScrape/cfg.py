@@ -90,7 +90,7 @@ class Cfg(JsonSchemaMixin):
     run_seed_vids: int = field(default=5, metadata=JsonSchemaMeta(
         description="the number of videos to watch when performing a daily run", required=False))
     run_test_vids: Optional[int] = field(default=None, metadata=JsonSchemaMeta(
-        description="the number recommendations to collect", required=False))
+        description="the number recommendations to collect. Only define if you want to restrict for test purposes", required=False))
 
 
 async def load_cfg() -> Cfg:
