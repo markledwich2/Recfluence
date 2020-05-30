@@ -1,13 +1,15 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.8-alpine3.10
+FROM python:3-slim
 
-# update apk repo
-RUN echo "https://dl-4.alpinelinux.org/alpine/v3.10/main" >> /etc/apk/repositories && \
-    echo "https://dl-4.alpinelinux.org/alpine/v3.10/community" >> /etc/apk/repositories
-
-# install chromedriver
-RUN apk update
-RUN apk add chromium chromium-chromedriver build-base libffi-dev openssl-dev
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get -y install --no-install-recommends chromium-driver \
+    #
+    # Clean up
+    && apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=dialog
 
 # upgrade pip
 RUN pip install --upgrade pip
@@ -25,6 +27,5 @@ RUN python -m pip install -r requirements.txt
 WORKDIR /app
 ADD . /app
 
-
 # During debugging, this entry point will be overridden. For more information, refer to https://aka.ms/vscode-docker-python-debug
-CMD ["python", "yt_scraper.py"]
+CMD ["python", "app.py"]

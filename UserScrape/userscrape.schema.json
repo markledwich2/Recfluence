@@ -39,6 +39,18 @@
       "type": "integer",
       "default": 20,
       "description": "number of times to collect the list of videos in the feed"
+    },
+    "init_seed": {
+      "type": "integer",
+      "description": "the number of videos to watch when initializing"
+    },
+    "run_seed": {
+      "type": "integer",
+      "description": "the number of videos to watch when performing a daily run"
+    },
+    "run_recs": {
+      "type": "integer",
+      "description": "the number recommendations to collect"
     }
   },
   "description": "UserScrape configuration",

@@ -32,14 +32,6 @@ namespace YtFunctions {
         await cleaner.DeleteExpiredResources(ctx.Log);
       });
 
-    [FunctionName("StopIdleSeq_Timer")]
-    public async Task StopIdleSeq_Timer([TimerTrigger("0 */15 * * * *")] TimerInfo myTimer, ExecutionContext exec) =>
-      await StopIdleSeqInner(exec);
-
-    [FunctionName("StopIdleSeq")]
-    public async Task<IActionResult> StopIdleSeq([HttpTrigger(AuthorizationLevel.Function, "get", "post")]
-      HttpRequest req, ExecutionContext exec) => new OkObjectResult(await StopIdleSeqInner(exec));
-
     [FunctionName("Version")]
     public Task<IActionResult> Version([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
       HttpRequest req, ExecutionContext exec) => Ctx.Run(exec, c => {
@@ -47,27 +39,6 @@ namespace YtFunctions {
 Runtime ${GitVersionInfo.RuntimeSemVer(typeof(YtCollector))}
 Discovered ${GitVersionInfo.DiscoverVersion(typeof(YtCollector))}";
       return Task.FromResult((IActionResult) new OkObjectResult(versionText));
-    });
-
-    Task<string> StopIdleSeqInner(ExecutionContext exec) => Ctx.Run(exec, async c => {
-      var azue = c.Scope.Resolve<IAzure>();
-      if (!c.Root.IsProd()) return LogReason("not prod");
-      var group = await azue.SeqGroup(c.Cfg.Seq, c.Cfg.Pipe.Azure);
-      if (group.State() != ContainerState.Running) return LogReason("seq container not running");
-      var seq = new SeqConnection(c.Cfg.Seq.SeqUrl.OriginalString);
-      var events = await seq.Events.ListAsync(count: 5, filter: c.Cfg.Seq.IdleQuery, render: true);
-      if (events.Any()) {
-        c.Log.Information("{Events} recent events exist from '{Query}'", events.Count, c.Cfg.Seq.IdleQuery);
-        return $"recent events exist: {events.Join("\n", e => e.RenderedMessage)}";
-      }
-      c.Log.Information("No recent events from '{Query}'. Stopping {ContainerGroup}", c.Cfg.Seq.IdleQuery, group.Name);
-      await group.StopAsync();
-      return $"stopped group {group.Name}";
-
-      string LogReason(string reason) {
-        c.Log.Information("{Noun} - {reason}", nameof(StopIdleSeq), reason);
-        return reason;
-      }
     });
 
     [FunctionName("Update_Timer")]

@@ -5,7 +5,7 @@
             "label": "docker-build",
             "platform": "python",
             "dockerBuild": {
-                "tag": "yt_scraper:latest",
+                "tag": "ytnetworks.azurecr.io/userscrape:latest",
                 "dockerfile": "${workspaceFolder}/Dockerfile",
                 "context": "${workspaceFolder}"
             },
@@ -15,34 +15,15 @@
             }
         },
         {
-            "type": "docker-run",
-            "label": "docker-run: debug",
-            "dependsOn": [
-                "docker-build"
-            ],
-            "python": {
-                "file": "yt_scraper.py"
-            },
-            "options": {
-                "env": {
-                    "yt_scraper_proxy_key":"984ceb04eec146a9b94c0f54998c1d69",
-                    "yt_scraper_sas":"https://pyt.blob.core.windows.net/testdata?st=2020-04-04T05%3A16%3A12Z&se=2087-04-05T05%3A16%3A00Z&sp=racwdl&sv=2018-03-28&sr=c&sig=3P9C41eTPviKxgWXnRK%2FD%2Fj4ZCCFtf2N%2BxEVGBkJVFM%3D"
-                }
-            },
-            
-        },
-        {
+            "label": "run docker -it",
             "type": "shell",
-            "label": "docker shell",
-            "dependsOn": [
-                "docker-build"
-            ],
-            "command": [
-                "docker",
+            "command": "docker",
+            "args": [
                 "run",
                 "-it",
-                " yt_scraper:latest",
-                "/bin/sh"
+                "--env-file",
+                ".env",
+                "ytnetworks.azurecr.io/userscrape:latest"
             ],
             "problemMatcher": []
         }

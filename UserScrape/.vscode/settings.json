@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
         "Identitarian",
+        "aiohttp",
         "appcfg",
         "asdict",
         "asyncio",
@@ -15,7 +16,8 @@
         "sesh",
         "spawnl",
         "strftime",
-        "userscrape"
+        "userscrape",
+        "vids"
     ],
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,

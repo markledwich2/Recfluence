@@ -12,83 +12,97 @@ variables:
     env: prod
   ${{ if ne( variables['Build.SourceBranchName'], 'master') }}:
     env: stage
-    
 
 stages:
-- stage: YtNetworksContainer
-  jobs:
-  - job: YtNetworksContainer
-    pool:
-      vmImage: ubuntu-latest
+  - stage: YtNetworksContainer
+    jobs:
+      - job: YtNetworksContainer
+        pool:
+          vmImage: ubuntu-latest
 
-    steps:
+        steps:
+          - script: |
+              echo GitVersion
+              dotnet tool restore
+              dotnet dotnet-gitversion /output buildserver /nofetch
+            failOnStderr: true
+            workingDirectory: ./App
 
-    - script: |
-          echo GitVersion
-          dotnet tool restore
-          dotnet dotnet-gitversion /output buildserver /nofetch
-      failOnStderr: true
-      workingDirectory: ./App
+          - task: Docker@2
+            displayName: YtCli Docker Build
+            inputs:
+              command: build
+              containerRegistry: ytnetworks
+              repository: ytnetworks
+              tags: $(GitVersion.SemVer)
+              arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
+              buildContext: ./App
 
-    - task: Docker@2
-      displayName: YtCli Docker Build
-      inputs:
-        command: build
-        containerRegistry: ytnetworks
-        repository: ytnetworks
-        tags: $(GitVersion.SemVer)
-        arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
-        buildContext: ./App
+          - task: Docker@2
+            displayName: YtCli Docker Push
+            inputs:
+              command: push
+              containerRegistry: ytnetworks
+              repository: ytnetworks
+              tags: $(GitVersion.SemVer)
 
-    - task: Docker@2
-      displayName: YtCli Docker Push
-      inputs:
-        command: push
-        containerRegistry: ytnetworks
-        repository: ytnetworks
-        tags: $(GitVersion.SemVer)
+  - stage: Dataform
+    dependsOn: []
+    jobs:
+      - job: DataformContainer
+        pool:
+          vmImage: ubuntu-latest
 
-- stage: Dataform
-  dependsOn: []
-  jobs:
-  - job: DataformContainer
-    pool:
-      vmImage: ubuntu-latest
-      
-    steps:
+        steps:
+          - task: Docker@2
+            displayName: Dataform Docker Build & Push
+            inputs:
+              command: buildAndPush
+              containerRegistry: ytnetworks
+              repository: dataform
+              tags: latest
+              buildContext: Dataform
+              Dockerfile: Dataform/Dockerfile
 
-    - task: Docker@2
-      displayName: Dataform Docker Build & Push
-      inputs:
-        command: buildAndPush
-        containerRegistry: ytnetworks
-        repository: dataform
-        tags: latest
-        buildContext: Dataform
-        Dockerfile: Dataform/Dockerfile
+  - stage: UserScrape
+    dependsOn: []
+    jobs:
+      - job: UserScrapeContainer
+        pool:
+          vmImage: ubuntu-latest
 
-- stage: YtFunction
-  dependsOn: []
-  jobs:
-  - job: YtFunction
-    pool:
-      vmImage: ubuntu-latest
+        steps:
+          - task: Docker@2
+            displayName: UserScrape Docker Build & Push
+            inputs:
+              command: buildAndPush
+              containerRegistry: ytnetworks
+              repository: userscrape
+              tags: latest
+              buildContext: UserScrape
+              Dockerfile: UserScrape/Dockerfile
 
-    steps:
+  - stage: YtFunction
+    dependsOn: []
+    jobs:
+      - job: YtFunction
+        pool:
+          vmImage: ubuntu-latest
 
-    - script: |
-          echo GitVersion
-          dotnet tool restore
-          dotnet dotnet-gitversion /output buildserver /nofetch
-      failOnStderr: true
-      workingDirectory: ./App
+        steps:
+          - script: |
+              echo GitVersion
+              dotnet tool restore
+              dotnet dotnet-gitversion /output buildserver /nofetch
+            failOnStderr: true
+            workingDirectory: ./App
 
-    - script: dotnet publish -c Release  --output $(Build.ArtifactStagingDirectory)/YtFunctions /p:Version='$(GitVersion.AssemblySemVer)' /p:InformationalVersion='$(GitVersion.SemVer)'
-      workingDirectory: ./App/YtFunctions
-      displayName: Publish YtFunctions
+          - script: dotnet publish -c Release  --output $(Build.ArtifactStagingDirectory)/YtFunctions /p:Version='$(GitVersion.AssemblySemVer)' /p:InformationalVersion='$(GitVersion.SemVer)'
+            workingDirectory: ./App/YtFunctions
+            displayName: Publish YtFunctions
 
-    - task: PublishBuildArtifacts@1
-      displayName: Pubish YtFunctions Artifact
-      inputs:
-          pathtoPublish: $(Build.ArtifactStagingDirectory)/YtFunctions
-          artifactName: YtFunctions
+          - task: PublishBuildArtifacts@1
+            displayName: Pubish YtFunctions Artifact
+            inputs:
+              pathtoPublish: $(Build.ArtifactStagingDirectory)/YtFunctions
+              artifactName: YtFunctions

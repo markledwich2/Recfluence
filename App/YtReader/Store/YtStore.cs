@@ -36,7 +36,7 @@ namespace YtReader.Store {
       _ => new AzureBlobFileStore(Cfg.DataStorageCs, StoragePath(type), Log)
     };
 
-    StringPath StoragePath(DataStoreType type) =>
+    public StringPath StoragePath(DataStoreType type) =>
       Cfg.RootPath(Version) + "/" + type switch {
         DataStoreType.Pipe => Cfg.PipePath,
         DataStoreType.Db => Cfg.DbPath,
@@ -53,6 +53,8 @@ namespace YtReader.Store {
       var container = client.GetContainerReference(cfg.RootPath(version.Prerelease));
       return container;
     }
+    
+    
 
     public static string RootPath(this StorageCfg cfg, SemVersion version) => cfg.RootPath(version.Prerelease);
     public static string RootPath(this StorageCfg cfg, string prefix) => prefix.HasValue() ? $"{cfg.Container}-{prefix}" : cfg.Container;

@@ -1,7 +1,7 @@
 import pandas as pd
 from cfg import UserCfg
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Iterable, Any
+from typing import List, Dict, Tuple, Iterable, Any, Optional
 from pandas.core.series import Series
 
 
@@ -21,7 +21,7 @@ class SeedVideo(BasicVideo):
 # todo: this list should be queries directly form snowflake. cheaper during development to start like this
 
 
-def load_test_videos() -> List[BasicVideo]:
+def load_test_videos(num: Optional[int]) -> List[BasicVideo]:
     """gets the top 5 videos in the last 7 days for each ideology (distinct channels)"""
     # this SQL generates this file https://github.com/markledwich2/YouTubeNetworks_Dataform/blob/master/sql/user_scrape_tests.sql
     # todo: this list should be queries directly form snowflake. cheaper during development to start like this
@@ -30,10 +30,10 @@ def load_test_videos() -> List[BasicVideo]:
         BasicVideo(row.VIDEO_ID, row.VIDEO_TITLE, row.CHANNEL_ID, row.CHANNEL_TITLE, row.IDEOLOGY)
         for i, row in df.iterrows()
     ]
-    return test_videos
+    return test_videos if num == None else test_videos[0:num]
 
 
-def load_seed_videos(num: int = 50) -> Dict[str, List[SeedVideo]]:
+def load_seed_videos(num: int) -> Dict[str, List[SeedVideo]]:
     """a list of videos to seed user history with. Random videos proportional to views spread across channels in each ideology group
 
     Keyword Arguments:

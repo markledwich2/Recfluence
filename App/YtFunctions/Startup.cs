@@ -60,7 +60,6 @@ namespace YtFunctions {
       if (cfg.Seq.SeqUrl != null)
         logCfg = logCfg.WriteTo.Seq(cfg.Seq.SeqUrl.OriginalString, LogEventLevel.Debug);
       logCfg = logCfg.YtEnrich(root.Env, nameof(YtFunctions), version);
-      new SeqHost(cfg.Seq, cfg.Pipe.Azure).StartSeqIfNeeded();
       return logCfg.MinimumLevel.Debug().CreateLogger();
     }
   }

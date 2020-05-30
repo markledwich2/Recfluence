@@ -1,6 +1,6 @@
 ﻿{
   "seq": {
-    "seqUrl": "http://ytseq.westus2.azurecontainer.io",
+    "seqUrl": "http://seq.recfluence.net",
     "containerGroupName": "seq"
   },
   "snowflake": {
@@ -9,8 +9,8 @@
     "Schema": "public",
     "db": "yt"
   },
-  "parallelChannels": 4,
-  "defaultParallel": 8,
+  "parallelChannels": 2,
+  "defaultParallel": 2,
   "channelsPerContainer": 300,
   "sheets": {
     "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",

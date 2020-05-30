@@ -5,6 +5,9 @@ from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
 from dataclasses_jsonschema import JsonSchemaMixin, SchemaType
 from dataclasses_jsonschema.type_defs import JsonSchemaMeta
+from dotenv import load_dotenv
+import os
+import aiohttp
 
 
 @dataclass_json
@@ -82,10 +85,24 @@ class Cfg(JsonSchemaMixin):
     feed_scans: int = field(default=20, metadata=JsonSchemaMeta(
         description="number of times to collect the list of videos in the feed", required=False))
 
+    init_seed_vids: int = field(default=50, metadata=JsonSchemaMeta(
+        description="the number of videos to watch when initializing", required=False))
+    run_seed_vids: int = field(default=5, metadata=JsonSchemaMeta(
+        description="the number of videos to watch when performing a daily run", required=False))
+    run_test_vids: Optional[int] = field(default=None, metadata=JsonSchemaMeta(
+        description="the number recommendations to collect", required=False))
 
-def load_cfg() -> Cfg:
-    '''loads application configuration from userscrape.json
+
+async def load_cfg() -> Cfg:
+    '''loads application configuration form a blob (if defined in .env cfg_sas) or ./userscrape.json
     '''
-    with open('userscrape.json', "r") as r:
-        cfg = Cfg.from_json(r.read())
+    load_dotenv()
+    cfg_sas = os.getenv('cfg_sas')
+    if (cfg_sas):
+        async with aiohttp.ClientSession() as sesh:
+            async with sesh.get(cfg_sas) as r:
+                cfg = Cfg.from_json(await r.text())
+    else:
+        with open('userscrape.json', "r") as r:
+            cfg = Cfg.from_json(r.read())
     return cfg

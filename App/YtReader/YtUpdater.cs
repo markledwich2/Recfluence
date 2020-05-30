@@ -30,9 +30,10 @@ namespace YtReader {
     readonly YtDataform   YtDataform;
     readonly YtBackup     _backup;
     readonly string       _updated;
+    readonly UserScrape _userScrape;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, YtStage warehouse, YtSearch search,
-      YtResults results, YtDataform ytDataform, YtBackup backup) {
+      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape) {
       Cfg = cfg;
       _updated = Guid.NewGuid().ToShortString(6);
       Log = log.ForContext("UpdateId", _updated);
@@ -42,9 +43,13 @@ namespace YtReader {
       _results = results;
       YtDataform = ytDataform;
       _backup = backup;
+      _userScrape = userScrape;
     }
 
     Task Collect(bool fullLoad) => _collector.Collect(Log, forceUpdate: fullLoad);
+    
+    Task UserScrape(bool init) => _userScrape.Run(Log, init);
+    
     [DependsOn(nameof(Collect))] Task Stage(bool fullLoad, string[] tables) => _warehouse.StageUpdate(Log, fullLoad, tables);
 
     [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad) => YtDataform.Update(Log, fullLoad);
@@ -64,6 +69,7 @@ namespace YtReader {
       
       var actionMethods = TaskGraph.FromMethods(
         () => Collect(fullLoad),
+        () => UserScrape(true),
         () => Stage(fullLoad, tables),
         () => Search(fullLoad),
         () => Results(),

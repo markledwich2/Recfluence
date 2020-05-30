@@ -48,7 +48,7 @@ namespace YtCli {
 
     static async Task<CmdCtx<TOption>> TaskCtx<TOption>(TOption option, string[] args) {
       var (app, root, version) = await Setup.LoadCfg(rootLogger: Setup.ConsoleLogger());
-      var log = await Setup.CreateLogger(root.Env, option.GetType().Name, version, app);
+      var log = Setup.CreateLogger(root.Env, option.GetType().Name, version, app);
       var scope = Setup.MainScope(root, app, Setup.PipeAppCtxEmptyScope(root, app), version, log);
       return new CmdCtx<TOption>(root, app, log, option, scope, args);
     }

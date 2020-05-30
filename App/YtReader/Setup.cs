@@ -35,7 +35,8 @@ using YtReader.Yt;
 
 namespace YtReader {
   public static class Setup {
-    public static string AppName = "YouTubeNetworks";
+    public static string AppName      = "YouTubeNetworks";
+    public static string CfgContainer = "cfg";
 
     public static FPath SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("YtNetworks.sln");
     public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
@@ -51,7 +52,7 @@ namespace YtReader {
       new LoggerConfiguration()
         .WriteTo.Console(level).CreateLogger();
 
-    public static async Task<Logger> CreateLogger(string env, string app, VersionInfo version, AppCfg cfg = null) {
+    public static Logger CreateLogger(string env, string app, VersionInfo version, AppCfg cfg = null) {
       var c = new LoggerConfiguration()
         .WriteTo.Console(LogEventLevel.Information);
 
@@ -59,8 +60,7 @@ namespace YtReader {
         c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces, LogEventLevel.Debug);
 
       if (cfg != null)
-        c = await c.WriteToSeqAndStartIfNeeded(cfg);
-
+        c = c.ConfigureSeq(cfg);
 
       var log = c.YtEnrich(env, app, version.Version)
         .MinimumLevel.Debug()
@@ -78,11 +78,10 @@ namespace YtReader {
         new PropertyEnricher("Version", version)
       );
 
-    static async Task<LoggerConfiguration> WriteToSeqAndStartIfNeeded(this LoggerConfiguration loggerCfg, AppCfg cfg) {
+    static LoggerConfiguration ConfigureSeq(this LoggerConfiguration loggerCfg, AppCfg cfg) {
       var seqCfg = cfg?.Seq;
       if (seqCfg?.SeqUrl == null) return loggerCfg;
       var resCfg = loggerCfg.WriteTo.Seq(seqCfg.SeqUrl.OriginalString, LogEventLevel.Debug);
-      await new SeqHost(seqCfg, cfg.Pipe.Azure).StartSeqIfNeeded();
       return resCfg;
     }
 
@@ -114,7 +113,7 @@ namespace YtReader {
       var version = await versionProvider.Version();
 
       var envLower = cfgRoot.Env.ToLowerInvariant();
-      var secretStore = new AzureBlobFileStore(cfgRoot.AppStoreCs, "cfg", Logger.None);
+      var secretStore = new AzureBlobFileStore(cfgRoot.AppStoreCs, CfgContainer, Logger.None);
       var secretNames = cfgRoot.IsProd() ? new[] {envLower} : new[] {"dev", version.Version.Prerelease};
       var secrets = new List<string>();
       foreach (var name in secretNames) {
@@ -185,6 +184,7 @@ namespace YtReader {
 
       // merge default properties from the pipe config
       appCfg.Dataform.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.Dataform.Container);
+      appCfg.UserScrape.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.UserScrape.Container);
     }
 
     static IReadOnlyCollection<ValidationResult> Validate(object cfgObject) =>
@@ -224,6 +224,7 @@ namespace YtReader {
       b.Register(_ => cfg.Results).SingleInstance();
       b.Register(_ => cfg.Dataform).SingleInstance();
       b.Register(_ => cfg.Seq).SingleInstance();
+      b.Register(_ => cfg.UserScrape).SingleInstance();
 
 
       b.RegisterType<SnowflakeConnectionProvider>().SingleInstance();
@@ -251,7 +252,7 @@ namespace YtReader {
       b.RegisterType<YtDataform>().SingleInstance();
       b.RegisterType<AzureContainers>().SingleInstance();
       b.RegisterType<LocalPipeWorker>().SingleInstance();
-      b.RegisterType<SeqHost>();
+      b.RegisterType<UserScrape>();
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>().SingleInstance();

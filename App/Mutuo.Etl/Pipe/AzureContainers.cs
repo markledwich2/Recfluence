@@ -21,7 +21,6 @@ using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Pipe {
   public class AzureContainers : IPipeWorkerStartable {
-    readonly PipeAzureCfg   AzureCfg;
     readonly SemVersion     Version;
     readonly RegistryClient RegistryClient;
 
@@ -31,6 +30,8 @@ namespace Mutuo.Etl.Pipe {
       RegistryClient = registryClient;
       Az = new Lazy<IAzure>(azureCfg.GetAzure);
     }
+
+    public PipeAzureCfg AzureCfg { get; }
 
     Lazy<IAzure> Az { get; }
 
@@ -174,6 +175,16 @@ namespace Mutuo.Etl.Pipe {
         .WithTag("expire", (DateTime.UtcNow + 2.Days()).ToString("o"));
 
       return createGroup;
+    }
+  }
+  
+  public static class AzureContainersEx
+  {
+    public static async Task EnsureSuccess(this IContainerGroup group, string groupName) {
+      if (group.State().In(ContainerState.Failed, ContainerState.Terminated)) {
+        var content = await group.GetLogContentAsync(groupName);
+        throw new InvalidOperationException($"Container exited with error code: ${content}");
+      }
     }
   }
 }

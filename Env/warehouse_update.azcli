@@ -1,10 +1,8 @@
 az login
 
 az configure --defaults location=westus2 group=ytnetworks
-
 registryPass=`az keyvault secret show --name "ytnetworks-registry-password" --vault-name "recfluence" --output json | jq -r '.value'`
 cs=`az storage account show-connection-string --name ytapp --output tsv`
-
 
 
 az container create --name update-warehouse-search --image ytnetworks.azurecr.io/ytnetworks:0.5.2 --cpu 2 --memory 4 \
@@ -12,7 +10,6 @@ az container create --name update-warehouse-search --image ytnetworks.azurecr.io
     --environment-variables env=prod appStoreCs=$cs \
     --registry-username ytnetworks  --registry-password $registryPass \
     --restart-policy Never
-
 az container attach -n update-warehouse-search
 #az container delete -n update-warehouse-search
 
@@ -24,4 +21,3 @@ az container create --name update-manual --image ytnetworks.azurecr.io/ytnetwork
     --registry-username ytnetworks  --registry-password $registryPass \
     --restart-policy Never
     
-az container attach -n update-manual

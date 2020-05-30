@@ -55,6 +55,7 @@ namespace YtReader {
     [Required] public SyncDbCfg           SyncDb                { get; set; } = new SyncDbCfg();
     [Required] public AzureCleanerCfg     Cleaner               { get; set; } = new AzureCleanerCfg();
     [Required] public YtUpdaterCfg        Updater               { get; set; } = new YtUpdaterCfg();
+    [Required] public UserScrapeCfg  UserScrape { get; set; } = new UserScrapeCfg();
   }
 
   public class ElasticCfg {
@@ -129,7 +130,6 @@ namespace YtReader {
 
   public class SeqCfg {
     public Uri    SeqUrl             { get; set; }
-    public string IdleQuery          { get; set; } = "@Timestamp > Now() - 1h and App != 'YtFunctions'";
     public string ContainerGroupName { get; set; } = "seq";
   }
 }
