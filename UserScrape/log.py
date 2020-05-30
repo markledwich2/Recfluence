@@ -3,7 +3,7 @@ import logging
 import json
 
 
-def configure_log(url: str, env='Debug', trial_id=None):
+def configure_log(url: str, env='dev', trial_id=None):
     seqlog.configure_from_dict({
         'version': 1,
         'disable_existing_loggers': True,

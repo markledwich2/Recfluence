@@ -6,7 +6,6 @@ from data import load_seed_videos, load_test_videos
 import asyncio
 import argparse
 from typing import List
-
 from store import BlobStore, new_trial_id
 from azure.storage.blob import PublicAccess
 from discord_bot import DiscordBot
@@ -21,10 +20,10 @@ from format import format_seconds
 
 
 async def experiment(initialization: bool, accounts: List[str], trial_id=None):
-
+    env = os.getenv('env') or 'dev'
     cfg: Cfg = await load_cfg()
     trial_id = trial_id if trial_id else new_trial_id()
-    configure_log(cfg.seqUrl, trial_id=trial_id)
+    configure_log(cfg.seqUrl, trial_id=trial_id, env=env)
 
     log = logging.getLogger('seq')
     users: List[UserCfg] = [u for u in cfg.users if accounts == None or u.ideology in accounts]

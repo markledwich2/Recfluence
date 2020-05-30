@@ -52,6 +52,7 @@ namespace YtReader {
       var fullName = Cfg.Container.FullContainerImageName("latest");
       var env = new (string name, string value)[] {
         ("cfg_sas", $"{blob.Uri}{sas}"),
+        ("env", RootCfg.Env)
       };
 
       var args = new[] {"app.py"};
