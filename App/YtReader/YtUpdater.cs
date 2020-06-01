@@ -47,18 +47,12 @@ namespace YtReader {
     }
 
     Task Collect(bool fullLoad) => _collector.Collect(Log, forceUpdate: fullLoad);
-    
-    Task UserScrape(bool init) => _userScrape.Run(Log, init);
-    
     [DependsOn(nameof(Collect))] Task Stage(bool fullLoad, string[] tables) => _warehouse.StageUpdate(Log, fullLoad, tables);
-
     [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad) => YtDataform.Update(Log, fullLoad);
-
     [DependsOn(nameof(Dataform))] Task Search(bool fullLoad) => _search.SyncToElastic(Log, fullLoad);
-
     [DependsOn(nameof(Dataform))] Task Results() => _results.SaveBlobResults(Log);
-
     [DependsOn(nameof(Collect))] Task Backup() => _backup.Backup(Log);
+    [DependsOn(nameof(Results))] Task UserScrape(bool init) => _userScrape.Run(Log, init);
 
     [Pipe]
     public async Task Update(string[] actions = null, bool fullLoad = false, string[] tables = null) {
@@ -69,10 +63,10 @@ namespace YtReader {
       
       var actionMethods = TaskGraph.FromMethods(
         () => Collect(fullLoad),
-        () => UserScrape(true),
         () => Stage(fullLoad, tables),
         () => Search(fullLoad),
         () => Results(),
+        () => UserScrape(true),
         () => Dataform(fullLoad),
         () => Backup());
 

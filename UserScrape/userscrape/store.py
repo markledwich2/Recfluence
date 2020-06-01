@@ -9,14 +9,20 @@ from azure.storage.blob import PublicAccess, BlobProperties
 from azure.core.paging import ItemPaged
 from datetime import datetime
 import shortuuid
-from cfg import UserCfg, StoreCfg
+from .cfg import UserCfg, StoreCfg
 from pathlib import Path, PurePath, PurePosixPath
+import gzip
+from io import BytesIO
 
 
 class BlobStore:
     def __init__(self, cfg: StoreCfg):
         self.cfg = cfg
         self.container = ContainerClient.from_connection_string(cfg.cs, cfg.container)
+
+    def url(self, path: PurePath):
+        blob = self.container.get_blob_client(path.as_posix())
+        return blob.url
 
     def ensure_container_exits(self, public_access: PublicAccess = None):
         """creates the container if it doesn't exist"""
@@ -46,8 +52,7 @@ class BlobStore:
     def save_file(self, localFile: PurePath, remotePath: PurePath):
         """uploads a local file to the container"""
         with open(localFile, 'rb') as f:
-            self.container.upload_blob(
-                remotePath.as_posix(), f, overwrite=True)
+            self.container.upload_blob(remotePath.as_posix(), f, overwrite=True)
 
     def load(self, path: PurePath):
         try:
@@ -55,6 +60,21 @@ class BlobStore:
         except ResourceNotFoundError:
             return None
         return blob.content_as_text()
+
+    def load_file(self, local_file: PurePath, remote_file: PurePath):
+        """loads a blob into a local file"""
+        with open(local_file, 'wb') as w:
+            blob = self.container.get_blob_client(remote_file.as_posix())
+            props: BlobProperties = blob.get_blob_properties()
+
+            if(props.content_settings.content_encoding == 'gzip'):  # ffs https://github.com/Azure/azure-storage-python/issues/548
+                dl = self.container.download_blob(remote_file.as_posix())
+                content = dl.content_as_bytes()
+                data_gz = gzip.compress(content)
+                w.write(data_gz)
+            else:
+                dl = self.container.download_blob(remote_file.as_posix())
+                dl.readinto(w)
 
     def load_dic(self, path: PurePath):
         txt = self.load(path)
@@ -80,12 +100,24 @@ def file_date_str(time: datetime = datetime.now()):
     return time.strftime('%Y-%m-%d_%H-%M-%S')
 
 
-class UserScrapePaths:
+class BlobPaths:
     def __init__(self, storeCfg: StoreCfg, trial_id: str, user: UserCfg = None, session_id: str = None):
         self.storeCfg = storeCfg
         self.trial_id = trial_id
         self.user = user
         self.session_id = session_id
+
+    def results_path_recfluence(self) -> PurePath:
+        """path that recfluence stores its latest results"""
+        return PurePosixPath('results')
+
+    def results_path_out(self) -> PurePath:
+        """path to store the results of trials once complete"""
+        return PurePosixPath(f'{self.storeCfg.root_path}/results')
+
+    def results_path_in(self) -> PurePath:
+        """path to incoming files (e.g. video seeds from recfluence)"""
+        return self.__trial_path('results_in')
 
     def __trial_path(self, catalog: str) -> PurePath:
         return PurePosixPath(f'{self.storeCfg.root_path}/run/{catalog}/{self.trial_id}')
@@ -95,9 +127,6 @@ class UserScrapePaths:
 
     def user_path(self) -> PurePath:
         return PurePosixPath(f'{self.storeCfg.root_path}/run/user/{self.user.email}')
-
-    def results_path(self) -> PurePath:
-        return PurePosixPath(f'{self.storeCfg.root_path}/results')
 
     def __trial_user_path(self, catalog: str) -> PurePath:
         return self.__trial_path(catalog) / self.user.email
@@ -131,3 +160,6 @@ class UserScrapePaths:
 
     def feed_path(self) -> PurePath:
         return self.__trial_path("feed")
+
+    def local_temp_path(self, path: PurePath) -> Path:
+        return Path(tempfile.gettempdir()) / 'userscrape' / self.trial_id / path

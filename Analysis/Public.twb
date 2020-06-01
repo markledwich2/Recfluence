@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8' ?>
 
-<!-- build 20194.20.0119.2058                               -->
-<workbook source-build='2019.4.2 (20194.20.0119.2058)' source-platform='win' version='18.1' xml:base='https://public.tableau.com' xmlns:user='http://www.tableausoftware.com/xml/user'>
+<!-- build 20194.20.0427.1919                               -->
+<workbook source-build='2019.4.6 (20194.20.0427.1919)' source-platform='win' version='18.1' xml:base='https://public.tableau.com' xmlns:user='http://www.tableausoftware.com/xml/user'>
   <document-format-change-manifest>
     <AutoCreateAndUpdateDSDPhoneLayouts ignorable='true' predowngraded='true' />
     <IntuitiveSorting />
@@ -31,861 +31,9 @@
       <column caption='from' datatype='date' name='[Parameter 2]' param-domain-type='any' role='measure' type='quantitative' value='#2018-11-01#'>
         <calculation class='tableau' formula='#2018-11-01#' />
       </column>
-      <column caption='to' datatype='date' name='[Parameter 3]' param-domain-type='any' role='measure' type='quantitative' value='#2020-01-30#'>
-        <calculation class='tableau' formula='#2020-01-30#' />
+      <column caption='to' datatype='date' name='[Parameter 3]' param-domain-type='any' role='measure' type='quantitative' value='#2020-05-31#'>
+        <calculation class='tableau' formula='#2020-05-31#' />
       </column>
-    </datasource>
-    <datasource caption='Channel Stats' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9' version='18.1'>
-      <connection class='federated'>
-        <named-connections>
-          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp'>
-            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' workgroup-auth-mode='as-is' />
-          </named-connection>
-        </named-connections>
-        <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp' name='Custom SQL Query' type='text'>with cr as (&#13;&#10;    select channel_id&#13;&#10;         , sum(relevant_impressions) as relevant_impressions&#13;&#10;         , sum(relevant_impressions_in) as relevant_impressions_in&#13;&#10;         , max(datediff(day, &lt;[Parameters].[Parameter 2]&gt;, least(last_day(&lt;[Parameters].[Parameter 3]&gt;, month), current_date()))) as days&#13;&#10;         , sum(relevant_impressions) / days as relevant_impressions_daily&#13;&#10;         , sum(relevant_impressions_in) / days as relevant_impressions_in_daily&#13;&#10;         , max(meets_subsviews_criteria) as meets_subsviews_criteria&#13;&#10;         , sum(video_views) / days as video_views_daily&#13;&#10;         , sum(relevant_video_views) / days as relevant_video_views_daily&#13;&#10;    from channel_stats_monthly&#13;&#10;    where month between &lt;[Parameters].[Parameter 2]&gt; and last_day(&lt;[Parameters].[Parameter 3]&gt;, month)&#13;&#10;    group by channel_id&#13;&#10;)&#13;&#10;&#13;&#10;select c.channel_id&#13;&#10;     , channel_title&#13;&#10;     , channel_views&#13;&#10;     , country&#13;&#10;     , relevance&#13;&#10;     , subs&#13;&#10;     , channel_lifetime_daily_views&#13;&#10;     , channel_lifetime_daily_views_relevant&#13;&#10;     , channel_video_views&#13;&#10;     , relevant_impressions_daily&#13;&#10;     , relevant_impressions_in_daily&#13;&#10;     , video_views_daily&#13;&#10;     , relevant_video_views_daily&#13;&#10;     , avg_minutes&#13;&#10;     , from_date&#13;&#10;     , to_date&#13;&#10;     , lr&#13;&#10;     , tags&#13;&#10;     , ideology&#13;&#10;     , media&#13;&#10;     , manoel&#13;&#10;     , ain&#13;&#10;     , logo_url&#13;&#10;from channel_latest c&#13;&#10;         left join cr on c.channel_id = cr.channel_id&#13;&#10;where cr.meets_subsviews_criteria = true</relation>
-        <metadata-records>
-          <metadata-record class='column'>
-            <remote-name>CHANNEL_ID</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[CHANNEL_ID]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>CHANNEL_ID</remote-alias>
-            <ordinal>1</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>CHANNEL_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[CHANNEL_TITLE]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>CHANNEL_TITLE</remote-alias>
-            <ordinal>2</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>CHANNEL_VIEWS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[CHANNEL_VIEWS]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>CHANNEL_VIEWS</remote-alias>
-            <ordinal>3</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>COUNTRY</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[COUNTRY]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>COUNTRY</remote-alias>
-            <ordinal>4</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>RELEVANCE</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[RELEVANCE]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>RELEVANCE</remote-alias>
-            <ordinal>5</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>SUBS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[SUBS]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>SUBS</remote-alias>
-            <ordinal>6</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS</remote-alias>
-            <ordinal>7</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>6</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT</remote-alias>
-            <ordinal>8</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>CHANNEL_VIDEO_VIEWS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[CHANNEL_VIDEO_VIEWS]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>CHANNEL_VIDEO_VIEWS</remote-alias>
-            <ordinal>9</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>RELEVANT_IMPRESSIONS_DAILY</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[RELEVANT_IMPRESSIONS_DAILY]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>RELEVANT_IMPRESSIONS_DAILY</remote-alias>
-            <ordinal>10</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>RELEVANT_IMPRESSIONS_IN_DAILY</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[RELEVANT_IMPRESSIONS_IN_DAILY]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>RELEVANT_IMPRESSIONS_IN_DAILY</remote-alias>
-            <ordinal>11</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>VIDEO_VIEWS_DAILY</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[VIDEO_VIEWS_DAILY]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>VIDEO_VIEWS_DAILY</remote-alias>
-            <ordinal>12</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>RELEVANT_VIDEO_VIEWS_DAILY</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[RELEVANT_VIDEO_VIEWS_DAILY]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>RELEVANT_VIDEO_VIEWS_DAILY</remote-alias>
-            <ordinal>13</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>AVG_MINUTES</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[AVG_MINUTES]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>AVG_MINUTES</remote-alias>
-            <ordinal>14</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>27</precision>
-            <scale>6</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>FROM_DATE</remote-name>
-            <remote-type>7</remote-type>
-            <local-name>[FROM_DATE]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>FROM_DATE</remote-alias>
-            <ordinal>15</ordinal>
-            <local-type>datetime</local-type>
-            <aggregation>Year</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TO_DATE</remote-name>
-            <remote-type>7</remote-type>
-            <local-name>[TO_DATE]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>TO_DATE</remote-alias>
-            <ordinal>16</ordinal>
-            <local-type>datetime</local-type>
-            <aggregation>Year</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>LR</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[LR]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>LR</remote-alias>
-            <ordinal>17</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TAGS</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[TAGS]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>TAGS</remote-alias>
-            <ordinal>18</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>IDEOLOGY</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[IDEOLOGY]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>IDEOLOGY</remote-alias>
-            <ordinal>19</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>22</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>MEDIA</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[MEDIA]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>MEDIA</remote-alias>
-            <ordinal>20</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>18</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>MANOEL</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[MANOEL]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>MANOEL</remote-alias>
-            <ordinal>21</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>AIN</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[AIN]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>AIN</remote-alias>
-            <ordinal>22</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>LOGO_URL</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[LOGO_URL]</local-name>
-            <parent-name>[Custom SQL Query]</parent-name>
-            <remote-alias>LOGO_URL</remote-alias>
-            <ordinal>23</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-          </metadata-record>
-        </metadata-records>
-      </connection>
-      <aliases enabled='yes' />
-      <column datatype='string' name='[:Measure Names]' role='dimension' type='nominal'>
-        <aliases>
-          <alias key='&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:RELEVANT_IMPRESSIONS_DAILY:qk]&quot;' value='Impressions Out' />
-          <alias key='&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:RELEVANT_IMPRESSIONS_IN_DAILY:qk]&quot;' value='Impressions In' />
-        </aliases>
-      </column>
-      <column caption='Channel Id' datatype='string' name='[CHANNEL_ID]' role='dimension' type='nominal' />
-      <column caption='Channel Lifetime Daily Views' datatype='real' name='[CHANNEL_LIFETIME_DAILY_VIEWS]' role='measure' type='quantitative' />
-      <column caption='Channel Lifetime Relevant Daily Views' datatype='real' name='[CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT]' role='measure' type='quantitative' />
-      <column caption='Channel Title' datatype='string' name='[CHANNEL_TITLE]' role='dimension' type='nominal' />
-      <column datatype='string' name='[COUNTRY]' role='dimension' semantic-role='[Country].[ISO3166_2]' type='nominal' />
-      <column caption='Flow Advantage %' datatype='real' default-format='*+#%;-#%' name='[Calculation_1361776001277554688]' role='measure' type='quantitative'>
-        <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS_IN_DAILY])/SUM([RELEVANT_IMPRESSIONS_DAILY]) - 1' />
-      </column>
-      <column caption='Net Recommendations Daily' datatype='real' name='[Calculation_171699804373467136]' role='measure' type='quantitative'>
-        <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS_DAILY]) - SUM([RELEVANT_IMPRESSIONS_IN_DAILY])' />
-      </column>
-      <column caption='Channels Total' datatype='integer' name='[Channels (copy)]' role='measure' type='quantitative'>
-        <calculation class='tableau' formula='Total([Number of Records])'>
-          <table-calc ordering-type='Rows' />
-        </calculation>
-      </column>
-      <column caption='Group' datatype='string' name='[IDEOLOGY]' role='dimension' type='nominal'>
-        <aliases>
-          <alias key='%null%' value='Other' />
-        </aliases>
-      </column>
-      <column caption='Media' datatype='string' name='[MEDIA]' role='dimension' type='nominal' />
-      <column caption='Channels' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
-        <calculation class='tableau' formula='countd([CHANNEL_ID])' />
-      </column>
-      <column caption='Relevant Impressions Daily' datatype='real' name='[RELEVANT_IMPRESSIONS_DAILY]' role='measure' type='quantitative' />
-      <column caption='Relevant Impressions Daily In' datatype='real' name='[RELEVANT_IMPRESSIONS_IN_DAILY]' role='measure' type='quantitative' />
-      <column caption='Relevant Views Daily' datatype='real' name='[RELEVANT_VIDEO_VIEWS_DAILY]' role='measure' type='quantitative' />
-      <column-instance column='[IDEOLOGY]' derivation='None' name='[none:IDEOLOGY:nk]' pivot='key' type='nominal' />
-      <column-instance column='[RELEVANT_IMPRESSIONS_DAILY]' derivation='Sum' name='[sum:RELEVANT_IMPRESSIONS_DAILY:qk]' pivot='key' type='quantitative' />
-      <column-instance column='[RELEVANT_IMPRESSIONS_IN_DAILY]' derivation='Sum' name='[sum:RELEVANT_IMPRESSIONS_IN_DAILY:qk]' pivot='key' type='quantitative' />
-      <group caption='Action (Group)' hidden='true' name='[Action (Group)]' name-style='unqualified' user:auto-column='sheet_link'>
-        <groupfilter function='crossjoin'>
-          <groupfilter function='level-members' level='[IDEOLOGY]' />
-        </groupfilter>
-      </group>
-      <group caption='Action (Ideology)' hidden='true' name='[Action (Ideology)]' name-style='unqualified' user:auto-column='sheet_link'>
-        <groupfilter function='crossjoin'>
-          <groupfilter function='level-members' level='[IDEOLOGY]' />
-        </groupfilter>
-      </group>
-      <group caption='Action (Media)' hidden='true' name='[Action (Media)]' name-style='unqualified' user:auto-column='sheet_link'>
-        <groupfilter function='crossjoin'>
-          <groupfilter function='level-members' level='[MEDIA]' />
-        </groupfilter>
-      </group>
-      <extract count='-1' enabled='true' units='records'>
-        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks/.Data/Basics.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='01/29/2020 09:31:58 PM' username='tableau_internal_user'>
-          <relation name='Extract' table='[Extract].[Extract]' type='table' />
-          <refresh>
-            <refresh-event add-from-file-path='Channel Stats' increment-value='%null%' refresh-type='create' rows-inserted='780' timestamp-start='2020-01-29 21:31:58.537' />
-          </refresh>
-          <metadata-records>
-            <metadata-record class='column'>
-              <remote-name>CHANNEL_ID</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[CHANNEL_ID]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>CHANNEL_ID</remote-alias>
-              <ordinal>0</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>780</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>CHANNEL_TITLE</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[CHANNEL_TITLE]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>CHANNEL_TITLE</remote-alias>
-              <ordinal>1</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>780</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>CHANNEL_VIEWS</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[CHANNEL_VIEWS]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>CHANNEL_VIEWS</remote-alias>
-              <ordinal>2</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>769</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>COUNTRY</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[COUNTRY]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>COUNTRY</remote-alias>
-              <ordinal>3</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>22</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>RELEVANCE</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[RELEVANCE]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>RELEVANCE</remote-alias>
-              <ordinal>4</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>26</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>SUBS</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[SUBS]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>SUBS</remote-alias>
-              <ordinal>5</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>591</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS</remote-alias>
-              <ordinal>6</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>775</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT</remote-alias>
-              <ordinal>7</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>775</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>CHANNEL_VIDEO_VIEWS</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[CHANNEL_VIDEO_VIEWS]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>CHANNEL_VIDEO_VIEWS</remote-alias>
-              <ordinal>8</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>775</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>RELEVANT_IMPRESSIONS_DAILY</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[RELEVANT_IMPRESSIONS_DAILY]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>RELEVANT_IMPRESSIONS_DAILY</remote-alias>
-              <ordinal>9</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>770</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>RELEVANT_IMPRESSIONS_IN_DAILY</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[RELEVANT_IMPRESSIONS_IN_DAILY]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>RELEVANT_IMPRESSIONS_IN_DAILY</remote-alias>
-              <ordinal>10</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>780</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>VIDEO_VIEWS_DAILY</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[VIDEO_VIEWS_DAILY]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>VIDEO_VIEWS_DAILY</remote-alias>
-              <ordinal>11</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>771</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>RELEVANT_VIDEO_VIEWS_DAILY</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[RELEVANT_VIDEO_VIEWS_DAILY]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>RELEVANT_VIDEO_VIEWS_DAILY</remote-alias>
-              <ordinal>12</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>771</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>AVG_MINUTES</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[AVG_MINUTES]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>AVG_MINUTES</remote-alias>
-              <ordinal>13</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>754</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>FROM_DATE</remote-name>
-              <remote-type>135</remote-type>
-              <local-name>[FROM_DATE]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>FROM_DATE</remote-alias>
-              <ordinal>14</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>datetime</local-type>
-              <aggregation>Year</aggregation>
-              <approx-count>774</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TO_DATE</remote-name>
-              <remote-type>135</remote-type>
-              <local-name>[TO_DATE]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TO_DATE</remote-alias>
-              <ordinal>15</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>datetime</local-type>
-              <aggregation>Year</aggregation>
-              <approx-count>769</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>LR</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[LR]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>LR</remote-alias>
-              <ordinal>16</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>3</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TAGS</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[TAGS]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TAGS</remote-alias>
-              <ordinal>17</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>226</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>IDEOLOGY</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[IDEOLOGY]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>IDEOLOGY</remote-alias>
-              <ordinal>18</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>14</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>MEDIA</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[MEDIA]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>MEDIA</remote-alias>
-              <ordinal>19</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>3</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>MANOEL</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[MANOEL]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>MANOEL</remote-alias>
-              <ordinal>20</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>5</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>AIN</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[AIN]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>AIN</remote-alias>
-              <ordinal>21</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>2</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>LOGO_URL</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[LOGO_URL]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>LOGO_URL</remote-alias>
-              <ordinal>22</ordinal>
-              <family>Custom SQL Query</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>769</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-          </metadata-records>
-        </connection>
-      </extract>
-      <layout dim-ordering='alphabetic' dim-percentage='0.435196' measure-ordering='alphabetic' measure-percentage='0.401117' parameter-percentage='0.163687' show-structure='true' user-set-layout='true' />
-      <style>
-        <style-rule element='mark'>
-          <encoding attr='color' field='[:Measure Names]' type='palette'>
-            <map to='#4e79a7'>
-              <bucket>&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:RELEVANT_IMPRESSIONS_IN_DAILY:qk]&quot;</bucket>
-            </map>
-            <map to='#bcbcbc'>
-              <bucket>&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:RELEVANT_IMPRESSIONS_DAILY:qk]&quot;</bucket>
-            </map>
-          </encoding>
-          <encoding attr='color' field='[none:IDEOLOGY:nk]' type='palette'>
-            <map to='#333333'>
-              <bucket>&quot;Unclasified&quot;</bucket>
-            </map>
-            <map to='#3887be'>
-              <bucket>&quot;Partisan Left&quot;</bucket>
-            </map>
-            <map to='#41afa5'>
-              <bucket>&quot;Religious Conservative&quot;</bucket>
-            </map>
-            <map to='#4e79a7'>
-              <bucket>%null%</bucket>
-            </map>
-            <map to='#56b881'>
-              <bucket>&quot;Social Justice&quot;</bucket>
-            </map>
-            <map to='#6d6d6d'>
-              <bucket>&quot;Unclassified&quot;</bucket>
-            </map>
-            <map to='#6ec9e0'>
-              <bucket>&quot;Socialist&quot;</bucket>
-            </map>
-            <map to='#8a8acb'>
-              <bucket>&quot;Anti-SJW&quot;</bucket>
-            </map>
-            <map to='#96cbb3'>
-              <bucket>&quot;Anti-theist&quot;</bucket>
-            </map>
-            <map to='#a0cbe8'>
-              <bucket>&quot;Alt-light&quot;</bucket>
-            </map>
-            <map to='#aa557f'>
-              <bucket>&quot;Center/Left MSM&quot;</bucket>
-            </map>
-            <map to='#b7b7b7'>
-              <bucket>&quot;Libertarian&quot;</bucket>
-            </map>
-            <map to='#c68143'>
-              <bucket>&quot;White Identitarian&quot;</bucket>
-            </map>
-            <map to='#e0393e'>
-              <bucket>&quot;Partisan Right&quot;</bucket>
-            </map>
-            <map to='#e55e5e'>
-              <bucket>&quot;Provocative Anti-SJW&quot;</bucket>
-            </map>
-            <map to='#ed6498'>
-              <bucket>&quot;MRA&quot;</bucket>
-            </map>
-            <map to='#ffc168'>
-              <bucket>&quot;Conspiracy&quot;</bucket>
-            </map>
-          </encoding>
-        </style-rule>
-      </style>
-      <semantic-values>
-        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
-      </semantic-values>
-      <datasource-dependencies datasource='Parameters'>
-        <column caption='from' datatype='date' name='[Parameter 2]' param-domain-type='any' role='measure' type='quantitative' value='#2018-11-01#'>
-          <calculation class='tableau' formula='#2018-11-01#' />
-        </column>
-        <column caption='to' datatype='date' name='[Parameter 3]' param-domain-type='any' role='measure' type='quantitative' value='#2020-01-30#'>
-          <calculation class='tableau' formula='#2020-01-30#' />
-        </column>
-      </datasource-dependencies>
     </datasource>
     <datasource caption='Channel Recs Monthly' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 7)' version='18.1'>
       <connection class='federated'>
@@ -1709,7 +857,7 @@
           </metadata-records>
         </connection>
       </extract>
-      <layout dim-ordering='alphabetic' dim-percentage='0.412446' measure-ordering='alphabetic' measure-percentage='0.463097' parameter-percentage='0.124457' show-structure='true' user-set-layout='true' />
+      <layout dim-ordering='alphabetic' dim-percentage='0.412268' measure-ordering='alphabetic' measure-percentage='0.463623' parameter-percentage='0.124108' show-structure='true' user-set-layout='true' />
       <style>
         <style-rule element='mark'>
           <encoding attr='color' field='[none:TO_IDEOLOGY:nk]' type='palette'>
@@ -1856,6 +1004,858 @@
           <groupfilter function='member' level='[my:REC_MONTH:ok]' member='202002' />
         </groupfilter>
       </filter>
+    </datasource>
+    <datasource caption='Channel Stats' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' workgroup-auth-mode='as-is' />
+          </named-connection>
+        </named-connections>
+        <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp' name='Custom SQL Query' type='text'>with cr as (&#13;&#10;    select channel_id&#13;&#10;         , sum(relevant_impressions) as relevant_impressions&#13;&#10;         , sum(relevant_impressions_in) as relevant_impressions_in&#13;&#10;         , max(datediff(day, &lt;[Parameters].[Parameter 2]&gt;, least(last_day(&lt;[Parameters].[Parameter 3]&gt;, month), current_date()))) as days&#13;&#10;         , sum(relevant_impressions) / days as relevant_impressions_daily&#13;&#10;         , sum(relevant_impressions_in) / days as relevant_impressions_in_daily&#13;&#10;         , max(meets_subsviews_criteria) as meets_subsviews_criteria&#13;&#10;         , sum(video_views) / days as video_views_daily&#13;&#10;         , sum(relevant_video_views) / days as relevant_video_views_daily&#13;&#10;    from channel_stats_monthly&#13;&#10;    where month between &lt;[Parameters].[Parameter 2]&gt; and last_day(&lt;[Parameters].[Parameter 3]&gt;, month)&#13;&#10;    group by channel_id&#13;&#10;)&#13;&#10;&#13;&#10;select c.channel_id&#13;&#10;     , channel_title&#13;&#10;     , channel_views&#13;&#10;     , country&#13;&#10;     , relevance&#13;&#10;     , subs&#13;&#10;     , channel_lifetime_daily_views&#13;&#10;     , channel_lifetime_daily_views_relevant&#13;&#10;     , channel_video_views&#13;&#10;     , relevant_impressions_daily&#13;&#10;     , relevant_impressions_in_daily&#13;&#10;     , video_views_daily&#13;&#10;     , relevant_video_views_daily&#13;&#10;     , avg_minutes&#13;&#10;     , from_date&#13;&#10;     , to_date&#13;&#10;     , lr&#13;&#10;     , tags&#13;&#10;     , ideology&#13;&#10;     , media&#13;&#10;     , manoel&#13;&#10;     , ain&#13;&#10;     , logo_url&#13;&#10;from channel_latest c&#13;&#10;         left join cr on c.channel_id = cr.channel_id&#13;&#10;where cr.meets_subsviews_criteria = true</relation>
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_ID]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_ID</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_TITLE]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_TITLE</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[CHANNEL_VIEWS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_VIEWS</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>COUNTRY</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[COUNTRY]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>COUNTRY</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>RELEVANCE</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[RELEVANCE]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>RELEVANCE</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>SUBS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[SUBS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>SUBS</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS</remote-alias>
+            <ordinal>7</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>6</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT</remote-alias>
+            <ordinal>8</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_VIDEO_VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[CHANNEL_VIDEO_VIEWS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_VIDEO_VIEWS</remote-alias>
+            <ordinal>9</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>RELEVANT_IMPRESSIONS_DAILY</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[RELEVANT_IMPRESSIONS_DAILY]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>RELEVANT_IMPRESSIONS_DAILY</remote-alias>
+            <ordinal>10</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>RELEVANT_IMPRESSIONS_IN_DAILY</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[RELEVANT_IMPRESSIONS_IN_DAILY]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>RELEVANT_IMPRESSIONS_IN_DAILY</remote-alias>
+            <ordinal>11</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>VIDEO_VIEWS_DAILY</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[VIDEO_VIEWS_DAILY]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>VIDEO_VIEWS_DAILY</remote-alias>
+            <ordinal>12</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>RELEVANT_VIDEO_VIEWS_DAILY</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[RELEVANT_VIDEO_VIEWS_DAILY]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>RELEVANT_VIDEO_VIEWS_DAILY</remote-alias>
+            <ordinal>13</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>AVG_MINUTES</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[AVG_MINUTES]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>AVG_MINUTES</remote-alias>
+            <ordinal>14</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>27</precision>
+            <scale>6</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_DATE</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[FROM_DATE]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>FROM_DATE</remote-alias>
+            <ordinal>15</ordinal>
+            <local-type>datetime</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_DATE</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[TO_DATE]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>TO_DATE</remote-alias>
+            <ordinal>16</ordinal>
+            <local-type>datetime</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>LR</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[LR]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>LR</remote-alias>
+            <ordinal>17</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TAGS</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TAGS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>TAGS</remote-alias>
+            <ordinal>18</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>IDEOLOGY</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[IDEOLOGY]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>IDEOLOGY</remote-alias>
+            <ordinal>19</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>22</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>MEDIA</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[MEDIA]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>MEDIA</remote-alias>
+            <ordinal>20</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>18</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>MANOEL</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[MANOEL]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>MANOEL</remote-alias>
+            <ordinal>21</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>AIN</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[AIN]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>AIN</remote-alias>
+            <ordinal>22</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>LOGO_URL</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[LOGO_URL]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>LOGO_URL</remote-alias>
+            <ordinal>23</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column datatype='string' name='[:Measure Names]' role='dimension' type='nominal'>
+        <aliases>
+          <alias key='&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:RELEVANT_IMPRESSIONS_DAILY:qk]&quot;' value='Impressions Out' />
+          <alias key='&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:RELEVANT_IMPRESSIONS_IN_DAILY:qk]&quot;' value='Impressions In' />
+        </aliases>
+      </column>
+      <column caption='Channel Id' datatype='string' name='[CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='Channel Lifetime Daily Views' datatype='real' name='[CHANNEL_LIFETIME_DAILY_VIEWS]' role='measure' type='quantitative' />
+      <column caption='Channel Lifetime Relevant Daily Views' datatype='real' name='[CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT]' role='measure' type='quantitative' />
+      <column caption='Channel Title' datatype='string' name='[CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column datatype='string' name='[COUNTRY]' role='dimension' semantic-role='[Country].[ISO3166_2]' type='nominal' />
+      <column caption='Flow Advantage %' datatype='real' default-format='*+#%;-#%' name='[Calculation_1361776001277554688]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS_IN_DAILY])/SUM([RELEVANT_IMPRESSIONS_DAILY]) - 1' />
+      </column>
+      <column caption='Net Recommendations Daily' datatype='real' name='[Calculation_171699804373467136]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS_DAILY]) - SUM([RELEVANT_IMPRESSIONS_IN_DAILY])' />
+      </column>
+      <column caption='Channels Total' datatype='integer' name='[Channels (copy)]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='Total([Number of Records])'>
+          <table-calc ordering-type='Rows' />
+        </calculation>
+      </column>
+      <column caption='Group' datatype='string' name='[IDEOLOGY]' role='dimension' type='nominal'>
+        <aliases>
+          <alias key='%null%' value='Other' />
+        </aliases>
+      </column>
+      <column caption='Media' datatype='string' name='[MEDIA]' role='dimension' type='nominal' />
+      <column caption='Channels' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
+        <calculation class='tableau' formula='countd([CHANNEL_ID])' />
+      </column>
+      <column caption='Relevant Impressions Daily' datatype='real' name='[RELEVANT_IMPRESSIONS_DAILY]' role='measure' type='quantitative' />
+      <column caption='Relevant Impressions Daily In' datatype='real' name='[RELEVANT_IMPRESSIONS_IN_DAILY]' role='measure' type='quantitative' />
+      <column caption='Relevant Views Daily' datatype='real' name='[RELEVANT_VIDEO_VIEWS_DAILY]' role='measure' type='quantitative' />
+      <column-instance column='[IDEOLOGY]' derivation='None' name='[none:IDEOLOGY:nk]' pivot='key' type='nominal' />
+      <column-instance column='[RELEVANT_IMPRESSIONS_DAILY]' derivation='Sum' name='[sum:RELEVANT_IMPRESSIONS_DAILY:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[RELEVANT_IMPRESSIONS_IN_DAILY]' derivation='Sum' name='[sum:RELEVANT_IMPRESSIONS_IN_DAILY:qk]' pivot='key' type='quantitative' />
+      <group caption='Action (Group)' hidden='true' name='[Action (Group)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[IDEOLOGY]' />
+        </groupfilter>
+      </group>
+      <group caption='Action (Ideology)' hidden='true' name='[Action (Ideology)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[IDEOLOGY]' />
+        </groupfilter>
+      </group>
+      <group caption='Action (Media)' hidden='true' name='[Action (Media)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[MEDIA]' />
+        </groupfilter>
+      </group>
+      <extract count='-1' enabled='true' units='records'>
+        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks2/Analysis/.Data/Basics.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='05/31/2020 11:43:24 PM' username='tableau_internal_user'>
+          <relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <refresh>
+            <refresh-event add-from-file-path='Channel Stats' increment-value='%null%' refresh-type='create' rows-inserted='784' timestamp-start='2020-05-31 23:43:24.603' />
+          </refresh>
+          <metadata-records>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[CHANNEL_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_ID</remote-alias>
+              <ordinal>0</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>784</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[CHANNEL_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_TITLE</remote-alias>
+              <ordinal>1</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>784</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_VIEWS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[CHANNEL_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_VIEWS</remote-alias>
+              <ordinal>2</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>759</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>COUNTRY</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[COUNTRY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>COUNTRY</remote-alias>
+              <ordinal>3</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>23</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>RELEVANCE</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[RELEVANCE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>RELEVANCE</remote-alias>
+              <ordinal>4</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>26</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>SUBS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[SUBS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>SUBS</remote-alias>
+              <ordinal>5</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>592</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS</remote-alias>
+              <ordinal>6</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>784</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT</remote-alias>
+              <ordinal>7</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>784</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_VIDEO_VIEWS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[CHANNEL_VIDEO_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_VIDEO_VIEWS</remote-alias>
+              <ordinal>8</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>784</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>RELEVANT_IMPRESSIONS_DAILY</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[RELEVANT_IMPRESSIONS_DAILY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>RELEVANT_IMPRESSIONS_DAILY</remote-alias>
+              <ordinal>9</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>779</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>RELEVANT_IMPRESSIONS_IN_DAILY</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[RELEVANT_IMPRESSIONS_IN_DAILY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>RELEVANT_IMPRESSIONS_IN_DAILY</remote-alias>
+              <ordinal>10</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>784</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>VIDEO_VIEWS_DAILY</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[VIDEO_VIEWS_DAILY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>VIDEO_VIEWS_DAILY</remote-alias>
+              <ordinal>11</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>779</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>RELEVANT_VIDEO_VIEWS_DAILY</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[RELEVANT_VIDEO_VIEWS_DAILY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>RELEVANT_VIDEO_VIEWS_DAILY</remote-alias>
+              <ordinal>12</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>779</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>AVG_MINUTES</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[AVG_MINUTES]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>AVG_MINUTES</remote-alias>
+              <ordinal>13</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>767</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>FROM_DATE</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[FROM_DATE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_DATE</remote-alias>
+              <ordinal>14</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>783</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_DATE</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[TO_DATE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_DATE</remote-alias>
+              <ordinal>15</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>783</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>LR</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[LR]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>LR</remote-alias>
+              <ordinal>16</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>4</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TAGS</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TAGS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TAGS</remote-alias>
+              <ordinal>17</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>217</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>IDEOLOGY</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[IDEOLOGY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>IDEOLOGY</remote-alias>
+              <ordinal>18</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>14</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>MEDIA</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[MEDIA]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>MEDIA</remote-alias>
+              <ordinal>19</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>3</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>MANOEL</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[MANOEL]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>MANOEL</remote-alias>
+              <ordinal>20</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>5</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>AIN</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[AIN]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>AIN</remote-alias>
+              <ordinal>21</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>2</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>LOGO_URL</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[LOGO_URL]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>LOGO_URL</remote-alias>
+              <ordinal>22</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>762</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+          </metadata-records>
+        </connection>
+      </extract>
+      <layout dim-ordering='alphabetic' dim-percentage='0.375149' measure-ordering='alphabetic' measure-percentage='0.531661' parameter-percentage='0.09319' show-structure='true' user-set-layout='true' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[:Measure Names]' type='palette'>
+            <map to='#4e79a7'>
+              <bucket>&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:RELEVANT_IMPRESSIONS_IN_DAILY:qk]&quot;</bucket>
+            </map>
+            <map to='#bcbcbc'>
+              <bucket>&quot;[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[sum:RELEVANT_IMPRESSIONS_DAILY:qk]&quot;</bucket>
+            </map>
+          </encoding>
+          <encoding attr='color' field='[none:IDEOLOGY:nk]' type='palette'>
+            <map to='#333333'>
+              <bucket>&quot;Unclasified&quot;</bucket>
+            </map>
+            <map to='#3887be'>
+              <bucket>&quot;Partisan Left&quot;</bucket>
+            </map>
+            <map to='#41afa5'>
+              <bucket>&quot;Religious Conservative&quot;</bucket>
+            </map>
+            <map to='#4e79a7'>
+              <bucket>%null%</bucket>
+            </map>
+            <map to='#56b881'>
+              <bucket>&quot;Social Justice&quot;</bucket>
+            </map>
+            <map to='#6d6d6d'>
+              <bucket>&quot;Unclassified&quot;</bucket>
+            </map>
+            <map to='#6ec9e0'>
+              <bucket>&quot;Socialist&quot;</bucket>
+            </map>
+            <map to='#8a8acb'>
+              <bucket>&quot;Anti-SJW&quot;</bucket>
+            </map>
+            <map to='#96cbb3'>
+              <bucket>&quot;Anti-theist&quot;</bucket>
+            </map>
+            <map to='#a0cbe8'>
+              <bucket>&quot;Alt-light&quot;</bucket>
+            </map>
+            <map to='#aa557f'>
+              <bucket>&quot;Center/Left MSM&quot;</bucket>
+            </map>
+            <map to='#b7b7b7'>
+              <bucket>&quot;Libertarian&quot;</bucket>
+            </map>
+            <map to='#c68143'>
+              <bucket>&quot;White Identitarian&quot;</bucket>
+            </map>
+            <map to='#e0393e'>
+              <bucket>&quot;Partisan Right&quot;</bucket>
+            </map>
+            <map to='#e55e5e'>
+              <bucket>&quot;Provocative Anti-SJW&quot;</bucket>
+            </map>
+            <map to='#ed6498'>
+              <bucket>&quot;MRA&quot;</bucket>
+            </map>
+            <map to='#ffc168'>
+              <bucket>&quot;Conspiracy&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+      <datasource-dependencies datasource='Parameters'>
+        <column caption='from' datatype='date' name='[Parameter 2]' param-domain-type='any' role='measure' type='quantitative' value='#2018-11-01#'>
+          <calculation class='tableau' formula='#2018-11-01#' />
+        </column>
+        <column caption='to' datatype='date' name='[Parameter 3]' param-domain-type='any' role='measure' type='quantitative' value='#2020-05-31#'>
+          <calculation class='tableau' formula='#2020-05-31#' />
+        </column>
+      </datasource-dependencies>
     </datasource>
   </datasources>
   <actions>
@@ -2704,6 +2704,9 @@
             </column>
             <column caption='Relevant Views Daily' datatype='real' name='[RELEVANT_VIDEO_VIEWS_DAILY]' role='measure' type='quantitative' />
             <column-instance column='[MEDIA]' derivation='None' name='[none:MEDIA:nk]' pivot='key' type='nominal' />
+            <column-instance column='[RELEVANT_VIDEO_VIEWS_DAILY]' derivation='Sum' name='[pcto:sum:RELEVANT_VIDEO_VIEWS_DAILY:qk]' pivot='key' type='quantitative'>
+              <table-calc ordering-type='Columns' type='PctTotal' />
+            </column-instance>
             <column-instance column='[RELEVANT_VIDEO_VIEWS_DAILY]' derivation='Sum' name='[sum:RELEVANT_VIDEO_VIEWS_DAILY:qk]' pivot='key' type='quantitative' />
             <column-instance column='[Number of Records]' derivation='User' name='[usr:Number of Records:qk]' pivot='key' type='quantitative' />
           </datasource-dependencies>
@@ -2760,9 +2763,14 @@
               <breakdown value='auto' />
             </view>
             <mark class='Automatic' />
+            <encodings>
+              <text column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9].[pcto:sum:RELEVANT_VIDEO_VIEWS_DAILY:qk]' />
+            </encodings>
             <style>
               <style-rule element='mark'>
                 <format attr='mark-color' value='#c0c0c0' />
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-cull' value='true' />
               </style-rule>
               <style-rule element='pane'>
                 <format attr='minheight' value='-1' />
@@ -3022,17 +3030,17 @@
         <column caption='from' datatype='date' name='[Parameter 2]' param-domain-type='any' role='measure' type='quantitative' value='#2018-11-01#'>
           <calculation class='tableau' formula='#2018-11-01#' />
         </column>
-        <column caption='to' datatype='date' name='[Parameter 3]' param-domain-type='any' role='measure' type='quantitative' value='#2020-01-30#'>
-          <calculation class='tableau' formula='#2020-01-30#' />
+        <column caption='to' datatype='date' name='[Parameter 3]' param-domain-type='any' role='measure' type='quantitative' value='#2020-05-31#'>
+          <calculation class='tableau' formula='#2020-05-31#' />
         </column>
       </datasource-dependencies>
       <zones>
         <zone h='100000' id='4' type='layout-basic' w='100000' x='0' y='0'>
-          <zone h='99192' id='74' param='horz' type='layout-flow' w='98978' x='511' y='404'>
-            <zone h='99192' id='70' param='horz' type='layout-flow' w='98978' x='511' y='404'>
-              <zone h='99192' id='13' param='horz' type='layout-flow' w='98978' x='511' y='404'>
-                <zone h='99192' id='11' type='layout-basic' w='98978' x='511' y='404'>
-                  <zone h='72028' id='3' name='Classification' w='42197' x='511' y='404'>
+          <zone h='98996' id='74' param='horz' type='layout-flow' w='99104' x='448' y='502'>
+            <zone h='98996' id='70' param='horz' type='layout-flow' w='99104' x='448' y='502'>
+              <zone h='98996' id='13' param='horz' type='layout-flow' w='99104' x='448' y='502'>
+                <zone h='98996' id='11' type='layout-basic' w='99104' x='448' y='502'>
+                  <zone h='71882' id='3' name='Classification' w='46637' x='448' y='502'>
                     <zone-style>
                       <format attr='border-color' value='#000000' />
                       <format attr='border-style' value='none' />
@@ -3040,7 +3048,7 @@
                       <format attr='margin' value='4' />
                     </zone-style>
                   </zone>
-                  <zone h='27164' id='5' name='Media' w='42197' x='511' y='72432'>
+                  <zone h='27114' id='5' name='Media' w='46637' x='448' y='72384'>
                     <zone-style>
                       <format attr='border-color' value='#000000' />
                       <format attr='border-style' value='none' />
@@ -3048,7 +3056,7 @@
                       <format attr='margin' value='4' />
                     </zone-style>
                   </zone>
-                  <zone h='94903' id='10' name='Channels' w='56781' x='42708' y='4693'>
+                  <zone h='94718' id='10' name='Channels' w='52467' x='47085' y='4780'>
                     <zone-style>
                       <format attr='border-color' value='#000000' />
                       <format attr='border-style' value='none' />
@@ -3056,7 +3064,7 @@
                       <format attr='margin' value='4' />
                     </zone-style>
                   </zone>
-                  <zone h='4289' id='75' mode='datetime' param='[Parameters].[Parameter 2]' type='paramctrl' w='28388' x='42708' y='404'>
+                  <zone h='4278' id='75' mode='datetime' param='[Parameters].[Parameter 2]' type='paramctrl' w='24034' x='47085' y='502'>
                     <zone-style>
                       <format attr='border-color' value='#000000' />
                       <format attr='border-style' value='none' />
@@ -3064,7 +3072,7 @@
                       <format attr='margin' value='4' />
                     </zone-style>
                   </zone>
-                  <zone h='4289' id='76' mode='datetime' param='[Parameters].[Parameter 3]' type='paramctrl' w='28393' x='71096' y='404'>
+                  <zone h='4278' id='76' mode='datetime' param='[Parameters].[Parameter 3]' type='paramctrl' w='28433' x='71119' y='502'>
                     <zone-style>
                       <format attr='border-color' value='#000000' />
                       <format attr='border-style' value='none' />
@@ -3088,9 +3096,9 @@
         <devicelayout auto-generated='true' name='Phone'>
           <size maxheight='950' minheight='950' sizing-mode='vscroll' />
           <zones>
-            <zone h='100000' id='90' type='layout-basic' w='100000' x='0' y='0'>
-              <zone h='84000' id='89' param='vert' type='layout-flow' w='84000' x='8000' y='8000'>
-                <zone fixed-size='280' h='72028' id='3' is-fixed='true' name='Classification' w='42197' x='511' y='404'>
+            <zone h='100000' id='92' type='layout-basic' w='100000' x='0' y='0'>
+              <zone h='98996' id='91' param='vert' type='layout-flow' w='99104' x='448' y='502'>
+                <zone fixed-size='280' h='71882' id='3' is-fixed='true' name='Classification' w='46637' x='448' y='502'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
                     <format attr='border-style' value='none' />
@@ -3099,7 +3107,7 @@
                     <format attr='padding' value='0' />
                   </zone-style>
                 </zone>
-                <zone h='4289' id='75' mode='datetime' param='[Parameters].[Parameter 2]' type='paramctrl' w='28388' x='42708' y='404'>
+                <zone h='4278' id='75' mode='datetime' param='[Parameters].[Parameter 2]' type='paramctrl' w='24034' x='47085' y='502'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
                     <format attr='border-style' value='none' />
@@ -3108,7 +3116,7 @@
                     <format attr='padding' value='0' />
                   </zone-style>
                 </zone>
-                <zone h='4289' id='76' mode='datetime' param='[Parameters].[Parameter 3]' type='paramctrl' w='28393' x='71096' y='404'>
+                <zone h='4278' id='76' mode='datetime' param='[Parameters].[Parameter 3]' type='paramctrl' w='28433' x='71119' y='502'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
                     <format attr='border-style' value='none' />
@@ -3117,7 +3125,7 @@
                     <format attr='padding' value='0' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='280' h='94903' id='10' is-fixed='true' name='Channels' w='56781' x='42708' y='4693'>
+                <zone fixed-size='280' h='94718' id='10' is-fixed='true' name='Channels' w='52467' x='47085' y='4780'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
                     <format attr='border-style' value='none' />
@@ -3126,7 +3134,7 @@
                     <format attr='padding' value='0' />
                   </zone-style>
                 </zone>
-                <zone fixed-size='210' h='27164' id='5' is-fixed='true' name='Media' w='42197' x='511' y='72432'>
+                <zone fixed-size='209' h='27114' id='5' is-fixed='true' name='Media' w='46637' x='448' y='72384'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
                     <format attr='border-style' value='none' />
@@ -3160,8 +3168,34 @@
           <zoom type='entire-view' />
         </viewpoint>
       </viewpoints>
-      <active id='-1' />
+      <active id='5' />
       <simple-id uuid='{5C049C14-82F2-4C4B-B4D4-AD7D1320B8A4}' />
+    </window>
+    <window class='worksheet' maximized='true' name='Media'>
+      <cards>
+        <edge name='left'>
+          <strip size='288'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='title' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+      </viewpoint>
+      <simple-id uuid='{2FE95A39-7777-4A63-8874-3198DCC90BC6}' />
     </window>
     <window class='worksheet' name='Group Net Flow'>
       <cards>
@@ -3249,7 +3283,7 @@
       </viewpoint>
       <simple-id uuid='{295F216E-07BC-463D-BF49-082FA8358633}' />
     </window>
-    <window class='worksheet' maximized='true' name='Group % of All Recs'>
+    <window class='worksheet' name='Group % of All Recs'>
       <cards>
         <edge name='left'>
           <strip size='252'>
@@ -3399,226 +3433,178 @@
       </viewpoint>
       <simple-id uuid='{7A5CD79B-1B6A-4180-9E58-A75D3C79BC80}' />
     </window>
-    <window class='worksheet' hidden='true' name='Media'>
-      <cards>
-        <edge name='left'>
-          <strip size='160'>
-            <card type='pages' />
-            <card type='filters' />
-            <card type='marks' />
-          </strip>
-        </edge>
-        <edge name='top'>
-          <strip size='2147483647'>
-            <card type='columns' />
-          </strip>
-          <strip size='2147483647'>
-            <card type='rows' />
-          </strip>
-          <strip size='2147483647'>
-            <card type='title' />
-          </strip>
-        </edge>
-      </cards>
-      <viewpoint>
-        <zoom type='entire-view' />
-      </viewpoint>
-      <simple-id uuid='{2FE95A39-7777-4A63-8874-3198DCC90BC6}' />
-    </window>
   </windows>
   <thumbnails>
     <thumbnail height='192' name='Channel' width='192'>
       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
-      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
-      94nxgE+oAAAAAElFTkSuQmCC
+      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
     </thumbnail>
     <thumbnail height='192' name='Group % of All Recs' width='192'>
       iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAABJ0AAASdAHeZh94
@@ -4281,6 +4267,51 @@
       155b/7C1b8Vx9jyuyhr0iXFsbRvIpJIgppFlEpCUs3F9B4KuiHKLGZ2hiHKrldb2Rvr6higv
       LiMZdCEzWWgqKiUTS7FlUxvne4YoMi//iSch8WGxJmaFkN4AK0d6AywPKRVCIq+RDCCR10gG
       kMhr/n8vYSnPHiEXmgAAAABJRU5ErkJggg==
+    </thumbnail>
+    <thumbnail height='192' name='Media' width='192'>
+      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
     </thumbnail>
     <thumbnail height='192' name='Net Flow Advantage' width='192'>
       iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAABJ0AAASdAHeZh94

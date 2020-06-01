@@ -52,7 +52,7 @@
     },
     "run_test_vids": {
       "type": "integer",
-      "description": "the number recommendations to collect"
+      "description": "the number recommendations to collect. Only define if you want to restrict for test purposes"
     }
   },
   "description": "UserScrape configuration",

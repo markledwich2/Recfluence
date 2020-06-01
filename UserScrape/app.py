@@ -1,22 +1,22 @@
 import os
-from cfg import load_cfg
-from crawler import Crawler
+from userscrape.cfg import load_cfg, UserCfg, Cfg
+from userscrape.crawler import Crawler
+from userscrape.data import UserScrapeData
+from userscrape.store import BlobStore, new_trial_id
+from userscrape.discord_bot import DiscordBot
+from userscrape.log import configure_log
+from userscrape.results import save_complete_trial
+from userscrape.format import format_seconds
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
-from data import load_seed_videos, load_test_videos
 import asyncio
 import argparse
 from typing import List
-from store import BlobStore, new_trial_id
 from azure.storage.blob import PublicAccess
-from discord_bot import DiscordBot
 import logging
-from log import configure_log
 import time
 import seqlog
-from cfg import UserCfg, Cfg
 import shortuuid
-from results import save_complete_trial
-from format import format_seconds
+import sys
 
 
 async def experiment(initialization: bool, accounts: List[str], trial_id=None):
@@ -33,11 +33,13 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
 
     trial_start_time = time.time()
 
-    videos_to_test = load_test_videos(cfg.run_test_vids)
-    videos_to_seed = load_seed_videos(cfg.init_seed_vids if initialization else cfg.run_seed_vids)
-
     store = BlobStore(cfg.store)
     store.ensure_container_exits(PublicAccess.Container)
+    data = UserScrapeData(store, trial_id)
+
+    videos_to_test = data.test_videos(cfg.run_test_vids)
+    videos_to_seed = data.seed_videos(cfg.init_seed_vids if initialization else cfg.run_seed_vids)
+
     bot = DiscordBot(cfg.discord)
     await bot.start_in_backround()
 
@@ -83,9 +85,12 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
         log.info("completed trial {trial_id} in {duration}", trial_id=trial_id,
                  duration=format_seconds(time.time() - trial_start_time))
         save_complete_trial(trial_id, store, log)
+        logging.shutdown()
     else:
         log.error('trail ({trial_id}) failed for users {users}. Investigate and re-run this trail (it will resume incomplete tasks)',
                   users='|'.join(failedUsers), trial_id=trial_id)
+        logging.shutdown()
+        sys.exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Start one iteration of the experiment. If you run this for the first time \

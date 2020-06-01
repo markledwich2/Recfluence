@@ -23,12 +23,12 @@ from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath
 import tempfile
 import asyncio
 from typing import Any, List, Dict
-from store import BlobStore, UserScrapePaths, file_date_str
-from discord_bot import DiscordBot
-from cfg import UserCfg
+from .store import BlobStore, BlobPaths, file_date_str
+from .discord_bot import DiscordBot
+from .cfg import UserCfg
 import logging
 from logging import Logger
-from format import format_seconds
+from .format import format_seconds
 
 
 @dataclass_json
@@ -81,7 +81,7 @@ class Crawler:
         self.lang = lang
         self.trial_id = trial_id
         self.session_id = file_date_str()
-        self.path = UserScrapePaths(store.cfg, trial_id, user, self.session_id)
+        self.path = BlobPaths(store.cfg, trial_id, user, self.session_id)
 
     async def test_ip(self):
         wd = self.driver

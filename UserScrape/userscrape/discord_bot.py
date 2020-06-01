@@ -2,7 +2,7 @@ import os
 import re
 import discord
 from discord.ext import commands
-from cfg import DiscordCfg, UserCfg
+from userscrape.cfg import DiscordCfg, UserCfg
 import asyncio
 from typing import Dict
 from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath

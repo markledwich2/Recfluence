@@ -10,6 +10,7 @@
         "getenv",
         "groupby",
         "iterrows",
+        "jdbc",
         "jsonl",
         "jsons",
         "nargs",
@@ -35,8 +36,8 @@
         "**/.hg": true,
         "**/CVS": true,
         "**/.DS_Store": true,
-        "__*__": true,
-        "__azurite_*.json": true
+        "**/__*__": true,
+        "__azurite_*.json": true,
     },
     "editor.formatOnSave": true
 }
