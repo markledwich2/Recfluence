@@ -97,7 +97,7 @@ class Crawler:
         self.__load_cookies()
 
         wd.get('https://www.youtube.com')
-        self.wait_for_visible('#contents')
+        await self.wait_for_visible('#contents')
         await self.__log_driver_status('home')
 
         try:
@@ -108,11 +108,21 @@ class Crawler:
         if(login != None):
             await self.login()
 
-    def wait_for_visible(self, cssSelector: str) -> WebElement:
-        return WebDriverWait(self.driver, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, cssSelector)))
+    async def wait_for_visible(self, cssSelector: str) -> WebElement:
+        """waits for an element to be visible  at the given css selector, logs errors to seq & discord"""
+        try:
+            return WebDriverWait(self.driver, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, cssSelector)))
+        except WebDriverException as e:
+            await self.__log_driver_status(cssSelector, str(e))
+        raise e
 
-    def wait_for_clickable(self, cssSelector: str) -> WebElement:
-        return WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, cssSelector)))
+    async def wait_for_clickable(self, cssSelector: str) -> WebElement:
+        """waits for an element to be clickable at the given css selector, logs errors to seq & discord"""
+        try:
+            return WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, cssSelector)))
+        except WebDriverException as e:
+            await self.__log_driver_status(cssSelector, str(e))
+        raise e
 
     async def login(self) -> CrawlResult:
         wd = self.driver
@@ -122,64 +132,49 @@ class Crawler:
         wd.get(
             f'https://accounts.google.com/signin/v2/identifier?service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3D{self.lang}%26next%3D%252F&hl={self.lang}&ec=65620&flowName=GlifWebSignIn&flowEntry=ServiceLogin')
 
-        phase = 'email'
-
         wfc = self.wait_for_clickable
         wfv = self.wait_for_visible
 
         async def onHome():
-            phase = 'home'
-            wfv(homeSelector)
-            await self.__log_driver_status(phase)
+            await wfv(homeSelector)
             self.__save_cookies()
 
-        try:
-            wfc('input[type="email"]').send_keys(user.email)
-            # next_button = wd.find_element_by_id('next').click()
-            wfc('#identifierNext').click()
-            phase = 'email entered'
+        (await wfc('input[type="email"]')).send_keys(user.email)
+        # next_button = wd.find_element_by_id('next').click()
+        (await wfc('#identifierNext')).click()
+        (await wfc('input[type="password"]')).send_keys(user.password)
+        (await wfc('#passwordNext')).click()
+        await asyncio.sleep(2)
 
-            wfc('input[type="password"]').send_keys(user.password)
-            wfc('#passwordNext').click()
-            await asyncio.sleep(2)
+        telSelector = 'input[type="tel"]'
+        smsSelector = '*[data-sendmethod="SMS"]'
+        captchaSelector = 'input[aria-label="Type the text you hear or see"]'
+        homeSelector = '#primary'
 
-            phase = 'password entered'
-            telSelector = 'input[type="tel"]'
-            smsSelector = '*[data-sendmethod="SMS"]'
-            captchaSelector = 'input[aria-label="Type the text you hear or see"]'
-            homeSelector = '#primary'
-
-            authEl: WebElement = wfv(f'{telSelector}, {smsSelector}, {captchaSelector}, {homeSelector}')
-            if authEl.get_attribute('id') == 'primary':
-                await onHome()
-                return CrawlResult()
-            if authEl.get_attribute('type') == 'tel':
-                wfc(telSelector).send_keys(user.telephone_number)
-                phase = 'phone_number_entered'
-                wfc('#idvanyphonecollectNext').click()
-                code = await self.bot.request_code(user)
-                wfc(telSelector).send_keys(code)
-                wfc('#idvanyphoneverifyNext').click()
-            elif authEl.get_attribute('data-sendmethod') == 'SMS':
-                wfc(smsSelector).click()  # select sms option
-                code = await self.bot.request_code(user)
-                wfc(telSelector).send_keys(code)
-                wfc('#idvPreregisteredPhoneNext').click()
-            elif authEl.get_attribute('aria-label') == 'Type the text you hear or see':
-                captchaPath = self.__save_image('captcha')
-                captcha = await self.bot.request_code(user, "enter the catpcha", captchaPath)
-                wfc(captchaSelector).send_keys(captcha)
-                wfc('#identifierNext').click()
-            else:
-                raise WebDriverException('unable to find post-password element')
-
+        authEl: WebElement = await wfv(f'{telSelector}, {smsSelector}, {captchaSelector}, {homeSelector}')
+        if authEl.get_attribute('id') == 'primary':
             await onHome()
             return CrawlResult()
+        if authEl.get_attribute('type') == 'tel':
+            (await wfc(telSelector)).send_keys(user.telephone_number)
+            (await wfc('#idvanyphonecollectNext')).click()
+            code = await self.bot.request_code(user)
+            (await wfc(telSelector)).send_keys(code)
+            (await wfc('#idvanyphoneverifyNext')).click()
+        elif authEl.get_attribute('data-sendmethod') == 'SMS':
+            (await wfc(smsSelector)).click()  # select sms option
+            code = await self.bot.request_code(user)
+            (await wfc(telSelector)).send_keys(code)
+            (await wfc('#idvPreregisteredPhoneNext')).click()
+        elif authEl.get_attribute('aria-label') == 'Type the text you hear or see':
+            captchaPath = self.__save_image('captcha')
+            captcha = await self.bot.request_code(user, "enter the catpcha", captchaPath)
+            (await wfc(captchaSelector)).send_keys(captcha)
+            (await wfc('#identifierNext')).click()
+        else:
+            raise WebDriverException('unable to find post-password element')
 
-        except WebDriverException as e:
-            await self.__log_driver_status(f'{phase}-exception', e.msg)
-            raise e
-
+        await onHome()
         return CrawlResult()
 
     def get_video_features(self, video_id, rec_result: RecResult, personalized_count: int):
@@ -358,16 +353,10 @@ class Crawler:
         self.driver.switch_to.window(current_tab)
         self.driver.get("https://www.youtube.com/watch?v=" + video_id)
         # wait until video is loaded
-        playbutton = self.wait.until(
-            EC.presence_of_element_located((By.XPATH,
-                                            '//*[@class="ytp-play-button ytp-button"]'))
-        )
+
+        (await self.wait_for_clickable('.ytp-play-button.ytp-button')).click()
 
         self.log.info('{email} - started watching video {video}', email=self.user.email, video=video_id)
-
-        # todo: in the end this will be only english
-        if playbutton.get_attribute('title') in ["Play (k)", "Wiedergabe (k)"]:
-            playbutton.click()
 
         # we store any advertisements that appear
         advertisements = dict(
@@ -377,7 +366,7 @@ class Crawler:
             advertisers=[]
         )
 
-        def handle_ad() -> bool:
+        async def handle_ad() -> bool:
             """returns true when an add was found, false otherwise"""
             # unfortunately the ad loads slower than the player so we wait here to be sure we detect the ad if any appears
             time.sleep(2)  # blocking sleep (instead of await asyncio.sleep()) because we rely on the driver being on this tab
@@ -390,12 +379,12 @@ class Crawler:
             advertisements['advertisers'].append(ad_text)
             time.sleep(5)
             try:
-                self.wait_for_visible('*.ytp-ad-skip-button.ytp-button').click()
+                (await self.wait_for_visible('*.ytp-ad-skip-button.ytp-button')).click()
                 return True
             except TimeoutException:
                 return False
 
-        while handle_ad():
+        while await handle_ad():
             time.sleep(1)
         # wait again, for second ad that might appear
 
@@ -580,15 +569,17 @@ class Crawler:
         self.store.save(seshPath / f'{name}.json', state)
 
         # save image
-        localImagePath = self.__save_image(name)
-        self.store.save_file(localImagePath, seshPath / f'{name}.png')
+        local_image_path = self.__save_image(name)
+        remote_image_path = seshPath / f'{name}.png'
+        self.store.save_file(local_image_path, remote_image_path)
+        image_url = self.store.url(remote_image_path)
 
         if(error != None):
-            self.log.error('{email} - expereinced error ({error}) at {url} when ({phase})',
-                           email=self.user.email, error=error, url=wd.current_url, phase=name)
-            await self.bot.msg(f'{self.user.email} expereinced error ({error}) at {wd.current_url} when ({name})', localImagePath)
+            self.log.error('{email} - expereinced error ({error}) at {url} when ({phase}) {image_url}',
+                           email=self.user.email, error=error, url=wd.current_url, phase=name, image_url=image_url)
+            await self.bot.msg(f'{self.user.email} expereinced error ({error}) at {wd.current_url} when ({name})', local_image_path)
 
-        os.remove(localImagePath)
+        os.remove(local_image_path)
 
     def shutdown(self):
         self.driver.quit()
