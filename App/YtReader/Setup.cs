@@ -44,7 +44,7 @@ namespace YtReader {
 
     public static Logger CreateTestLogger() =>
       new LoggerConfiguration()
-        .WriteTo.Seq("http://localhost:5341")
+        .WriteTo.Seq("http://localhost:5341", LogEventLevel.Debug)
         .WriteTo.Console()
         .CreateLogger();
 

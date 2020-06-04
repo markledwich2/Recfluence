@@ -53,8 +53,6 @@ namespace YtReader.Store {
       var container = client.GetContainerReference(cfg.RootPath(version.Prerelease));
       return container;
     }
-    
-    
 
     public static string RootPath(this StorageCfg cfg, SemVersion version) => cfg.RootPath(version.Prerelease);
     public static string RootPath(this StorageCfg cfg, string prefix) => prefix.HasValue() ? $"{cfg.Container}-{prefix}" : cfg.Container;
@@ -92,17 +90,18 @@ namespace YtReader.Store {
   }
 
   public class ChannelStored2 : WithUpdatedItem {
-    public string        ChannelId     { get; set; }
-    public string        ChannelTitle  { get; set; }
-    public string        MainChannelId { get; set; }
-    public string        Description   { get; set; }
-    public string        LogoUrl       { get; set; }
-    public double        Relevance     { get; set; }
-    public string        LR            { get; set; }
-    public ulong?        Subs          { get; set; }
-    public ulong?        ChannelViews  { get; set; }
-    public string        Country       { get; set; }
-    public ChannelStatus Status        { get; set; }
+    public string              ChannelId     { get; set; }
+    public string              ChannelTitle  { get; set; }
+    public string              MainChannelId { get; set; }
+    public string              Description   { get; set; }
+    public string              LogoUrl       { get; set; }
+    public double              Relevance     { get; set; }
+    public string              LR            { get; set; }
+    public ulong?              Subs          { get; set; }
+    public ulong?              ChannelViews  { get; set; }
+    public string              Country       { get; set; }
+    public ChannelStatus       Status        { get; set; }
+    public ChannelReviewStatus ReviewStatus  { get; set; }
 
     public IReadOnlyCollection<string>            HardTags     { get; set; }
     public IReadOnlyCollection<string>            SoftTags     { get; set; }
@@ -128,12 +127,37 @@ namespace YtReader.Store {
     public string                ChannelTitle { get; set; }
     public DateTime              UploadDate   { get; set; }
     public string                Description  { get; set; }
-    public ThumbnailSet          Thumbnails   { get; set; }
+    public VideoThumbnail        Thumbnail    { get; set; } = new VideoThumbnail();
     public TimeSpan              Duration     { get; set; }
     public IReadOnlyList<string> Keywords     { get; set; } = new List<string>();
     public Statistics            Statistics   { get; set; }
-
     public override string ToString() => $"{Title}";
+  }
+
+  public class VideoThumbnail {
+    public static VideoThumbnail FromVideoId(string videoId) {
+      var t = new ThumbnailSet(videoId);
+      return new VideoThumbnail {
+        LowResUrl = t.LowResUrl,
+        StandardResUrl = t.StandardResUrl,
+        HighRestUrl = t.HighResUrl,
+        MaxResUrl = t.MaxResUrl
+      };
+    }
+
+    public string LowResUrl      { get; set; }
+    public string HighRestUrl    { get; set; }
+    public string MaxResUrl      { get; set; }
+    public string StandardResUrl { get; set; }
+  }
+
+  public class VideoCommentStored2 {
+    public string    ChannelId       { get; set; }
+    public string    VideoId         { get; set; }
+    public string    Author          { get; set; }
+    public string    AuthorChannelId { get; set; }
+    public string    Comment         { get; set; }
+    public DateTime? Created         { get; set; }
   }
 
   public class RecStored2 : Rec, IHasUpdated {
@@ -153,13 +177,14 @@ namespace YtReader.Store {
     public IReadOnlyCollection<ClosedCaption> Captions   { get; set; } = new List<ClosedCaption>();
   }
 
-  public class VideoExtraStored2 : WithUpdatedItem {
-    public string Id           { get; set; }
-    public string ChannelId    { get; set; }
-    public string ChannelTitle { get; set; }
-    public bool?  HasAd        { get; set; }
-    public string Error        { get; set; }
-    public string SubError     { get; set; }
+  public class VideoExtraStored2 : VideoStored2 {
+    public bool?                 HasAd       { get; set; }
+    public string                Error       { get; set; }
+    public string                SubError    { get; set; }
+    public VideoCommentStored2[] Comments    { get; set; }
+    public string                Ad          { get; set; }
+    public string                CommentsMsg { get; set; }
+    public ScrapeSource          Source      { get; set; }
   }
 
   public interface IHasUpdated {

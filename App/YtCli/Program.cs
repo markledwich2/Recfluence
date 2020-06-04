@@ -88,9 +88,6 @@ namespace YtCli {
     [Option('c', "channels", HelpText = "optional '|' separated list of channels to process")]
     public string ChannelIds { get; set; }
 
-    [Option('t', "type", HelpText = "Control what parts of the update process to run")]
-    public CollectorMode UpdateType { get; set; }
-
     [Option('f', "force", HelpText = "Force update of channels, so stats are refreshed even if they have been updated recently")]
     public bool ForceUpdate { get; set; }
 
@@ -106,7 +103,7 @@ namespace YtCli {
       var cfg = ctx.Scope.Resolve<PipeAppCfg>();
       cfg.Location = PipeRunLocation.Local;
       var pipeCtx = new PipeCtx(cfg, appCtx, standardPipeCtx.Store, standardPipeCtx.Log);
-      await pipeCtx.Run((YtCollector d) => d.Collect(PipeArg.Inject<ILogger>(), ctx.Option.UpdateType, ctx.Option.ForceUpdate));
+      await pipeCtx.Run((YtCollector d) => d.Collect(PipeArg.Inject<ILogger>(), ctx.Option.ForceUpdate));
     }
   }
 
@@ -187,7 +184,7 @@ namespace YtCli {
   public class TrafficCmd : ICommonCmd {
     public static async Task Traffic(CmdCtx<TrafficCmd> ctx) {
       var store = ctx.Cfg.DataStore(ctx.Log, ctx.Cfg.Storage.PrivatePath);
-      await TrafficSourceExports.Process(store, ctx.Cfg, new YtScraper(ctx.Cfg.Scraper), ctx.Log);
+      await TrafficSourceExports.Process(store, ctx.Cfg, new WebScraper(ctx.Cfg.Scraper), ctx.Log);
     }
   }
 

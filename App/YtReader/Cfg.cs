@@ -34,11 +34,9 @@ namespace YtReader {
 
   public class AppCfg {
     public            string              AppInsightsKey        { get; set; }
-    public            int                 ParallelChannels      { get; set; } = 4;
     public            int                 DefaultParallel       { get; set; } = 8;
-    public            int                 ChannelsPerContainer  { get; set; } = 150;
     [Required] public BranchEnvCfg        Env                   { get; set; } = new BranchEnvCfg();
-    [Required] public YtReaderCfg         YtReader              { get; set; } = new YtReaderCfg();
+    [Required] public YtCollectCfg        YtCollect             { get; set; } = new YtCollectCfg();
     [Required] public StorageCfg          Storage               { get; set; } = new StorageCfg();
     [Required] public ICollection<string> YTApiKeys             { get; set; } = new List<string>();
     [Required] public HashSet<string>     LimitedToSeedChannels { get; set; } = new HashSet<string>();
@@ -86,6 +84,8 @@ namespace YtReader {
     public            int        TimeoutSeconds { get; set; } = 40;
     public            int        Retry          { get; set; } = 10;
     public            bool       AlwaysUseProxy { get; set; }
+    public            int        ChromeParallel { get; set; } = 2;
+    public            int        Webarallel     { get; set; } = 10;
   }
 
   public class SheetsCfg {
@@ -95,7 +95,7 @@ namespace YtReader {
     [Required]                           public int                 Parallel            { get; set; } = 4;
   }
 
-  public class YtReaderCfg {
+  public class YtCollectCfg {
     public DateTime  From { get; set; }
     public DateTime? To   { get; set; }
 
@@ -117,6 +117,13 @@ namespace YtReader {
     public TimeSpan RefreshAllAfter { get; set; } = 23.Hours();
 
     public bool AlwaysUseProxy { get; set; }
+
+    /// <summary>The maximum number of videos to refresh exta info on (per run) because they have no comments (we didn't used
+    ///   to collect them)</summary>
+    public int PopulateMissingCommentsLimit { get; set; } = 20;
+
+    public int ParallelChannels     { get; set; } = 2;
+    public int ChannelsPerContainer { get; set; } = 150;
   }
 
   public class StorageCfg {

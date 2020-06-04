@@ -23,7 +23,7 @@ using YtReader.Store;
 //// a modified version of https://github.com/Tyrrrz/YoutubeExplode
 
 namespace YtReader.YtWebsite {
-  public class YtScraper {
+  public class WebScraper {
     const    string     MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
     readonly ScraperCfg Cfg;
 
@@ -34,7 +34,7 @@ namespace YtReader.YtWebsite {
 
     long DirectHttpFailures;
 
-    public YtScraper(ScraperCfg scraperCfg) {
+    public WebScraper(ScraperCfg scraperCfg) {
       Cfg = scraperCfg;
       DirectHttp = CreateHttpClient(false);
       ProxyHttp = CreateHttpClient(true);
@@ -349,8 +349,8 @@ namespace YtReader.YtWebsite {
 
     #region Videos
 
-    async Task<(HtmlDocument html, string raw, string url)> GetVideoWatchPageHtmlAsync(string videoId, ILogger log) {
-      var url = $"https://youtube.com/watch?v={videoId}&disable_polymer=true&bpctr=9999999999&hl=en-us";
+    public async Task<(HtmlDocument html, string raw, string url)> GetVideoWatchPageHtmlAsync(string videoId, ILogger log) {
+      var url = $"https://youtube.com/watch?v={videoId}&bpctr=9999999999&hl=en-us";
       var raw = await GetRaw(url, "video watch", log);
       return (Html.ParseDocument(raw), raw, url);
     }
@@ -359,16 +359,30 @@ namespace YtReader.YtWebsite {
 
     public const string RestrictedVideoError = "Restricted";
 
-    //ytInitialPlayerResponse.responseContext.serviceTrackingParams.filter(p => p.service == "CSI")[0].params
-    public async Task<(IReadOnlyCollection<Rec> recs, VideoExtraStored2 extra)> GetRecsAndExtra(string videoId, ILogger log) {
-      var (html, raw, url) = await GetVideoWatchPageHtmlAsync(videoId, log);
+    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) =>
+      await videos.BlockFunc(async v => await GetRecsAndExtra(v, log), Cfg.Webarallel);
 
+    //ytInitialPlayerResponse.responseContext.serviceTrackingParams.filter(p => p.service == "CSI")[0].params
+    public async Task<RecsAndExtra> GetRecsAndExtra(string videoId, ILogger log) {
+      var watchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
+      var (html, raw, url) = watchPage;
       var channel = ChannelInfoFromWatchPage(html);
+      var infoDic = await GetVideoInfoDicAsync(videoId, log);
+      var videoItem = await GetVideo(videoId, infoDic, watchPage);
+
       var extra = new VideoExtraStored2 {
-        Id = videoId,
+        VideoId = videoId,
         Updated = DateTime.UtcNow,
         ChannelId = channel.channelId,
-        ChannelTitle = channel.channelTitle
+        ChannelTitle = channel.channelTitle,
+        Description = videoItem.Description,
+        Duration = videoItem.Duration,
+        Keywords = videoItem.Keywords,
+        Title = videoItem.Title,
+        UploadDate = videoItem.UploadDate.UtcDateTime,
+        Statistics = videoItem.Statistics,
+        Source = ScrapeSource.Web,
+        Thumbnail = VideoThumbnail.FromVideoId(videoId)
       };
 
       var restrictedMode = html.QueryElements("head > meta[property=\"og:restrictions:age\"]").FirstOrDefault()?.GetAttribute("content")?.Value == "18+";
@@ -382,7 +396,7 @@ namespace YtReader.YtWebsite {
         if (extra.SubError.HasValue()) // all pages have the error, but not a suberror
           extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
       }
-      if (extra.Error != null) return (new Rec[] { }, extra);
+      if (extra.Error != null) return new RecsAndExtra(extra, new Rec[] { });
 
       var recs = GetRecs(html, url, log);
       if (!recs.Any())
@@ -391,7 +405,7 @@ namespace YtReader.YtWebsite {
       var match = _ytAdRegex.Match(raw);
       extra.HasAd = match.Success && match.Groups[1].Value == "1";
 
-      return (recs, extra);
+      return new RecsAndExtra(extra, recs);
     }
 
     static (string channelTitle, string channelId) ChannelInfoFromWatchPage(HtmlDocument html) {
@@ -405,7 +419,7 @@ namespace YtReader.YtWebsite {
       return (title, id);
     }
 
-    IReadOnlyCollection<Rec> GetRecs(HtmlDocument html, string url, ILogger log) {
+    Rec[] GetRecs(HtmlDocument html, string url, ILogger log) {
       var recs = (from d in html.QueryElements("li.video-list-item.related-list-item").Select((e, i) => (e, i))
         let titleSpan = d.e.QueryElements("span.title").FirstOrDefault()
         let channelSpan = d.e.QueryElements("span.stat.attribution > span").FirstOrDefault()
@@ -416,7 +430,7 @@ namespace YtReader.YtWebsite {
           ToVideoTitle = titleSpan.GetInnerText(),
           ToChannelTitle = channelSpan.GetInnerText(),
           Rank = d.i + 1
-        }).ToList();
+        }).ToArray();
 
       return recs;
     }
@@ -428,15 +442,18 @@ namespace YtReader.YtWebsite {
       return captions;
     }
 
-    public async Task<VideoItem> GetVideoAsync(string videoId, ILogger log) {
+    public async Task<VideoItem> GetVideo(string videoId, ILogger log) {
       if (!ValidateVideoId(videoId))
         throw new ArgumentException($"Invalid YouTube video ID [{videoId}].", nameof(videoId));
+      var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
+      var videoWatchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
+      return await GetVideo(videoId, videoInfoDic, videoWatchPage);
+    }
 
-      var videoInfoDicTask = GetVideoInfoDicAsync(videoId, log);
-      var videoWatchPageTask = GetVideoWatchPageHtmlAsync(videoId, log);
-
-      var videoInfoDic = await videoInfoDicTask;
+    static async Task<VideoItem> GetVideo(string videoId, IReadOnlyDictionary<string, string> videoInfoDic,
+      (HtmlDocument html, string raw, string url) videoWatchPage) {
       var responseJson = JToken.Parse(videoInfoDic["player_response"]);
+      var renderer = responseJson.SelectToken("microformat.playerMicroformatRenderer");
 
       if (string.Equals(responseJson.SelectToken("playabilityStatus.status")?.Value<string>(), "error",
         StringComparison.OrdinalIgnoreCase))
@@ -449,21 +466,20 @@ namespace YtReader.YtWebsite {
 
       var videoAuthor = VideoValue<string>("author");
       var videoTitle = VideoValue<string>("title");
-      var videoDuration = TimeSpan.FromSeconds(VideoValue<double>("videoDetails.lengthSeconds"));
+      var videoDuration = TimeSpan.FromSeconds(VideoValue<double>("lengthSeconds"));
       var videoKeywords = responseJson.SelectToken("videoDetails.keywords").NotNull().Values<string>().ToArray();
       var videoDescription = VideoValue<string>("shortDescription");
       var videoViewCount = VideoValue<long>("viewCount"); // some videos have no views
       var channelId = VideoValue<string>("channelId");
       var channelTitle = VideoValue<string>("author");
 
-      var (videoWatchPageHtml, _, _) = await videoWatchPageTask;
-      var videoUploadDate = videoWatchPageHtml.QueryElements("meta[itemprop=\"datePublished\"]")
-                              .FirstOrDefault()?.GetAttribute("content").Value.ParseDateTimeOffset("yyyy-MM-dd") ??
+      var videoUploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseDateTimeOffset("yyyy-MM-dd") ??
                             throw new InvalidOperationException("No upload date found in page");
-      var videoLikeCountRaw = videoWatchPageHtml.GetElementsByClassName("like-button-renderer-like-button")
+
+      var videoLikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-like-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
       var videoLikeCount = !videoLikeCountRaw.IsNullOrWhiteSpace() ? videoLikeCountRaw.ParseLong() : 0;
-      var videoDislikeCountRaw = videoWatchPageHtml.GetElementsByClassName("like-button-renderer-dislike-button")
+      var videoDislikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-dislike-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
       var videoDislikeCount = !videoDislikeCountRaw.IsNullOrWhiteSpace() ? videoDislikeCountRaw.ParseLong() : 0;
 
@@ -551,16 +567,30 @@ namespace YtReader.YtWebsite {
   }
 
   public class Rec {
-    public string    ToVideoId      { get; set; }
-    public string    ToVideoTitle   { get; set; }
-    public string    ToChannelTitle { get; set; }
-    public string    ToChannelId    { get; set; } // only known if from the API
-    public RecSource Source         { get; set; }
-    public int       Rank           { get; set; }
+    public string        ToVideoId      { get; set; }
+    public string        ToVideoTitle   { get; set; }
+    public string        ToChannelTitle { get; set; }
+    public string        ToChannelId    { get; set; } // only known if from the API
+    public ScrapeSource? Source         { get; set; }
+    public int           Rank           { get; set; }
+    public long?         ToViews        { get; set; }
+    public DateTime?     ToUploadDate   { get; set; }
+    public bool          ForYou         { get; set; }
   }
 
-  public enum RecSource {
+  public enum ScrapeSource {
     Web,
-    Api
+    Api,
+    Chrome
+  }
+
+  public class RecsAndExtra {
+    public RecsAndExtra(VideoExtraStored2 extra, Rec[] recs) {
+      Extra = extra;
+      Recs = recs;
+    }
+
+    public VideoExtraStored2 Extra { get; set; }
+    public Rec[]             Recs  { get; set; }
   }
 }
