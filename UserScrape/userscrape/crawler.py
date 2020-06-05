@@ -238,7 +238,7 @@ class Crawler:
                 break
 
         if findRecsEx:
-            unavalable = self.get_video_unavailable()
+            unavalable = await self.get_video_unavailable()
             if(unavalable == None):
                 await self.__log_driver_status('recommendations', findRecsEx.msg)
                 raise findRecsEx

@@ -8,23 +8,32 @@ def configure_log(url: str, env='dev', branch_env=None, trial_id=None) -> loggin
         'version': 1,
         'disable_existing_loggers': True,
         'root': {
-            'level': 'WARN',
+            'level': 'DEBUG',
             'handlers': ['console']
         },
         'loggers': {
             'seq': {
-                'level': 'INFO',
-                'handlers': ['seq']
+                'level': 'DEBUG',
+                'handlers': ['seq'],
+                'propagate': True
             }
         },
         'handlers': {
             'console': {
-                'class': 'seqlog.structured_logging.ConsoleStructuredLogHandler'
+                'class': 'seqlog.structured_logging.ConsoleStructuredLogHandler',
+                'formatter': 'seq'
             },
             'seq': {
                 'class': 'seqlog.structured_logging.SeqLogHandler',
                 'server_url': url,
-                'batch_size': 1
+                'batch_size': 10,
+                'auto_flush_timeout': 2,
+                'formatter': 'seq'
+            }
+        },
+        'formatters': {
+            'seq': {
+                'style': '{'
             }
         }
     })

@@ -17,6 +17,7 @@ import time
 import seqlog
 import shortuuid
 import sys
+from seqlog import log_to_seq
 
 
 async def experiment(initialization: bool, accounts: List[str], trial_id=None):
