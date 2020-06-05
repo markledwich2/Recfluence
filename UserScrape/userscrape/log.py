@@ -3,7 +3,7 @@ import logging
 import json
 
 
-def configure_log(url: str, env='dev', trial_id=None):
+def configure_log(url: str, env='dev', branch_env=None, trial_id=None) -> logging.Logger:
     seqlog.configure_from_dict({
         'version': 1,
         'disable_existing_loggers': True,
@@ -32,5 +32,8 @@ def configure_log(url: str, env='dev', trial_id=None):
     seqlog.set_global_log_properties(
         app="UserScrape",
         env=env,
+        branch_env=branch_env,
         trial_id=trial_id
     )
+
+    return logging.getLogger('seq')

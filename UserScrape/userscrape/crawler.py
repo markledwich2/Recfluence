@@ -108,20 +108,28 @@ class Crawler:
         if(login != None):
             await self.login()
 
-    async def wait_for_visible(self, cssSelector: str) -> WebElement:
+    async def wait_for_visible(self, cssSelector: str, error_expected: bool = False) -> WebElement:
         """waits for an element to be visible  at the given css selector, logs errors to seq & discord"""
         try:
             return WebDriverWait(self.driver, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, cssSelector)))
         except WebDriverException as e:
-            await self.__log_driver_status(cssSelector, str(e))
+            await self.handle_driver_ex(e, cssSelector, error_expected)
         raise e
 
-    async def wait_for_clickable(self, cssSelector: str) -> WebElement:
+    async def wait_for_clickable(self, cssSelector: str, error_expected: bool = False) -> WebElement:
         """waits for an element to be clickable at the given css selector, logs errors to seq & discord"""
         try:
             return WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, cssSelector)))
         except WebDriverException as e:
-            await self.__log_driver_status(cssSelector, str(e))
+            await self.handle_driver_ex(e, cssSelector, error_expected)
+
+    async def handle_driver_ex(self, e: WebDriverException, selector: str, expected: bool = False):
+        ex_name = e.__class__.__name__
+        if(expected):
+            self.log.debug('selector {selector} failed with {ex_name} (but we expected it to)',
+                           selector=selector, ex_name=ex_name)
+        else:
+            await self.__log_driver_status(selector, )
         raise e
 
     async def login(self) -> CrawlResult:
@@ -230,14 +238,8 @@ class Crawler:
                 break
 
         if findRecsEx:
-            reason: List[WebElement] = self.driver.find_elements_by_css_selector(
-                '.reason.yt-player-error-message-renderer')
-            subReason: List[WebElement] = self.driver.find_elements_by_css_selector(
-                '.subreason.yt-player-error-message-renderer')
-
-            if(reason):
-                unavalable = VideoUnavailable(reason[0].text, subReason[0].text if subReason else None)
-            else:
+            unavalable = self.get_video_unavailable()
+            if(unavalable == None):
                 await self.__log_driver_status('recommendations', findRecsEx.msg)
                 raise findRecsEx
 
@@ -269,6 +271,16 @@ class Crawler:
         self.log.info('{email} - recommendations collected for {video}', email=self.user.email, video=video_id)
         # return the recommendations
         return True
+
+    async def get_video_unavailable(self):
+        reason: List[WebElement] = self.driver.find_elements_by_css_selector(
+            '#info > .reason.yt-player-error-message-renderer')
+        subReason: List[WebElement] = self.driver.find_elements_by_css_selector(
+            '#info > .subreason.yt-player-error-message-renderer')
+        if(reason):
+            unavalable = VideoUnavailable(reason[0].text, subReason[0].text if subReason else None)
+            return unavalable
+        return None
 
     async def delete_last_video_from_history(self, video_id: str):
         self.driver.get('https://www.youtube.com/feed/history')
@@ -354,7 +366,24 @@ class Crawler:
         self.driver.get("https://www.youtube.com/watch?v=" + video_id)
         # wait until video is loaded
 
-        (await self.wait_for_clickable('.ytp-play-button.ytp-button')).click()
+        try:
+            (await self.wait_for_clickable('.ytp-play-button.ytp-button', error_expected=True))  # no need to click, it auto-plays
+        except TimeoutException as e:
+            unavailable = await self.get_video_unavailable()
+            if(unavailable == None):
+                await self.__log_driver_status('.ytp-play-button.ytp-button', 'no play button or unavailable msg found. Probably a bug')
+                raise e
+            else:
+                # the video didn't load, but it is unavailable for a reason. Log this as the result.
+                watch_time = {
+                    'account': self.user.email,
+                    'trial': self.trial_id,
+                    'video_id': video_id,
+                    'updated': datetime.utcnow().isoformat(),
+                    'unavailable': asdict(unavailable) if unavailable else None,
+                }
+                self.store.save(self.path.watch_time_json(video_id), watch_time)
+                return
 
         self.log.info('{email} - started watching video {video}', email=self.user.email, video=video_id)
 
@@ -379,7 +408,7 @@ class Crawler:
             advertisements['advertisers'].append(ad_text)
             time.sleep(5)
             try:
-                (await self.wait_for_visible('*.ytp-ad-skip-button.ytp-button')).click()
+                (await self.wait_for_clickable('*.ytp-ad-skip-button.ytp-button', error_expected=True)).click()
                 return True
             except TimeoutException:
                 return False
@@ -420,7 +449,7 @@ class Crawler:
         self.store.save(self.path.watch_time_json(video_id), watch_time)
 
         self.log.info('{email} - finished watching {watch_time} of video {video}',
-                      email=self.user.email, video=video_id, watch_time=format_seconds(watch_time['watch_time']))
+                      email=self.user.email, video=video_id, watch_time=watch_time['watch_time'])
 
         self.driver.switch_to.window(current_tab)
         self.driver.close()

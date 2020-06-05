@@ -92,12 +92,17 @@ class Cfg(JsonSchemaMixin):
     run_test_vids: Optional[int] = field(default=None, metadata=JsonSchemaMeta(
         description="the number recommendations to collect. Only define if you want to restrict for test purposes", required=False))
 
+    branch_env: str = field(default=None, metadata=JsonSchemaMeta(
+        description="a name to prefix/suffix names of environment objects to have clean branch environments", required=False))
+
 
 async def load_cfg() -> Cfg:
     '''loads application configuration form a blob (if defined in .env cfg_sas) or ./userscrape.json
     '''
     load_dotenv()
     cfg_sas = os.getenv('cfg_sas')
+
+    cfg: Cfg
     if (cfg_sas):
         async with aiohttp.ClientSession() as sesh:
             async with sesh.get(cfg_sas) as r:
@@ -105,4 +110,8 @@ async def load_cfg() -> Cfg:
     else:
         with open('userscrape.json', "r") as r:
             cfg = Cfg.from_json(r.read())
+
+    if(cfg.branch_env):
+        cfg.store.container = f'{cfg.store.container}-{cfg.branch_env}'
+
     return cfg
