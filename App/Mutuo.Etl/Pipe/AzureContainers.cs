@@ -86,9 +86,10 @@ namespace Mutuo.Etl.Pipe {
 
     public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string fullImageName, (string name, string value)[] envVars, string[] args,
       bool returnOnStart = false, Func<Region> customRegion = null, ILogger log = null) {
+      var sw = Stopwatch.StartNew();
       var groupDef = await ContainerGroup(cfg, groupName, groupName, fullImageName, envVars, args, customRegion);
       var group = await Create(groupDef, log);
-      var run = await Run(group, returnOnStart, log);
+      var run = await Run(group, returnOnStart, sw, log);
       return run;
     }
 
@@ -103,26 +104,30 @@ namespace Mutuo.Etl.Pipe {
       return group.Result;
     }
 
-    public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, ILogger log) {
-      var sw = Stopwatch.StartNew();
+    public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log) {
       var running = false;
+      var loggedWaiting = Stopwatch.StartNew();
 
       while (true) {
         group = await group.RefreshAsync();
         var state = group.State();
 
         if (!running && state == ContainerState.Running) {
-          log.Information("{ContainerGroup} - container started in {Duration}", group.Name, sw.Elapsed);
+          log.Information("{ContainerGroup} - container started in {Duration}", group.Name, sw.Elapsed.HumanizeShort());
           running = true;
           if (returnOnRunning) return group;
         }
         if (!state.IsCompletedState()) {
-          await Task.Delay(500);
+          if (loggedWaiting.Elapsed > 1.Minutes()) {
+            log.Debug("{ContainerGroup} - waiting to complete. Current state {State}", group.Name, group.State);
+            loggedWaiting.Restart();
+          }
+          await Task.Delay(5.Seconds());
           continue;
         }
         break;
       }
-      log.Information("{ContainerGroup} - container ({Status}) in {Duration}", group.Name, group.State, sw.Elapsed);
+      log.Information("{ContainerGroup} - container ({Status}) in {Duration}", group.Name, group.State, sw.Elapsed.HumanizeShort());
       return group;
     }
 
@@ -177,13 +182,13 @@ namespace Mutuo.Etl.Pipe {
       return createGroup;
     }
   }
-  
-  public static class AzureContainersEx
-  {
-    public static async Task EnsureSuccess(this IContainerGroup group, string groupName) {
-      if (group.State().In(ContainerState.Failed, ContainerState.Terminated)) {
-        var content = await group.GetLogContentAsync(groupName);
-        throw new InvalidOperationException($"Container exited with error code: ${content}");
+
+  public static class AzureContainersEx {
+    public static async Task EnsureSuccess(this IContainerGroup group, string containerName, ILogger log) {
+      if (!group.State().In(ContainerState.Succeeded)) {
+        var content = await group.GetLogContentAsync(containerName);
+        Log.Error("Container {Container} did not succeed ({State}). Logs: {Logs}", group.Name, group.State, content);
+        throw new InvalidOperationException($"Container {group.Name} did not succeed ({group.State}). Logs: {content}");
       }
     }
   }

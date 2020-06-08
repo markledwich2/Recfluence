@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Humanizer;
 using LtGt;
+using Mutuo.Etl.Blob;
 using Newtonsoft.Json.Linq;
 using Polly;
 using Serilog;
@@ -24,8 +25,10 @@ using YtReader.Store;
 
 namespace YtReader.YtWebsite {
   public class WebScraper {
-    const    string     MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
-    readonly ScraperCfg Cfg;
+    const    string           MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
+    readonly ProxyCfg         Proxy;
+    readonly YtCollectCfg     CollectCfg;
+    readonly ISimpleFileStore LogStore;
 
     readonly HttpClient DirectHttp;
     readonly HttpClient ProxyHttp;
@@ -34,8 +37,10 @@ namespace YtReader.YtWebsite {
 
     long DirectHttpFailures;
 
-    public WebScraper(ScraperCfg scraperCfg) {
-      Cfg = scraperCfg;
+    public WebScraper(ProxyCfg proxy, YtCollectCfg collectCfg, ISimpleFileStore logStore) {
+      Proxy = proxy;
+      CollectCfg = collectCfg;
+      LogStore = logStore;
       DirectHttp = CreateHttpClient(false);
       ProxyHttp = CreateHttpClient(true);
     }
@@ -46,22 +51,22 @@ namespace YtReader.YtWebsite {
       new HttpClient(new HttpClientHandler {
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         UseCookies = false,
-        Proxy = useProxy ? new WebProxy(Cfg.Url, true, new string[] { }, new NetworkCredential(Cfg.Creds.Name, Cfg.Creds.Secret)) : null,
+        Proxy = useProxy ? new WebProxy(Proxy.Url, true, new string[] { }, new NetworkCredential(Proxy.Creds.Name, Proxy.Creds.Secret)) : null,
         UseProxy = useProxy
       }) {
-        Timeout = Cfg.TimeoutSeconds.Seconds()
+        Timeout = Proxy.TimeoutSeconds.Seconds()
       };
 
     async Task<string> GetRaw(string url, string desc, ILogger log) {
       log.Debug("Scraping {Desc} {Url}", desc, url);
 
-      var useDirect = !Cfg.AlwaysUseProxy && Interlocked.Read(ref DirectHttpFailures) == 0;
+      var useDirect = !Proxy.AlwaysUseProxy && Interlocked.Read(ref DirectHttpFailures) == 0;
 
       if (useDirect)
         try {
           var directPolicy = Policy
             .HandleResult<HttpResponseMessage>(m => m.IsTransientError())
-            .RetryWithBackoff(desc, Cfg.Retry, log);
+            .RetryWithBackoff(desc, Proxy.Retry, log);
 
           var directRes = await directPolicy.ExecuteAsync(async () => {
             var get = await DirectHttp.GetAsync(url);
@@ -85,11 +90,11 @@ namespace YtReader.YtWebsite {
 
       var proxyPolicy = Policy
         .Handle<HttpRequestException>().Or<TaskCanceledException>()
-        .RetryWithBackoff(desc, Cfg.Retry, log);
+        .RetryWithBackoff(desc, Proxy.Retry, log);
 
       var res = await proxyPolicy.ExecuteAsync(async () => {
         var get = ProxyHttp.GetAsync(url);
-        if (await Task.WhenAny(get, Task.Delay((Cfg.TimeoutSeconds + 10).Seconds())) != get)
+        if (await Task.WhenAny(get, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) != get)
           throw new TaskCanceledException($"GetStringAsync on {url} took to long without timing out itself");
 
         var innerRes = await get;
@@ -360,7 +365,7 @@ namespace YtReader.YtWebsite {
     public const string RestrictedVideoError = "Restricted";
 
     public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) =>
-      await videos.BlockFunc(async v => await GetRecsAndExtra(v, log), Cfg.Webarallel);
+      await videos.BlockFunc(async v => await GetRecsAndExtra(v, log), CollectCfg.WebParallel);
 
     //ytInitialPlayerResponse.responseContext.serviceTrackingParams.filter(p => p.service == "CSI")[0].params
     public async Task<RecsAndExtra> GetRecsAndExtra(string videoId, ILogger log) {
@@ -368,7 +373,7 @@ namespace YtReader.YtWebsite {
       var (html, raw, url) = watchPage;
       var channel = ChannelInfoFromWatchPage(html);
       var infoDic = await GetVideoInfoDicAsync(videoId, log);
-      var videoItem = await GetVideo(videoId, infoDic, watchPage);
+      var videoItem = GetVideo(videoId, infoDic, watchPage);
 
       var extra = new VideoExtraStored2 {
         VideoId = videoId,
@@ -398,9 +403,14 @@ namespace YtReader.YtWebsite {
       }
       if (extra.Error != null) return new RecsAndExtra(extra, new Rec[] { });
 
-      var recs = GetRecs(html, url, log);
-      if (!recs.Any())
-        log.Warning("No error, but unable to find recommended videos: {Url}", url);
+      var recs = GetRecs(html);
+      if (!recs.Any()) {
+        var uri = new Uri(url);
+        var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), $"{uri.PathAndQuery}.html");
+        var logUrl = LogStore.Url(path);
+        await LogStore.Save(path, raw.AsStream(), log);
+        log.Warning("WebScraper - Unable to find recs: {Url}", logUrl);
+      }
 
       var match = _ytAdRegex.Match(raw);
       extra.HasAd = match.Success && match.Groups[1].Value == "1";
@@ -419,12 +429,12 @@ namespace YtReader.YtWebsite {
       return (title, id);
     }
 
-    Rec[] GetRecs(HtmlDocument html, string url, ILogger log) {
+    Rec[] GetRecs(HtmlDocument html) {
       var recs = (from d in html.QueryElements("li.video-list-item.related-list-item").Select((e, i) => (e, i))
         let titleSpan = d.e.QueryElements("span.title").FirstOrDefault()
         let channelSpan = d.e.QueryElements("span.stat.attribution > span").FirstOrDefault()
         let videoA = d.e.QueryElements("a.content-link").FirstOrDefault()
-        where videoA != null && channelSpan != null && videoA != null
+        where videoA != null && channelSpan != null
         select new Rec {
           ToVideoId = ParseVideoId($"https://youtube.com/{videoA.GetAttribute("href").Value}"),
           ToVideoTitle = titleSpan.GetInnerText(),
@@ -447,10 +457,10 @@ namespace YtReader.YtWebsite {
         throw new ArgumentException($"Invalid YouTube video ID [{videoId}].", nameof(videoId));
       var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
       var videoWatchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
-      return await GetVideo(videoId, videoInfoDic, videoWatchPage);
+      return GetVideo(videoId, videoInfoDic, videoWatchPage);
     }
 
-    static async Task<VideoItem> GetVideo(string videoId, IReadOnlyDictionary<string, string> videoInfoDic,
+    static VideoItem GetVideo(string videoId, IReadOnlyDictionary<string, string> videoInfoDic,
       (HtmlDocument html, string raw, string url) videoWatchPage) {
       var responseJson = JToken.Parse(videoInfoDic["player_response"]);
       var renderer = responseJson.SelectToken("microformat.playerMicroformatRenderer");

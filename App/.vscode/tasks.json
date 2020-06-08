@@ -69,17 +69,31 @@
       "label": "Build Container",
       "type": "shell",
       "command": "dotnet",
-      "args": ["run", "publish-container"],
+      "args": [
+        "run",
+        "build-container"
+      ],
       "options": {
         "cwd": "${workspaceRoot}/YtCli"
       },
       "problemMatcher": "$msCompile"
     },
     {
+      "label": "Run Container",
+      "type": "shell",
+      "command": [
+        "pwsh",
+        "docker-run-recfluence.ps1"
+      ],
+      "problemMatcher": []
+    },
+    {
       "label": "Re-generate Json Schema",
       "type": "shell",
       "command": "dotnet",
-      "options": { "cwd": "${workspaceRoot}/Mutuo.Tools" },
+      "options": {
+        "cwd": "${workspaceRoot}/Mutuo.Tools"
+      },
       "args": [
         "run",
         "--",

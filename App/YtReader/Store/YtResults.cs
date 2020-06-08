@@ -20,6 +20,7 @@ using SysExtensions.IO;
 using SysExtensions.Net;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Db;
 
 namespace YtReader.Store {
   class ResQuery {
@@ -33,12 +34,12 @@ namespace YtReader.Store {
       FileType = fileType;
     }
 
-    public string     Name       { get; }
-    public string     Query      { get; }
-    public string     Desc       { get; }
-    public object     Parameters { get; }
+    public string     Name        { get; }
+    public string     Query       { get; }
+    public string     Desc        { get; }
+    public object     Parameters  { get; }
     public bool       InSharedZip { get; }
-    public ResFilType FileType   { get; }
+    public ResFilType FileType    { get; }
   }
 
   enum ResFilType {
@@ -47,8 +48,8 @@ namespace YtReader.Store {
   }
 
   class FileQuery : ResQuery {
-    public FileQuery(string name, StringPath path, string desc = null, object parameters = null, bool inSharedZip = false) 
-      : base(name, desc: desc, parameters: parameters, inSharedZip:inSharedZip) =>
+    public FileQuery(string name, StringPath path, string desc = null, object parameters = null, bool inSharedZip = false)
+      : base(name, desc: desc, parameters: parameters, inSharedZip: inSharedZip) =>
       Path = path;
 
     public StringPath Path { get; set; }
@@ -75,34 +76,34 @@ namespace YtReader.Store {
       var dateRangeParams = new {from = "2019-11-01", to = now.ToString("yyyy-MM-01")};
       var queries = new[] {
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
-            "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip:true),
+            "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip: true),
 
           new FileQuery("vis_category_recs", "sql/vis_category_recs.sql",
-            "aggregate recommendations between all combinations of the categories available on recfluence.net", dateRangeParams, inSharedZip:true),
+            "aggregate recommendations between all combinations of the categories available on recfluence.net", dateRangeParams, inSharedZip: true),
 
           new FileQuery("vis_channel_recs", "sql/vis_channel_recs.sql",
-            "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams, inSharedZip:true),
+            "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams, inSharedZip: true),
 
           new ResQuery("channel_classification",
-            desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip:true),
-          
-          
+            desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip: true),
+
+
           // userscrape data
-          new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new { videos_per_ideology = 50 }),
-          new FileQuery("us_tests", "sql/us_tests.sql", parameters: new { videos_per_ideology = 5 }),
+          new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_ideology = 50}),
+          new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos_per_ideology = 5}),
 
           // classifier data 
 
           new ResQuery("class_channels", "select * from channel_latest", fileType: ResFilType.Json),
 
-          new ResQuery("class_videos", "select * from video_latest qualify rank() over (partition by channel_id order by views desc) <= 3", 
+          new ResQuery("class_videos", "select * from video_latest qualify rank() over (partition by channel_id order by views desc) <= 3",
             fileType: ResFilType.Json),
 
           new ResQuery("class_captions", @"with v as (
   select * from video_latest qualify rank() over (partition by channel_id order by views desc) <= 3
 )
 select c.* from caption c
-inner join v on v.video_id = c.video_id", 
+inner join v on v.video_id = c.video_id",
             fileType: ResFilType.Json)
 
 
@@ -203,6 +204,7 @@ inner join v on v.video_id = c.video_id",
         var url = Store.Url(fileName);
         Log.Information("Result - saved {Name} to {Url}", fileName, url);
       }
+
       await Save();
     }
   }

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Mutuo.Etl.Blob;
+using Newtonsoft.Json.Converters;
 using Semver;
 using Serilog;
 using SysExtensions;
@@ -16,7 +18,8 @@ namespace YtReader.Store {
     Db,
     Results,
     Private,
-    Backup
+    Backup,
+    Logs
   }
 
   /// <summary>Access to any of the stores</summary>
@@ -42,6 +45,7 @@ namespace YtReader.Store {
         DataStoreType.Db => Cfg.DbPath,
         DataStoreType.Private => Cfg.PrivatePath,
         DataStoreType.Results => Cfg.ResultsPath,
+        DataStoreType.Logs => Cfg.LogsPath,
         _ => throw new NotImplementedException($"StoryType {type} not supported")
       };
   }
@@ -178,13 +182,14 @@ namespace YtReader.Store {
   }
 
   public class VideoExtraStored2 : VideoStored2 {
-    public bool?                 HasAd       { get; set; }
-    public string                Error       { get; set; }
-    public string                SubError    { get; set; }
-    public VideoCommentStored2[] Comments    { get; set; }
-    public string                Ad          { get; set; }
-    public string                CommentsMsg { get; set; }
-    public ScrapeSource          Source      { get; set; }
+    public bool?                 HasAd        { get; set; }
+    public string                Error        { get; set; }
+    public string                SubError     { get; set; }
+    public VideoCommentStored2[] Comments     { get; set; }
+    public string                Ad           { get; set; }
+    public string                CommentsMsg  { get; set; }
+    public ScrapeSource          Source       { get; set; }
+    public long?                 CommentCount { get; set; }
   }
 
   public interface IHasUpdated {

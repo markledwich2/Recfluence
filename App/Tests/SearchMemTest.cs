@@ -9,7 +9,9 @@ using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Threading;
 using YtReader;
+using YtReader.Db;
 using YtReader.Search;
+using DbCaption = YtReader.Search.DbCaption;
 
 namespace Tests {
   public class SearchMemTest {
@@ -18,7 +20,7 @@ namespace Tests {
       var basePath = Setup.SolutionDir?.Combine("YtCli").ToString() ?? throw new InvalidOperationException("Expecting solution file for loading settings");
       var (app, root, version) = await Setup.LoadCfg(rootLogger: Setup.ConsoleLogger(), basePath: basePath);
 
-      app.Snowflake.Db = "yt";
+      app.Snowflake.DbSuffix = null;
       var log = Setup.CreateTestLogger();
       var scope = Setup.MainScope(root, app, Setup.PipeAppCtxEmptyScope(root, app), version, log);
       var db = scope.Resolve<SnowflakeConnectionProvider>();

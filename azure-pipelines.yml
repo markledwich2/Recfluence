@@ -33,7 +33,7 @@ stages:
             inputs:
               command: build
               containerRegistry: ytnetworks
-              repository: ytnetworks
+              repository: recfluence
               tags: $(GitVersion.SemVer)
               arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
               buildContext: ./App
@@ -43,8 +43,10 @@ stages:
             inputs:
               command: push
               containerRegistry: ytnetworks
-              repository: ytnetworks
-              tags: $(GitVersion.SemVer)
+              repository: recfluence
+              tags: |
+                $(GitVersion.SemVer)
+                latest
 
   - stage: Dataform
     dependsOn: []

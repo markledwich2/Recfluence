@@ -9,9 +9,6 @@
     "Schema": "public",
     "db": "yt"
   },
-  "parallelChannels": 4,
-  "defaultParallel": 8,
-  "channelsPerContainer": 300,
   "sheets": {
     "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",
     "userChannelSheetIds": [
@@ -21,7 +18,7 @@
       "12OUpAzlrUPxWi0TJNQYVwu5FB5Q0ughLLPgakGWEGf8"
     ]
   },
-  "scraper": {
+  "proxy": {
     "url": "us.smartproxy.com:10000"
   },
   "pipe": {
@@ -36,10 +33,10 @@
     "default": {
       "container": {
         "registry": "ytnetworks.azurecr.io",
-        "imageName": "ytnetworks",
+        "imageName": "recfluence",
         "cores": 2,
         "mem": 2,
-        "exe": "./ytnetworks"
+        "exe": "./recfluence"
       }
     },
     "pipes": [

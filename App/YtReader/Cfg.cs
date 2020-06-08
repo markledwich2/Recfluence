@@ -8,6 +8,7 @@ using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using SysExtensions.Configuration;
 using SysExtensions.Security;
+using YtReader.Db;
 
 namespace YtReader {
   public class RootCfg {
@@ -36,13 +37,13 @@ namespace YtReader {
     public            string              AppInsightsKey        { get; set; }
     public            int                 DefaultParallel       { get; set; } = 8;
     [Required] public BranchEnvCfg        Env                   { get; set; } = new BranchEnvCfg();
-    [Required] public YtCollectCfg        YtCollect             { get; set; } = new YtCollectCfg();
+    [Required] public YtCollectCfg        Collect               { get; set; } = new YtCollectCfg();
     [Required] public StorageCfg          Storage               { get; set; } = new StorageCfg();
     [Required] public ICollection<string> YTApiKeys             { get; set; } = new List<string>();
     [Required] public HashSet<string>     LimitedToSeedChannels { get; set; } = new HashSet<string>();
     [Required] public SeqCfg              Seq                   { get; set; } = new SeqCfg();
     [Required] public SheetsCfg           Sheets                { get; set; } = new SheetsCfg();
-    [Required] public ScraperCfg          Scraper               { get; set; } = new ScraperCfg();
+    [Required] public ProxyCfg            Proxy                 { get; set; } = new ProxyCfg();
     [Required] public SnowflakeCfg        Snowflake             { get; set; } = new SnowflakeCfg();
     [Required] public WarehouseCfg        Warehouse             { get; set; } = new WarehouseCfg();
     [Required] public SqlServerCfg        AppDb                 { get; set; } = new SqlServerCfg();
@@ -78,14 +79,12 @@ namespace YtReader {
     [Required] public int    Parallel     { get; set; } = 4;
   }
 
-  public class ScraperCfg {
+  public class ProxyCfg {
     [Required] public string     Url            { get; set; }
     [Required] public NameSecret Creds          { get; set; }
     public            int        TimeoutSeconds { get; set; } = 40;
     public            int        Retry          { get; set; } = 10;
     public            bool       AlwaysUseProxy { get; set; }
-    public            int        ChromeParallel { get; set; } = 2;
-    public            int        Webarallel     { get; set; } = 10;
   }
 
   public class SheetsCfg {
@@ -120,10 +119,13 @@ namespace YtReader {
 
     /// <summary>The maximum number of videos to refresh exta info on (per run) because they have no comments (we didn't used
     ///   to collect them)</summary>
-    public int PopulateMissingCommentsLimit { get; set; } = 20;
+    public int PopulateMissingCommentsLimit { get; set; } = 50;
+    public int ParallelChannels     { get;         set; } = 2;
+    public int ChannelsPerContainer { get;         set; } = 150;
 
-    public int ParallelChannels     { get; set; } = 2;
-    public int ChannelsPerContainer { get; set; } = 150;
+    public int ChromeParallel { get; set; } = 2;
+    public int WebParallel    { get; set; } = 5;
+    public int ChromeAttempts { get; set; } = 3;
   }
 
   public class StorageCfg {
@@ -133,6 +135,7 @@ namespace YtReader {
     [Required] public string ResultsPath   { get; set; } = "results";
     [Required] public string PrivatePath   { get; set; } = "private";
     [Required] public string PipePath      { get; set; } = "pipe";
+    [Required] public string LogsPath      { get; set; } = "logs";
 
     [Required] public string BackupCs       { get; set; }
     [Required] public string BackupRootPath { get; set; }

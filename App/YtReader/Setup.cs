@@ -32,13 +32,14 @@ using YtReader.Db;
 using YtReader.Search;
 using YtReader.Store;
 using YtReader.Yt;
+using YtReader.YtWebsite;
 
 namespace YtReader {
   public static class Setup {
     public static string AppName      = "YouTubeNetworks";
     public static string CfgContainer = "cfg";
 
-    public static FPath SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("YtNetworks.sln");
+    public static FPath SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("Recfluence.sln");
     public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
     public static FPath LocalDataDir    => "Data".AsPath().InAppData(AppName);
 
@@ -155,7 +156,7 @@ namespace YtReader {
     }
 
     static void PostLoadConfiguration(AppCfg appCfg, RootCfg cfgRoot, string[] secrets, SemVersion version) {
-      appCfg.Snowflake.Db = appCfg.Snowflake.DbName(version);
+      appCfg.Snowflake.DbSuffix ??= version.Prerelease;
       appCfg.Elastic.IndexPrefix = EsIndex.IndexPrefix(version);
 
       // override pipe cfg with equivalent global cfg
@@ -211,9 +212,9 @@ namespace YtReader {
       b.Register(_ => log);
       b.Register(_ => cfg).SingleInstance();
       b.Register(_ => rootCfg).SingleInstance();
+      b.Register(_ => containerCfg).SingleInstance();
       b.Register(_ => cfg.Pipe).SingleInstance();
       b.Register(_ => cfg.Pipe.Azure).SingleInstance();
-      b.Register(_ => containerCfg).SingleInstance();
       b.Register(_ => cfg.Elastic).SingleInstance();
       b.Register(_ => cfg.Snowflake).SingleInstance();
       b.Register(_ => cfg.Warehouse).SingleInstance();
@@ -225,7 +226,8 @@ namespace YtReader {
       b.Register(_ => cfg.Dataform).SingleInstance();
       b.Register(_ => cfg.Seq).SingleInstance();
       b.Register(_ => cfg.UserScrape).SingleInstance();
-
+      b.Register(_ => cfg.Proxy).SingleInstance();
+      b.Register(_ => cfg.Collect).SingleInstance();
 
       b.RegisterType<SnowflakeConnectionProvider>().SingleInstance();
       b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();
@@ -240,6 +242,8 @@ namespace YtReader {
       b.RegisterType<YtResults>().WithKeyedParam(DataStoreType.Results, Typ.Of<ISimpleFileStore>()).SingleInstance();
       b.RegisterType<StoreUpgrader>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
       b.RegisterType<YtStage>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
+      b.RegisterType<WebScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>()).SingleInstance();
+      b.RegisterType<ChromeScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>()).SingleInstance();
 
       b.RegisterType<YtSearch>().SingleInstance();
       b.RegisterType<YtCollector>().SingleInstance();

@@ -6,28 +6,42 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Humanizer;
+using Mutuo.Etl.Blob;
 using PuppeteerSharp;
 using Serilog;
+using Serilog.Events;
 using Serilog.Extensions.Logging;
 using SysExtensions;
 using SysExtensions.Collections;
+using SysExtensions.Security;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
 
 namespace YtReader.YtWebsite {
   public class ChromeScraper {
-    readonly ScraperCfg Cfg;
-    public ChromeScraper(ScraperCfg cfg) => Cfg = cfg;
+    readonly ProxyCfg         ProxyCfg;
+    readonly YtCollectCfg     CollectCfg;
+    readonly ISimpleFileStore LogStore;
+
+    public ChromeScraper(ProxyCfg proxyCfg, YtCollectCfg collectCfg, ISimpleFileStore logStore) {
+      ProxyCfg = proxyCfg;
+      CollectCfg = collectCfg;
+      LogStore = logStore;
+    }
+
     public async Task Init() => await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultRevision);
 
     static readonly ILogger ConsoleLog = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 
-    static async Task<Browser> CreateBrowser(ILogger log) {
+    async Task<Browser> CreateBrowser(bool proxy, ILogger log) {
       var browser = await Puppeteer.LaunchAsync(new LaunchOptions {
         Headless = true,
         DefaultViewport = new ViewPortOptions {Width = 1024, Height = 1200},
-        Args = new[] {"--disable-dev-shm-usage", "--no-sandbox"}
+        Args = new[] {
+          "--disable-dev-shm-usage", "--no-sandbox",
+          proxy ? $"--proxy-server={ProxyCfg.Url}" : null
+        }.NotNull().ToArray()
       }, new SerilogLoggerFactory(ConsoleLog)); // log to console only because it often has transient errors
       return browser;
     }
@@ -35,35 +49,46 @@ namespace YtReader.YtWebsite {
     public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) {
       var sw = Stopwatch.StartNew();
       log = log.ForContext("Module", nameof(ChromeScraper));
+      var proxy = false;
 
-      // run 4 browsers that navigate one video at a time
-      var browsers = 4;
-      var res = await videos.Batch(videos.Count / 4).BlockFunc(async b => {
+      var browsers = CollectCfg.ChromeParallel;
+      var videosPerBrowser = videos.Count / CollectCfg.ChromeParallel + 1;
+      var res = await videos.Batch(videosPerBrowser).BlockFunc(async b => {
         var requests = new ConcurrentBag<(Request req, bool aborted)>();
-        using var browser = await CreateBrowser(log);
+        using var browser = await CreateBrowser(proxy, log);
         return await b.BlockFunc(async v => {
           //var context = await browser.CreateIncognitoBrowserContextAsync(); // opening windows is more reliable than tabs in practice
           log.Debug("loading video {Video}", v);
-
           using var page = await browser.NewPageAsync();
+          if (proxy)
+            await page.AuthenticateAsync(ProxyCfg.Creds.AsCreds());
           await page.SetCookieAsync(); // clears cookies
           await ConfigureRequests(log, page, v, (req, aborted) => requests.Add((req, aborted)));
-          var video = await GetVideo(page, v, log);
-
-          /*var stats = requests.Where(r => !r.aborted)
-            .Select(r => new {Uri = new Uri(r.req.Url), r.req.Response})
-            .Select(r => $"{r.Uri.Host}{r.Uri.AbsolutePath}")
-            .ToArray();*/
-
-          log.Debug("finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
-            v, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
-          return video;
+          var attempt = 0;
+          while (true) {
+            try {
+              var video = await GetVideo(page, v, log);
+              log.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
+                v, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
+              return video;
+            }
+            catch (Exception ex) {
+              var lastAttempt = attempt >= CollectCfg.ChromeAttempts;
+              log.Write(lastAttempt ? LogEventLevel.Error : LogEventLevel.Warning, ex,
+                "ChromeScraper - failed to load video {Video}: {Error}", v, ex.Message);
+              if (lastAttempt)
+                throw;
+            }
+            attempt++;
+          }
         });
       }, browsers);
 
-      log.Information("loaded {Videos} in {Duration}", videos.Count, sw.HumanizeShort());
+      log.Information("ChromeScraper - loaded {Videos} in {Duration}", videos.Count, sw.HumanizeShort());
       return res.SelectMany().ToReadOnly();
     }
+
+    #region Request handling
 
     static readonly Regex AbortPathRe = new Regex("\\.(woff2|png|ico)$", RegexOptions.Compiled);
 
@@ -103,52 +128,89 @@ namespace YtReader.YtWebsite {
       };
     }
 
-    const string CommentSel      = "ytd-comment-renderer#comment";
+    #endregion
+
+    const string CommentCountSel = "#comments #count";
     const string CommentErrorSel = "#comments #message";
     const string VideoErrorSel   = "#info > .reason.yt-player-error-message-renderer";
 
     async Task<RecsAndExtra> GetVideo(Page page, string videoId, ILogger log) {
       log = log.ForContext("Video", videoId);
       await page.GoToAsync($"https://youtube.com/watch?v={videoId}");
-
       // wait for either a single comment, or a message that the coments are turned off. This is the slowest part to load.
-      await page.WaitForSelectorAsync(new[] {CommentSel, CommentErrorSel, VideoErrorSel}.Join(", "), new WaitForSelectorOptions {Timeout = 60000});
-
+      await WaitForSelector(page,
+        new[] {CommentCountSel, CommentErrorSel, VideoErrorSel}.Join(", "),
+        2.Minutes(), log);
       var video = await VideoDetails(page, videoId);
-
-      // missing video return the error
-      if (video == null) {
-        var error = await page.EvaluateFunctionAsync<string>(@$"() => {{
+      var error = await page.EvaluateFunctionAsync<string>(@$"() => {{
   var el = document.querySelector('{VideoErrorSel}')
   return el ? el.innerText : null
 }}");
-        if (error == null) throw new InvalidOperationException("can't fin video or error message, probably a bug");
-        var subError = await page.EvaluateFunctionAsync<string>(@"() => {
+
+      var subError = await page.EvaluateFunctionAsync<string>(@"() => {
   var el = document.querySelector('#info > .subreason.yt-player-error-message-renderer')
   return el ? el.innerText : null
 }");
+
+      if (video == null) {
+        if (error == null) throw new InvalidOperationException("can't find video or error message, probably a bug");
         return new RecsAndExtra(new VideoExtraStored2 {
           VideoId = videoId,
           Error = error,
           SubError = subError
-        }, default);
+        }, recs: default);
       }
 
-      await ScrollDown(page, maxScroll: 8000, videoId, log);
+      video.Error = error;
+      video.SubError = subError;
+
+      await ScrollDown(page, maxScroll: null, videoId, log);
       (video.Ad, video.HasAd) = await GetAd(page);
-      var recs = await GetRecs(page);
-      (video.Comments, video.CommentsMsg) = await GetComments(page, video);
+      var recs = await GetRecs(page, error.HasValue(), log);
+      (video.Comments, video.CommentsMsg, video.CommentCount) = await GetComments(page, video);
       return new RecsAndExtra(video, recs);
     }
 
-    static async Task<(VideoCommentStored2[] comments, string msg)> GetComments(Page page, VideoExtraStored2 video) {
-      var videoComments = await page.EvaluateExpressionAsync<VideoComment[]>(
-        $@"Array.from(document.querySelectorAll('{CommentSel}')).map(c => ({{ 
-    author: c.querySelector('a#author-text').innerText, 
-    authorChannelId: /\/channel\/(.*)/.exec(c.querySelector('a#author-text').href)[1],
-    comment: c.querySelector('#content-text').innerText,
-    ago: c.querySelector('yt-formatted-string.published-time-text').innerText
- }}))");
+    static async Task ScrollDown(Page page, int? maxScroll, string videoId, ILogger log) {
+      var scrollHeight = 0;
+      while (true) {
+        var newScrollHeight = await page.EvaluateExpressionAsync<int>("document.scrollingElement.scrollHeight");
+        if (newScrollHeight == scrollHeight || maxScroll != null && newScrollHeight > maxScroll.Value) {
+          log.Debug("scrolled down on {Video} to {ScrollHeight}px", videoId, newScrollHeight);
+          break;
+        }
+        await page.EvaluateExpressionAsync(@"document.scrollingElement.scroll(0, document.scrollingElement.scrollHeight)");
+        scrollHeight = newScrollHeight;
+        await 1.Seconds().Delay();
+      }
+    }
+
+    static async Task<(VideoCommentStored2[] comments, string msg, long? count)> GetComments(Page page, VideoExtraStored2 video) {
+      try {
+        await page.WaitForSelectorAsync(CommentCountSel);
+      }
+      catch (WaitTaskTimeoutException) { }
+
+      var commentCount = await page.EvaluateFunctionAsync<long?>(@"() => {
+    var el = document.querySelector('#comments #count')
+    if(!el) return null
+    var match =/(?<num>\d+) Comment/.exec(el.innerText.replace(/,/g, ''))
+    if(!match) return null
+    return parseInt(match.groups.num)
+}");
+
+      var commentSel = @"Array.from(document.querySelectorAll('ytd-comment-renderer#comment')).map(c => {
+    var authorEl = c.querySelector('a#author-text')
+    var channelMatch  = /\/channel\/(.*)/.exec(authorEl.href)
+    return {
+        author: authorEl.innerText, 
+        authorChannelId: (channelMatch && channelMatch.length > 1) ? channelMatch[1] : null,
+        comment: c.querySelector('#content-text').innerText,
+        ago: c.querySelector('yt-formatted-string.published-time-text').innerText
+     }
+})";
+
+      var videoComments = await page.EvaluateExpressionAsync<VideoComment[]>(commentSel);
       var comments = videoComments.Select(c => new VideoCommentStored2 {
         Author = c.author,
         AuthorChannelId = c.authorChannelId,
@@ -159,51 +221,90 @@ namespace YtReader.YtWebsite {
       }).ToArray();
 
       if (comments.HasItems())
-        return (comments, default);
+        return (comments, default, commentCount);
 
       var msg = await page.EvaluateFunctionAsync<string>(@$"() => {{
   var el = document.querySelector('{CommentErrorSel}')
   return el ? el.innerText : null
 }}");
 
-      if (msg.HasValue())
-        return (default, msg);
+      if (commentCount < 3 || msg.HasValue())
+        return (default, msg, commentCount);
 
       throw new InvalidOperationException("can't find comments, or a message about no-comments. Probably a bug");
     }
 
-    static async Task<Rec[]> GetRecs(Page page) {
-      var recsSel = @"ytInitialData.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results
-.map(r => r.compactAutoplayRenderer && Object.assign({}, r.compactAutoplayRenderer.contents[0].compactVideoRenderer, {autoPlay:true}) 
-    || r.compactVideoRenderer &&  Object.assign({}, r.compactVideoRenderer, {autoPlay:false}) 
-    || null)
-.filter(r => r != null)
-.map((v,i) =>({
-    videoId:v.videoId, 
-    title: v.title && v.title.simpleText || v.title && v.title.runs && v.title.runs[0].text, 
-    thumb: v.thumbnail && v.thumbnail.thumbnails[v.thumbnail.thumbnails.length -1].url,
-    channelTitle: v.longBylineText && v.longBylineText.runs[0].text, 
-    publishAgo: v.publishedTimeText && v.publishedTimeText.simpleText, 
-    viewText: v.viewCountText && v.viewCountText.simpleText || v.viewCountText && v.viewCountText.runs && v.viewCountText.runs[0].text,
-    duration:v.lengthText && v.lengthText.simpleText, 
-    channelId:v.channelId,
-    rank:i+1
-}))";
-      var recs = await page.EvaluateExpressionAsync<CompactVideoRenderer[]>(recsSel);
+    async Task<Rec[]> GetRecs(Page page, bool hasError, ILogger log) {
+      var recsSel = @"() => {
+    var watchNext = ytInitialData.contents.twoColumnWatchNextResults
+    if(!watchNext || !watchNext.secondaryResults || !watchNext.secondaryResults.secondaryResults) return null
+    return watchNext.secondaryResults.secondaryResults.results
+    .map(r => r.compactAutoplayRenderer && Object.assign({}, r.compactAutoplayRenderer.contents[0].compactVideoRenderer, {autoPlay:true}) 
+        || r.compactVideoRenderer &&  Object.assign({}, r.compactVideoRenderer, {autoPlay:false}) 
+        || null)
+    .filter(r => r != null)
+    .map((v,i) =>({
+        videoId:v.videoId, 
+        title: v.title && v.title.simpleText || v.title && v.title.runs && v.title.runs[0].text, 
+        thumb: v.thumbnail && v.thumbnail.thumbnails[v.thumbnail.thumbnails.length -1].url,
+        channelTitle: v.longBylineText && v.longBylineText.runs[0].text, 
+        publishAgo: v.publishedTimeText && v.publishedTimeText.simpleText, 
+        viewText: v.viewCountText && v.viewCountText.simpleText || v.viewCountText && v.viewCountText.runs && v.viewCountText.runs[0].text,
+        duration:v.lengthText && v.lengthText.simpleText, 
+        channelId:v.channelId,
+        rank:i+1
+    }))
+}";
 
-      var recRes = recs.Select(r => new Rec {
-        Source = ScrapeSource.Chrome,
-        ToVideoId = r.videoId,
-        ToChannelId = r.channelId,
-        ToChannelTitle = r.channelTitle,
-        Rank = r.rank,
-        ToVideoTitle = r.title,
-        ToViews = ParseViews(r.viewText),
-        ToUploadDate = ParseAgo(DateTime.UtcNow, r.publishAgo),
-        ForYou = r.viewText == "Recommended for you"
-      }).ToArray();
+      var attempts = 3;
+      while (true) {
+        var recs = await page.EvaluateFunctionAsync<CompactVideoRenderer[]>(recsSel);
+        if (recs != null) {
+          var recRes = recs.Select(r => new Rec {
+            Source = ScrapeSource.Chrome,
+            ToVideoId = r.videoId,
+            ToChannelId = r.channelId,
+            ToChannelTitle = r.channelTitle,
+            Rank = r.rank,
+            ToVideoTitle = r.title,
+            ToViews = ParseViews(r.viewText),
+            ToUploadDate = ParseAgo(DateTime.UtcNow, r.publishAgo),
+            ForYou = r.viewText == "Recommended for you",
+          }).ToArray();
 
-      return recRes;
+          return recRes;
+        }
+        if (hasError)
+          return new Rec[] { };
+
+        if (attempts <= 0) {
+          var (html, img) = await SavePageDump(page, log);
+          Log.Warning("ChromeScraper - unable to find recs in video at url {Url}. See {Html} {Img}", page.Url, html, img);
+          return new Rec[] { };
+        }
+        await 1.Seconds().Delay();
+        attempts--;
+      }
+    }
+
+    async Task WaitForSelector(Page page, string selector, TimeSpan timeout, ILogger log) {
+      try {
+        await page.WaitForSelectorAsync(selector, new WaitForSelectorOptions {Timeout = (int) timeout.TotalMilliseconds});
+      }
+      catch (WaitTaskTimeoutException e) {
+        log.Warning(e, "Waiting for '{Selector}' timed out on {Page}", selector, page.Uri().PathAndQuery);
+      }
+    }
+
+    async Task<(Uri html, Uri image)> SavePageDump(Page page, ILogger log) {
+      var dom = await page.MainFrame.GetContentAsync();
+      var imgStream = await page.ScreenshotStreamAsync();
+      var basePath = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"));
+      var pageName = page.Uri().PathAndQuery;
+      var htmlPath = basePath.Add($"{pageName}.html");
+      var imgPath = basePath.Add($"{pageName}.png");
+      await Task.WhenAll(LogStore.Save(htmlPath, dom.AsStream(), log), LogStore.Save(imgPath, imgStream, log));
+      return (LogStore.Url(htmlPath), LogStore.Url(imgPath));
     }
 
     static async Task<(string ad, bool hasAd)> GetAd(Page page) {
@@ -220,20 +321,6 @@ namespace YtReader.YtWebsite {
     }");
 
       return (ad, hasAd);
-    }
-
-    static async Task ScrollDown(Page page, int maxScroll, string videoId, ILogger log) {
-      var scrollHeight = 0;
-      while (true) {
-        var newScrollHeight = await page.EvaluateExpressionAsync<int>("document.scrollingElement.scrollHeight");
-        if (newScrollHeight == scrollHeight || newScrollHeight > maxScroll) {
-          log.Debug("scrolled down on {Video} to {ScrollHeight}px", videoId, newScrollHeight);
-          break;
-        }
-        await page.EvaluateExpressionAsync(@"document.scrollingElement.scroll(0, document.scrollingElement.scrollHeight)");
-        scrollHeight = newScrollHeight;
-        await 1.Seconds().Delay();
-      }
     }
 
     async Task<VideoExtraStored2> VideoDetails(Page page, string videoId) {
@@ -257,7 +344,10 @@ namespace YtReader.YtWebsite {
       var detailsScript = await page.EvaluateExpressionAsync<VideoDetailsFromScript>(
         "JSON.parse(document.querySelector('script.ytd-player-microformat-renderer').innerText)");
       var likeDislike = await page.EvaluateExpressionAsync<LikesDislikes>(
-        @"Object.assign({}, ...ytInitialData.contents.twoColumnWatchNextResults.results.results.contents[0].videoPrimaryInfoRenderer.videoActions.menuRenderer.topLevelButtons
+        @"Object.assign({}, ...ytInitialData.contents.twoColumnWatchNextResults.results.results.contents
+    .map(c => c.videoPrimaryInfoRenderer)
+    .filter(c => c)
+    .flatMap(c => c.videoActions.menuRenderer.topLevelButtons)
     .map(b => b.toggleButtonRenderer).filter(b => b)
     .map(b => b.defaultText.accessibility.accessibilityData.label)
     .map((l,i) => {
@@ -352,5 +442,10 @@ namespace YtReader.YtWebsite {
       public string comment         { get; set; }
       public string ago             { get; set; }
     }
+  }
+
+  public static class PageEx {
+    public static Uri Uri(this Page page) => new Uri(page.Url);
+    public static Credentials AsCreds(this NameSecret secret) => new Credentials {Username = secret.Name, Password = secret.Secret};
   }
 }

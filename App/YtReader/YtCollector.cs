@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using AngleSharp.Common;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
@@ -13,6 +12,7 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Db;
 using YtReader.Store;
 using YtReader.Yt;
 using YtReader.YtWebsite;
@@ -30,22 +30,23 @@ namespace YtReader {
     readonly AppCfg                      Cfg;
     readonly SnowflakeConnectionProvider Sf;
     readonly IPipeCtx                    PipeCtx;
-    readonly WebScraper                   Scraper;
+    readonly WebScraper                  Scraper;
     readonly ChromeScraper               ChromeScraper;
     readonly YtStore                     Store;
 
-    public YtCollector(YtStore store, AppCfg cfg, SnowflakeConnectionProvider sf, IPipeCtx pipeCtx, ILogger log) {
+    public YtCollector(YtStore store, AppCfg cfg, SnowflakeConnectionProvider sf, IPipeCtx pipeCtx, WebScraper webScraper, ChromeScraper chromeScraper,
+      ILogger log) {
       Store = store;
       Cfg = cfg;
       Sf = sf;
       PipeCtx = pipeCtx;
-      Scraper = new WebScraper(cfg.Scraper);
-      ChromeScraper = new ChromeScraper(cfg.Scraper);
+      Scraper = webScraper;
+      ChromeScraper = chromeScraper;
       Api = new YtClient(cfg.YTApiKeys, log);
     }
 
-    YtCollectCfg RCfg => Cfg.YtCollect;
-    
+    YtCollectCfg RCfg => Cfg.Collect;
+
     [Pipe]
     public async Task Collect(ILogger log, bool forceUpdate = false) {
       var channels = await UpdateAllChannels(log);
@@ -119,7 +120,7 @@ namespace YtReader {
       bool forceUpdate, ILogger log = null) {
       log ??= Logger.None;
       var workSw = Stopwatch.StartNew();
-      
+
       var channelResults = await channels
         .Where(c => c.Status == ChannelStatus.Alive &&
                     c.ReviewStatus.In(ChannelReviewStatus.Pending, ChannelReviewStatus.AlgoAccepted, ChannelReviewStatus.ManualAccepted))
@@ -268,18 +269,31 @@ namespace YtReader {
       // use chrome when its +1 week old and +1 month old. We should get most of the comments that way (max 50 vids)
       var forChromeUpdate = (await VideosForChromeUpdate(c, conn, log)).ToHashSet();
       var forUpdate = (await VideoToUpdateRecs(c, vids)).Where(v => !forChromeUpdate.Contains(v)).ToArray();
-      
+
       var chromeExtra = await ChromeScraper.GetRecsAndExtra(forChromeUpdate, log);
       var webExtra = await Scraper.GetRecsAndExtra(forUpdate, log);
 
-      var allExtra = (chromeExtra.Concat(webExtra)).ToArray();
-      
+      var allExtra = chromeExtra.Concat(webExtra).ToArray();
+
       var extra = allExtra.Select(v => v.Extra).NotNull().ToArray();
-      
+
       var updated = DateTime.UtcNow;
-      var recs = allExtra
-        .SelectMany(v => v.Recs.Select((r, i) => new RecStored2 {
-          FromChannelId = c.ChannelId,
+      var recs = ToRecStored(allExtra, updated);
+
+      if (recs.Any())
+        await Store.Recs.Append(recs, log);
+
+      if (extra.Any())
+        await Store.VideoExtra.Append(extra, log);
+
+      log.Information("{Channel} - Recorded {WebExtras} web-extras, {ChromeExtras} chrome-extras, {Recs} recs, {Comments} comments",
+        c.ChannelTitle, webExtra.Count, chromeExtra.Count, recs.Length, extra.Sum(e => e.Comments?.Length ?? 0));
+    }
+
+    public static RecStored2[] ToRecStored(RecsAndExtra[] allExtra, DateTime updated) =>
+      allExtra
+        .SelectMany(v => v.Recs?.Select((r, i) => new RecStored2 {
+          FromChannelId = v.Extra.ChannelId,
           FromVideoId = v.Extra.VideoId,
           FromVideoTitle = v.Extra.Title,
           ToChannelTitle = r.ToChannelTitle,
@@ -292,17 +306,7 @@ namespace YtReader {
           ToViews = r.ToViews,
           ToUploadDate = r.ToUploadDate,
           Updated = updated
-        })).ToArray();
-      
-      if (recs.Any())
-        await Store.Recs.Append(recs, log);
-      
-      if (extra.Any()) 
-        await Store.VideoExtra.Append(extra, log);
-      
-      log.Information("{Channel} - Recorded {WebExtras} web-extras, {ChromeExtras} chrome-extras, {Recs} recs, {Comments} comments",
-        c.ChannelTitle, webExtra.Count, chromeExtra.Count, recs.Length, extra.Sum(e => e.Comments.Length));
-    }
+        }) ?? new RecStored2[] { }).ToArray();
 
     async Task<IReadOnlyCollection<string>> VideosForChromeUpdate(ChannelStored2 c, LoggedConnection connection, ILogger log) {
       var ids = await connection.Query<string>("videos sans-comments",
@@ -336,7 +340,7 @@ namespace YtReader {
 )
 select video_id
 from videos_to_update
-order by upload_date desc
+order by random()
 limit :limit",
         param: new {channel_id = c.ChannelId, limit = RCfg.PopulateMissingCommentsLimit});
       log.Information("{Channel} - found {Videos} in need of chrome update", c.ChannelTitle, ids.Count);

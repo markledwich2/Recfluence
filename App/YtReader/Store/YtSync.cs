@@ -6,6 +6,7 @@ using Serilog;
 using Snowflake.Data.Client;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Db;
 
 namespace YtReader.Store {
   public class YtSync {
