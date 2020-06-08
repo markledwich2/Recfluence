@@ -202,14 +202,23 @@ namespace YtReader.Yt {
     Dead
   }
 
+  public enum ChannelReviewStatus {
+    None,
+    Pending,
+    ManualAccepted,
+    ManualRejected,
+    AlgoAccepted,
+    AlgoRejected
+  }
+
   public class ChannelData {
-    public string           Id          { get; set; }
-    public string           Title       { get; set; }
-    public ChannelStatus    Status      { get; set; }
-    public string           Country     { get; set; }
-    public string           Description { get; set; }
-    public ThumbnailDetails Thumbnails  { get; set; }
-    public ChannelStats     Stats       { get; set; }
+    public string              Id           { get; set; }
+    public string              Title        { get; set; }
+    public ChannelStatus       Status       { get; set; }
+    public string              Country      { get; set; }
+    public string              Description  { get; set; }
+    public ThumbnailDetails    Thumbnails   { get; set; }
+    public ChannelStats        Stats        { get; set; }
 
     public override string ToString() => Title;
   }

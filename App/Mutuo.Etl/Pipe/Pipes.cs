@@ -6,7 +6,8 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Util;
-using CommandLine;
+using CliFx;
+using CliFx.Attributes;
 using Mutuo.Etl.Blob;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -145,7 +146,7 @@ namespace Mutuo.Etl.Pipe {
     }
 
     /// <summary>Executes a pipe in this process. Assumes args/state has been created for this to run</summary>
-    public static async Task<ExitCode> DoPipeWork(this IPipeCtx ctx, PipeRunId id) {
+    public static async Task DoPipeWork(this IPipeCtx ctx, PipeRunId id) {
       var pipeMethods = PipeMethods(ctx);
 
       var pipeName = id.Name;
@@ -191,9 +192,8 @@ namespace Mutuo.Etl.Pipe {
       }
       catch (Exception ex) {
         ctx.Log.Error(ex, "Pipe {Pipe} failed with error: {Error}", pipeName, ex.Message);
-        return ExitCode.Error;
+        throw;
       }
-      return ExitCode.Success;
     }
 
     static object ChangeToType(object value, Type type) {
@@ -339,13 +339,14 @@ namespace Mutuo.Etl.Pipe {
 
   /// <summary>The application entrypoint for inner pipe dependencies and parallel tasks. Add this to your CLI as a verb Not
   ///   intended to be called by user. Seperately provide your own high level entrypoints with explicit parameters and help.</summary>
-  [Verb("pipe")]
-  public class PipeCmdArgs {
-    [Option('r', HelpText = "The pipe name, or the runId in the format Pipe|Group|Num.")]
+  public abstract class PipeCmdArgs : ICommand {
+    [CommandOption('r', Description = "The pipe name, or the runId in the format Pipe|Group|Num.")]
     public string RunId { get; set; }
 
-    [Option('l', HelpText = "The location to run the pipe Local/Container/LocalContainer", Default = PipeRunLocation.Local)]
+    [CommandOption('l', Description = "The location to run the pipe Local/Container/LocalContainer")]
     public PipeRunLocation? Location { get; set; } = PipeRunLocation.Local;
+
+    public abstract ValueTask ExecuteAsync(IConsole console);
   }
 
   /// <summary>Decorate any types that contain pipe functions. The parameters will be populated from either the InState

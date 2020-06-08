@@ -63,13 +63,13 @@ namespace YtReader {
         .BlockAction(async b => {
           log.Debug("UserScrape - launching container");
           var groupName = $"userscrape-{Guid.NewGuid().ToShortString(4).ToLower()}";
-          var (res, dur) = await Containers.Launch(
+          var (group, dur) = await Containers.Launch(
             Cfg.Container, groupName, fullName,
             env,
             args.Concat("-a", b.Join("|")).ToArray(),
             log: log
           ).WithDuration();
-          await res.EnsureSuccess(groupName);
+          await group.EnsureSuccess(groupName, log).WithWrappedException("UserScrape - container failed");
           log.Information("UserScrape - container completed in {Duration}", dur.HumanizeShort());
         }, Containers.AzureCfg.Parallel);
     }

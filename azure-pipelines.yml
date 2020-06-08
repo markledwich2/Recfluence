@@ -14,9 +14,9 @@ variables:
     env: stage
 
 stages:
-  - stage: YtNetworksContainer
+  - stage: RecfluenceContainer
     jobs:
-      - job: YtNetworksContainer
+      - job: RecfluenceContainer
         pool:
           vmImage: ubuntu-latest
 
@@ -33,8 +33,10 @@ stages:
             inputs:
               command: build
               containerRegistry: ytnetworks
-              repository: ytnetworks
-              tags: $(GitVersion.SemVer)
+              repository: recfluence
+              tags: |
+                $(GitVersion.SemVer)
+                latest
               arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
               buildContext: ./App
 
@@ -43,8 +45,10 @@ stages:
             inputs:
               command: push
               containerRegistry: ytnetworks
-              repository: ytnetworks
-              tags: $(GitVersion.SemVer)
+              repository: recfluence
+              tags: |
+                $(GitVersion.SemVer)
+                latest
 
   - stage: Dataform
     dependsOn: []

@@ -212,7 +212,7 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     this.load()
   }
 
-  resultUrl() { return ${ this.props.dataUrl } }
+  resultUrl() { return this.props.dataUrl }
 
   async load() {
     let data = await YtModel.dataSet(this.resultUrl())

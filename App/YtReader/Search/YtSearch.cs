@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using Autofac.Util;
 using Elasticsearch.Net;
@@ -20,6 +19,7 @@ using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Db;
 using Policy = Polly.Policy;
 
 namespace YtReader.Search {
@@ -107,11 +107,11 @@ namespace YtReader.Search {
       var index = Es.GetIndexFor<T>() ?? throw new InvalidOperationException("The ElasticClient must have default indexes created for types used");
       var exists = await Es.Indices.ExistsAsync(index);
 
-      if(!exists.Exists) {
+      if (!exists.Exists) {
         await Es.Indices.CreateAsync(index, c => c.Map<T>(m => m.AutoMap()));
         log.Information("Created ElasticSearch Index {Index}", index);
       }
-      else if(fullLoad) {
+      else if (fullLoad) {
         await Es.MapAsync<T>(c => c.AutoMap());
         log.Information("Updated index mapping {Index}", index);
       }

@@ -50,7 +50,9 @@ namespace Mutuo.Etl.Pipe {
       await store.Set($"{md.Id.StatePath()}.RunMetadata", md, false, log);
 
     public static ContainerState State(this IContainerGroup group) => group.State.ToEnum<ContainerState>(false);
-    public static bool IsCompletedState(this ContainerState state) => state.In(ContainerState.Succeeded, ContainerState.Failed);
+
+    public static bool IsCompletedState(this ContainerState state) => state.In(
+      ContainerState.Succeeded, ContainerState.Failed, ContainerState.Stopped, ContainerState.Terminated);
 
     public static async Task<IContainerGroup> WaitForState(this IContainerGroup group, params ContainerState[] states) {
       while (true) {

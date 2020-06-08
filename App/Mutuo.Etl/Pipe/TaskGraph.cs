@@ -58,7 +58,6 @@ namespace Mutuo.Etl.Pipe {
 
   public class TaskGraph {
     readonly DependencyGraph<GraphTask> _graph;
-    readonly ILogger                    _log;
 
     public TaskGraph(IEnumerable<GraphTask> jobs) => _graph = CreateGraph(jobs.ToArray());
 

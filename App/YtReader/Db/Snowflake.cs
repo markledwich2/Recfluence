@@ -10,7 +10,7 @@ using SysExtensions;
 using SysExtensions.Security;
 using SysExtensions.Text;
 
-namespace YtReader {
+namespace YtReader.Db {
   public class SnowflakeCfg {
     public            NameSecret Creds     { get; set; } = new NameSecret();
     [Required] public string     Account   { get; set; }
@@ -18,6 +18,7 @@ namespace YtReader {
     public            string     Db        { get; set; }
     public            string     Schema    { get; set; }
     public            string     Role      { get; set; }
+    public            string     DbSuffix  { get; set; }
   }
 
   public class SnowflakeConnectionProvider {
@@ -41,7 +42,7 @@ namespace YtReader {
       Cs(new (string name, string value)[] {
         ("account", cfg.Account),
         ("user", cfg.Creds.Name),
-        ("db", db ?? cfg.Db),
+        ("db", db ?? cfg.DbName()),
         ("schema", schema ?? cfg.Schema),
         ("warehouse", cfg.Warehouse),
         ("role", role ?? cfg.Role)

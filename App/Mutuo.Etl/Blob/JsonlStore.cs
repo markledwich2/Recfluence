@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Humanizer;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
@@ -75,20 +77,29 @@ namespace Mutuo.Etl.Blob {
     
     public async Task<IReadOnlyCollection<T>> Items(StringPath path) => await LoadJsonl(path);
 
+    static readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {
+      NullValueHandling = NullValueHandling.Ignore,
+      DefaultValueHandling = DefaultValueHandling.Include,
+      Formatting = Formatting.None,
+      Converters = {
+        new StringEnumConverter()
+      }
+    };
+
     public async Task Append(IReadOnlyCollection<T> items, ILogger log = null) {
       log ??= Log;
       if (items.None()) return;
       await items.GroupBy(Partition).BlockAction(async g => {
         var ts = items.Max(GetTs);
         var path = JsonlStoreExtensions.FilePath(FilePath(g.Key), ts, Version);
-        using var memStream = await items.ToJsonlGzStream(new JsonSerializerSettings());
+        using var memStream = await items.ToJsonlGzStream(JCfg);
         await Store.Save(path, memStream, log).WithDuration();
       }, Parallel);
     }
 
     async Task<IReadOnlyCollection<T>> LoadJsonl(StringPath path) {
       await using var stream = await Store.Load(path);
-      return stream.LoadJsonlGz<T>();
+      return stream.LoadJsonlGz<T>(JCfg);
     }
   }
 

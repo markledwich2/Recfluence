@@ -13,8 +13,9 @@ namespace YtReader {
       Info = info;
     }
 
-    public SemVersion     Version { get; set; }
-    public GitVersionInfo Info    { get; set; }
+    public SemVersion     Version     { get; set; }
+    public GitVersionInfo Info        { get; set; }
+    public SemVersion     ProdVersion => Version.Change(prerelease: "");
   }
 
   public class VersionInfoProvider {
@@ -30,7 +31,7 @@ namespace YtReader {
 
     static readonly Regex NonAlphaNum = new Regex("[^a-zA-Z0-9]", RegexOptions.Compiled);
 
-    public static string GetVersionPrefix(RootCfg rootCfg, SemVersion version,  GitVersionInfo info = null) {
+    public static string GetVersionPrefix(RootCfg rootCfg, SemVersion version, GitVersionInfo info = null) {
       if (rootCfg.IsProd()) return rootCfg.BranchEnv ?? "";
       var prerelease = version.Prerelease.HasValue() ? version.Prerelease : null;
       var prefix = rootCfg.BranchEnv ?? info?.BranchName ?? prerelease ?? rootCfg.Env.ToLower();

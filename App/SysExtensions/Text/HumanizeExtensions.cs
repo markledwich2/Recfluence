@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using Humanizer.Localisation;
 using static Humanizer.Localisation.TimeUnit;
@@ -27,7 +28,7 @@ namespace SysExtensions.Text {
       }
     }
 
-    
+    public static string HumanizeShort(this Stopwatch sw) => sw.Elapsed.HumanizeShort();
     
     public static string HumanizeShort(this TimeSpan t) {
       var units = new (int v, string s, TimeUnit u)[]

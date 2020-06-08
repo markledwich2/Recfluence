@@ -1,14 +1,13 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Mutuo.Etl.Pipe;
 using Serilog;
-using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Db;
 
 namespace YtReader {
   public class DataformCfg {
@@ -55,12 +54,8 @@ namespace YtReader {
       log.Debug("Dataform - launching container");
       var containerName = "dataform";
       var fullName = Cfg.Container.FullContainerImageName("latest");
-      var (res, dur) = await Containers.Launch(Cfg.Container, containerName, fullName, env, new string[] { }, log: log).WithDuration();
-      if (res.State().In(ContainerState.Failed, ContainerState.Terminated)) {
-        var content = await res.GetLogContentAsync(containerName);
-        log.Error("Dataform - container failed in {Duration}: {LogContent}", dur.HumanizeShort(), content);
-        throw new InvalidOperationException($"Dataform - container exited with error code: ${content}");
-      }
+      var (group, dur) = await Containers.Launch(Cfg.Container, containerName, fullName, env, new string[] { }, log: log).WithDuration();
+      await group.EnsureSuccess(containerName, log).WithWrappedException("Dataform - container failed");
       log.Information("Dataform - container completed in {Duration}", dur.HumanizeShort());
     }
   }

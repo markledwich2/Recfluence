@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.File;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
@@ -134,7 +133,7 @@ namespace Mutuo.Etl.Blob {
     static void AutoPopulateProps(StringPath path, CloudBlockBlob blob) {
       var ext = new Stack<string>(path.Extensions);
 
-      if (ext.Peek().In("gz", "gzip")) {
+      if (ext.Count > 0 && ext.Peek().In("gz", "gzip")) {
         ext.Pop(); // pop so we can work at the content type appropreately
         blob.Properties.ContentEncoding = "gzip";
       }

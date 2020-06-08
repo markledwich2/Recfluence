@@ -1,31 +1,36 @@
 ﻿using System.Threading.Tasks;
-using Autofac;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Exceptions;
 using Mutuo.Etl.Pipe;
+using Serilog;
 using SysExtensions.Text;
 
 namespace YtCli {
+  [Command("pipe")]
   public class PipeCmd : PipeCmdArgs {
-    public static async Task<ExitCode> RunPipe(ICmdCtx<PipeCmd> ctx) {
-      var option = ctx.Option;
+    readonly IPipeCtx PipeCtx;
+    readonly ILogger  Log;
 
-      var pipeCtx = ctx.Scope.Resolve<IPipeCtx>();
-      var pipeMethods = pipeCtx.PipeMethods();
-      var runId = option.RunId.HasValue() ? PipeRunId.FromString(option.RunId) : new PipeRunId();
-      if (option.RunId.NullOrEmpty()) {
-        ctx.Log.Error($"Provide one of the following pipes to run: {pipeMethods.Join(", ", m => m.Method.Name)}");
-        return ExitCode.Error;
-      }
-      if (!pipeMethods.ContainsKey(runId.Name)) {
-        ctx.Log.Error($"Pipe {runId.Name} not found. Available: {pipeMethods.Join(", ", m => m.Method.Name)}");
-        return ExitCode.Error;
-      }
+    public PipeCmd(IPipeCtx pipeCtx, ILogger log) {
+      PipeCtx = pipeCtx;
+      Log = log;
+    }
 
-      ctx.Log.Information("Pipe Run Command Started {RunId}", option.RunId);
+    public override async ValueTask ExecuteAsync(IConsole console) {
+      var pipeMethods = PipeCtx.PipeMethods();
+      var runId = RunId.HasValue() ? PipeRunId.FromString(RunId) : new PipeRunId();
+      if (RunId.NullOrEmpty()) throw new CommandException($"Provide one of the following pipes to run: {pipeMethods.Join(", ", m => m.Method.Name)}");
+      if (!pipeMethods.ContainsKey(runId.Name))
+        throw new CommandException($"Pipe {runId.Name} not found. Available: {pipeMethods.Join(", ", m => m.Method.Name)}");
+
+      Log.Information("Pipe Run Command Started {RunId}", RunId);
       if (runId.HasGroup)
-        return await pipeCtx.DoPipeWork(runId);
+        await PipeCtx.DoPipeWork(runId);
 
-      var res = await pipeCtx.Run(runId.Name, log: ctx.Log, location: ctx.Option.Location ?? PipeRunLocation.Local);
-      return res.Error ? ExitCode.Error : ExitCode.Success;
+      var res = await PipeCtx.Run(runId.Name, log: Log, location: Location ?? PipeRunLocation.Local);
+      if (res.Error)
+        throw new CommandException(res.ErrorMessage);
     }
   }
 }

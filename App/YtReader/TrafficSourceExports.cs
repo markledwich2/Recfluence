@@ -18,7 +18,7 @@ using YtReader.YtWebsite;
 
 namespace YtReader {
   public static class TrafficSourceExports {
-    public static async Task Process(ISimpleFileStore store, AppCfg cfg, YtScraper yt, ILogger log) {
+    public static async Task Process(ISimpleFileStore store, WebScraper web, ILogger log) {
       var blobs = await store.List("rec_exports").SelectManyList();
       //blobs = blobs.Where(b => b.Path == "rec_exports/Traffic source 2019-07-01_2019-08-01 David Pakman Show.zip").ToList();
 
@@ -55,7 +55,7 @@ namespace YtReader {
         using var csvReader = new CsvReader(csvStream, CsvExtensions.DefaultConfig);
 
         var records = csvReader.GetRecords<TrafficSourceExportRow>().ToList();
-        var rows = (await records.BlockFunc(Process, cfg.DefaultParallel,
+        var rows = (await records.BlockFunc(Process, 4,
             progressUpdate: p => log.Debug("Processing traffic sources for {Path}: {Rows}/{TotalRows}", b.Path, p.Completed, records.Count)))
           .NotNull().ToList();
 
@@ -67,7 +67,7 @@ namespace YtReader {
           if (source.Length != 2 || source[0] != "YT_RELATED")
             return null; // total at the top or otherwise. not interested
           var videoId = source[1];
-          var fromVideo = await yt.GetVideoAsync(videoId, log);
+          var fromVideo = await web.GetVideo(videoId, log);
 
           return new TrafficSourceRow {
             ToChannelTitle = exportInfo.Channel,

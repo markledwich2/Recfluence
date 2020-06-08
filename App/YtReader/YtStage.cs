@@ -7,12 +7,12 @@ using Humanizer;
 using Humanizer.Bytes;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
-using Semver;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Db;
 using YtReader.Store;
 
 namespace YtReader {
@@ -40,8 +40,8 @@ namespace YtReader {
     }
 
     public async Task StageUpdate(ILogger log, bool fullLoad = false, string[] tableNames = null) {
-      log = log.ForContext("db", Conn.Cfg.Db);
-      log.Information("StageUpdate - started for db {Db}", Conn.Cfg.Db);
+      log = log.ForContext("db", Conn.Cfg.DbName());
+      log.Information("StageUpdate - started for db {Db}", Conn.Cfg.DbName());
       var sw = Stopwatch.StartNew();
       var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table, StringComparer.OrdinalIgnoreCase) == true).ToArray();
       await tables.BlockAction(async t => {
@@ -95,7 +95,7 @@ namespace YtReader {
   }
 
   public static class YtWarehouse {
-    public static string DbName(this SnowflakeCfg cfg, SemVersion version) => version.Prerelease.HasValue() ? $"{cfg.Db}_{version.Prerelease}" : "yt";
+    public static string DbName(this SnowflakeCfg cfg) => cfg.DbSuffix.HasValue() ? $"{cfg.Db}_{cfg.DbSuffix}" : cfg.Db;
 
     static StageTableCfg UsTable(string name) =>
       new StageTableCfg($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, tsCol: "updated");
