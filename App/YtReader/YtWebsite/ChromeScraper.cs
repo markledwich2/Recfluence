@@ -3,13 +3,14 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Humanizer;
 using Mutuo.Etl.Blob;
+using Newtonsoft.Json.Linq;
 using PuppeteerSharp;
 using Serilog;
-using Serilog.Events;
 using Serilog.Extensions.Logging;
 using SysExtensions;
 using SysExtensions.Collections;
@@ -46,36 +47,67 @@ namespace YtReader.YtWebsite {
       return browser;
     }
 
-    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) {
+    public async Task<string> GetIp(bool proxy, ILogger log) {
+      var browser = await CreateBrowser(proxy, log);
+      var page = await browser.NewPageAsync();
+      if (proxy)
+        await page.AuthenticateAsync(ProxyCfg.Creds.AsCreds()); // workaround for chrome not supporting password proxies
+      var response = await page.GoToAsync("https://api.ipify.org?format=json");
+      var j = await response.JsonAsync();
+      return j["ip"]?.Value<string>();
+    }
+
+    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log, bool proxy = false) {
       var sw = Stopwatch.StartNew();
       log = log.ForContext("Module", nameof(ChromeScraper));
-      var proxy = false;
 
       var browsers = CollectCfg.ChromeParallel;
       var videosPerBrowser = videos.Count / CollectCfg.ChromeParallel + 1;
       var res = await videos.Batch(videosPerBrowser).BlockFunc(async b => {
         var requests = new ConcurrentBag<(Request req, bool aborted)>();
-        using var browser = await CreateBrowser(proxy, log);
-        return await b.BlockFunc(async v => {
-          //var context = await browser.CreateIncognitoBrowserContextAsync(); // opening windows is more reliable than tabs in practice
-          log.Debug("loading video {Video}", v);
-          using var page = await browser.NewPageAsync();
-          if (proxy)
-            await page.AuthenticateAsync(ProxyCfg.Creds.AsCreds());
+        await using var directBrowser = new AsyncLazy<Browser>(async () => await CreateBrowser(proxy: false, log));
+        await using var proxyBrowser = new AsyncLazy<Browser>(async () => await CreateBrowser(proxy: true, log));
+
+        async Task<Browser> Browser(bool prox) => prox ? await proxyBrowser.GetOrCreate() : await directBrowser.GetOrCreate();
+
+        async Task<Page> Page(bool prox, string v) {
+          var browser = await Browser(prox);
+          var page = await browser.NewPageAsync(); // create page inside retry loop. some transient errors seems to be caused by state in the page
+          if (prox)
+            await page.AuthenticateAsync(ProxyCfg.Creds.AsCreds()); // workaround for chrome not supporting password proxies
           await page.SetCookieAsync(); // clears cookies
           await ConfigureRequests(log, page, v, (req, aborted) => requests.Add((req, aborted)));
-          var attempt = 0;
+          return page;
+        }
+
+        return await b.BlockFunc(async v => {
+          //var context = await browser.CreateIncognitoBrowserContextAsync(); // opening windows is more reliable than tabs in practice
+          var attempt = 1;
+
           while (true) {
+            var lastAttempt = attempt >= CollectCfg.ChromeAttempts;
+            log.Debug("loading video {Video}. Proxy={Proxy}", v, proxy ? ProxyCfg.Url : "Direct");
+            using var page = await Page(proxy, v);
             try {
-              var video = await GetVideo(page, v, log);
-              log.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
-                v, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
-              return video;
+              var (video, notOkResponse) = await GetVideo(page, v, log);
+              if (notOkResponse != null) {
+                if (notOkResponse.Status == HttpStatusCode.TooManyRequests && !proxy) {
+                  proxy = true;
+                  attempt = 0;
+                  log.Information("ChromeScraper - error response ({Status}) loading {Video}: switching to proxy", notOkResponse.Status, v);
+                }
+                else {
+                  throw new InvalidOperationException($"not OK response ({notOkResponse.Status})");
+                }
+              }
+              if (video != null) {
+                log.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
+                  v, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
+                return video;
+              }
             }
             catch (Exception ex) {
-              var lastAttempt = attempt >= CollectCfg.ChromeAttempts;
-              log.Write(lastAttempt ? LogEventLevel.Error : LogEventLevel.Warning, ex,
-                "ChromeScraper - failed to load video {Video}: {Error}", v, ex.Message);
+              log.Warning(ex, "ChromeScraper - failed to load video {Video} from {Url} (attempt {Attempt}): {Error}", v, page.Url, attempt, ex.Message);
               if (lastAttempt)
                 throw;
             }
@@ -134,9 +166,11 @@ namespace YtReader.YtWebsite {
     const string CommentErrorSel = "#comments #message";
     const string VideoErrorSel   = "#info > .reason.yt-player-error-message-renderer";
 
-    async Task<RecsAndExtra> GetVideo(Page page, string videoId, ILogger log) {
+    async Task<(RecsAndExtra video, Response notOkResponse)> GetVideo(Page page, string videoId, ILogger log) {
       log = log.ForContext("Video", videoId);
-      await page.GoToAsync($"https://youtube.com/watch?v={videoId}");
+      var response = await page.GoToAsync($"https://youtube.com/watch?v={videoId}");
+      if (response.Status != HttpStatusCode.OK)
+        return (default, response);
       // wait for either a single comment, or a message that the coments are turned off. This is the slowest part to load.
       await WaitForSelector(page,
         new[] {CommentCountSel, CommentErrorSel, VideoErrorSel}.Join(", "),
@@ -154,11 +188,13 @@ namespace YtReader.YtWebsite {
 
       if (video == null) {
         if (error == null) throw new InvalidOperationException("can't find video or error message, probably a bug");
-        return new RecsAndExtra(new VideoExtraStored2 {
-          VideoId = videoId,
-          Error = error,
-          SubError = subError
-        }, recs: default);
+        return (
+          new RecsAndExtra(
+            new VideoExtraStored2 {
+              VideoId = videoId,
+              Error = error,
+              SubError = subError
+            }, recs: default), default);
       }
 
       video.Error = error;
@@ -168,7 +204,7 @@ namespace YtReader.YtWebsite {
       (video.Ad, video.HasAd) = await GetAd(page);
       var recs = await GetRecs(page, error.HasValue(), log);
       (video.Comments, video.CommentsMsg, video.CommentCount) = await GetComments(page, video);
-      return new RecsAndExtra(video, recs);
+      return (new RecsAndExtra(video, recs), default);
     }
 
     static async Task ScrollDown(Page page, int? maxScroll, string videoId, ILogger log) {

@@ -12,13 +12,9 @@ using SysExtensions.Text;
 namespace Mutuo.Etl.Blob {
   public class LocalSimpleFileStore : ISimpleFileStore {
     readonly FPath Dir;
-    public LocalSimpleFileStore(FPath dir) {
-      Dir = dir;
-    }
+    public LocalSimpleFileStore(FPath dir) => Dir = dir;
 
-    static void InitDirIfRequired() {
-      
-    }
+    static void InitDirIfRequired() { }
 
     public Task Save(StringPath path, FPath file, ILogger log = null) {
       file.EnsureDirectoryExists();
@@ -40,7 +36,9 @@ namespace Mutuo.Etl.Blob {
       return Task.FromResult(s);
     }
 
+#pragma warning disable 1998
     public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) {
+#pragma warning restore 1998
       var files = Path(path).Files("*", allDirectories);
       var res = files.Select(AsListItem).ToArray();
       yield return res;
@@ -55,7 +53,7 @@ namespace Mutuo.Etl.Blob {
     public Task<bool> Delete(StringPath path, ILogger log = null) {
       var p = Path(path);
       var exists = p.Exists;
-      if(exists)
+      if (exists)
         p.Delete();
       return Task.FromResult(exists);
     }
@@ -63,11 +61,11 @@ namespace Mutuo.Etl.Blob {
     public Task<Stream> OpenForWrite(StringPath path, ILogger log = null) {
       var p = Path(path);
       p.EnsureDirectoryExists();
-      var s = (Stream)p.Open(FileMode.Create, FileAccess.Write);
+      var s = (Stream) p.Open(FileMode.Create, FileAccess.Write);
       return Task.FromResult(s);
     }
 
-    public Task<FileListItem> Info(StringPath path) => Task.FromResult(AsListItem( Path(path)));
+    public Task<FileListItem> Info(StringPath path) => Task.FromResult(AsListItem(Path(path)));
 
     public Uri Url(StringPath path) => $"file://{Path(path).FullPath}".AsUri();
   }

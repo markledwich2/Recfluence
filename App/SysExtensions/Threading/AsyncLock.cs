@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using SysExtensions.Reflection;
 
 namespace SysExtensions.Threading {
-  public class AsyncLazy<T> {
+  public class AsyncLazy<T> : IAsyncDisposable {
     readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
     public AsyncLazy(Func<Task<T>> creator) => Creator = creator;
     Func<Task<T>> Creator { get; }
@@ -19,6 +19,13 @@ namespace SysExtensions.Threading {
         Value = await Creator();
       }
       return Value;
+    }
+
+    public async ValueTask DisposeAsync() {
+      _lock?.Dispose();
+      if (Value == null) return;
+      if (Value is IAsyncDisposable a) await a.DisposeAsync();
+      else if (Value is IDisposable d) d.Dispose();
     }
   }
 

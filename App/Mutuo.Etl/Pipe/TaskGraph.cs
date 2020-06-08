@@ -154,8 +154,7 @@ namespace Mutuo.Etl.Pipe {
             var logTimeTask = Task.Delay(1.Minutes(), cancel);
             if (logTimeTask == await Task.WhenAny(logTimeTask, newTaskSignal.WaitAsync())) {
               newTaskSignal.Reset();
-              log.Debug("Waiting for {Tasks} {TaskList} to complete",
-                block.InputCount, tasks.Running.Select(t => t.Name));
+              log.Debug("Waiting for {TaskList} to complete", tasks.Running.Select(t => t.Name));
             }
           }
 

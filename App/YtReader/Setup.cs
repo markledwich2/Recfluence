@@ -47,6 +47,7 @@ namespace YtReader {
       new LoggerConfiguration()
         .WriteTo.Seq("http://localhost:5341", LogEventLevel.Debug)
         .WriteTo.Console()
+        .MinimumLevel.Debug()
         .CreateLogger();
 
     public static ILogger ConsoleLogger(LogEventLevel level = LogEventLevel.Information) =>

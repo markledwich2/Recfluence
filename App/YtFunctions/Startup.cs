@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection.AzureFunctions;
-using Humanizer.Localisation;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Azure.WebJobs;
 using Mutuo.Etl.Pipe;
@@ -45,7 +44,8 @@ namespace YtFunctions {
     public FuncCtx WithLog(ILogger log) => new FuncCtx(log, PipeCtx, Root, Cfg, Scope);
 
     public static async Task<FuncCtx> LoadCtx(ExecutionContext exec) {
-      var (app, root, version) = await Setup.LoadCfg(exec.FunctionAppDirectory);
+      var cfgDir = Setup.SolutionDir == null ? exec.FunctionAppDirectory : Setup.SolutionDir.Combine("YtCli").FullPath;
+      var (app, root, version) = await Setup.LoadCfg(cfgDir);
       var log = Logger(root, app, version.Version);
       var appCtx = Setup.PipeAppCtxEmptyScope(root, app);
       var scope = Setup.MainScope(root, app, appCtx, version, log);

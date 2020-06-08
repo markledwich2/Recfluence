@@ -1,17 +1,15 @@
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Autofac;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
-using Seq.Api;
 using Serilog;
 using SysExtensions.Build;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
@@ -60,6 +58,17 @@ Discovered ${GitVersionInfo.DiscoverVersion(typeof(YtCollector))}";
       return res.Error
         ? $"Error starting pipe work: {res.ErrorMessage}"
         : $"Started work on containers(s): {res.Containers.Join(", ", c => $"{c.Image} -> {c.Name}")}";
+    });
+
+    [FunctionName("Sms")]
+    public Task<IActionResult> Sms([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
+      HttpRequest req, ExecutionContext exec) => Ctx.Run(exec, c => {
+      var sms = req.Body.ToObject<TeleSignSms>();
+
+      //talk to discod. for now now
+      c.Log.Information("Received SMS from {Phone}: {Msg}", sms.user_response.phone_number, sms.user_response.mo_message);
+
+      return Task.FromResult((IActionResult) new OkResult());
     });
   }
 }
