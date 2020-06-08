@@ -491,10 +491,14 @@ class Crawler:
         loop_break_index = 0
         while not feed_is_bannerfree:
             # refresh the feed everytime we had to close something until we finally get a completely clean feed
+            
+            if loop_break_index == 10:
+                self.__log_driver_status('Feed Banner Detector is caught in loop - old feed')
+
             self.driver.get("https://www.youtube.com")
 
             if loop_break_index == 10:
-                self.__log_driver_status('Feed Banner Detector is caught in loop')
+                self.__log_driver_status('Feed Banner Detector is caught in loop - new feed')
                 raise WebDriverException('Feed Banner Detector is caught in loop')
             # set the stop condition to True unless any 'banners' are detected
             feed_is_bannerfree = True
