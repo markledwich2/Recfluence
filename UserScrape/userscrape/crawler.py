@@ -488,9 +488,14 @@ class Crawler:
             return
 
         feed_is_bannerfree = False
+        loop_break_index = 0
         while not feed_is_bannerfree:
             # refresh the feed everytime we had to close something until we finally get a completely clean feed
             self.driver.get("https://www.youtube.com")
+
+            if loop_break_index == 10:
+                self.__log_driver_status('Feed Banner Detector is caught in loop')
+                raise WebDriverException('Feed Banner Detector is caught in loop')
             # set the stop condition to True unless any 'banners' are detected
             feed_is_bannerfree = True
             try:
@@ -526,6 +531,7 @@ class Crawler:
                 for button in themed_content:
                     button.click()
                     print("banner closed")
+            loop_break_index += 1
 
         all_videos = self.wait.until(
             EC.presence_of_all_elements_located((By.XPATH, '//*[@id="video-title-link"]'))
@@ -604,9 +610,9 @@ class Crawler:
         image_url = self.store.url(remote_image_path)
 
         if(error != None):
-            self.log.error('{email} - expereinced error ({error}) at {url} when ({phase}) {image_url}',
+            self.log.error('{email} - experienced error ({error}) at {url} when ({phase}) {image_url}',
                            email=self.user.email, error=error, url=wd.current_url, phase=name, image_url=image_url)
-            await self.bot.msg(f'{self.user.email} expereinced error ({error}) at {wd.current_url} when ({name})', local_image_path)
+            await self.bot.msg(f'{self.user.email} experienced error ({error}) at {wd.current_url} when ({name})', local_image_path)
 
         os.remove(local_image_path)
 
