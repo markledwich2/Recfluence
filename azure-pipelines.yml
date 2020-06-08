@@ -14,9 +14,9 @@ variables:
     env: stage
 
 stages:
-  - stage: YtNetworksContainer
+  - stage: RecfluenceContainer
     jobs:
-      - job: YtNetworksContainer
+      - job: RecfluenceContainer
         pool:
           vmImage: ubuntu-latest
 
@@ -34,7 +34,9 @@ stages:
               command: build
               containerRegistry: ytnetworks
               repository: recfluence
-              tags: $(GitVersion.SemVer)
+              tags: |
+                $(GitVersion.SemVer)
+                latest
               arguments: --build-arg SEMVER=$(GitVersion.SemVer) --build-arg ASSEMBLY_SEMVER=$(GitVersion.AssemblySemVer)
               buildContext: ./App
 
