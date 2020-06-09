@@ -168,35 +168,37 @@ namespace YtReader.YtWebsite {
 
     async Task<(RecsAndExtra video, Response notOkResponse)> GetVideo(Page page, string videoId, ILogger log) {
       log = log.ForContext("Video", videoId);
-      var response = await page.GoToAsync($"https://youtube.com/watch?v={videoId}");
+      var response = await page.GoToAsync($"https://youtube.com/watch?v={videoId}", (int)2.Minutes().TotalMilliseconds, 
+        new [] {WaitUntilNavigation.Networkidle2, WaitUntilNavigation.Load, WaitUntilNavigation.DOMContentLoaded});
       if (response.Status != HttpStatusCode.OK)
         return (default, response);
       // wait for either a single comment, or a message that the coments are turned off. This is the slowest part to load.
-      await WaitForSelector(page,
+      /*await WaitForSelector(page,
         new[] {CommentCountSel, CommentErrorSel, VideoErrorSel}.Join(", "),
-        2.Minutes(), log);
-      var video = await VideoDetails(page, videoId);
-      var error = await page.EvaluateFunctionAsync<string>(@$"() => {{
-  var el = document.querySelector('{VideoErrorSel}')
-  return el ? el.innerText : null
-}}");
-
-      var subError = await page.EvaluateFunctionAsync<string>(@"() => {
+        2.Minutes(), log);*/
+      var (video, error) = await VideoDetails(page, videoId);
+      string subError = null;
+      if (video == null) {
+        if (error == null) {
+          error = await page.EvaluateFunctionAsync<string>(@$"() => {{
+          var el = document.querySelector('{VideoErrorSel}')
+          return el ? el.innerText : null
+        }}");
+          
+          subError = await page.EvaluateFunctionAsync<string>(@"() => {
   var el = document.querySelector('#info > .subreason.yt-player-error-message-renderer')
   return el ? el.innerText : null
 }");
-
-      if (video == null) {
-        if (error == null) throw new InvalidOperationException("can't find video or error message, probably a bug");
-        return (
-          new RecsAndExtra(
-            new VideoExtraStored2 {
-              VideoId = videoId,
-              Error = error,
-              SubError = subError
-            }, recs: default), default);
+        }
+        
+        return (new RecsAndExtra(
+          new VideoExtraStored2 {
+            VideoId = videoId,
+            Error = error,
+            SubError = subError
+          }, recs: default), default);
       }
-
+      
       video.Error = error;
       video.SubError = subError;
 
@@ -264,7 +266,7 @@ namespace YtReader.YtWebsite {
   return el ? el.innerText : null
 }}");
 
-      if (commentCount < 3 || msg.HasValue())
+      if (commentCount < 5 || msg.HasValue())
         return (default, msg, commentCount);
 
       throw new InvalidOperationException("can't find comments, or a message about no-comments. Probably a bug");
@@ -359,9 +361,11 @@ namespace YtReader.YtWebsite {
       return (ad, hasAd);
     }
 
-    async Task<VideoExtraStored2> VideoDetails(Page page, string videoId) {
+    const string VideoErrorUpcoming = "upcoming";
+
+    async Task<(VideoExtraStored2, string error)> VideoDetails(Page page, string videoId) {
       var details = await page.EvaluateFunctionAsync<VideDetails>(@"() => {
-     var v = ytInitialPlayerResponse.videoDetails
+     var v = typeof(ytInitialData) != 'undefined' && ytInitialPlayerResponse.videoDetails
      if(!v) return null
      return {
         author:v.author,
@@ -372,20 +376,19 @@ namespace YtReader.YtWebsite {
         thumbnail:v.thumbnail.thumbnails[v.thumbnail.thumbnails.length - 1].url,
         title:v.title,
         videoId:v.videoId,
-        viewCount:v.viewCount
+        viewCount:v.viewCount,
+        isLiveContent:v.isLiveContent,
+        isUpcoming:v.isUpcoming
     }
 }");
-      if (details == null) return null;
+      if (details == null) return default;
+      if (details.isUpcoming == true) return (default, VideoErrorUpcoming);
 
       var detailsScript = await page.EvaluateExpressionAsync<VideoDetailsFromScript>(
         "JSON.parse(document.querySelector('script.ytd-player-microformat-renderer').innerText)");
       var likeDislike = await page.EvaluateExpressionAsync<LikesDislikes>(
-        @"Object.assign({}, ...ytInitialData.contents.twoColumnWatchNextResults.results.results.contents
-    .map(c => c.videoPrimaryInfoRenderer)
-    .filter(c => c)
-    .flatMap(c => c.videoActions.menuRenderer.topLevelButtons)
-    .map(b => b.toggleButtonRenderer).filter(b => b)
-    .map(b => b.defaultText.accessibility.accessibilityData.label)
+        @"Array.from(document.querySelectorAll('#top-level-buttons #text')).map(b => b.getAttribute('aria-label'))
+    .filter(b => b)
     .map((l,i) => {
         var m = /^(\d*,?\d*|No) (likes|dislikes)/.exec(l)
         if(!m) {
@@ -394,8 +397,7 @@ namespace YtReader.YtWebsite {
         }
         var key = m.length >= 3 ? m[2] : `position ${i}`
         return {[key] : m[1] == 'No' ? 0 : parseInt(m[1].replace(/,/g, ''))}
-    })
-)");
+    })");
 
       var video = new VideoExtraStored2 {
         VideoId = videoId,
@@ -412,7 +414,7 @@ namespace YtReader.YtWebsite {
         Source = ScrapeSource.Chrome
       };
 
-      return video;
+      return (video, default);
     }
 
     class VideDetails {
@@ -424,6 +426,8 @@ namespace YtReader.YtWebsite {
       public long     viewCount        { get; set; }
       public int      lengthSeconds    { get; set; }
       public string   thumbnail        { get; set; }
+      public bool?    isLiveContent    { get; set; }
+      public bool?    isUpcoming       { get; set; }
     }
 
     class LikesDislikes {

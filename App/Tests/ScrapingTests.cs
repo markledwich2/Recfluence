@@ -21,13 +21,10 @@ namespace Tests {
       var appCtx = Setup.PipeAppCtxEmptyScope(rootCfg, cfg);
       var scope = Setup.MainScope(rootCfg, cfg, appCtx, version, log);
       var chrome = scope.Resolve<ChromeScraper>();
-
-      var ipTest = await chrome.GetIp(proxy: true, log);
-
       var web = scope.Resolve<WebScraper>();
-      var vids = new[] {"Fay6parYkrw", "KskhAiNJGYI"};
-      var chromeExtras = await chrome.GetRecsAndExtra(vids, log, proxy: true);
-      var webExtras = await web.GetRecsAndExtra(vids, log);
+      var vids = new[] { "BxFHm1tXwlM", "Fay6parYkrw", "KskhAiNJGYI"};
+      var chromeExtras = await chrome.GetRecsAndExtra(vids, log, proxy: false);
+      /*var webExtras = await web.GetRecsAndExtra(vids, log);
       var allExtras = chromeExtras.Concat(webExtras).OrderBy(e => e.Extra.VideoId).ToArray();
       var allRecs = YtCollector.ToRecStored(allExtras, DateTime.UtcNow);
       var dir = TestContext.CurrentContext.WorkDirectory.AsPath().Combine(".data");
@@ -35,7 +32,7 @@ namespace Tests {
       var recsStore = new JsonlStore<RecStored2>(localStore, "recs", e => e.Updated.FileSafeTimestamp(), log);
       var extraStore = new JsonlStore<VideoExtraStored2>(localStore, "extra", e => e.Updated.FileSafeTimestamp(), log);
       await extraStore.Append(allExtras.Select(e => e.Extra).ToArray());
-      await recsStore.Append(allRecs);
+      await recsStore.Append(allRecs);*/
     }
   }
 }

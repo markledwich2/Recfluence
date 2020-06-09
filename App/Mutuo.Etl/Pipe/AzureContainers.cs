@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using CliFx.Exceptions;
 using Humanizer;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.ContainerGroup.Definition;
@@ -187,8 +188,10 @@ namespace Mutuo.Etl.Pipe {
     public static async Task EnsureSuccess(this IContainerGroup group, string containerName, ILogger log) {
       if (!group.State().In(ContainerState.Succeeded)) {
         var content = await group.GetLogContentAsync(containerName);
-        Log.Error("Container {Container} did not succeed ({State}). Logs: {Logs}", group.Name, group.State, content);
-        throw new InvalidOperationException($"Container {group.Name} did not succeed ({group.State}). Logs: {content}");
+        var exitCode = group.Containers[containerName].InstanceView.CurrentState.ExitCode;
+        Log.Warning("Container {Container} did not succeed State ({State}), ExitCode ({ErrorCode}), Logs: {Logs}", 
+          group.Name, group.State, exitCode, content);
+        throw new CommandException($"Container {group.Name} did not succeed ({group.State}), exit code ({exitCode}). Logs: {content}", exitCode: exitCode ?? 0);
       }
     }
   }

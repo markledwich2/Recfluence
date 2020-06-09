@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using CliFx.Exceptions;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
+using Polly;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
@@ -61,17 +63,26 @@ namespace YtReader {
 
       await accounts.Batch(batchSize: 1, maxBatches: Cfg.MaxContainers)
         .BlockAction(async b => {
-          log.Debug("UserScrape - launching container");
-          var groupName = $"userscrape-{Guid.NewGuid().ToShortString(4).ToLower()}";
-          var (group, dur) = await Containers.Launch(
-            Cfg.Container, groupName, fullName,
-            env,
-            args.Concat("-a", b.Join("|")).ToArray(),
-            log: log
-          ).WithDuration();
-          await group.EnsureSuccess(groupName, log).WithWrappedException("UserScrape - container failed");
-          log.Information("UserScrape - container completed in {Duration}", dur.HumanizeShort());
+          var trial = $"{DateTime.UtcNow:yyyy-MM-dd_HH-mm-ss}_{Guid.NewGuid().ToShortString(4)}";
+          var trialLog = log.ForContext("Trail", trial);
+
+          await Policy.Handle<CommandException>().RetryAsync(3,
+              (e, i) => trialLog.Warning(e, "UserScrape - trial {Trial} failed ({Attempt}): Error: {Error}", trial, i, e.Message))
+            .ExecuteAsync(async () => {
+              trialLog.Debug("UserScrape - launching container");
+              var groupName = $"userscrape-{ShortGuid.Create(5).ToLower().Replace(oldChar: '_', newChar: '-')}";
+              var (group, dur) = await Containers.Launch(
+                Cfg.Container, groupName, fullName,
+                env,
+                args.Concat("-t", trial, "-a", b.Join("|")).ToArray(),
+                log: trialLog
+              ).WithDuration();
+              await group.EnsureSuccess(groupName, trialLog);
+              trialLog.Information("UserScrape - container completed in {Duration}", dur.HumanizeShort());
+            });
         }, Containers.AzureCfg.Parallel);
     }
+
+    const int RetryErrorCode = 13;
   }
 }
