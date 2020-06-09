@@ -9,9 +9,10 @@ import _ from 'lodash'
 import { RouteComponentProps } from "@reach/router"
 import styled from 'styled-components'
 import { media, isGatsbyServer } from '../MainLayout'
+import { uri, Uri } from '../../common/Uri'
 
 interface Props extends RouteComponentProps {
-  dataUrl: string
+  dataUrl: Uri
 }
 
 interface State {
@@ -19,8 +20,9 @@ interface State {
 }
 
 const ChannelRelationsStyles = styled.div`
-
   height:100vh;
+  display:flex;
+  flex-flow:column;
     
   /* Title */
   div.title-details > div {
@@ -173,10 +175,10 @@ const MainChartStyled = styled.div`
   }
   
   @media all and (min-width: 1200px) {
-    height: 100%;
+    /* height: 100%; */
 
     > .Relations {
-      height: 100%;
+      height: 99%;
       flex: 2 auto;
     }
 
@@ -212,10 +214,10 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
     this.load()
   }
 
-  resultUrl() { return this.props.dataUrl }
+  get resultUrl() { return this.props.dataUrl }
 
   async load() {
-    let data = await YtModel.dataSet(this.resultUrl())
+    let data = await YtModel.dataSet(this.resultUrl)
 
     const params = new URLSearchParams(location.search)
     if (Array.from(params).length > 0) {
