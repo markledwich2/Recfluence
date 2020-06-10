@@ -1,6 +1,6 @@
 import os
 from userscrape.cfg import load_cfg, UserCfg, Cfg
-from userscrape.crawler import Crawler
+from userscrape.crawler import Crawler, DetectedAsBotException
 from userscrape.data import UserScrapeData
 from userscrape.store import BlobStore, new_trial_id
 from userscrape.discord_bot import DiscordBot
@@ -43,14 +43,19 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
     await bot.start_in_backround()
 
     failedUsers = []
+    detected_as_bot = False
 
     try:
         for user in users:
+            if(detected_as_bot):
+                failedUsers.append(user.email)
+                continue
+
             log.info('{email} - started scraping', email=user.email)
             start = time.time()
 
             crawler = Crawler(store, bot, user, cfg.headless, trial_id, log)
-            user_seed_videos = videos_to_seed[user.ideology]
+            user_seed_videos = videos_to_seed[user.ideology] if user.ideology in videos_to_seed else []
             user_seed_video_ids: List[str] = [video.video_id for video in user_seed_videos]
 
             try:
@@ -71,7 +76,10 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
                 # crawler.delete_history()
                 log.info("{email} - complete in {duration}", email=user.email,
                          duration=format_seconds(time.time() - start))
-
+            except DetectedAsBotException:
+                log.error('{email} - detected as bot. aborting scraping for all users', email=user.email, exc_info=1)
+                failedUsers.append(user.email)
+                detected_as_bot = True
             except BaseException:
                 log.error('{email} - unhandled error. aborting scraping for this user', email=user.email, exc_info=1)
                 failedUsers.append(user.email)
@@ -89,7 +97,7 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
         log.error('trail ({trial_id}) failed for users {users}. Investigate and re-run this trail (it will resume incomplete tasks)',
                   users='|'.join(failedUsers), trial_id=trial_id)
         logging.shutdown()
-        sys.exit(1)
+        sys.exit(13 if detected_as_bot else 1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Start one iteration of the experiment. If you run this for the first time \

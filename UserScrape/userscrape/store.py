@@ -13,6 +13,7 @@ from .cfg import UserCfg, StoreCfg
 from pathlib import Path, PurePath, PurePosixPath
 import gzip
 from io import BytesIO
+from azure.storage.blob._models import ContentSettings
 
 
 class BlobStore:
@@ -49,10 +50,13 @@ class BlobStore:
         self.save_file(localPath, path)
         os.remove(localPath)
 
-    def save_file(self, localFile: PurePath, remotePath: PurePath):
+    def save_file(self, localFile: PurePath, remotePath: PurePath, content_type: str = None):
         """uploads a local file to the container"""
         with open(localFile, 'rb') as f:
-            self.container.upload_blob(remotePath.as_posix(), f, overwrite=True)
+            blob = self.container.get_blob_client(remotePath.as_posix())
+            blob.upload_blob(f,
+                             overwrite=True,
+                             content_settings=ContentSettings(content_type=content_type) if content_type else None)
 
     def load(self, path: PurePath):
         try:

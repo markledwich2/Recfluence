@@ -66,7 +66,7 @@ class DiscordBot():
     async def msg(self, msg: str, localFile: PurePath = None):
         channel = self.channel()
         if(localFile != None):
-            await channel.send(msg, file=discord.File(localFile.as_posix()))
+            await channel.send(msg, file=discord.File(localFile))
         else:
             await channel.send(msg)
 
