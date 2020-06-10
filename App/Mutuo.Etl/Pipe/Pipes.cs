@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Util;
@@ -56,11 +57,11 @@ namespace Mutuo.Etl.Pipe {
     /// <summary>Launches a child pipe that works on a list of items</summary>
     /// <param name="expression">a call to a pipe method. The arguments will be resolved and serialized</param>
     public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> Process<TIn, TOut>(this IEnumerable<TIn> items, IPipeCtx ctx,
-      Expression<Func<TIn[], Task<TOut>>> expression, PipeRunCfg runCfg = null, ILogger log = null) {
+      Expression<Func<TIn[], Task<TOut>>> expression, PipeRunCfg runCfg = null, ILogger log = null, CancellationToken cancel = default) {
       var pipeCall = expression.Body as MethodCallExpression ?? throw new InvalidOperationException("The expression must be a call to a pipe method");
       if (pipeCall.Method.GetCustomAttribute<PipeAttribute>() == null)
         throw new InvalidOperationException($"given transform '{pipeCall.Method.Name}' must have a Pipe attribute");
-      return await RunItemPipe<TIn, TOut>(items.ToArray(), ctx, pipeCall.Method.Name, pipeCall.ResolveArgs(), runCfg, log ?? Logger.None);
+      return await RunItemPipe<TIn, TOut>(items.ToArray(), ctx, pipeCall.Method.Name, pipeCall.ResolveArgs(), runCfg, log ?? Logger.None, cancel);
     }
 
     /// <summary>Launches a pipe that works on a batch of items</summary>
@@ -83,7 +84,7 @@ namespace Mutuo.Etl.Pipe {
     /// <summary>Runs a pipe to process a list of work in batches on multiple containers. The transform is used to provide
     ///   strong typing, but may not actually be run locally.</summary>
     static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> RunItemPipe<TIn, TOut>(this TIn[] items, IPipeCtx ctx,
-      string pipeName, PipeArg[] args, PipeRunCfg runCfg = null, ILogger log = null) {
+      string pipeName, PipeArg[] args, PipeRunCfg runCfg = null, ILogger log = null, CancellationToken cancel = default) {
       log ??= Logger.None;
       var pipeMethods = PipeMethods(ctx);
       var (_, method) = pipeMethods[pipeName];
@@ -106,7 +107,9 @@ namespace Mutuo.Etl.Pipe {
 
       var pipeWorker = PipeWorker(ctx);
       log.Debug("{PipeWorker} - launching batches {@batches}", pipeWorker.GetType().Name, batches);
-      var res = pipeWorker is IPipeWorkerStartable s ? await s.Launch(ctx, batches, runCfg.ReturnOnStart, log) : await pipeWorker.Launch(ctx, batches, log);
+      var res = pipeWorker is IPipeWorkerStartable s ? 
+        await s.Launch(ctx, batches, runCfg.ReturnOnStart, log, cancel:cancel) : 
+        await pipeWorker.Launch(ctx, batches, log, cancel:cancel);
 
       var hasOutState = typeof(TOut) != typeof(object) && !runCfg.ReturnOnStart;
       var outState = hasOutState ? await GetOutState() : res.Select(r => (Metadata: r, OutState: (TOut) default)).ToArray();
@@ -146,7 +149,7 @@ namespace Mutuo.Etl.Pipe {
     }
 
     /// <summary>Executes a pipe in this process. Assumes args/state has been created for this to run</summary>
-    public static async Task DoPipeWork(this IPipeCtx ctx, PipeRunId id) {
+    public static async Task DoPipeWork(this IPipeCtx ctx, PipeRunId id, CancellationToken cancel) {
       var pipeMethods = PipeMethods(ctx);
 
       var pipeName = id.Name;
@@ -161,6 +164,9 @@ namespace Mutuo.Etl.Pipe {
 
       var loadInArgs = await LoadInArgs(ctx, id);
       var args = loadInArgs.ToDictionary(a => a.Name);
+      
+      if(cancel.IsCancellationRequested)
+        return;
 
       var pipeParams = await method.GetParameters().BlockFunc(async p => {
         if (args.TryGetValue(p.Name ?? throw new NotImplementedException("parameters must have names"), out var arg))
@@ -176,8 +182,8 @@ namespace Mutuo.Etl.Pipe {
               return rows;
             }
           }
-        return ctx.Scope.Resolve(p.ParameterType);
-      });
+        return p.ParameterType == typeof(CancellationToken) ? cancel : ctx.Scope.Resolve(p.ParameterType);
+      }, cancel:cancel);
 
       try {
         dynamic task = method.Invoke(pipeInstance, pipeParams.ToArray()) ??

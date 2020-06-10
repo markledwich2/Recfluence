@@ -43,7 +43,7 @@ namespace YtReader.YtWebsite {
           "--disable-dev-shm-usage", "--no-sandbox",
           proxy ? $"--proxy-server={ProxyCfg.Url}" : null
         }.NotNull().ToArray()
-      }, new SerilogLoggerFactory(ConsoleLog)); // log to console only because it often has transient errors
+      }); // logging has so much inconsequential errors we ignore it
       return browser;
     }
 
@@ -387,7 +387,8 @@ namespace YtReader.YtWebsite {
       var detailsScript = await page.EvaluateExpressionAsync<VideoDetailsFromScript>(
         "JSON.parse(document.querySelector('script.ytd-player-microformat-renderer').innerText)");
       var likeDislike = await page.EvaluateExpressionAsync<LikesDislikes>(
-        @"Array.from(document.querySelectorAll('#top-level-buttons #text')).map(b => b.getAttribute('aria-label'))
+        @"Array.from(document.querySelectorAll('#top-level-buttons #text'))
+    .map(b => b.getAttribute('aria-label'))
     .filter(b => b)
     .map((l,i) => {
         var m = /^(\d*,?\d*|No) (likes|dislikes)/.exec(l)
@@ -397,7 +398,8 @@ namespace YtReader.YtWebsite {
         }
         var key = m.length >= 3 ? m[2] : `position ${i}`
         return {[key] : m[1] == 'No' ? 0 : parseInt(m[1].replace(/,/g, ''))}
-    })");
+    })
+.reduce((acc, cur) => ({ ...acc, ...cur }), {})");
 
       var video = new VideoExtraStored2 {
         VideoId = videoId,

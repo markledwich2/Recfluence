@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CliFx.Exceptions;
 using Humanizer;
@@ -36,11 +37,13 @@ namespace Mutuo.Etl.Pipe {
 
     Lazy<IAzure> Az { get; }
 
-    public Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) => Launch(ctx, ids, false, log);
+    public Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) => 
+      Launch(ctx, ids, false, log, cancel);
 
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log) {
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, 
+      ILogger log, CancellationToken cancel) {
       var res = await ids.BlockFunc(async runId => {
         var runCfg = runId.PipeCfg(ctx.PipeCfg); // id is for the sub-pipe, ctx is for the root
 
@@ -50,7 +53,7 @@ namespace Mutuo.Etl.Pipe {
 
         var containerGroup = runId.ContainerGroupName();
         var (launch, launchDur) = await Launch(runCfg.Container, containerGroup, fullImageName, ctx.AppCtx.EnvironmentVariables,
-          runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog).WithDuration();
+          runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog, cancel).WithDuration();
 
         var logTxt = await launch.GetLogContentAsync(containerGroup);
         var logPath = new StringPath($"{runId.StatePath()}.log.txt");
@@ -80,17 +83,18 @@ namespace Mutuo.Etl.Pipe {
         if (launch.State() == ContainerState.Succeeded) await DeleteContainer(runId.ContainerGroupName(), log);
 
         return md;
-      }, ctx.PipeCfg.Azure.Parallel);
+      }, ctx.PipeCfg.Azure.Parallel, cancel:cancel);
 
       return res;
     }
 
-    public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string fullImageName, (string name, string value)[] envVars, string[] args,
-      bool returnOnStart = false, Func<Region> customRegion = null, ILogger log = null) {
+    public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string fullImageName, 
+      (string name, string value)[] envVars, string[] args,
+      bool returnOnStart = false, Func<Region> customRegion = null, ILogger log = null, CancellationToken cancel = default) {
       var sw = Stopwatch.StartNew();
       var groupDef = await ContainerGroup(cfg, groupName, groupName, fullImageName, envVars, args, customRegion);
       var group = await Create(groupDef, log);
-      var run = await Run(group, returnOnStart, sw, log);
+      var run = await Run(group, returnOnStart, sw, log, cancel);
       return run;
     }
 
@@ -105,7 +109,7 @@ namespace Mutuo.Etl.Pipe {
       return group.Result;
     }
 
-    public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log) {
+    public async Task<IContainerGroup> Run(IContainerGroup @group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {
       var running = false;
       var loggedWaiting = Stopwatch.StartNew();
 
@@ -119,6 +123,12 @@ namespace Mutuo.Etl.Pipe {
           if (returnOnRunning) return group;
         }
         if (!state.IsCompletedState()) {
+          if (cancel.IsCancellationRequested) {
+            log.Information("{ContainerGroup} - cancellation requested - stopping", group.Name);
+            await group.StopAsync();
+            await group.WaitForState(ContainerState.Stopped, ContainerState.Failed, ContainerState.Terminated);
+            return group;
+          }
           if (loggedWaiting.Elapsed > 1.Minutes()) {
             log.Debug("{ContainerGroup} - waiting to complete. Current state {State}", group.Name, group.State);
             loggedWaiting.Restart();
@@ -188,7 +198,7 @@ namespace Mutuo.Etl.Pipe {
     public static async Task EnsureSuccess(this IContainerGroup group, string containerName, ILogger log) {
       if (!group.State().In(ContainerState.Succeeded)) {
         var content = await group.GetLogContentAsync(containerName);
-        var exitCode = group.Containers[containerName].InstanceView.CurrentState.ExitCode;
+        var exitCode = group.Containers[containerName].InstanceView?.CurrentState.ExitCode;
         Log.Warning("Container {Container} did not succeed State ({State}), ExitCode ({ErrorCode}), Logs: {Logs}", 
           group.Name, group.State, exitCode, content);
         throw new CommandException($"Container {group.Name} did not succeed ({group.State}), exit code ({exitCode}). Logs: {content}", exitCode: exitCode ?? 0);

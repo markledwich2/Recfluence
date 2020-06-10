@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using Microsoft.AspNetCore.Http;
@@ -13,6 +14,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
+using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
 using IMSLogger = Microsoft.Extensions.Logging.ILogger;
 
 #pragma warning disable 618
@@ -52,7 +54,7 @@ Discovered ${GitVersionInfo.DiscoverVersion(typeof(YtCollector))}";
 
     Task<string> RunUpdate(ExecutionContext exec) => Ctx.Run(exec, async c => {
       var pipeCtx = c.Scope.Resolve<IPipeCtx>();
-      var res = await pipeCtx.Run((YtUpdater u) => u.Update(null, false, null), c.Log, true);
+      var res = await pipeCtx.Run((YtUpdater u) => u.PipeUpdate(null, false, null), c.Log, returnOnStarted: true);
       if (res.Error)
         Log.Error("ApiBackend - Error starting RunUpdate: {Message}", res.ErrorMessage);
       return res.Error

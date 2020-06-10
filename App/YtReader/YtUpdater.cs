@@ -46,29 +46,34 @@ namespace YtReader {
       _userScrape = userScrape;
     }
 
-    Task Collect(bool fullLoad) => _collector.Collect(Log, forceUpdate: fullLoad);
+    Task Collect(bool fullLoad, CancellationToken cancel) => _collector.Collect(Log, forceUpdate: fullLoad, cancel);
     [DependsOn(nameof(Collect))] Task Stage(bool fullLoad, string[] tables) => _warehouse.StageUpdate(Log, fullLoad, tables);
-    [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad) => YtDataform.Update(Log, fullLoad);
-    [DependsOn(nameof(Dataform))] Task Search(bool fullLoad) => _search.SyncToElastic(Log, fullLoad);
+    [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad, CancellationToken cancel) => YtDataform.Update(Log, fullLoad, cancel);
+    [DependsOn(nameof(Dataform))] Task Search(bool fullLoad, CancellationToken cancel) => _search.SyncToElastic(Log, fullLoad, cancel:cancel);
     [DependsOn(nameof(Dataform))] Task Results() => _results.SaveBlobResults(Log);
     [DependsOn(nameof(Collect))] Task Backup() => _backup.Backup(Log);
-    [DependsOn(nameof(Results))] Task UserScrape(bool init) => _userScrape.Run(Log, init);
+    
+    [DependsOn(nameof(Results), nameof(Collect), nameof(Dataform))] 
+    Task UserScrape(bool init, CancellationToken cancel) => _userScrape.Run(Log, init, cancel);
 
-    [Pipe]
-    public async Task Update(string[] actions = null, bool fullLoad = false, string[] tables = null) {
+    [Pipe] 
+    public Task PipeUpdate(string[] actions, bool fullLoad, string[] tables) => Update(actions, fullLoad, tables);
+    
+    
+    public async Task Update(string[] actions = null, bool fullLoad = false, string[] tables = null, CancellationToken cancel = default) {
       actions ??= new string[]{};
       tables ??= new string[]{};
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
       
       var actionMethods = TaskGraph.FromMethods(
-        () => Collect(fullLoad),
-        () => Stage(fullLoad, tables),
-        () => Search(fullLoad),
-        () => Results(),
-        () => UserScrape(true),
-        () => Dataform(fullLoad),
-        () => Backup());
+        c => Collect(fullLoad, c),
+        c => Stage(fullLoad, tables),
+        c => Search(fullLoad, c),
+        c => Results(),
+        c => UserScrape(true, c),
+        c => Dataform(fullLoad, c),
+        c => Backup());
 
       if (actions.Any()) {
         var missing = actions.Where(a => actionMethods[a] == null).ToArray();
@@ -84,7 +89,7 @@ namespace YtReader {
       if (!actions.Contains(nameof(Backup)) && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
         backup.Status = GraphTaskStatus.Ignored;
       
-      var res = await actionMethods.Run(Cfg.Parallel, Log, CancellationToken.None);
+      var res = await actionMethods.Run(Cfg.Parallel, Log, cancel);
 
       var errors = res.Where(r => r.Error).ToArray();
       if (errors.Any())

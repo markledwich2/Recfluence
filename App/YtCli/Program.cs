@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using CliFx;
@@ -81,7 +82,7 @@ namespace YtCli {
       // run the work using the pipe entry point, forced to be local
       PipeAppCfg.Location = PipeRunLocation.Local;
       var pipeCtx = new PipeCtx(PipeAppCfg, appCtx, PipeCtx.Store, PipeCtx.Log);
-      await pipeCtx.Run((YtCollector d) => d.Collect(PipeArg.Inject<ILogger>(), ForceUpdate));
+      await pipeCtx.Run((YtCollector d) => d.Collect(PipeArg.Inject<ILogger>(), ForceUpdate, PipeArg.Inject<CancellationToken>()));
     }
   }
 
@@ -211,7 +212,7 @@ namespace YtCli {
     }
 
     public async ValueTask ExecuteAsync(IConsole console) =>
-      await PipeCtx.Run((YtSearch s) => s.SyncToElastic(Log, FullLoad, Limit), location: Location, log: Log);
+      await PipeCtx.Run((YtSearch s) => s.SyncToElastic(Log, FullLoad, Limit, console.GetCancellationToken()), location: Location, log: Log);
   }
 
   [Command("backup", Description = "Backup database")]
@@ -260,6 +261,7 @@ namespace YtCli {
   [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]
   public class UpdateCmd : ICommand {
     readonly YtUpdater Updater;
+    readonly ILogger Log;
 
     [CommandOption('a', Description = "| delimited list of action to run (empty for all)")]
     public string Actions { get; set; }
@@ -270,10 +272,15 @@ namespace YtCli {
     [CommandOption('t', Description = "| delimited list of tables to restrict updates to")]
     public string Tables { get; set; }
 
-    public UpdateCmd(YtUpdater updater) => Updater = updater;
+    public UpdateCmd(YtUpdater updater, ILogger log) {
+      Updater = updater;
+      Log = log;
+    }
 
-    public async ValueTask ExecuteAsync(IConsole console) =>
-      await Updater.Update(Actions?.Split("|"), FullLoad, Tables?.Split("|"));
+    public async ValueTask ExecuteAsync(IConsole console) {
+      console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
+      await Updater.Update(Actions?.Split("|"), FullLoad, Tables?.Split("|"), console.GetCancellationToken());
+    }
   }
 
   [Command("build-container")]

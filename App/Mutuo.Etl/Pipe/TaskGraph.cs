@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -17,13 +18,13 @@ using static Mutuo.Etl.Pipe.GraphTaskStatus;
 
 namespace Mutuo.Etl.Pipe {
   public class GraphTask {
-    public GraphTask(string name, string[] dependsOn, Func<Task> run) {
+    public GraphTask(string name, string[] dependsOn, Func<CancellationToken, Task> run) {
       Run = run;
       Name = name;
       DependsOn = dependsOn;
     }
 
-    public Func<Task>      Run       { get; set; }
+    public Func<CancellationToken, Task>      Run       { get; set; }
     public string          Name      { get; set; }
     public string[]        DependsOn { get; set; }
     public GraphTaskStatus Status    { get; set; }
@@ -61,10 +62,10 @@ namespace Mutuo.Etl.Pipe {
 
     public TaskGraph(IEnumerable<GraphTask> jobs) => _graph = CreateGraph(jobs.ToArray());
 
-    public static TaskGraph FromMethods(params Expression<Func<Task>>[] methods) =>
+    public static TaskGraph FromMethods(params Expression<Func<CancellationToken, Task>>[] methods) =>
       new TaskGraph(methods.Select(t => GraphTask(t)).ToArray());
 
-    public static GraphTask GraphTask(Expression<Func<Task>> expression, params string[] dependsOn) {
+    public static GraphTask GraphTask(Expression<Func<CancellationToken, Task>> expression, params string[] dependsOn) {
       var runTask = expression.Compile();
       var m = expression.Body as MethodCallExpression ?? throw new InvalidOperationException("expected an expression that calls a method");
       var deps = m.Method.GetCustomAttribute<DependsOnAttribute>()?.Deps;
@@ -126,13 +127,16 @@ namespace Mutuo.Etl.Pipe {
           };
 
         try {
-          if (tasks.DependenciesDeep(task).Any(d => d.Status.In(Cancelled, Error))) {
+          if (cancel.IsCancellationRequested || tasks.DependenciesDeep(task).Any(d => d.Status.In(Cancelled, Error))) {
             task.Status = Cancelled;
             return Result();
           }
           task.Status = Running;
-          await task.Run();
-          task.Status = Success;
+          await task.Run(cancel);
+          if (cancel.IsCancellationRequested)
+            task.Status = Cancelled;
+          else
+            task.Status = Success;
           return Result();
         }
         catch (Exception ex) {
@@ -148,6 +152,12 @@ namespace Mutuo.Etl.Pipe {
 
       async Task Producer() {
         while (!tasks.AllComplete) {
+          if (cancel.IsCancellationRequested) {
+            foreach (var t in tasks.All.Where(t => t.Status.IsIncomplete())) {
+              t.Status = Cancelled;
+            }
+          }
+          
           var tasksToAdd = tasks.AvailableToRun().ToList();
           if (tasksToAdd.IsEmpty()) {
             // if no tasks are ready to start. Wait to either be signaled, or log which tasks are still running
@@ -160,7 +170,7 @@ namespace Mutuo.Etl.Pipe {
 
           foreach (var task in tasksToAdd) {
             task.Status = Queued;
-            await block.SendAsync(task, cancel);
+            await block.SendAsync(task);
           }
         }
         block.Complete();
@@ -169,8 +179,8 @@ namespace Mutuo.Etl.Pipe {
       var producer = Producer();
 
       var taskResults = new List<GraphTaskResult>();
-      while (await block.OutputAvailableAsync(cancel)) {
-        var item = await block.ReceiveAsync(cancel);
+      while (await block.OutputAvailableAsync()) {
+        var item = await block.ReceiveAsync();
         taskResults.Add(item);
         newTaskSignal.Set();
       }

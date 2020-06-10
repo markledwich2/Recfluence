@@ -69,10 +69,10 @@ namespace Tests {
       log.Information("hey there");
 
       var res = await TaskGraph.FromMethods(
-          () => Shorten(log),
-          () => Generate(log, true),
-          () => NotDependent(log))
-        .Run(2, log, CancellationToken.None);
+          c => Shorten(log),
+          c => Generate(log, true),
+          c => NotDependent(log))
+        .Run(parallel: 2, log, CancellationToken.None);
 
       var resByName = res.ToKeyedCollection(r => r.Name);
       resByName[nameof(Generate)].FinalStatus.Should().Be(GraphTaskStatus.Error);

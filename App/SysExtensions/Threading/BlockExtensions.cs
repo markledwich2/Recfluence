@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Humanizer;
@@ -14,8 +15,9 @@ using SysExtensions.Text;
 
 namespace SysExtensions.Threading {
   public static class BlockExtensions {
-    public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallelism = 1, int? capacity = null) {
-      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
+    public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallelism = 1, int? capacity = null, 
+      CancellationToken cancel = default) {
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false, CancellationToken = cancel};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
 
       var block = new ActionBlock<T>(action, options);
@@ -113,9 +115,9 @@ namespace SysExtensions.Threading {
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
     public static async Task<IReadOnlyCollection<R>> BlockFunc<T, R>(this IEnumerable<T> source,
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null,
-      Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default) {
+      Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default, CancellationToken cancel = default) {
       progressPeriod = progressPeriod == default ? 60.Seconds() : progressPeriod;
-      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false};
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
       var block = new TransformBlock<T, R>(func, options);
 

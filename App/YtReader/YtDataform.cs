@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Mutuo.Etl.Pipe;
 using Serilog;
@@ -33,7 +34,7 @@ namespace YtReader {
       SeqCfg = seqCfg;
     }
 
-    public async Task Update(ILogger log, bool fullLoad) {
+    public async Task Update(ILogger log, bool fullLoad, CancellationToken cancel) {
       var sfCfg = SfCfg.JsonClone();
       sfCfg.Role = "dataform"; // ensure dataform run in its own lower-credentialed role
 
@@ -54,7 +55,7 @@ namespace YtReader {
       log.Debug("Dataform - launching container");
       var containerName = "dataform";
       var fullName = Cfg.Container.FullContainerImageName("latest");
-      var (group, dur) = await Containers.Launch(Cfg.Container, containerName, fullName, env, new string[] { }, log: log).WithDuration();
+      var (group, dur) = await Containers.Launch(Cfg.Container, containerName, fullName, env, new string[] { }, log: log, cancel:cancel).WithDuration();
       await group.EnsureSuccess(containerName, log).WithWrappedException("Dataform - container failed");
       log.Information("Dataform - container completed in {Duration}", dur.HumanizeShort());
     }

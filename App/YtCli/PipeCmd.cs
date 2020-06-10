@@ -26,7 +26,7 @@ namespace YtCli {
 
       Log.Information("Pipe Run Command Started {RunId}", RunId);
       if (runId.HasGroup)
-        await PipeCtx.DoPipeWork(runId);
+        await PipeCtx.DoPipeWork(runId, console.GetCancellationToken());
 
       var res = await PipeCtx.Run(runId.Name, log: Log, location: Location ?? PipeRunLocation.Local);
       if (res.Error)

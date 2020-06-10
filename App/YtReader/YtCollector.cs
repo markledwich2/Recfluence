@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
@@ -48,12 +49,14 @@ namespace YtReader {
     YtCollectCfg RCfg => Cfg.Collect;
 
     [Pipe]
-    public async Task Collect(ILogger log, bool forceUpdate = false) {
-      var channels = await UpdateAllChannels(log);
+    public async Task Collect(ILogger log, bool forceUpdate = false, CancellationToken cancel = default) {
+      var channels = await UpdateAllChannels(log, cancel);
+      if(cancel.IsCancellationRequested)
+        return;
       var (result, dur) = await channels
         .Randomize() // randomize to even the load. Without this the large channels at the beginning make the first batch go way slower
         .Process(PipeCtx,
-          b => ProcessChannels(b, forceUpdate, Inject<ILogger>()))
+          b => ProcessChannels(b, forceUpdate, Inject<ILogger>(), Inject<CancellationToken>()), log:log, cancel:cancel)
         .WithDuration();
 
       var allChannelResults = result.SelectMany(r => r.OutState.Channels).ToArray();
@@ -61,7 +64,7 @@ namespace YtReader {
         nameof(Collect), allChannelResults.Count(c => c.Success), allChannelResults.Length, dur.HumanizeShort());
     }
 
-    async Task<IEnumerable<ChannelStored2>> UpdateAllChannels(ILogger log) {
+    async Task<IEnumerable<ChannelStored2>> UpdateAllChannels(ILogger log, CancellationToken cancel) {
       var store = Store.Channels;
       log.Information("Starting channels update. Limited to ({Included})",
         Cfg.LimitedToSeedChannels?.HasItems() == true ? Cfg.LimitedToSeedChannels.Join("|") : "All");
@@ -69,9 +72,11 @@ namespace YtReader {
       var seeds = await ChannelSheets.Channels(Cfg.Sheets, log);
 
       var (channels, dur) = await seeds.Where(c => Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(c.Id))
-        .BlockFunc(UpdateChannel, Cfg.DefaultParallel,
+        .BlockFunc(UpdateChannel, Cfg.DefaultParallel, cancel:cancel,
           progressUpdate: p => log.Debug("Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, seeds.Count)).WithDuration();
 
+      if (cancel.IsCancellationRequested) return channels;
+      
       if (channels.Any())
         await store.Append(channels, log);
 
@@ -117,10 +122,10 @@ namespace YtReader {
 
     [Pipe]
     public async Task<ProcessChannelResults> ProcessChannels(IReadOnlyCollection<ChannelStored2> channels,
-      bool forceUpdate, ILogger log = null) {
+      bool forceUpdate, ILogger log = null, CancellationToken cancel = default) {
       log ??= Logger.None;
       var workSw = Stopwatch.StartNew();
-
+      
       var channelResults = await channels
         .Where(c => c.Status == ChannelStatus.Alive &&
                     c.ReviewStatus.In(ChannelReviewStatus.Pending, ChannelReviewStatus.AlgoAccepted, ChannelReviewStatus.ManualAccepted))
@@ -142,7 +147,7 @@ namespace YtReader {
             log.Error(ex, "Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
             return (c, Success: false);
           }
-        }, RCfg.ParallelChannels);
+        }, RCfg.ParallelChannels, cancel:cancel);
 
       var res = new ProcessChannelResults {
         Channels = channelResults.Select(r => new ProcessChannelResult {ChannelId = r.c.ChannelId, Success = r.Success}).ToArray(),
