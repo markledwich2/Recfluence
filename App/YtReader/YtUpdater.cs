@@ -57,9 +57,6 @@ namespace YtReader {
     Task UserScrape(bool init, CancellationToken cancel) => _userScrape.Run(Log, init, cancel);
 
     [Pipe] 
-    public Task PipeUpdate(string[] actions, bool fullLoad, string[] tables) => Update(actions, fullLoad, tables);
-    
-    
     public async Task Update(string[] actions = null, bool fullLoad = false, string[] tables = null, CancellationToken cancel = default) {
       actions ??= new string[]{};
       tables ??= new string[]{};
