@@ -8,7 +8,7 @@ def configure_log(url: str, env='dev', branch_env=None, trial_id=None) -> loggin
         'version': 1,
         'disable_existing_loggers': True,
         'root': {
-            'level': 'DEBUG',
+            'level': 'WARN',
             'handlers': ['console']
         },
         'loggers': {
