@@ -157,7 +157,7 @@ class Crawler:
         wfc('#identifierNext').click()
         wfc('input[type="password"]').send_keys(user.password)
         wfc('#passwordNext').click()
-        asyncio.sleep(2)
+        await asyncio.sleep(2)
 
         telSelector = 'input[type="tel"]'
         smsSelector = '*[data-sendmethod="SMS"]'
