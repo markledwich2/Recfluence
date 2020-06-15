@@ -178,11 +178,13 @@ namespace YtReader {
   public class ChannelSheet {
     public string                                 Id            { get; set; }
     public string                                 Title         { get; set; }
-    public double                                 Relevance     { get; set; } // between 0 and 1
+    public double?                                 Relevance     { get; set; } // between 0 and 1
     public string                                 LR            { get; set; }
     public string                                 MainChannelId { get; set; }
     public IReadOnlyCollection<string>            HardTags      { get; set; } = new List<string>();
     public IReadOnlyCollection<string>            SoftTags      { get; set; } = new List<string>();
     public IReadOnlyCollection<UserChannelStore2> UserChannels  { get; set; } = new List<UserChannelStore2>();
   }
+  
+  
 }

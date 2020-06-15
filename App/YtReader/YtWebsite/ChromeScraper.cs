@@ -37,7 +37,7 @@ namespace YtReader.YtWebsite {
 
     async Task<Browser> CreateBrowser(bool proxy, ILogger log) {
       var browser = await Puppeteer.LaunchAsync(new LaunchOptions {
-        Headless = true,
+        Headless = CollectCfg.Headless,
         DefaultViewport = new ViewPortOptions {Width = 1024, Height = 1200},
         Args = new[] {
           "--disable-dev-shm-usage", "--no-sandbox",
@@ -225,7 +225,7 @@ namespace YtReader.YtWebsite {
 
     static async Task<(VideoCommentStored2[] comments, string msg, long? count)> GetComments(Page page, VideoExtraStored2 video) {
       try {
-        await page.WaitForSelectorAsync(CommentCountSel);
+        await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}" );
       }
       catch (WaitTaskTimeoutException) { }
 
@@ -384,8 +384,14 @@ namespace YtReader.YtWebsite {
       if (details == null) return default;
       if (details.isUpcoming == true) return (default, VideoErrorUpcoming);
 
-      var detailsScript = await page.EvaluateExpressionAsync<VideoDetailsFromScript>(
-        "JSON.parse(document.querySelector('script.ytd-player-microformat-renderer').innerText)");
+      var detailsScript = await page.EvaluateFunctionAsync<VideoDetailsFromScript>(@"() => {
+    var el = document.querySelector('script.ytd-player-microformat-renderer')
+    if(!el) return null
+    return JSON.parse(document.querySelector('script.ytd-player-microformat-renderer').innerText)
+}");
+      if (detailsScript == null) 
+        return default;
+      
       var likeDislike = await page.EvaluateExpressionAsync<LikesDislikes>(
         @"Array.from(document.querySelectorAll('#top-level-buttons #text'))
     .map(b => b.getAttribute('aria-label'))

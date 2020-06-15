@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using CliFx;
+using CliFx.Attributes;
 using Medallion.Shell;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema.Generation;
@@ -15,26 +17,35 @@ using SysExtensions.Threading;
 
 namespace Mutuo.Tools {
   /// <summary>Tool for generating json schemas</summary>
-  public static class SchemaTool {
-    /// <summary>Save a schema file for a type</summary>
-    [DisplayName("schema")]
-    public static async Task GenerateSchema(string types, DirectoryInfo dir, bool ignoreRequired) {
+  [Command("schema")]
+  public class SchemaCmd : ICommand {
+
+    [CommandOption("dir", 'd', Description= "the directory of the project to build containing the types")]
+    public DirectoryInfo Dir { get; set; }
+
+    [CommandOption("types", 't', Description= "| separated list of types to generate schemas for")]
+    public string Types { get; set; }
+
+    [CommandOption("ignore-required", 'i', Description= "if specified will not enforce required types")]
+    public bool IgnoreRequired { get; set; }
+    
+    public async ValueTask ExecuteAsync(IConsole console) {
       // build proj
-      var shell = new Shell(o => o.WorkingDirectory(dir.FullName));
+      var shell = new Shell(o => o.WorkingDirectory(Dir.FullName));
 
       var run = shell.Run("dotnet", "build");
       await run.StandardOutput.PipeToAsync(Console.Out);
       var res = await run.Task;
       if (!res.Success) throw new InvalidOperationException($"build failed: {res.StandardError}");
 
-      var projPath = dir.FullName.AsPath();
+      var projPath = Dir.FullName.AsPath();
       var projFile = projPath.Files("*.csproj", false).FirstOrDefault() ?? throw new InvalidOperationException("Can't find project");
       var latestAssembly = projPath.Files($"{projFile.FileNameWithoutExtension}.dll", true)
                              .OrderByDescending(f => f.FileInfo().LastWriteTime).FirstOrDefault() ??
                            throw new InvalidOperationException("Can't find built assembly");
 
       var a = Assembly.LoadFrom(latestAssembly.FullPath);
-      await types.Split("|").BlockAction(async type => {
+      await Types.Split("|").BlockAction(async type => {
         var t = a.GetType(type) ?? throw new InvalidOperationException($"can't find type {type}");
         var g = new JSchemaGenerator {
           DefaultRequired = Required.DisallowNull,
@@ -45,10 +56,10 @@ namespace Mutuo.Tools {
           GenerationProviders = {new StringEnumGenerationProvider()}
         };
         var schema = g.Generate(t);
-        if (ignoreRequired)
+        if (IgnoreRequired)
           foreach (var s in schema.InArray().WithDescendants(s => s.Properties.Values.Concat(s.Items)))
             s.Required.Clear();
-        await File.WriteAllTextAsync($"{dir.FullName}/{t.Name}.schema.json", schema.ToString());
+        await File.WriteAllTextAsync($"{Dir.FullName}/{t.Name}.schema.json", schema.ToString());
       });
     }
   }
