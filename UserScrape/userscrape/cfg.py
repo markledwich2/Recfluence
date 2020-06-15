@@ -95,6 +95,9 @@ class Cfg(JsonSchemaMixin):
     branch_env: str = field(default=None, metadata=JsonSchemaMeta(
         description="a name to prefix/suffix names of environment objects to have clean branch environments", required=False))
 
+    max_watch_secs: int = field(default=300, metadata=JsonSchemaMeta(
+        description="the maximum time to watch a seed video for", required=False))
+
 
 async def load_cfg() -> Cfg:
     '''loads application configuration form a blob (if defined in .env cfg_sas) or ./userscrape.json

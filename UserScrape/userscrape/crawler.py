@@ -75,7 +75,7 @@ def create_driver(headless: bool) -> WebDriver:
 
 
 class Crawler:
-    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, trial_id: str, log: Logger, lang='en'):
+    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, trial_id: str, log: Logger, max_watch_secs: int, lang='en'):
         self.store = store
         self.bot = bot
         self.driver = create_driver(headless)
@@ -85,6 +85,7 @@ class Crawler:
         self.log = log
         self.lang = lang
         self.trial_id = trial_id
+        self.max_watch_secs = max_watch_secs
         self.session_id = file_date_str()
         self.path = BlobPaths(store.cfg, trial_id, user, self.session_id)
 
@@ -225,7 +226,13 @@ class Crawler:
             self.log.info('{email} -skipping recommendation {video}', email=self.user.email, video=video_id)
             return False
 
+        self.log.debug('{email} - about load video page for recs {video}', email=self.user.email, video=video_id)
         self.driver.get("https://www.youtube.com/watch?v=" + video_id)
+        self.log.debug('{email} - loaded video page for recs {video}', email=self.user.email, video=video_id)
+
+        url = urlparse(self.driver.current_url)
+        if(url.path == '/sorry/index'):  # the sorry we think you are a bot page ()
+            raise DetectedAsBotException('we have been redirected to the are a bot page')
 
         # this is the list of elements from the recommendation sidebar
         # it does not always load all recommendations at the same time, therefore the loop
@@ -269,6 +276,8 @@ class Crawler:
                     'full_info': full_info})
 
         rec_result = RecResult(recs, unavalable)
+        self.log.debug('{email} - about to store {recs} recs for {video}',
+                       email=self.user.email, video=video_id, recs=len(recs))
 
         # store the information about the current video plus the corresponding recommendations
         self.get_video_features(video_id, rec_result, personalized_counter)
@@ -444,7 +453,7 @@ class Crawler:
         duration = self._get_seconds(duration)
         # to make sure that every video is watched long enough
         # watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
-        watch_time = duration if duration < 300 else 300
+        watch_time = duration if duration < self.max_watch_secs else self.max_watch_secs
 
         # let the asynchronous manager know that now other videos can be started
         await asyncio.sleep(watch_time)

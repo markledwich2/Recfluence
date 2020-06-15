@@ -54,7 +54,7 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
             log.info('{email} - started scraping', email=user.email)
             start = time.time()
 
-            crawler = Crawler(store, bot, user, cfg.headless, trial_id, log)
+            crawler = Crawler(store, bot, user, cfg.headless, trial_id, log, cfg.max_watch_secs)
             user_seed_videos = videos_to_seed[user.ideology] if user.ideology in videos_to_seed else []
             user_seed_video_ids: List[str] = [video.video_id for video in user_seed_videos]
 
