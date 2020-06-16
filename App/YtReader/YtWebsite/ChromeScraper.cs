@@ -205,7 +205,7 @@ namespace YtReader.YtWebsite {
       await ScrollDown(page, maxScroll: null, videoId, log);
       (video.Ad, video.HasAd) = await GetAd(page);
       var recs = await GetRecs(page, error.HasValue(), log);
-      (video.Comments, video.CommentsMsg, video.CommentCount) = await GetComments(page, video);
+      (video.Comments, video.CommentsMsg, video.CommentCount) = await GetComments(page, video, log);
       return (new RecsAndExtra(video, recs), default);
     }
 
@@ -223,7 +223,7 @@ namespace YtReader.YtWebsite {
       }
     }
 
-    static async Task<(VideoCommentStored2[] comments, string msg, long? count)> GetComments(Page page, VideoExtraStored2 video) {
+    async Task<(VideoCommentStored2[] comments, string msg, long? count)> GetComments(Page page, VideoExtraStored2 video, ILogger log) {
       try {
         await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}" );
       }
@@ -265,11 +265,14 @@ namespace YtReader.YtWebsite {
   var el = document.querySelector('{CommentErrorSel}')
   return el ? el.innerText : null
 }}");
-
+      
       if (commentCount < 5 || msg.HasValue())
         return (default, msg, commentCount);
 
-      throw new InvalidOperationException("can't find comments, or a message about no-comments. Probably a bug");
+      var (url, image) = await SavePageDump(page, log);
+      log.Warning("ChromeScraper - can't find comments, or a message about no-comments. Video {Video}. Url ({Url}). Image ({Image})", 
+        video.VideoId, url, image);
+      return (default, default, commentCount);
     }
 
     async Task<Rec[]> GetRecs(Page page, bool hasError, ILogger log) {
