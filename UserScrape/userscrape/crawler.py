@@ -318,7 +318,7 @@ class Crawler:
                                                 '//*[@id="video-title"]'))
             )
         except WebDriverException as e:
-            self.log.warning('unable to find any video in history to delete')
+            self.log.debug('unable to find any video in history to delete')
             return
 
         try:

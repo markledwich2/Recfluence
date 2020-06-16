@@ -144,13 +144,13 @@ namespace YtReader.Store {
       return new VideoThumbnail {
         LowResUrl = t.LowResUrl,
         StandardResUrl = t.StandardResUrl,
-        HighRestUrl = t.HighResUrl,
+        HighResUrl = t.HighResUrl,
         MaxResUrl = t.MaxResUrl
       };
     }
 
     public string LowResUrl      { get; set; }
-    public string HighRestUrl    { get; set; }
+    public string HighResUrl    { get; set; }
     public string MaxResUrl      { get; set; }
     public string StandardResUrl { get; set; }
   }
