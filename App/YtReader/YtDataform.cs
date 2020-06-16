@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Mutuo.Etl.Pipe;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;

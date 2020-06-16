@@ -82,17 +82,18 @@ namespace YtReader {
           await Policy.Handle<CommandException>().RetryAsync(retryCount: 3,
               (e, i) => trialLog.Warning(e, "UserScrape - trial {Trial} failed ({Attempt}): Error: {Error}", trial, i, e.Message))
             .ExecuteAsync(async c => {
-              trialLog.Debug("UserScrape - launching container");
               var groupName = $"userscrape-{ShortGuid.Create(5).ToLower().Replace(oldChar: '_', newChar: '-')}";
+              var groupLog = trialLog.ForContext("ContainerGroup", groupName);
+              groupLog.Debug("UserScrape - launching container");
               var (group, dur) = await Containers.Launch(
                 Cfg.Container, groupName, fullName,
                 env,
                 args.Concat("-t", trial, "-a", b.Join("|")).ToArray(),
-                log: trialLog,
+                log: groupLog,
                 cancel:c
               ).WithDuration();
-              await group.EnsureSuccess(groupName, trialLog);
-              trialLog.Information("UserScrape - container completed in {Duration}", dur.HumanizeShort());
+              await group.EnsureSuccess(groupName, groupLog);
+              groupLog.Information("UserScrape - container completed in {Duration}", dur.HumanizeShort());
             }, cancel);
         }, Containers.AzureCfg.Parallel, cancel:cancel);
     }

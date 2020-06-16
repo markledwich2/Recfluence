@@ -307,7 +307,7 @@ namespace YtReader.YtWebsite {
             ToVideoTitle = r.title,
             ToViews = ParseViews(r.viewText),
             ToUploadDate = ParseAgo(DateTime.UtcNow, r.publishAgo),
-            ForYou = r.viewText == "Recommended for you",
+            ForYou = ParseForYou(r.viewText),
           }).ToArray();
 
           return recRes;
@@ -324,6 +324,8 @@ namespace YtReader.YtWebsite {
         attempts--;
       }
     }
+
+    public static bool ParseForYou(string viewText) => viewText == "Recommended for you";
 
     async Task WaitForSelector(Page page, string selector, TimeSpan timeout, ILogger log) {
       try {
@@ -455,7 +457,7 @@ namespace YtReader.YtWebsite {
       public int    rank         { get; set; }
     }
 
-    static long? ParseViews(string s) {
+    public static long? ParseViews(string s) {
       if (s.NullOrEmpty()) return null;
       var m = Regex.Match(s, "^(\\d+,?\\d*) views");
       if (!m.Success) return null;
@@ -463,7 +465,7 @@ namespace YtReader.YtWebsite {
       return views;
     }
 
-    static DateTime? ParseAgo(DateTime now, string ago) {
+    public static DateTime? ParseAgo(DateTime now, string ago) {
       if (ago == null) return null;
       var res = Regex.Match(ago, "(?<num>\\d)\\s(?<unit>minute|hour|day|week|month|year)[s]? ago");
       if (!res.Success) return null;

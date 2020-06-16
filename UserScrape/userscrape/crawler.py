@@ -114,6 +114,14 @@ class Crawler:
         if(login != None):
             await self.login()
 
+    def wait_for_visibles(self, cssSelector: str, error_expected: bool = False) -> WebElement:
+        """waits for all elements to be visible  at the given css selector, logs errors to seq & discord"""
+        try:
+            return WebDriverWait(self.driver, 5).until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, cssSelector)))
+        except WebDriverException as e:
+            self.handle_driver_ex(e, cssSelector, error_expected)
+        raise e
+
     def wait_for_visible(self, cssSelector: str, error_expected: bool = False) -> WebElement:
         """waits for an element to be visible  at the given css selector, logs errors to seq & discord"""
         try:
@@ -135,7 +143,7 @@ class Crawler:
             self.log.debug('selector {selector} failed with {ex_name} (but we expected it to)',
                            selector=selector, ex_name=ex_name)
         else:
-            self.__log_driver_status(selector, )
+            self.__log_driver_status(selector, ex_name)
         raise e
 
     async def login(self) -> CrawlResult:
@@ -232,22 +240,28 @@ class Crawler:
 
         url = urlparse(self.driver.current_url)
         if(url.path == '/sorry/index'):  # the sorry we think you are a bot page ()
-            raise DetectedAsBotException('we have been redirected to the are a bot page')
+            self.log.debug('{email} - raising we have been redirected to the you-are-a-bot-page', email=self.user.email)
+            raise DetectedAsBotException('we have been redirected to the you-are-a-bot-page')
 
         # this is the list of elements from the recommendation sidebar
         # it does not always load all recommendations at the same time, therefore the loop
         all_recs = []
         unavalable: VideoUnavailable = None
         findRecsEx: WebDriverException = None
-        while len(all_recs) < 19:
+        rec_attempt = 0
+        while True:
             try:
-                all_recs = self.wait.until(
-                    EC.visibility_of_all_elements_located(
-                        (By.XPATH, '//*[@id="dismissable"]/div/div[1]/a'))
-                )
+                all_recs = self.wait_for_visibles(
+                    '.ytd-watch-next-secondary-results-renderer a.ytd-compact-video-renderer')
             except WebDriverException as e:
                 findRecsEx = e
                 break
+            if(len(all_recs) >= 20):
+                break
+            rec_attempt = rec_attempt+1
+            if(rec_attempt > 3):
+                break
+            await asyncio.sleep(2)
 
         if findRecsEx:
             unavalable = self.get_video_unavailable()
@@ -263,17 +277,14 @@ class Crawler:
                 if personalized:
                     personalized_counter += 1
                 # take the link and remove everything except for the id of the video that the link leads to
-                recommendation_id = i.get_attribute('href').replace(
-                    'https://www.youtube.com/watch?v=', '')
-
+                recommendation_id = i.get_attribute('href').replace('https://www.youtube.com/watch?v=', '')
                 rec_el = i.find_element_by_css_selector('#video-title')
-                title = rec_el.get_attribute('title')
-                full_info = rec_el.get_attribute('aria-label')
                 recs.append({
                     'id': recommendation_id,
                     'personalized': personalized,
-                    'title': title,
-                    'full_info': full_info})
+                    'title': rec_el.get_attribute('title'),
+                    'full_info': rec_el.get_attribute('aria-label')
+                })
 
         rec_result = RecResult(recs, unavalable)
         self.log.debug('{email} - about to store {recs} recs for {video}',
@@ -386,9 +397,9 @@ class Crawler:
         except TimeoutException as e:
             unavailable = self.get_video_unavailable()
             if(unavailable == None):
-                captcha = self.driver.find_elements_by_css_selector('form.#captcha-form')
+                captcha = self.driver.find_elements_by_css_selector('form#captcha-form')
                 if captcha:
-                    self.__log_driver_status('form.#captcha-form', 'we have been caught :(')
+                    self.__log_driver_status('form#captcha-form', 'we have been caught :(')
                     raise DetectedAsBotException
                 else:
                     self.__log_driver_status('.ytp-play-button.ytp-button',
@@ -625,8 +636,8 @@ class Crawler:
         image_url = self.store.url(remote_image_path)
 
         if(error != None):
-            self.log.error('{email} - expereinced error ({error}) at {url} when ({phase}) {image_url}',
-                           email=self.user.email, error=error, url=wd.current_url, phase=name, image_url=image_url)
+            self.log.warn('{email} - expereinced error ({error}) at {url} when ({phase}) {image_url}',
+                          email=self.user.email, error=error, url=wd.current_url, phase=name, image_url=image_url)
 
         os.remove(local_image_path)
 

@@ -42,7 +42,7 @@ def configure_log(url: str, env='dev', branch_env=None, trial_id=None) -> loggin
         app="UserScrape",
         env=env,
         branch_env=branch_env,
-        trial_id=trial_id
+        Trial=trial_id
     )
 
     return logging.getLogger('seq')

@@ -18,7 +18,8 @@
         "spawnl",
         "strftime",
         "userscrape",
-        "vids"
+        "vids",
+        "visibles"
     ],
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,15 +12,17 @@ using System.Xml.Linq;
 using Humanizer;
 using LtGt;
 using Mutuo.Etl.Blob;
+using Nest;
 using Newtonsoft.Json.Linq;
-using Polly;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
+using Policy = Polly.Policy;
 
 //// a modified version of https://github.com/Tyrrrz/YoutubeExplode
 
@@ -52,7 +55,7 @@ namespace YtReader.YtWebsite {
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         UseCookies = false,
         Proxy = useProxy ? new WebProxy(Proxy.Url, true, new string[] { }, new NetworkCredential(Proxy.Creds.Name, Proxy.Creds.Secret)) : null,
-        UseProxy = useProxy
+        UseProxy = useProxy,
       }) {
         Timeout = Proxy.TimeoutSeconds.Seconds()
       };
@@ -69,9 +72,9 @@ namespace YtReader.YtWebsite {
             .RetryWithBackoff(desc, Proxy.Retry, log);
 
           var directRes = await directPolicy.ExecuteAsync(async () => {
-            var get = await DirectHttp.GetAsync(url);
-            ThrowMissingResourceInvalidOpIfNeeded(get);
-            return get;
+            var resp = await DirectHttp.SendAsync(Get(url));
+            ThrowMissingResourceInvalidOpIfNeeded(resp);
+            return resp;
           });
 
           var sw = Stopwatch.StartNew();
@@ -93,11 +96,11 @@ namespace YtReader.YtWebsite {
         .RetryWithBackoff(desc, Proxy.Retry, log);
 
       var res = await proxyPolicy.ExecuteAsync(async () => {
-        var get = ProxyHttp.GetAsync(url);
-        if (await Task.WhenAny(get, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) != get)
+        var resp = ProxyHttp.SendAsync(Get(url));
+        if (await Task.WhenAny(resp, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) != resp)
           throw new TaskCanceledException($"GetStringAsync on {url} took to long without timing out itself");
 
-        var innerRes = await get;
+        var innerRes = await resp;
         ThrowMissingResourceInvalidOpIfNeeded(innerRes);
         innerRes.EnsureSuccessStatusCode();
         return await innerRes.ContentAsString();
@@ -107,6 +110,10 @@ namespace YtReader.YtWebsite {
       log.Debug("Proxy scraped {Desc} {Url} in {Duration}", desc, url, res.Duration);
       return res.Result;
     }
+
+    static HttpRequestMessage Get(string url) =>
+      url.AsUri().Get().AddHeader("User-Agent", 
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36");
 
     static void ThrowMissingResourceInvalidOpIfNeeded(HttpResponseMessage directRes) {
       if (directRes.StatusCode == HttpStatusCode.BadRequest)
@@ -398,18 +405,19 @@ namespace YtReader.YtWebsite {
       else {
         extra.SubError = html.QueryElements("#unavailable-submessage").FirstOrDefault()?.GetInnerText();
         if (extra.SubError == "") extra.SubError = null;
-        if (extra.SubError.HasValue()) // all pages have the error, but not a suberror
+        if (extra.SubError.HasValue()) // all pages have the error, but not a sub-error
           extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
       }
       if (extra.Error != null) return new RecsAndExtra(extra, new Rec[] { });
 
-      var recs = GetRecs(html);
-      if (!recs.Any()) {
+
+      var (recs, recEx) = Def.New(() => GetRecs2(html)).Try();
+      if (recs?.Any() != true || recEx != null) {
         var uri = new Uri(url);
         var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), $"{uri.PathAndQuery}.html");
         var logUrl = LogStore.Url(path);
         await LogStore.Save(path, raw.AsStream(), log);
-        log.Warning("WebScraper - Unable to find recs: {Url}", logUrl);
+        log.Warning("WebScraper - Unable to find recs at ({Url}). error: {Error}", logUrl, recEx?.ToString());
       }
 
       var match = _ytAdRegex.Match(raw);
@@ -428,8 +436,46 @@ namespace YtReader.YtWebsite {
 
       return (title, id);
     }
+    
+    static readonly Regex WindowObjectsRe = new Regex("^.*window\\[\"(?<name>\\w+)\"\\]\\s*=\\s*(?<json>{.*?});?$", 
+      RegexOptions.Compiled | RegexOptions.Multiline);
+    
+    public Rec[] GetRecs2(HtmlDocument html) {
 
-    Rec[] GetRecs(HtmlDocument html) {
+      var scripts = html.QueryElements("script")
+        .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
+
+      var windowObjects = scripts
+        .SelectMany(t => WindowObjectsRe.Matches(t))
+        .ToDictionary(m => m.Groups["name"].Value, m => m.Groups["json"].Value);
+
+      var initData = windowObjects.TryGet("ytInitialData") ?? throw new InvalidOperationException("can't find ytInitialData data script");
+
+      var jInit = JObject.Parse(initData);
+      var resultsSel = "$.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results";
+      var jResults = (JArray) jInit.SelectToken(resultsSel) ?? throw new InvalidOperationException($"can't find {resultsSel}");
+      var recs = jResults
+        .OfType<JObject>()
+        .Select(j => j.SelectToken("compactAutoplayRenderer.contents[0].compactVideoRenderer") ?? j.SelectToken("compactVideoRenderer"))
+        .Where(j => j != null)
+        .Select((j, i) => {
+          var viewText = (j.SelectToken("viewCountText.simpleText") ?? j.SelectToken("viewCountText.runs[0].text"))?.Value<string>();
+          return new Rec {
+            ToVideoId = j.Value<string>("videoId"),
+            ToVideoTitle = j["title"]?.Value<string>("simpleText") ?? j.SelectToken("title.runs[0].text")?.Value<string>(),
+            ToChannelId = j.Value<string>("channelId"),
+            ToChannelTitle = j.SelectToken("longBylineText.runs[0].text")?.Value<string>(),
+            Rank = i + 1,
+            Source = ScrapeSource.Web,
+            ToViews = ChromeScraper.ParseViews(viewText),
+            ToUploadDate = ChromeScraper.ParseAgo(DateTime.UtcNow, j.SelectToken("publishedTimeText.simpleText")?.Value<string>()),
+            ForYou = ChromeScraper.ParseForYou(viewText)
+          };
+        }).ToArray();
+      return recs;
+    }
+
+    public Rec[] GetRecs(HtmlDocument html) {
       var recs = (from d in html.QueryElements("li.video-list-item.related-list-item").Select((e, i) => (e, i))
         let titleSpan = d.e.QueryElements("span.title").FirstOrDefault()
         let channelSpan = d.e.QueryElements("span.stat.attribution > span").FirstOrDefault()

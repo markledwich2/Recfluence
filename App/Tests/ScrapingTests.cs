@@ -1,38 +1,45 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
-using Mutuo.Etl.Blob;
 using NUnit.Framework;
-using SysExtensions;
-using SysExtensions.IO;
+using Serilog;
 using YtReader;
-using YtReader.Store;
 using YtReader.YtWebsite;
 
 namespace Tests {
   public static class ScrapingTests {
     [Test]
-    public static async Task ScrapeVid() {
+    public static async Task ChromeRecsAndExtra() {
       // get comments, does watch page html have it
+      using var ctx = await TextCtx();
+      var chrome = ctx.Resolve<ChromeScraper>();
+      var web = ctx.Resolve<WebScraper>();
+      var vids = new[] {"BxFHm1tXwlM", "Fay6parYkrw", "KskhAiNJGYI"};
+      var chromeExtras = await chrome.GetRecsAndExtra(vids, ctx.Log, proxy: false);
+    }
+
+    [Test]
+    public static async Task WebRecsAndExtra() {
+      using var ctx = await TextCtx();
+      var ws = ctx.Scope.Resolve<WebScraper>();
+      var extra = await ws.GetRecsAndExtra("DLq1DUcMh1Q", ctx.Log);
+    }
+
+    static async Task<TestCtx> TextCtx() {
       var (cfg, rootCfg, version ) = await Setup.LoadCfg(basePath: Setup.SolutionDir.Combine("YtCli").FullPath);
       using var log = Setup.CreateTestLogger();
-      log.Debug("Starting {TestName}", nameof(ScrapeVid));
+      log.Debug("Starting {TestName}", nameof(TestContext.Test.Name));
       var appCtx = Setup.PipeAppCtxEmptyScope(rootCfg, cfg);
-      var scope = Setup.MainScope(rootCfg, cfg, appCtx, version, log);
-      var chrome = scope.Resolve<ChromeScraper>();
-      var web = scope.Resolve<WebScraper>();
-      var vids = new[] { "BxFHm1tXwlM", "Fay6parYkrw", "KskhAiNJGYI"};
-      var chromeExtras = await chrome.GetRecsAndExtra(vids, log, proxy: false);
-      /*var webExtras = await web.GetRecsAndExtra(vids, log);
-      var allExtras = chromeExtras.Concat(webExtras).OrderBy(e => e.Extra.VideoId).ToArray();
-      var allRecs = YtCollector.ToRecStored(allExtras, DateTime.UtcNow);
-      var dir = TestContext.CurrentContext.WorkDirectory.AsPath().Combine(".data");
-      var localStore = new LocalSimpleFileStore(dir);
-      var recsStore = new JsonlStore<RecStored2>(localStore, "recs", e => e.Updated.FileSafeTimestamp(), log);
-      var extraStore = new JsonlStore<VideoExtraStored2>(localStore, "extra", e => e.Updated.FileSafeTimestamp(), log);
-      await extraStore.Append(allExtras.Select(e => e.Extra).ToArray());
-      await recsStore.Append(allRecs);*/
+      return new TestCtx {Scope = Setup.MainScope(rootCfg, cfg, appCtx, version, log), Log = log, App = cfg, Root = rootCfg};
     }
+  }
+
+  class TestCtx : IDisposable {
+    public ILifetimeScope Scope { get; set; }
+    public ILogger        Log   { get; set; }
+    public AppCfg         App   { get; set; }
+    public RootCfg        Root  { get; set; }
+    public void Dispose() => Scope?.Dispose();
+    public T Resolve<T>() => Scope.Resolve<T>();
   }
 }
