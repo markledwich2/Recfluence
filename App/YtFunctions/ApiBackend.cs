@@ -54,7 +54,7 @@ Discovered ${GitVersionInfo.DiscoverVersion(typeof(YtCollector))}";
 
     Task<string> RunUpdate(ExecutionContext exec) => Ctx.Run(exec, async c => {
       var pipeCtx = c.Scope.Resolve<IPipeCtx>();
-      var res = await pipeCtx.Run((YtUpdater u) => u.Update(null, false, null, PipeArg.Inject<CancellationToken>()), c.Log, returnOnStarted: true);
+      var res = await pipeCtx.Run((YtUpdater u) => u.Update(null, false, null, null, PipeArg.Inject<CancellationToken>()), c.Log, returnOnStarted: true);
       if (res.Error)
         Log.Error("ApiBackend - Error starting RunUpdate: {Message}", res.ErrorMessage);
       return res.Error

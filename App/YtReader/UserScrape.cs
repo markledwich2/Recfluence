@@ -20,7 +20,7 @@ namespace YtReader {
   public class UserScrapeCfg {
     public ContainerCfg Container { get; set; } = new ContainerCfg {
       Cores = 1,
-      Mem = 6,
+      Mem = 3,
       ImageName = "userscrape",
       Exe = "python"
     };

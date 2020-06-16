@@ -35,25 +35,25 @@ namespace YtReader {
       SeqCfg = seqCfg;
     }
 
-    public async Task Update(ILogger log, bool fullLoad, CancellationToken cancel) {
+    public async Task Update(ILogger log, bool fullLoad, string[] tables, CancellationToken cancel) {
       var sfCfg = SfCfg.JsonClone();
       sfCfg.Role = "dataform"; // ensure dataform run in its own lower-credentialed role
+      sfCfg.Db = sfCfg.DbName(); // serialize the environment specific db name
 
       var args = new[] {
-        "--include-deps",
         fullLoad ? " --full-refresh " : null,
-        "--tags standard"
-      }.NotNull().ToArray();
+        tables?.Any() == true ? $"--actions {tables.Join(" ", t => t.ToUpperInvariant())}" : "--tags standard"
+      }.NotNull().Join(" ");
 
       var env = new (string name, string value)[] {
         ("SNOWFLAKE_JSON", sfCfg.ToJson()),
         ("REPO", "https://github.com/markledwich2/YouTubeNetworks_Dataform.git"),
         ("BRANCH", "master"),
-        ("DATAFORM_RUN_ARGS", args.Join(" ")),
+        ("DATAFORM_RUN_ARGS", args),
         ("SEQ", SeqCfg.SeqUrl.ToString())
       };
 
-      log.Debug("Dataform - launching container");
+      log.Information("Dataform - launching container to update {Db}. dataform {Args}", sfCfg.DbName(), args);
       var containerName = "dataform";
       var fullName = Cfg.Container.FullContainerImageName("latest");
       var (group, dur) = await Containers.Launch(Cfg.Container, containerName, fullName, env, new string[] { }, log: log, cancel:cancel).WithDuration();

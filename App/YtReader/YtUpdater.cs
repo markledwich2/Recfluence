@@ -48,18 +48,20 @@ namespace YtReader {
 
     Task Collect(bool fullLoad, CancellationToken cancel) => _collector.Collect(Log, forceUpdate: fullLoad, cancel);
     [DependsOn(nameof(Collect))] Task Stage(bool fullLoad, string[] tables) => _warehouse.StageUpdate(Log, fullLoad, tables);
-    [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad, CancellationToken cancel) => YtDataform.Update(Log, fullLoad, cancel);
+    [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad, string[] tables, CancellationToken cancel) => YtDataform.Update(Log, fullLoad, tables, cancel);
     [DependsOn(nameof(Dataform))] Task Search(bool fullLoad, CancellationToken cancel) => _search.SyncToElastic(Log, fullLoad, cancel:cancel);
-    [DependsOn(nameof(Dataform))] Task Results() => _results.SaveBlobResults(Log);
+    [DependsOn(nameof(Dataform))] Task Results(string[] results) => _results.SaveBlobResults(Log, results);
     [DependsOn(nameof(Collect))] Task Backup() => _backup.Backup(Log);
     
     [DependsOn(nameof(Results), nameof(Collect), nameof(Dataform))] 
     Task UserScrape(bool init, CancellationToken cancel) => _userScrape.Run(Log, init, cancel);
 
     [Pipe] 
-    public async Task Update(string[] actions = null, bool fullLoad = false, string[] tables = null, CancellationToken cancel = default) {
+    public async Task Update(string[] actions = null, bool fullLoad = false, string[] tables = null, string[] results = default,
+      CancellationToken cancel = default) {
       actions ??= new string[]{};
       tables ??= new string[]{};
+      results ??= new string[]{};
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
       
@@ -67,9 +69,9 @@ namespace YtReader {
         c => Collect(fullLoad, c),
         c => Stage(fullLoad, tables),
         c => Search(fullLoad, c),
-        c => Results(),
+        c => Results(results),
         c => UserScrape(true, c),
-        c => Dataform(fullLoad, c),
+        c => Dataform(fullLoad, tables, c),
         c => Backup());
 
       if (actions.Any()) {

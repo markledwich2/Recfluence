@@ -271,6 +271,9 @@ namespace YtCli {
 
     [CommandOption('t', Description = "| delimited list of tables to restrict updates to")]
     public string Tables { get; set; }
+    
+    [CommandOption('r', Description = "| delimited list of query names to restrict results to")]
+    public string Results { get; set; }
 
     public UpdateCmd(YtUpdater updater, ILogger log) {
       Updater = updater;
@@ -279,7 +282,7 @@ namespace YtCli {
 
     public async ValueTask ExecuteAsync(IConsole console) {
       console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
-      await Updater.Update(Actions?.Split("|"), FullLoad, Tables?.Split("|"), console.GetCancellationToken());
+      await Updater.Update(Actions?.Split("|"), FullLoad, Tables?.Split("|"), Results?.Split("|"), console.GetCancellationToken());
     }
   }
 
