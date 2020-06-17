@@ -7,6 +7,7 @@ using Serilog;
 using SysExtensions.Text;
 
 namespace YtCli {
+  /// <summary>Generic command for pipe ETL to launch instances to perform any pipe operations</summary>
   [Command("pipe")]
   public class PipeCmd : PipeCmdArgs {
     readonly IPipeCtx PipeCtx;
@@ -28,7 +29,7 @@ namespace YtCli {
       if (runId.HasGroup)
         await PipeCtx.DoPipeWork(runId, console.GetCancellationToken());
 
-      var res = await PipeCtx.Run(runId.Name, log: Log, location: Location ?? PipeRunLocation.Local);
+      var res = await PipeCtx.Run(runId.Name, new PipeRunOptions {Location = Location ?? PipeRunLocation.Local}, log: Log);
       if (res.Error)
         throw new CommandException(res.ErrorMessage);
     }

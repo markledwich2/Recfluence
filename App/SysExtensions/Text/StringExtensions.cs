@@ -30,7 +30,7 @@ namespace SysExtensions.Text {
     /// <summary>Like string.Join. However also will escape the seperator and escape charachter so this is reversable using
     ///   Split</summary>
     public static string Join<T>(this IEnumerable<T> items, string separator, Func<T, string> format = null, char? escapeCharacter = null) {
-      format ??= (s => s.ToString());
+      format ??= s => s.ToString();
       var escapeFormat = format;
       if (escapeCharacter != null)
         escapeFormat = s =>
@@ -41,8 +41,9 @@ namespace SysExtensions.Text {
 
     public static bool NullOrEmpty(this string value) => string.IsNullOrEmpty(value);
 
-    public static IEnumerable<string> UnJoin(this string input, char separator, char escapeCharacter = '\\') {
-      if (input == null) yield break;
+    public static string[] UnJoin(this string input, char separator, char escapeCharacter = '\\') {
+      var res = new List<string>();
+      if (input == null) return res.ToArray();
       var itemBuffer = "";
       var wasEscaped = false; //i > 0 && input[i - 1] == escapeCharacter;
       foreach (var c in input) {
@@ -64,11 +65,12 @@ namespace SysExtensions.Text {
           continue;
         }
 
-        yield return itemBuffer;
+        res.Add(itemBuffer);
         itemBuffer = "";
       }
 
-      yield return itemBuffer;
+      res.Add(itemBuffer);
+      return res.ToArray();
     }
 
     public static byte[] ToBytesUtf8(this string s) => Encoding.UTF8.GetBytes(s);

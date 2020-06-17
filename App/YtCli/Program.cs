@@ -73,8 +73,7 @@ namespace YtCli {
     public bool ForceUpdate { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) {
-      if (ChannelIds.HasValue())
-        Cfg.LimitedToSeedChannels = ChannelIds.UnJoin('|').ToHashSet();
+      var channels = ChannelIds?.UnJoin('|').ToArray();
 
       // make a new app context with a custom region defined
       var appCtx = new PipeAppCtx(AppCtx) {CustomRegion = () => Rand.Choice(Regions)};
@@ -82,7 +81,7 @@ namespace YtCli {
       // run the work using the pipe entry point, forced to be local
       PipeAppCfg.Location = PipeRunLocation.Local;
       var pipeCtx = new PipeCtx(PipeAppCfg, appCtx, PipeCtx.Store, PipeCtx.Log);
-      await pipeCtx.Run((YtCollector d) => d.Collect(PipeArg.Inject<ILogger>(), ForceUpdate, PipeArg.Inject<CancellationToken>()));
+      await pipeCtx.Run((YtCollector d) => d.Collect(PipeArg.Inject<ILogger>(), ForceUpdate, false, channels, PipeArg.Inject<CancellationToken>()));
     }
   }
 
@@ -212,7 +211,8 @@ namespace YtCli {
     }
 
     public async ValueTask ExecuteAsync(IConsole console) =>
-      await PipeCtx.Run((YtSearch s) => s.SyncToElastic(Log, FullLoad, Limit, console.GetCancellationToken()), location: Location, log: Log);
+      await PipeCtx.Run((YtSearch s) => s.SyncToElastic(Log, FullLoad, Limit, console.GetCancellationToken()),
+        new PipeRunOptions {Location = Location, Exclusive = true}, log: Log);
   }
 
   [Command("backup", Description = "Backup database")]
@@ -261,7 +261,8 @@ namespace YtCli {
   [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]
   public class UpdateCmd : ICommand {
     readonly YtUpdater Updater;
-    readonly ILogger Log;
+    readonly IPipeCtx  PipeCtx;
+    readonly ILogger   Log;
 
     [CommandOption('a', Description = "| delimited list of action to run (empty for all)")]
     public string Actions { get; set; }
@@ -271,18 +272,38 @@ namespace YtCli {
 
     [CommandOption('t', Description = "| delimited list of tables to restrict updates to")]
     public string Tables { get; set; }
-    
+
     [CommandOption('r', Description = "| delimited list of query names to restrict results to")]
     public string Results { get; set; }
 
-    public UpdateCmd(YtUpdater updater, ILogger log) {
+    [CommandOption('l', Description = "The location to run the update")]
+    public PipeRunLocation Location { get; set; }
+
+    [CommandOption('c', Description = "| delimited list of channels to collect")]
+    public string Channels { get; set; }
+
+    [CommandOption("disable-discover", Description = "when collecting, don't go and find new channels to classify")]
+    public bool DisableChannelDiscover { get; set; }
+
+    public UpdateCmd(YtUpdater updater, IPipeCtx pipeCtx, ILogger log) {
       Updater = updater;
+      PipeCtx = pipeCtx;
       Log = log;
     }
 
     public async ValueTask ExecuteAsync(IConsole console) {
       console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
-      await Updater.Update(Actions?.Split("|"), FullLoad, Tables?.Split("|"), Results?.Split("|"), console.GetCancellationToken());
+      var options = new UpdateOptions {
+        Actions = Actions?.UnJoin('|').ToArray(),
+        Channels = Channels?.UnJoin('|'),
+        Tables = Tables?.UnJoin('|'),
+        Results = Results?.UnJoin('|'),
+        FullLoad = FullLoad,
+        DisableChannelDiscover = DisableChannelDiscover
+      };
+
+      await PipeCtx.Run((YtUpdater u) => u.Update(options, PipeArg.Inject<CancellationToken>()),
+        new PipeRunOptions {Location = Location, Exclusive = true}, Log, console.GetCancellationToken());
     }
   }
 

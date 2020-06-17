@@ -13,37 +13,31 @@ namespace SysExtensions.Reflection {
   }
 
   public static class ReflectionExtensions {
-    /// <summary>Coppies properties and all items in ICollection<> properties</summary>
-    public static void CopyPropertiesFrom<T>(this T to, object from, CopyPropertiesBehaviour behaviour = CopyPropertiesBehaviour.CopyAll)
+    /// <summary>Copies non-default properties and all items in ICollection<> properties</summary>
+    public static void CopyPropertiesFrom<T>(this T to, object from)
       where T : class {
       foreach (var toProp in to.GetType().GetProperties()) {
         var fromProp = from.GetType().GetProperty(toProp.Name, toProp.PropertyType);
         if (fromProp == null) continue;
+        var fromValue = from.GetPropValue(fromProp.Name);
+
+        // don't copy if values are default for their type
+        if (fromValue.EqualsSafe(fromProp.PropertyType.DefaultForType()))
+          continue;
 
         // set any setter properties
-        if (toProp.GetSetMethod() != null && toProp.GetIndexParameters().Length == 0 && toProp.GetIndexParameters().Length == 0)
-          switch (behaviour) {
-            case CopyPropertiesBehaviour.CopyAll:
-              SetValue(to, from, toProp);
-              break;
-            case CopyPropertiesBehaviour.SkipDefault:
-              var existingValue = toProp.GetValue(to);
-              if (existingValue == toProp.PropertyType.DefaultForType())
-                SetValue(to, from, toProp);
-              break;
-            default:
-              throw new ArgumentOutOfRangeException(nameof(behaviour), behaviour, null);
-          }
-
-        if (toProp.PropertyType.GetTypeInfo().IsGenericType && typeof(ICollection<>).IsAssignableFrom(toProp.PropertyType
-                                                              .GetGenericTypeDefinition())
-                                                            && typeof(IEnumerable).IsAssignableFrom(fromProp.PropertyType)) {
-          var toCollection = toProp.GetValue(to, null);
-          var addMethod = toCollection.GetType().GetMethod("Add");
-          var fromEnumerable = (IEnumerable) fromProp.GetValue(from, null);
-          foreach (var item in fromEnumerable)
-            addMethod.Invoke(toCollection, new[] {item});
+        if (toProp.GetSetMethod() != null && toProp.GetIndexParameters().Length == 0 && toProp.GetIndexParameters().Length == 0) {
+          toProp.SetValue(to, fromValue);
+          continue;
         }
+
+        if (!toProp.PropertyType.GetTypeInfo().IsGenericType || !typeof(ICollection<>).IsAssignableFrom(toProp.PropertyType
+          .GetGenericTypeDefinition()) || !typeof(IEnumerable).IsAssignableFrom(fromProp.PropertyType)) continue;
+
+        var toCollection = toProp.GetValue(to, null) ?? throw new InvalidOperationException("collection not set-able or ad-able");
+        var addMethod = toCollection.GetType().GetMethod("Add") ?? throw new InvalidOperationException("collection not set-able or ad-able");
+        foreach (var item in (IEnumerable) fromProp.GetValue(from, index: null) ?? new object[] { })
+          addMethod.Invoke(toCollection, new[] {item});
       }
     }
 
@@ -53,9 +47,10 @@ namespace SysExtensions.Reflection {
       return to;
     }
 
+    /// <summary>Makes a shallow clone of the object and sets non-default properties from with (slow)</summary>
     public static T ShallowWith<T>(this T from, T with) where T : class, new() {
       var clone = from.ShallowClone();
-      clone.CopyPropertiesFrom(with, CopyPropertiesBehaviour.SkipDefault);
+      clone.CopyPropertiesFrom(with);
       return clone;
     }
 
@@ -94,8 +89,8 @@ namespace SysExtensions.Reflection {
       return true;
     }
 
-    static void SetValue<T>(T to, object from, PropertyInfo toProp) where T : class =>
-      toProp.SetValue(to, toProp.GetValue(from, null), null);
+    /// <summary>A null safe equals</summary>
+    public static bool EqualsSafe(this object a, object b) => a?.Equals(b) ?? b == null;
 
     public static object GetPropValue(this object o, string propName) => o.GetType().GetProperty(propName).GetValue(o);
 

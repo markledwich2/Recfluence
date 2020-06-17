@@ -3,9 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
-using Semver;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
@@ -15,6 +13,15 @@ using YtReader.Store;
 namespace YtReader {
   public class YtUpdaterCfg {
     public int Parallel { get; set; } = 4;
+  }
+
+  public class UpdateOptions {
+    public bool     FullLoad               { get; set; }
+    public string[] Actions                { get; set; }
+    public string[] Tables                 { get; set; }
+    public string[] Results                { get; set; }
+    public string[] Channels               { get; set; }
+    public bool     DisableChannelDiscover { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -30,7 +37,7 @@ namespace YtReader {
     readonly YtDataform   YtDataform;
     readonly YtBackup     _backup;
     readonly string       _updated;
-    readonly UserScrape _userScrape;
+    readonly UserScrape   _userScrape;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, YtStage warehouse, YtSearch search,
       YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape) {
@@ -46,34 +53,36 @@ namespace YtReader {
       _userScrape = userScrape;
     }
 
-    Task Collect(bool fullLoad, CancellationToken cancel) => _collector.Collect(Log, forceUpdate: fullLoad, cancel);
+    Task Collect(bool fullLoad, bool disableDiscover, string[] channels, CancellationToken cancel) =>
+      _collector.Collect(Log, forceUpdate: fullLoad, disableDiscover, channels, cancel);
+
     [DependsOn(nameof(Collect))] Task Stage(bool fullLoad, string[] tables) => _warehouse.StageUpdate(Log, fullLoad, tables);
     [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad, string[] tables, CancellationToken cancel) => YtDataform.Update(Log, fullLoad, tables, cancel);
-    [DependsOn(nameof(Dataform))] Task Search(bool fullLoad, CancellationToken cancel) => _search.SyncToElastic(Log, fullLoad, cancel:cancel);
+    [DependsOn(nameof(Dataform))] Task Search(bool fullLoad, CancellationToken cancel) => _search.SyncToElastic(Log, fullLoad, cancel: cancel);
     [DependsOn(nameof(Dataform))] Task Results(string[] results) => _results.SaveBlobResults(Log, results);
     [DependsOn(nameof(Collect))] Task Backup() => _backup.Backup(Log);
-    
-    [DependsOn(nameof(Results), nameof(Collect), nameof(Dataform))] 
+
+    [DependsOn(nameof(Results), nameof(Collect), nameof(Dataform))]
     Task UserScrape(bool init, CancellationToken cancel) => _userScrape.Run(Log, init, cancel);
 
-    [Pipe] 
-    public async Task Update(string[] actions = null, bool fullLoad = false, string[] tables = null, string[] results = default,
-      CancellationToken cancel = default) {
-      actions ??= new string[]{};
-      tables ??= new string[]{};
-      results ??= new string[]{};
+    [Pipe]
+    public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
+      options ??= new UpdateOptions();
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
-      
+
+      var fullLoad = options.FullLoad;
+
       var actionMethods = TaskGraph.FromMethods(
-        c => Collect(fullLoad, c),
-        c => Stage(fullLoad, tables),
+        c => Collect(fullLoad, options.DisableChannelDiscover, options.Channels, c),
+        c => Stage(fullLoad, options.Tables),
         c => Search(fullLoad, c),
-        c => Results(results),
+        c => Results(options.Results),
         c => UserScrape(true, c),
-        c => Dataform(fullLoad, tables, c),
+        c => Dataform(fullLoad, options.Tables, c),
         c => Backup());
 
+      var actions = options.Actions;
       if (actions.Any()) {
         var missing = actions.Where(a => actionMethods[a] == null).ToArray();
         if (missing.Any())
@@ -82,12 +91,12 @@ namespace YtReader {
         foreach (var m in actionMethods.All.Where(m => !actions.Contains(m.Name)))
           m.Status = GraphTaskStatus.Ignored;
       }
-      
+
       // TODO: tasks should have frequencies within a dependency graph. But for now, full backups only on sundays, or if explicit
       var backup = actionMethods[nameof(Backup)];
       if (!actions.Contains(nameof(Backup)) && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
         backup.Status = GraphTaskStatus.Ignored;
-      
+
       var res = await actionMethods.Run(Cfg.Parallel, Log, cancel);
 
       var errors = res.Where(r => r.Error).ToArray();

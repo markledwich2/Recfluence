@@ -32,7 +32,7 @@ namespace YtReader {
     readonly AzureContainers Containers;
     readonly RootCfg         RootCfg;
     readonly UserScrapeCfg   Cfg;
-    readonly SemVersion Version;
+    readonly SemVersion      Version;
 
     public UserScrape(AzureContainers containers, RootCfg rootCfg, UserScrapeCfg cfg, SemVersion version) {
       Containers = containers;
@@ -53,7 +53,7 @@ namespace YtReader {
       }
 
       // use branch env cfg if it exists
-      var cfgBlob = await CfgBlob();;
+      var cfgBlob = await CfgBlob();
       var sas = cfgBlob.GetSharedAccessSignature(new SharedAccessBlobPolicy {
         SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddDays(2),
         Permissions = SharedAccessBlobPermissions.Read
@@ -90,12 +90,12 @@ namespace YtReader {
                 env,
                 args.Concat("-t", trial, "-a", b.Join("|")).ToArray(),
                 log: groupLog,
-                cancel:c
+                cancel: c
               ).WithDuration();
               await group.EnsureSuccess(groupName, groupLog);
               groupLog.Information("UserScrape - container completed in {Duration}", dur.HumanizeShort());
             }, cancel);
-        }, Containers.AzureCfg.Parallel, cancel:cancel);
+        }, Containers.AzureCfg.Parallel, cancel: cancel);
     }
 
     const int RetryErrorCode = 13;

@@ -34,7 +34,7 @@
       "container": {
         "registry": "ytnetworks.azurecr.io",
         "imageName": "recfluence",
-        "cores": 2,
+        "cores": 1,
         "mem": 2,
         "exe": "./recfluence"
       }
@@ -43,17 +43,14 @@
       {
         "pipeName": "Update",
         "container": {
-          "mem": 8,
-          "cores": 2
+          "mem": 4,
+          "cores": 1
         }
       },
       {
         "pipeName": "ProcessChannels",
         "maxParallel": 8,
-        "minWorkItems": 50,
-        "container": {
-          "mem": 4
-        }
+        "minWorkItems": 50
       }
     ]
   },

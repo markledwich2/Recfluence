@@ -22,17 +22,25 @@ using SysExtensions.Serialization;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Pipe {
+  public class PipeRunOptions {
+    public bool             ReturnOnStarted { get; set; }
+    public PipeRunLocation? Location        { get; set; }
+
+    /// <summary>when true, will fail if this pipe is already running</summary>
+    public bool Exclusive { get; set; }
+  }
+
   public static class Pipes {
     public static async Task<(PipeRunMetadata Metadata, TOut State)> Run<TOut, TPipeInstance>(this IPipeCtx ctx,
-      Expression<Func<TPipeInstance, Task<TOut>>> expression, ILogger log = null, bool returnOnStarted = false, PipeRunLocation? location = null) {
+      Expression<Func<TPipeInstance, Task<TOut>>> expression, PipeRunOptions options = null, ILogger log = null) {
       var pipeCall = PipeMethodCall(expression);
-      return await RunRootPipe<TOut>(ctx, pipeCall.Method.Name, pipeCall.ResolveArgs(), returnOnStarted, log ?? Logger.None, location);
+      return await RunRootPipe<TOut>(ctx, pipeCall.Method.Name, pipeCall.ResolveArgs(), options, log ?? Logger.None);
     }
 
-    public static async Task<PipeRunMetadata> Run<TPipeInstance>(this IPipeCtx ctx, Expression<Func<TPipeInstance, Task>> expression, ILogger log = null,
-      bool returnOnStarted = false, PipeRunLocation? location = null) {
+    public static async Task<PipeRunMetadata> Run<TPipeInstance>(this IPipeCtx ctx, Expression<Func<TPipeInstance, Task>> expression,
+      PipeRunOptions options = null, ILogger log = null, CancellationToken cancel = default) {
       var pipeCall = PipeMethodCall(expression);
-      var res = await RunRootPipe<object>(ctx, pipeCall.Method.Name, ResolveArgs(pipeCall), returnOnStarted, log ?? Logger.None, location);
+      var res = await RunRootPipe<object>(ctx, pipeCall.Method.Name, ResolveArgs(pipeCall), options, log ?? Logger.None, cancel);
       return res.Metadata;
     }
 
@@ -43,16 +51,16 @@ namespace Mutuo.Etl.Pipe {
     /// <param name="log"></param>
     /// <param name="returnOnStarted"></param>
     public static async Task<(PipeRunMetadata Metadata, TOut State)> Run<TOut>(this IPipeCtx ctx, Expression<Func<Task<TOut>>> expression,
-      ILogger log = null, bool returnOnStarted = false, PipeRunLocation? location = null) {
+      PipeRunOptions options = null, ILogger log = null) {
       var pipeCall = PipeMethodCall(expression);
-      var res = await RunRootPipe<TOut>(ctx, pipeCall.Method.Name, pipeCall.ResolveArgs(), returnOnStarted, log ?? Logger.None, location);
+      var res = await RunRootPipe<TOut>(ctx, pipeCall.Method.Name, pipeCall.ResolveArgs(), options, log);
       return res;
     }
 
     /// <summary>Launches a root pipe</summary>
-    public static async Task<PipeRunMetadata> Run(this IPipeCtx ctx, string pipeName, PipeRunLocation? location, (string Name, object Value)[] args = null,
-      bool returnOnStarted = false, ILogger log = null) =>
-      (await RunRootPipe<object>(ctx, pipeName, SerializableArgs(args ?? new (string Name, object Value)[] { }), returnOnStarted, log, location)).Metadata;
+    public static async Task<PipeRunMetadata> Run(this IPipeCtx ctx, string pipeName, PipeRunOptions options = null,
+      (string Name, object Value)[] args = null, ILogger log = null) =>
+      (await RunRootPipe<object>(ctx, pipeName, SerializableArgs(args ?? new (string Name, object Value)[] { }), options, log)).Metadata;
 
     /// <summary>Launches a child pipe that works on a list of items</summary>
     /// <param name="expression">a call to a pipe method. The arguments will be resolved and serialized</param>
@@ -69,15 +77,17 @@ namespace Mutuo.Etl.Pipe {
       IPipeCtx ctx, string pipeName, (string Name, object Value)[] args, PipeRunCfg runCfg = null, ILogger log = null) =>
       await RunItemPipe<object, object>(items.Cast<object>().ToArray(), ctx, pipeName, SerializableArgs(args), runCfg, log);
 
-    static async Task<(PipeRunMetadata Metadata, TOut OutState)> RunRootPipe<TOut>(this IPipeCtx ctx, string pipeName, PipeArg[] args, bool returnOnStarted,
-      ILogger log, PipeRunLocation? location) {
+    static async Task<(PipeRunMetadata Metadata, TOut OutState)> RunRootPipe<TOut>(this IPipeCtx ctx, string pipeName, PipeArg[] args,
+      PipeRunOptions options = null, ILogger log = null, CancellationToken cancel = default) {
+      options ??= new PipeRunOptions();
+      log ??= Logger.None;
       var runId = PipeRunId.FromName(pipeName);
       await ctx.SaveInArg(args, runId, log);
-      var pipeWorker = PipeWorker(ctx, location);
+      var pipeWorker = PipeWorker(ctx, options.Location);
       var md = pipeWorker is IPipeWorkerStartable s
-        ? await s.Launch(ctx, runId, returnOnStarted, log)
-        : await pipeWorker.Launch(ctx, runId, log);
-      var state = await GetOutState<TOut>(ctx, log, md, returnOnStarted);
+        ? await s.Launch(ctx, runId, options.ReturnOnStarted, options.Exclusive, log, cancel)
+        : await pipeWorker.Launch(ctx, runId, log, cancel);
+      var state = await GetOutState<TOut>(ctx, log, md, options.ReturnOnStarted);
       return state;
     }
 
@@ -107,9 +117,9 @@ namespace Mutuo.Etl.Pipe {
 
       var pipeWorker = PipeWorker(ctx);
       log.Debug("{PipeWorker} - launching batches {@batches}", pipeWorker.GetType().Name, batches);
-      var res = pipeWorker is IPipeWorkerStartable s ? 
-        await s.Launch(ctx, batches, runCfg.ReturnOnStart, log, cancel:cancel) : 
-        await pipeWorker.Launch(ctx, batches, log, cancel:cancel);
+      var res = pipeWorker is IPipeWorkerStartable s
+        ? await s.Launch(ctx, batches, runCfg.ReturnOnStart, false, log, cancel: cancel)
+        : await pipeWorker.Launch(ctx, batches, log, cancel: cancel);
 
       var hasOutState = typeof(TOut) != typeof(object) && !runCfg.ReturnOnStart;
       var outState = hasOutState ? await GetOutState() : res.Select(r => (Metadata: r, OutState: (TOut) default)).ToArray();
@@ -164,8 +174,8 @@ namespace Mutuo.Etl.Pipe {
 
       var loadInArgs = await LoadInArgs(ctx, id);
       var args = loadInArgs.ToDictionary(a => a.Name);
-      
-      if(cancel.IsCancellationRequested)
+
+      if (cancel.IsCancellationRequested)
         return;
 
       var pipeParams = await method.GetParameters().BlockFunc(async p => {
@@ -183,7 +193,7 @@ namespace Mutuo.Etl.Pipe {
             }
           }
         return p.ParameterType == typeof(CancellationToken) ? cancel : ctx.Scope.Resolve(p.ParameterType);
-      }, cancel:cancel);
+      }, cancel: cancel);
 
       try {
         dynamic task = method.Invoke(pipeInstance, pipeParams.ToArray()) ??
@@ -324,7 +334,9 @@ namespace Mutuo.Etl.Pipe {
 
     public string  Name    { get; set; }
     public ArgMode ArgMode { get; set; }
-    public object  Value   { get; set; }
+
+    /// <summary>The value of the arg. We rely on the serializer embedding the type name to deserialize into the instance type</summary>
+    public object Value { get; set; }
 
     /// <summary>used in expressions, this represents an arugment to a pipe that should be resolved</summary>
     /// <typeparam name="T"></typeparam>

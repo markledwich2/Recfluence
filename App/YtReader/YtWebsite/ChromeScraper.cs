@@ -11,7 +11,6 @@ using Mutuo.Etl.Blob;
 using Newtonsoft.Json.Linq;
 using PuppeteerSharp;
 using Serilog;
-using Serilog.Extensions.Logging;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Security;
@@ -82,36 +81,46 @@ namespace YtReader.YtWebsite {
 
         return await b.BlockFunc(async v => {
           //var context = await browser.CreateIncognitoBrowserContextAsync(); // opening windows is more reliable than tabs in practice
-          var attempt = 1;
+          var videoAttempt = 0;
+          var videoProxy = proxy; // try to not use proxy (its too expensive, delay and try again)
 
           while (true) {
-            var lastAttempt = attempt >= CollectCfg.ChromeAttempts;
-            log.Debug("loading video {Video}. Proxy={Proxy}", v, proxy ? ProxyCfg.Url : "Direct");
-            using var page = await Page(proxy, v);
+            videoAttempt++;
+            var lastAttempt = videoAttempt >= CollectCfg.ChromeAttempts;
+            log.Debug("loading video {Video}. Proxy={Proxy}", v, videoProxy ? ProxyCfg.Url : "Direct");
+            using var page = await Page(videoProxy, v);
             try {
               var (video, notOkResponse) = await GetVideo(page, v, log);
               if (notOkResponse != null) {
                 if (notOkResponse.Status == HttpStatusCode.TooManyRequests && !proxy) {
-                  proxy = true;
-                  attempt = 0;
-                  log.Information("ChromeScraper - error response ({Status}) loading {Video}: switching to proxy", notOkResponse.Status, v);
+                  if (lastAttempt) {
+                    videoProxy = true;
+                    videoAttempt = 0;
+                    log.Information("ChromeScraper - error response ({Status}) loading {Video}:  switching to proxy", notOkResponse.Status, v);
+                  }
+                  else {
+                    var delay = 1.Minutes() + (videoAttempt ^ 2).Minutes();
+                    await delay.Delay();
+                    log.Information("ChromeScraper - error response ({Status}) loading {Video}: waiting for {Duration} to try again", notOkResponse.Status, v,
+                      delay);
+                  }
                 }
                 else {
                   throw new InvalidOperationException($"not OK response ({notOkResponse.Status})");
                 }
               }
-              if (video != null) {
-                log.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
-                  v, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
-                return video;
-              }
+
+              if (video == null) continue;
+
+              log.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
+                v, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
+              return video;
             }
             catch (Exception ex) {
-              log.Warning(ex, "ChromeScraper - failed to load video {Video} from {Url} (attempt {Attempt}): {Error}", v, page.Url, attempt, ex.Message);
+              log.Warning(ex, "ChromeScraper - failed to load video {Video} from {Url} (attempt {Attempt}): {Error}", v, page.Url, videoAttempt, ex.Message);
               if (lastAttempt)
                 throw;
             }
-            attempt++;
           }
         });
       }, browsers);
@@ -168,8 +177,8 @@ namespace YtReader.YtWebsite {
 
     async Task<(RecsAndExtra video, Response notOkResponse)> GetVideo(Page page, string videoId, ILogger log) {
       log = log.ForContext("Video", videoId);
-      var response = await page.GoToAsync($"https://youtube.com/watch?v={videoId}", (int)2.Minutes().TotalMilliseconds, 
-        new [] {WaitUntilNavigation.Networkidle2, WaitUntilNavigation.Load, WaitUntilNavigation.DOMContentLoaded});
+      var response = await page.GoToAsync($"https://youtube.com/watch?v={videoId}", (int) 2.Minutes().TotalMilliseconds,
+        new[] {WaitUntilNavigation.Networkidle2, WaitUntilNavigation.Load, WaitUntilNavigation.DOMContentLoaded});
       if (response.Status != HttpStatusCode.OK)
         return (default, response);
       // wait for either a single comment, or a message that the coments are turned off. This is the slowest part to load.
@@ -184,13 +193,13 @@ namespace YtReader.YtWebsite {
           var el = document.querySelector('{VideoErrorSel}')
           return el ? el.innerText : null
         }}");
-          
+
           subError = await page.EvaluateFunctionAsync<string>(@"() => {
   var el = document.querySelector('#info > .subreason.yt-player-error-message-renderer')
   return el ? el.innerText : null
 }");
         }
-        
+
         return (new RecsAndExtra(
           new VideoExtraStored2 {
             VideoId = videoId,
@@ -198,7 +207,7 @@ namespace YtReader.YtWebsite {
             SubError = subError
           }, recs: default), default);
       }
-      
+
       video.Error = error;
       video.SubError = subError;
 
@@ -225,7 +234,7 @@ namespace YtReader.YtWebsite {
 
     async Task<(VideoCommentStored2[] comments, string msg, long? count)> GetComments(Page page, VideoExtraStored2 video, ILogger log) {
       try {
-        await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}" );
+        await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}");
       }
       catch (WaitTaskTimeoutException) { }
 
@@ -265,12 +274,12 @@ namespace YtReader.YtWebsite {
   var el = document.querySelector('{CommentErrorSel}')
   return el ? el.innerText : null
 }}");
-      
+
       if (commentCount < 5 || msg.HasValue())
         return (default, msg, commentCount);
 
       var (url, image) = await SavePageDump(page, log);
-      log.Warning("ChromeScraper - can't find comments, or a message about no-comments. Video {Video}. Url ({Url}). Image ({Image})", 
+      log.Warning("ChromeScraper - can't find comments, or a message about no-comments. Video {Video}. Url ({Url}). Image ({Image})",
         video.VideoId, url, image);
       return (default, default, commentCount);
     }
@@ -394,9 +403,9 @@ namespace YtReader.YtWebsite {
     if(!el) return null
     return JSON.parse(document.querySelector('script.ytd-player-microformat-renderer').innerText)
 }");
-      if (detailsScript == null) 
+      if (detailsScript == null)
         return default;
-      
+
       var likeDislike = await page.EvaluateExpressionAsync<LikesDislikes>(
         @"Array.from(document.querySelectorAll('#top-level-buttons #text'))
     .map(b => b.getAttribute('aria-label'))

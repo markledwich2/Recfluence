@@ -37,13 +37,13 @@ namespace Mutuo.Etl.Pipe {
 
     Lazy<IAzure> Az { get; }
 
-    public Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) => 
-      Launch(ctx, ids, false, log, cancel);
+    public Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) =>
+      Launch(ctx, ids, returnOnRunning: false, exclusive: false, log: log, cancel: cancel);
 
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, 
-      ILogger log, CancellationToken cancel) {
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning,
+      bool exclusive, ILogger log, CancellationToken cancel) {
       var res = await ids.BlockFunc(async runId => {
         var runCfg = runId.PipeCfg(ctx.PipeCfg); // id is for the sub-pipe, ctx is for the root
 
@@ -51,7 +51,8 @@ namespace Mutuo.Etl.Pipe {
         var fullImageName = runCfg.Container.FullContainerImageName(tag);
         var pipeLog = log.ForContext("Image", fullImageName).ForContext("Pipe", runId.Name);
 
-        var containerGroup = runId.ContainerGroupName();
+        var containerGroup = runId.ContainerGroupName(exclusive, Version);
+
         var (launch, launchDur) = await Launch(runCfg.Container, containerGroup, fullImageName, ctx.AppCtx.EnvironmentVariables,
           runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog, cancel).WithDuration();
 
@@ -79,20 +80,31 @@ namespace Mutuo.Etl.Pipe {
           ctx.Store.Save(logPath, logTxt.AsStream(), pipeLog),
           md.Save(ctx.Store, pipeLog));
 
-        // delete succeeded containers. Failed, and rutned on running will be cleaned up by another process
-        if (launch.State() == ContainerState.Succeeded) await DeleteContainer(runId.ContainerGroupName(), log);
+        // delete succeeded non-exclusive containers. Failed, and rutned on running will be cleaned up by another process
+        if (launch.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0)) await DeleteContainer(containerGroup, log);
 
         return md;
-      }, ctx.PipeCfg.Azure.Parallel, cancel:cancel);
+      }, ctx.PipeCfg.Azure.Parallel);
 
       return res;
     }
 
-    public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string fullImageName, 
+    public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string fullImageName,
       (string name, string value)[] envVars, string[] args,
       bool returnOnStart = false, Func<Region> customRegion = null, ILogger log = null, CancellationToken cancel = default) {
       var sw = Stopwatch.StartNew();
-      var groupDef = await ContainerGroup(cfg, groupName, groupName, fullImageName, envVars, args, customRegion);
+      var options = new GroupOptions {
+        ContainerName = groupName,
+        Region = customRegion?.Invoke().Name ?? cfg.Region,
+        Image = fullImageName,
+        Cores = cfg.Cores,
+        Mem = cfg.Mem,
+        Env = envVars.ToDictionary(e => e.name, e => e.value),
+        Exe = cfg.Exe,
+        Args = args
+      };
+      await EnsureNotRunning(groupName, options, Az.Value, AzureCfg.ResourceGroup);
+      var groupDef = ContainerGroup(cfg, groupName, options);
       var group = await Create(groupDef, log);
       var run = await Run(group, returnOnStart, sw, log, cancel);
       return run;
@@ -109,7 +121,7 @@ namespace Mutuo.Etl.Pipe {
       return group.Result;
     }
 
-    public async Task<IContainerGroup> Run(IContainerGroup @group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {
+    public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {
       var running = false;
       var loggedWaiting = Stopwatch.StartNew();
 
@@ -142,7 +154,7 @@ namespace Mutuo.Etl.Pipe {
       return group;
     }
 
-    static async Task EnsureNotRunning(string groupName, IAzure azure, string rg) {
+    static async Task EnsureNotRunning(string groupName, GroupOptions options, IAzure azure, string rg) {
       var group = await azure.ContainerGroups.GetByResourceGroupAsync(rg, groupName);
       if (group != null) {
         if (group.State.HasValue() && group.State == "Running")
@@ -159,32 +171,35 @@ namespace Mutuo.Etl.Pipe {
       return tag;
     }
 
-    async Task<IWithCreate> ContainerGroup(ContainerCfg container, string groupName, string containerName, string fullImageName,
-      IEnumerable<(string name, string value)> envVars,
-      string[] args, Func<Region> customRegion = null
-    ) {
+    class GroupOptions {
+      public string                     Region        { get; set; }
+      public int                        Cores         { get; set; }
+      public double                     Mem           { get; set; }
+      public Dictionary<string, string> Env           { get; set; }
+      public string                     Image         { get; set; }
+      public string                     ContainerName { get; set; }
+      public string                     Exe           { get; set; }
+      public string[]                   Args          { get; set; }
+    }
+
+    IWithCreate ContainerGroup(ContainerCfg container, string groupName, GroupOptions options) {
       var rg = AzureCfg.ResourceGroup;
-      await EnsureNotRunning(groupName, Az.Value, rg);
-
       var registryCreds = container.RegistryCreds ?? throw new InvalidOperationException("no registry credentials");
-
-
       var group = Az.Value.ContainerGroups.Define(groupName)
-        .WithRegion(customRegion?.Invoke().Name ?? container.Region)
+        .WithRegion(options.Region)
         .WithExistingResourceGroup(rg)
         .WithLinux()
         .WithPrivateImageRegistry(container.Registry, registryCreds.Name, registryCreds.Secret)
         .WithoutVolume()
-        .DefineContainerInstance(containerName)
-        .WithImage(fullImageName)
+        .DefineContainerInstance(options.ContainerName)
+        .WithImage(options.Image)
         .WithoutPorts()
-        .WithCpuCoreCount(container.Cores)
-        .WithMemorySizeInGB(container.Mem)
-        .WithEnvironmentVariables(envVars.ToDictionary(e => e.name, e => e.value));
+        .WithCpuCoreCount(options.Cores)
+        .WithMemorySizeInGB(options.Mem)
+        .WithEnvironmentVariables(options.Env);
 
       if (container.Exe.HasValue())
-        group = group.WithStartingCommandLine(container.Exe, args);
-
+        group = group.WithStartingCommandLine(options.Exe, options.Args);
       var createGroup = group
         .Attach()
         .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
@@ -199,7 +214,7 @@ namespace Mutuo.Etl.Pipe {
       if (!group.State().In(ContainerState.Succeeded)) {
         var content = await group.GetLogContentAsync(containerName);
         var exitCode = group.Containers[containerName].InstanceView?.CurrentState.ExitCode;
-        Log.Warning("Container {Container} did not succeed State ({State}), ExitCode ({ErrorCode}), Logs: {Logs}", 
+        Log.Warning("Container {Container} did not succeed State ({State}), ExitCode ({ErrorCode}), Logs: {Logs}",
           group.Name, group.State, exitCode, content);
         throw new CommandException($"Container {group.Name} did not succeed ({group.State}), exit code ({exitCode}). Logs: {content}", exitCode: exitCode ?? 0);
       }

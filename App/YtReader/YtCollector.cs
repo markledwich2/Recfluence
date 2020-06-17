@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.S3.Model.Internal.MarshallTransformations;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
@@ -50,8 +49,9 @@ namespace YtReader {
     YtCollectCfg RCfg => Cfg.Collect;
 
     [Pipe]
-    public async Task Collect(ILogger log, bool forceUpdate = false, CancellationToken cancel = default) {
-      var channels = await UpdateAllChannels(log, cancel);
+    public async Task Collect(ILogger log, bool forceUpdate = false, bool disableDiscover = false, string[] limitChannels = null,
+      CancellationToken cancel = default) {
+      var channels = await UpdateAllChannels(disableDiscover, limitChannels, log, cancel);
       if (cancel.IsCancellationRequested)
         return;
       var (result, dur) = await channels
@@ -65,28 +65,29 @@ namespace YtReader {
         nameof(Collect), allChannelResults.Count(c => c.Success), allChannelResults.Length, dur.HumanizeShort());
     }
 
-    async Task<IEnumerable<ChannelStored2>> UpdateAllChannels(ILogger log, CancellationToken cancel) {
+    async Task<IEnumerable<ChannelStored2>> UpdateAllChannels(bool disableDiscover, string[] limitChannels, ILogger log, CancellationToken cancel) {
       var store = Store.Channels;
+      var limitChannelHash = limitChannels.HasItems() ? limitChannels.ToHashSet() : Cfg.LimitedToSeedChannels?.ToHashSet() ?? new HashSet<string>();
       log.Information("Starting channels update. Limited to ({Included})",
-        Cfg.LimitedToSeedChannels?.HasItems() == true ? Cfg.LimitedToSeedChannels.Join("|") : "All");
+        limitChannelHash.Any() ? limitChannelHash.Join("|") : "All");
 
-      using var db = await Sf.OpenConnection(log);
-      
       var toUpdate = (await ChannelSheets.Channels(Cfg.Sheets, log))
-        .Where(c => Cfg.LimitedToSeedChannels.IsEmpty() || Cfg.LimitedToSeedChannels.Contains(c.Id))
+        .Where(c => limitChannelHash.IsEmpty() || limitChannelHash.Contains(c.Id))
         .Select(s => (Channel: s, ReviewStatus: ChannelReviewStatus.ManualAccepted)).ToArray();
 
-      if (!RCfg.DisableDiscover) {
+      if (!disableDiscover) {
+        using var db = await Sf.OpenConnection(log);
+        //pending channels sans-extras
         var toClassify = await db.Query<(string channel_id, string channel_title)>("channels pending classification",
-          @"select distinct $1:ChannelId::string as channel_id, $1:ChannelTitle::string as channel_title
-        from @yt_data/db2/channels/ (file_format=>json)
-        where $1:ReviewStatus::string in ('Pending')
-        qualify row_number() over (partition by channel_id order by $1:Updated:timestamp_ntz desc) =1
-        limit :DiscoverChannels
-        ", param:new { RCfg.DiscoverChannels });
+          @"select distinct channel_id, channel_title
+from channel_latest c
+where review_status in ('Pending')
+  and not exists(select * from video_extra e where e.channel_id=c.channel_id)
+limit :DiscoverChannels
+        ", param: new {RCfg.DiscoverChannels});
 
-        var remaining =RCfg.DiscoverChannels - toClassify.Count;
-        if(remaining > 0)
+        var remaining = RCfg.DiscoverChannels - toClassify.Count;
+        if (remaining > 0)
           toClassify = toClassify.Concat(await db.Query<(string channel_id, string channel_title)>("channels to classify", @"with tc as (
     select to_channel_id, any_value(to_channel_title) as channel_title, count(*) as recs
     from rec
@@ -96,8 +97,8 @@ namespace YtReader {
   select to_channel_id as channel_id, channel_title from tc
   where not exists(select * from channel_latest c where c.channel_id = to_channel_id)
   order by recs desc
-  limit :remaining", param:new {remaining})).ToArray();
-        
+  limit :remaining", param: new {remaining})).ToArray();
+
         toUpdate = toUpdate.Concat(toClassify.Select(c => (new ChannelSheet {
           Id = c.channel_id, Title = c.channel_title
         }, ChannelReviewStatus.Pending))).ToArray();
@@ -220,12 +221,12 @@ namespace YtReader {
 
       // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.
       var uploadedFrom = md == null ? RCfg.From : DateTime.UtcNow - RCfg.RefreshVideosWithin;
-      var vids = await ChannelVidItems(c, uploadedFrom, discover ? RCfg.DiscoverChannelVids : (int?) null,  log).ToListAsync();
+      var vids = await ChannelVidItems(c, uploadedFrom, discover ? RCfg.DiscoverChannelVids : (int?) null, log).ToListAsync();
       await SaveVids(c, vids, Store.Videos, lastUpload, log);
 
       // which method do we use for each video??
       // use chrome when its +1 week old and +1 month old. We should get most of the comments that way (max 50 vids)
-      
+
       var discoverVids = discover ? vids.OrderBy(v => v.Statistics.ViewCount).Take(RCfg.DiscoverChannelVids).ToList() : null;
       var forChromeUpdate = (discover
           ? discoverVids.Select(v => v.Id) // when discovering channels update all using chrome
@@ -266,12 +267,11 @@ namespace YtReader {
 
     async IAsyncEnumerable<VideoItem> ChannelVidItems(ChannelStored2 c, DateTime uploadFrom, int? max, ILogger log) {
       var count = 0;
-      await foreach (var vids in Scraper.GetChannelUploadsAsync(c.ChannelId, log)) {
-        foreach (var v in vids) {
-          count++;
-          if (v.UploadDate.UtcDateTime > uploadFrom && (max == null || count <= max)) yield return v;
-          else yield break;
-        }
+      await foreach (var vids in Scraper.GetChannelUploadsAsync(c.ChannelId, log))
+      foreach (var v in vids) {
+        count++;
+        if (v.UploadDate.UtcDateTime > uploadFrom && (max == null || count <= max)) yield return v;
+        else yield break;
       }
     }
 

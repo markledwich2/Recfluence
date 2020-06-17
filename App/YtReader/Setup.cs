@@ -104,8 +104,8 @@ namespace YtReader {
       basePath ??= Environment.CurrentDirectory;
       var cfgRoot = new ConfigurationBuilder()
         .SetBasePath(basePath)
-        .AddEnvironmentVariables()
         .AddJsonFile("local.rootcfg.json", true)
+        .AddEnvironmentVariables()
         .Build().Get<RootCfg>();
 
       if (cfgRoot.AppStoreCs == null)

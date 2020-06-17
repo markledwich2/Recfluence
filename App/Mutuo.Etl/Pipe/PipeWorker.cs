@@ -25,7 +25,8 @@ namespace Mutuo.Etl.Pipe {
   public interface IPipeWorkerStartable : IPipeWorker {
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
-    Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log, CancellationToken cancel);
+    Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, bool exclusive, ILogger log,
+      CancellationToken cancel);
   }
 
   public enum ContainerState {
@@ -40,7 +41,13 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public static class PipeWorkerEx {
-    public static string ContainerGroupName(this PipeRunId runid) => $"{runid.Name}-{runid.GroupId}-{runid.Num}".ToLowerInvariant();
+    public static string ContainerGroupName(this PipeRunId runId, bool exclusive, SemVersion version) =>
+      new[] {
+        runId.Name,
+        version.Prerelease == "" ? null : version.Prerelease,
+        exclusive ? null : runId.GroupId,
+        runId.Num > 0 ? runId.Num.ToString() : null
+      }.NotNull().Join("-", p => p!.ToLowerInvariant());
 
     /// <summary>the container image name, with its registry and tag</summary>
     public static string FullContainerImageName(this ContainerCfg cfg, string tag) => $"{cfg.Registry}/{cfg.ImageName}:{tag}";
@@ -69,8 +76,10 @@ namespace Mutuo.Etl.Pipe {
       (await worker.Launch(ctx, new[] {runId}, log, cancel)).First();
 
     /// <summary>Starts some pipe work. Assumes required state has been created</summary>
-    public static async Task<PipeRunMetadata> Launch(this IPipeWorkerStartable worker, IPipeCtx ctx, PipeRunId runId, bool returnOnStarting, ILogger log, CancellationToken cancel = default) =>
-      (await worker.Launch(ctx, new[] {runId}, returnOnStarting, log, cancel)).First();
+    public static async Task<PipeRunMetadata> Launch(this IPipeWorkerStartable worker, IPipeCtx ctx, PipeRunId runId, bool returnOnStarting, bool exclusive,
+      ILogger log,
+      CancellationToken cancel = default) =>
+      (await worker.Launch(ctx, new[] {runId}, returnOnStarting, exclusive, log, cancel)).First();
   }
 
   public class LocalPipeWorker : IPipeWorker {

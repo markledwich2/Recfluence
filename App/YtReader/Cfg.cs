@@ -117,23 +117,21 @@ namespace YtReader {
 
     public bool AlwaysUseProxy { get; set; }
     public bool Headless       { get; set; } = true;
-    
-    public bool DisableDiscover { get; set; }
-    
+
     /// <summary>the number of channels to have in the pending state to be classified</summary>
     public int DiscoverChannels { get; set; } = 100;
-    
+
     /// <summary>the number of vids to populate with data when discovering new channels (i.e. preparing data to be classified)</summary>
     public int DiscoverChannelVids { get; set; } = 5;
 
     /// <summary>The maximum number of videos to refresh exta info on (per run) because they have no comments (we didn't used
     ///   to collect them)</summary>
-    public int PopulateMissingCommentsLimit { get; set; } = 8;
-    public int ParallelChannels     { get;         set; } = 2;
+    public int PopulateMissingCommentsLimit { get; set; } = 4;
+    public int ParallelChannels     { get;         set; } = 1;
     public int ChannelsPerContainer { get;         set; } = 150;
 
-    public int ChromeParallel { get; set; } = 2;
-    public int WebParallel    { get; set; } = 5;
+    public int ChromeParallel { get; set; } = 1;
+    public int WebParallel    { get; set; } = 1;
     public int ChromeAttempts { get; set; } = 3;
   }
 
