@@ -83,7 +83,7 @@ namespace YtReader {
         c => Backup());
 
       var actions = options.Actions;
-      if (actions.Any()) {
+      if (actions?.Any() == true) {
         var missing = actions.Where(a => actionMethods[a] == null).ToArray();
         if (missing.Any())
           throw new InvalidOperationException($"no such action(s) ({missing.Join("|")}), available: {actionMethods.All.Join("|", a => a.Name)}");
@@ -94,7 +94,7 @@ namespace YtReader {
 
       // TODO: tasks should have frequencies within a dependency graph. But for now, full backups only on sundays, or if explicit
       var backup = actionMethods[nameof(Backup)];
-      if (!actions.Contains(nameof(Backup)) && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
+      if (backup.Status != GraphTaskStatus.Ignored && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
         backup.Status = GraphTaskStatus.Ignored;
 
       var res = await actionMethods.Run(Cfg.Parallel, Log, cancel);
