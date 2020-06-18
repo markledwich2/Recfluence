@@ -13,8 +13,7 @@ namespace Tests {
       // get comments, does watch page html have it
       using var ctx = await TextCtx();
       var chrome = ctx.Resolve<ChromeScraper>();
-      var web = ctx.Resolve<WebScraper>();
-      var vids = new[] {"BxFHm1tXwlM", "Fay6parYkrw", "KskhAiNJGYI"};
+      var vids = new[] {"xxQOtOCbASs"}; //, "BxFHm1tXwlM", "Fay6parYkrw", "KskhAiNJGYI"};
       var chromeExtras = await chrome.GetRecsAndExtra(vids, ctx.Log, proxy: false);
     }
 

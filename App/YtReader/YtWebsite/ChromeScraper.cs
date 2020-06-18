@@ -106,7 +106,7 @@ namespace YtReader.YtWebsite {
                   }
                 }
                 else {
-                  throw new InvalidOperationException($"not OK response ({notOkResponse.Status})");
+                  throw new InvalidOperationException($"not OK response when using proxy ({notOkResponse.Status})");
                 }
               }
 
@@ -187,26 +187,24 @@ namespace YtReader.YtWebsite {
         2.Minutes(), log);*/
       var (video, error) = await VideoDetails(page, videoId);
       string subError = null;
-      if (video == null) {
-        if (error == null) {
-          error = await page.EvaluateFunctionAsync<string>(@$"() => {{
-          var el = document.querySelector('{VideoErrorSel}')
-          return el ? el.innerText : null
-        }}");
+      if (error == null) {
+        error = await page.EvaluateFunctionAsync<string>(@$"() => {{
+        var el = document.querySelector('{VideoErrorSel}')
+        return el ? el.innerText : null
+      }}");
 
-          subError = await page.EvaluateFunctionAsync<string>(@"() => {
-  var el = document.querySelector('#info > .subreason.yt-player-error-message-renderer')
-  return el ? el.innerText : null
+        subError = await page.EvaluateFunctionAsync<string>(@"() => {
+var el = document.querySelector('#info > .subreason.yt-player-error-message-renderer')
+return el ? el.innerText : null
 }");
-        }
-
-        return (new RecsAndExtra(
-          new VideoExtraStored2 {
-            VideoId = videoId,
-            Error = error,
-            SubError = subError
-          }, recs: default), default);
       }
+      
+      if(video == null)
+        return (new RecsAndExtra(new VideoExtraStored2 {
+          VideoId = videoId,
+          Error = error,
+          SubError = subError
+        }, recs: default), default);
 
       video.Error = error;
       video.SubError = subError;
@@ -219,16 +217,42 @@ namespace YtReader.YtWebsite {
     }
 
     static async Task ScrollDown(Page page, int? maxScroll, string videoId, ILogger log) {
-      var scrollHeight = 0;
+      async Task<int> ScrollHeight() => await page.EvaluateExpressionAsync<int>("document.scrollingElement.scrollHeight");
+      Task ScrollPage() => page.EvaluateExpressionAsync(@"document.scrollingElement.scroll(0, document.scrollingElement.scrollTop + window.innerHeight * 0.9)");
+      Task ScrollBottom() => page.EvaluateExpressionAsync(@"document.scrollingElement.scroll(0, document.scrollingElement.scrollHeight)");
+
       while (true) {
-        var newScrollHeight = await page.EvaluateExpressionAsync<int>("document.scrollingElement.scrollHeight");
-        if (newScrollHeight == scrollHeight || maxScroll != null && newScrollHeight > maxScroll.Value) {
-          log.Debug("scrolled down on {Video} to {ScrollHeight}px", videoId, newScrollHeight);
-          break;
+        var scrollTop = await page.EvaluateExpressionAsync<int>("document.scrollingElement.scrollTop");
+        if (scrollTop == 0) { // first time we scroll, wait for the comments section to load before continuing down
+          await ScrollPage();
+          try {
+            await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}");
+          }
+          catch (WaitTaskTimeoutException) { }
         }
-        await page.EvaluateExpressionAsync(@"document.scrollingElement.scroll(0, document.scrollingElement.scrollHeight)");
-        scrollHeight = newScrollHeight;
-        await 1.Seconds().Delay();
+        else {
+          if (maxScroll != null && scrollTop > maxScroll.Value) {
+            log.Debug("reached maxed scroll top {ScrollTop}px on {Video}", videoId, scrollTop);
+            break;
+          }
+
+          var newContentAttempt = 0;
+          var scrollHeight = await ScrollHeight();
+          var newScrollHeight = scrollHeight;
+          while (newContentAttempt < 4) {
+            newContentAttempt++;
+            await ScrollBottom();
+            newScrollHeight = await ScrollHeight();
+            if (newScrollHeight > scrollHeight)
+              break;
+            await 300.Milliseconds().Delay();
+          }
+
+          if (newScrollHeight <= scrollHeight) {
+            log.Debug("scrolled to bottom {ScrollTop}px on {Video}", videoId, newScrollHeight);
+            break;
+          }
+        }
       }
     }
 
