@@ -52,8 +52,10 @@ namespace Mutuo.Etl.Pipe {
         var pipeLog = log.ForContext("Image", fullImageName).ForContext("Pipe", runId.Name);
 
         var containerGroup = runId.ContainerGroupName(exclusive, Version);
+        var containerName = runCfg.Container.ImageName.ToLowerInvariant();
 
-        var (launch, launchDur) = await Launch(runCfg.Container, containerGroup, fullImageName, ctx.AppCtx.EnvironmentVariables,
+        var (launch, launchDur) = await Launch(runCfg.Container, containerGroup, containerName, 
+          fullImageName, ctx.AppCtx.EnvironmentVariables,
           runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog, cancel).WithDuration();
 
         var logTxt = await launch.GetLogContentAsync(containerGroup);
@@ -89,12 +91,12 @@ namespace Mutuo.Etl.Pipe {
       return res;
     }
 
-    public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string fullImageName,
+    public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string containerName, string fullImageName,
       (string name, string value)[] envVars, string[] args,
       bool returnOnStart = false, Func<Region> customRegion = null, ILogger log = null, CancellationToken cancel = default) {
       var sw = Stopwatch.StartNew();
       var options = new GroupOptions {
-        ContainerName = groupName,
+        ContainerName = containerName,
         Region = customRegion?.Invoke().Name ?? cfg.Region,
         Image = fullImageName,
         Cores = cfg.Cores,

@@ -86,7 +86,7 @@ namespace YtReader {
               var groupLog = trialLog.ForContext("ContainerGroup", groupName);
               groupLog.Debug("UserScrape - launching container");
               var (group, dur) = await Containers.Launch(
-                Cfg.Container, groupName, fullName,
+                Cfg.Container, groupName, "userscrape", fullName,
                 env,
                 args.Concat("-t", trial, "-a", b.Join("|")).ToArray(),
                 log: groupLog,
