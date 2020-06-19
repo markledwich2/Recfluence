@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Mutuo.Etl.Blob;
-using Newtonsoft.Json.Converters;
 using Semver;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
-using YtReader.Yt;
+using YtReader.YtApi;
 using YtReader.YtWebsite;
 
 namespace YtReader.Store {
@@ -94,18 +92,23 @@ namespace YtReader.Store {
   }
 
   public class ChannelStored2 : WithUpdatedItem {
-    public string              ChannelId     { get; set; }
-    public string              ChannelTitle  { get; set; }
-    public string              MainChannelId { get; set; }
-    public string              Description   { get; set; }
-    public string              LogoUrl       { get; set; }
-    public double?              Relevance     { get; set; }
-    public string              LR            { get; set; }
-    public ulong?              Subs          { get; set; }
-    public ulong?              ChannelViews  { get; set; }
-    public string              Country       { get; set; }
-    public ChannelStatus       Status        { get; set; }
-    public ChannelReviewStatus ReviewStatus  { get; set; }
+    public string                ChannelId          { get; set; }
+    public string                ChannelTitle       { get; set; }
+    public string                MainChannelId      { get; set; }
+    public string                Description        { get; set; }
+    public string                LogoUrl            { get; set; }
+    public double?               Relevance          { get; set; }
+    public string                LR                 { get; set; }
+    public ulong?                Subs               { get; set; }
+    public ulong?                ChannelViews       { get; set; }
+    public string                Country            { get; set; }
+    public string[]              FeaturedChannelIds { get; set; }
+    public string                DefaultLanguage    { get; set; }
+    public string                Keywords           { get; set; }
+    public ChannelSubscription[] Subscriptions      { get; set; }
+
+    public ChannelStatus       Status       { get; set; }
+    public ChannelReviewStatus ReviewStatus { get; set; }
 
     public IReadOnlyCollection<string>            HardTags     { get; set; }
     public IReadOnlyCollection<string>            SoftTags     { get; set; }
@@ -150,7 +153,7 @@ namespace YtReader.Store {
     }
 
     public string LowResUrl      { get; set; }
-    public string HighResUrl    { get; set; }
+    public string HighResUrl     { get; set; }
     public string MaxResUrl      { get; set; }
     public string StandardResUrl { get; set; }
   }

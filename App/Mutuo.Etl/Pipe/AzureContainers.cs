@@ -54,17 +54,17 @@ namespace Mutuo.Etl.Pipe {
         var containerGroup = runId.ContainerGroupName(exclusive, Version);
         var containerName = runCfg.Container.ImageName.ToLowerInvariant();
 
-        var (launch, launchDur) = await Launch(runCfg.Container, containerGroup, containerName, 
+        var (group, launchDur) = await Launch(runCfg.Container, containerGroup, containerName,
           fullImageName, ctx.AppCtx.EnvironmentVariables,
           runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog, cancel).WithDuration();
 
-        var logTxt = await launch.GetLogContentAsync(containerGroup);
+        var logTxt = await group.GetLogContentAsync(containerName);
         var logPath = new StringPath($"{runId.StatePath()}.log.txt");
 
-        var launchState = launch.State();
+        var launchState = group.State();
 
         var errorMsg = launchState.In(ContainerState.Failed, ContainerState.Terminated, ContainerState.Unknown)
-          ? $"The container is in an error state '{launch.State}', see {logPath}"
+          ? $"The container is in an error state '{group.State}', see {logPath}"
           : null;
         if (errorMsg.HasValue())
           pipeLog.Error("{RunId} - failed: {Log}", runId.ToString(), logTxt);
@@ -72,9 +72,9 @@ namespace Mutuo.Etl.Pipe {
         var md = new PipeRunMetadata {
           Id = runId,
           Duration = launchDur,
-          Containers = launch.Containers.Select(c => c.Value).ToArray(),
-          RawState = launch.State,
-          State = launch.State(),
+          Containers = group.Containers.Select(c => c.Value).ToArray(),
+          RawState = group.State,
+          State = group.State(),
           RunCfg = runCfg,
           ErrorMessage = errorMsg
         };
@@ -83,7 +83,7 @@ namespace Mutuo.Etl.Pipe {
           md.Save(ctx.Store, pipeLog));
 
         // delete succeeded non-exclusive containers. Failed, and rutned on running will be cleaned up by another process
-        if (launch.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0)) await DeleteContainer(containerGroup, log);
+        if (group.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0)) await DeleteContainer(containerGroup, log);
 
         return md;
       }, ctx.PipeCfg.Azure.Parallel);

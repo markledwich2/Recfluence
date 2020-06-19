@@ -22,7 +22,7 @@ namespace Tests {
 
       app.Snowflake.DbSuffix = null;
       var log = Setup.CreateTestLogger();
-      var scope = Setup.MainScope(root, app, Setup.PipeAppCtxEmptyScope(root, app), version, log);
+      var scope = Setup.MainScope(root, app, Setup.PipeAppCtxEmptyScope(root, app, version.Version), version, log);
       var db = scope.Resolve<SnowflakeConnectionProvider>();
       using var conn = await db.OpenConnection(log);
       await conn.SetSessionParams((SfParam.ClientPrefetchThreads, 2));

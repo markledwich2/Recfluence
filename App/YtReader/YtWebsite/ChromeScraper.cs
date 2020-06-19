@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Humanizer;
 using Mutuo.Etl.Blob;
-using Newtonsoft.Json.Linq;
 using PuppeteerSharp;
 using Serilog;
 using SysExtensions;
@@ -32,21 +31,20 @@ namespace YtReader.YtWebsite {
 
     public async Task Init() => await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultRevision);
 
-    static readonly ILogger ConsoleLog = new LoggerConfiguration().WriteTo.Console().CreateLogger();
-
-    async Task<Browser> CreateBrowser(bool proxy, ILogger log) {
+    async Task<Browser> CreateBrowser(ILogger log, ProxyConnectionCfg proxy) {
       var browser = await Puppeteer.LaunchAsync(new LaunchOptions {
         Headless = CollectCfg.Headless,
         DefaultViewport = new ViewPortOptions {Width = 1024, Height = 1200},
         Args = new[] {
           "--disable-dev-shm-usage", "--no-sandbox",
-          proxy ? $"--proxy-server={ProxyCfg.Url}" : null
+          proxy != null ? $"--proxy-server={proxy.Url}" : null
         }.NotNull().ToArray()
       }); // logging has so much inconsequential errors we ignore it
       return browser;
     }
 
-    public async Task<string> GetIp(bool proxy, ILogger log) {
+    /*
+    public async Task<string> GetIp(ProxyConnectionCfg proxy, ILogger log) {
       var browser = await CreateBrowser(proxy, log);
       var page = await browser.NewPageAsync();
       if (proxy)
@@ -55,75 +53,71 @@ namespace YtReader.YtWebsite {
       var j = await response.JsonAsync();
       return j["ip"]?.Value<string>();
     }
+    */
 
-    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log, bool proxy = false) {
+    int _lastUsedBrowserIdx; // re-use the same browser proxies across different calls to recs and extra
+
+    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) {
       var sw = Stopwatch.StartNew();
       log = log.ForContext("Module", nameof(ChromeScraper));
+      var proxies = ProxyCfg.DirectAndProxies().Take(2)
+        .ToArray(); // only use the first fallback (datacenter proxies). residential is too expensive for the volume of data we are loading.
+      var parallel = CollectCfg.ChromeParallel;
+      var videosPerBrowserPool = videos.Count / CollectCfg.ChromeParallel;
 
-      var browsers = CollectCfg.ChromeParallel;
-      var videosPerBrowser = videos.Count / CollectCfg.ChromeParallel + 1;
-      var res = await videos.Batch(videosPerBrowser).BlockFunc(async b => {
+      var res = await videos.Batch(videosPerBrowserPool).BlockFunc(async b => {
         var requests = new ConcurrentBag<(Request req, bool aborted)>();
-        await using var directBrowser = new AsyncLazy<Browser>(async () => await CreateBrowser(proxy: false, log));
-        await using var proxyBrowser = new AsyncLazy<Browser>(async () => await CreateBrowser(proxy: true, log));
+        var browsers = new ResourceCycle<Browser, ProxyConnectionCfg>(proxies, p => CreateBrowser(log, p), _lastUsedBrowserIdx);
 
-        async Task<Browser> Browser(bool prox) => prox ? await proxyBrowser.GetOrCreate() : await directBrowser.GetOrCreate();
-
-        async Task<Page> Page(bool prox, string v) {
-          var browser = await Browser(prox);
+        async Task<Page> Page(Browser browser, ProxyConnectionCfg proxy) {
           var page = await browser.NewPageAsync(); // create page inside retry loop. some transient errors seems to be caused by state in the page
-          if (prox)
-            await page.AuthenticateAsync(ProxyCfg.Creds.AsCreds()); // workaround for chrome not supporting password proxies
+          if (proxy.Creds != null)
+            await page.AuthenticateAsync(proxy.Creds.AsCreds()); // workaround for chrome not supporting password proxies
           await page.SetCookieAsync(); // clears cookies
-          await ConfigureRequests(log, page, v, (req, aborted) => requests.Add((req, aborted)));
+          await ConfigureRequests(page, (req, aborted) => requests.Add((req, aborted)));
           return page;
         }
 
         return await b.BlockFunc(async v => {
           //var context = await browser.CreateIncognitoBrowserContextAsync(); // opening windows is more reliable than tabs in practice
           var videoAttempt = 0;
-          var videoProxy = proxy; // try to not use proxy (its too expensive, delay and try again)
+          var videoLog = log.ForContext("Video", v);
 
           while (true) {
+            var (browser, proxy) = await browsers.Get();
             videoAttempt++;
             var lastAttempt = videoAttempt >= CollectCfg.ChromeAttempts;
-            log.Debug("loading video {Video}. Proxy={Proxy}", v, videoProxy ? ProxyCfg.Url : "Direct");
-            using var page = await Page(videoProxy, v);
+            videoLog.Debug("loading video {Video}. Proxy={Proxy}", v, proxy?.Url == null ? "Direct" : proxy.Url);
+            using var page = await Page(browser, proxy);
             try {
-              var (video, notOkResponse) = await GetVideo(page, v, log);
+              var (video, notOkResponse) = await GetVideo(page, v, videoLog);
               if (notOkResponse != null) {
-                if (notOkResponse.Status == HttpStatusCode.TooManyRequests && !proxy) {
-                  if (lastAttempt) {
-                    videoProxy = true;
-                    videoAttempt = 0;
-                    log.Information("ChromeScraper - error response ({Status}) loading {Video}:  switching to proxy", notOkResponse.Status, v);
-                  }
-                  else {
-                    var delay = 1.Minutes() + (videoAttempt ^ 2).Minutes();
-                    await delay.Delay();
-                    log.Information("ChromeScraper - error response ({Status}) loading {Video}: waiting for {Duration} to try again", notOkResponse.Status, v,
-                      delay);
-                  }
+                if (notOkResponse.Status == HttpStatusCode.TooManyRequests) {
+                  await browsers.NextResource(browser);
+                  _lastUsedBrowserIdx = browsers.Idx;
+                  videoAttempt = 0;
+                  videoLog.Information("ChromeScraper - error response ({Status}) loading {Video}: using next proxy", notOkResponse.Status, v);
                 }
                 else {
-                  throw new InvalidOperationException($"not OK response when using proxy ({notOkResponse.Status})");
+                  throw new InvalidOperationException($"Not OK response ({notOkResponse.Status})");
                 }
               }
 
               if (video == null) continue;
 
-              log.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
+              videoLog.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
                 v, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
               return video;
             }
             catch (Exception ex) {
-              log.Warning(ex, "ChromeScraper - failed to load video {Video} from {Url} (attempt {Attempt}): {Error}", v, page.Url, videoAttempt, ex.Message);
+              videoLog.Warning(ex, "ChromeScraper - failed to load video {Video} from {Url} (attempt {Attempt}): {Error}", v, page.Url, videoAttempt,
+                ex.Message);
               if (lastAttempt)
                 throw;
             }
           }
         });
-      }, browsers);
+      }, parallel);
 
       log.Information("ChromeScraper - loaded {Videos} in {Duration}", videos.Count, sw.HumanizeShort());
       return res.SelectMany().ToReadOnly();
@@ -153,7 +147,7 @@ namespace YtReader.YtWebsite {
       return false;
     }
 
-    static async Task ConfigureRequests(ILogger log, Page page, string v, Action<Request, bool> onHandled) {
+    static async Task ConfigureRequests(Page page, Action<Request, bool> onHandled) {
       await page.SetRequestInterceptionAsync(true);
       page.Request += async (sender, e) => {
         if (AbortRequest(e.Request)) {
@@ -198,8 +192,8 @@ var el = document.querySelector('#info > .subreason.yt-player-error-message-rend
 return el ? el.innerText : null
 }");
       }
-      
-      if(video == null)
+
+      if (video == null)
         return (new RecsAndExtra(new VideoExtraStored2 {
           VideoId = videoId,
           Error = error,

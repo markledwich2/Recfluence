@@ -23,7 +23,7 @@ using Troschuetz.Random;
 using YtReader;
 using YtReader.Search;
 using YtReader.Store;
-using YtReader.Yt;
+using YtReader.YtApi;
 using YtReader.YtWebsite;
 
 namespace YtCli {
@@ -31,7 +31,7 @@ namespace YtCli {
     public static async Task<int> Main(string[] args) {
       var (cfg, root, version) = await Setup.LoadCfg(rootLogger: Setup.ConsoleLogger());
       using var log = Setup.CreateLogger(root.Env, null, version, cfg);
-      using var scope = Setup.MainScope(root, cfg, Setup.PipeAppCtxEmptyScope(root, cfg), version, log);
+      using var scope = Setup.MainScope(root, cfg, Setup.PipeAppCtxEmptyScope(root, cfg, version.Version), version, log);
 
       using var cmdScope = scope.BeginLifetimeScope(c => { c.RegisterAssemblyTypes(typeof(Program).Assembly).AssignableTo<ICommand>(); });
 

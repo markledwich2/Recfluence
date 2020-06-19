@@ -13,22 +13,21 @@ using Polly;
 using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Net;
+using SysExtensions.Text;
 
-namespace YtReader.Yt {
+namespace YtReader.YtApi {
   public class YtClient {
-    public YtClient(IEnumerable<string> keys, ILogger log) {
+    public YtClient(YtApiCfg cfg, ILogger log) {
       Log = log;
       YtService = new YouTubeService();
-      AvailableKeys = new ConcurrentDictionary<string, string>(keys.Select(k => new KeyValuePair<string, string>(k, null)));
+      AvailableKeys = new ConcurrentDictionary<string, string>(cfg.Keys.Select(k => new KeyValuePair<string, string>(k, value: null)));
       Start = DateTime.UtcNow;
     }
 
     public ConcurrentDictionary<string, string> AvailableKeys { get; set; }
-
-    public DateTime Start { get; }
-
-    ILogger               Log       { get; }
-    public YouTubeService YtService { get; }
+    public DateTime                             Start         { get; }
+    ILogger                                     Log           { get; }
+    public YouTubeService                       YtService     { get; }
 
     async Task<T> GetResponse<T>(YouTubeBaseServiceRequest<T> request) {
       void SetRequestKey() {
@@ -41,8 +40,12 @@ namespace YtReader.Yt {
       return await Policy
         // handle quote limits
         .Handle<GoogleApiException>(g => {
-          if (g.HttpStatusCode != HttpStatusCode.Forbidden) return false;
-          AvailableKeys.TryRemove(request.Key, out var value);
+          var isQuotaError = g.HttpStatusCode == HttpStatusCode.Forbidden && g.Error.Errors.Any(e => e.Reason == "quotaExceeded");
+          if (!isQuotaError) {
+            Log.Debug(g, "YtApi - return error not detected as quota: {Errors}", g.Error.Errors.Join(", ", e => e.Reason));
+            return false;
+          }
+          AvailableKeys.TryRemove(request.Key, out _);
           Log.Warning(g, "Quota exceeded, no longer using key {Key}", request.Key);
           SetRequestKey();
           return true;
@@ -170,11 +173,21 @@ namespace YtReader.Yt {
     }
 
     public async Task<ChannelData> ChannelData(string id) {
-      var s = YtService.Channels.List("snippet,statistics");
-      s.Id = id;
-      var r = await GetResponse(s);
-      var c = r.Items?.FirstOrDefault();
+      var channelList = YtService.Channels.List("snippet,statistics,brandingSettings");
+      channelList.Id = id;
+      var response = await GetResponse(channelList);
+      var c = response.Items?.FirstOrDefault();
       if (c == null) return null;
+
+      var subs = YtService.Subscriptions.List("snippet");
+      subs.ChannelId = id;
+      SubscriptionListResponse subsRes = null;
+      try {
+        subsRes = await GetResponse(subs);
+      }
+      catch (Exception) {
+        Log.Debug("YtApi - getting channel {Channel} subs failed. most don't allow it so this is fine", id);
+      }
 
       var data = new ChannelData {
         Id = id,
@@ -187,9 +200,12 @@ namespace YtReader.Yt {
           SubCount = c.Statistics.SubscriberCount,
           Updated = DateTime.UtcNow
         },
-        Status = ChannelStatus.Alive
+        Status = ChannelStatus.Alive,
+        FeaturedChannelIds = c.BrandingSettings?.Channel?.FeaturedChannelsUrls?.ToArray(),
+        DefaultLanguage = c.BrandingSettings?.Channel?.DefaultLanguage,
+        Keywords = c.BrandingSettings?.Channel?.Keywords,
+        Subscriptions = subsRes?.Items?.Select(s => new ChannelSubscription {Id = s.Snippet?.ChannelId, Title = s.Snippet?.Title}).ToArray()
       };
-
       return data;
     }
 
@@ -212,15 +228,24 @@ namespace YtReader.Yt {
   }
 
   public class ChannelData {
-    public string              Id           { get; set; }
-    public string              Title        { get; set; }
-    public ChannelStatus       Status       { get; set; }
-    public string              Country      { get; set; }
-    public string              Description  { get; set; }
-    public ThumbnailDetails    Thumbnails   { get; set; }
-    public ChannelStats        Stats        { get; set; }
+    public string                Id                 { get; set; }
+    public string                Title              { get; set; }
+    public ChannelStatus         Status             { get; set; }
+    public string                Country            { get; set; }
+    public string                Description        { get; set; }
+    public ThumbnailDetails      Thumbnails         { get; set; }
+    public ChannelStats          Stats              { get; set; }
+    public string[]              FeaturedChannelIds { get; set; }
+    public string                DefaultLanguage    { get; set; }
+    public string                Keywords           { get; set; }
+    public ChannelSubscription[] Subscriptions      { get; set; }
 
     public override string ToString() => Title;
+  }
+
+  public class ChannelSubscription {
+    public string Id    { get; set; }
+    public string Title { get; set; }
   }
 
   public class ChannelStats {

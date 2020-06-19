@@ -47,15 +47,15 @@ namespace Mutuo.Etl.Blob {
     HttpClient H { get; }
 
     public async Task<Stream> Load(StringPath path, ILogger log = null) {
+      var blob = BlobRef(path);
       try {
-        var blob = BlobRef(path);
         var mem = new MemoryStream();
         await blob.DownloadToStreamAsync(mem);
         mem.Seek(0, SeekOrigin.Begin);
         return mem;
       }
       catch (Exception ex) {
-        throw new InvalidOperationException($"Unable to load blob {path}", ex);
+        throw new InvalidOperationException($"Unable to load blob {blob.Uri}", ex);
       }
     }
 

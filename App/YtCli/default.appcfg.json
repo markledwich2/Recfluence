@@ -18,9 +18,6 @@
       "12OUpAzlrUPxWi0TJNQYVwu5FB5Q0ughLLPgakGWEGf8"
     ]
   },
-  "proxy": {
-    "url": "us.smartproxy.com:10000"
-  },
   "pipe": {
     "azure": {
       "subscriptionId": "93ef8661-3e11-4fcc-92ae-d0383e7e4ad3",

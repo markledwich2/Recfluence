@@ -47,7 +47,7 @@ namespace YtFunctions {
       var cfgDir = Setup.SolutionDir == null ? exec.FunctionAppDirectory : Setup.SolutionDir.Combine("YtCli").FullPath;
       var (app, root, version) = await Setup.LoadCfg(cfgDir);
       var log = Logger(root, app, version.Version);
-      var appCtx = Setup.PipeAppCtxEmptyScope(root, app);
+      var appCtx = Setup.PipeAppCtxEmptyScope(root, app, version.Version);
       var scope = Setup.MainScope(root, app, appCtx, version, log);
       return new FuncCtx(scope.Resolve<ILogger>(), appCtx, root, app, scope);
     }

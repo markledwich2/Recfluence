@@ -76,7 +76,7 @@ namespace YtReader.Store {
       var dateRangeParams = new {from = "2019-11-01", to = now.ToString("yyyy-MM-01")};
 
       const string pendingChannelsSelect = "select * from channel_latest where review_status='Pending'";
-      
+
       var queries = new[] {
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip: true),
@@ -109,7 +109,7 @@ from pending p
        inner join video_comments c on p.channel_id=c.channel_id
 order by channel_id, video_id, created",
             fileType: ResFilType.Json),
-          
+
           new ResQuery("class_captions", $@"with pending as ({pendingChannelsSelect})
 select c.channel_id, video_id, caption_group, offset_seconds, caption
 from pending p

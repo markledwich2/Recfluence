@@ -3,7 +3,9 @@ using System.Threading.Tasks;
 using Autofac;
 using NUnit.Framework;
 using Serilog;
+using SysExtensions.Threading;
 using YtReader;
+using YtReader.YtApi;
 using YtReader.YtWebsite;
 
 namespace Tests {
@@ -13,22 +15,30 @@ namespace Tests {
       // get comments, does watch page html have it
       using var ctx = await TextCtx();
       var chrome = ctx.Resolve<ChromeScraper>();
-      var vids = new[] {"xxQOtOCbASs"}; //, "BxFHm1tXwlM", "Fay6parYkrw", "KskhAiNJGYI"};
-      var chromeExtras = await chrome.GetRecsAndExtra(vids, ctx.Log, proxy: false);
+      var vids = new[] {"n_vzBGB3F_Y", "xxQOtOCbASs" /* (tall video) */, "DLq1DUcMh1Q", "n_vzBGB3F_Y", "xxQOtOCbASs"};
+      var chromeExtras = await chrome.GetRecsAndExtra(vids, ctx.Log);
     }
 
     [Test]
     public static async Task WebRecsAndExtra() {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<WebScraper>();
-      var extra = await ws.GetRecsAndExtra("DLq1DUcMh1Q", ctx.Log);
+      var extra = await ws.GetRecsAndExtra(new[] {"n_vzBGB3F_Y", "xxQOtOCbASs" /* (tall video) */, "DLq1DUcMh1Q", "n_vzBGB3F_Y", "xxQOtOCbASs"}, ctx.Log);
+    }
+
+    [Test]
+    public static async Task ChannelData() {
+      using var ctx = await TextCtx();
+      var api = ctx.Resolve<YtClient>();
+      var data = await new[] {"UCMDxbhGcsE7EnknxPEzC_Iw", "UCHEf6T_gVq4tlW5i91ESiWg", "UCYeF244yNGuFefuFKqxIAXw"}
+        .BlockFunc(c => api.ChannelData(c));
     }
 
     static async Task<TestCtx> TextCtx() {
       var (cfg, rootCfg, version ) = await Setup.LoadCfg(basePath: Setup.SolutionDir.Combine("YtCli").FullPath);
-      using var log = Setup.CreateTestLogger();
-      log.Debug("Starting {TestName}", nameof(TestContext.Test.Name));
-      var appCtx = Setup.PipeAppCtxEmptyScope(rootCfg, cfg);
+      var log = Setup.CreateTestLogger();
+      log.Information("Starting {TestName}", TestContext.CurrentContext.Test.Name);
+      var appCtx = Setup.PipeAppCtxEmptyScope(rootCfg, cfg, version.Version);
       return new TestCtx {Scope = Setup.MainScope(rootCfg, cfg, appCtx, version, log), Log = log, App = cfg, Root = rootCfg};
     }
   }

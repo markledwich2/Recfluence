@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using Humanizer;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
+using SysExtensions.Collections;
 using SysExtensions.Configuration;
 using SysExtensions.Security;
+using SysExtensions.Text;
 using YtReader.Db;
 
 namespace YtReader {
@@ -34,27 +37,31 @@ namespace YtReader {
   }
 
   public class AppCfg {
-    public            string              AppInsightsKey        { get; set; }
-    public            int                 DefaultParallel       { get; set; } = 8;
-    [Required] public BranchEnvCfg        Env                   { get; set; } = new BranchEnvCfg();
-    [Required] public YtCollectCfg        Collect               { get; set; } = new YtCollectCfg();
-    [Required] public StorageCfg          Storage               { get; set; } = new StorageCfg();
-    [Required] public ICollection<string> YTApiKeys             { get; set; } = new List<string>();
-    [Required] public HashSet<string>     LimitedToSeedChannels { get; set; } = new HashSet<string>();
-    [Required] public SeqCfg              Seq                   { get; set; } = new SeqCfg();
-    [Required] public SheetsCfg           Sheets                { get; set; } = new SheetsCfg();
-    [Required] public ProxyCfg            Proxy                 { get; set; } = new ProxyCfg();
-    [Required] public SnowflakeCfg        Snowflake             { get; set; } = new SnowflakeCfg();
-    [Required] public WarehouseCfg        Warehouse             { get; set; } = new WarehouseCfg();
-    [Required] public SqlServerCfg        AppDb                 { get; set; } = new SqlServerCfg();
-    [Required] public ResultsCfg          Results               { get; set; } = new ResultsCfg();
-    [Required] public PipeAppCfg          Pipe                  { get; set; } = new PipeAppCfg();
-    [Required] public DataformCfg         Dataform              { get; set; } = new DataformCfg();
-    [Required] public ElasticCfg          Elastic               { get; set; }
-    [Required] public SyncDbCfg           SyncDb                { get; set; } = new SyncDbCfg();
-    [Required] public AzureCleanerCfg     Cleaner               { get; set; } = new AzureCleanerCfg();
-    [Required] public YtUpdaterCfg        Updater               { get; set; } = new YtUpdaterCfg();
-    [Required] public UserScrapeCfg       UserScrape            { get; set; } = new UserScrapeCfg();
+    public            string          AppInsightsKey        { get; set; }
+    public            int             DefaultParallel       { get; set; } = 8;
+    [Required] public BranchEnvCfg    Env                   { get; set; } = new BranchEnvCfg();
+    [Required] public YtCollectCfg    Collect               { get; set; } = new YtCollectCfg();
+    [Required] public StorageCfg      Storage               { get; set; } = new StorageCfg();
+    [Required] public YtApiCfg        YtApi                 { get; set; } = new YtApiCfg();
+    [Required] public HashSet<string> LimitedToSeedChannels { get; set; } = new HashSet<string>();
+    [Required] public SeqCfg          Seq                   { get; set; } = new SeqCfg();
+    [Required] public SheetsCfg       Sheets                { get; set; } = new SheetsCfg();
+    [Required] public ProxyCfg        Proxy                 { get; set; } = new ProxyCfg();
+    [Required] public SnowflakeCfg    Snowflake             { get; set; } = new SnowflakeCfg();
+    [Required] public WarehouseCfg    Warehouse             { get; set; } = new WarehouseCfg();
+    [Required] public SqlServerCfg    AppDb                 { get; set; } = new SqlServerCfg();
+    [Required] public ResultsCfg      Results               { get; set; } = new ResultsCfg();
+    [Required] public PipeAppCfg      Pipe                  { get; set; } = new PipeAppCfg();
+    [Required] public DataformCfg     Dataform              { get; set; } = new DataformCfg();
+    [Required] public ElasticCfg      Elastic               { get; set; }
+    [Required] public SyncDbCfg       SyncDb                { get; set; } = new SyncDbCfg();
+    [Required] public AzureCleanerCfg Cleaner               { get; set; } = new AzureCleanerCfg();
+    [Required] public YtUpdaterCfg    Updater               { get; set; } = new YtUpdaterCfg();
+    [Required] public UserScrapeCfg   UserScrape            { get; set; } = new UserScrapeCfg();
+  }
+
+  public class YtApiCfg {
+    [Required] public ICollection<string> Keys { get; set; } = new List<string>();
   }
 
   public class ElasticCfg {
@@ -80,11 +87,21 @@ namespace YtReader {
   }
 
   public class ProxyCfg {
-    [Required] public string     Url            { get; set; }
-    [Required] public NameSecret Creds          { get; set; }
-    public            int        TimeoutSeconds { get; set; } = 40;
-    public            int        Retry          { get; set; } = 10;
-    public            bool       AlwaysUseProxy { get; set; }
+    [Required] public ProxyConnectionCfg[] Proxies        { get; set; } = { };
+    public            int                  TimeoutSeconds { get; set; } = 40;
+    public            int                  Retry          { get; set; } = 10;
+    public            bool                 AlwaysUseProxy { get; set; }
+  }
+
+  public static class ProxyCfgEx {
+    public static ProxyConnectionCfg[] DirectAndProxies(this ProxyCfg cfg) => new[] {new ProxyConnectionCfg()}.Concat(cfg.Proxies).ToArray();
+  }
+
+  public class ProxyConnectionCfg {
+    [Required] public string     Url   { get; set; }
+    [Required] public NameSecret Creds { get; set; }
+
+    public bool IsDirect() => Url.NullOrEmpty();
   }
 
   public class SheetsCfg {
@@ -122,16 +139,16 @@ namespace YtReader {
     public int DiscoverChannels { get; set; } = 25;
 
     /// <summary>the number of vids to populate with data when discovering new channels (i.e. preparing data to be classified)</summary>
-    public int DiscoverChannelVids { get; set; } = 8;
+    public int DiscoverChannelVids { get; set; } = 5;
 
     /// <summary>The maximum number of videos to refresh exta info on (per run) because they have no comments (we didn't used
     ///   to collect them)</summary>
-    public int PopulateMissingCommentsLimit { get; set; } = 4;
-    public int ParallelChannels     { get;         set; } = 1;
+    public int PopulateMissingCommentsLimit { get; set; } = 2;
+    public int ParallelChannels     { get;         set; } = 2;
     public int ChannelsPerContainer { get;         set; } = 150;
 
-    public int ChromeParallel { get; set; } = 1;
-    public int WebParallel    { get; set; } = 1;
+    public int ChromeParallel { get; set; } = 2;
+    public int WebParallel    { get; set; } = 8;
     public int ChromeAttempts { get; set; } = 3;
   }
 

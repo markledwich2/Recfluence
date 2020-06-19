@@ -15,7 +15,7 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 using YtReader.Store;
-using YtReader.Yt;
+using YtReader.YtApi;
 using YtReader.YtWebsite;
 using static Mutuo.Etl.Pipe.PipeArg;
 using VideoItem = YtReader.YtWebsite.VideoItem;
@@ -36,14 +36,14 @@ namespace YtReader {
     readonly YtStore                     Store;
 
     public YtCollector(YtStore store, AppCfg cfg, SnowflakeConnectionProvider sf, IPipeCtx pipeCtx, WebScraper webScraper, ChromeScraper chromeScraper,
-      ILogger log) {
+      YtClient api) {
       Store = store;
       Cfg = cfg;
       Sf = sf;
       PipeCtx = pipeCtx;
       Scraper = webScraper;
       ChromeScraper = chromeScraper;
-      Api = new YtClient(cfg.YTApiKeys, log);
+      Api = api;
     }
 
     YtCollectCfg RCfg => Cfg.Collect;
@@ -147,7 +147,11 @@ limit :DiscoverChannels
           HardTags = channel.HardTags,
           SoftTags = channel.SoftTags,
           UserChannels = channel.UserChannels,
-          ReviewStatus = reviewStatus
+          ReviewStatus = reviewStatus,
+          FeaturedChannelIds = channelData.FeaturedChannelIds,
+          Keywords = channelData.Keywords,
+          Subscriptions = channelData.Subscriptions,
+          DefaultLanguage = channelData.DefaultLanguage
         };
         return channelStored;
       }
@@ -184,14 +188,12 @@ limit :DiscoverChannels
 
       var res = new ProcessChannelResults {
         Channels = channelResults.Select(r => new ProcessChannelResult {ChannelId = r.c.ChannelId, Success = r.Success}).ToArray(),
-        Duration = workSw.Elapsed,
-        RequestStats = Scraper.RequestStats
+        Duration = workSw.Elapsed
       };
 
       log.Information(
         "{Pipe} complete - {ChannelsComplete} channel videos/captions/recs, {ChannelsFailed} failed in {Duration}, {DirectRequests} direct requests, {ProxyRequests} proxy requests",
-        nameof(ProcessChannels), channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), res.Duration, res.RequestStats.direct,
-        res.RequestStats.proxy);
+        nameof(ProcessChannels), channelResults.Count(c => c.Success), channelResults.Count(c => !c.Success), res.Duration);
 
       return res;
     }
@@ -356,17 +358,17 @@ limit :DiscoverChannels
       var db = await conn.GetOrCreate();
       var ids = await db.Query<string>("videos sans-comments",
         @"with chrome_extra_latest as (
-  // to use table once we have these new fields loaded
-  select v:Id as video_id
-       , v:Updated::timestamp_ntz updated
-       , v:ChannelId::string channel_id
-       , v:Error::string as error
-       , v:Source::string as source
+  select video_id
+       , updated
+       , channel_id
+       , error
+       , source
+       , views
        , row_number() over (partition by video_id order by updated desc) as age_no
        , count(1) over (partition by video_id) as extras
-  from video_extra_stage v
+  from video_extra v
   where channel_id = :channel_id
-        and v:Source::string = 'Chrome'
+        and source = 'Chrome'
     qualify age_no = 1
 )
    , videos_to_update as (
@@ -375,6 +377,7 @@ limit :DiscoverChannels
        , v.upload_date
        , e.extras
        , e.source
+       , e.views
        , datediff(d, e.updated, convert_timezone('UTC', current_timestamp())) as extra_ago
   from video_latest v
          left join chrome_extra_latest e on e.video_id = v.video_id
@@ -385,7 +388,7 @@ limit :DiscoverChannels
 )
 select video_id
 from videos_to_update
-order by random()
+order by views desc
 limit :limit",
         param: new {channel_id = c.ChannelId, limit = RCfg.PopulateMissingCommentsLimit});
       log.Information("{Channel} - found {Videos} in need of chrome update", c.ChannelTitle, ids.Count);
@@ -417,9 +420,8 @@ limit :limit",
     }
 
     public class ProcessChannelResults {
-      public ProcessChannelResult[]    Channels     { get; set; }
-      public TimeSpan                  Duration     { get; set; }
-      public (long direct, long proxy) RequestStats { get; set; }
+      public ProcessChannelResult[] Channels { get; set; }
+      public TimeSpan               Duration { get; set; }
     }
   }
 }
