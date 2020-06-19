@@ -61,11 +61,13 @@ namespace YtReader.Store {
     readonly SnowflakeConnectionProvider Sf;
     readonly ResultsCfg                  ResCfg;
     readonly ISimpleFileStore            Store;
+    readonly UserScrapeCfg UserScrapeCfg;
 
-    public YtResults(SnowflakeConnectionProvider sf, ResultsCfg resCfg, ISimpleFileStore store) {
+    public YtResults(SnowflakeConnectionProvider sf, ResultsCfg resCfg, ISimpleFileStore store, UserScrapeCfg userScrapeCfg) {
       Sf = sf;
       ResCfg = resCfg;
       Store = store;
+      UserScrapeCfg = userScrapeCfg;
     }
 
     public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null) {
@@ -91,8 +93,8 @@ namespace YtReader.Store {
             desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip: true),
 
           // userscrape data
-          new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_ideology = 50}),
-          new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos_per_ideology = 5}),
+          new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_ideology = UserScrapeCfg.SeedsPerIdeology}),
+          new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos_per_ideology = UserScrapeCfg.TestsPerIdeology}),
 
           // classifier data 
 

@@ -26,6 +26,8 @@ namespace YtReader {
     };
 
     public int MaxContainers { get; set; } = 10;
+    public int SeedsPerIdeology { get; set; } = 50;
+    public int TestsPerIdeology { get; set; } = 5;
   }
 
   public class UserScrape {
