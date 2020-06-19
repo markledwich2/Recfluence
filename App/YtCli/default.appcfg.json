@@ -40,7 +40,7 @@
       {
         "pipeName": "Update",
         "container": {
-          "mem": 4,
+          "mem": 6,
           "cores": 1
         }
       },

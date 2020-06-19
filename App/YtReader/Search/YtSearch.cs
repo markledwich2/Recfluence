@@ -128,7 +128,7 @@ namespace YtReader.Search {
 
     async Task BatchToEs<T>(ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy, CancellationToken cancel) where T : class =>
       await enumerable
-        .Batch(5_000).WithIndex()
+        .Batch(3_000).WithIndex()
         .BlockFunc(b => BatchToEs(b.item, b.index, esPolicy, log),
           parallel: 2, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
           capacity: 2, 
