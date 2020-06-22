@@ -112,7 +112,7 @@ namespace YtReader {
   }
 
   public class YtCollectCfg {
-    public DateTime  From { get; set; }
+    public DateTime  From { get; set; } = new DateTime(2019, 1, 1);
     public DateTime? To   { get; set; }
 
     /// <summary>How old a video before we stop collecting video stats. This is cheap, due to video stats being returned in a
@@ -145,7 +145,7 @@ namespace YtReader {
     ///   to collect them)</summary>
     public int PopulateMissingCommentsLimit { get; set; } = 2;
     public int ParallelChannels     { get;         set; } = 2;
-    public int ChannelsPerContainer { get;         set; } = 150;
+    public int ChannelsPerContainer { get;         set; } = 80;
 
     public int ChromeParallel { get; set; } = 2;
     public int WebParallel    { get; set; } = 8;
