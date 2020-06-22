@@ -28,7 +28,7 @@
                 "--env-file",
                 ".env",
                 "ytnetworks.azurecr.io/dataform:latest",
-                "bin/bash"
+                "bin/sh"
             ],
             "problemMatcher": []
         },
