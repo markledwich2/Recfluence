@@ -71,13 +71,15 @@ namespace YtReader {
       return log;
     }
 
-    public static LoggerConfiguration YtEnrich(this LoggerConfiguration logCfg, string env, string app, SemVersion version) =>
-      logCfg.Enrich.With(
+    public static LoggerConfiguration YtEnrich(this LoggerConfiguration logCfg, string env, string app, SemVersion version) {
+      var container = AzureContainers.GetContainerEnv();
+      return logCfg.Enrich.With(
         new PropertyEnricher("App", app),
         new PropertyEnricher("Env", env),
-        new PropertyEnricher("Machine", Environment.MachineName),
+        new PropertyEnricher("Machine", container ?? Environment.MachineName),
         new PropertyEnricher("Version", version)
       );
+    }
 
     static LoggerConfiguration ConfigureSeq(this LoggerConfiguration loggerCfg, AppCfg cfg) {
       var seqCfg = cfg?.Seq;

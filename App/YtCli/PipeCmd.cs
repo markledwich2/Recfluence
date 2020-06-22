@@ -25,13 +25,17 @@ namespace YtCli {
       if (!pipeMethods.ContainsKey(runId.Name))
         throw new CommandException($"Pipe {runId.Name} not found. Available: {pipeMethods.Join(", ", m => m.Method.Name)}");
 
-      Log.Information("Pipe Run Command Started {RunId}", RunId);
-      if (runId.HasGroup)
+      var log = Log.ForContext("RunId", runId);
+      log.Information("Pipe Run Command Started {RunId}", RunId);
+      if (runId.HasGroup) {
         await PipeCtx.DoPipeWork(runId, console.GetCancellationToken());
-
-      var res = await PipeCtx.Run(runId.Name, new PipeRunOptions {Location = Location ?? PipeRunLocation.Local}, log: Log);
-      if (res.Error)
-        throw new CommandException(res.ErrorMessage);
+      }
+      else {
+        var res = await PipeCtx.Run(runId.Name, new PipeRunOptions {Location = Location ?? PipeRunLocation.Local}, log: log,
+          cancel: console.GetCancellationToken());
+        if (res.Error)
+          throw new CommandException(res.ErrorMessage);
+      }
     }
   }
 }

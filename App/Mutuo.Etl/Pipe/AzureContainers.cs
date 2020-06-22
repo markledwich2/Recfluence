@@ -32,6 +32,10 @@ namespace Mutuo.Etl.Pipe {
       RegistryClient = registryClient;
       Az = new Lazy<IAzure>(azureCfg.GetAzure);
     }
+    
+    public static readonly string ContainerNameEnv  = $"{nameof(AzureContainers)}_Container";
+    public static string GetContainerEnv() => Environment.GetEnvironmentVariable(ContainerNameEnv);
+    public static ILogger Enrich(ILogger log) => log.ForContext("Container", GetContainerEnv());
 
     public PipeAzureCfg AzureCfg { get; }
 
@@ -101,7 +105,7 @@ namespace Mutuo.Etl.Pipe {
         Image = fullImageName,
         Cores = cfg.Cores,
         Mem = cfg.Mem,
-        Env = envVars.ToDictionary(e => e.name, e => e.value),
+        Env = envVars.Concat((name:ContainerNameEnv, value:groupName)).ToDictionary(e => e.name, e => e.value),
         Exe = cfg.Exe,
         Args = args
       };

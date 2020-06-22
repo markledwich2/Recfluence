@@ -59,8 +59,8 @@ namespace Mutuo.Etl.Pipe {
 
     /// <summary>Launches a root pipe</summary>
     public static async Task<PipeRunMetadata> Run(this IPipeCtx ctx, string pipeName, PipeRunOptions options = null,
-      (string Name, object Value)[] args = null, ILogger log = null) =>
-      (await RunRootPipe<object>(ctx, pipeName, SerializableArgs(args ?? new (string Name, object Value)[] { }), options, log)).Metadata;
+      (string Name, object Value)[] args = null, ILogger log = null, CancellationToken cancel = default) =>
+      (await RunRootPipe<object>(ctx, pipeName, SerializableArgs(args ?? new (string Name, object Value)[] { }), options, log, cancel)).Metadata;
 
     /// <summary>Launches a child pipe that works on a list of items</summary>
     /// <param name="expression">a call to a pipe method. The arguments will be resolved and serialized</param>
@@ -81,6 +81,7 @@ namespace Mutuo.Etl.Pipe {
       PipeRunOptions options = null, ILogger log = null, CancellationToken cancel = default) {
       options ??= new PipeRunOptions();
       log ??= Logger.None;
+      
       var runId = PipeRunId.FromName(pipeName);
       await ctx.SaveInArg(args, runId, log);
       var pipeWorker = PipeWorker(ctx, options.Location);
