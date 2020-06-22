@@ -21,9 +21,9 @@ using IMSLogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace YtFunctions {
   public class ApiBackend {
-    readonly AsyncLazy<FuncCtx, ExecutionContext> Ctx;
+    readonly Defer<FuncCtx, ExecutionContext> Ctx;
 
-    public ApiBackend(AsyncLazy<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
+    public ApiBackend(Defer<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
 
     [FunctionName(nameof(DeleteExpiredResources_Timer))]
     public Task DeleteExpiredResources_Timer([TimerTrigger("0 0 * * * *")] TimerInfo myTimer, ExecutionContext exec) =>

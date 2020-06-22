@@ -183,11 +183,11 @@
     "ProxyCfg": {
       "type": "object",
       "properties": {
-        "url": {
-          "type": "string"
-        },
-        "creds": {
-          "type": "string"
+        "proxies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProxyConnectionCfg"
+          }
         },
         "timeoutSeconds": {
           "type": "integer"
@@ -197,6 +197,17 @@
         },
         "alwaysUseProxy": {
           "type": "boolean"
+        }
+      }
+    },
+    "ProxyConnectionCfg": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "creds": {
+          "type": "string"
         }
       }
     },
@@ -420,6 +431,12 @@
         },
         "maxContainers": {
           "type": "integer"
+        },
+        "seedsPerIdeology": {
+          "type": "integer"
+        },
+        "testsPerIdeology": {
+          "type": "integer"
         }
       }
     },
@@ -443,6 +460,17 @@
         },
         "metadataParallel": {
           "type": "integer"
+        }
+      }
+    },
+    "YtApiCfg": {
+      "type": "object",
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -477,6 +505,12 @@
         },
         "headless": {
           "type": "boolean"
+        },
+        "discoverChannels": {
+          "type": "integer"
+        },
+        "discoverChannelVids": {
+          "type": "integer"
         },
         "populateMissingCommentsLimit": {
           "type": "integer"
@@ -524,23 +558,14 @@
     "storage": {
       "$ref": "#/definitions/StorageCfg"
     },
-    "ytApiKeys": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+    "ytApi": {
+      "$ref": "#/definitions/YtApiCfg"
     },
     "limitedToSeedChannels": {
       "type": "array",
       "items": {
         "type": "string"
       }
-    },
-    "disableDiscover": {
-      "type": "boolean"
-    },
-    "discoverChannelVids": {
-      "type": "integer"
     },
     "seq": {
       "$ref": "#/definitions/SeqCfg"

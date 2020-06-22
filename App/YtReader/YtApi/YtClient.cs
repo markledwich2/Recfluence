@@ -172,21 +172,23 @@ namespace YtReader.YtApi {
       return vids;
     }
 
-    public async Task<ChannelData> ChannelData(string id) {
-      var channelList = YtService.Channels.List("snippet,statistics,brandingSettings");
+    public async Task<ChannelData> ChannelData(string id, bool full = false) {
+      var channelList = YtService.Channels.List(new[] {"snippet", "statistics"}.Concat(full ? "brandingSettings" : null).NotNull().Join(","));
       channelList.Id = id;
       var response = await GetResponse(channelList);
       var c = response.Items?.FirstOrDefault();
       if (c == null) return null;
 
-      var subs = YtService.Subscriptions.List("snippet");
-      subs.ChannelId = id;
-      SubscriptionListResponse subsRes = null;
-      try {
-        subsRes = await GetResponse(subs);
-      }
-      catch (Exception) {
-        Log.Debug("YtApi - getting channel {Channel} subs failed. most don't allow it so this is fine", id);
+      SubscriptionListResponse subRes = null;
+      if (full) {
+        var subs = YtService.Subscriptions.List("snippet");
+        subs.ChannelId = id;
+        try {
+          subRes = await GetResponse(subs);
+        }
+        catch (Exception) {
+          Log.Debug("YtApi - getting channel {Channel} subs failed. most don't allow it so this is fine", id);
+        }
       }
 
       var data = new ChannelData {
@@ -200,11 +202,10 @@ namespace YtReader.YtApi {
           SubCount = c.Statistics.SubscriberCount,
           Updated = DateTime.UtcNow
         },
-        Status = ChannelStatus.Alive,
         FeaturedChannelIds = c.BrandingSettings?.Channel?.FeaturedChannelsUrls?.ToArray(),
         DefaultLanguage = c.BrandingSettings?.Channel?.DefaultLanguage,
         Keywords = c.BrandingSettings?.Channel?.Keywords,
-        Subscriptions = subsRes?.Items?.Select(s => new ChannelSubscription {Id = s.Snippet?.ChannelId, Title = s.Snippet?.Title}).ToArray()
+        Subscriptions = subRes?.Items?.Select(s => new ChannelSubscription {Id = s.Snippet?.ChannelId, Title = s.Snippet?.Title}).ToArray()
       };
       return data;
     }
@@ -212,25 +213,9 @@ namespace YtReader.YtApi {
     #endregion
   }
 
-  public enum ChannelStatus {
-    None,
-    Alive,
-    Dead
-  }
-
-  public enum ChannelReviewStatus {
-    None,
-    Pending,
-    ManualAccepted,
-    ManualRejected,
-    AlgoAccepted,
-    AlgoRejected
-  }
-
   public class ChannelData {
     public string                Id                 { get; set; }
     public string                Title              { get; set; }
-    public ChannelStatus         Status             { get; set; }
     public string                Country            { get; set; }
     public string                Description        { get; set; }
     public ThumbnailDetails      Thumbnails         { get; set; }

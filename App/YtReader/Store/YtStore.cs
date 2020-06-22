@@ -91,6 +91,25 @@ namespace YtReader.Store {
       new JsonlStore<T>(Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);
   }
 
+  public enum ChannelStatus {
+    None,
+    Alive,
+    Dead
+  }
+
+  public enum ChannelReviewStatus {
+    None,
+    Pending,
+    ManualAccepted,
+    ManualRejected,
+    AlgoAccepted,
+    AlgoRejected
+  }
+
+  public static class ChannelReviewStatusEx {
+    public static bool Accepted(this ChannelReviewStatus s) => s.In(ChannelReviewStatus.ManualAccepted, ChannelReviewStatus.AlgoAccepted);
+  }
+
   public class ChannelStored2 : WithUpdatedItem {
     public string                ChannelId          { get; set; }
     public string                ChannelTitle       { get; set; }
@@ -114,7 +133,8 @@ namespace YtReader.Store {
     public IReadOnlyCollection<string>            SoftTags     { get; set; }
     public IReadOnlyCollection<UserChannelStore2> UserChannels { get; set; }
 
-    public string StatusMessage { get; set; }
+    public string   StatusMessage  { get; set; }
+    public DateTime LastFullUpdate { get; set; }
     public override string ToString() => $"{ChannelTitle}";
   }
 

@@ -108,7 +108,7 @@ namespace YtCli {
       }
       if (ChannelId.HasValue()) {
         var c = await YtClient.ChannelData(ChannelId);
-        Log.Information("{ChannelTitle},{Status}", c.Title, c.Status);
+        Log.Information("{ChannelTitle}", c.Title);
       }
 
       if (VideoId.NullOrEmpty() && ChannelId.NullOrEmpty())

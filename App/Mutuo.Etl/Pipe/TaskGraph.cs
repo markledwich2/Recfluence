@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -9,11 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Humanizer;
+using Nito.AsyncEx;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
-using SysExtensions.Threading;
 using static Mutuo.Etl.Pipe.GraphTaskStatus;
 
 namespace Mutuo.Etl.Pipe {
@@ -24,10 +23,10 @@ namespace Mutuo.Etl.Pipe {
       DependsOn = dependsOn;
     }
 
-    public Func<CancellationToken, Task>      Run       { get; set; }
-    public string          Name      { get; set; }
-    public string[]        DependsOn { get; set; }
-    public GraphTaskStatus Status    { get; set; }
+    public Func<CancellationToken, Task> Run       { get; set; }
+    public string                        Name      { get; set; }
+    public string[]                      DependsOn { get; set; }
+    public GraphTaskStatus               Status    { get; set; }
   }
 
   public enum GraphTaskStatus {
@@ -148,24 +147,23 @@ namespace Mutuo.Etl.Pipe {
 
       var block = new TransformBlock<GraphTask, GraphTaskResult>(RunTask,
         new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel});
-      var newTaskSignal = new AsyncManualResetEvent();
+      var newTaskSignal = new AsyncManualResetEvent(true);
 
       async Task Producer() {
         while (!tasks.AllComplete) {
-          if (cancel.IsCancellationRequested) {
-            foreach (var t in tasks.All.Where(t => t.Status.IsIncomplete())) {
+          if (cancel.IsCancellationRequested)
+            foreach (var t in tasks.All.Where(t => t.Status.IsIncomplete()))
               t.Status = Cancelled;
-            }
-          }
-          
+
           var tasksToAdd = tasks.AvailableToRun().ToList();
           if (tasksToAdd.IsEmpty()) {
             // if no tasks are ready to start. Wait to either be signaled, or log which tasks are still running
             var logTimeTask = Task.Delay(1.Minutes(), cancel);
-            if (logTimeTask == await Task.WhenAny(logTimeTask, newTaskSignal.WaitAsync())) {
+            await Task.WhenAny(logTimeTask, newTaskSignal.WaitAsync());
+            if (newTaskSignal.IsSet)
               newTaskSignal.Reset();
+            if (logTimeTask.IsCompleted)
               log.Debug("Waiting for {TaskList} to complete", tasks.Running.Select(t => t.Name));
-            }
           }
 
           foreach (var task in tasksToAdd) {

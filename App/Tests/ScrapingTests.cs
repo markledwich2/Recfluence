@@ -15,7 +15,7 @@ namespace Tests {
       // get comments, does watch page html have it
       using var ctx = await TextCtx();
       var chrome = ctx.Resolve<ChromeScraper>();
-      var vids = new[] {"n_vzBGB3F_Y", "xxQOtOCbASs" /* (tall video) */, "DLq1DUcMh1Q", "n_vzBGB3F_Y", "xxQOtOCbASs"};
+      var vids = new[] {"0pn2bwa2zZc", /*"n_vzBGB3F_Y", "xxQOtOCbASs" /* (tall video) #1#, "DLq1DUcMh1Q", "n_vzBGB3F_Y", "xxQOtOCbASs"*/};
       var chromeExtras = await chrome.GetRecsAndExtra(vids, ctx.Log);
     }
 
@@ -31,7 +31,7 @@ namespace Tests {
       using var ctx = await TextCtx();
       var api = ctx.Resolve<YtClient>();
       var data = await new[] {"UCMDxbhGcsE7EnknxPEzC_Iw", "UCHEf6T_gVq4tlW5i91ESiWg", "UCYeF244yNGuFefuFKqxIAXw"}
-        .BlockFunc(c => api.ChannelData(c));
+        .BlockFunc(c => api.ChannelData(c, full: true));
     }
 
     static async Task<TestCtx> TextCtx() {

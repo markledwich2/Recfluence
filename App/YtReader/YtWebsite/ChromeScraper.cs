@@ -65,9 +65,10 @@ namespace YtReader.YtWebsite {
       var parallel = CollectCfg.ChromeParallel;
       var videosPerBrowserPool = videos.Count / CollectCfg.ChromeParallel;
 
-      var res = await videos.Batch(videosPerBrowserPool).BlockFunc(async b => {
+      var res = await videos.Batch(videosPerBrowserPool).WithIndex().BlockFunc(async batch => {
+        var (b, i) = batch;
         var requests = new ConcurrentBag<(Request req, bool aborted)>();
-        var browsers = new ResourceCycle<Browser, ProxyConnectionCfg>(proxies, p => CreateBrowser(log, p), _lastUsedBrowserIdx);
+        await using var browsers = new ResourceCycle<Browser, ProxyConnectionCfg>(proxies, p => CreateBrowser(log, p), _lastUsedBrowserIdx);
 
         async Task<Page> Page(Browser browser, ProxyConnectionCfg proxy) {
           var page = await browser.NewPageAsync(); // create page inside retry loop. some transient errors seems to be caused by state in the page
@@ -116,10 +117,11 @@ namespace YtReader.YtWebsite {
                 throw;
             }
           }
-        });
+        }, parallel: 1, progressUpdate: p => log.Debug("ChromeScraper - browser pool {Pool} progress {Complete}/{Total}",
+          i, p.CompletedTotal, b.Count));
       }, parallel);
 
-      log.Information("ChromeScraper - loaded {Videos} in {Duration}", videos.Count, sw.HumanizeShort());
+      log.Information("ChromeScraper - finished loading all {Videos} videos in {Duration}", videos.Count, sw.HumanizeShort());
       return res.SelectMany().ToReadOnly();
     }
 
@@ -171,8 +173,12 @@ namespace YtReader.YtWebsite {
 
     async Task<(RecsAndExtra video, Response notOkResponse)> GetVideo(Page page, string videoId, ILogger log) {
       log = log.ForContext("Video", videoId);
-      var response = await page.GoToAsync($"https://youtube.com/watch?v={videoId}", (int) 2.Minutes().TotalMilliseconds,
-        new[] {WaitUntilNavigation.Networkidle2, WaitUntilNavigation.Load, WaitUntilNavigation.DOMContentLoaded});
+      var (response, dur) = await page.GoToAsync($"https://youtube.com/watch?v={videoId}", (int) 2.Minutes().TotalMilliseconds,
+        new[] {WaitUntilNavigation.Networkidle2, WaitUntilNavigation.Load, WaitUntilNavigation.DOMContentLoaded}).WithDuration();
+
+      log.Debug("ChromeScraper - received response {Status} for video {Video} in {Duration}",
+        response.Status, videoId, dur.HumanizeShort());
+
       if (response.Status != HttpStatusCode.OK)
         return (default, response);
       // wait for either a single comment, or a message that the coments are turned off. This is the slowest part to load.
@@ -215,35 +221,53 @@ return el ? el.innerText : null
       Task ScrollPage() => page.EvaluateExpressionAsync(@"document.scrollingElement.scroll(0, document.scrollingElement.scrollTop + window.innerHeight * 0.9)");
       Task ScrollBottom() => page.EvaluateExpressionAsync(@"document.scrollingElement.scroll(0, document.scrollingElement.scrollHeight)");
 
+      var logSw = Stopwatch.StartNew();
+      var sw = Stopwatch.StartNew();
+
       while (true) {
         var scrollTop = await page.EvaluateExpressionAsync<int>("document.scrollingElement.scrollTop");
         if (scrollTop == 0) { // first time we scroll, wait for the comments section to load before continuing down
           await ScrollPage();
           try {
-            await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}");
+            log.Debug("ChromeScraper - waiting for comments to load on {Video}", videoId);
+            var (_, dur) = await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}").WithDuration();
+            log.Debug("ChromeScraper - comments on {Video} found in {Duration}", videoId, dur.HumanizeShort());
           }
           catch (WaitTaskTimeoutException) { }
         }
         else {
           if (maxScroll != null && scrollTop > maxScroll.Value) {
-            log.Debug("reached maxed scroll top {ScrollTop}px on {Video}", videoId, scrollTop);
+            log.Debug("reached maxed scroll top {Scroll}px on {Video}", videoId, scrollTop);
             break;
           }
 
           var newContentAttempt = 0;
           var scrollHeight = await ScrollHeight();
           var newScrollHeight = scrollHeight;
+
           while (newContentAttempt < 4) {
             newContentAttempt++;
+            await 600.Milliseconds().Delay();
             await ScrollBottom();
             newScrollHeight = await ScrollHeight();
             if (newScrollHeight > scrollHeight)
               break;
-            await 300.Milliseconds().Delay();
+          }
+
+          if (logSw.Elapsed > 30.Seconds()) {
+            log.Debug("ChromeScraper - scrolling to {Scroll}px on {Video}", newScrollHeight, videoId);
+            logSw.Restart();
           }
 
           if (newScrollHeight <= scrollHeight) {
-            log.Debug("scrolled to bottom {ScrollTop}px on {Video}", videoId, newScrollHeight);
+            log.Debug("scrolled to bottom {Scroll}px on {Video} in {Duration}",
+              newScrollHeight, videoId, sw.Elapsed.HumanizeShort());
+            break;
+          }
+
+          if (sw.Elapsed > 2.Minutes()) {
+            log.Debug("ChromeScraper - stopping scrolling at {Scroll}px on {Video} after {Duration}",
+              newScrollHeight, videoId, sw.Elapsed.HumanizeShort());
             break;
           }
         }

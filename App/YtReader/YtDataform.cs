@@ -42,6 +42,7 @@ namespace YtReader {
 
       var args = new[] {
         fullLoad ? " --full-refresh " : null,
+        "--include-deps",
         tables?.Any() == true ? $"--actions {tables.Join(" ", t => t.ToUpperInvariant())}" : "--tags standard"
       }.NotNull().Join(" ");
 
@@ -53,10 +54,10 @@ namespace YtReader {
         ("SEQ", SeqCfg.SeqUrl.ToString())
       };
 
-      log.Information("Dataform - launching container to update {Db}. dataform {Args}", sfCfg.DbName(), args);
+      log.Information("Dataform - launching container to update {Db}. dataform {Args}", sfCfg.Db, args);
       var containerName = "dataform";
       var fullName = Cfg.Container.FullContainerImageName("latest");
-      var (group, dur) = await Containers.Launch(Cfg.Container, containerName, containerName, fullName, 
+      var (group, dur) = await Containers.Launch(Cfg.Container, containerName, containerName, fullName,
         env, new string[] { }, log: log, cancel: cancel).WithDuration();
       await group.EnsureSuccess(containerName, log).WithWrappedException("Dataform - container failed");
       log.Information("Dataform - container completed in {Duration}", dur.HumanizeShort());

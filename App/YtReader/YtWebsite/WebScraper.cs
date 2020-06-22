@@ -353,15 +353,14 @@ namespace YtReader.YtWebsite {
     public async Task<RecsAndExtra> GetRecsAndExtra(string videoId, ILogger log) {
       var watchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
       var (html, raw, url) = watchPage;
-      var channel = ChannelInfoFromWatchPage(html);
       var infoDic = await GetVideoInfoDicAsync(videoId, log);
       var videoItem = GetVideo(videoId, infoDic, watchPage);
 
       var extra = new VideoExtraStored2 {
         VideoId = videoId,
         Updated = DateTime.UtcNow,
-        ChannelId = channel.channelId,
-        ChannelTitle = channel.channelTitle,
+        ChannelId = videoItem.ChannelId,
+        ChannelTitle = videoItem.ChannelTitle,
         Description = videoItem.Description,
         Duration = videoItem.Duration,
         Keywords = videoItem.Keywords,
@@ -446,22 +445,6 @@ namespace YtReader.YtWebsite {
             ForYou = ChromeScraper.ParseForYou(viewText)
           };
         }).ToArray();
-      return recs;
-    }
-
-    public Rec[] GetRecs(HtmlDocument html) {
-      var recs = (from d in html.QueryElements("li.video-list-item.related-list-item").Select((e, i) => (e, i))
-        let titleSpan = d.e.QueryElements("span.title").FirstOrDefault()
-        let channelSpan = d.e.QueryElements("span.stat.attribution > span").FirstOrDefault()
-        let videoA = d.e.QueryElements("a.content-link").FirstOrDefault()
-        where videoA != null && channelSpan != null
-        select new Rec {
-          ToVideoId = ParseVideoId($"https://youtube.com/{videoA.GetAttribute("href").Value}"),
-          ToVideoTitle = titleSpan.GetInnerText(),
-          ToChannelTitle = channelSpan.GetInnerText(),
-          Rank = d.i + 1
-        }).ToArray();
-
       return recs;
     }
 
@@ -600,7 +583,7 @@ namespace YtReader.YtWebsite {
     public string        ToVideoId      { get; set; }
     public string        ToVideoTitle   { get; set; }
     public string        ToChannelTitle { get; set; }
-    public string        ToChannelId    { get; set; } // only known if from the API
+    public string        ToChannelId    { get; set; }
     public ScrapeSource? Source         { get; set; }
     public int           Rank           { get; set; }
     public long?         ToViews        { get; set; }
