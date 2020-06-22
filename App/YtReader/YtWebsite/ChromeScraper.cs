@@ -224,9 +224,11 @@ return el ? el.innerText : null
       var logSw = Stopwatch.StartNew();
       var sw = Stopwatch.StartNew();
 
+      var commentLoop = 0;
       while (true) {
+        commentLoop++;
         var scrollTop = await page.EvaluateExpressionAsync<int>("document.scrollingElement.scrollTop");
-        if (scrollTop == 0) { // first time we scroll, wait for the comments section to load before continuing down
+        if (commentLoop <= 1) { // first time we scroll, wait for the comments section to load before continuing down
           await ScrollPage();
           try {
             log.Debug("ChromeScraper - waiting for comments to load on {Video}", videoId);

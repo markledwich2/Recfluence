@@ -47,7 +47,7 @@
       {
         "pipeName": "ProcessChannels",
         "mem": 6,
-        "maxParallel": 8,
+        "maxParallel": 16,
         "minWorkItems": 50
       }
     ]

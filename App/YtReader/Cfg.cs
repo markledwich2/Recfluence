@@ -145,7 +145,6 @@ namespace YtReader {
     ///   to collect them)</summary>
     public int PopulateMissingCommentsLimit { get; set; } = 2;
     public int ParallelChannels     { get;         set; } = 2;
-    public int ChannelsPerContainer { get;         set; } = 80;
 
     public int ChromeParallel { get; set; } = 2;
     public int WebParallel    { get; set; } = 8;
