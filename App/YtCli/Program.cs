@@ -32,9 +32,7 @@ namespace YtCli {
       var (cfg, root, version) = await Setup.LoadCfg(rootLogger: Setup.ConsoleLogger());
       using var log = Setup.CreateLogger(root.Env, null, version, cfg);
       using var scope = Setup.MainScope(root, cfg, Setup.PipeAppCtxEmptyScope(root, cfg, version.Version), version, log);
-
       using var cmdScope = scope.BeginLifetimeScope(c => { c.RegisterAssemblyTypes(typeof(Program).Assembly).AssignableTo<ICommand>(); });
-
       var app = new CliApplicationBuilder()
         .AddCommandsFromThisAssembly()
         .UseTypeActivator(t => cmdScope.Resolve(t))

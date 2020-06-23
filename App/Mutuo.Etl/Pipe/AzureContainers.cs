@@ -110,6 +110,9 @@ namespace Mutuo.Etl.Pipe {
         Args = args
       };
       await EnsureNotRunning(groupName, options, Az.Value, AzureCfg.ResourceGroup);
+      
+      log.Information("Launching container group {Container} ({FullImage}), Env ({Env}), Args ({Args})", 
+        groupName, options.Image, options.Env.Join(";", e => $"{e.Key}={e.Value}"), args.Join(" "));
       var groupDef = ContainerGroup(cfg, groupName, options);
       var group = await Create(groupDef, log);
       var run = await Run(group, returnOnStart, sw, log, cancel);
@@ -123,7 +126,7 @@ namespace Mutuo.Etl.Pipe {
 
     static async Task<IContainerGroup> Create(IWithCreate groupDef, ILogger log) {
       var group = await groupDef.CreateAsync().WithDuration();
-      log.Information("{ContainerGroup} - group created in {Duration}", group.Result.Name, group.Duration);
+      log.Debug("{Container} - group created in {Duration}", group.Result.Name, group.Duration);
       return group.Result;
     }
 
@@ -136,19 +139,19 @@ namespace Mutuo.Etl.Pipe {
         var state = group.State();
 
         if (!running && state == ContainerState.Running) {
-          log.Information("{ContainerGroup} - container started in {Duration}", group.Name, sw.Elapsed.HumanizeShort());
+          log.Debug("{Container} - container started in {Duration}", group.Name, sw.Elapsed.HumanizeShort());
           running = true;
           if (returnOnRunning) return group;
         }
         if (!state.IsCompletedState()) {
           if (cancel.IsCancellationRequested) {
-            log.Information("{ContainerGroup} - cancellation requested - stopping", group.Name);
+            log.Information("{Container} - cancellation requested - stopping", group.Name);
             await group.StopAsync();
             await group.WaitForState(ContainerState.Stopped, ContainerState.Failed, ContainerState.Terminated);
             return group;
           }
           if (loggedWaiting.Elapsed > 1.Minutes()) {
-            log.Debug("{ContainerGroup} - waiting to complete. Current state {State}", group.Name, group.State);
+            log.Debug("{Container} - waiting to complete. Current state {State}", group.Name, group.State);
             loggedWaiting.Restart();
           }
           await Task.Delay(5.Seconds());
@@ -156,7 +159,7 @@ namespace Mutuo.Etl.Pipe {
         }
         break;
       }
-      log.Information("{ContainerGroup} - container ({Status}) in {Duration}", group.Name, group.State, sw.Elapsed.HumanizeShort());
+      log.Information("{Container} - container ({Status}) in {Duration}", group.Name, group.State, sw.Elapsed.HumanizeShort());
       return group;
     }
 

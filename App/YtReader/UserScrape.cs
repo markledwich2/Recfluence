@@ -86,15 +86,15 @@ namespace YtReader {
             .ExecuteAsync(async c => {
               var groupName = $"userscrape-{ShortGuid.Create(5).ToLower().Replace(oldChar: '_', newChar: '-')}";
               var groupLog = trialLog.ForContext("ContainerGroup", groupName);
-              groupLog.Debug("UserScrape - launching container");
+              const string containerName = "userscrape";
               var (group, dur) = await Containers.Launch(
-                Cfg.Container, groupName, "userscrape", fullName,
+                Cfg.Container, groupName, containerName, fullName,
                 env,
                 args.Concat("-t", trial, "-a", b.Join("|")).ToArray(),
                 log: groupLog,
                 cancel: c
               ).WithDuration();
-              await group.EnsureSuccess(groupName, groupLog);
+              await group.EnsureSuccess(containerName, groupLog);
               groupLog.Information("UserScrape - container completed in {Duration}", dur.HumanizeShort());
             }, cancel);
         }, Containers.AzureCfg.Parallel, cancel: cancel);
