@@ -94,10 +94,10 @@ qualify row_number() over (partition by v:ChannelId::string order by v:Updated::
         .Randomize() // each run, we want to spread the early runs, possible failures across different channels
         .ToArray();
 
-      // perform full update on channels older than 30 days (max to 50 at a time because of quota limit).
+      // perform full update on channels older than 30 days (max X at a time because of quota limit).
       var fullUpdate = toUpdate
         .Where(c => c.Updated == default || c.Updated - c.LastFullUpdate > 30.Days())
-        .Take(50)
+        .Take(600)
         .Select(c => c.ChannelId).ToHashSet();
 
       var (channels, dur) = await toUpdate.Concat(toDiscover)
