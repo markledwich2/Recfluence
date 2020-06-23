@@ -90,7 +90,9 @@ qualify row_number() over (partition by v:ChannelId::string order by v:Updated::
       // human classification of channels. also acts a manual seed list
       var toUpdate = (await ChannelSheets.Channels(Cfg.Sheets, log))
         .Where(c => limitChannelHash.IsEmpty() || limitChannelHash.Contains(c.Id))
-        .Select(s => ChannelStored(s, channelPev)).ToArray();
+        .Select(s => ChannelStored(s, channelPev))
+        .Randomize() // each run, we want to spread the early runs, possible failures across different channels
+        .ToArray();
 
       // perform full update on channels older than 30 days (max to 50 at a time because of quota limit).
       var fullUpdate = toUpdate

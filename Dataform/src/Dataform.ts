@@ -56,7 +56,7 @@ export async function run(branch: string, repo: string, sfCfg: YtSfCfg, runArgs:
         const execLog = log.child({cmdName:name})
         log.debug({cmd:cmd}, 'executing sub-process ')
         const task = exec(cmd, { cwd: runPath,  })
-        task.stdout.on('data', (d:string) => execLog.debug({process:'dataform'}, stripAnsi(d)))
+        task.stdout.on('data', (d:string) => execLog.info({process:'dataform'}, stripAnsi(d)))
         const res = await task
         return res
     }

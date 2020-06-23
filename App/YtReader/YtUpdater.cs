@@ -22,6 +22,7 @@ namespace YtReader {
     public string[] Results                { get; set; }
     public string[] Channels               { get; set; }
     public bool     DisableChannelDiscover { get; set; }
+    public bool UserScrapeInit { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -78,7 +79,7 @@ namespace YtReader {
         c => Stage(fullLoad, options.Tables),
         c => Search(fullLoad, c),
         c => Results(options.Results),
-        c => UserScrape(true, c),
+        c => UserScrape(options.UserScrapeInit, c),
         c => Dataform(fullLoad, options.Tables, c),
         c => Backup());
 

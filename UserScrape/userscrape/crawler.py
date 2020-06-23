@@ -30,6 +30,7 @@ import logging
 from logging import Logger
 from .format import format_seconds
 from azure.storage.blob._models import ContentSettings
+from more_itertools import chunked
 
 
 @dataclass_json
@@ -496,17 +497,20 @@ class Crawler:
         Arguments:
             videos {list[str]} -- a list with all the video id's that are supposed to be watched
         """
-        tasks = []
-        main_window = self.driver.window_handles[-1]
-        for video_id in videos:
-            if self.store.exists(self.path.watch_time_json(video_id)):
-                self.log.info('{email} - skipping watching video {video}', email=self.user.email, video=video_id)
-                continue
 
-            self.driver.execute_script("window.open('');")
-            new_tab = self.driver.window_handles[-1]
-            tasks.append(self.watch_video(video_id, main_window, new_tab))
-        await asyncio.gather(*tasks)
+        main_window = self.driver.window_handles[-1]
+        for video_batch in chunked(videos, 6):
+            tasks = []
+            for video_id in video_batch:
+                
+                if self.store.exists(self.path.watch_time_json(video_id)):
+                    self.log.info('{email} - skipping watching video {video}', email=self.user.email, video=video_id)
+                    continue
+
+                self.driver.execute_script("window.open('');")
+                new_tab = self.driver.window_handles[-1]
+                tasks.append(self.watch_video(video_id, main_window, new_tab))
+            await asyncio.gather(*tasks)
 
     def scan_feed(self, scan_num: int):
         # especially during the corona crisis, YouTube is offering a lot of extra information

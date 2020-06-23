@@ -282,6 +282,9 @@ namespace YtCli {
     [CommandOption('c', Description = "| delimited list of channels to collect")]
     public string Channels { get; set; }
 
+    [CommandOption("us-init", Description = "Run userscrape in init mode (additional seed videos)")]
+    public bool UserScrapeInit { get; set; }
+
     [CommandOption("disable-discover", Description = "when collecting, don't go and find new channels to classify")]
     public bool DisableChannelDiscover { get; set; }
 
