@@ -4,6 +4,7 @@ import { capitalCase, merge, toRecord, delay } from '../common/Utils'
 import { SelectionState } from './Chart'
 import { Col, Dim } from './Dim'
 import { DbModel } from './DbModel'
+import { Uri } from './Uri'
 
 export interface Graph<N, L> {
   nodes: N
@@ -94,10 +95,10 @@ export class YtModel {
     this.selectionState = { selected: [], parameters: { record: { colorBy: 'ideology' } } }
   }
 
-  static async dataSet(path: string): Promise<YtModel> {
-    const channelsTask = d3.csv(path + 'vis_channel_stats.csv.gz')
-    const recTask = d3.csv(path + 'vis_channel_recs.csv.gz')
-    const recCatTask = d3.csv(path + 'vis_category_recs.csv.gz')
+  static async dataSet(path: Uri): Promise<YtModel> {
+    const channelsTask = d3.csv(path.addPath('vis_channel_stats.csv.gz').url)
+    const recTask = d3.csv(path.addPath('vis_channel_recs.csv.gz').url)
+    const recCatTask = d3.csv(path.addPath('vis_category_recs.csv.gz').url)
     await delay(1)
     const channels = (await channelsTask).map((c: any) => DbModel.ChannelData(c))
     const channelDic = _(channels).keyBy(c => c.channelId).value()

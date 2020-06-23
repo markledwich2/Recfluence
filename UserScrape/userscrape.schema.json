@@ -53,6 +53,15 @@
     "run_test_vids": {
       "type": "integer",
       "description": "the number recommendations to collect. Only define if you want to restrict for test purposes"
+    },
+    "branch_env": {
+      "type": "string",
+      "description": "a name to prefix/suffix names of environment objects to have clean branch environments"
+    },
+    "max_watch_secs": {
+      "type": "integer",
+      "default": 300,
+      "description": "the maximum time to watch a seed video for"
     }
   },
   "description": "UserScrape configuration",

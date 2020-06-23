@@ -10,6 +10,7 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
@@ -78,7 +79,7 @@ namespace YtReader {
           {SheetId = v, Weight = 1}) // I used to weight some users higher (that's why there is that logic). Now we weight them all the same (1)
         .BlockFunc(async s => new {
           Channels = await SheetValues<UserChannelSheet>(service, s.SheetId, "Channels", log)
-            .WithWrappedException($"eror reading user sheet {s.SheetId}", log),
+            .WithWrappedException($"error reading user sheet {s.SheetId}", log),
           s.SheetId,
           s.Weight
         }, sheetsCfg.Parallel);
@@ -178,7 +179,7 @@ namespace YtReader {
   public class ChannelSheet {
     public string                                 Id            { get; set; }
     public string                                 Title         { get; set; }
-    public double                                 Relevance     { get; set; } // between 0 and 1
+    public double?                                Relevance     { get; set; } // between 0 and 1
     public string                                 LR            { get; set; }
     public string                                 MainChannelId { get; set; }
     public IReadOnlyCollection<string>            HardTags      { get; set; } = new List<string>();

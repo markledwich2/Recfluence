@@ -61,11 +61,13 @@ namespace YtReader.Store {
     readonly SnowflakeConnectionProvider Sf;
     readonly ResultsCfg                  ResCfg;
     readonly ISimpleFileStore            Store;
+    readonly UserScrapeCfg UserScrapeCfg;
 
-    public YtResults(SnowflakeConnectionProvider sf, ResultsCfg resCfg, ISimpleFileStore store) {
+    public YtResults(SnowflakeConnectionProvider sf, ResultsCfg resCfg, ISimpleFileStore store, UserScrapeCfg userScrapeCfg) {
       Sf = sf;
       ResCfg = resCfg;
       Store = store;
+      UserScrapeCfg = userScrapeCfg;
     }
 
     public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null) {
@@ -74,6 +76,9 @@ namespace YtReader.Store {
 
       var now = DateTime.Now;
       var dateRangeParams = new {from = "2019-11-01", to = now.ToString("yyyy-MM-01")};
+
+      const string pendingChannelsSelect = "select * from channel_latest where review_status='Pending'";
+
       var queries = new[] {
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip: true),
@@ -87,25 +92,32 @@ namespace YtReader.Store {
           new ResQuery("channel_classification",
             desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip: true),
 
-
           // userscrape data
-          new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_ideology = 50}),
-          new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos_per_ideology = 5}),
+          new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_ideology = UserScrapeCfg.SeedsPerIdeology}),
+          new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos_per_ideology = UserScrapeCfg.TestsPerIdeology}),
 
           // classifier data 
 
-          new ResQuery("class_channels", "select * from channel_latest", fileType: ResFilType.Json),
+          new ResQuery("class_channels", pendingChannelsSelect, fileType: ResFilType.Json),
 
-          new ResQuery("class_videos", "select * from video_latest qualify rank() over (partition by channel_id order by views desc) <= 3",
+          new ResQuery("class_videos", $@"with pending as ({pendingChannelsSelect})
+select c.* from pending p inner join video_comments c on p.channel_id=c.channel_id
+order by  channel_id, video_id",
             fileType: ResFilType.Json),
 
-          new ResQuery("class_captions", @"with v as (
-  select * from video_latest qualify rank() over (partition by channel_id order by views desc) <= 3
-)
-select c.* from caption c
-inner join v on v.video_id = c.video_id",
-            fileType: ResFilType.Json)
+          new ResQuery("class_comments", $@"with pending as ({pendingChannelsSelect})
+select c.*
+from pending p
+       inner join video_comments c on p.channel_id=c.channel_id
+order by channel_id, video_id, created",
+            fileType: ResFilType.Json),
 
+          new ResQuery("class_captions", $@"with pending as ({pendingChannelsSelect})
+select c.channel_id, video_id, caption_group, offset_seconds, caption
+from pending p
+       inner join caption c on p.channel_id=c.channel_id
+order by channel_id, video_id, caption_group",
+            fileType: ResFilType.Json),
 
           /*new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
           new ResQuery("icc_lr", desc: "channel classifications in a format used to calculate how consistent reviewers are when deciding left/right/center"),

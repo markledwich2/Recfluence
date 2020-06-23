@@ -19,10 +19,10 @@ namespace YtReader {
   }
 
   public class VersionInfoProvider {
-    readonly AsyncLazy<VersionInfo> LazyVersion;
+    readonly Defer<VersionInfo> LazyVersion;
 
     public VersionInfoProvider(ILogger log, RootCfg rootCfg) =>
-      LazyVersion = new AsyncLazy<VersionInfo>(async () => {
+      LazyVersion = new Defer<VersionInfo>(async () => {
         var (version, info) = await GitVersionInfo.DiscoverVersion(typeof(VersionInfo), log);
         var prefix = GetVersionPrefix(rootCfg, version, info);
         version = version.Change(prerelease: prefix);

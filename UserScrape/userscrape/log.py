@@ -8,7 +8,7 @@ def configure_log(url: str, env='dev', branch_env=None, trial_id=None) -> loggin
         'version': 1,
         'disable_existing_loggers': True,
         'root': {
-            'level': 'DEBUG',
+            'level': 'WARN',
             'handlers': ['console']
         },
         'loggers': {
@@ -42,7 +42,7 @@ def configure_log(url: str, env='dev', branch_env=None, trial_id=None) -> loggin
         app="UserScrape",
         env=env,
         branch_env=branch_env,
-        trial_id=trial_id
+        Trial=trial_id
     )
 
     return logging.getLogger('seq')

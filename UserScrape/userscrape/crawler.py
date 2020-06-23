@@ -29,6 +29,8 @@ from .cfg import UserCfg
 import logging
 from logging import Logger
 from .format import format_seconds
+from azure.storage.blob._models import ContentSettings
+from more_itertools import chunked
 
 
 @dataclass_json
@@ -52,6 +54,10 @@ class RecResult:
     unavailable: VideoUnavailable = None
 
 
+class DetectedAsBotException(Exception):
+    pass
+
+
 def create_driver(headless: bool) -> WebDriver:
     options = Options()
     if(headless):
@@ -70,7 +76,7 @@ def create_driver(headless: bool) -> WebDriver:
 
 
 class Crawler:
-    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, trial_id: str, log: Logger, lang='en'):
+    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, trial_id: str, log: Logger, max_watch_secs: int, lang='en'):
         self.store = store
         self.bot = bot
         self.driver = create_driver(headless)
@@ -80,6 +86,7 @@ class Crawler:
         self.log = log
         self.lang = lang
         self.trial_id = trial_id
+        self.max_watch_secs = max_watch_secs
         self.session_id = file_date_str()
         self.path = BlobPaths(store.cfg, trial_id, user, self.session_id)
 
@@ -88,7 +95,7 @@ class Crawler:
         wd.get('https://httpbin.org/ip')
         pre: WebElement = wd.find_element_by_css_selector('pre')
         print(f'Running with IP {json.loads(pre.text)["origin"]}')
-        await self.__log_driver_status('ip')
+        self.__log_driver_status('ip')
 
     async def load_home_and_login(self):
         wd = self.driver
@@ -97,8 +104,8 @@ class Crawler:
         self.__load_cookies()
 
         wd.get('https://www.youtube.com')
-        await self.wait_for_visible('#contents')
-        await self.__log_driver_status('home')
+        self.wait_for_visible('#contents')
+        self.__log_driver_status('home')
 
         try:
             login = wd.find_element_by_css_selector('paper-button[aria-label="Sign in"]')
@@ -108,28 +115,36 @@ class Crawler:
         if(login != None):
             await self.login()
 
-    async def wait_for_visible(self, cssSelector: str, error_expected: bool = False) -> WebElement:
+    def wait_for_visibles(self, cssSelector: str, error_expected: bool = False) -> WebElement:
+        """waits for all elements to be visible  at the given css selector, logs errors to seq & discord"""
+        try:
+            return WebDriverWait(self.driver, 5).until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, cssSelector)))
+        except WebDriverException as e:
+            self.handle_driver_ex(e, cssSelector, error_expected)
+        raise e
+
+    def wait_for_visible(self, cssSelector: str, error_expected: bool = False) -> WebElement:
         """waits for an element to be visible  at the given css selector, logs errors to seq & discord"""
         try:
             return WebDriverWait(self.driver, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, cssSelector)))
         except WebDriverException as e:
-            await self.handle_driver_ex(e, cssSelector, error_expected)
+            self.handle_driver_ex(e, cssSelector, error_expected)
         raise e
 
-    async def wait_for_clickable(self, cssSelector: str, error_expected: bool = False) -> WebElement:
+    def wait_for_clickable(self, cssSelector: str, error_expected: bool = False) -> WebElement:
         """waits for an element to be clickable at the given css selector, logs errors to seq & discord"""
         try:
             return WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, cssSelector)))
         except WebDriverException as e:
-            await self.handle_driver_ex(e, cssSelector, error_expected)
+            self.handle_driver_ex(e, cssSelector, error_expected)
 
-    async def handle_driver_ex(self, e: WebDriverException, selector: str, expected: bool = False):
+    def handle_driver_ex(self, e: WebDriverException, selector: str, expected: bool = False):
         ex_name = e.__class__.__name__
         if(expected):
             self.log.debug('selector {selector} failed with {ex_name} (but we expected it to)',
                            selector=selector, ex_name=ex_name)
         else:
-            await self.__log_driver_status(selector, )
+            self.__log_driver_status(selector, ex_name)
         raise e
 
     async def login(self) -> CrawlResult:
@@ -143,15 +158,15 @@ class Crawler:
         wfc = self.wait_for_clickable
         wfv = self.wait_for_visible
 
-        async def onHome():
-            await wfv(homeSelector)
+        def onHome():
+            wfv(homeSelector)
             self.__save_cookies()
 
-        (await wfc('input[type="email"]')).send_keys(user.email)
+        wfc('input[type="email"]').send_keys(user.email)
         # next_button = wd.find_element_by_id('next').click()
-        (await wfc('#identifierNext')).click()
-        (await wfc('input[type="password"]')).send_keys(user.password)
-        (await wfc('#passwordNext')).click()
+        wfc('#identifierNext').click()
+        wfc('input[type="password"]').send_keys(user.password)
+        wfc('#passwordNext').click()
         await asyncio.sleep(2)
 
         telSelector = 'input[type="tel"]'
@@ -159,30 +174,30 @@ class Crawler:
         captchaSelector = 'input[aria-label="Type the text you hear or see"]'
         homeSelector = '#primary'
 
-        authEl: WebElement = await wfv(f'{telSelector}, {smsSelector}, {captchaSelector}, {homeSelector}')
+        authEl: WebElement = wfv(f'{telSelector}, {smsSelector}, {captchaSelector}, {homeSelector}')
         if authEl.get_attribute('id') == 'primary':
-            await onHome()
+            onHome()
             return CrawlResult()
         if authEl.get_attribute('type') == 'tel':
-            (await wfc(telSelector)).send_keys(user.telephone_number)
-            (await wfc('#idvanyphonecollectNext')).click()
+            wfc(telSelector).send_keys(user.telephone_number)
+            wfc('#idvanyphonecollectNext').click()
             code = await self.bot.request_code(user)
-            (await wfc(telSelector)).send_keys(code)
-            (await wfc('#idvanyphoneverifyNext')).click()
+            wfc(telSelector).send_keys(code)
+            wfc('#idvanyphoneverifyNext').click()
         elif authEl.get_attribute('data-sendmethod') == 'SMS':
-            (await wfc(smsSelector)).click()  # select sms option
+            wfc(smsSelector).click()  # select sms option
             code = await self.bot.request_code(user)
-            (await wfc(telSelector)).send_keys(code)
-            (await wfc('#idvPreregisteredPhoneNext')).click()
+            wfc(telSelector).send_keys(code)
+            wfc('#idvPreregisteredPhoneNext').click()
         elif authEl.get_attribute('aria-label') == 'Type the text you hear or see':
             captchaPath = self.__save_image('captcha')
             captcha = await self.bot.request_code(user, "enter the catpcha", captchaPath)
-            (await wfc(captchaSelector)).send_keys(captcha)
-            (await wfc('#identifierNext')).click()
+            wfc(captchaSelector).send_keys(captcha)
+            wfc('#identifierNext').click()
         else:
             raise WebDriverException('unable to find post-password element')
 
-        await onHome()
+        onHome()
         return CrawlResult()
 
     def get_video_features(self, video_id, rec_result: RecResult, personalized_count: int):
@@ -220,27 +235,39 @@ class Crawler:
             self.log.info('{email} -skipping recommendation {video}', email=self.user.email, video=video_id)
             return False
 
+        self.log.debug('{email} - about load video page for recs {video}', email=self.user.email, video=video_id)
         self.driver.get("https://www.youtube.com/watch?v=" + video_id)
+        self.log.debug('{email} - loaded video page for recs {video}', email=self.user.email, video=video_id)
+
+        url = urlparse(self.driver.current_url)
+        if(url.path == '/sorry/index'):  # the sorry we think you are a bot page ()
+            self.log.debug('{email} - raising we have been redirected to the you-are-a-bot-page', email=self.user.email)
+            raise DetectedAsBotException('we have been redirected to the you-are-a-bot-page')
 
         # this is the list of elements from the recommendation sidebar
         # it does not always load all recommendations at the same time, therefore the loop
         all_recs = []
         unavalable: VideoUnavailable = None
         findRecsEx: WebDriverException = None
-        while len(all_recs) < 19:
+        rec_attempt = 0
+        while True:
             try:
-                all_recs = self.wait.until(
-                    EC.visibility_of_all_elements_located(
-                        (By.XPATH, '//*[@id="dismissable"]/div/div[1]/a'))
-                )
+                all_recs = self.wait_for_visibles(
+                    '.ytd-watch-next-secondary-results-renderer a.ytd-compact-video-renderer')
             except WebDriverException as e:
                 findRecsEx = e
                 break
+            if(len(all_recs) >= 20):
+                break
+            rec_attempt = rec_attempt+1
+            if(rec_attempt > 3):
+                break
+            await asyncio.sleep(2)
 
         if findRecsEx:
-            unavalable = await self.get_video_unavailable()
+            unavalable = self.get_video_unavailable()
             if(unavalable == None):
-                await self.__log_driver_status('recommendations', findRecsEx.msg)
+                self.__log_driver_status('recommendations', findRecsEx.msg)
                 raise findRecsEx
 
         recs = []
@@ -251,19 +278,18 @@ class Crawler:
                 if personalized:
                     personalized_counter += 1
                 # take the link and remove everything except for the id of the video that the link leads to
-                recommendation_id = i.get_attribute('href').replace(
-                    'https://www.youtube.com/watch?v=', '')
-
+                recommendation_id = i.get_attribute('href').replace('https://www.youtube.com/watch?v=', '')
                 rec_el = i.find_element_by_css_selector('#video-title')
-                title = rec_el.get_attribute('title')
-                full_info = rec_el.get_attribute('aria-label')
                 recs.append({
                     'id': recommendation_id,
                     'personalized': personalized,
-                    'title': title,
-                    'full_info': full_info})
+                    'title': rec_el.get_attribute('title'),
+                    'full_info': rec_el.get_attribute('aria-label')
+                })
 
         rec_result = RecResult(recs, unavalable)
+        self.log.debug('{email} - about to store {recs} recs for {video}',
+                       email=self.user.email, video=video_id, recs=len(recs))
 
         # store the information about the current video plus the corresponding recommendations
         self.get_video_features(video_id, rec_result, personalized_counter)
@@ -272,7 +298,7 @@ class Crawler:
         # return the recommendations
         return True
 
-    async def get_video_unavailable(self):
+    def get_video_unavailable(self):
         reason: List[WebElement] = self.driver.find_elements_by_css_selector(
             '#info > .reason.yt-player-error-message-renderer')
         subReason: List[WebElement] = self.driver.find_elements_by_css_selector(
@@ -293,7 +319,7 @@ class Crawler:
                                                 '//*[@id="video-title"]'))
             )
         except WebDriverException as e:
-            self.log.warning('unable to find any video in history to delete')
+            self.log.debug('unable to find any video in history to delete')
             return
 
         try:
@@ -315,7 +341,7 @@ class Crawler:
                 delete_buttons[0].click()
             # self.__log_info(f'after_deleting_last_video_{video_id}')
         except WebDriverException as e:
-            await self.__log_driver_status('deleting last video', e.msg)
+            self.__log_driver_status('deleting last video', e.msg)
 
     def delete_history(self):
         self.driver.get('https://www.youtube.com/feed/history')
@@ -367,11 +393,18 @@ class Crawler:
         # wait until video is loaded
 
         try:
-            (await self.wait_for_clickable('.ytp-play-button.ytp-button', error_expected=True))  # no need to click, it auto-plays
+            # no need to click, it auto-plays
+            self.wait_for_clickable('.ytp-play-button.ytp-button', error_expected=True)
         except TimeoutException as e:
-            unavailable = await self.get_video_unavailable()
+            unavailable = self.get_video_unavailable()
             if(unavailable == None):
-                await self.__log_driver_status('.ytp-play-button.ytp-button', 'no play button or unavailable msg found. Probably a bug')
+                captcha = self.driver.find_elements_by_css_selector('form#captcha-form')
+                if captcha:
+                    self.__log_driver_status('form#captcha-form', 'we have been caught :(')
+                    raise DetectedAsBotException
+                else:
+                    self.__log_driver_status('.ytp-play-button.ytp-button',
+                                             'no play button or unavailable msg found. Probably a bug')
                 raise e
             else:
                 # the video didn't load, but it is unavailable for a reason. Log this as the result.
@@ -395,7 +428,7 @@ class Crawler:
             advertisers=[]
         )
 
-        async def handle_ad() -> bool:
+        def handle_ad() -> bool:
             """returns true when an add was found, false otherwise"""
             # unfortunately the ad loads slower than the player so we wait here to be sure we detect the ad if any appears
             time.sleep(2)  # blocking sleep (instead of await asyncio.sleep()) because we rely on the driver being on this tab
@@ -408,12 +441,12 @@ class Crawler:
             advertisements['advertisers'].append(ad_text)
             time.sleep(5)
             try:
-                (await self.wait_for_clickable('*.ytp-ad-skip-button.ytp-button', error_expected=True)).click()
+                self.wait_for_clickable('*.ytp-ad-skip-button.ytp-button', error_expected=True).click()
                 return True
             except TimeoutException:
                 return False
 
-        while await handle_ad():
+        while handle_ad():
             time.sleep(1)
         # wait again, for second ad that might appear
 
@@ -432,7 +465,7 @@ class Crawler:
         duration = self._get_seconds(duration)
         # to make sure that every video is watched long enough
         # watch_time = duration if duration < 300 else 300 if duration/3 < 300 else duration/3
-        watch_time = duration if duration < 300 else 300
+        watch_time = duration if duration < self.max_watch_secs else self.max_watch_secs
 
         # let the asynchronous manager know that now other videos can be started
         await asyncio.sleep(watch_time)
@@ -464,17 +497,20 @@ class Crawler:
         Arguments:
             videos {list[str]} -- a list with all the video id's that are supposed to be watched
         """
-        tasks = []
-        main_window = self.driver.window_handles[-1]
-        for video_id in videos:
-            if self.store.exists(self.path.watch_time_json(video_id)):
-                self.log.info('{email} - skipping watching video {video}', email=self.user.email, video=video_id)
-                continue
 
-            self.driver.execute_script("window.open('');")
-            new_tab = self.driver.window_handles[-1]
-            tasks.append(self.watch_video(video_id, main_window, new_tab))
-        await asyncio.gather(*tasks)
+        main_window = self.driver.window_handles[-1]
+        for video_batch in chunked(videos, 6):
+            tasks = []
+            for video_id in video_batch:
+                
+                if self.store.exists(self.path.watch_time_json(video_id)):
+                    self.log.info('{email} - skipping watching video {video}', email=self.user.email, video=video_id)
+                    continue
+
+                self.driver.execute_script("window.open('');")
+                new_tab = self.driver.window_handles[-1]
+                tasks.append(self.watch_video(video_id, main_window, new_tab))
+            await asyncio.gather(*tasks)
 
     def scan_feed(self, scan_num: int):
         # especially during the corona crisis, YouTube is offering a lot of extra information
@@ -589,7 +625,7 @@ class Crawler:
         return localImagePath
 
     # easy method to save screenshots for headless mode
-    async def __log_driver_status(self, name: str, error: str = None):
+    def __log_driver_status(self, name: str, error: str = None):
         wd = self.driver
 
         seshPath = self.path.session_path()
@@ -610,14 +646,13 @@ class Crawler:
         # save image
         local_image_path = self.__save_image(name)
         remote_image_path = seshPath / f'{name}.png'
-        self.store.save_file(local_image_path, remote_image_path)
+        self.store.save_file(local_image_path, remote_image_path, content_type='image/png')
         image_url = self.store.url(remote_image_path)
 
         if(error != None):
-            self.log.error('{email} - experienced error ({error}) at {url} when ({phase}) {image_url}',
-                           email=self.user.email, error=error, url=wd.current_url, phase=name, image_url=image_url)
-            await self.bot.msg(f'{self.user.email} experienced error ({error}) at {wd.current_url} when ({name})', local_image_path)
-
+            self.log.warn('{email} - expereinced error ({error}) at {url} when ({phase}) {image_url}',
+                          email=self.user.email, error=error, url=wd.current_url, phase=name, image_url=image_url)
+              
         os.remove(local_image_path)
 
     def shutdown(self):

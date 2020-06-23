@@ -8,10 +8,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Humanizer;
 using Mutuo.Etl.Blob;
-using Newtonsoft.Json.Linq;
 using PuppeteerSharp;
 using Serilog;
-using Serilog.Extensions.Logging;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Security;
@@ -33,21 +31,20 @@ namespace YtReader.YtWebsite {
 
     public async Task Init() => await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultRevision);
 
-    static readonly ILogger ConsoleLog = new LoggerConfiguration().WriteTo.Console().CreateLogger();
-
-    async Task<Browser> CreateBrowser(bool proxy, ILogger log) {
+    async Task<Browser> CreateBrowser(ILogger log, ProxyConnectionCfg proxy) {
       var browser = await Puppeteer.LaunchAsync(new LaunchOptions {
-        Headless = true,
+        Headless = CollectCfg.Headless,
         DefaultViewport = new ViewPortOptions {Width = 1024, Height = 1200},
         Args = new[] {
           "--disable-dev-shm-usage", "--no-sandbox",
-          proxy ? $"--proxy-server={ProxyCfg.Url}" : null
+          proxy != null ? $"--proxy-server={proxy.Url}" : null
         }.NotNull().ToArray()
-      }, new SerilogLoggerFactory(ConsoleLog)); // log to console only because it often has transient errors
+      }); // logging has so much inconsequential errors we ignore it
       return browser;
     }
 
-    public async Task<string> GetIp(bool proxy, ILogger log) {
+    /*
+    public async Task<string> GetIp(ProxyConnectionCfg proxy, ILogger log) {
       var browser = await CreateBrowser(proxy, log);
       var page = await browser.NewPageAsync();
       if (proxy)
@@ -56,67 +53,75 @@ namespace YtReader.YtWebsite {
       var j = await response.JsonAsync();
       return j["ip"]?.Value<string>();
     }
+    */
 
-    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log, bool proxy = false) {
+    int _lastUsedBrowserIdx; // re-use the same browser proxies across different calls to recs and extra
+
+    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) {
       var sw = Stopwatch.StartNew();
       log = log.ForContext("Module", nameof(ChromeScraper));
+      var proxies = ProxyCfg.DirectAndProxies().Take(2)
+        .ToArray(); // only use the first fallback (datacenter proxies). residential is too expensive for the volume of data we are loading.
+      var parallel = CollectCfg.ChromeParallel;
+      var videosPerBrowserPool = videos.Count / CollectCfg.ChromeParallel;
 
-      var browsers = CollectCfg.ChromeParallel;
-      var videosPerBrowser = videos.Count / CollectCfg.ChromeParallel + 1;
-      var res = await videos.Batch(videosPerBrowser).BlockFunc(async b => {
+      var res = await videos.Batch(videosPerBrowserPool).WithIndex().BlockFunc(async batch => {
+        var (b, i) = batch;
         var requests = new ConcurrentBag<(Request req, bool aborted)>();
-        await using var directBrowser = new AsyncLazy<Browser>(async () => await CreateBrowser(proxy: false, log));
-        await using var proxyBrowser = new AsyncLazy<Browser>(async () => await CreateBrowser(proxy: true, log));
+        await using var browsers = new ResourceCycle<Browser, ProxyConnectionCfg>(proxies, p => CreateBrowser(log, p), _lastUsedBrowserIdx);
 
-        async Task<Browser> Browser(bool prox) => prox ? await proxyBrowser.GetOrCreate() : await directBrowser.GetOrCreate();
-
-        async Task<Page> Page(bool prox, string v) {
-          var browser = await Browser(prox);
+        async Task<Page> Page(Browser browser, ProxyConnectionCfg proxy) {
           var page = await browser.NewPageAsync(); // create page inside retry loop. some transient errors seems to be caused by state in the page
-          if (prox)
-            await page.AuthenticateAsync(ProxyCfg.Creds.AsCreds()); // workaround for chrome not supporting password proxies
+          if (proxy.Creds != null)
+            await page.AuthenticateAsync(proxy.Creds.AsCreds()); // workaround for chrome not supporting password proxies
           await page.SetCookieAsync(); // clears cookies
-          await ConfigureRequests(log, page, v, (req, aborted) => requests.Add((req, aborted)));
+          await ConfigureRequests(page, (req, aborted) => requests.Add((req, aborted)));
           return page;
         }
 
         return await b.BlockFunc(async v => {
           //var context = await browser.CreateIncognitoBrowserContextAsync(); // opening windows is more reliable than tabs in practice
-          var attempt = 1;
+          var videoAttempt = 0;
+          var videoLog = log.ForContext("Video", v);
 
           while (true) {
-            var lastAttempt = attempt >= CollectCfg.ChromeAttempts;
-            log.Debug("loading video {Video}. Proxy={Proxy}", v, proxy ? ProxyCfg.Url : "Direct");
-            using var page = await Page(proxy, v);
+            var (browser, proxy) = await browsers.Get();
+            videoAttempt++;
+            var lastAttempt = videoAttempt >= CollectCfg.ChromeAttempts;
+            videoLog.Debug("loading video {Video}. Proxy={Proxy}", v, proxy?.Url == null ? "Direct" : proxy.Url);
+            using var page = await Page(browser, proxy);
             try {
-              var (video, notOkResponse) = await GetVideo(page, v, log);
+              var (video, notOkResponse) = await GetVideo(page, v, videoLog);
               if (notOkResponse != null) {
-                if (notOkResponse.Status == HttpStatusCode.TooManyRequests && !proxy) {
-                  proxy = true;
-                  attempt = 0;
-                  log.Information("ChromeScraper - error response ({Status}) loading {Video}: switching to proxy", notOkResponse.Status, v);
+                if (notOkResponse.Status == HttpStatusCode.TooManyRequests) {
+                  await browsers.NextResource(browser);
+                  _lastUsedBrowserIdx = browsers.Idx;
+                  videoAttempt = 0;
+                  videoLog.Information("ChromeScraper - error response ({Status}) loading {Video}: using next proxy", notOkResponse.Status, v);
                 }
                 else {
-                  throw new InvalidOperationException($"not OK response ({notOkResponse.Status})");
+                  throw new InvalidOperationException($"Not OK response ({notOkResponse.Status})");
                 }
               }
-              if (video != null) {
-                log.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
-                  v, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
-                return video;
-              }
+
+              if (video == null) continue;
+
+              videoLog.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
+                v, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
+              return video;
             }
             catch (Exception ex) {
-              log.Warning(ex, "ChromeScraper - failed to load video {Video} from {Url} (attempt {Attempt}): {Error}", v, page.Url, attempt, ex.Message);
+              videoLog.Warning(ex, "ChromeScraper - failed to load video {Video} from {Url} (attempt {Attempt}): {Error}", v, page.Url, videoAttempt,
+                ex.Message);
               if (lastAttempt)
                 throw;
             }
-            attempt++;
           }
-        });
-      }, browsers);
+        }, parallel: 1, progressUpdate: p => log.Debug("ChromeScraper - browser pool {Pool} progress {Complete}/{Total}",
+          i, p.CompletedTotal, b.Count));
+      }, parallel);
 
-      log.Information("ChromeScraper - loaded {Videos} in {Duration}", videos.Count, sw.HumanizeShort());
+      log.Information("ChromeScraper - finished loading all {Videos} videos in {Duration}", videos.Count, sw.HumanizeShort());
       return res.SelectMany().ToReadOnly();
     }
 
@@ -144,7 +149,7 @@ namespace YtReader.YtWebsite {
       return false;
     }
 
-    static async Task ConfigureRequests(ILogger log, Page page, string v, Action<Request, bool> onHandled) {
+    static async Task ConfigureRequests(Page page, Action<Request, bool> onHandled) {
       await page.SetRequestInterceptionAsync(true);
       page.Request += async (sender, e) => {
         if (AbortRequest(e.Request)) {
@@ -168,34 +173,38 @@ namespace YtReader.YtWebsite {
 
     async Task<(RecsAndExtra video, Response notOkResponse)> GetVideo(Page page, string videoId, ILogger log) {
       log = log.ForContext("Video", videoId);
-      var response = await page.GoToAsync($"https://youtube.com/watch?v={videoId}");
+      var (response, dur) = await page.GoToAsync($"https://youtube.com/watch?v={videoId}", (int) 2.Minutes().TotalMilliseconds,
+        new[] {WaitUntilNavigation.Networkidle2, WaitUntilNavigation.Load, WaitUntilNavigation.DOMContentLoaded}).WithDuration();
+
+      log.Debug("ChromeScraper - received response {Status} for video {Video} in {Duration}",
+        response.Status, videoId, dur.HumanizeShort());
+
       if (response.Status != HttpStatusCode.OK)
         return (default, response);
       // wait for either a single comment, or a message that the coments are turned off. This is the slowest part to load.
-      await WaitForSelector(page,
+      /*await WaitForSelector(page,
         new[] {CommentCountSel, CommentErrorSel, VideoErrorSel}.Join(", "),
-        2.Minutes(), log);
-      var video = await VideoDetails(page, videoId);
-      var error = await page.EvaluateFunctionAsync<string>(@$"() => {{
-  var el = document.querySelector('{VideoErrorSel}')
-  return el ? el.innerText : null
-}}");
+        2.Minutes(), log);*/
+      var (video, error) = await VideoDetails(page, videoId);
+      string subError = null;
+      if (error == null) {
+        error = await page.EvaluateFunctionAsync<string>(@$"() => {{
+        var el = document.querySelector('{VideoErrorSel}')
+        return el ? el.innerText : null
+      }}");
 
-      var subError = await page.EvaluateFunctionAsync<string>(@"() => {
-  var el = document.querySelector('#info > .subreason.yt-player-error-message-renderer')
-  return el ? el.innerText : null
+        subError = await page.EvaluateFunctionAsync<string>(@"() => {
+var el = document.querySelector('#info > .subreason.yt-player-error-message-renderer')
+return el ? el.innerText : null
 }");
-
-      if (video == null) {
-        if (error == null) throw new InvalidOperationException("can't find video or error message, probably a bug");
-        return (
-          new RecsAndExtra(
-            new VideoExtraStored2 {
-              VideoId = videoId,
-              Error = error,
-              SubError = subError
-            }, recs: default), default);
       }
+
+      if (video == null)
+        return (new RecsAndExtra(new VideoExtraStored2 {
+          VideoId = videoId,
+          Error = error,
+          SubError = subError
+        }, recs: default), default);
 
       video.Error = error;
       video.SubError = subError;
@@ -203,27 +212,73 @@ namespace YtReader.YtWebsite {
       await ScrollDown(page, maxScroll: null, videoId, log);
       (video.Ad, video.HasAd) = await GetAd(page);
       var recs = await GetRecs(page, error.HasValue(), log);
-      (video.Comments, video.CommentsMsg, video.CommentCount) = await GetComments(page, video);
+      (video.Comments, video.CommentsMsg, video.CommentCount) = await GetComments(page, video, log);
       return (new RecsAndExtra(video, recs), default);
     }
 
     static async Task ScrollDown(Page page, int? maxScroll, string videoId, ILogger log) {
-      var scrollHeight = 0;
+      async Task<int> ScrollHeight() => await page.EvaluateExpressionAsync<int>("document.scrollingElement.scrollHeight");
+      Task ScrollPage() => page.EvaluateExpressionAsync(@"document.scrollingElement.scroll(0, document.scrollingElement.scrollTop + window.innerHeight * 0.9)");
+      Task ScrollBottom() => page.EvaluateExpressionAsync(@"document.scrollingElement.scroll(0, document.scrollingElement.scrollHeight)");
+
+      var logSw = Stopwatch.StartNew();
+      var sw = Stopwatch.StartNew();
+
+      var commentLoop = 0;
       while (true) {
-        var newScrollHeight = await page.EvaluateExpressionAsync<int>("document.scrollingElement.scrollHeight");
-        if (newScrollHeight == scrollHeight || maxScroll != null && newScrollHeight > maxScroll.Value) {
-          log.Debug("scrolled down on {Video} to {ScrollHeight}px", videoId, newScrollHeight);
-          break;
+        commentLoop++;
+        var scrollTop = await page.EvaluateExpressionAsync<int>("document.scrollingElement.scrollTop");
+        if (commentLoop <= 1) { // first time we scroll, wait for the comments section to load before continuing down
+          await ScrollPage();
+          try {
+            log.Debug("ChromeScraper - waiting for comments to load on {Video}", videoId);
+            var (_, dur) = await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}").WithDuration();
+            log.Debug("ChromeScraper - comments on {Video} found in {Duration}", videoId, dur.HumanizeShort());
+          }
+          catch (WaitTaskTimeoutException) { }
         }
-        await page.EvaluateExpressionAsync(@"document.scrollingElement.scroll(0, document.scrollingElement.scrollHeight)");
-        scrollHeight = newScrollHeight;
-        await 1.Seconds().Delay();
+        else {
+          if (maxScroll != null && scrollTop > maxScroll.Value) {
+            log.Debug("reached maxed scroll top {Scroll}px on {Video}", videoId, scrollTop);
+            break;
+          }
+
+          var newContentAttempt = 0;
+          var scrollHeight = await ScrollHeight();
+          var newScrollHeight = scrollHeight;
+
+          while (newContentAttempt < 4) {
+            newContentAttempt++;
+            await 600.Milliseconds().Delay();
+            await ScrollBottom();
+            newScrollHeight = await ScrollHeight();
+            if (newScrollHeight > scrollHeight)
+              break;
+          }
+
+          if (logSw.Elapsed > 30.Seconds()) {
+            log.Debug("ChromeScraper - scrolling to {Scroll}px on {Video}", newScrollHeight, videoId);
+            logSw.Restart();
+          }
+
+          if (newScrollHeight <= scrollHeight) {
+            log.Debug("scrolled to bottom {Scroll}px on {Video} in {Duration}",
+              newScrollHeight, videoId, sw.Elapsed.HumanizeShort());
+            break;
+          }
+
+          if (sw.Elapsed > 2.Minutes()) {
+            log.Debug("ChromeScraper - stopping scrolling at {Scroll}px on {Video} after {Duration}",
+              newScrollHeight, videoId, sw.Elapsed.HumanizeShort());
+            break;
+          }
+        }
       }
     }
 
-    static async Task<(VideoCommentStored2[] comments, string msg, long? count)> GetComments(Page page, VideoExtraStored2 video) {
+    async Task<(VideoCommentStored2[] comments, string msg, long? count)> GetComments(Page page, VideoExtraStored2 video, ILogger log) {
       try {
-        await page.WaitForSelectorAsync(CommentCountSel);
+        await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}");
       }
       catch (WaitTaskTimeoutException) { }
 
@@ -264,10 +319,13 @@ namespace YtReader.YtWebsite {
   return el ? el.innerText : null
 }}");
 
-      if (commentCount < 3 || msg.HasValue())
+      if (commentCount < 5 || msg.HasValue())
         return (default, msg, commentCount);
 
-      throw new InvalidOperationException("can't find comments, or a message about no-comments. Probably a bug");
+      var (url, image) = await SavePageDump(page, log);
+      log.Warning("ChromeScraper - can't find comments, or a message about no-comments. Video {Video}. Url ({Url}). Image ({Image})",
+        video.VideoId, url, image);
+      return (default, default, commentCount);
     }
 
     async Task<Rec[]> GetRecs(Page page, bool hasError, ILogger log) {
@@ -305,7 +363,7 @@ namespace YtReader.YtWebsite {
             ToVideoTitle = r.title,
             ToViews = ParseViews(r.viewText),
             ToUploadDate = ParseAgo(DateTime.UtcNow, r.publishAgo),
-            ForYou = r.viewText == "Recommended for you",
+            ForYou = ParseForYou(r.viewText),
           }).ToArray();
 
           return recRes;
@@ -322,6 +380,8 @@ namespace YtReader.YtWebsite {
         attempts--;
       }
     }
+
+    public static bool ParseForYou(string viewText) => viewText == "Recommended for you";
 
     async Task WaitForSelector(Page page, string selector, TimeSpan timeout, ILogger log) {
       try {
@@ -359,9 +419,11 @@ namespace YtReader.YtWebsite {
       return (ad, hasAd);
     }
 
-    async Task<VideoExtraStored2> VideoDetails(Page page, string videoId) {
+    const string VideoErrorUpcoming = "upcoming";
+
+    async Task<(VideoExtraStored2, string error)> VideoDetails(Page page, string videoId) {
       var details = await page.EvaluateFunctionAsync<VideDetails>(@"() => {
-     var v = ytInitialPlayerResponse.videoDetails
+     var v = typeof(ytInitialData) != 'undefined' && ytInitialPlayerResponse.videoDetails
      if(!v) return null
      return {
         author:v.author,
@@ -372,20 +434,26 @@ namespace YtReader.YtWebsite {
         thumbnail:v.thumbnail.thumbnails[v.thumbnail.thumbnails.length - 1].url,
         title:v.title,
         videoId:v.videoId,
-        viewCount:v.viewCount
+        viewCount:v.viewCount,
+        isLiveContent:v.isLiveContent,
+        isUpcoming:v.isUpcoming
     }
 }");
-      if (details == null) return null;
+      if (details == null) return default;
+      if (details.isUpcoming == true) return (default, VideoErrorUpcoming);
 
-      var detailsScript = await page.EvaluateExpressionAsync<VideoDetailsFromScript>(
-        "JSON.parse(document.querySelector('script.ytd-player-microformat-renderer').innerText)");
+      var detailsScript = await page.EvaluateFunctionAsync<VideoDetailsFromScript>(@"() => {
+    var el = document.querySelector('script.ytd-player-microformat-renderer')
+    if(!el) return null
+    return JSON.parse(document.querySelector('script.ytd-player-microformat-renderer').innerText)
+}");
+      if (detailsScript == null)
+        return default;
+
       var likeDislike = await page.EvaluateExpressionAsync<LikesDislikes>(
-        @"Object.assign({}, ...ytInitialData.contents.twoColumnWatchNextResults.results.results.contents
-    .map(c => c.videoPrimaryInfoRenderer)
-    .filter(c => c)
-    .flatMap(c => c.videoActions.menuRenderer.topLevelButtons)
-    .map(b => b.toggleButtonRenderer).filter(b => b)
-    .map(b => b.defaultText.accessibility.accessibilityData.label)
+        @"Array.from(document.querySelectorAll('#top-level-buttons #text'))
+    .map(b => b.getAttribute('aria-label'))
+    .filter(b => b)
     .map((l,i) => {
         var m = /^(\d*,?\d*|No) (likes|dislikes)/.exec(l)
         if(!m) {
@@ -395,7 +463,7 @@ namespace YtReader.YtWebsite {
         var key = m.length >= 3 ? m[2] : `position ${i}`
         return {[key] : m[1] == 'No' ? 0 : parseInt(m[1].replace(/,/g, ''))}
     })
-)");
+.reduce((acc, cur) => ({ ...acc, ...cur }), {})");
 
       var video = new VideoExtraStored2 {
         VideoId = videoId,
@@ -412,7 +480,7 @@ namespace YtReader.YtWebsite {
         Source = ScrapeSource.Chrome
       };
 
-      return video;
+      return (video, default);
     }
 
     class VideDetails {
@@ -424,6 +492,8 @@ namespace YtReader.YtWebsite {
       public long     viewCount        { get; set; }
       public int      lengthSeconds    { get; set; }
       public string   thumbnail        { get; set; }
+      public bool?    isLiveContent    { get; set; }
+      public bool?    isUpcoming       { get; set; }
     }
 
     class LikesDislikes {
@@ -443,7 +513,7 @@ namespace YtReader.YtWebsite {
       public int    rank         { get; set; }
     }
 
-    static long? ParseViews(string s) {
+    public static long? ParseViews(string s) {
       if (s.NullOrEmpty()) return null;
       var m = Regex.Match(s, "^(\\d+,?\\d*) views");
       if (!m.Success) return null;
@@ -451,7 +521,7 @@ namespace YtReader.YtWebsite {
       return views;
     }
 
-    static DateTime? ParseAgo(DateTime now, string ago) {
+    public static DateTime? ParseAgo(DateTime now, string ago) {
       if (ago == null) return null;
       var res = Regex.Match(ago, "(?<num>\\d)\\s(?<unit>minute|hour|day|week|month|year)[s]? ago");
       if (!res.Success) return null;

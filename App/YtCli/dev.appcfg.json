@@ -2,9 +2,9 @@
   "storage": {
     "backupRootPath": "backuptest"
   },
-  "ytReader": {
-    "from": "2019-10-01",
-    "to": null,
-    "refreshRecsWithin": "20.00:00:00.0"
+  "collect": {
+    "discoverChannels": 2,
+    "discoverChannelVids": 2,
+    "from": "2020-04-01"
   }
 }

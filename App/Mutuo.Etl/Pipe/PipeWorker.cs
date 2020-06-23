@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
 using Medallion.Shell;
@@ -18,13 +19,14 @@ namespace Mutuo.Etl.Pipe {
   public interface IPipeWorker {
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
-    Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log);
+    Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel);
   }
 
   public interface IPipeWorkerStartable : IPipeWorker {
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
-    Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, ILogger log);
+    Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, bool exclusive, ILogger log,
+      CancellationToken cancel);
   }
 
   public enum ContainerState {
@@ -39,7 +41,13 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public static class PipeWorkerEx {
-    public static string ContainerGroupName(this PipeRunId runid) => $"{runid.Name}-{runid.GroupId}-{runid.Num}".ToLowerInvariant();
+    public static string ContainerGroupName(this PipeRunId runId, bool exclusive, SemVersion version) =>
+      new[] {
+        runId.Name,
+        version.Prerelease == "" ? null : version.Prerelease,
+        exclusive ? null : runId.GroupId,
+        runId.Num > 0 ? runId.Num.ToString() : null
+      }.NotNull().Join("-", p => p!.ToLowerInvariant());
 
     /// <summary>the container image name, with its registry and tag</summary>
     public static string FullContainerImageName(this ContainerCfg cfg, string tag) => $"{cfg.Registry}/{cfg.ImageName}:{tag}";
@@ -64,12 +72,14 @@ namespace Mutuo.Etl.Pipe {
     }
 
     /// <summary>Starts some pipe work. Assumes required state has been created</summary>
-    public static async Task<PipeRunMetadata> Launch(this IPipeWorker worker, IPipeCtx ctx, PipeRunId runId, ILogger log) =>
-      (await worker.Launch(ctx, new[] {runId}, log)).First();
+    public static async Task<PipeRunMetadata> Launch(this IPipeWorker worker, IPipeCtx ctx, PipeRunId runId, ILogger log, CancellationToken cancel = default) =>
+      (await worker.Launch(ctx, new[] {runId}, log, cancel)).First();
 
     /// <summary>Starts some pipe work. Assumes required state has been created</summary>
-    public static async Task<PipeRunMetadata> Launch(this IPipeWorkerStartable worker, IPipeCtx ctx, PipeRunId runId, bool returnOnStarting, ILogger log) =>
-      (await worker.Launch(ctx, new[] {runId}, returnOnStarting, log)).First();
+    public static async Task<PipeRunMetadata> Launch(this IPipeWorkerStartable worker, IPipeCtx ctx, PipeRunId runId, bool returnOnStarting, bool exclusive,
+      ILogger log,
+      CancellationToken cancel = default) =>
+      (await worker.Launch(ctx, new[] {runId}, returnOnStarting, exclusive, log, cancel)).First();
   }
 
   public class LocalPipeWorker : IPipeWorker {
@@ -77,7 +87,7 @@ namespace Mutuo.Etl.Pipe {
 
     public LocalPipeWorker(SemVersion version) => Version = version;
 
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) =>
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) =>
       await ids.BlockFunc(async id => {
         var runCfg = id.PipeCfg(ctx.PipeCfg);
         var image = runCfg.Container.FullContainerImageName(Version.PipeTag());
@@ -87,7 +97,7 @@ namespace Mutuo.Etl.Pipe {
           .Concat(runCfg.Container.Exe)
           .Concat(id.PipeArgs())
           .ToArray<object>();
-        var cmd = Command.Run("docker", args).RedirectTo(Console.Out);
+        var cmd = Command.Run("docker", args, o => o.CancellationToken(cancel)).RedirectTo(Console.Out);
         var res = await cmd.Task;
         var md = res.Success
           ? new PipeRunMetadata {
@@ -103,9 +113,9 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class ThreadPipeWorker : IPipeWorker {
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log) {
+    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) {
       var res = await ids.BlockFunc(async id => {
-        await ctx.DoPipeWork(id);
+        await ctx.DoPipeWork(id, cancel);
         var md = new PipeRunMetadata {
           Id = id
         };

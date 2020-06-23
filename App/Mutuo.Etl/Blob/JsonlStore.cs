@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Humanizer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
@@ -14,9 +12,8 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Blob {
-
   public interface IJsonlStore {
-    StringPath Path { get; }
+    StringPath       Path  { get; }
     ISimpleFileStore Store { get; }
 
     /// <summary>returns the latest file (either in landing or staging) within the given partition</summary>
@@ -25,20 +22,19 @@ namespace Mutuo.Etl.Blob {
     Task<StoreFileMd> LatestFile(string partition = null);
 
     Task<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false);
-    
   }
-  
+
   /// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl</summary>
   public class JsonlStore<T> : IJsonlStore {
-    static readonly long          TargetBytes = (long)10.Megabytes().Bytes;
+    static readonly long            TargetBytes = (long) 10.Megabytes().Bytes;
     readonly        Func<T, string> GetPartition;
     readonly        Func<T, string> GetTs;
 
     readonly ILogger          Log;
     readonly int              Parallel;
-    public ISimpleFileStore Store { get; }
+    public   ISimpleFileStore Store { get; }
     readonly string           Version;
-    
+
     public StringPath Path { get; }
 
     /// <summary></summary>
@@ -74,10 +70,10 @@ namespace Mutuo.Etl.Blob {
     }
 
     public Task<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false) => Store.Files(path, allDirectories);
-    
+
     public async Task<IReadOnlyCollection<T>> Items(StringPath path) => await LoadJsonl(path);
 
-    static readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {
+    public readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {
       NullValueHandling = NullValueHandling.Ignore,
       DefaultValueHandling = DefaultValueHandling.Include,
       Formatting = Formatting.None,

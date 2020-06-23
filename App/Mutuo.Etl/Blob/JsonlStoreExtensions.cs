@@ -31,7 +31,7 @@ namespace Mutuo.Etl.Blob {
       path.Add(FileName(ts, version));
 
     public static string FileName(string ts, string version) =>
-      $"{ts}.{version ?? ""}.{GuidExtensions.NewShort(6)}.{Extension}";
+      $"{ts}.{version ?? ""}.{ShortGuid.Create(6)}.{Extension}";
     
     /// <summary>Process new files in land into stage. Note on the different modes: - LandAndStage: Immutable operation, load
     ///   data downstream from the stage directory - Default: Mutates the files in the same directory. Downstream operations:

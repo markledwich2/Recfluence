@@ -20,9 +20,9 @@ namespace YtFunctions {
     /// <summary>Use the Json.net defaults because we want to keep original name casings so that we aren't re-casing the db in
     ///   different formats</summary>
     static readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {Formatting = Formatting.None};
-    readonly AsyncLazy<FuncCtx, ExecutionContext> Ctx;
+    readonly Defer<FuncCtx, ExecutionContext> Ctx;
 
-    public ApiSearch(AsyncLazy<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
+    public ApiSearch(Defer<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
 
     [FunctionName("video")]
     public async Task<HttpResponseMessage> Video([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "video/{videoId}")]

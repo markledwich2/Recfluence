@@ -7,6 +7,7 @@ using Serilog;
 using SysExtensions.Text;
 
 namespace YtCli {
+  /// <summary>Generic command for pipe ETL to launch instances to perform any pipe operations</summary>
   [Command("pipe")]
   public class PipeCmd : PipeCmdArgs {
     readonly IPipeCtx PipeCtx;
@@ -24,13 +25,17 @@ namespace YtCli {
       if (!pipeMethods.ContainsKey(runId.Name))
         throw new CommandException($"Pipe {runId.Name} not found. Available: {pipeMethods.Join(", ", m => m.Method.Name)}");
 
-      Log.Information("Pipe Run Command Started {RunId}", RunId);
-      if (runId.HasGroup)
-        await PipeCtx.DoPipeWork(runId);
-
-      var res = await PipeCtx.Run(runId.Name, log: Log, location: Location ?? PipeRunLocation.Local);
-      if (res.Error)
-        throw new CommandException(res.ErrorMessage);
+      var log = Log.ForContext("RunId", runId);
+      log.Information("Pipe Run Command Started {RunId}", RunId);
+      if (runId.HasGroup) {
+        await PipeCtx.DoPipeWork(runId, console.GetCancellationToken());
+      }
+      else {
+        var res = await PipeCtx.Run(runId.Name, new PipeRunOptions {Location = Location ?? PipeRunLocation.Local}, log: log,
+          cancel: console.GetCancellationToken());
+        if (res.Error)
+          throw new CommandException(res.ErrorMessage);
+      }
     }
   }
 }

@@ -9,3 +9,4 @@ discord.py
 seqlog
 shortuuid
 aiohttp
+more-itertools

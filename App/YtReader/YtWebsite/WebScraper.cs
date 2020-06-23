@@ -1,19 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Humanizer;
 using LtGt;
 using Mutuo.Etl.Blob;
 using Newtonsoft.Json.Linq;
-using Polly;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Serialization;
@@ -25,88 +23,72 @@ using YtReader.Store;
 
 namespace YtReader.YtWebsite {
   public class WebScraper {
-    const    string           MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
-    readonly ProxyCfg         Proxy;
-    readonly YtCollectCfg     CollectCfg;
-    readonly ISimpleFileStore LogStore;
-
-    readonly HttpClient DirectHttp;
-    readonly HttpClient ProxyHttp;
-    long                _directRequests;
-    long                _proxyRequests;
-
-    long DirectHttpFailures;
+    const    string                                        MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
+    readonly ProxyCfg                                      Proxy;
+    readonly YtCollectCfg                                  CollectCfg;
+    readonly ISimpleFileStore                              LogStore;
+    readonly ResourceCycle<HttpClient, ProxyConnectionCfg> Clients;
 
     public WebScraper(ProxyCfg proxy, YtCollectCfg collectCfg, ISimpleFileStore logStore) {
       Proxy = proxy;
       CollectCfg = collectCfg;
       LogStore = logStore;
-      DirectHttp = CreateHttpClient(false);
-      ProxyHttp = CreateHttpClient(true);
+      Clients = new ResourceCycle<HttpClient, ProxyConnectionCfg>(proxy.DirectAndProxies(), p => Task.FromResult(CreateHttpClient(p)));
     }
 
-    public (long direct, long proxy) RequestStats => (_directRequests, _proxyRequests);
-
-    HttpClient CreateHttpClient(bool useProxy) =>
+    HttpClient CreateHttpClient(ProxyConnectionCfg proxy) =>
       new HttpClient(new HttpClientHandler {
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         UseCookies = false,
-        Proxy = useProxy ? new WebProxy(Proxy.Url, true, new string[] { }, new NetworkCredential(Proxy.Creds.Name, Proxy.Creds.Secret)) : null,
-        UseProxy = useProxy
+        Proxy = proxy.Url == null
+          ? null
+          : new WebProxy(proxy.Url, BypassOnLocal: true, new string[] { },
+            proxy.Creds != null ? new NetworkCredential(proxy.Creds.Name, proxy.Creds.Secret) : null),
+        UseProxy = proxy.Url != null,
       }) {
         Timeout = Proxy.TimeoutSeconds.Seconds()
       };
 
     async Task<string> GetRaw(string url, string desc, ILogger log) {
-      log.Debug("Scraping {Desc} {Url}", desc, url);
+      log.Debug("WebScraper -  {Desc} {Url}", desc, url);
 
-      var useDirect = !Proxy.AlwaysUseProxy && Interlocked.Read(ref DirectHttpFailures) == 0;
-
-      if (useDirect)
+      var attempts = 0;
+      while (true) {
+        attempts++;
+        var (http, proxy) = await Clients.Get();
         try {
-          var directPolicy = Policy
-            .HandleResult<HttpResponseMessage>(m => m.IsTransientError())
-            .RetryWithBackoff(desc, Proxy.Retry, log);
-
-          var directRes = await directPolicy.ExecuteAsync(async () => {
-            var get = await DirectHttp.GetAsync(url);
-            ThrowMissingResourceInvalidOpIfNeeded(get);
-            return get;
-          });
-
-          var sw = Stopwatch.StartNew();
-          directRes.EnsureSuccessStatusCode();
-          var raw = await directRes.ContentAsString();
-          Interlocked.Increment(ref _directRequests);
-          log.Debug("Direct scraped {Desc} {Url} in {Duration}", desc, url, sw.Elapsed);
-          return raw;
+          var resp = http.SendAsync(Get(url));
+          if (await Task.WhenAny(resp, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) != resp)
+            throw new TaskCanceledException($"GetStringAsync on {url} took to long without timing out itself");
+          var innerRes = await resp;
+          ThrowMissingResourceInvalidOpIfNeeded(innerRes);
+          if (
+            (proxy.IsDirect() || attempts > 3) // fall back immediately for direct, 3 failures for proxies
+            && innerRes.StatusCode == HttpStatusCode.TooManyRequests) {
+            log.Debug("WebScraper - TooManyRequests status, falling back to next proxy");
+            await Clients.NextResource(http);
+            attempts = 0;
+            continue;
+          }
+          innerRes.EnsureSuccessStatusCode();
+          log.Debug("WebScraper - {Desc} {Url}. Proxy: {Proxy}", desc, url, proxy.Url ?? "Direct");
+          return await innerRes.ContentAsString();
         }
         catch (Exception ex) {
+          log.Warning(ex, "WebScraper - error requesting {url} attempt {Attempt} : {Error} ", url, attempts, ex.Message);
           if (ex is InvalidOperationException && ex.Message == MissingYtResourceMessage)
-            throw; // fail early, don't fall back to proxy for this error
-          Interlocked.Increment(ref DirectHttpFailures);
-          log.Debug(ex, "Direct connection failed with {Error}. Falling back to proxy", ex.Message);
+            throw;
+          if (!(ex is HttpRequestException || ex is TaskCanceledException)) // continue on these
+            throw;
+          if (attempts > 3)
+            throw;
         }
-
-      var proxyPolicy = Policy
-        .Handle<HttpRequestException>().Or<TaskCanceledException>()
-        .RetryWithBackoff(desc, Proxy.Retry, log);
-
-      var res = await proxyPolicy.ExecuteAsync(async () => {
-        var get = ProxyHttp.GetAsync(url);
-        if (await Task.WhenAny(get, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) != get)
-          throw new TaskCanceledException($"GetStringAsync on {url} took to long without timing out itself");
-
-        var innerRes = await get;
-        ThrowMissingResourceInvalidOpIfNeeded(innerRes);
-        innerRes.EnsureSuccessStatusCode();
-        return await innerRes.ContentAsString();
-      }).WithDuration();
-
-      Interlocked.Increment(ref _proxyRequests);
-      log.Debug("Proxy scraped {Desc} {Url} in {Duration}", desc, url, res.Duration);
-      return res.Result;
+      }
     }
+
+    static HttpRequestMessage Get(string url) =>
+      url.AsUri().Get().AddHeader("User-Agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36");
 
     static void ThrowMissingResourceInvalidOpIfNeeded(HttpResponseMessage directRes) {
       if (directRes.StatusCode == HttpStatusCode.BadRequest)
@@ -371,15 +353,14 @@ namespace YtReader.YtWebsite {
     public async Task<RecsAndExtra> GetRecsAndExtra(string videoId, ILogger log) {
       var watchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
       var (html, raw, url) = watchPage;
-      var channel = ChannelInfoFromWatchPage(html);
       var infoDic = await GetVideoInfoDicAsync(videoId, log);
       var videoItem = GetVideo(videoId, infoDic, watchPage);
 
       var extra = new VideoExtraStored2 {
         VideoId = videoId,
         Updated = DateTime.UtcNow,
-        ChannelId = channel.channelId,
-        ChannelTitle = channel.channelTitle,
+        ChannelId = videoItem.ChannelId,
+        ChannelTitle = videoItem.ChannelTitle,
         Description = videoItem.Description,
         Duration = videoItem.Duration,
         Keywords = videoItem.Keywords,
@@ -398,18 +379,19 @@ namespace YtReader.YtWebsite {
       else {
         extra.SubError = html.QueryElements("#unavailable-submessage").FirstOrDefault()?.GetInnerText();
         if (extra.SubError == "") extra.SubError = null;
-        if (extra.SubError.HasValue()) // all pages have the error, but not a suberror
+        if (extra.SubError.HasValue()) // all pages have the error, but not a sub-error
           extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
       }
       if (extra.Error != null) return new RecsAndExtra(extra, new Rec[] { });
 
-      var recs = GetRecs(html);
-      if (!recs.Any()) {
+
+      var (recs, recEx) = Def.New(() => GetRecs2(html)).Try();
+      if (recs?.Any() != true || recEx != null) {
         var uri = new Uri(url);
         var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), $"{uri.PathAndQuery}.html");
         var logUrl = LogStore.Url(path);
         await LogStore.Save(path, raw.AsStream(), log);
-        log.Warning("WebScraper - Unable to find recs: {Url}", logUrl);
+        log.Warning("WebScraper - Unable to find recs at ({Url}). error: {Error}", logUrl, recEx?.ToString());
       }
 
       var match = _ytAdRegex.Match(raw);
@@ -429,19 +411,40 @@ namespace YtReader.YtWebsite {
       return (title, id);
     }
 
-    Rec[] GetRecs(HtmlDocument html) {
-      var recs = (from d in html.QueryElements("li.video-list-item.related-list-item").Select((e, i) => (e, i))
-        let titleSpan = d.e.QueryElements("span.title").FirstOrDefault()
-        let channelSpan = d.e.QueryElements("span.stat.attribution > span").FirstOrDefault()
-        let videoA = d.e.QueryElements("a.content-link").FirstOrDefault()
-        where videoA != null && channelSpan != null
-        select new Rec {
-          ToVideoId = ParseVideoId($"https://youtube.com/{videoA.GetAttribute("href").Value}"),
-          ToVideoTitle = titleSpan.GetInnerText(),
-          ToChannelTitle = channelSpan.GetInnerText(),
-          Rank = d.i + 1
-        }).ToArray();
+    static readonly Regex WindowObjectsRe = new Regex("^.*window\\[\"(?<name>\\w+)\"\\]\\s*=\\s*(?<json>{.*?});?$",
+      RegexOptions.Compiled | RegexOptions.Multiline);
 
+    public Rec[] GetRecs2(HtmlDocument html) {
+      var scripts = html.QueryElements("script")
+        .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
+
+      var windowObjects = scripts
+        .SelectMany(t => WindowObjectsRe.Matches(t))
+        .ToDictionary(m => m.Groups["name"].Value, m => m.Groups["json"].Value);
+
+      var initData = windowObjects.TryGet("ytInitialData") ?? throw new InvalidOperationException("can't find ytInitialData data script");
+
+      var jInit = JObject.Parse(initData);
+      var resultsSel = "$.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results";
+      var jResults = (JArray) jInit.SelectToken(resultsSel) ?? throw new InvalidOperationException($"can't find {resultsSel}");
+      var recs = jResults
+        .OfType<JObject>()
+        .Select(j => j.SelectToken("compactAutoplayRenderer.contents[0].compactVideoRenderer") ?? j.SelectToken("compactVideoRenderer"))
+        .Where(j => j != null)
+        .Select((j, i) => {
+          var viewText = (j.SelectToken("viewCountText.simpleText") ?? j.SelectToken("viewCountText.runs[0].text"))?.Value<string>();
+          return new Rec {
+            ToVideoId = j.Value<string>("videoId"),
+            ToVideoTitle = j["title"]?.Value<string>("simpleText") ?? j.SelectToken("title.runs[0].text")?.Value<string>(),
+            ToChannelId = j.Value<string>("channelId"),
+            ToChannelTitle = j.SelectToken("longBylineText.runs[0].text")?.Value<string>(),
+            Rank = i + 1,
+            Source = ScrapeSource.Web,
+            ToViews = ChromeScraper.ParseViews(viewText),
+            ToUploadDate = ChromeScraper.ParseAgo(DateTime.UtcNow, j.SelectToken("publishedTimeText.simpleText")?.Value<string>()),
+            ForYou = ChromeScraper.ParseForYou(viewText)
+          };
+        }).ToArray();
       return recs;
     }
 
@@ -580,7 +583,7 @@ namespace YtReader.YtWebsite {
     public string        ToVideoId      { get; set; }
     public string        ToVideoTitle   { get; set; }
     public string        ToChannelTitle { get; set; }
-    public string        ToChannelId    { get; set; } // only known if from the API
+    public string        ToChannelId    { get; set; }
     public ScrapeSource? Source         { get; set; }
     public int           Rank           { get; set; }
     public long?         ToViews        { get; set; }

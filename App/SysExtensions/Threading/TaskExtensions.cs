@@ -1,14 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Dynamic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Serilog;
 using SysExtensions.Collections;
 
 namespace SysExtensions.Threading {
+
+  public static class Def {
+    /// <summary>
+    /// Create a func with type inference
+    /// </summary>
+    public static Func<T> New<T>(this Func<T> func) => func;
+  }
+  
   public static class TaskExtensions {
+    
     /// <summary>Waits for all of the tasks, however will cancel the tasks and throw an exception if any of the tasks have a
     ///   fault</summary>
     /// <param name="tasks"></param>
@@ -90,44 +99,5 @@ namespace SysExtensions.Threading {
 
     public static async Task<(bool Success, T Res)> WithTimeout<T>(this Task<T> task, TimeSpan timeout) =>
       task == await Task.WhenAny(task, timeout.Delay()) ? (true, await task) : (false, default);
-
-    public static async Task<T> WithWrappedException<T>(this Task<T> task, Func<Exception, string> getMesage, ILogger log = null) {
-      try {
-        return await task;
-      }
-      catch (Exception ex) {
-        var msg = getMesage(ex);
-        log?.Error(ex, msg);
-        throw new InvalidOperationException(msg, ex);
-      }
-    }
-
-    /// <summary>Wraps and throws the exception. The error is logged if log is provided.</summary>
-    /// <param name="task"></param>
-    /// <param name="message"></param>
-    /// <param name="log">if provided, errors will be logged</param>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
-    public static async Task<T> WithWrappedException<T>(this Task<T> task, string message, ILogger log = null) {
-      try {
-        return await task;
-      }
-      catch (Exception ex) {
-        log?.Error(ex, message);
-        throw new InvalidOperationException(message, ex);
-      }
-    }
-
-    public static async Task WithWrappedException(this Task task, string taskDescription, ILogger log = null) {
-      try {
-        await task;
-      }
-      catch (Exception ex) {
-        var msg = $"Unhandled error performing ({taskDescription}): {ex.Message}";
-        log?.Error(ex, msg);
-        throw new InvalidOperationException(msg, ex);
-      }
-    }
   }
 }

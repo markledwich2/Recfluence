@@ -31,7 +31,7 @@ using SysExtensions.Text;
 using YtReader.Db;
 using YtReader.Search;
 using YtReader.Store;
-using YtReader.Yt;
+using YtReader.YtApi;
 using YtReader.YtWebsite;
 
 namespace YtReader {
@@ -45,9 +45,8 @@ namespace YtReader {
 
     public static Logger CreateTestLogger() =>
       new LoggerConfiguration()
-        .WriteTo.Seq("http://localhost:5341", LogEventLevel.Debug)
-        .WriteTo.Console()
-        .MinimumLevel.Debug()
+        .WriteTo.Seq("http://localhost:5341", LogEventLevel.Debug).MinimumLevel.Debug()
+        .WriteTo.Console().MinimumLevel.Debug()
         .CreateLogger();
 
     public static ILogger ConsoleLogger(LogEventLevel level = LogEventLevel.Information) =>
@@ -72,13 +71,15 @@ namespace YtReader {
       return log;
     }
 
-    public static LoggerConfiguration YtEnrich(this LoggerConfiguration logCfg, string env, string app, SemVersion version) =>
-      logCfg.Enrich.With(
+    public static LoggerConfiguration YtEnrich(this LoggerConfiguration logCfg, string env, string app, SemVersion version) {
+      var container = AzureContainers.GetContainerEnv();
+      return logCfg.Enrich.With(
         new PropertyEnricher("App", app),
         new PropertyEnricher("Env", env),
-        new PropertyEnricher("Machine", Environment.MachineName),
+        new PropertyEnricher("Machine", container ?? Environment.MachineName),
         new PropertyEnricher("Version", version)
       );
+    }
 
     static LoggerConfiguration ConfigureSeq(this LoggerConfiguration loggerCfg, AppCfg cfg) {
       var seqCfg = cfg?.Seq;
@@ -92,10 +93,11 @@ namespace YtReader {
     /// <param name="rootCfg"></param>
     /// <param name="appCfg"></param>
     /// <returns></returns>
-    public static (string name, string value)[] PipeEnv(RootCfg rootCfg, AppCfg appCfg) =>
+    public static (string name, string value)[] PipeEnv(RootCfg rootCfg, AppCfg appCfg, SemVersion version) =>
       new[] {
         (nameof(RootCfg.Env), rootCfg.Env),
-        (nameof(RootCfg.AppStoreCs), rootCfg.AppStoreCs)
+        (nameof(RootCfg.AppStoreCs), rootCfg.AppStoreCs),
+        (nameof(RootCfg.BranchEnv), version.Prerelease)
       };
 
     /// <summary>Loads application configuration, and sets global config for .net</summary>
@@ -104,8 +106,8 @@ namespace YtReader {
       basePath ??= Environment.CurrentDirectory;
       var cfgRoot = new ConfigurationBuilder()
         .SetBasePath(basePath)
-        .AddEnvironmentVariables()
         .AddJsonFile("local.rootcfg.json", true)
+        .AddEnvironmentVariables()
         .Build().Get<RootCfg>();
 
       if (cfgRoot.AppStoreCs == null)
@@ -192,9 +194,9 @@ namespace YtReader {
     static IReadOnlyCollection<ValidationResult> Validate(object cfgObject) =>
       new DataAnnotationsValidator().TryValidateObjectRecursive(cfgObject).results;
 
-    public static PipeAppCtx PipeAppCtxEmptyScope(RootCfg root, AppCfg appCfg) =>
+    public static PipeAppCtx PipeAppCtxEmptyScope(RootCfg root, AppCfg appCfg, SemVersion version) =>
       new PipeAppCtx(new ContainerBuilder().Build().BeginLifetimeScope(), typeof(YtCollector)) {
-        EnvironmentVariables = PipeEnv(root, appCfg)
+        EnvironmentVariables = PipeEnv(root, appCfg, version)
       };
 
     public static ILifetimeScope MainScope(RootCfg rootCfg, AppCfg cfg, PipeAppCtx pipeAppCtx, VersionInfo version, ILogger log) {
@@ -229,6 +231,7 @@ namespace YtReader {
       b.Register(_ => cfg.UserScrape).SingleInstance();
       b.Register(_ => cfg.Proxy).SingleInstance();
       b.Register(_ => cfg.Collect).SingleInstance();
+      b.Register(_ => cfg.YtApi).SingleInstance();
 
       b.RegisterType<SnowflakeConnectionProvider>().SingleInstance();
       b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();
@@ -279,7 +282,6 @@ namespace YtReader {
     public static ISimpleFileStore DataStore(this AppCfg cfg, ILogger log, StringPath path) =>
       new AzureBlobFileStore(cfg.Storage.DataStorageCs, path, log);
 
-    public static YtClient YtClient(this AppCfg cfg, ILogger log) => new YtClient(cfg.YTApiKeys, log);
     public static bool IsProd(this RootCfg root) => root.Env?.ToLowerInvariant() == "prod";
   }
 }

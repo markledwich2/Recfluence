@@ -180,25 +180,14 @@
         }
       }
     },
-    "ResultsCfg": {
+    "ProxyCfg": {
       "type": "object",
       "properties": {
-        "fileQueryUri": {
-          "type": "string"
-        },
-        "parallel": {
-          "type": "integer"
-        }
-      }
-    },
-    "ScraperCfg": {
-      "type": "object",
-      "properties": {
-        "url": {
-          "type": "string"
-        },
-        "creds": {
-          "type": "string"
+        "proxies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProxyConnectionCfg"
+          }
         },
         "timeoutSeconds": {
           "type": "integer"
@@ -211,15 +200,34 @@
         }
       }
     },
+    "ProxyConnectionCfg": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "creds": {
+          "type": "string"
+        }
+      }
+    },
+    "ResultsCfg": {
+      "type": "object",
+      "properties": {
+        "fileQueryUri": {
+          "type": "string"
+        },
+        "parallel": {
+          "type": "integer"
+        }
+      }
+    },
     "SeqCfg": {
       "type": "object",
       "properties": {
         "seqUrl": {
           "type": "string",
           "format": "uri"
-        },
-        "idleQuery": {
-          "type": "string"
         },
         "containerGroupName": {
           "type": "string"
@@ -278,6 +286,9 @@
         },
         "role": {
           "type": "string"
+        },
+        "dbSuffix": {
+          "type": "string"
         }
       }
     },
@@ -317,6 +328,9 @@
           "type": "string"
         },
         "pipePath": {
+          "type": "string"
+        },
+        "logsPath": {
           "type": "string"
         },
         "backupCs": {
@@ -409,6 +423,23 @@
         }
       }
     },
+    "UserScrapeCfg": {
+      "type": "object",
+      "properties": {
+        "container": {
+          "$ref": "#/definitions/ContainerCfg"
+        },
+        "maxContainers": {
+          "type": "integer"
+        },
+        "seedsPerIdeology": {
+          "type": "integer"
+        },
+        "testsPerIdeology": {
+          "type": "integer"
+        }
+      }
+    },
     "WarehouseCfg": {
       "type": "object",
       "properties": {
@@ -432,7 +463,18 @@
         }
       }
     },
-    "YtReaderCfg": {
+    "YtApiCfg": {
+      "type": "object",
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "YtCollectCfg": {
       "type": "object",
       "properties": {
         "from": {
@@ -452,11 +494,41 @@
         "refreshRecsMin": {
           "type": "integer"
         },
+        "refreshRecsMax": {
+          "type": "integer"
+        },
         "refreshAllAfter": {
           "type": "string"
         },
         "alwaysUseProxy": {
           "type": "boolean"
+        },
+        "headless": {
+          "type": "boolean"
+        },
+        "discoverChannels": {
+          "type": "integer"
+        },
+        "discoverChannelVids": {
+          "type": "integer"
+        },
+        "populateMissingCommentsLimit": {
+          "type": "integer"
+        },
+        "parallelChannels": {
+          "type": "integer"
+        },
+        "channelsPerContainer": {
+          "type": "integer"
+        },
+        "chromeParallel": {
+          "type": "integer"
+        },
+        "webParallel": {
+          "type": "integer"
+        },
+        "chromeAttempts": {
+          "type": "integer"
         }
       }
     },
@@ -474,29 +546,20 @@
     "appInsightsKey": {
       "type": "string"
     },
-    "parallelChannels": {
-      "type": "integer"
-    },
     "defaultParallel": {
-      "type": "integer"
-    },
-    "channelsPerContainer": {
       "type": "integer"
     },
     "env": {
       "$ref": "#/definitions/BranchEnvCfg"
     },
-    "ytReader": {
-      "$ref": "#/definitions/YtReaderCfg"
+    "collect": {
+      "$ref": "#/definitions/YtCollectCfg"
     },
     "storage": {
       "$ref": "#/definitions/StorageCfg"
     },
-    "ytApiKeys": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+    "ytApi": {
+      "$ref": "#/definitions/YtApiCfg"
     },
     "limitedToSeedChannels": {
       "type": "array",
@@ -510,8 +573,8 @@
     "sheets": {
       "$ref": "#/definitions/SheetsCfg"
     },
-    "scraper": {
-      "$ref": "#/definitions/ScraperCfg"
+    "proxy": {
+      "$ref": "#/definitions/ProxyCfg"
     },
     "snowflake": {
       "$ref": "#/definitions/SnowflakeCfg"
@@ -542,6 +605,9 @@
     },
     "updater": {
       "$ref": "#/definitions/YtUpdaterCfg"
+    },
+    "userScrape": {
+      "$ref": "#/definitions/UserScrapeCfg"
     }
   }
 }

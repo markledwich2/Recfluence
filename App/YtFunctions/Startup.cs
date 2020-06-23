@@ -20,7 +20,7 @@ namespace YtFunctions {
   public class Startup : FunctionsStartup {
     public override void Configure(IFunctionsHostBuilder builder) =>
       builder.UseAutofacServiceProviderFactory(c => {
-        c.Register(_ => new AsyncLazy<FuncCtx, ExecutionContext>(FuncCtx.LoadCtx)).SingleInstance();
+        c.Register(_ => new Defer<FuncCtx, ExecutionContext>(FuncCtx.LoadCtx)).SingleInstance();
         c.RegisterType<ApiBackend>();
         c.RegisterType<ApiSearch>();
       });
@@ -47,7 +47,7 @@ namespace YtFunctions {
       var cfgDir = Setup.SolutionDir == null ? exec.FunctionAppDirectory : Setup.SolutionDir.Combine("YtCli").FullPath;
       var (app, root, version) = await Setup.LoadCfg(cfgDir);
       var log = Logger(root, app, version.Version);
-      var appCtx = Setup.PipeAppCtxEmptyScope(root, app);
+      var appCtx = Setup.PipeAppCtxEmptyScope(root, app, version.Version);
       var scope = Setup.MainScope(root, app, appCtx, version, log);
       return new FuncCtx(scope.Resolve<ILogger>(), appCtx, root, app, scope);
     }
@@ -65,14 +65,14 @@ namespace YtFunctions {
   }
 
   public static class FunctionHelper {
-    public static async Task Run(this AsyncLazy<FuncCtx, ExecutionContext> ctx, ExecutionContext exec, Func<FuncCtx, Task> action) =>
+    public static async Task Run(this Defer<FuncCtx, ExecutionContext> ctx, ExecutionContext exec, Func<FuncCtx, Task> action) =>
       await Run<object>(ctx, exec, async c => {
         await action(c);
         return null;
       });
 
     /// <summary>Executes a function with error handling and contextual logging</summary>
-    public static async Task<T> Run<T>(this AsyncLazy<FuncCtx, ExecutionContext> ctx, ExecutionContext exec, Func<FuncCtx, Task<T>> func) {
+    public static async Task<T> Run<T>(this Defer<FuncCtx, ExecutionContext> ctx, ExecutionContext exec, Func<FuncCtx, Task<T>> func) {
       var c = await ctx.GetOrCreate(exec);
       c = c.WithLog(c.Log.ForContext("Function", exec.FunctionName));
       try {

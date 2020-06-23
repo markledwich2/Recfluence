@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Mutuo.Etl.Db;
 using Serilog;
 using Snowflake.Data.Client;
+using SysExtensions;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;

@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using Microsoft.AspNetCore.Http;
@@ -13,15 +14,16 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
+using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
 using IMSLogger = Microsoft.Extensions.Logging.ILogger;
 
 #pragma warning disable 618
 
 namespace YtFunctions {
   public class ApiBackend {
-    readonly AsyncLazy<FuncCtx, ExecutionContext> Ctx;
+    readonly Defer<FuncCtx, ExecutionContext> Ctx;
 
-    public ApiBackend(AsyncLazy<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
+    public ApiBackend(Defer<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
 
     [FunctionName(nameof(DeleteExpiredResources_Timer))]
     public Task DeleteExpiredResources_Timer([TimerTrigger("0 0 * * * *")] TimerInfo myTimer, ExecutionContext exec) =>
@@ -52,7 +54,13 @@ Discovered ${GitVersionInfo.DiscoverVersion(typeof(YtCollector))}";
 
     Task<string> RunUpdate(ExecutionContext exec) => Ctx.Run(exec, async c => {
       var pipeCtx = c.Scope.Resolve<IPipeCtx>();
-      var res = await pipeCtx.Run((YtUpdater u) => u.Update(null, false, null), c.Log, true);
+      var options = new UpdateOptions();
+      var res = await pipeCtx.Run((YtUpdater u) => u.Update(options, PipeArg.Inject<CancellationToken>()),
+        new PipeRunOptions {
+          ReturnOnStarted = true,
+          Exclusive = true
+        }, c.Log);
+
       if (res.Error)
         Log.Error("ApiBackend - Error starting RunUpdate: {Message}", res.ErrorMessage);
       return res.Error
