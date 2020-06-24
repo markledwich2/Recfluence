@@ -33,7 +33,7 @@ namespace Tests {
 
     [Test]
     public static void TestContainerStateUnknown() {
-      var state = "PendingX".ToEnum<ContainerState>(false);
+      var state = "PendingX".ParseEnum<ContainerState>(false);
       state.Should().Be(ContainerState.Unknown);
     }
 

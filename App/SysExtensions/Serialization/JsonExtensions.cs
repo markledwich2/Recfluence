@@ -188,7 +188,7 @@ namespace SysExtensions.Serialization {
     public static T PropertyValue<T>(this JProperty jProp, JsonSerializerSettings settings = null) {
       var value = (jProp?.Value as JValue)?.Value;
       if (value == null) return default;
-      if (value is T) return (T) value;
+      if (value is T v) return v;
 
       var converter = TypeDescriptor.GetConverter(typeof(T));
       if (converter.CanConvertFrom(value.GetType()))

@@ -16,13 +16,14 @@ namespace YtReader {
   }
 
   public class UpdateOptions {
-    public bool     FullLoad               { get; set; }
-    public string[] Actions                { get; set; }
-    public string[] Tables                 { get; set; }
-    public string[] Results                { get; set; }
-    public string[] Channels               { get; set; }
-    public bool     DisableChannelDiscover { get; set; }
-    public bool UserScrapeInit { get; set; }
+    public bool                                    FullLoad               { get; set; }
+    public string[]                                Actions                { get; set; }
+    public string[]                                Tables                 { get; set; }
+    public string[]                                Results                { get; set; }
+    public string[]                                Channels               { get; set; }
+    public bool                                    DisableChannelDiscover { get; set; }
+    public bool                                    UserScrapeInit         { get; set; }
+    public (SearchIndex index, string condition)[] SearchConditions       { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -57,14 +58,29 @@ namespace YtReader {
     Task Collect(bool fullLoad, bool disableDiscover, string[] channels, CancellationToken cancel) =>
       _collector.Collect(Log, forceUpdate: fullLoad, disableDiscover, channels, cancel);
 
-    [DependsOn(nameof(Collect))] Task Stage(bool fullLoad, string[] tables) => _warehouse.StageUpdate(Log, fullLoad, tables);
-    [DependsOn(nameof(Stage))] Task Dataform(bool fullLoad, string[] tables, CancellationToken cancel) => YtDataform.Update(Log, fullLoad, tables, cancel);
-    [DependsOn(nameof(Dataform))] Task Search(bool fullLoad, CancellationToken cancel) => _search.SyncToElastic(Log, fullLoad, cancel: cancel);
-    [DependsOn(nameof(Dataform))] Task Results(string[] results) => _results.SaveBlobResults(Log, results);
-    [DependsOn(nameof(Collect))] Task Backup() => _backup.Backup(Log);
+    [DependsOn(nameof(Collect))]
+    Task Stage(bool fullLoad, string[] tables) =>
+      _warehouse.StageUpdate(Log, fullLoad, tables);
+
+    [DependsOn(nameof(Stage))]
+    Task Dataform(bool fullLoad, string[] tables, CancellationToken cancel) =>
+      YtDataform.Update(Log, fullLoad, tables, cancel);
+
+    [DependsOn(nameof(Dataform))]
+    Task Search(bool fullLoad, (SearchIndex index, string condition)[] conditions, CancellationToken cancel) =>
+      _search.SyncToElastic(Log, fullLoad, limit: null, conditions, cancel: cancel);
+
+    [DependsOn(nameof(Dataform))]
+    Task Results(string[] results) =>
+      _results.SaveBlobResults(Log, results);
+
+    [DependsOn(nameof(Collect))]
+    Task Backup() =>
+      _backup.Backup(Log);
 
     [DependsOn(nameof(Results), nameof(Collect), nameof(Dataform))]
-    Task UserScrape(bool init, CancellationToken cancel) => _userScrape.Run(Log, init, cancel);
+    Task UserScrape(bool init, CancellationToken cancel) =>
+      _userScrape.Run(Log, init, cancel);
 
     [Pipe]
     public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
@@ -77,7 +93,7 @@ namespace YtReader {
       var actionMethods = TaskGraph.FromMethods(
         c => Collect(fullLoad, options.DisableChannelDiscover, options.Channels, c),
         c => Stage(fullLoad, options.Tables),
-        c => Search(fullLoad, c),
+        c => Search(fullLoad, options.SearchConditions, c),
         c => Results(options.Results),
         c => UserScrape(options.UserScrapeInit, c),
         c => Dataform(fullLoad, options.Tables, c),

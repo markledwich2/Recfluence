@@ -74,6 +74,7 @@ namespace YtReader.Store {
       VideoExtra = CreateStore<VideoExtraStored2>("video_extra");
       Recs = CreateStore<RecStored2>("recs", r => r.FromChannelId);
       Captions = CreateStore<VideoCaptionStored2>("captions", c => c.ChannelId);
+      ChannelReviews = CreateStore<UserChannelReview>("channel_reviews", r => r.Email);
     }
 
     public ISimpleFileStore Store { get; }
@@ -84,6 +85,8 @@ namespace YtReader.Store {
     public JsonlStore<VideoExtraStored2>     VideoExtra { get; }
     public JsonlStore<RecStored2>            Recs       { get; }
     public JsonlStore<VideoCaptionStored2>   Captions   { get; }
+
+    public JsonlStore<UserChannelReview> ChannelReviews { get; }
 
     public IJsonlStore[] AllStores => new IJsonlStore[] {Channels, Searches, Videos, VideoExtra, Recs, Captions};
 
@@ -138,13 +141,22 @@ namespace YtReader.Store {
     public override string ToString() => $"{ChannelTitle}";
   }
 
-  public class UserChannelStore2 {
-    public string                      SheetId   { get; set; }
+  public class UserChannelReviewCommon : IHasUpdated {
     public string                      LR        { get; set; }
     public int                         Relevance { get; set; }
     public IReadOnlyCollection<string> SoftTags  { get; set; } = new List<string>();
     public string                      Notes     { get; set; }
-    public double                      Weight    { get; set; }
+    public DateTime                    Updated   { get; set; }
+  }
+
+  public class UserChannelReview : UserChannelReviewCommon {
+    public string ChannelId { get; set; }
+    public string Email     { get; set; }
+  }
+
+  public class UserChannelStore2 : UserChannelReview {
+    public string SheetId { get; set; }
+    public double Weight  { get; set; }
   }
 
   public class VideoStored2 : WithUpdatedItem {

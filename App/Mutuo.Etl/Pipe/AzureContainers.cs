@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,6 +19,7 @@ using SysExtensions.Build;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace Mutuo.Etl.Pipe {
   public class AzureContainers : IPipeWorkerStartable {
@@ -32,8 +32,8 @@ namespace Mutuo.Etl.Pipe {
       RegistryClient = registryClient;
       Az = new Lazy<IAzure>(azureCfg.GetAzure);
     }
-    
-    public static readonly string ContainerNameEnv  = $"{nameof(AzureContainers)}_Container";
+
+    public static readonly string ContainerNameEnv = $"{nameof(AzureContainers)}_Container";
     public static string GetContainerEnv() => Environment.GetEnvironmentVariable(ContainerNameEnv);
     public static ILogger Enrich(ILogger log) => log.ForContext("Container", GetContainerEnv());
 
@@ -105,14 +105,14 @@ namespace Mutuo.Etl.Pipe {
         Image = fullImageName,
         Cores = cfg.Cores,
         Mem = cfg.Mem,
-        Env = envVars.Concat((name:ContainerNameEnv, value:groupName)).ToDictionary(e => e.name, e => e.value),
+        Env = envVars.Concat((name: ContainerNameEnv, value: groupName)).ToDictionary(e => e.name, e => e.value),
         Exe = cfg.Exe,
         Args = args
       };
       await EnsureNotRunning(groupName, options, Az.Value, AzureCfg.ResourceGroup);
-      
-      log.Information("Launching container group {Container} ({FullImage}), Env ({Env}), Args ({Args})", 
-        groupName, options.Image, options.Env.Join(";", e => $"{e.Key}={e.Value}"), args.Join(" "));
+
+      log.Information("Launching container group {Container} ({FullImage}), Args ({Args})",
+        groupName, options.Image, args.Join(" "));
       var groupDef = ContainerGroup(cfg, groupName, options);
       var group = await Create(groupDef, log);
       var run = await Run(group, returnOnStart, sw, log, cancel);
@@ -126,7 +126,6 @@ namespace Mutuo.Etl.Pipe {
 
     static async Task<IContainerGroup> Create(IWithCreate groupDef, ILogger log) {
       var group = await groupDef.CreateAsync().WithDuration();
-      log.Debug("{Container} - group created in {Duration}", group.Result.Name, group.Duration);
       return group.Result;
     }
 

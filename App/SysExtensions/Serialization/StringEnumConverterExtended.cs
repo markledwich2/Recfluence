@@ -23,7 +23,7 @@ namespace SysExtensions.Serialization {
         switch (reader.TokenType) {
           case JsonToken.String:
             var enumText = reader.Value.ToString();
-            return enumText.ToEnum<Enum>(defaultEnumString: DefaultEnumString, t: t);
+            return enumText.ParseEnum<Enum>(defaultEnumString: DefaultEnumString, t: t);
           case JsonToken.Integer:
             throw new JsonSerializationException($"Integer value {reader.Value} is not allowed.");
         }

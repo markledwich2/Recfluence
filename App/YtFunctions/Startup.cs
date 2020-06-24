@@ -22,7 +22,7 @@ namespace YtFunctions {
       builder.UseAutofacServiceProviderFactory(c => {
         c.Register(_ => new Defer<FuncCtx, ExecutionContext>(FuncCtx.LoadCtx)).SingleInstance();
         c.RegisterType<ApiBackend>();
-        c.RegisterType<ApiSearch>();
+        c.RegisterType<ApiRecfluence>();
       });
   }
 
@@ -42,6 +42,8 @@ namespace YtFunctions {
     public ILifetimeScope Scope   { get; }
 
     public FuncCtx WithLog(ILogger log) => new FuncCtx(log, PipeCtx, Root, Cfg, Scope);
+
+    public T Resolve<T>() => Scope.Resolve<T>();
 
     public static async Task<FuncCtx> LoadCtx(ExecutionContext exec) {
       var cfgDir = Setup.SolutionDir == null ? exec.FunctionAppDirectory : Setup.SolutionDir.Combine("YtCli").FullPath;

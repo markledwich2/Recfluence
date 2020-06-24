@@ -61,13 +61,17 @@ namespace YtReader.Store {
     readonly SnowflakeConnectionProvider Sf;
     readonly ResultsCfg                  ResCfg;
     readonly ISimpleFileStore            Store;
-    readonly UserScrapeCfg UserScrapeCfg;
+    readonly UserScrapeCfg               UserScrapeCfg;
 
     public YtResults(SnowflakeConnectionProvider sf, ResultsCfg resCfg, ISimpleFileStore store, UserScrapeCfg userScrapeCfg) {
       Sf = sf;
       ResCfg = resCfg;
       Store = store;
       UserScrapeCfg = userScrapeCfg;
+    }
+
+    public static class Queries {
+      public const string ClassChannelsRaw = "class_channels_raw";
     }
 
     public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null) {
@@ -97,6 +101,9 @@ namespace YtReader.Store {
           new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos_per_ideology = UserScrapeCfg.TestsPerIdeology}),
 
           // classifier data 
+          new ResQuery(Queries.ClassChannelsRaw, @"select v from channel_stage
+where v:ReviewStatus::string = 'Pending'
+qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc) = 1", fileType: ResFilType.Json),
 
           new ResQuery("class_channels", pendingChannelsSelect, fileType: ResFilType.Json),
 

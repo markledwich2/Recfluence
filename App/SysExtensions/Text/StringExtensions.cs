@@ -127,5 +127,16 @@ namespace SysExtensions.Text {
 
     public static string Right(this string source, int length) =>
       length >= source.Length ? source : source.Substring(source.Length - length);
+
+    public static void Deconstruct<T>(this T[] list, out T first, out IList<T> rest) {
+      first = list.Length > 0 ? list[0] : default;
+      rest = list.Skip(1).ToList();
+    }
+
+    public static void Deconstruct<T>(this T[] list, out T first, out T second, out IList<T> rest) {
+      first = list.Length > 0 ? list[0] : default;
+      second = list.Length > 1 ? list[1] : default;
+      rest = list.Skip(2).ToList();
+    }
   }
 }

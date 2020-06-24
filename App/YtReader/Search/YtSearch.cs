@@ -21,9 +21,16 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
+using static YtReader.Search.SearchIndex;
 using Policy = Polly.Policy;
 
 namespace YtReader.Search {
+  public enum SearchIndex {
+    Channel,
+    Caption,
+    Video
+  }
+
   public class YtSearch {
     readonly SnowflakeConnectionProvider Db;
     readonly ElasticClient               Es;
@@ -34,20 +41,24 @@ namespace YtReader.Search {
     }
 
     [Pipe]
-    public async Task SyncToElastic(ILogger log, bool fullLoad = false, long? limit = null, CancellationToken cancel = default) {
-      await BasicSync<EsChannel>(log, "select * from channel_latest", fullLoad, limit);
-      await BasicSync<EsVideo>(log, "select * from video_latest", fullLoad, limit);
-      await SyncCaptions(log, fullLoad, limit, cancel);
+    public async Task SyncToElastic(ILogger log, bool fullLoad = false, long? limit = null,
+      (SearchIndex index, string condition)[] conditions = null, CancellationToken cancel = default) {
+      string[] Conditions(SearchIndex index) => conditions?.Where(c => c.index == index).Select(c => c.condition).ToArray();
+
+      await BasicSync<EsChannel>(log, "select * from channel_latest", fullLoad, limit, Conditions(Channel));
+      await BasicSync<EsVideo>(log, "select * from video_latest", fullLoad, limit, Conditions(Video));
+      await SyncCaptions(log, fullLoad, limit, Conditions(Caption), cancel);
     }
 
-    async Task BasicSync<T>(ILogger log, string selectSql, bool fullLoad, long? limit, string[] conditions = null, CancellationToken cancel = default) where T : class, IHasUpdated {
+    async Task BasicSync<T>(ILogger log, string selectSql, bool fullLoad, long? limit, string[] conditions = null, CancellationToken cancel = default)
+      where T : class, IHasUpdated {
       var lastUpdate = await Es.MaxDateField<T>(m => m.Field(p => p.updated));
       var sql = CreateSql(selectSql, fullLoad, lastUpdate, limit, conditions);
       await UpdateIndex<T>(log, fullLoad);
       await BatchToEs<T>(log, sql, cancel);
     }
 
-    async Task SyncCaptions(ILogger log, bool fullLoad, long? limit, CancellationToken cancel, string[] conditions = null) {
+    async Task SyncCaptions(ILogger log, bool fullLoad, long? limit, string[] conditions, CancellationToken cancel) {
       await UpdateIndex<EsCaption>(log, fullLoad);
       var lastUpdate = await Es.MaxDateField<EsCaption>(m => m.Field(p => p.updated));
       var sql = CreateSql("select * from caption", fullLoad, lastUpdate, limit, conditions);
@@ -98,7 +109,7 @@ namespace YtReader.Search {
 
       var param = lastUpdate == null || fullLoad ? null : new {max_updated = lastUpdate};
       if (param?.max_updated != null)
-        conditions = conditions.Concat(" updated > :max_updated").ToArray();
+        conditions = conditions.Concat("updated > :max_updated").ToArray();
       var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
       var sql = $"{selectSql}{sqlWhere}{SqlLimit(limit)}";
       return (sql, param);
@@ -131,8 +142,8 @@ namespace YtReader.Search {
         .Batch(3_000).WithIndex()
         .BlockFunc(b => BatchToEs(b.item, b.index, esPolicy, log),
           parallel: 2, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
-          capacity: 2, 
-          cancel:cancel);
+          capacity: 2,
+          cancel: cancel);
 
     async Task<int> BatchToEs<T>(IReadOnlyCollection<T> items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {
       var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(items));

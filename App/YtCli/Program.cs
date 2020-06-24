@@ -14,6 +14,7 @@ using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
 using Semver;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Build;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
@@ -190,29 +191,6 @@ namespace YtCli {
     }
   }
 
-  [Command("index", Description = "Update the search index")]
-  public class UpdateSearchIndexCmd : ICommand {
-    readonly IPipeCtx PipeCtx;
-    readonly ILogger  Log;
-    [CommandOption('l', Description = "Location to run (Local, Container, LocalContainer)")]
-    public PipeRunLocation Location { get; set; }
-
-    [CommandOption('t', Description = "Limit the query to top t results")]
-    public long? Limit { get; set; }
-
-    [CommandOption('f', Description = "If all captions should be re-indexed")]
-    public bool FullLoad { get; set; }
-
-    public UpdateSearchIndexCmd(IPipeCtx pipeCtx, ILogger log) {
-      PipeCtx = pipeCtx;
-      Log = log;
-    }
-
-    public async ValueTask ExecuteAsync(IConsole console) =>
-      await PipeCtx.Run((YtSearch s) => s.SyncToElastic(Log, FullLoad, Limit, console.GetCancellationToken()),
-        new PipeRunOptions {Location = Location, Exclusive = true}, log: Log);
-  }
-
   [Command("backup", Description = "Backup database")]
   public class BackupCmd : ICommand {
     readonly YtBackup Backup;
@@ -286,6 +264,10 @@ namespace YtCli {
     [CommandOption("disable-discover", Description = "when collecting, don't go and find new channels to classify")]
     public bool DisableChannelDiscover { get; set; }
 
+    [CommandOption("search-conditions", Description = @"filter for tables when updating search indexes (channel|video|caption). 
+(e.g. 'channel:channel_id=2|video:video_field is null:caption:false' ) ")]
+    public string SearchConditions { get; set; }
+
     public UpdateCmd(YtUpdater updater, IPipeCtx pipeCtx, ILogger log) {
       Updater = updater;
       PipeCtx = pipeCtx;
@@ -295,12 +277,16 @@ namespace YtCli {
     public async ValueTask ExecuteAsync(IConsole console) {
       console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
       var options = new UpdateOptions {
-        Actions = Actions?.UnJoin('|').ToArray(),
+        Actions = Actions?.UnJoin('|'),
         Channels = Channels?.UnJoin('|'),
         Tables = Tables?.UnJoin('|'),
         Results = Results?.UnJoin('|'),
         FullLoad = FullLoad,
-        DisableChannelDiscover = DisableChannelDiscover
+        DisableChannelDiscover = DisableChannelDiscover,
+        SearchConditions = SearchConditions?.UnJoin('|').Select(t => {
+          var (index, condition, _) = t.UnJoin(':');
+          return (index.ParseEnum<SearchIndex>(), condition);
+        }).ToArray(),
       };
 
       await PipeCtx.Run((YtUpdater u) => u.Update(options, PipeArg.Inject<CancellationToken>()),

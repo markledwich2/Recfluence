@@ -3,6 +3,7 @@ import { getJson } from "./Utils"
 import _ from 'lodash'
 import { DbModel } from './DbModel'
 import { EsCfg } from './Elastic'
+import { uri } from './Uri'
 
 const apiUrl = process.env.FUNC_URL
 
@@ -18,6 +19,30 @@ export async function getCaptions(cfg: EsCfg, videoId: string): Promise<EsCaptio
 
 export async function saveSearch(search: UserSearch): Promise<void> {
   await fetch(`${apiUrl}/search`, { method: 'PUT', body: JSON.stringify(search) })
+}
+
+export async function channelsForReview(email: string): Promise<ChannelForReview[]> {
+  var res = await getJson<ChannelForReview[]>(uri(apiUrl).addPath('channels_for_review').addQuery({ email }).url, { method: 'GET' })
+  return res
+}
+
+export interface ChannelReview {
+  channelId: string,
+  email: string,
+  lr: string,
+  relevance: number,
+  softTags: string,
+  notes: string,
+  dateTime: string
+}
+
+export interface ChannelForReview {
+  channelId: string,
+  channelTitle: string,
+  description: string,
+  logoUrl: string,
+  channelViews: number,
+  keywords: string
 }
 
 export interface UserSearch {

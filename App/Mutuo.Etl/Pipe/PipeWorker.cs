@@ -57,7 +57,7 @@ namespace Mutuo.Etl.Pipe {
     public static async Task Save(this PipeRunMetadata md, ISimpleFileStore store, ILogger log) =>
       await store.Set($"{md.Id.StatePath()}.RunMetadata", md, false, log);
 
-    public static ContainerState State(this IContainerGroup group) => group.State.ToEnum<ContainerState>(false);
+    public static ContainerState State(this IContainerGroup group) => group.State.ParseEnum<ContainerState>(false);
 
     public static bool IsCompletedState(this ContainerState state) => state.In(
       ContainerState.Succeeded, ContainerState.Failed, ContainerState.Stopped, ContainerState.Terminated);

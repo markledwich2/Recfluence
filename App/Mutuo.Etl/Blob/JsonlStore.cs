@@ -71,8 +71,6 @@ namespace Mutuo.Etl.Blob {
 
     public Task<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false) => Store.Files(path, allDirectories);
 
-    public async Task<IReadOnlyCollection<T>> Items(StringPath path) => await LoadJsonl(path);
-
     public readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {
       NullValueHandling = NullValueHandling.Ignore,
       DefaultValueHandling = DefaultValueHandling.Include,
@@ -91,6 +89,11 @@ namespace Mutuo.Etl.Blob {
         using var memStream = await items.ToJsonlGzStream(JCfg);
         await Store.Save(path, memStream, log).WithDuration();
       }, Parallel);
+    }
+
+    public async IAsyncEnumerable<IReadOnlyCollection<T>> Items(string partition = null) {
+      foreach (var f in await Files(FilePath(partition), allDirectories: true))
+        yield return await LoadJsonl(f.Path);
     }
 
     async Task<IReadOnlyCollection<T>> LoadJsonl(StringPath path) {

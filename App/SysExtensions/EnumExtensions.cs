@@ -40,8 +40,8 @@ namespace SysExtensions {
 
     public static string EnumString<T>(this T value) where T : Enum => EnumString(value as Enum);
 
-    public static bool TryToEnum<T>(this string s, out T value) where T : Enum {
-      var enumValue = ToEnum<T>(s);
+    public static bool TryParseEnum<T>(this string s, out T value) where T : Enum {
+      var enumValue = ParseEnum<T>(s);
       if (enumValue == null)
         value = default;
       else
@@ -50,12 +50,12 @@ namespace SysExtensions {
       return enumValue != null;
     }
 
-    public static T ToEnum<T>(this string s, bool ensureFound = true, Type t = null, Func<Enum, string> defaultEnumString = null) where T : Enum {
+    public static T ParseEnum<T>(this string s, bool ensureFound = true, Type t = null, Func<Enum, string> defaultEnumString = null) where T : Enum {
       t ??= typeof(T);
-      return (T) ToEnum(s, t, ensureFound, defaultEnumString);
+      return (T) ParseEnum(s, t, ensureFound, defaultEnumString);
     }
 
-    public static object ToEnum(this string s, Type t, bool ensureFound = true, Func<Enum, string> defaultEnumString = null) {
+    public static object ParseEnum(this string s, Type t, bool ensureFound = true, Func<Enum, string> defaultEnumString = null) {
       defaultEnumString ??= e => e.ToString();
 
       Enum enumValue;
@@ -70,7 +70,7 @@ namespace SysExtensions {
       }
 
       if (ensureFound && !found) throw new InvalidCastException($"Unable to cast ({s}) to {t.Name}");
-      if(enumValue == null) enumValue = (Enum)t.DefaultForType(); // enumCache.TryGetValue will set to null instead of the default enum value when not found
+      if (enumValue == null) enumValue = (Enum) t.DefaultForType(); // enumCache.TryGetValue will set to null instead of the default enum value when not found
       return enumValue;
     }
 

@@ -31,7 +31,7 @@ namespace Mutuo.Etl.Db {
     public async Task<long> Execute(string operation, string sql, object param = null, DbTransaction transaction = null) =>
       await ExecWithLog(() => Conn.ExecuteAsync(sql, param, transaction), sql, operation);
 
-    /// <summary>Liek the dapper Query function. use when you need to stream the rows non-greedily</summary>
+    /// <summary>Like the dapper Query function. use when you need to stream the rows non-greedily</summary>
     public IEnumerable<T> QueryBlocking<T>(string operation, string sql,
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = false) =>
       ExecWithLog(() => Conn.Query<T>(sql, param, transaction, commandTimeout: timeout?.TotalSeconds.RoundToInt(), buffered: buffered), sql, operation);

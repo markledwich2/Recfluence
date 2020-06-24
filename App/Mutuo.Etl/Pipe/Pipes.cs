@@ -81,7 +81,7 @@ namespace Mutuo.Etl.Pipe {
       PipeRunOptions options = null, ILogger log = null, CancellationToken cancel = default) {
       options ??= new PipeRunOptions();
       log ??= Logger.None;
-      
+
       var runId = PipeRunId.FromName(pipeName);
       await ctx.SaveInArg(args, runId, log);
       var pipeWorker = PipeWorker(ctx, options.Location);
@@ -220,7 +220,7 @@ namespace Mutuo.Etl.Pipe {
       if (value == null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
         return type.DefaultForType();
       if (value is string s && type.IsEnum)
-        return s.ToEnum(type);
+        return s.ParseEnum(type);
       try {
         return Convert.ChangeType(value, type);
       }

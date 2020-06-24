@@ -7,22 +7,24 @@ using Autofac;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Primitives;
 using Nest;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Serilog;
 using SysExtensions.Serialization;
 using SysExtensions.Threading;
-using YtReader.Db;
 using YtReader.Search;
 using YtReader.Store;
 
 namespace YtFunctions {
-  public class ApiSearch {
+  public class ApiRecfluence {
     /// <summary>Use the Json.net defaults because we want to keep original name casings so that we aren't re-casing the db in
     ///   different formats</summary>
     static readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {Formatting = Formatting.None};
     readonly Defer<FuncCtx, ExecutionContext> Ctx;
 
-    public ApiSearch(Defer<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
+    public ApiRecfluence(Defer<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
 
     [FunctionName("video")]
     public async Task<HttpResponseMessage> Video([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "video/{videoId}")]
@@ -70,15 +72,64 @@ namespace YtFunctions {
         return new HttpResponseMessage(HttpStatusCode.OK);
       });
 
-    public class VideoResponse {
-      public DbVideo   video   { get; set; }
-      public DbChannel channel { get; set; }
-      public string    error   { get; set; }
+    [FunctionName("channel_review")]
+    public async Task<HttpResponseMessage> ChannelReview([HttpTrigger(AuthorizationLevel.Anonymous, "put")]
+      HttpRequest req, ExecutionContext exec) =>
+      await Ctx.Run(exec, async c => {
+        var review = req.Body.ToObject<UserChannelReview>();
+        var log = c.Resolve<ILogger>();
+        var store = c.Scope.Resolve<YtStore>();
+        await store.ChannelReviews.Append(new[] {review}, log);
+        return new HttpResponseMessage(HttpStatusCode.OK);
+      });
+
+    [FunctionName("channels_reviewed")]
+    public async Task<HttpResponseMessage> ChannelsReviewed([HttpTrigger(AuthorizationLevel.Anonymous, "get")]
+      HttpRequest req, ExecutionContext exec) =>
+      await Ctx.Run(exec, async c => {
+        var (email, response) = EmailOrResponse(req);
+        if (response != null) return response;
+        var store = c.Scope.Resolve<YtStore>();
+        var reviews = await store.ChannelReviews.Items(email).ToListAsync();
+        return reviews.JsonResponse();
+      });
+
+    static (string email, HttpResponseMessage response) EmailOrResponse(HttpRequest req) {
+      var email = req.Query["email"];
+      if (email == StringValues.Empty)
+        return (null, new HttpResponseMessage(HttpStatusCode.Unauthorized) {Content = new StringContent("email must be provided")});
+      return (email, null);
     }
+
+    [FunctionName("channels_for_review")]
+    public async Task<HttpResponseMessage> ChannelsPending([HttpTrigger(AuthorizationLevel.Anonymous, "get")]
+      HttpRequest req, ExecutionContext exec) =>
+      await Ctx.Run(exec, async c => {
+        var (email, response) = EmailOrResponse(req);
+        if (response != null) return response;
+
+        var store = c.Scope.Resolve<YtStore>();
+        var results = c.Scope.Resolve<YtStores>().Store(DataStoreType.Results);
+
+        var reviewsTask = store.ChannelReviews.Items(email).SelectManyList();
+        await using var stream = await results.Load($"{YtResults.Queries.ClassChannelsRaw}.jsonl.gz");
+        var pending = stream.LoadJsonlGzLines()
+          .Select(l => JObject.Parse(l).PropertyValue<string>("V")
+            .ToObject<ChannelStored2>());
+        var reviews = await reviewsTask;
+        var reviewIds = reviews.Select(r => r.ChannelId).ToHashSet();
+        var res = pending.Where(p => !reviewIds.Contains(p.ChannelId));
+        return res.JsonResponse();
+      });
   }
 
   public static class HttpResponseEx {
-    public static HttpResponseMessage JsonResponse(this object o, JsonSerializerSettings settings) =>
+    public static HttpResponseMessage ErrorResponse(this object o, JsonSerializerSettings settings = null) =>
+      new HttpResponseMessage(HttpStatusCode.OK) {
+        Content = new StringContent(o.ToJson(settings), Encoding.UTF8, "application/json")
+      };
+
+    public static HttpResponseMessage JsonResponse(this object o, JsonSerializerSettings settings = null) =>
       new HttpResponseMessage(HttpStatusCode.OK) {
         Content = new StringContent(o.ToJson(settings), Encoding.UTF8, "application/json")
       };
