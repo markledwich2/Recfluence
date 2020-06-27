@@ -2,7 +2,7 @@ import React, { useContext, FunctionComponent, useState, useRef } from 'react'
 import styled from 'styled-components'
 import { ExitToApp as IconLogout } from '@styled-icons/material'
 import { UserContext } from './UserContext'
-import { theme } from './MainLayout'
+import { ytTheme } from './MainLayout'
 import useOutsideClick from './OutsideClick'
 
 
@@ -25,7 +25,7 @@ const UserMenuDiv = styled.div`
   top: 27px;
   right:0px;
   z-index:1;
-  background-color:${theme.backColorBolder};
+  background-color:${ytTheme.backColorBolder};
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
 
   width:200px;
@@ -42,7 +42,7 @@ const UserMenuDiv = styled.div`
     padding:0.5em;
 
     a {
-      color: ${theme.fontColor};
+      color: ${ytTheme.fontColor};
     }
 
     .icon {
@@ -53,7 +53,7 @@ const UserMenuDiv = styled.div`
     }
 
     :hover {
-      background-color:${theme.backColorBolder2};
+      background-color:${ytTheme.backColorBolder2};
       cursor: pointer;
     }
   }

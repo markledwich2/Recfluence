@@ -11,20 +11,20 @@ import { ChannelTags } from './ChannelTags'
 
 import styled from 'styled-components'
 import { HomeLogo, SiteLinks } from '../SiteMenu'
+import { ytTheme } from '../MainLayout'
 
 const TitleStyle = styled.div`
-  background-color: rgb(22, 22, 22);
+  background-color: ${ytTheme.backColorBolder};
   padding: 0px 0.5em;
   display: flex;
   flex-wrap: wrap;
-  min-height: 8em;
   justify-content: space-between;
 
   > .title {
     display: flex;
-    height: 8em;
-    flex: 3 30em;
+    flex: 2 2 20em;
     align-items: center;
+    min-height:8em;
   }
 
   .search {
@@ -32,7 +32,8 @@ const TitleStyle = styled.div`
     display: flex;
     flex-direction: column;
     justify-content: center;
-    flex: 1 20em;
+    flex: 1 1 12em;
+    padding: 0.5em;
   }`
 
 interface State extends InteractiveDataState { }

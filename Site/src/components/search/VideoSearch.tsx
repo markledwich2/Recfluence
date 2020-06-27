@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, CSSProperties, useContext, KeyboardEvent } from "react"
 import { RouteComponentProps as CProps } from "@reach/router"
 import { ReactiveBase, ReactiveList, DataSearch, MultiList, SelectedFilters, SingleRange, SingleDataList, StateProvider, DateRange, MultiDataList } from '@appbaseio/reactivesearch'
-import { theme, media, isGatsbyServer, CenterDiv } from "../MainLayout"
+import { ytTheme, media, isGatsbyServer, CenterDiv } from "../MainLayout"
 import styled from 'styled-components'
 import _, { Dictionary } from 'lodash'
 import { VideoSearchResults, SearchHelp, NoResult } from './VideoSearchResults'
@@ -41,7 +41,7 @@ const FiltersPane = styled.div`
     overflow-y: auto;
     justify-content:start;
     align-content:start;
-    background-color: ${theme.backColorBolder};
+    background-color: ${ytTheme.backColorBolder};
     min-height:0px; /*needed for column wrap to kick in*/
     padding:0.5em 0.5em;
 
@@ -87,15 +87,15 @@ const FiltersPane = styled.div`
         li.active, li:hover {
           span, label {
             font-weight: normal;
-            color: ${theme.themeColorBolder};
-            text-shadow: ${theme.fontThemeShadow};
+            color: ${ytTheme.themeColorBolder};
+            text-shadow: ${ytTheme.fontThemeShadow};
           }
         }
     }
 
     h2 {
         text-transform: uppercase;
-        color: ${theme.fontColor};
+        color: ${ytTheme.fontColor};
         margin:0.5em 0em;
     }
 
@@ -128,9 +128,9 @@ const ResultsPane = styled.div`
     height:100%; width:100%;
     overflow-y:scroll;
     select {
-        background:${theme.backColor};
+        background:${ytTheme.backColor};
         outline:1px solid #333;
-        color:${theme.fontColor};
+        color:${ytTheme.fontColor};
     }
 `
 
@@ -163,8 +163,8 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
       credentials={esCfg.creds}
       themePreset="dark"
       theme={{
-        typography: { fontSize: theme.fontSize, fontFamily: theme.fontFamily },
-        colors: { textColor: theme.fontColor, primaryColor: theme.themeColor }
+        typography: { fontSize: ytTheme.fontSize, fontFamily: ytTheme.fontFamily },
+        colors: { textColor: ytTheme.fontColor, primaryColor: ytTheme.themeColor }
       }}
     >
       <Page>
@@ -187,7 +187,8 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
               <StateProvider strict={false} >
                 {({ searchState }) => {
                   const query = searchState?.q?.value
-                  if (!query) return SearchHelp
+                  const empty = !query && !searchState?.channel?.value && !searchState?.group?.value
+                  if (empty) return SearchHelp
 
                   return <ReactiveList
                     componentId="result"

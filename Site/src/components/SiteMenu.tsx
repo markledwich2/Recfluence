@@ -1,7 +1,7 @@
 import React, { useContext, FunctionComponent } from 'react'
 import styled from 'styled-components'
 import logo from '../images/recfluence_word.svg'
-import { theme, safeLocation } from './MainLayout'
+import { ytTheme, safeLocation } from './MainLayout'
 import { Link } from 'gatsby'
 import { Person as IconUser, ExitToApp as IconLogout } from '@styled-icons/material'
 import { UserContext } from './UserContext'
@@ -11,7 +11,7 @@ const HeaderBar = styled.div`
   padding:6px 5px 3px 10px;
   display:flex;
   width:100%;
-  background-color:${theme.backColorBolder};
+  background-color:${ytTheme.backColorBolder};
 `
 
 const NavStyle = styled.nav`
@@ -29,8 +29,8 @@ const NavStyle = styled.nav`
   }
 
   .text-links a.active {
-    color: ${theme.themeColorBolder};
-    text-shadow: ${theme.fontThemeShadow};
+    color: ${ytTheme.themeColorBolder};
+    text-shadow: ${ytTheme.fontThemeShadow};
   }
 
   /* .icon, .text-icon {

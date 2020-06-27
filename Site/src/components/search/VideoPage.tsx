@@ -6,7 +6,7 @@ import YouTube from 'react-youtube'
 import styled from 'styled-components'
 import '../../types/NodeTypings.d.ts'
 import { dateFormat, secondsToHHMMSS, delay } from '../../common/Utils'
-import { theme } from '../MainLayout'
+import { ytTheme, ContentPageDiv } from '../MainLayout'
 import { ChannelData } from '../../common/YtModel'
 import { useLocation } from '@reach/router'
 import queryString from 'query-string'
@@ -20,16 +20,6 @@ const MainPageDiv = styled.div`
   display:flex;
   flex-direction:column;
   justify-content: stretch;
-`
-
-const VidePageDiv = styled.div`
-  width:100vw;
-  max-width:1024px;
-  margin:0 auto;
-  position:relative;
-  display:flex;
-  flex-direction:column;
-  min-height:0px; /* to get inner overflow-y:auto to work: intermediate divs must all be display:flex and min-hight:0 */
 `
 
 const ContentDiv = styled.div`
@@ -56,15 +46,15 @@ const CaptionDiv = styled(ContentDiv)`
     margin-bottom: 0.5em;
   }
 
-  color: ${theme.fontColor};
+  color: ${ytTheme.fontColor};
 
   .caption {
     padding-left: 10px;
   }
   .current.caption {
-    color: ${theme.fontColorBolder};
+    color: ${ytTheme.fontColorBolder};
     padding-left: 5px;
-    border-left: 5px solid ${theme.backColorBolder2};
+    border-left: 5px solid ${ytTheme.backColorBolder2};
   }
 `
 
@@ -144,7 +134,7 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
   return (
     <MainPageDiv>
       <TopSiteBar showLogin />
-      <VidePageDiv>
+      <ContentPageDiv>
         <VideoContainer><YouTube videoId={videoId} onReady={e => onVideoRender(e)} opts={{ height: '100%', width: '100%' }} /></VideoContainer>
         <ContentDiv>
           <VideoTitle>{v?.video_title}</VideoTitle>
@@ -177,7 +167,7 @@ export const Video: React.FC<VideoProps> = ({ videoId, esCfg }) => {
             })}
           </div>
         </CaptionDiv>
-      </VidePageDiv >
+      </ContentPageDiv >
     </MainPageDiv>
   )
 }

@@ -240,9 +240,7 @@ export class YtModel {
     ReligiousConservative: 'Religious Conservative',
     MissingLinkMedia: 'Missing Link Media',
     StateFunded: 'State Funded',
-    AntiWhiteness: 'Anti-whiteness',
-    LateNightTalkShow: '_',
-    Revolutionary: '_'
+    AntiWhiteness: 'Anti-whiteness'
   }
 
   private static recCol(dir: RecDir, name: keyof ChannelData) {

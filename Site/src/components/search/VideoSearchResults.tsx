@@ -6,7 +6,7 @@ import Highlighter from "react-highlight-words"
 import _ from 'lodash'
 import { queryHighlights } from '../../common/Elastic'
 import styled from 'styled-components'
-import { theme, media, CenterDiv } from '../MainLayout'
+import { ytTheme, media, CenterDiv } from '../MainLayout'
 import { Link } from 'gatsby'
 import ReactMarkdown from 'react-markdown/with-html'
 import { Spinner } from '../Spinner'
@@ -32,16 +32,16 @@ const HelpStyle = styled.div`
   font-size: 1.2em;
   line-height: 1.5em;
   b, h1, h2, h3 {
-      color:${theme.fontColor}
+      color:${ytTheme.fontColor}
   }
   p {
       margin: 0.5em 0em 1em 0em;
   }
   code, inlineCode  {
       font-family:monospace;
-      background-color:${theme.backColorBolder};
+      background-color:${ytTheme.backColorBolder};
       padding: 0.1em 0.2em;
-      border: 1px solid ${theme.backColorBolder2};
+      border: 1px solid ${ytTheme.backColorBolder2};
       border-radius: 5px;
   }
 `
@@ -62,7 +62,7 @@ const LoginOverlay = styled.div`
     max-width:500px;
     padding: 1em 2em;
     margin: 5em auto;
-    background-color: ${theme.backColorTransparent};
+    background-color: ${ytTheme.backColorTransparent};
   }
 `
 
@@ -80,13 +80,13 @@ const BlurOverlay = styled.div`
 `
 
 const NoMoreResults = styled.div`
-  color:${theme.fontColorSubtler};
+  color:${ytTheme.fontColorSubtler};
   text-align:center;
-  border-bottom: 1px solid ${theme.backColorBolder};
+  border-bottom: 1px solid ${ytTheme.backColorBolder};
   margin: 10px 0 20px;
   line-height: 0.1em;
   > span {
-    background:${theme.backColor}; 
+    background:${ytTheme.backColor}; 
     padding:0 10px; 
   }
 `
@@ -147,7 +147,6 @@ interface RenderState<T> {
 
 export const VideoSearchResults = ({ renderState, query }: { renderState: RenderState<EsCaption>, query: string }) => {
   var { data, loading, resultStats } = renderState
-  if (!query) return <></> // don't show empty results
 
   const { user, logIn } = useContext(UserContext)
 
@@ -214,7 +213,7 @@ const DetailsRow = styled.div`
     display:flex;
     flex-wrap:wrap;
     b {
-        color:${theme.fontColor}
+        color:${ytTheme.fontColor}
     }
     > * {
         padding-right:1em;
@@ -225,11 +224,11 @@ const CaptionP = styled.p`
   padding-bottom:0.3em;
 
   .part-name {
-    color:${theme.fontColorSubtler}
+    color:${ytTheme.fontColorSubtler}
   }
 
   .caption.part-Description, .caption.part-Keywords {
-    color:${theme.fontColorSubtler}
+    color:${ytTheme.fontColorSubtler}
   }
   .video-offset-link {
     margin-right:0.5em;
@@ -296,8 +295,8 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
 
 
 export const NoResult = () => <CenterDiv>
-  <span style={{ color: theme.fontColorSubtler, fontSize: '1.5em' }}>
-    <IconSad color={theme.backColorBolder2} height='2em'
+  <span style={{ color: ytTheme.fontColorSubtler, fontSize: '1.5em' }}>
+    <IconSad color={ytTheme.backColorBolder2} height='2em'
       style={{ position: 'relative', top: '0.5em', left: '-1em' }} />
                     Nothing found
     </span>

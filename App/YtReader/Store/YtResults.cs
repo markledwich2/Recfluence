@@ -25,13 +25,14 @@ using YtReader.Db;
 namespace YtReader.Store {
   class ResQuery {
     public ResQuery(string name, string query = null, string desc = null, object parameters = null, bool inSharedZip = false,
-      ResFilType fileType = ResFilType.Csv) {
+      ResFilType fileType = ResFilType.Csv, JsonSource jsonSource = default) {
       Name = name;
       Query = query;
       Desc = desc;
       Parameters = parameters;
       InSharedZip = inSharedZip;
       FileType = fileType;
+      JsonSource = jsonSource;
     }
 
     public string     Name        { get; }
@@ -40,6 +41,12 @@ namespace YtReader.Store {
     public object     Parameters  { get; }
     public bool       InSharedZip { get; }
     public ResFilType FileType    { get; }
+    public JsonSource JsonSource { get; }
+  }
+
+  public enum JsonSource {
+    AllColumns,
+    FirstColumn
   }
 
   enum ResFilType {
@@ -102,8 +109,9 @@ namespace YtReader.Store {
 
           // classifier data 
           new ResQuery(Queries.ClassChannelsRaw, @"select v from channel_stage
-where v:ReviewStatus::string = 'Pending'
-qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc) = 1", fileType: ResFilType.Json),
+where v:ReviewStatus::string not in ('AlgoRejected', 'ManualRejected')
+qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc) = 1", fileType: ResFilType.Json,
+            jsonSource: JsonSource.FirstColumn),
 
           new ResQuery("class_channels", pendingChannelsSelect, fileType: ResFilType.Json),
 
@@ -189,7 +197,7 @@ order by channel_id, video_id, caption_group",
       using (var sw = new StreamWriter(zw)) {
         var task = q.FileType switch {
           ResFilType.Csv => reader.WriteCsvGz(sw, fileName, log),
-          ResFilType.Json => reader.WriteJsonGz(sw, fileName, log),
+          ResFilType.Json => reader.WriteJsonGz(sw, q.JsonSource),
           _ => throw new NotImplementedException()
         };
         await task;
@@ -247,11 +255,14 @@ order by channel_id, video_id, caption_group",
       }
     }
 
-    public static async Task WriteJsonGz(this IDataReader reader, StreamWriter stream, string desc, ILogger log) {
+    public static async Task WriteJsonGz(this IDataReader reader, StreamWriter stream, JsonSource jsonSource) {
       while (reader.Read()) {
         var j = new JObject();
-        foreach (var i in reader.FieldRange())
-          j.Add(reader.GetName(i), JToken.FromObject(reader[i]));
+        if (jsonSource == JsonSource.FirstColumn)
+          j = JObject.Parse(reader.GetString(0));
+        else
+          foreach (var i in reader.FieldRange())
+            j.Add(reader.GetName(i), JToken.FromObject(reader[i]));
         await stream.WriteLineAsync(j.ToString(Formatting.None));
       }
     }

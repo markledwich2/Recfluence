@@ -45,8 +45,8 @@ namespace YtReader.Search {
       (SearchIndex index, string condition)[] conditions = null, CancellationToken cancel = default) {
       string[] Conditions(SearchIndex index) => conditions?.Where(c => c.index == index).Select(c => c.condition).ToArray();
 
-      await BasicSync<EsChannel>(log, "select * from channel_latest", fullLoad, limit, Conditions(Channel));
-      await BasicSync<EsVideo>(log, "select * from video_latest", fullLoad, limit, Conditions(Video));
+      await BasicSync<EsChannel>(log, "select * from channel_latest", fullLoad, limit, Conditions(Channel), cancel);
+      await BasicSync<EsVideo>(log, "select * from video_latest", fullLoad, limit, Conditions(Video), cancel);
       await SyncCaptions(log, fullLoad, limit, Conditions(Caption), cancel);
     }
 
@@ -108,7 +108,7 @@ namespace YtReader.Search {
       conditions ??= new string[] { };
 
       var param = lastUpdate == null || fullLoad ? null : new {max_updated = lastUpdate};
-      if (param?.max_updated != null)
+      if (param?.max_updated != null && conditions.IsEmpty())
         conditions = conditions.Concat("updated > :max_updated").ToArray();
       var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
       var sql = $"{selectSql}{sqlWhere}{SqlLimit(limit)}";

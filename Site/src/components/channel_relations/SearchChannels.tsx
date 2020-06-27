@@ -6,7 +6,7 @@ import { YtModel, ChannelData } from '../../common/YtModel'
 import { delay } from '../../common/Utils'
 import { InteractiveDataProps, ChartProps, InteractiveDataState, SelectionState, SelectionStateHelper } from '../../common/Chart'
 import { Dim, Col } from '../../common/Dim'
-import { YtTheme } from '../../common/YtTheme'
+import { selectStyle, selectTheme } from '../MainLayout'
 
 interface State {
 }
@@ -79,8 +79,8 @@ export class SearchChannels extends React.Component<Props, State> {
           onChange={this.onSelected}
           options={options}
           placeholder="Select Channel"
-          styles={YtTheme.selectStyle}
-          theme={YtTheme.selectTheme}
+          styles={selectStyle}
+          theme={selectTheme}
           value={selectedValue ? selectedValue : null}
           filterOption={createFilter({ ignoreAccents: false })}
           ref={(r) => (this.ref = r)}

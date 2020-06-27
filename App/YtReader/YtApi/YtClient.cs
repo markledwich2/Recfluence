@@ -69,7 +69,7 @@ namespace YtReader.YtApi {
         ChannelTitle = v.Snippet.ChannelTitle,
         ChannelId = v.Snippet.ChannelId,
         Language = v.Snippet.DefaultLanguage,
-        PublishedAt = v.Snippet.PublishedAt ?? DateTime.MinValue,
+        PublishedAt = v.Snippet.PublishedAt?.ParseDate() ?? DateTime.MinValue,
         CategoryId = v.Snippet.CategoryId,
         Stats = new VideoStats {
           Views = v.Statistics?.ViewCount,
@@ -161,7 +161,7 @@ namespace YtReader.YtApi {
         vids.AddRange(res.Items.Where(v => v.Snippet.PublishedAt != null).Select(v => new ChannelVideoListItem {
           VideoId = v.Id.VideoId,
           VideoTitle = v.Snippet.Title,
-          PublishedAt = v.Snippet.PublishedAt ?? DateTime.MinValue,
+          PublishedAt = v.Snippet.PublishedAt.ParseDate(),
           Updated = DateTime.UtcNow
         }));
         if (res.NextPageToken == null)

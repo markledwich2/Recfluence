@@ -142,16 +142,18 @@ namespace YtReader.Store {
   }
 
   public class UserChannelReviewCommon : IHasUpdated {
-    public string                      LR        { get; set; }
-    public int                         Relevance { get; set; }
-    public IReadOnlyCollection<string> SoftTags  { get; set; } = new List<string>();
-    public string                      Notes     { get; set; }
-    public DateTime                    Updated   { get; set; }
+    public string                      LR            { get; set; }
+    public int                         Relevance     { get; set; }
+    public IReadOnlyCollection<string> SoftTags      { get; set; } = new List<string>();
+    public string                      Notes         { get; set; }
+    public DateTime                    Updated       { get; set; }
+    public string                      MainChannelId { get; set; }
   }
 
   public class UserChannelReview : UserChannelReviewCommon {
-    public string ChannelId { get; set; }
-    public string Email     { get; set; }
+    public string ChannelId    { get; set; }
+    public string ChannelTitle { get; set; }
+    public string Email        { get; set; }
   }
 
   public class UserChannelStore2 : UserChannelReview {

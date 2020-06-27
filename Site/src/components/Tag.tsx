@@ -12,4 +12,5 @@ const TagStyle = styled.span`
   white-space:nowrap;
 `
 
-export const Tag = ({ color, label }: { color?: string, label: string }) => <TagStyle style={{ backgroundColor: color }}>{label}</TagStyle>
+export const Tag = ({ color, label, style }: { color?: string, label: string, style?: React.CSSProperties }) =>
+  <TagStyle style={{ ...style, backgroundColor: color }}>{label}</TagStyle>

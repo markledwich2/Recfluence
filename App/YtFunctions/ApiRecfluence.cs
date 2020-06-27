@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -13,6 +14,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions.Serialization;
+using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Search;
 using YtReader.Store;
@@ -77,6 +79,9 @@ namespace YtFunctions {
       HttpRequest req, ExecutionContext exec) =>
       await Ctx.Run(exec, async c => {
         var review = req.Body.ToObject<UserChannelReview>();
+        if (review.Email.NullOrEmpty())
+          return new HttpResponseMessage(HttpStatusCode.BadRequest) {Content = new StringContent("email must be provided")};
+        review.Updated = DateTime.UtcNow;
         var log = c.Resolve<ILogger>();
         var store = c.Scope.Resolve<YtStore>();
         await store.ChannelReviews.Append(new[] {review}, log);
@@ -90,8 +95,8 @@ namespace YtFunctions {
         var (email, response) = EmailOrResponse(req);
         if (response != null) return response;
         var store = c.Scope.Resolve<YtStore>();
-        var reviews = await store.ChannelReviews.Items(email).ToListAsync();
-        return reviews.JsonResponse();
+        var reviews = await store.ChannelReviews.Items(email).SelectManyList();
+        return reviews.JsonResponse(store.ChannelReviews.JCfg);
       });
 
     static (string email, HttpResponseMessage response) EmailOrResponse(HttpRequest req) {
@@ -100,27 +105,6 @@ namespace YtFunctions {
         return (null, new HttpResponseMessage(HttpStatusCode.Unauthorized) {Content = new StringContent("email must be provided")});
       return (email, null);
     }
-
-    [FunctionName("channels_for_review")]
-    public async Task<HttpResponseMessage> ChannelsPending([HttpTrigger(AuthorizationLevel.Anonymous, "get")]
-      HttpRequest req, ExecutionContext exec) =>
-      await Ctx.Run(exec, async c => {
-        var (email, response) = EmailOrResponse(req);
-        if (response != null) return response;
-
-        var store = c.Scope.Resolve<YtStore>();
-        var results = c.Scope.Resolve<YtStores>().Store(DataStoreType.Results);
-
-        var reviewsTask = store.ChannelReviews.Items(email).SelectManyList();
-        await using var stream = await results.Load($"{YtResults.Queries.ClassChannelsRaw}.jsonl.gz");
-        var pending = stream.LoadJsonlGzLines()
-          .Select(l => JObject.Parse(l).PropertyValue<string>("V")
-            .ToObject<ChannelStored2>());
-        var reviews = await reviewsTask;
-        var reviewIds = reviews.Select(r => r.ChannelId).ToHashSet();
-        var res = pending.Where(p => !reviewIds.Contains(p.ChannelId));
-        return res.JsonResponse();
-      });
   }
 
   public static class HttpResponseEx {

@@ -1,11 +1,19 @@
 import { ChannelData } from "./YtModel"
-import { getJson } from "./Utils"
+import { getJson, putJson, getJsonl } from "./Utils"
 import _ from 'lodash'
 import { DbModel } from './DbModel'
 import { EsCfg } from './Elastic'
 import { uri } from './Uri'
 
-const apiUrl = process.env.FUNC_URL
+export const apiUrl = process.env.FUNC_URL
+
+// On a build+server, or in prod. the server will breifly show the main page before replacing with the correct rout
+// This is because when /video/ is requested, the redirects aren't pointing to /index.html.
+// i think I should use a static page 
+// https://stackoverflow.com/questions/52051090/gatsbyjs-client-only-paths-goes-to-404-page-when-the-url-is-directly-accessed-in
+
+export const resultsUrl = uri(process.env.RESULTS_HOST)
+  .addPath(`${process.env.RESULTS_CONTAINER}${process.env.BRANCH_ENV ? `-${process.env.BRANCH_ENV}` : ''}`, process.env.RESULTS_PATH)
 
 export async function getVideo(cfg: EsCfg, videoId: string): Promise<{ video: EsVideo, channel: ChannelData }> {
   var res = await getJson<EsVideoResponse>(`${apiUrl}/video/${videoId}`)
@@ -18,31 +26,44 @@ export async function getCaptions(cfg: EsCfg, videoId: string): Promise<EsCaptio
 }
 
 export async function saveSearch(search: UserSearch): Promise<void> {
-  await fetch(`${apiUrl}/search`, { method: 'PUT', body: JSON.stringify(search) })
+  await putJson(`${apiUrl}/search`, search)
 }
 
-export async function channelsForReview(email: string): Promise<ChannelForReview[]> {
-  var res = await getJson<ChannelForReview[]>(uri(apiUrl).addPath('channels_for_review').addQuery({ email }).url, { method: 'GET' })
-  return res
+export async function getChannels(): Promise<RawChannelData[]> {
+  return await getJsonl<RawChannelData>(resultsUrl.addPath('class_channels_raw.jsonl.gz').url)
+}
+
+export async function saveReview(review: ChannelReview): Promise<Response> {
+  return await putJson(uri(apiUrl).addPath('channel_review').url, review)
+}
+
+export async function channelsReviewed(email: string): Promise<ChannelReview[]> {
+  return await getJson<ChannelReview[]>(uri(apiUrl).addPath('channels_reviewed').addQuery({ email }).url)
+}
+
+export interface ChannelReviewAndData extends ChannelReview, RawChannelData {
+  ReviewUpdated: string
 }
 
 export interface ChannelReview {
-  channelId: string,
-  email: string,
-  lr: string,
-  relevance: number,
-  softTags: string,
-  notes: string,
-  dateTime: string
+  ChannelId: string
+  Email?: string
+  LR?: string
+  Relevance?: number
+  SoftTags: string[]
+  Notes?: string
+  Updated?: string
+  MainChannelId?: string
 }
 
-export interface ChannelForReview {
-  channelId: string,
-  channelTitle: string,
-  description: string,
-  logoUrl: string,
-  channelViews: number,
-  keywords: string
+export interface RawChannelData {
+  ChannelId: string
+  ChannelTitle: string
+  Description: string
+  LogoUrl: string
+  ChannelViews: number
+  Keywords: string
+  ReviewStatus: string
 }
 
 export interface UserSearch {
@@ -55,12 +76,12 @@ export interface UserSearch {
 }
 
 export interface VideoData {
-  video: EsVideo,
+  video: EsVideo
   channel: ChannelData
 }
 
 interface EsVideoResponse {
-  video: EsVideo,
+  video: EsVideo
   channel: any
 }
 

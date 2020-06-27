@@ -1,4 +1,4 @@
-import { ColEx } from "../../common/Dim"
+import { ColEx, Col } from "../../common/Dim"
 import { ChannelData, YtModel } from "../../common/YtModel"
 import { color } from "d3"
 import React from "react"
@@ -35,7 +35,8 @@ const ColTag = (p: ColTagProps) => {
     const col = dim.col(p.colName)
     const labelFunc = ColEx.labelFunc(col)
     const colorFunc = ColEx.colorFunc(col)
-    const darkerColor = (v: string) => color(colorFunc(v))?.darker(2).hex()
     const val = c[p.colName]
-    return <Tag key={c.lr} label={labelFunc(val)} color={darkerColor(val)} />
+    return <Tag key={c.lr} label={labelFunc(val)} color={tagColor(colorFunc(val))} />
 }
+
+export const tagColor = (chartColor: string) => color(chartColor)?.darker(2).hex()

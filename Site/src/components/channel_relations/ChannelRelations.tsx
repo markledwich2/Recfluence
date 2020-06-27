@@ -6,12 +6,12 @@ import { SelectableCell, DimQuery, Dim } from '../../common/Dim'
 import { YtInteractiveChartHelper } from "../../common/YtInteractiveChartHelper"
 import * as _ from 'lodash'
 import { ChartProps, InteractiveDataState } from '../../common/Chart'
-import { YtTheme } from '../../common/YtTheme'
 import Select from 'react-select'
 import { renderToString } from 'react-dom/server'
 import { classNames, delay } from '../../common/Utils'
 import { range } from 'd3'
 import styled from 'styled-components'
+import { selectStyle, selectTheme } from '../MainLayout'
 
 const LegendStyle = styled.div`
   position: absolute;
@@ -113,8 +113,8 @@ export class ChannelRelations extends React.Component<Props, State> {
         <Select
           options={options}
           value={selected}
-          styles={YtTheme.selectStyle}
-          theme={YtTheme.selectTheme}
+          styles={selectStyle}
+          theme={selectTheme}
           onChange={this.onColorBySelected}
         ></Select>
         <svg height={legendNodes.length * 21} onClick={() => selections.clearAll()}>

@@ -1,12 +1,13 @@
 import React, { useState, PropsWithChildren, MouseEventHandler } from "react"
 import styled from 'styled-components'
-import { theme } from './MainLayout'
+import { ytTheme } from './MainLayout'
 import { StyledIconBase } from '@styled-icons/styled-icon'
 
 interface ButtonProps {
     label?: string
     icon?: JSX.Element
     onclick: MouseEventHandler<JSX.Element>
+    primary?: boolean
 }
 
 const ButtonStyle = styled.button`
@@ -15,19 +16,24 @@ const ButtonStyle = styled.button`
     text-transform: uppercase;
     text-align: center;
 
-    background-color: ${theme.backColorBolder};
+    
     border: none;
     cursor: pointer;
     align-self: center;
-    color: ${theme.fontColor};
-
+    color: ${ytTheme.fontColor};
+    
+    background-color: ${p => p.primary ? ytTheme.themeColorSubtler : ytTheme.backColorBolder};
+    :hover {
+        background-color: ${ytTheme.backColorBolder3};
+    }
     font-size: 1em;
     line-height: 1em;
-    padding: .5em 1em 0.2em 1em;
+    padding: .5em 1em 0.5em 1em;
     border-radius: 0.2em;
     outline: none;
     font-weight: bolder;
     
+
 
     ${StyledIconBase} {
         height: 1.4em;
@@ -38,4 +44,4 @@ const ButtonStyle = styled.button`
     }
 `
 
-export const Button = ({ label, icon, onclick }: ButtonProps) => <ButtonStyle onClick={onclick}>{icon} {label}</ButtonStyle>
+export const Button = ({ label, icon, onclick, primary }: ButtonProps) => <ButtonStyle onClick={onclick} primary={primary}>{icon} {label}</ButtonStyle>
