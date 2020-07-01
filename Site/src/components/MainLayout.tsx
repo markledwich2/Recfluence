@@ -14,6 +14,8 @@ export function isGatsbyServer() { return typeof window === 'undefined' }
 
 export function safeLocation(): Location { return isGatsbyServer() ? null : location }
 
+export const mainLayoutId = 'main-layout'
+
 const themeIntent: ThemeIntent = {
   fontFamily: 'Segoe UI, Tahoma',
   themeColor: '#249e98',
@@ -24,7 +26,6 @@ export const ytTheme = makeTheme(themeIntent)
 
 export const MainLayout: FunctionComponent<RouteComponentProps> = ({ children }) => {
   useEffect(() => {
-
     // incase any elements expand beyond the root div, style the nody background
     const s = document.body.style
     s.background = ytTheme.backColor
@@ -52,7 +53,7 @@ export const MainLayout: FunctionComponent<RouteComponentProps> = ({ children })
             <Helmet>
               <title>{data.site.siteMetadata.title}</title>
             </Helmet>
-            <MainStyleDiv>
+            <MainStyleDiv id={mainLayoutId}>
               {children}
             </MainStyleDiv>
           </ToastProvider>
@@ -114,7 +115,7 @@ const MainStyleDiv = styled.div`
     -webkit-appearance: none;
   }
 
-  input, textarea {
+  input, textarea, button {
     border:solid 1px ${ytTheme.backColorBolder2};
     padding: 0.5em 0.6em;
     border-radius:5px;
@@ -124,21 +125,32 @@ const MainStyleDiv = styled.div`
       outline:none;
     }
   }
-  
 
-  input[type=submit] {
+  input[type=submit], button {
     text-transform: uppercase;
     font-weight: bolder;
     padding: .5em 1em;
 
     :hover {
         background-color: ${ytTheme.backColorBolder3};
+        cursor:pointer;
     }
 
     :disabled {
       color: ${ytTheme.fontColorSubtler2};
       background-color: ${ytTheme.backColorBolder};
     }
+  }
+
+  button {
+    padding: .58em 1em;
+    border: none;
+    outline: none;
+    font: inherit;
+    font-weight: bolder;
+    color: inherit;
+    background: none;
+    background-color: ${ytTheme.backColorBolder};
   }
 
   textarea {
@@ -163,6 +175,14 @@ const MainStyleDiv = styled.div`
 
   h1, h2, h3 {
     color: ${ytTheme.fontColorBolder};
+  }
+
+  code, inlineCode  {
+      font-family:monospace;
+      background-color:${ytTheme.backColorBolder2};
+      padding: 0.1em 0.2em;
+      border: 1px solid ${ytTheme.backColorBolder3};
+      border-radius: 5px;
   }
 `
 

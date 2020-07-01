@@ -19,6 +19,7 @@ const TitleStyle = styled.div`
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
+  min-height:127px;
 
   > .title {
     display: flex;
@@ -68,8 +69,9 @@ export class ChannelRelationsTitle extends React.Component<Props, State> {
           <div><b>{c.title}</b></div>
           <div>
             {c.relevantDailyViews == c.dailyViews ?
-              <><b>{compactInteger(c.relevantDailyViews)}</b> relevant daily views <i>{dateFormat(c.publishedFrom)}</i> to <i>{dateFormat(c.publishedTo)}</i></>
-              : <><b>{compactInteger(c.relevantDailyViews)}</b> relevant / <b>{compactInteger(c.dailyViews)}</b> daily views <i>{dateFormat(c.publishedFrom)}</i> to <i>{dateFormat(c.publishedTo)}</i></>}
+              <><b>{compactInteger(c.relevantDailyViews)}</b> relevant daily views</>
+              : <><b>{compactInteger(c.relevantDailyViews)}</b> relevant / <b>{compactInteger(c.dailyViews)}</b> daily views</>}
+            {/* <i>{dateFormat(c.publishedFrom)}</i> to <i>{dateFormat(c.publishedTo)}</i> */}
           </div>
           <div>
             <b>{compactInteger(c.subCount)}</b> subscribers

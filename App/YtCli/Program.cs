@@ -294,6 +294,26 @@ namespace YtCli {
     }
   }
 
+  [Command("migrate-reviews")]
+  public class MigrateReviewsCmd : ICommand {
+    readonly SheetsCfg SheetsCfg;
+    readonly ILogger   Log;
+    readonly YtStore   Store;
+
+    public MigrateReviewsCmd(SheetsCfg sheetsCfg, ILogger log, YtStore store) {
+      SheetsCfg = sheetsCfg;
+      Log = log;
+      Store = store;
+    }
+
+    public async ValueTask ExecuteAsync(IConsole console) {
+      var userSheets = await ChannelSheets.Channels(SheetsCfg, Log);
+      var reviews = userSheets.SelectMany(r => r.UserChannels).ToArray();
+      foreach (var r in reviews) r.Updated = DateTime.UtcNow;
+      await Store.ChannelReviews.Append(reviews);
+    }
+  }
+
   [Command("build-container")]
   public class BuildContainerCmd : ICommand {
     readonly SemVersion   Version;

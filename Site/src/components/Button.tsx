@@ -1,4 +1,4 @@
-import React, { useState, PropsWithChildren, MouseEventHandler } from "react"
+import React, { useState, PropsWithChildren, MouseEventHandler, CSSProperties } from "react"
 import styled from 'styled-components'
 import { ytTheme } from './MainLayout'
 import { StyledIconBase } from '@styled-icons/styled-icon'
@@ -32,8 +32,6 @@ const ButtonStyle = styled.button`
     border-radius: 0.2em;
     outline: none;
     font-weight: bolder;
-    
-
 
     ${StyledIconBase} {
         height: 1.4em;
@@ -45,3 +43,11 @@ const ButtonStyle = styled.button`
 `
 
 export const Button = ({ label, icon, onclick, primary }: ButtonProps) => <ButtonStyle onClick={onclick} primary={primary}>{icon} {label}</ButtonStyle>
+
+export const inlineButtonStyle: CSSProperties = {
+    height: '1.4em',
+    width: '1.4em',
+    position: 'relative',
+    top: '-0.10em',
+    paddingRight: '0.2em'
+}

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
@@ -15,7 +16,7 @@ using SysExtensions.Text;
 
 namespace SysExtensions.Threading {
   public static class BlockExtensions {
-    public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallelism = 1, int? capacity = null, 
+    public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallelism = 1, int? capacity = null,
       CancellationToken cancel = default) {
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false, CancellationToken = cancel};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
@@ -56,14 +57,6 @@ namespace SysExtensions.Threading {
       var res = await consume;
       return res;
     }
-
-    /*public static (IEnumerable<T> source, IPropagatorBlock<T, TFirstR> first, IReceivableSourceBlock<TLastR[]> batch) WithCollectAll<T, TFirstR, TLast, TLastR>(
-      this (IEnumerable<T> source, IPropagatorBlock<T, TFirstR> first, IPropagatorBlock<TLast, TLastR> last) withFunc) {
-      var (source, first, last) = withFunc;
-      var batch = new BatchBlock<TLastR>(int.MaxValue);
-      last.LinkTo(batch, new DataflowLinkOptions {PropagateCompletion = true});
-      return (source, first, batch);
-    }*/
 
     public static async Task<int> BlockBatch<T>(this IEnumerable<T> source,
       Func<IReadOnlyCollection<T>, Task> action, int batchSize = 10_000, int parallel = 1, int fileParallel = 4,
@@ -112,6 +105,36 @@ namespace SysExtensions.Threading {
         .Run().ConfigureAwait(false);
     }
 
+    public static async IAsyncEnumerable<R> BlockTrans<T, R>(this IEnumerable<T> source,
+      Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
+      var block = GetBlock(func, parallel, capacity, cancel);
+      var produceTask = ProduceAsync(source, block);
+      while (await block.OutputAvailableAsync())
+        yield return await block.ReceiveAsync();
+      await Task.WhenAll(produceTask, block.Completion);
+    }
+
+    public static async IAsyncEnumerable<R> BlockTrans<T, R>(this IAsyncEnumerable<T> source,
+      Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
+      var block = GetBlock(func, parallel, capacity, cancel);
+      var produceTask = ProduceAsync(source, block);
+      while (await block.OutputAvailableAsync())
+        yield return await block.ReceiveAsync();
+      await Task.WhenAll(produceTask, block.Completion);
+    }
+
+    public static async IAsyncEnumerable<R> BlockTrans<T, R>(this Task<IAsyncEnumerable<T>> source,
+      Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
+      await foreach (var i in (await source).BlockTrans(func, parallel, capacity, cancel))
+        yield return i;
+    }
+
+    static TransformBlock<T, R> GetBlock<T, R>(Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) {
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
+      if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
+      return new TransformBlock<T, R>(func, options);
+    }
+
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
     public static async Task<IReadOnlyCollection<R>> BlockFunc<T, R>(this IEnumerable<T> source,
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null,
@@ -152,6 +175,16 @@ namespace SysExtensions.Threading {
       await block.Completion;
 
       return result;
+    }
+
+    static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<T> block) {
+      var produced = 0;
+      await foreach (var item in source) {
+        await block.SendAsync(item).ConfigureAwait(false);
+        produced++;
+      }
+      block.Complete();
+      return produced;
     }
 
     static async Task<long> ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block) {

@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Humanizer;
-using Humanizer.Localisation;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
@@ -13,48 +12,51 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Blob {
-
   public class OptimiseCfg {
-    public long TargetBytes { get; set; } = (long)10.Megabytes().Bytes;
-    public int Parallel { get; set; } = 8;
+    public long TargetBytes { get; set; } = (long) 10.Megabytes().Bytes;
+    public int  Parallel    { get; set; } = 8;
   }
-  
+
   public static class JsonlStoreExtensions {
     public const string Extension = "jsonl.gz";
-    
-    public static async Task<IReadOnlyCollection<StoreFileMd>> Files(this ISimpleFileStore store, StringPath path, bool allDirectories = false) {
-      var list = (await store.List(path, allDirectories).SelectManyList()).Where(p => !p.Path.Name.StartsWith("_") && p.Path.Name.EndsWith(Extension));
-      return list.Select(StoreFileMd.FromFileItem).ToList();
+
+    public static async IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(this ISimpleFileStore store, StringPath path, bool allDirectories = false) {
+      await foreach (var p in store.List(path, allDirectories))
+        yield return p
+          .Where(p => !p.Path.Name.StartsWith("_") && p.Path.Name.EndsWith(Extension))
+          .Select(StoreFileMd.FromFileItem).ToArray();
     }
-    
+
     public static StringPath FilePath(StringPath path, string ts, string version = null) =>
       path.Add(FileName(ts, version));
 
     public static string FileName(string ts, string version) =>
       $"{ts}.{version ?? ""}.{ShortGuid.Create(6)}.{Extension}";
-    
+
+    public static Task
+      Optimise(this IJsonlStore store, OptimiseCfg cfg, StringPath partition, string ts = null, ILogger log = null) =>
+      store.Store.Optimise(cfg, partition != null ? store.Path.Add(partition) : store.Path, ts, log);
+
     /// <summary>Process new files in land into stage. Note on the different modes: - LandAndStage: Immutable operation, load
     ///   data downstream from the stage directory - Default: Mutates the files in the same directory. Downstream operations:
     ///   don't run while processing, and fully reload after this is complete</summary>
     /// <returns>stats about the optimisation, and all new files (optimised or not) based on the timestamp</returns>
-    public static async Task<(long optimiseIn, long optimiseOut, StoreFileMd[] files)> Optimise(this ISimpleFileStore store, OptimiseCfg cfg, StringPath rootPath, string ts = null, ILogger log = null) { // all partition landing files (will group using directories)
+    public static async Task
+      Optimise(this ISimpleFileStore store, OptimiseCfg cfg, StringPath rootPath, string ts = null, ILogger log = null) {
+      // all partition landing files (will group using directories)
       var sw = Stopwatch.StartNew();
-      
+
       log.Debug("Optimise {Path} - reading current files", rootPath);
       var (byDir, duration) = await ToOptimiseByDir(store, rootPath, ts).WithDuration();
       log.Debug("Optimise {Path} - read {Files} files across {Partitions} partitions in {Duration}",
         rootPath, byDir.Sum(p => p.Count()), byDir.Length, duration.HumanizeShort());
 
       var optimiseRes = await byDir.BlockFunc(p => Optimise(store, p.Key, p, cfg, log), cfg.Parallel);
-      var res = (
-        optimiseIn: optimiseRes.Sum(r => r.optimisedIn), 
-        optimiseOut: optimiseRes.Sum(r => r.optimisedOut), 
-        files: byDir.SelectMany(df => df).ToArray());
-      
+      var optimiseIn = optimiseRes.Sum(r => r.optimisedIn);
+      var optimiseOut = optimiseRes.Sum(r => r.optimisedOut);
+
       log.Information("Optimise {Path} - optimised {FilesIn} into {FilesOut} files in {Duration}",
-        rootPath, res.optimiseIn, res.optimiseOut, sw.Elapsed.HumanizeShort());
-      
-      return res;
+        rootPath, optimiseIn, optimiseOut, sw.Elapsed.HumanizeShort());
     }
 
     /// <summary>Join ts (timestamp) contiguous files together until they are > MaxBytes</summary>
@@ -141,7 +143,7 @@ namespace Mutuo.Etl.Blob {
     }
 
     static async Task<IGrouping<string, StoreFileMd>[]> ToOptimiseByDir(ISimpleFileStore store, StringPath landPath, string ts) =>
-      (await store.Files(landPath, true))
+      (await store.Files(landPath, allDirectories: true).SelectManyList())
       .Where(f => ts == null || string.CompareOrdinal(f.Ts, ts) > 0)
       .GroupBy(f => f.Path.Parent.ToString())
       .ToArray();

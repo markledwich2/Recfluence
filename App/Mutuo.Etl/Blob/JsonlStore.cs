@@ -21,7 +21,7 @@ namespace Mutuo.Etl.Blob {
     /// <returns></returns>
     Task<StoreFileMd> LatestFile(string partition = null);
 
-    Task<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false);
+    IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false);
   }
 
   /// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl</summary>
@@ -64,12 +64,13 @@ namespace Mutuo.Etl.Blob {
 
     /// <summary>Returns the most recent file within this path (any child directories)</summary>
     async Task<StoreFileMd> LatestFile(StringPath path) {
-      var files = await Files(path, true);
+      var files = await Files(path, allDirectories: true).SelectManyList();
       var latest = files.OrderByDescending(f => StoreFileMd.GetTs(f.Path)).FirstOrDefault();
       return latest;
     }
 
-    public Task<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false) => Store.Files(path, allDirectories);
+    public IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false) => 
+      Store.Files(FilePath(path), allDirectories);
 
     public readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {
       NullValueHandling = NullValueHandling.Ignore,
@@ -86,14 +87,15 @@ namespace Mutuo.Etl.Blob {
       await items.GroupBy(Partition).BlockAction(async g => {
         var ts = items.Max(GetTs);
         var path = JsonlStoreExtensions.FilePath(FilePath(g.Key), ts, Version);
-        using var memStream = await items.ToJsonlGzStream(JCfg);
+        using var memStream = await g.ToJsonlGzStream(JCfg);
         await Store.Save(path, memStream, log).WithDuration();
       }, Parallel);
     }
 
     public async IAsyncEnumerable<IReadOnlyCollection<T>> Items(string partition = null) {
-      foreach (var f in await Files(FilePath(partition), allDirectories: true))
-        yield return await LoadJsonl(f.Path);
+      await foreach (var dir in Files(partition, allDirectories: true))
+      await foreach (var item in dir.BlockTrans(f => LoadJsonl(f.Path), Parallel, capacity:10))
+        yield return item;
     }
 
     async Task<IReadOnlyCollection<T>> LoadJsonl(StringPath path) {

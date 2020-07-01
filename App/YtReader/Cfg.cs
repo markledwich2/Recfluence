@@ -105,10 +105,15 @@ namespace YtReader {
   }
 
   public class SheetsCfg {
-    [Required] [SkipRecursiveValidation] public JObject             CredJson            { get; set; }
-    [Required]                           public string              MainChannelSheetId  { get; set; }
-    [Required]                           public ICollection<string> UserChannelSheetIds { get; set; }
-    [Required]                           public int                 Parallel            { get; set; } = 4;
+    [Required] [SkipRecursiveValidation] public JObject                   CredJson           { get; set; }
+    [Required]                           public string                    MainChannelSheetId { get; set; }
+    [Required]                           public ICollection<UserSheetCfg> UserSheets         { get; set; }
+    [Required]                           public int                       Parallel           { get; set; } = 4;
+  }
+
+  public class UserSheetCfg {
+    public string SheetId { get; set; }
+    public string Email   { get; set; }
   }
 
   public class YtCollectCfg {
@@ -144,7 +149,7 @@ namespace YtReader {
     /// <summary>The maximum number of videos to refresh exta info on (per run) because they have no comments (we didn't used
     ///   to collect them)</summary>
     public int PopulateMissingCommentsLimit { get; set; } = 2;
-    public int ParallelChannels     { get;         set; } = 2;
+    public int ParallelChannels { get;             set; } = 2;
 
     public int ChromeParallel { get; set; } = 2;
     public int WebParallel    { get; set; } = 8;

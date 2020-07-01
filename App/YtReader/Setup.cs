@@ -232,6 +232,7 @@ namespace YtReader {
       b.Register(_ => cfg.Proxy).SingleInstance();
       b.Register(_ => cfg.Collect).SingleInstance();
       b.Register(_ => cfg.YtApi).SingleInstance();
+      b.Register(_ => cfg.Sheets).SingleInstance();
 
       b.RegisterType<SnowflakeConnectionProvider>().SingleInstance();
       b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();

@@ -27,7 +27,7 @@ interface TimedCaption {
 }
 
 
-const HelpStyle = styled.div`
+const MarkdownStyle = styled.div`
   padding:1em;
   font-size: 1.2em;
   line-height: 1.5em;
@@ -36,13 +36,6 @@ const HelpStyle = styled.div`
   }
   p {
       margin: 0.5em 0em 1em 0em;
-  }
-  code, inlineCode  {
-      font-family:monospace;
-      background-color:${ytTheme.backColorBolder};
-      padding: 0.1em 0.2em;
-      border: 1px solid ${ytTheme.backColorBolder2};
-      border-radius: 5px;
   }
 `
 
@@ -121,7 +114,7 @@ Use \`~\` to match variations within a single character. E.g. \`Charlie~\` will 
 Use \`~N\` to match N character different. E.g. \`Utilitarian~3\` will match \`Utilitarians\` and \`Utilitarianism\`. 
 `
 
-export const SearchHelp = <HelpStyle><ReactMarkdown source={searchMd} escapeHtml={false} /></HelpStyle>
+export const SearchHelp = <MarkdownStyle><ReactMarkdown source={searchMd} escapeHtml={false} /></MarkdownStyle>
 
 const captionPartOrder: { [P in CaptionPart]: number } = {
   Title: 0,

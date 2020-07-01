@@ -5,17 +5,19 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Autofac;
+using Humanizer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Primitives;
+using Mutuo.Etl.Blob;
 using Nest;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader;
 using YtReader.Search;
 using YtReader.Store;
 
@@ -85,6 +87,13 @@ namespace YtFunctions {
         var log = c.Resolve<ILogger>();
         var store = c.Scope.Resolve<YtStore>();
         await store.ChannelReviews.Append(new[] {review}, log);
+        
+        // if we have lots of small files, clean them up
+        var files = await store.ChannelReviews.Files(review.Email).SelectManyList();
+        var optimiseCfg = c.Resolve<WarehouseCfg>().Optimise;
+        if (files.Count(f => f.Bytes.Bytes() < (optimiseCfg.TargetBytes * 0.9).Bytes()) > 10)
+          await store.ChannelReviews.Optimise(optimiseCfg, review.Email, log: log);
+
         return new HttpResponseMessage(HttpStatusCode.OK);
       });
 
@@ -96,7 +105,9 @@ namespace YtFunctions {
         if (response != null) return response;
         var store = c.Scope.Resolve<YtStore>();
         var reviews = await store.ChannelReviews.Items(email).SelectManyList();
-        return reviews.JsonResponse(store.ChannelReviews.JCfg);
+        return reviews
+          .GroupBy(r => r.ChannelId).Select(g => g.OrderByDescending(g => g.Updated).First()) // only return the latest edit for a channel
+          .JsonResponse(store.ChannelReviews.JCfg);
       });
 
     static (string email, HttpResponseMessage response) EmailOrResponse(HttpRequest req) {

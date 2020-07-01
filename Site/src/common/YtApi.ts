@@ -29,23 +29,19 @@ export async function saveSearch(search: UserSearch): Promise<void> {
   await putJson(`${apiUrl}/search`, search)
 }
 
-export async function getChannels(): Promise<RawChannelData[]> {
-  return await getJsonl<RawChannelData>(resultsUrl.addPath('class_channels_raw.jsonl.gz').url)
+export async function getChannels(): Promise<RawChannel[]> {
+  return await getJsonl<RawChannel>(resultsUrl.addPath('class_channels_raw.jsonl.gz').url)
 }
 
-export async function saveReview(review: ChannelReview): Promise<Response> {
+export async function saveReview(review: Review): Promise<Response> {
   return await putJson(uri(apiUrl).addPath('channel_review').url, review)
 }
 
-export async function channelsReviewed(email: string): Promise<ChannelReview[]> {
-  return await getJson<ChannelReview[]>(uri(apiUrl).addPath('channels_reviewed').addQuery({ email }).url)
+export async function channelsReviewed(email: string): Promise<Review[]> {
+  return await getJson<Review[]>(uri(apiUrl).addPath('channels_reviewed').addQuery({ email }).url)
 }
 
-export interface ChannelReviewAndData extends ChannelReview, RawChannelData {
-  ReviewUpdated: string
-}
-
-export interface ChannelReview {
+export interface Review {
   ChannelId: string
   Email?: string
   LR?: string
@@ -56,7 +52,7 @@ export interface ChannelReview {
   MainChannelId?: string
 }
 
-export interface RawChannelData {
+export interface RawChannel {
   ChannelId: string
   ChannelTitle: string
   Description: string

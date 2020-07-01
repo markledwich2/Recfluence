@@ -11,11 +11,23 @@
   },
   "sheets": {
     "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",
-    "userChannelSheetIds": [
-      "1S1nYJXSRTKXmAQnCur7hKK4aFdDTMHV70L2UUUAs0os",
-      "1lGDF1YAGRza336C_hg6KJfzIuChIuDF2IzGg8LjEcAc",
-      "1FclpJwIYGo4u4fQdgwBiV1LC72NRHwXyF7y90yV7wzY",
-      "12OUpAzlrUPxWi0TJNQYVwu5FB5Q0ughLLPgakGWEGf8"
+    "userSheets": [
+      {
+        "sheetId": "1S1nYJXSRTKXmAQnCur7hKK4aFdDTMHV70L2UUUAs0os",
+        "email": "mark@ledwich.com.au"
+      },
+      {
+        "sheetId": "1lGDF1YAGRza336C_hg6KJfzIuChIuDF2IzGg8LjEcAc",
+        "email": "daemoniasaves@protonmail.com"
+      },
+      {
+        "sheetId": "1FclpJwIYGo4u4fQdgwBiV1LC72NRHwXyF7y90yV7wzY",
+        "email": "anna.zaitsev@gmail.com"
+      },
+      {
+        "sheetId": "12OUpAzlrUPxWi0TJNQYVwu5FB5Q0ughLLPgakGWEGf8",
+        "email": "zombie@recfluence.net"
+      }
     ]
   },
   "pipe": {

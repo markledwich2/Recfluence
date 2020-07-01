@@ -74,18 +74,19 @@ namespace YtReader {
 
     public static async Task<IReadOnlyCollection<ChannelSheet>> Channels(SheetsCfg sheetsCfg, ILogger log) {
       var service = GetService(sheetsCfg);
-      var userChannelSheets = await sheetsCfg.UserChannelSheetIds
+      var userChannelSheets = await sheetsCfg.UserSheets
         .Select((v, i) => new
-          {SheetId = v, Weight = 1}) // I used to weight some users higher (that's why there is that logic). Now we weight them all the same (1)
+          {v.SheetId, v.Email, Weight = 1}) // I used to weight some users higher (that's why there is that logic). Now we weight them all the same (1)
         .BlockFunc(async s => new {
           Channels = await SheetValues<UserChannelSheet>(service, s.SheetId, "Channels", log)
             .WithWrappedException($"error reading user sheet {s.SheetId}", log),
           s.SheetId,
-          s.Weight
+          s.Weight,
+          s.Email
         }, sheetsCfg.Parallel);
 
       var userChannelsById = userChannelSheets
-        .SelectMany(u => u.Channels.Select(c => new {u.SheetId, u.Weight, Channel = c}))
+        .SelectMany(u => u.Channels.Select(c => new {u.SheetId, u.Weight, Channel = c, u.Email}))
         .ToMultiValueDictionary(c => c.Channel.Id);
 
       var mainChannels = await MainChannels(sheetsCfg, service, log);
@@ -96,12 +97,15 @@ namespace YtReader {
 
             var classifications = ucs.Select(uc =>
               new UserChannelStore2 {
+                Email = uc.Email,
+                ChannelId = uc.Channel.Id,
                 SoftTags = SoftTags(uc.Channel),
                 Relevance = uc.Channel.Relevance,
                 LR = uc.Channel.LR,
                 SheetId = uc.SheetId,
                 Notes = uc.Channel.Notes,
-                Weight = uc.Weight
+                Weight = uc.Weight,
+                MainChannelId = mc.MainChannelId
               }).ToList();
 
             var totalWeight = classifications.Sum(c => c.Weight);
