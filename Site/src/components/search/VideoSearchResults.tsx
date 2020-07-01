@@ -11,7 +11,7 @@ import { Link } from 'gatsby'
 import ReactMarkdown from 'react-markdown/with-html'
 import { Spinner } from '../Spinner'
 import { SadTear as IconSad } from '@styled-icons/fa-solid'
-import { UserContext } from '../UserContext'
+import { UserContext, LoginOverlay } from '../UserContext'
 import { EsCaption, CaptionPart } from '../../common/YtApi'
 
 
@@ -41,22 +41,6 @@ const MarkdownStyle = styled.div`
 
 const ResultsPane = styled.div`
   padding: 0 1em;
-`
-
-const LoginOverlay = styled.div`
-  position: absolute; 
-  top:0px; left:0px;
-  width:100%;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-
-  > div {
-    max-width:500px;
-    padding: 1em 2em;
-    margin: 5em auto;
-    background-color: ${ytTheme.backColorTransparent};
-  }
 `
 
 const BlurOverlay = styled.div`
@@ -173,12 +157,10 @@ export const VideoSearchResults = ({ renderState, query }: { renderState: Render
         <div className={user ? "blurred" : "blurred un-authed"} />
       </>}
     </BlurOverlay>
-    {!user && <LoginOverlay><div>
-      <big><a onClick={_ => logIn()}>Sign in</a> to enable search</big><br /><br />
-        Consider your searches public information. This service is free (for now) but we want to be are to use the search data however we wish in the future.<br /><br />
-
-        Please use responsibly.
-        </div></LoginOverlay>}
+    <LoginOverlay verb='enable search'>
+      Consider your searches public information. This service is free (for now) but we want to be are to use the search data however we wish in the future.<br /><br />
+    Please use responsibly.
+  </LoginOverlay>
 
     {!loading && resultStats.numberOfResults > 0 && resultStats.numberOfResults <= resultStats.displayedResults &&
       <NoMoreResults><span>the end</span></NoMoreResults>}

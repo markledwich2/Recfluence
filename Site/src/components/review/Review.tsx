@@ -1,6 +1,6 @@
 import * as React from "react"
-import { useContext, useEffect, useState, useMemo } from 'react'
-import { UserContext } from '../UserContext'
+import { useContext, useEffect, useState, useMemo, useCallback } from 'react'
+import { UserContext, LoginOverlay } from '../UserContext'
 import { channelsReviewed, saveReview as apiSaveReview, RawChannel, getChannels, Review } from '../../common/YtApi'
 import { Spinner } from '../Spinner'
 import { ytTheme, mainLayoutId } from '../MainLayout'
@@ -13,8 +13,6 @@ import { ReviewForm } from './ReviewForm'
 import { ReviewedGrid } from './ReviewGrid'
 import { useHotkeys, Options as HotkeyOptions } from 'react-hotkeys-hook'
 import { ChannelReview } from './ReviewCommon'
-
-//Modal.setAppElement(`#${mainLayoutId}`)
 
 const ReviewPageDiv = styled.div`
   padding: 2em;
@@ -35,9 +33,8 @@ const ReviewPageDiv = styled.div`
 `
 const reviewValid = (r: Review): boolean => r.Relevance != null && r.LR != null
 
-
-export const ChannelReviewDiv = () => {
-  const userCtx = useContext(UserContext)
+export const ReviewControl = () => {
+  const { user } = useContext(UserContext)
   const [review, setReview] = useState<ChannelReview>(null)
   const [reviews, setReviews] = useState<ChannelReview[]>()
   const [channels, setChannels] = useState<_.Dictionary<RawChannel>>()
@@ -52,7 +49,7 @@ export const ChannelReviewDiv = () => {
 
   useEffect(() => {
     const go = async () => {
-      const email = userCtx?.user?.email
+      const email = user?.email
       if (!email) return
       try {
         await init(email)
@@ -61,7 +58,7 @@ export const ChannelReviewDiv = () => {
       }
     }
     go()
-  }, [userCtx])
+  }, [user])
 
   const isEditing = editing != null
   const currentReview = isEditing ? editing : review
@@ -72,6 +69,7 @@ export const ChannelReviewDiv = () => {
     'ctrl+d': () => { saveNonPoliticalReview(currentReview, isEditing) },
     'esc': () => setEditing(null)
   }
+
 
   _.forEach(handlers, (handler, key: keyof typeof handlers) => {
     useHotkeys(key, e => {
@@ -105,7 +103,7 @@ export const ChannelReviewDiv = () => {
   }
 
   const saveReview = async ({ review, channel }: ChannelReview, isEditing: boolean): Promise<ChannelReview> => {
-    const toSave = { review: { ...review, Updated: new Date().toISOString(), Email: userCtx.user?.email }, channel }
+    const toSave = { review: { ...review, Updated: new Date().toISOString(), Email: user?.email }, channel }
     const res = await apiSaveReview(toSave.review)
     res.ok ? addToast(`Saved channel :  ${channel.ChannelTitle}`, { appearance: 'success', autoDismiss: true })
       : addToast(`Couldn't save:  ${await res.text()}`, { appearance: 'warning', autoDismiss: true })
@@ -119,64 +117,71 @@ export const ChannelReviewDiv = () => {
   const saveNonPoliticalReview = ({ review, channel }: ChannelReview, isEditing: boolean) =>
     saveReview({ review: { ...review, Relevance: 0 }, channel }, isEditing)
 
-  if (!userCtx?.user) return <span>Please log in to review channels</span>
-  if (!review) return <><Spinner size='50px' /></>
-
-  const mainChannelOptions = _(channels).map(c => ({ label: c.ChannelTitle, value: c.ChannelId }))
-    .keyBy(c => c.value).value()
 
   // fetch some channels for review & list existing
   return <ReviewPageDiv id='review-page'>
-    {pending && (<div>
-      <h3>To Review ({pending.length})</h3>
-      {pending.length == 0 && <span>You're up to date. You hard worker you!</span>}
-    </div>)}
+    <LoginOverlay verb='to review channels' />
 
-    {review && <ReviewForm
-      review={review}
-      mainChannelOptions={mainChannelOptions}
-      onChange={r => setReview(r)}
-      onSave={async r => { await saveReview(r, false) }}
-      onSaveNonPolitical={async r => { await saveNonPoliticalReview(r, false) }}
-      reviewValid={reviewValid}
-    />}
+    {user && <>
 
-    <Modal
-      isOpen={isEditing}
-      ariaHideApp={false}
-      parentSelector={() => document.querySelector('#review-page')}
-      style={{
-        overlay: {
-          backgroundColor: 'none',
-          backdropFilter: 'blur(15px)'
-        },
-        content: {
-          backgroundColor: ytTheme.backColor, padding: '2em', border: 'none',
-          maxWidth: '800px',
-          minWidth: "600px",
-          top: '50%',
-          left: '50%',
-          right: 'auto',
-          bottom: 'auto',
-          marginRight: '-50%',
-          transform: 'translate(-50%, -50%)'
-        }
-      }}>
-      <ReviewForm
-        review={editing}
-        mainChannelOptions={mainChannelOptions}
-        onChange={r => setEditing(r)}
-        onSave={async r => {
-          await saveReview(r, true)
-          setEditing(null)
-        }}
-        onSaveNonPolitical={async r => { await saveNonPoliticalReview(r, true) }}
-        reviewValid={reviewValid}
-        onCancel={() => setEditing(null)}
-      />
-    </Modal>
+      {pending && <div>
+        <h3>To Review ({pending.length})</h3>
+        {pending.length == 0 && <span>You're up to date. You hard worker you!</span>}
+      </div>}
 
-    <h3>Reviewed</h3>
-    <div>{reviews?.length <= 0 ? <>You haven't reviewed anything yet</> : reviewedGrid}</div>
+      {(!channels || !reviews) ?
+        <Spinner size='50px' /> :
+        <ReviewForm
+          review={review}
+          channels={channels}
+          onChange={r => setReview(r)}
+          onSave={async r => { await saveReview(r, false) }}
+          onSaveNonPolitical={async r => { await saveNonPoliticalReview(r, false) }}
+          reviewValid={reviewValid}
+        />}
+
+
+      {reviews && <>
+        <h3>Reviewed</h3>
+        <div>{reviews?.length <= 0 ? <>You haven't reviewed anything yet</> : reviewedGrid}</div>
+      </>
+      }
+
+      {isEditing && <Modal
+        isOpen={isEditing}
+        ariaHideApp={false}
+        parentSelector={() => document.querySelector('#review-page')}
+        style={{
+          overlay: {
+            backgroundColor: 'none',
+            backdropFilter: 'blur(15px)'
+          },
+          content: {
+            backgroundColor: ytTheme.backColor, padding: '2em', border: 'none',
+            maxWidth: '800px',
+            minWidth: "600px",
+            top: '50%',
+            left: '50%',
+            right: 'auto',
+            bottom: 'auto',
+            marginRight: '-50%',
+            transform: 'translate(-50%, -50%)'
+          }
+        }}>
+        <ReviewForm
+          review={editing}
+          channels={channels}
+          onChange={r => setEditing(r)}
+          onSave={async r => {
+            await saveReview(r, true)
+            setEditing(null)
+          }}
+          onSaveNonPolitical={async r => { await saveNonPoliticalReview(r, true) }}
+          reviewValid={reviewValid}
+          onCancel={() => setEditing(null)}
+        />
+      </Modal>}
+    </>
+    }
   </ReviewPageDiv >
 }

@@ -1,7 +1,9 @@
 
 import createAuth0Client, { Auth0Client, Auth0ClientOptions } from '@auth0/auth0-spa-js'
-import React, { useState, useEffect, FunctionComponent } from 'react'
-import { isGatsbyServer } from './MainLayout'
+import React, { useState, useEffect, FunctionComponent, useContext } from 'react'
+import { isGatsbyServer, ytTheme } from './MainLayout'
+import styled from 'styled-components'
+
 
 export const UserContext = React.createContext<UserCtx>(null)
 
@@ -67,4 +69,29 @@ export const UserContextProvider: FunctionComponent<{ authOptions: Auth0ClientOp
   }
 
   return <UserContext.Provider value={{ user, logIn, logOut }} children={children} />
+}
+
+const LoginOverlayDiv = styled.div`
+  position: absolute; 
+  top:100px; left:0px;
+  width:100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+
+  > div {
+    max-width:500px;
+    padding: 1em 2em;
+    margin: 5em auto;
+  }
+`
+
+export const LoginOverlay: FunctionComponent<{ verb: string }> = ({ verb, children }) => {
+  const { user, logIn } = useContext(UserContext)
+  return <>{!user && <LoginOverlayDiv>
+    <div style={{ backgroundColor: ytTheme.backColorTransparent }}>
+      <big><a onClick={_ => logIn()}>Sign in</a> to {verb}</big><br /><br />
+      <div>{children}</div>
+    </div>
+  </LoginOverlayDiv>}</>
 }

@@ -256,7 +256,7 @@ export const selectStyle: StylesConfig = {
   option: (p, s) => ({ ...p, color: ytTheme.fontColor }),
   container: (p) => ({ ...p, padding: 0, margin: 0, width: '100%' }),
   menu: (p) => ({ ...p, padding: 0, margin: 0 }),
-  menuList: (p) => ({ ...p, maxHeight: '800px' }),
+  menuList: (p) => ({ ...p, maxHeight: '500px' }),
 }
 
 export const selectTheme = (selectTheme: STheme): STheme => ({

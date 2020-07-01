@@ -1,7 +1,7 @@
 
 import * as React from "react"
-import { useEffect, useState, useRef, FunctionComponent } from 'react'
-import { Review } from '../../common/YtApi'
+import { useEffect, useState, useRef, FunctionComponent, useMemo } from 'react'
+import { Review, RawChannel } from '../../common/YtApi'
 import { ytTheme, selectStyle, selectTheme } from '../MainLayout'
 import { ChannelLogo, channelUrl } from '../channel/Channel'
 import styled from 'styled-components'
@@ -67,7 +67,7 @@ const tips = {
   If these considerations align in the same direction then the channel is left or right. If there was a mix then they are assigned the center/heterodox category.
 `,
   tag: `Choose all tags that apply. Help for each tag within the drop-down control.`,
-  mainChannel: 'The parent channel (if applicable). `\n\n Example: `Fox 10 Phoenix` should have this set as `Fox News`',
+  mainChannel: 'The parent channel (if applicable). \n\n Example: `Fox 10 Phoenix` should have this set as `Fox News`',
   relevance: 'The portion of content relevant to politics, cultural commentary or morally important sense-making. English speaking only. ',
   notes: 'Relevant notes about this channel. This is useful if we need to go back and ad new tags, or diagnose disagreements',
   save: '**Save** `crl+s`',
@@ -99,14 +99,14 @@ const Field: FunctionComponent<FieldProps> = ({ name, size, label, children, req
     </label>
   </div>
 
-export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCancel, reviewValid, mainChannelOptions }: {
+export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCancel, reviewValid, channels }: {
   review: ChannelReview,
   onSave: (r: ChannelReview) => Promise<void>,
   onSaveNonPolitical: (r: ChannelReview) => Promise<void>,
   onChange: (r: ChannelReview) => void,
   onCancel?: () => void,
   reviewValid: (r: Review) => boolean,
-  mainChannelOptions: _.Dictionary<Option>
+  channels: _.Dictionary<RawChannel>
 }) => {
 
   const lrRef = useRef(null)
@@ -122,6 +122,16 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
   const r = review.review
 
   const updateReviewProp = (p: keyof Review, v: any) => onChange({ ...review, review: { ...r, [p]: v } })
+
+  console.log('channels', channels)
+
+  const { channelOptions, channelDic } = useMemo(() => {
+    const channelOptions = _(channels)
+      .map(c => ({ label: c.ChannelTitle, value: c.ChannelId }))
+      .orderBy(c => c.label).value()
+    const channelDic = _(channelOptions).keyBy(c => c.value).value()
+    return { channelOptions, channelDic }
+  }, [channels])
 
   return <>{c && r && (<>
     <FlexRow>
@@ -172,10 +182,10 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
         <Field name='mainChannel' label='Main (Parent) ChannelTags' size='l' >
           <Select
             id='MainChannelId'
-            value={r.MainChannelId ? mainChannelOptions[r.MainChannelId] : null}
+            value={r.MainChannelId ? channelDic[r.MainChannelId] : null}
             isClearable
             backspaceRemovesValue
-            options={_.values(mainChannelOptions)}
+            options={channelOptions}
             onChange={(o: Option) => updateReviewProp('MainChannelId', o?.value)}
             styles={selectStyle} theme={selectTheme} />
         </Field>

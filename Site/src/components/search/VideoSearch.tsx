@@ -229,7 +229,7 @@ const SearchTexBox: React.FunctionComponent = () => {
     {/* the default behavior of DataSearch is to show results as you type. We can override thi behavior by using a
        controlled component, but this prevents smooth typing on mobile. 
        
-       Out solution is to use an invisible controlled DataSearch component and let users type in a vanilla input.
+       Our solution is to use an invisible controlled DataSearch component and let users type in a vanilla input.
       */}
 
     <StateProvider strict={false} >
@@ -241,7 +241,7 @@ const SearchTexBox: React.FunctionComponent = () => {
             setQuery(q)
             saveSearch({
               origin: location.origin,
-              email: user.email,
+              email: user?.email,
               query: q,
               channels: searchState.channel.value,
               ideologies: searchState.ideology.value,
@@ -269,15 +269,12 @@ const SearchTexBox: React.FunctionComponent = () => {
       }}
       value={query}
     />
-
-
   </SearchTextBoxStyle >
 }
 
 const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatch<React.SetStateAction<SortValue>>, sort: SortValue, style: CSSProperties }) =>
   <FiltersPane style={style}>
     <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-
       <SingleDataList componentId='sort' title='Sort' filterLabel='Sort'
         dataField={sort.field}
         data={_(sortOptions).keys().map(k => ({ label: k })).value()}
@@ -324,7 +321,6 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
       dataField="upload_date"
       URLParams
     />
-
 
     <MultiList
       className="multi-list ideology"
