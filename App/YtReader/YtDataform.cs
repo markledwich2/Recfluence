@@ -37,7 +37,6 @@ namespace YtReader {
 
     public async Task Update(ILogger log, bool fullLoad, string[] tables, CancellationToken cancel) {
       var sfCfg = SfCfg.JsonClone();
-      sfCfg.Role = "dataform"; // ensure dataform run in its own lower-credentialed role
       sfCfg.Db = sfCfg.DbName(); // serialize the environment specific db name
 
       var args = new[] {

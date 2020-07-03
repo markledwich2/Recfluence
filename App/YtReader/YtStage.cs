@@ -41,7 +41,7 @@ namespace YtReader {
 
     public async Task StageUpdate(ILogger log, bool fullLoad = false, string[] tableNames = null) {
       log = log.ForContext("db", Conn.Cfg.DbName());
-      log.Information("StageUpdate - started for db {Db}", Conn.Cfg.DbName());
+      log.Information("StageUpdate - started for snowflake host '{Host}', db '{Db}'", Conn.Cfg.Host, Conn.Cfg.DbName());
       var sw = Stopwatch.StartNew();
       var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table, StringComparer.OrdinalIgnoreCase) == true).ToArray();
       await tables.BlockAction(async t => {
