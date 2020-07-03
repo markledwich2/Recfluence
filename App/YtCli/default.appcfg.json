@@ -4,10 +4,11 @@
     "containerGroupName": "seq"
   },
   "snowflake": {
-    "Account": "mutuo",
-    "Warehouse": "yt",
-    "Schema": "public",
-    "db": "yt"
+    "host": "ql98184.west-us-2.azure.snowflakecomputing.com",
+    "warehouse": "yt",
+    "schema": "public",
+    "db": "yt",
+    "role": "recfluence"
   },
   "sheets": {
     "mainChannelSheetId": "17tO7k3cLF7wJXkfUgan5lQxLh047MPaMzD5ayB4G_rs",

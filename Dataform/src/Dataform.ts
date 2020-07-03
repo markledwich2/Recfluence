@@ -5,7 +5,7 @@ import * as bunyan from 'bunyan'
 import formatMs from 'humanize-duration'
 import { performance } from 'perf_hooks'
 import stripAnsi from 'strip-ansi'
-
+import _ from 'lodash'
 
 /** Dataform's config to provide in .df-credentials.json */
 export interface DataformSfCfg {
@@ -19,7 +19,7 @@ export interface DataformSfCfg {
 
 /** Type from YtReader.Db.Snowflake.SnowflakeCfg */
 export interface YtSfCfg {
-    account: string
+    host: string
     creds: string
     warehouse?: string
     db?: string
@@ -30,8 +30,9 @@ export interface YtSfCfg {
 export async function writeDataformCreds(sfCfg:YtSfCfg, path:string): Promise<void> {
     if(!sfCfg.creds)  throw new Error('no creds supplied')
     const [user, pass] = sfCfg.creds.split(':')
+
     const dfCfg:DataformSfCfg = {
-        accountId: sfCfg.account,
+        accountId:  _(sfCfg.host.split('.')).takeWhile(h => h.toLowerCase() != 'snowflakecomputing').join('.'),
         databaseName: sfCfg.db,
         warehouse: sfCfg.warehouse,
         username: user,

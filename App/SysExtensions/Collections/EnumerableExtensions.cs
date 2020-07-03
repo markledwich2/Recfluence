@@ -34,6 +34,12 @@ namespace SysExtensions.Collections {
 
     public static IEnumerable<T> SelectMany<T>(this IEnumerable<IEnumerable<T>> items) => items.SelectMany(i => i);
 
+    public static async IAsyncEnumerable<T> SelectMany<T>(this IAsyncEnumerable<IEnumerable<T>> items) {
+      await foreach (var g in items)
+      foreach (var i in g) 
+        yield return i;
+    }
+
     public static IEnumerable<T> WithDescendants<T>(this IEnumerable<T> items, Func<T, IEnumerable<T>> children) {
       var toRecurse = new Queue<T>(items);
       while (toRecurse.Count > 0) {

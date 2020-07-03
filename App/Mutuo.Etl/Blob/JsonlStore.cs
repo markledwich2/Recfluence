@@ -19,7 +19,7 @@ namespace Mutuo.Etl.Blob {
     /// <summary>returns the latest file (either in landing or staging) within the given partition</summary>
     /// <param name="partition"></param>
     /// <returns></returns>
-    Task<StoreFileMd> LatestFile(string partition = null);
+    Task<StoreFileMd> LatestFile(StringPath path = null);
 
     IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false);
   }
@@ -56,14 +56,9 @@ namespace Mutuo.Etl.Blob {
     /// <summary>The land path for a given partition is where files are first put before being optimised. Default -
     ///   [Path]/[Partition], LandAndStage - [Path]/land/[partition]</summary>
     StringPath FilePath(string partition = null) => partition.NullOrEmpty() ? Path : Path.Add(partition);
-
-    /// <summary>returns the latest file (either in landing or staging) within the given partition</summary>
-    /// <param name="partition"></param>
-    /// <returns></returns>
-    public async Task<StoreFileMd> LatestFile(string partition = null) => await LatestFile(FilePath(partition));
-
+    
     /// <summary>Returns the most recent file within this path (any child directories)</summary>
-    async Task<StoreFileMd> LatestFile(StringPath path) {
+    public async Task<StoreFileMd> LatestFile(StringPath path = null) {
       var files = await Files(path, allDirectories: true).SelectManyList();
       var latest = files.OrderByDescending(f => StoreFileMd.GetTs(f.Path)).FirstOrDefault();
       return latest;

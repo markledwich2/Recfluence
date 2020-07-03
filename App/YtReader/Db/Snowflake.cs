@@ -13,7 +13,7 @@ using SysExtensions.Text;
 namespace YtReader.Db {
   public class SnowflakeCfg {
     public            NameSecret Creds     { get; set; } = new NameSecret();
-    [Required] public string     Account   { get; set; }
+    [Required] public string     Host   { get; set; }
     public            string     Warehouse { get; set; }
     public            string     Db        { get; set; }
     public            string     Schema    { get; set; }
@@ -40,7 +40,8 @@ namespace YtReader.Db {
 
     public static string Cs(this SnowflakeCfg cfg, string db = null, string schema = null, string role = null) =>
       Cs(new (string name, string value)[] {
-        ("account", cfg.Account),
+        ("account", cfg.Host.Split('.').FirstOrDefault()),
+        ("host", cfg.Host),
         ("user", cfg.Creds.Name),
         ("db", db ?? cfg.DbName()),
         ("schema", schema ?? cfg.Schema),

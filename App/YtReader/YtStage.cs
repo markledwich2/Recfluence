@@ -20,7 +20,7 @@ namespace YtReader {
     [Required] public string      Stage              { get; set; } = "yt_data";
     [Required] public OptimiseCfg Optimise           { get; set; } = new OptimiseCfg();
     [Required] public int         LoadTablesParallel { get; set; } = 4;
-    public            string[]    Roles              { get; set; } = {"dataform", "sysadmin"};
+    public            string[]    Roles              { get; set; } = {"sysadmin"};
     public            int         MetadataParallel   { get; set; } = 8;
   }
 
@@ -106,6 +106,7 @@ namespace YtReader {
       UsTable("watch"),
       UsTable("ad"),
       new StageTableCfg("channels", "channel_stage"),
+      new StageTableCfg("channel_reviews", "channel_review_stage"),
       new StageTableCfg("videos", "video_stage"),
       new StageTableCfg("recs", "rec_stage"),
       new StageTableCfg("video_extra", "video_extra_stage"),

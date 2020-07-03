@@ -5,6 +5,7 @@ declare namespace NodeJS {
     export interface ProcessEnv {
         SNOWFLAKE_JSON: string
         REPO: string
+        // this is the repo branch (not the branch environment)
         BRANCH: string
         DATAFORM_RUN_ARGS: string
         SEQ:string

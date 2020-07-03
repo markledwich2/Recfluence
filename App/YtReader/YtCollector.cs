@@ -74,24 +74,21 @@ namespace YtReader {
       log.Information("Collect - Starting channels update. Limited to ({Included})",
         limitChannelHash.Any() ? limitChannelHash.Join("|") : "All");
 
-      IKeyedCollection<string, ChannelStored2> channelPev;
+      IKeyedCollection<string, ChannelStored2> channelNotRejected;
       ChannelStored2[] toDiscover;
       using (var db = await Sf.OpenConnection(log)) {
         var channelLimitSql = limitChannelHash.Any() ? $" and v:ChannelId::string in ({limitChannelHash.Join(",", c => $"'{c}'")})" : "";
         // retrieve previous channel state to update with new classification (algos and human) and stats form the API
-        channelPev = (await db.Query<string>("channels - previous", $@"select v
+        channelNotRejected = (await db.Query<string>("channels - previous", $@"select v
 from channel_stage
 where v:Status::string is null or v:Status::string not in ('ManualRejected', 'AlgoRejected') {channelLimitSql}
 qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc) = 1"))
           .Select(s => s.ToObject<ChannelStored2>(Store.Channels.JCfg)).ToKeyedCollection(c => c.ChannelId);
-        toDiscover = disableDiscover ? new ChannelStored2[] { } : await ChannelsToDiscover(db, channelPev, log);
+        toDiscover = disableDiscover ? new ChannelStored2[] { } : await ChannelsToDiscover(db, channelNotRejected, log);
       }
 
-      // human classification of channels. also acts a manual seed list
-      var toUpdate = (await ChannelSheets.Channels(Cfg.Sheets, log))
-        .Where(c => limitChannelHash.IsEmpty() || limitChannelHash.Contains(c.Id))
-        .Select(s => ChannelStored(s, channelPev))
-        .Randomize() // each run, we want to spread the early runs, possible failures across different channels
+      var toUpdate = channelNotRejected.Where(c => c.ReviewStatus.Accepted())
+        .Where(c => limitChannelHash.IsEmpty() || limitChannelHash.Contains(c.ChannelId))
         .ToArray();
 
       // perform full update on channels older than 30 days (max X at a time because of quota limit).
@@ -260,11 +257,13 @@ limit :DiscoverChannels
           c.ChannelTitle, c.StatusMessage);
         return;
       }
-
-      log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions", c.ChannelTitle);
-
+      
       var md = await Store.Videos.LatestFile(c.ChannelId);
       var lastUpload = md?.Ts?.ParseFileSafeTimestamp();
+
+      log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions. Last video stage {LastUpload}", 
+        c.ChannelTitle, lastUpload);
+
       var lastModified = md?.Modified;
       var recentlyUpdated = !forceUpdate && lastModified != null && lastModified.Value.IsYoungerThan(RCfg.RefreshAllAfter);
       if (recentlyUpdated) {
