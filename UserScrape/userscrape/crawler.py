@@ -200,10 +200,10 @@ class Crawler:
         onHome()
         return CrawlResult()
 
-    def get_video_features(self, video_id, rec_result: RecResult, personalized_count: int):
+    def get_video_features(self, video_id, rec_result: RecResult):
         available = rec_result.unavailable == None
         video_info = {
-            'account': self.user.email,
+            'account': self.user.ideology,
             'trial': self.trial_id,
             'video_id': video_id,
             'title': self.wait.until(EC.presence_of_element_located(
@@ -216,7 +216,6 @@ class Crawler:
                 (By.CSS_SELECTOR, "#text > a"))).get_attribute('href').strip(
                 'https://www.youtube.com/channel/') if available else None,  # read this from our own data if we have it. unavailable video's don't show the channel
             'recommendations': rec_result.recs if available else None,
-            'personalization_count': personalized_count,
             'unavailable': asdict(rec_result.unavailable) if rec_result.unavailable else None,
             'updated': datetime.utcnow().isoformat()
         }
@@ -252,8 +251,25 @@ class Crawler:
         rec_attempt = 0
         while True:
             try:
-                all_recs = self.wait_for_visibles(
-                    '.ytd-watch-next-secondary-results-renderer a.ytd-compact-video-renderer')
+                all_recs = self.driver.execute_script('''
+    var watchNext = ytInitialData.contents.twoColumnWatchNextResults
+    if(!watchNext || !watchNext.secondaryResults || !watchNext.secondaryResults.secondaryResults) return null
+    return watchNext.secondaryResults.secondaryResults.results
+    .map(r => r.compactAutoplayRenderer && Object.assign({}, r.compactAutoplayRenderer.contents[0].compactVideoRenderer, {autoPlay:true}) 
+        || r.compactVideoRenderer &&  Object.assign({}, r.compactVideoRenderer, {autoPlay:false}) 
+        || null)
+    .filter(r => r != null)
+    .map((v,i) =>({
+        videoId:v.videoId, 
+        title: v.title && v.title.simpleText || v.title && v.title.runs && v.title.runs[0].text, 
+        thumb: v.thumbnail && v.thumbnail.thumbnails[v.thumbnail.thumbnails.length -1].url,
+        channelTitle: v.longBylineText && v.longBylineText.runs[0].text, 
+        publishAgo: v.publishedTimeText && v.publishedTimeText.simpleText, 
+        viewText: v.viewCountText && v.viewCountText.simpleText || v.viewCountText && v.viewCountText.runs && v.viewCountText.runs[0].text,
+        duration:v.lengthText && v.lengthText.simpleText, 
+        channelId:v.channelId,
+        rank:i+1
+    }))''')
             except WebDriverException as e:
                 findRecsEx = e
                 break
@@ -270,29 +286,12 @@ class Crawler:
                 self.__log_driver_status('recommendations', findRecsEx.msg)
                 raise findRecsEx
 
-        recs = []
-        personalized_counter = 0  # how many of the recommendations are personalized?
-        if unavalable == None:
-            for i in all_recs:
-                personalized = 'Recommended for you' in i.text
-                if personalized:
-                    personalized_counter += 1
-                # take the link and remove everything except for the id of the video that the link leads to
-                recommendation_id = i.get_attribute('href').replace('https://www.youtube.com/watch?v=', '')
-                rec_el = i.find_element_by_css_selector('#video-title')
-                recs.append({
-                    'id': recommendation_id,
-                    'personalized': personalized,
-                    'title': rec_el.get_attribute('title'),
-                    'full_info': rec_el.get_attribute('aria-label')
-                })
-
-        rec_result = RecResult(recs, unavalable)
+        rec_result = RecResult(all_recs, unavalable)
         self.log.debug('{email} - about to store {recs} recs for {video}',
-                       email=self.user.email, video=video_id, recs=len(recs))
+                       email=self.user.email, video=video_id, recs=len(all_recs))
 
         # store the information about the current video plus the corresponding recommendations
-        self.get_video_features(video_id, rec_result, personalized_counter)
+        self.get_video_features(video_id, rec_result)
 
         self.log.info('{email} - recommendations collected for {video}', email=self.user.email, video=video_id)
         # return the recommendations
@@ -502,7 +501,7 @@ class Crawler:
         for video_batch in chunked(videos, 6):
             tasks = []
             for video_id in video_batch:
-                
+
                 if self.store.exists(self.path.watch_time_json(video_id)):
                     self.log.info('{email} - skipping watching video {video}', email=self.user.email, video=video_id)
                     continue
@@ -527,7 +526,7 @@ class Crawler:
         loop_break_index = 0
         while not feed_is_bannerfree:
             # refresh the feed everytime we had to close something until we finally get a completely clean feed
-            
+
             if loop_break_index == 10:
                 self.__log_driver_status('Feed Banner Detector is caught in loop - old feed')
 
@@ -652,7 +651,7 @@ class Crawler:
         if(error != None):
             self.log.warn('{email} - expereinced error ({error}) at {url} when ({phase}) {image_url}',
                           email=self.user.email, error=error, url=wd.current_url, phase=name, image_url=image_url)
-              
+
         os.remove(local_image_path)
 
     def shutdown(self):

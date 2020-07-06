@@ -16,7 +16,6 @@ class UserCfg(JsonSchemaMixin):
     email: str = field(
         metadata={"description": "email of the user e.g. mra.userscrape@gmail.com"})
     password: str = field(metadata={"description": "password for the user "})
-    telephone_number: str = field(metadata={"description": "telephone number to verify account "})
     ideology: str = field(metadata=JsonSchemaMeta({
         "description": "The users ideology, expected to be unique between users",
         "examples": [
@@ -33,8 +32,10 @@ class UserCfg(JsonSchemaMixin):
             "Conspiracy",
             "Social Justice"
         ]}))
-    notify_discord_user_id: Optional[int] = field(metadata=JsonSchemaMeta(
-        {"description": "the user id (e.g. 123465448467005488) in discord to notify", "required": False}))
+    telephone_number: Optional[str] = field(default=None, metadata=JsonSchemaMeta(
+        description="telephone number to verify account ", required=False)),
+    notify_discord_user_id: Optional[int] = field(default=None, metadata=JsonSchemaMeta(
+        description="the user id (e.g. 123465448467005488) in discord to notify", required=False))
 
 
 @dataclass_json
