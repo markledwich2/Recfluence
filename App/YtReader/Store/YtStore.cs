@@ -152,7 +152,6 @@ namespace YtReader.Store {
 
   public class UserChannelReview : UserChannelReviewCommon {
     public string ChannelId    { get; set; }
-    public string ChannelTitle { get; set; }
     public string Email        { get; set; }
   }
 

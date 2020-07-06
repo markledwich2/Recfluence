@@ -12,6 +12,7 @@ using Medallion.Shell;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
+using Newtonsoft.Json.Linq;
 using Semver;
 using Serilog;
 using SysExtensions;
@@ -20,12 +21,15 @@ using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
+using SysExtensions.Threading;
 using Troschuetz.Random;
 using YtReader;
+using YtReader.Db;
 using YtReader.Search;
 using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
+using DbCaption = YtReader.Db.DbCaption;
 
 namespace YtCli {
   class Program {
@@ -293,24 +297,41 @@ namespace YtCli {
         new PipeRunOptions {Location = Location, Exclusive = true}, Log, console.GetCancellationToken());
     }
   }
-
-  [Command("migrate-reviews")]
-  public class MigrateReviewsCmd : ICommand {
+  
+  [Command("fix-reviews")]
+  public class FixReviewsCmd : ICommand {
     readonly SheetsCfg SheetsCfg;
     readonly ILogger   Log;
     readonly YtStore   Store;
+    readonly SnowflakeConnectionProvider Sf;
+    
+    static string[] FixTags = {"Mainstream News", "Politician"};
 
-    public MigrateReviewsCmd(SheetsCfg sheetsCfg, ILogger log, YtStore store) {
+    public FixReviewsCmd(SheetsCfg sheetsCfg, ILogger log, YtStore store, SnowflakeConnectionProvider sf) {
       SheetsCfg = sheetsCfg;
       Log = log;
       Store = store;
+      Sf = sf;
     }
 
     public async ValueTask ExecuteAsync(IConsole console) {
-      var userSheets = await ChannelSheets.Channels(SheetsCfg, Log);
-      var reviews = userSheets.SelectMany(r => r.UserChannels).ToArray();
-      foreach (var r in reviews) r.Updated = DateTime.UtcNow;
-      await Store.ChannelReviews.Append(reviews);
+      using var db = await Sf.OpenConnection(Log);
+      var oldTags = (await db.Query<(string channelId, string hardTags)>("channels", "select channel_id, hard_tags from channel_latest"))
+        .ToDictionary(c => c.channelId, c => c.hardTags.NullOrEmpty() ? new string[] {} : JArray.Parse(c.hardTags).Values<string>().ToArray() );
+      var reviews = (await Store.ChannelReviews.Items().SelectManyList())
+        .GroupBy(r => (r.Email, r.ChannelId)).Select(g => g.OrderByDescending(i => i.Updated).First()).ToArray();
+      
+      var toSave = new List<UserChannelReview>();
+      foreach (var r in reviews) {
+        var old = oldTags[r.ChannelId];
+        if (old == default) continue;
+        var toAdd = FixTags.Where(f => old.Contains(f) && !r.SoftTags.Contains(f)).ToArray();
+        if (!toAdd.Any()) continue;
+        r.SoftTags = r.SoftTags.Concat(toAdd).ToArray();
+        r.Updated = DateTime.UtcNow;
+        toSave.Add(r);
+      }
+      await Store.ChannelReviews.Append(toSave);
     }
   }
 

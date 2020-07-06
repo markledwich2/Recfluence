@@ -71,7 +71,7 @@ namespace YtReader.YtWebsite {
         await using var browsers = new ResourceCycle<Browser, ProxyConnectionCfg>(proxies, p => CreateBrowser(log, p), _lastUsedBrowserIdx);
 
         async Task<Page> Page(Browser browser, ProxyConnectionCfg proxy) {
-          var page = await browser.NewPageAsync(); // create page inside retry loop. some transient errors seems to be caused by state in the page
+          var page = await browser.NewPageAsync(); 
           if (proxy.Creds != null)
             await page.AuthenticateAsync(proxy.Creds.AsCreds()); // workaround for chrome not supporting password proxies
           await page.SetCookieAsync(); // clears cookies
@@ -84,7 +84,7 @@ namespace YtReader.YtWebsite {
           var videoAttempt = 0;
           var videoLog = log.ForContext("Video", v);
 
-          while (true) {
+          while (true) { // retry loop. ome transient errors seems to be caused by state in the page
             var (browser, proxy) = await browsers.Get();
             videoAttempt++;
             var lastAttempt = videoAttempt >= CollectCfg.ChromeAttempts;

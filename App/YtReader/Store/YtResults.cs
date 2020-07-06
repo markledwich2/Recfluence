@@ -77,10 +77,6 @@ namespace YtReader.Store {
       UserScrapeCfg = userScrapeCfg;
     }
 
-    public static class Queries {
-      public const string ClassChannelsRaw = "class_channels_raw";
-    }
-
     public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null) {
       using var db = await Sf.OpenConnection(log);
       queryNames ??= new string[] { };
@@ -106,13 +102,18 @@ namespace YtReader.Store {
           // userscrape data
           new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_ideology = UserScrapeCfg.SeedsPerIdeology}),
           new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos_per_ideology = UserScrapeCfg.TestsPerIdeology}),
-
-          // classifier data 
-          new ResQuery(Queries.ClassChannelsRaw, @"select v from channel_stage
-where v:ReviewStatus::string not in ('AlgoRejected', 'ManualRejected')
-qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc) = 1", fileType: ResFilType.Json,
-            jsonSource: JsonSource.FirstColumn),
-
+          
+          // classification data
+          
+          new ResQuery("review_channels", @"select channel_id as ""ChannelId""
+     , channel_title as ""ChannelTitle""
+     , description as ""Description""
+     , logo_url as ""LogoUrl""
+     , channel_views as ""ChannelViews""
+     , review_status as ""ReviewStatus""
+     , review_count as ""ReviewCount""
+from channel_latest", fileType: ResFilType.Json),
+          
           new ResQuery("class_channels", pendingChannelsSelect, fileType: ResFilType.Json),
 
           new ResQuery("class_videos", $@"with pending as ({pendingChannelsSelect})

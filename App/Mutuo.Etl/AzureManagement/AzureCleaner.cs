@@ -68,11 +68,16 @@ namespace Mutuo.Etl.AzureManagement {
       var allGroups = await azure.ContainerGroups.ListAsync();
       var toDelete = allGroups.Where(g => g.IsExpired() && g.State().IsCompletedState()).ToArray();
       if (toDelete.Any()) {
-        await azure.ContainerGroups.DeleteByIdsAsync(toDelete.Select(g => g.Id).ToArray());
-        log.Information("Deleted expired container groups: {@toDelete}", toDelete.Select(g => g.Name).ToArray());
+        try {
+          await azure.ContainerGroups.DeleteByIdsAsync(toDelete.Select(g => g.Id).ToArray());
+          log.Information("AzureCleaner - deleted expired container groups: {@toDelete}", toDelete.Select(g => g.Name).ToArray());
+        }
+        catch (Exception ex) {
+          log.Warning(ex, "AzureCleaner - error deleting container groups: {Error}`", ex.Message);
+        }
       }
       else {
-        log.Debug("No expired container groups to delete");
+        log.Debug("AzureCleaner - No expired container groups to delete");
       }
     }
   }
