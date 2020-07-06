@@ -31,8 +31,6 @@ export interface ChannelData {
   views: number
   ideology: string
   media: string,
-  manoel: string,
-  ain: string,
   /** this only exists when from the the azure function */
   lifetimeDailyViews?: number
 }
@@ -52,10 +50,6 @@ export interface RecData {
   toLr?: string
   fromMedia?: string
   toMedia?: string
-  fromManoel?: string
-  toManoel?: string
-  fromAin?: string
-  toAin?: string
   relevantImpressionsDaily: number
   recommendsViewChannelPercent?: number
 }
@@ -145,7 +139,7 @@ export class YtModel {
     return m
   }
 
-  static categoryCols: (keyof ChannelData)[] = ['ideology', 'lr', 'media', 'manoel', 'ain']
+  static categoryCols: (keyof ChannelData)[] = ['ideology', 'lr', 'media']
 
 
   static channelDimStatic = new Dim<ChannelData>({
@@ -153,7 +147,7 @@ export class YtModel {
     cols: [
       {
         name: 'channelId',
-        props: ['lr', 'ideology', 'media', 'manoel', 'ain'],
+        props: ['lr', 'ideology', 'media'],
         labelCol: 'title'
       },
       {
@@ -203,34 +197,11 @@ export class YtModel {
           { value: 'YouTube', label: 'YouTube Creator', color: '#e55e5e' },
           { value: 'Missing Link Media', color: '#41afa5' },
         ]
-      },
-      {
-        name: 'manoel',
-        label: 'Radicalization Pathways - Ribeiro et al.',
-        values: [
-          { value: 'Alt-light', color: '#e55e5e' },
-          { value: 'IDW', color: '#8a8acb' },
-          { value: 'Alt-right', color: '#c68143' },
-          { value: 'Control', color: '#b7b7b7' },
-          { value: '', label: 'Unclassified', color: '#333' },
-        ]
-      },
-      {
-        name: 'ain',
-        label: 'Alternative Influence Network',
-        values: [
-          { value: '', label: 'Unclassified', color: '#333' },
-          { value: 'AIN', color: '#41afa5' }
-        ]
       }
     ]
   })
 
   static tagAlias: Record<string, string> = {
-    ManoelAltLite: 'Ribeiro - Alt-light',
-    ManoelAltRight: 'Ribeiro - Alt-right',
-    ManoelIDW: 'Ribeiro - IDW',
-    ManoelControl: 'Ribeiro - Control',
     AntiSJW: 'Anti-SJW',
     SocialJusticeL: 'Social Justice',
     WhiteIdentitarian: 'White Identitarian',

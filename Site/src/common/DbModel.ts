@@ -25,8 +25,6 @@ export class DbModel {
             ideology: c.ideology,
             media: c.media,
             relevance: c.relevance,
-            manoel: c.manoel,
-            ain: c.ain,
             lifetimeDailyViews: c.channel_lifetime_daily_views ?
                 +c.channel_lifetime_daily_views : null
         }
