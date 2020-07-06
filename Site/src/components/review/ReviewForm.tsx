@@ -1,7 +1,7 @@
 
 import * as React from "react"
 import { useEffect, useState, useRef, FunctionComponent, useMemo } from 'react'
-import { Review, RawChannel } from '../../common/YtApi'
+import { Review, BasicChannel } from '../../common/YtApi'
 import { ytTheme, selectStyle, selectTheme } from '../MainLayout'
 import { ChannelLogo, channelUrl } from '../channel/Channel'
 import styled from 'styled-components'
@@ -106,7 +106,7 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
   onChange: (r: ChannelReview) => void,
   onCancel?: () => void,
   reviewValid: (r: Review) => boolean,
-  channels: _.Dictionary<RawChannel>
+  channels: _.Dictionary<BasicChannel>
 }) => {
 
   const lrRef = useRef(null)
@@ -179,7 +179,7 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
             styles={selectStyle} theme={selectTheme} />
         </Field>
 
-        <Field name='mainChannel' label='Main (Parent) ChannelTags' size='l' >
+        <Field name='mainChannel' label='Main (Parent) Channel' size='l' >
           <Select
             id='MainChannelId'
             value={r.MainChannelId ? channelDic[r.MainChannelId] : null}

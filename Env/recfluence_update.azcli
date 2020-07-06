@@ -1,0 +1,16 @@
+az login
+
+az configure --defaults location=westus2 group=ytnetworks
+registryPass=`az keyvault secret show --name "ytnetworks-registry-password" --vault-name "recfluence" --output json | jq -r '.value'`
+cs=`az storage account show-connection-string --name ytapp --output tsv`
+
+az container delete --name update-manual
+
+az container create --name update-manual --image ytnetworks.azurecr.io/recfluence:latest --cpu 1 --memory 1 \
+    --command-line "./recfluence update -a Dataform" \
+    --environment-variables env=prod appStoreCs=$cs \
+    --registry-username ytnetworks  --registry-password $registryPass \
+    --restart-policy Never
+    
+
+az container start --name dataform

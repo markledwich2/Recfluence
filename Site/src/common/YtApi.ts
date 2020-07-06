@@ -29,8 +29,8 @@ export async function saveSearch(search: UserSearch): Promise<void> {
   await putJson(`${apiUrl}/search`, search)
 }
 
-export async function getChannels(): Promise<RawChannel[]> {
-  return await getJsonl<RawChannel>(resultsUrl.addPath('class_channels_raw.jsonl.gz').url)
+export async function reviewChannels(): Promise<BasicChannel[]> {
+  return await getJsonl<BasicChannel>(resultsUrl.addPath('review_channels.jsonl.gz').url)
 }
 
 export async function saveReview(review: Review): Promise<Response> {
@@ -52,14 +52,14 @@ export interface Review {
   MainChannelId?: string
 }
 
-export interface RawChannel {
+export interface BasicChannel {
   ChannelId: string
   ChannelTitle: string
   Description: string
   LogoUrl: string
   ChannelViews: number
-  Keywords: string
   ReviewStatus: string
+  ReviewCount: number
 }
 
 export interface UserSearch {

@@ -8,7 +8,7 @@ import ReactMarkdown from 'react-markdown'
 import { Tag } from '../Tag'
 import _ from 'lodash'
 import { OptionProps } from 'react-select/lib/components/Option'
-import { Review, RawChannel } from '../../common/YtApi'
+import { Review, BasicChannel } from '../../common/YtApi'
 
 const chanDim = new Dim<ChannelData>(YtModel.channelDimStatic.meta)
 const tagCol = chanDim.col('tags')
@@ -16,7 +16,7 @@ const tagFunc = { label: (t: string) => YtModel.tagAlias[t] ?? _.startCase(t), c
 
 
 export interface ChannelReview {
-  channel: RawChannel
+  channel: BasicChannel
   review: Review
 }
 
@@ -34,7 +34,7 @@ export const tagOptions: TagOption[] = _([
   { value: 'QAnon', md: 'A channel focused on [Q-Anon](https://en.wikipedia.org/wiki/QAnon). Q is a handle of someone with access to the "deep state" leaking plots against Trump and his supporters. Examples: [Edge of Wonder](https://www.youtube.com/channel/UCxC2RlwWGHnwXanvHNBmw2w), [prayingmedic](https://www.youtube.com/channel/UCSio3E7kYvPeHKhfuYZWriA)' },
   { value: 'Libertarian', md: 'A [political philosophy](https://en.wikipedia.org/wiki/Libertarianism) wth individual liberty as its main principal. Generally skeptical of authority and state power (e.g. regulation, taxes, government programs). Favor free markets and private ownership. To tag, this should be the main driver of their politics. Does not include libertarian socialists who also are anti-state but are anti-capitalist and promote communal living. Examples: [Reason](https://www.youtube.com/user/ReasonTV), [John Stossel](https://www.youtube.com/user/ReasonTV), [The Cato Institute](https://www.youtube.com/user/catoinstitutevideo)' },
   { value: 'AntiSJW', md: 'Significant focus on criticizing *Social Justice* (see below) with a positive view of the marketplace of ideas and discussing controversial topics. To tag, this should be a common focus in their content.|[MILO](https://www.youtube.com/user/yiannopoulosm), [Tim Pool](https://www.youtube.com/user/Timcasts)' },
-  { value: 'SocialJustice', md: ' Beleive or promote: Identity Politics & Intersectionality (narratives of oppression though the combination of historically oppressed identities), *Political Correctness* (the restriction of ideas and words you can say in polite society), *Social Constructionism* (the idea that the differences between individuals and groups are explained entirely by environment. For example sex differences are caused by culture not by biological sex).<br><br>Content in reaction to Anti-SJW or conservative content.<br><br>Their supporters are active on [r/Breadtube](https://www.reddit.com/r/BreadTube/) and the creators often identify with this label. This tag only includes breadtuber’s if their content is criticizing ant-SJW’s (promoting socialism is its own, separate tag). Examples: [Peter Coffin](https://www.youtube.com/user/petercoffin), [hbomberguy](https://www.youtube.com/user/hbomberguy)' },
+  { value: 'SocialJustice', md: ' Believe or promote: Identity Politics & Intersectionality (narratives of oppression though the combination of historically oppressed identities), *Political Correctness* (the restriction of ideas and words you can say in polite society), *Social Constructionism* (the idea that the differences between individuals and groups are explained entirely by environment. For example sex differences are caused by culture not by biological sex).<br><br>Content in reaction to Anti-SJW or conservative content.<br><br>Their supporters are active on [r/Breadtube](https://www.reddit.com/r/BreadTube/) and the creators often identify with this label. This tag only includes breadtuber’s if their content is criticizing ant-SJW’s (promoting socialism is its own, separate tag). Examples: [Peter Coffin](https://www.youtube.com/user/petercoffin), [hbomberguy](https://www.youtube.com/user/hbomberguy)' },
   { value: 'WhiteIdentitarian', md: 'Identifies-with/is-proud-of the superiority of “whites” and western Civilization.<br><br>An example of identifying with “western heritage”  would be to refer to the sistine chapel, or bach as “our culture”.<br><br>Promotes or defends: An ethno-state where residence or citizenship would be limited to “whites” OR a type of nationalist that seek to maintain a white national identity (white nationalism), historical narratives focused on the “white” lineage and its superiority, Essentialist concepts of racial differences<br><br>Are concerned about whites becoming a minority population in the US. Examples: [NPI / RADIX](https://www.youtube.com/user/NPIAmerica), [Stefan Molyneux](https://www.youtube.com/user/stefbot)' },
   { value: 'Educational', md: 'Channel that has significant focuses on education material related to politics/culture. Examples: [TED](https://www.youtube.com/user/TEDtalksDirector/videos), [SoulPancake](https://www.youtube.com/user/soulpancake)' },
   { value: 'LateNightTalkShow', md: 'Channel with content presented humorous monologues about the day\'s news, guest interviews and comedy sketches. Examples: [Last Week Tonight](https://www.youtube.com/user/LastWeekTonight), [Trevor Noah](https://www.youtube.com/channel/UCwWhs_6x42TyRM4Wstoq8HA)' },

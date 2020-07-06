@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { UserContext, LoginOverlay } from '../UserContext'
-import { channelsReviewed, saveReview as apiSaveReview, RawChannel, getChannels, Review } from '../../common/YtApi'
+import { channelsReviewed, saveReview as apiSaveReview, BasicChannel, reviewChannels, Review } from '../../common/YtApi'
 import { Spinner } from '../Spinner'
 import { ytTheme, mainLayoutId } from '../MainLayout'
 import styled from 'styled-components'
@@ -37,8 +37,8 @@ export const ReviewControl = () => {
   const { user } = useContext(UserContext)
   const [review, setReview] = useState<ChannelReview>(null)
   const [reviews, setReviews] = useState<ChannelReview[]>()
-  const [channels, setChannels] = useState<_.Dictionary<RawChannel>>()
-  const [pending, setPending] = useState<RawChannel[]>()
+  const [channels, setChannels] = useState<_.Dictionary<BasicChannel>>()
+  const [pending, setPending] = useState<BasicChannel[]>()
   const [editing, setEditing] = useState<ChannelReview>(null)
 
   const { addToast } = useToasts()
@@ -80,19 +80,19 @@ export const ReviewControl = () => {
   })
 
   const init = async (email: string) => {
-    const channelsTask = getChannels()
+    const channelsTask = reviewChannels()
     const reviewedTask = channelsReviewed(email)
     const channels = _.keyBy(await channelsTask, c => c.ChannelId)
     const reviews = _(await reviewedTask).map(r => ({ channel: channels[r.ChannelId], review: r })).value()
     const reviewedDic = _.keyBy(reviews, r => r.channel.ChannelId)
-    const pending = _(channels).filter(c => c.ReviewStatus == 'Pending' && !reviewedDic[c.ChannelId]).value()
+    const pending = _(channels).filter(c => c.ReviewStatus == 'Pending' && !reviewedDic[c.ChannelId]).orderBy(c => [c.ReviewCount, -c.ChannelViews]).value()
     const review = nextPending(pending)
     setChannels(channels)
     setReview(review)
     setReviews(reviews)
   }
 
-  const nextPending = (pending: RawChannel[]): ChannelReview => {
+  const nextPending = (pending: BasicChannel[]): ChannelReview => {
     const c = pending.length > 0 ? pending[0] : null
     if (c)
       setPending(pending.filter(p => p.ChannelId != c.ChannelId))

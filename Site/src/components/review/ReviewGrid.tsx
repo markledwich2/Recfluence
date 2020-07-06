@@ -1,7 +1,7 @@
 import { ChannelLogo } from '../channel/Channel'
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en'
-import { RawChannel } from '../../common/YtApi'
+import { BasicChannel } from '../../common/YtApi'
 import styled from 'styled-components'
 import * as React from "react"
 import _ from 'lodash'
@@ -28,7 +28,7 @@ const ReviewedTableStyle = styled.table`
 `
 
 export const ReviewedGrid = ({ reviews, onEditReview, channels }:
-  { reviews: ChannelReview[], onEditReview: (c: ChannelReview) => void, channels: _.Dictionary<RawChannel> }) => {
+  { reviews: ChannelReview[], onEditReview: (c: ChannelReview) => void, channels: _.Dictionary<BasicChannel> }) => {
   let reviewedList = _(reviews)
     .groupBy(r => r.review.ChannelId)
     .mapValues(g => _.orderBy(g, r => r.review.Updated, 'desc')[0])
