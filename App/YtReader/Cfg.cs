@@ -140,8 +140,8 @@ namespace YtReader {
     public bool AlwaysUseProxy { get; set; }
     public bool Headless       { get; set; } = true;
 
-    /// <summary>the number of channels to have in the pending state to be classified</summary>
-    public int DiscoverChannels { get; set; } = 25;
+    /// <summary>the number of channels to discover each collect</summary>
+    public int DiscoverChannels { get; set; } = 100;
 
     /// <summary>the number of vids to populate with data when discovering new channels (i.e. preparing data to be classified)</summary>
     public int DiscoverChannelVids { get; set; } = 5;

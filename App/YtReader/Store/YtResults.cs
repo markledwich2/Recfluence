@@ -112,7 +112,7 @@ namespace YtReader.Store {
      , channel_views as ""ChannelViews""
      , review_status as ""ReviewStatus""
      , review_count as ""ReviewCount""
-from channel_latest", fileType: ResFilType.Json),
+from channel_latest where meets_sub_criteria", fileType: ResFilType.Json),
           
           new ResQuery("class_channels", pendingChannelsSelect, fileType: ResFilType.Json),
 

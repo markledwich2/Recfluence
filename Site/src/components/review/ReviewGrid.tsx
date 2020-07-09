@@ -27,12 +27,17 @@ const ReviewedTableStyle = styled.table`
   }
 `
 
-export const ReviewedGrid = ({ reviews, onEditReview, channels }:
-  { reviews: ChannelReview[], onEditReview: (c: ChannelReview) => void, channels: _.Dictionary<BasicChannel> }) => {
-  let reviewedList = _(reviews)
-    .groupBy(r => r.review.ChannelId)
-    .mapValues(g => _.orderBy(g, r => r.review.Updated, 'desc')[0])
-    .orderBy(r => r.review.Updated, 'desc').value()
+export const ReviewedGrid = ({ reviews, page, onEditReview, onShowMore, channels }:
+  {
+    reviews: ChannelReview[],
+    page?: number,
+    onEditReview: (c: ChannelReview) => void,
+    onShowMore: () => void,
+    channels: _.Dictionary<BasicChannel>
+  }) => {
+
+  page = page ?? 1
+  const reviewsToDisplay = page * 50
 
   return <ReviewedTableStyle>
     <thead>
@@ -44,7 +49,7 @@ export const ReviewedGrid = ({ reviews, onEditReview, channels }:
       </tr>
     </thead>
     <tbody>
-      {reviewedList.map(cr => {
+      {reviews?.slice(0, reviewsToDisplay).map(cr => {
         var c = cr.channel
         var r = cr.review
         return <tr key={`${c.ChannelId}|${r.Updated}`}>
@@ -74,5 +79,6 @@ export const ReviewedGrid = ({ reviews, onEditReview, channels }:
       }
       )}
     </tbody>
+    {reviewsToDisplay < reviews.length && <div><a onClick={() => onShowMore()}>show more reviews</a></div>}
   </ReviewedTableStyle>
 }

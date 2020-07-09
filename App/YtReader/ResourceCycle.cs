@@ -23,7 +23,7 @@ namespace YtReader {
     public async Task<(T Resource, TCfg Cfg)> Get() {
       var c = _current;
       if (c != null) return c.Value;
-      return await NextResource(null);
+      return await NextResource(null).ConfigureAwait(false);
     }
 
     /// <summary>Will cycle to the next resource if the current one matches the cfg given (reference equality)</summary>
@@ -35,14 +35,14 @@ namespace YtReader {
       if (_current.HasValue && _current.Value.Resource == Resource) {
         Idx = (Idx + 1) % _configs.Length;
         if (_current.Value.Resource is IAsyncDisposable d)
-          await d.DisposeAsync();
+          await d.DisposeAsync().ConfigureAwait(false);
         _current = null;
       }
 
       if (_current != null) return _current.Value;
 
       var cfg = _configs[Idx];
-      _current = (await Create(cfg), cfg);
+      _current = (await Create(cfg).ConfigureAwait(false), cfg);
       return _current.Value;
     }
 
@@ -50,7 +50,7 @@ namespace YtReader {
       var r = _current?.Resource;
       if (r == null) return;
       if (r is IAsyncDisposable a)
-        await a.DisposeAsync();
+        await a.DisposeAsync().ConfigureAwait(false);
       else if (_current?.Resource is IDisposable d)
         d.Dispose();
     }

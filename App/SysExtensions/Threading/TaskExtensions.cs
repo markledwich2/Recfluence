@@ -1,23 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Dynamic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SysExtensions.Collections;
 
 namespace SysExtensions.Threading {
-
   public static class Def {
-    /// <summary>
-    /// Create a func with type inference
-    /// </summary>
+    /// <summary>Create a func with type inference</summary>
     public static Func<T> New<T>(this Func<T> func) => func;
   }
-  
+
   public static class TaskExtensions {
-    
     /// <summary>Waits for all of the tasks, however will cancel the tasks and throw an exception if any of the tasks have a
     ///   fault</summary>
     /// <param name="tasks"></param>
@@ -97,7 +92,12 @@ namespace SysExtensions.Threading {
       return res;
     }
 
-    public static async Task<(bool Success, T Res)> WithTimeout<T>(this Task<T> task, TimeSpan timeout) =>
-      task == await Task.WhenAny(task, timeout.Delay()) ? (true, await task) : (false, default);
+    public static async Task<(bool finished, TResult res)> WithTimeout<TResult>(this Task<TResult> task, TimeSpan timeout) {
+      using var timeoutCancellationTokenSource = new CancellationTokenSource();
+      var completedTask = await Task.WhenAny(task, Task.Delay(timeout, timeoutCancellationTokenSource.Token));
+      if (completedTask != task) return (false, default);
+      timeoutCancellationTokenSource.Cancel();
+      return (true, await task);
+    }
   }
 }

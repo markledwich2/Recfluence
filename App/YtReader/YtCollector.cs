@@ -181,10 +181,12 @@ limit :DiscoverChannels
     where to_channel_id is not null
     group by to_channel_id
   )
-  select to_channel_id as channel_id, channel_title from tc
+, tc2 as (
+    select to_channel_id as channel_id, channel_title from tc
   where not exists(select * from channel_stage c where c.v:ChannelId::string = to_channel_id)
-  order by recs desc
-  limit :remaining", param: new {remaining})
+
+)
+select * from tc2 sample (:remaining rows)", param: new {remaining})
         : new (string channel_id, string channel_title)[] { };
 
       log.Debug("Collect - found {Channels} new channels for discovery", newDiscover.Count);
@@ -257,11 +259,11 @@ limit :DiscoverChannels
           c.ChannelTitle, c.StatusMessage);
         return;
       }
-      
+
       var md = await Store.Videos.LatestFile(c.ChannelId);
       var lastUpload = md?.Ts?.ParseFileSafeTimestamp();
 
-      log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions. Last video stage {LastUpload}", 
+      log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions. Last video stage {LastUpload}",
         c.ChannelTitle, lastUpload);
 
       var lastModified = md?.Modified;

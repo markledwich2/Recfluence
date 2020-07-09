@@ -40,12 +40,18 @@ export const ReviewControl = () => {
   const [channels, setChannels] = useState<_.Dictionary<BasicChannel>>()
   const [pending, setPending] = useState<BasicChannel[]>()
   const [editing, setEditing] = useState<ChannelReview>(null)
+  const [reviewsPage, setReviewPage] = useState<number>(1)
 
   const { addToast } = useToasts()
 
   const reviewedGrid = useMemo(
-    () => <ReviewedGrid reviews={reviews} onEditReview={c => setEditing(jsonClone(c))} channels={channels} />,
-    [reviews, channels])
+    () => <ReviewedGrid
+      reviews={reviews}
+      page={reviewsPage}
+      onShowMore={() => setReviewPage(reviewsPage + 1)}
+      onEditReview={c => setEditing(jsonClone(c))}
+      channels={channels} />,
+    [reviews, channels, reviewsPage])
 
   useEffect(() => {
     const go = async () => {
@@ -83,9 +89,13 @@ export const ReviewControl = () => {
     const channelsTask = reviewChannels()
     const reviewedTask = channelsReviewed(email)
     const channels = _.keyBy(await channelsTask, c => c.ChannelId)
-    const reviews = _(await reviewedTask).map(r => ({ channel: channels[r.ChannelId], review: r })).value()
+    const reviews = _(await reviewedTask)
+      .map(r => ({ channel: channels[r.ChannelId], review: r }))
+      .orderBy(r => r.review.Updated, 'desc')
+      .value()
     const reviewedDic = _.keyBy(reviews, r => r.channel.ChannelId)
-    const pending = _(channels).filter(c => c.ReviewStatus == 'Pending' && !reviewedDic[c.ChannelId]).orderBy(c => [c.ReviewCount, -c.ChannelViews]).value()
+    const pending = _(channels).filter(c => c.ReviewStatus == 'Pending' && !reviewedDic[c.ChannelId])
+      .shuffle().value()
     const review = nextPending(pending)
     setChannels(channels)
     setReview(review)
@@ -143,7 +153,11 @@ export const ReviewControl = () => {
 
       {reviews && <>
         <h3>Reviewed</h3>
-        <div>{reviews?.length <= 0 ? <>You haven't reviewed anything yet</> : reviewedGrid}</div>
+        <div>
+          {reviews?.length <= 0 ?
+            <>You haven't reviewed anything yet</> : reviewedGrid
+          }
+        </div>
       </>
       }
 

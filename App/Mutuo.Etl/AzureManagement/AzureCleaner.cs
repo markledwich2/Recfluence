@@ -8,6 +8,7 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.DockerRegistry;
 using Mutuo.Etl.Pipe;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
@@ -65,9 +66,10 @@ namespace Mutuo.Etl.AzureManagement {
     }
 
     async Task DelContainerGroups(IAzure azure, ILogger log) {
-      var allGroups = await azure.ContainerGroups.ListAsync();
-      var toDelete = allGroups.Where(g => g.IsExpired() && g.State().IsCompletedState()).ToArray();
-      if (toDelete.Any()) {
+      var (allGroups, listEx) = await Def.New(() => azure.ContainerGroups.ListAsync()).Try();
+      if (listEx != null) log.Warning(listEx, "AzureCleaner - error deleting container groups: {Error}`", listEx.Message);
+      var toDelete = allGroups.NotNull().Where(g => g.IsExpired() && g.State().IsCompletedState()).ToArray();
+      if (toDelete.Any())
         try {
           await azure.ContainerGroups.DeleteByIdsAsync(toDelete.Select(g => g.Id).ToArray());
           log.Information("AzureCleaner - deleted expired container groups: {@toDelete}", toDelete.Select(g => g.Name).ToArray());
@@ -75,10 +77,8 @@ namespace Mutuo.Etl.AzureManagement {
         catch (Exception ex) {
           log.Warning(ex, "AzureCleaner - error deleting container groups: {Error}`", ex.Message);
         }
-      }
-      else {
+      else
         log.Debug("AzureCleaner - No expired container groups to delete");
-      }
     }
   }
 

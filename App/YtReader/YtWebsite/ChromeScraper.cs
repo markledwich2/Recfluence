@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -43,21 +42,11 @@ namespace YtReader.YtWebsite {
       return browser;
     }
 
-    /*
-    public async Task<string> GetIp(ProxyConnectionCfg proxy, ILogger log) {
-      var browser = await CreateBrowser(proxy, log);
-      var page = await browser.NewPageAsync();
-      if (proxy)
-        await page.AuthenticateAsync(ProxyCfg.Creds.AsCreds()); // workaround for chrome not supporting password proxies
-      var response = await page.GoToAsync("https://api.ipify.org?format=json");
-      var j = await response.JsonAsync();
-      return j["ip"]?.Value<string>();
-    }
-    */
-
     int _lastUsedBrowserIdx; // re-use the same browser proxies across different calls to recs and extra
 
     public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) {
+      if (videos.None()) return new RecsAndExtra[] { };
+
       var sw = Stopwatch.StartNew();
       log = log.ForContext("Module", nameof(ChromeScraper));
       var proxies = ProxyCfg.DirectAndProxies().Take(2)
@@ -65,64 +54,73 @@ namespace YtReader.YtWebsite {
       var parallel = CollectCfg.ChromeParallel;
       var videosPerBrowserPool = videos.Count / CollectCfg.ChromeParallel;
 
-      var res = await videos.Batch(videosPerBrowserPool).WithIndex().BlockFunc(async batch => {
+      var recs = await videos.Batch(videosPerBrowserPool).WithIndex().BlockFunc(async batch => {
         var (b, i) = batch;
-        var requests = new ConcurrentBag<(Request req, bool aborted)>();
-        await using var browsers = new ResourceCycle<Browser, ProxyConnectionCfg>(proxies, p => CreateBrowser(log, p), _lastUsedBrowserIdx);
-
-        async Task<Page> Page(Browser browser, ProxyConnectionCfg proxy) {
-          var page = await browser.NewPageAsync(); 
-          if (proxy.Creds != null)
-            await page.AuthenticateAsync(proxy.Creds.AsCreds()); // workaround for chrome not supporting password proxies
-          await page.SetCookieAsync(); // clears cookies
-          await ConfigureRequests(page, (req, aborted) => requests.Add((req, aborted)));
-          return page;
-        }
-
-        return await b.BlockFunc(async v => {
-          //var context = await browser.CreateIncognitoBrowserContextAsync(); // opening windows is more reliable than tabs in practice
-          var videoAttempt = 0;
-          var videoLog = log.ForContext("Video", v);
-
-          while (true) { // retry loop. ome transient errors seems to be caused by state in the page
-            var (browser, proxy) = await browsers.Get();
-            videoAttempt++;
-            var lastAttempt = videoAttempt >= CollectCfg.ChromeAttempts;
-            videoLog.Debug("loading video {Video}. Proxy={Proxy}", v, proxy?.Url == null ? "Direct" : proxy.Url);
-            using var page = await Page(browser, proxy);
-            try {
-              var (video, notOkResponse) = await GetVideo(page, v, videoLog);
-              if (notOkResponse != null) {
-                if (notOkResponse.Status == HttpStatusCode.TooManyRequests) {
-                  await browsers.NextResource(browser);
-                  _lastUsedBrowserIdx = browsers.Idx;
-                  videoAttempt = 0;
-                  videoLog.Information("ChromeScraper - error response ({Status}) loading {Video}: using next proxy", notOkResponse.Status, v);
-                }
-                else {
-                  throw new InvalidOperationException($"Not OK response ({notOkResponse.Status})");
-                }
-              }
-
-              if (video == null) continue;
-
-              videoLog.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
-                v, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
-              return video;
-            }
-            catch (Exception ex) {
-              videoLog.Warning(ex, "ChromeScraper - failed to load video {Video} from {Url} (attempt {Attempt}): {Error}", v, page.Url, videoAttempt,
-                ex.Message);
-              if (lastAttempt)
-                throw;
-            }
-          }
-        }, parallel: 1, progressUpdate: p => log.Debug("ChromeScraper - browser pool {Pool} progress {Complete}/{Total}",
-          i, p.CompletedTotal, b.Count));
+        log.Debug("ChromeScraper - browser pool {i} for videos {Videos} starting", i, b.Join("|"));
+        var (success, res) = await VideoBatch(log, proxies, b, sw, i).WithTimeout((videos.Count * 10).Minutes());
+        if (!success)
+          log.Warning("ChromeScraper - browser pool {i} for videos {Videos} took too long and timed out");
+        return res;
       }, parallel);
 
       log.Information("ChromeScraper - finished loading all {Videos} videos in {Duration}", videos.Count, sw.HumanizeShort());
-      return res.SelectMany().ToReadOnly();
+      return recs.SelectMany().NotNull().ToReadOnly();
+    }
+
+    async Task<IReadOnlyCollection<RecsAndExtra>> VideoBatch(ILogger log, ProxyConnectionCfg[] proxies, IReadOnlyCollection<string> b, Stopwatch sw, int i) {
+      await using var browsers = new ResourceCycle<Browser, ProxyConnectionCfg>(proxies, p => CreateBrowser(log, p), _lastUsedBrowserIdx);
+
+      return await b.BlockFunc(async v => {
+        //var context = await browser.CreateIncognitoBrowserContextAsync(); // opening windows is more reliable than tabs in practice
+        var videoAttempt = 0;
+        var videoLog = log.ForContext("Video", v);
+
+        while (true) { // retry loop. ome transient errors seems to be caused by state in the page
+          videoAttempt++;
+          try {
+            return await Video(browsers, v, sw, videoLog);
+          }
+          catch (Exception ex) {
+            log.Warning(ex, "ChromeScraper - failed to load video {Video} (attempt {Attempt}): {Error}", v, videoAttempt, ex.Message);
+            if (videoAttempt >= CollectCfg.ChromeAttempts)
+              throw;
+          }
+        }
+      }, parallel: 1, progressUpdate: p => log.Debug("ChromeScraper - browser pool {Pool} progress {Complete}/{Total}",
+        i, p.CompletedTotal, b.Count));
+    }
+
+    async Task<Page> Page(Browser browser, ProxyConnectionCfg proxy) {
+      var page = await browser.NewPageAsync();
+      if (proxy.Creds != null)
+        await page.AuthenticateAsync(proxy.Creds.AsCreds()); // workaround for chrome not supporting password proxies
+      await page.SetCookieAsync(); // clears cookies
+      await ConfigureRequests(page);
+      return page;
+    }
+
+    async Task<RecsAndExtra> Video(ResourceCycle<Browser, ProxyConnectionCfg> browsers, string videoId, Stopwatch sw, ILogger log) {
+      var (browser, proxy) = await browsers.Get();
+      log.Debug("loading video {Video}. Proxy={Proxy}", videoId, proxy?.Url ?? "Direct");
+
+      using var page = await Page(browser, proxy);
+
+      var (video, notOkResponse) = await GetVideo(page, videoId, log);
+      if (notOkResponse != null) {
+        if (notOkResponse.Status == HttpStatusCode.TooManyRequests) {
+          await browsers.NextResource(browser);
+          _lastUsedBrowserIdx = browsers.Idx;
+          log.Information("ChromeScraper - error response ({Status}) loading {Video}: using next proxy", notOkResponse.Status, videoId);
+        }
+        else {
+          throw new InvalidOperationException($"Not OK response ({notOkResponse.Status})");
+        }
+      }
+
+      if (video == null) return null;
+      log.Debug("ChromeScraper - finished loading video {Video} with {Comments} comments and {Recommendations} recs in {Duration}",
+        videoId, video.Extra.Comments?.Length ?? 0, video.Recs?.Length ?? 0, sw.Elapsed.HumanizeShort());
+      return video;
     }
 
     #region Request handling
@@ -149,18 +147,16 @@ namespace YtReader.YtWebsite {
       return false;
     }
 
-    static async Task ConfigureRequests(Page page, Action<Request, bool> onHandled) {
+    static async Task ConfigureRequests(Page page) {
       await page.SetRequestInterceptionAsync(true);
       page.Request += async (sender, e) => {
         if (AbortRequest(e.Request)) {
           if (!e.Request.Failure.HasValue())
             await e.Request.AbortAsync();
-          onHandled(e.Request, true);
         }
         else {
           //log.Debug("{@Request} {@Response} ({Type}) for {Video}", e.Request, e.Request.ResourceType, v);
           await e.Request.ContinueAsync();
-          onHandled(e.Request, false);
         }
       };
     }
