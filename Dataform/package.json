@@ -18,7 +18,7 @@
     "dateformat": "^3.0.3",
     "dotenv": "^8.2.0",
     "humanize-duration": "^3.22.0",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "promisify-child-process": "^4.1.0",
     "strip-ansi": "^6.0.0",
     "ts-node": "^8.10.1",
