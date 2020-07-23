@@ -1,0 +1,2290 @@
+<?xml version='1.0' encoding='utf-8' ?>
+
+<!-- build 20202.20.0614.2338                               -->
+<workbook original-version='18.1' source-build='2020.2.2 (20202.20.0614.2338)' source-platform='win' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <document-format-change-manifest>
+    <IntuitiveSorting />
+    <IntuitiveSorting_SP2 />
+    <_.fcp.MarkAnimation.true...MarkAnimation />
+    <_.fcp.ObjectModelEncapsulateLegacy.true...ObjectModelEncapsulateLegacy />
+    <_.fcp.ObjectModelTableType.true...ObjectModelTableType />
+    <_.fcp.SchemaViewerObjectModel.true...SchemaViewerObjectModel />
+    <SheetIdentifierTracking />
+    <SortTagCleanup />
+    <SymmetricLogAxis />
+    <WindowsPersistSimpleIdentifiers />
+  </document-format-change-manifest>
+  <preferences>
+    <preference name='ui.encoding.shelf.height' value='24' />
+    <preference name='ui.shelf.height' value='26' />
+  </preferences>
+  <datasources>
+    <datasource hasconnection='false' inline='true' name='Parameters' version='18.1'>
+      <aliases enabled='yes' />
+      <column caption='NewSubsFactor' datatype='real' name='[Parameter 1]' param-domain-type='any' role='measure' type='quantitative' value='5.0'>
+        <calculation class='tableau' formula='5.0' />
+      </column>
+      <column caption='Tag' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;Conspiracy&quot;'>
+        <calculation class='tableau' formula='&quot;Conspiracy&quot;' />
+        <members>
+          <member value='&quot;Anti-SJW&quot;' />
+          <member value='&quot;Conspiracy&quot;' />
+          <member value='&quot;MSM&quot;' />
+          <member value='&quot;Partisan Left&quot;' />
+          <member value='&quot;Partisan Right&quot;' />
+          <member value='&quot;Social Justice&quot;' />
+          <member value='&quot;YouTube&quot;' />
+        </members>
+      </column>
+    </datasource>
+    <datasource caption='is_political_all_preds_20200707' inline='true' name='federated.0k9vq5p0spj6891b62r5k1r4t2sk' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='is_political_all_preds_20200707' name='textscan.1prcv1v05wntcx12xpgpe169ju1c'>
+            <connection class='textscan' directory='C:/Users/mark/Repos/YouTubeNetworks2/Analysis/.Data' filename='is_political_all_preds_20200707.txt' password='' server='' />
+          </named-connection>
+        </named-connections>
+        <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='textscan.1prcv1v05wntcx12xpgpe169ju1c' name='is_political_all_preds_20200707.txt' table='[is_political_all_preds_20200707#txt]' type='table'>
+          <columns character-set='UTF-8' header='no' locale='en_US' separator='&#9;'>
+            <column datatype='string' name='F1' ordinal='0' />
+            <column datatype='integer' name='F2' ordinal='1' />
+            <column datatype='integer' name='F3' ordinal='2' />
+            <column datatype='real' name='F4' ordinal='3' />
+            <column datatype='string' name='F5' ordinal='4' />
+          </columns>
+        </_.fcp.ObjectModelEncapsulateLegacy.false...relation>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...relation connection='textscan.1prcv1v05wntcx12xpgpe169ju1c' name='is_political_all_preds_20200707.txt' table='[is_political_all_preds_20200707#txt]' type='table'>
+          <columns character-set='UTF-8' header='no' locale='en_US' separator='&#9;'>
+            <column datatype='string' name='F1' ordinal='0' />
+            <column datatype='integer' name='F2' ordinal='1' />
+            <column datatype='integer' name='F3' ordinal='2' />
+            <column datatype='real' name='F4' ordinal='3' />
+            <column datatype='string' name='F5' ordinal='4' />
+          </columns>
+        </_.fcp.ObjectModelEncapsulateLegacy.true...relation>
+        <metadata-records>
+          <metadata-record class='capability'>
+            <remote-name />
+            <remote-type>0</remote-type>
+            <parent-name>[is_political_all_preds_20200707.txt]</parent-name>
+            <remote-alias />
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='character-set'>&quot;UTF-8&quot;</attribute>
+              <attribute datatype='string' name='collation'>&quot;en_US&quot;</attribute>
+              <attribute datatype='string' name='field-delimiter'>&quot;&#9;&quot;</attribute>
+              <attribute datatype='string' name='header-row'>&quot;false&quot;</attribute>
+              <attribute datatype='string' name='locale'>&quot;en_US&quot;</attribute>
+              <attribute datatype='string' name='single-char'>&quot;&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>F1</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[F1]</local-name>
+            <parent-name>[is_political_all_preds_20200707.txt]</parent-name>
+            <remote-alias>F1</remote-alias>
+            <ordinal>0</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <scale>1</scale>
+            <width>1073741823</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='LEN_RUS' />
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[is_political_all_preds_20200707.txt_A825D5A885EB49E1BA6041EC834C2AA8]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>F2</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[F2]</local-name>
+            <parent-name>[is_political_all_preds_20200707.txt]</parent-name>
+            <remote-alias>F2</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[is_political_all_preds_20200707.txt_A825D5A885EB49E1BA6041EC834C2AA8]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>F3</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[F3]</local-name>
+            <parent-name>[is_political_all_preds_20200707.txt]</parent-name>
+            <remote-alias>F3</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[is_political_all_preds_20200707.txt_A825D5A885EB49E1BA6041EC834C2AA8]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>F4</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[F4]</local-name>
+            <parent-name>[is_political_all_preds_20200707.txt]</parent-name>
+            <remote-alias>F4</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[is_political_all_preds_20200707.txt_A825D5A885EB49E1BA6041EC834C2AA8]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>F5</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[F5]</local-name>
+            <parent-name>[is_political_all_preds_20200707.txt]</parent-name>
+            <remote-alias>F5</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <scale>1</scale>
+            <width>1073741823</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='LEN_RUS' />
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[is_political_all_preds_20200707.txt_A825D5A885EB49E1BA6041EC834C2AA8]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='ChannelID' datatype='string' name='[F1]' role='dimension' type='nominal' />
+      <column caption='Subs' datatype='integer' name='[F2]' role='measure' type='quantitative' />
+      <column caption='Political' datatype='real' name='[F4]' role='measure' type='quantitative' />
+      <column caption='Channel' datatype='string' name='[F5]' role='dimension' type='nominal' />
+      <_.fcp.ObjectModelTableType.true...column caption='is_political_all_preds_20200707.txt' datatype='table' name='[__tableau_internal_object_id__].[is_political_all_preds_20200707.txt_A825D5A885EB49E1BA6041EC834C2AA8]' role='measure' type='quantitative' />
+      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-structure='true' />
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+        <objects>
+          <object caption='is_political_all_preds_20200707.txt' id='is_political_all_preds_20200707.txt_A825D5A885EB49E1BA6041EC834C2AA8'>
+            <properties context=''>
+              <relation connection='textscan.1prcv1v05wntcx12xpgpe169ju1c' name='is_political_all_preds_20200707.txt' table='[is_political_all_preds_20200707#txt]' type='table'>
+                <columns character-set='UTF-8' header='no' locale='en_US' separator='&#9;'>
+                  <column datatype='string' name='F1' ordinal='0' />
+                  <column datatype='integer' name='F2' ordinal='1' />
+                  <column datatype='integer' name='F3' ordinal='2' />
+                  <column datatype='real' name='F4' ordinal='3' />
+                  <column datatype='string' name='F5' ordinal='4' />
+                </columns>
+              </relation>
+            </properties>
+          </object>
+        </objects>
+      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    </datasource>
+    <datasource caption='recfluence_tag_preds_20200709' inline='true' name='federated.13o7lf90hvkybo13npmsn0mr2kq4' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='recfluence_tag_preds_20200709' name='textscan.03uienj07907ol12fo8ff1shd6a1'>
+            <connection class='textscan' directory='C:/Users/mark/Repos/YouTubeNetworks2/Analysis/.Data' filename='recfluence_tag_preds_20200709.txt' password='' server='' />
+          </named-connection>
+        </named-connections>
+        <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='textscan.03uienj07907ol12fo8ff1shd6a1' name='recfluence_tag_preds_20200709.txt' table='[recfluence_tag_preds_20200709#txt]' type='table'>
+          <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+            <column datatype='string' name='ID' ordinal='0' />
+            <column datatype='string' name='Channel' ordinal='1' />
+            <column datatype='integer' name='Subs' ordinal='2' />
+            <column datatype='integer' name='CommentSubs' ordinal='3' />
+            <column datatype='real' name='Political' ordinal='4' />
+            <column datatype='integer' name='MSM' ordinal='5' />
+            <column datatype='integer' name='YouTube' ordinal='6' />
+            <column datatype='integer' name='PartisanLeft' ordinal='7' />
+            <column datatype='integer' name='PartisanRight' ordinal='8' />
+            <column datatype='integer' name='SocialJustice' ordinal='9' />
+            <column datatype='integer' name='AntiSJW' ordinal='10' />
+            <column datatype='integer' name='Conspiracy' ordinal='11' />
+          </columns>
+        </_.fcp.ObjectModelEncapsulateLegacy.false...relation>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...relation connection='textscan.03uienj07907ol12fo8ff1shd6a1' name='recfluence_tag_preds_20200709.txt' table='[recfluence_tag_preds_20200709#txt]' type='table'>
+          <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+            <column datatype='string' name='ID' ordinal='0' />
+            <column datatype='string' name='Channel' ordinal='1' />
+            <column datatype='integer' name='Subs' ordinal='2' />
+            <column datatype='integer' name='CommentSubs' ordinal='3' />
+            <column datatype='real' name='Political' ordinal='4' />
+            <column datatype='integer' name='MSM' ordinal='5' />
+            <column datatype='integer' name='YouTube' ordinal='6' />
+            <column datatype='integer' name='PartisanLeft' ordinal='7' />
+            <column datatype='integer' name='PartisanRight' ordinal='8' />
+            <column datatype='integer' name='SocialJustice' ordinal='9' />
+            <column datatype='integer' name='AntiSJW' ordinal='10' />
+            <column datatype='integer' name='Conspiracy' ordinal='11' />
+          </columns>
+        </_.fcp.ObjectModelEncapsulateLegacy.true...relation>
+        <metadata-records>
+          <metadata-record class='capability'>
+            <remote-name />
+            <remote-type>0</remote-type>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias />
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='character-set'>&quot;UTF-8&quot;</attribute>
+              <attribute datatype='string' name='collation'>&quot;en_US&quot;</attribute>
+              <attribute datatype='string' name='field-delimiter'>&quot;&#9;&quot;</attribute>
+              <attribute datatype='string' name='header-row'>&quot;true&quot;</attribute>
+              <attribute datatype='string' name='locale'>&quot;en_US&quot;</attribute>
+              <attribute datatype='string' name='single-char'>&quot;&quot;</attribute>
+            </attributes>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[ID]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>ID</remote-alias>
+            <ordinal>0</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <scale>1</scale>
+            <width>1073741823</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='LEN_RUS' />
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>Channel</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[Channel]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>Channel</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <scale>1</scale>
+            <width>1073741823</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='LEN_RUS' />
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>Subs</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[Subs]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>Subs</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CommentSubs</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[CommentSubs]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>CommentSubs</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>Political</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[Political]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>Political</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>MSM</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[MSM]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>MSM</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>YouTube</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[YouTube]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>YouTube</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>PartisanLeft</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[PartisanLeft]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>PartisanLeft</remote-alias>
+            <ordinal>7</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>PartisanRight</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[PartisanRight]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>PartisanRight</remote-alias>
+            <ordinal>8</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>SocialJustice</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[SocialJustice]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>SocialJustice</remote-alias>
+            <ordinal>9</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>AntiSJW</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[AntiSJW]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>AntiSJW</remote-alias>
+            <ordinal>10</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>Conspiracy</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[Conspiracy]</local-name>
+            <parent-name>[recfluence_tag_preds_20200709.txt]</parent-name>
+            <remote-alias>Conspiracy</remote-alias>
+            <ordinal>11</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <_.fcp.ObjectModelTableType.true...column caption='recfluence_tag_preds_20200709.txt' datatype='table' name='[__tableau_internal_object_id__].[recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9]' role='measure' type='quantitative' />
+      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-structure='true' />
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+        <objects>
+          <object caption='recfluence_tag_preds_20200709.txt' id='recfluence_tag_preds_20200709.txt_51C9D997BBF14023AF877FB0BB712AA9'>
+            <properties context=''>
+              <relation connection='textscan.03uienj07907ol12fo8ff1shd6a1' name='recfluence_tag_preds_20200709.txt' table='[recfluence_tag_preds_20200709#txt]' type='table'>
+                <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+                  <column datatype='string' name='ID' ordinal='0' />
+                  <column datatype='string' name='Channel' ordinal='1' />
+                  <column datatype='integer' name='Subs' ordinal='2' />
+                  <column datatype='integer' name='CommentSubs' ordinal='3' />
+                  <column datatype='real' name='Political' ordinal='4' />
+                  <column datatype='integer' name='MSM' ordinal='5' />
+                  <column datatype='integer' name='YouTube' ordinal='6' />
+                  <column datatype='integer' name='PartisanLeft' ordinal='7' />
+                  <column datatype='integer' name='PartisanRight' ordinal='8' />
+                  <column datatype='integer' name='SocialJustice' ordinal='9' />
+                  <column datatype='integer' name='AntiSJW' ordinal='10' />
+                  <column datatype='integer' name='Conspiracy' ordinal='11' />
+                </columns>
+              </relation>
+            </properties>
+          </object>
+        </objects>
+      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    </datasource>
+    <datasource caption='new_political_chan_tag_preds_20200709.samp' inline='true' name='federated.1h1x6no1xb8mjw0zmun021pw1jpw' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='new_political_chan_tag_preds_20200709.samp' name='textscan.1rtv12d03f2pop129fgzw03vjcb8'>
+            <connection class='textscan' directory='C:/Users/mark/Repos/YouTubeNetworks2/Analysis/.Data' filename='new_political_chan_tag_preds_20200709.samp.txt' password='' server='' />
+          </named-connection>
+        </named-connections>
+        <_.fcp.ObjectModelEncapsulateLegacy.false...relation all='true' name='new_political_chan_tag_preds_20200709.samp.txt+' type='union'>
+          <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+            <column datatype='string' name='ID' />
+            <column datatype='string' name='Channel' />
+            <column datatype='integer' name='Subs' />
+            <column datatype='integer' name='CommentSubs' />
+            <column datatype='real' name='Political' />
+            <column datatype='integer' name='MSM' />
+            <column datatype='integer' name='YouTube' />
+            <column datatype='integer' name='PartisanLeft' />
+            <column datatype='integer' name='PartisanRight' />
+            <column datatype='integer' name='SocialJustice' />
+            <column datatype='integer' name='AntiSJW' />
+            <column datatype='integer' name='Conspiracy' />
+            <column datatype='string' name='Table Name' />
+          </columns>
+          <relation connection='textscan.1rtv12d03f2pop129fgzw03vjcb8' name='new_political_chan_tag_preds_20200709.samp.txt' table='[new_political_chan_tag_preds_20200709.samp#txt]' type='table'>
+            <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+              <column datatype='string' name='ID' ordinal='0' />
+              <column datatype='string' name='Channel' ordinal='1' />
+              <column datatype='integer' name='Subs' ordinal='2' />
+              <column datatype='integer' name='CommentSubs' ordinal='3' />
+              <column datatype='real' name='Political' ordinal='4' />
+              <column datatype='integer' name='MSM' ordinal='5' />
+              <column datatype='integer' name='YouTube' ordinal='6' />
+              <column datatype='integer' name='PartisanLeft' ordinal='7' />
+              <column datatype='integer' name='PartisanRight' ordinal='8' />
+              <column datatype='integer' name='SocialJustice' ordinal='9' />
+              <column datatype='integer' name='AntiSJW' ordinal='10' />
+              <column datatype='integer' name='Conspiracy' ordinal='11' />
+            </columns>
+          </relation>
+          <relation connection='textscan.1rtv12d03f2pop129fgzw03vjcb8' name='recfluence_tag_preds_20200709.txt' table='[recfluence_tag_preds_20200709#txt]' type='table'>
+            <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+              <column datatype='string' name='ID' ordinal='0' />
+              <column datatype='string' name='Channel' ordinal='1' />
+              <column datatype='integer' name='Subs' ordinal='2' />
+              <column datatype='integer' name='CommentSubs' ordinal='3' />
+              <column datatype='real' name='Political' ordinal='4' />
+              <column datatype='integer' name='MSM' ordinal='5' />
+              <column datatype='integer' name='YouTube' ordinal='6' />
+              <column datatype='integer' name='PartisanLeft' ordinal='7' />
+              <column datatype='integer' name='PartisanRight' ordinal='8' />
+              <column datatype='integer' name='SocialJustice' ordinal='9' />
+              <column datatype='integer' name='AntiSJW' ordinal='10' />
+              <column datatype='integer' name='Conspiracy' ordinal='11' />
+            </columns>
+          </relation>
+        </_.fcp.ObjectModelEncapsulateLegacy.false...relation>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...relation all='true' name='new_political_chan_tag_preds_20200709.samp.txt+' type='union'>
+          <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+            <column datatype='string' name='ID' />
+            <column datatype='string' name='Channel' />
+            <column datatype='integer' name='Subs' />
+            <column datatype='integer' name='CommentSubs' />
+            <column datatype='real' name='Political' />
+            <column datatype='integer' name='MSM' />
+            <column datatype='integer' name='YouTube' />
+            <column datatype='integer' name='PartisanLeft' />
+            <column datatype='integer' name='PartisanRight' />
+            <column datatype='integer' name='SocialJustice' />
+            <column datatype='integer' name='AntiSJW' />
+            <column datatype='integer' name='Conspiracy' />
+            <column datatype='string' name='Table Name' />
+          </columns>
+          <relation connection='textscan.1rtv12d03f2pop129fgzw03vjcb8' name='new_political_chan_tag_preds_20200709.samp.txt' table='[new_political_chan_tag_preds_20200709.samp#txt]' type='table'>
+            <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+              <column datatype='string' name='ID' ordinal='0' />
+              <column datatype='string' name='Channel' ordinal='1' />
+              <column datatype='integer' name='Subs' ordinal='2' />
+              <column datatype='integer' name='CommentSubs' ordinal='3' />
+              <column datatype='real' name='Political' ordinal='4' />
+              <column datatype='integer' name='MSM' ordinal='5' />
+              <column datatype='integer' name='YouTube' ordinal='6' />
+              <column datatype='integer' name='PartisanLeft' ordinal='7' />
+              <column datatype='integer' name='PartisanRight' ordinal='8' />
+              <column datatype='integer' name='SocialJustice' ordinal='9' />
+              <column datatype='integer' name='AntiSJW' ordinal='10' />
+              <column datatype='integer' name='Conspiracy' ordinal='11' />
+            </columns>
+          </relation>
+          <relation connection='textscan.1rtv12d03f2pop129fgzw03vjcb8' name='recfluence_tag_preds_20200709.txt' table='[recfluence_tag_preds_20200709#txt]' type='table'>
+            <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+              <column datatype='string' name='ID' ordinal='0' />
+              <column datatype='string' name='Channel' ordinal='1' />
+              <column datatype='integer' name='Subs' ordinal='2' />
+              <column datatype='integer' name='CommentSubs' ordinal='3' />
+              <column datatype='real' name='Political' ordinal='4' />
+              <column datatype='integer' name='MSM' ordinal='5' />
+              <column datatype='integer' name='YouTube' ordinal='6' />
+              <column datatype='integer' name='PartisanLeft' ordinal='7' />
+              <column datatype='integer' name='PartisanRight' ordinal='8' />
+              <column datatype='integer' name='SocialJustice' ordinal='9' />
+              <column datatype='integer' name='AntiSJW' ordinal='10' />
+              <column datatype='integer' name='Conspiracy' ordinal='11' />
+            </columns>
+          </relation>
+        </_.fcp.ObjectModelEncapsulateLegacy.true...relation>
+        <metadata-records>
+          <metadata-record class='capability'>
+            <remote-name />
+            <remote-type>0</remote-type>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias />
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[ID]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>ID</remote-alias>
+            <ordinal>0</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='LEN_RUS' />
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>Channel</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[Channel]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>Channel</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='LEN_RUS' />
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>Subs</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[Subs]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>Subs</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CommentSubs</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[CommentSubs]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>CommentSubs</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>Political</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[Political]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>Political</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>MSM</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[MSM]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>MSM</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>YouTube</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[YouTube]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>YouTube</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>PartisanLeft</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[PartisanLeft]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>PartisanLeft</remote-alias>
+            <ordinal>7</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>PartisanRight</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[PartisanRight]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>PartisanRight</remote-alias>
+            <ordinal>8</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>SocialJustice</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[SocialJustice]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>SocialJustice</remote-alias>
+            <ordinal>9</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>AntiSJW</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[AntiSJW]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>AntiSJW</remote-alias>
+            <ordinal>10</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>Conspiracy</remote-name>
+            <remote-type>20</remote-type>
+            <local-name>[Conspiracy]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>Conspiracy</remote-alias>
+            <ordinal>11</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <contains-null>true</contains-null>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>Table Name</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[Table Name]</local-name>
+            <parent-name>[new_political_chan_tag_preds_20200709.samp.txt+]</parent-name>
+            <remote-alias>Table Name</remote-alias>
+            <ordinal>12</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='LEN_RUS' />
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='Anti SJW' datatype='integer' name='[AntiSJW]' role='measure' type='quantitative' />
+      <column caption='Subs - Tag' datatype='integer' name='[Calculation_1194016854429855744]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='CASE [Parameters].[Parameter 2]&#13;&#10;when &quot;Anti-SJW&quot; then [Calculation_1828742926856433665]&#13;&#10;when &quot;Conspiracy&quot; then [Subs - Anti-SJW  (copy)_1828742926856802306]&#13;&#10;when &quot;MSM&quot; then [Subs - Conspiracy (copy)_1828742926857097219]&#13;&#10;when &quot;Partisan Left&quot; then [Subs - MSM (copy)_1828742926857596932]&#13;&#10;when &quot;Partisan Right&quot; then [Subs - Partisan Left (copy)_1828742926857728005]&#13;&#10;when &quot;Social Justice&quot; then [Subs - Partisan Right (copy)_1828742926857846790]&#13;&#10;when &quot;YouTuber&quot; then [Subs - Social Justice (copy)_1828742926858059783]&#13;&#10;END' />
+      </column>
+      <column caption='Subs - Anti-SJW ' datatype='integer' name='[Calculation_1828742926856433665]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='IIF([AntiSJW]=1, [Calculation_1828742926906187796], 0)' />
+      </column>
+      <column caption='Channels' datatype='integer' name='[Calculation_1828742926858391560]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='1' />
+      </column>
+      <column caption='Subs Group' datatype='string' name='[Calculation_1828742926860058641]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='STR(10 ^ floor(log([Subs], 10))) + &quot;+&quot;' />
+      </column>
+      <column caption='Set' datatype='string' name='[Calculation_1828742926904885267]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='CASE [Table Name]&#13;&#10;when &quot;new_political_chan_tag_preds_20200709.samp.txt&quot; then &quot;New&quot;&#13;&#10;else &quot;Recfluence&quot;&#13;&#10;END' />
+      </column>
+      <column caption='Subs (With factor)' datatype='integer' name='[Calculation_1828742926906187796]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='iif([Calculation_1828742926904885267]=&quot;New&quot;, [Subs]*5, [Subs])' />
+      </column>
+      <column caption='Comment Subs' datatype='integer' name='[CommentSubs]' role='measure' type='quantitative' />
+      <column datatype='integer' name='[Conspiracy]' role='measure' type='quantitative' />
+      <column datatype='integer' name='[MSM]' role='measure' type='quantitative' />
+      <column caption='Partisan Left' datatype='integer' name='[PartisanLeft]' role='measure' type='quantitative' />
+      <column caption='Partisan Right' datatype='integer' name='[PartisanRight]' role='measure' type='quantitative' />
+      <column datatype='real' name='[Political]' role='measure' type='quantitative' />
+      <column caption='Social Justice' datatype='integer' name='[SocialJustice]' role='measure' type='quantitative' />
+      <column caption='Subs - Conspiracy' datatype='integer' name='[Subs - Anti-SJW  (copy)_1828742926856802306]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='IIF([Conspiracy]=1, [Calculation_1828742926906187796], 0)' />
+      </column>
+      <column caption='Subs - MSM' datatype='integer' name='[Subs - Conspiracy (copy)_1828742926857097219]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='IIF([MSM]=1, [Calculation_1828742926906187796], 0)' />
+      </column>
+      <column caption='Subs - Partisan Left' datatype='integer' name='[Subs - MSM (copy)_1828742926857596932]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='IIF([PartisanLeft]=1, [Calculation_1828742926906187796], 0)' />
+      </column>
+      <column caption='Subs - Partisan Right' datatype='integer' name='[Subs - Partisan Left (copy)_1828742926857728005]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='IIF([PartisanRight]=1, [Calculation_1828742926906187796], 0)' />
+      </column>
+      <column caption='Subs - Social Justice' datatype='integer' name='[Subs - Partisan Right (copy)_1828742926857846790]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='IIF([SocialJustice]=1, [Calculation_1828742926906187796], 0)' />
+      </column>
+      <column caption='Subs - YouTuber' datatype='integer' name='[Subs - Social Justice (copy)_1828742926858059783]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='IIF([YouTube]=1, [Calculation_1828742926906187796], 0)' />
+      </column>
+      <column caption='File' datatype='string' name='[Table Name]' role='dimension' type='nominal'>
+        <aliases>
+          <alias key='&quot;recfluence_tag_preds_20200709.txt&quot;' value='Recfluence' />
+        </aliases>
+      </column>
+      <column caption='You Tube' datatype='integer' name='[YouTube]' role='measure' type='quantitative' />
+      <_.fcp.ObjectModelTableType.true...column caption='new_political_chan_tag_preds_20200709.samp.txt' datatype='table' name='[__tableau_internal_object_id__].[new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71]' role='measure' type='quantitative' />
+      <column-instance column='[AntiSJW]' derivation='Sum' name='[sum:AntiSJW:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Calculation_1828742926856433665]' derivation='Sum' name='[sum:Calculation_1828742926856433665:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[CommentSubs]' derivation='Sum' name='[sum:CommentSubs:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Conspiracy]' derivation='Sum' name='[sum:Conspiracy:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[MSM]' derivation='Sum' name='[sum:MSM:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[PartisanLeft]' derivation='Sum' name='[sum:PartisanLeft:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[PartisanRight]' derivation='Sum' name='[sum:PartisanRight:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Political]' derivation='Sum' name='[sum:Political:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[SocialJustice]' derivation='Sum' name='[sum:SocialJustice:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Subs - Anti-SJW  (copy)_1828742926856802306]' derivation='Sum' name='[sum:Subs - Anti-SJW  (copy)_1828742926856802306:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Subs - Conspiracy (copy)_1828742926857097219]' derivation='Sum' name='[sum:Subs - Conspiracy (copy)_1828742926857097219:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Subs - MSM (copy)_1828742926857596932]' derivation='Sum' name='[sum:Subs - MSM (copy)_1828742926857596932:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Subs - Partisan Left (copy)_1828742926857728005]' derivation='Sum' name='[sum:Subs - Partisan Left (copy)_1828742926857728005:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Subs - Partisan Right (copy)_1828742926857846790]' derivation='Sum' name='[sum:Subs - Partisan Right (copy)_1828742926857846790:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[Subs - Social Justice (copy)_1828742926858059783]' derivation='Sum' name='[sum:Subs - Social Justice (copy)_1828742926858059783:qk]' pivot='key' type='quantitative' />
+      <column-instance column='[YouTube]' derivation='Sum' name='[sum:YouTube:qk]' pivot='key' type='quantitative' />
+      <_.fcp.SchemaViewerObjectModel.false...folder name='Subs' role='measures'>
+        <folder-item name='[Calculation_1828742926856433665]' type='field' />
+        <folder-item name='[Subs - Anti-SJW  (copy)_1828742926856802306]' type='field' />
+        <folder-item name='[Subs - Conspiracy (copy)_1828742926857097219]' type='field' />
+        <folder-item name='[Subs - MSM (copy)_1828742926857596932]' type='field' />
+        <folder-item name='[Subs - Partisan Left (copy)_1828742926857728005]' type='field' />
+        <folder-item name='[Subs - Partisan Right (copy)_1828742926857846790]' type='field' />
+        <folder-item name='[Subs - Social Justice (copy)_1828742926858059783]' type='field' />
+      </_.fcp.SchemaViewerObjectModel.false...folder>
+      <_.fcp.SchemaViewerObjectModel.false...folder name='Tags' role='measures'>
+        <folder-item name='[AntiSJW]' type='field' />
+        <folder-item name='[CommentSubs]' type='field' />
+        <folder-item name='[Conspiracy]' type='field' />
+        <folder-item name='[MSM]' type='field' />
+        <folder-item name='[PartisanLeft]' type='field' />
+        <folder-item name='[PartisanRight]' type='field' />
+        <folder-item name='[Political]' type='field' />
+        <folder-item name='[SocialJustice]' type='field' />
+        <folder-item name='[YouTube]' type='field' />
+      </_.fcp.SchemaViewerObjectModel.false...folder>
+      <_.fcp.SchemaViewerObjectModel.true...folders-common>
+        <folder name='Subs'>
+          <folder-item name='[Calculation_1828742926856433665]' type='field' />
+          <folder-item name='[Subs - Anti-SJW  (copy)_1828742926856802306]' type='field' />
+          <folder-item name='[Subs - Conspiracy (copy)_1828742926857097219]' type='field' />
+          <folder-item name='[Subs - MSM (copy)_1828742926857596932]' type='field' />
+          <folder-item name='[Subs - Partisan Left (copy)_1828742926857728005]' type='field' />
+          <folder-item name='[Subs - Partisan Right (copy)_1828742926857846790]' type='field' />
+          <folder-item name='[Subs - Social Justice (copy)_1828742926858059783]' type='field' />
+        </folder>
+        <folder name='Tags'>
+          <folder-item name='[AntiSJW]' type='field' />
+          <folder-item name='[CommentSubs]' type='field' />
+          <folder-item name='[Conspiracy]' type='field' />
+          <folder-item name='[MSM]' type='field' />
+          <folder-item name='[PartisanLeft]' type='field' />
+          <folder-item name='[PartisanRight]' type='field' />
+          <folder-item name='[Political]' type='field' />
+          <folder-item name='[SocialJustice]' type='field' />
+          <folder-item name='[YouTube]' type='field' />
+        </folder>
+      </_.fcp.SchemaViewerObjectModel.true...folders-common>
+      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-aliased-fields='true' show-structure='false' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[:Measure Names]' type='palette'>
+            <map to='#4e79a7'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:AntiSJW:qk]&quot;</bucket>
+            </map>
+            <map to='#4e79a7'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:F11:qk]&quot;</bucket>
+            </map>
+            <map to='#4e79a7'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - MSM (copy)_1828742926857596932:qk]&quot;</bucket>
+            </map>
+            <map to='#59a14f'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:F9:qk]&quot;</bucket>
+            </map>
+            <map to='#59a14f'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:PartisanRight:qk]&quot;</bucket>
+            </map>
+            <map to='#76b7b2'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:F8:qk]&quot;</bucket>
+            </map>
+            <map to='#76b7b2'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:PartisanLeft:qk]&quot;</bucket>
+            </map>
+            <map to='#86bcb6'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Partisan Right (copy)_1828742926857846790:qk]&quot;</bucket>
+            </map>
+            <map to='#a0cbe8'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Conspiracy (copy)_1828742926857097219:qk]&quot;</bucket>
+            </map>
+            <map to='#b07aa1'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Calculation_1828742926856433665:qk]&quot;</bucket>
+            </map>
+            <map to='#b07aa1'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:F10:qk]&quot;</bucket>
+            </map>
+            <map to='#b07aa1'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:SocialJustice:qk]&quot;</bucket>
+            </map>
+            <map to='#d37295'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Social Justice (copy)_1828742926858059783:qk]&quot;</bucket>
+            </map>
+            <map to='#d4a6c8'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:CommentSubs:qk]&quot;</bucket>
+            </map>
+            <map to='#e15759'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:F6:qk]&quot;</bucket>
+            </map>
+            <map to='#e15759'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:MSM:qk]&quot;</bucket>
+            </map>
+            <map to='#e15759'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Partisan Left (copy)_1828742926857728005:qk]&quot;</bucket>
+            </map>
+            <map to='#edc948'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:F5:qk]&quot;</bucket>
+            </map>
+            <map to='#edc948'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Political:qk]&quot;</bucket>
+            </map>
+            <map to='#f1ce63'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Anti-SJW  (copy)_1828742926856802306:qk]&quot;</bucket>
+            </map>
+            <map to='#f28e2b'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Conspiracy:qk]&quot;</bucket>
+            </map>
+            <map to='#f28e2b'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:F12:qk]&quot;</bucket>
+            </map>
+            <map to='#ff9da7'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:F7:qk]&quot;</bucket>
+            </map>
+            <map to='#ff9da7'>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:YouTube:qk]&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+      <datasource-dependencies datasource='Parameters'>
+        <column caption='Tag' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;Conspiracy&quot;'>
+          <calculation class='tableau' formula='&quot;Conspiracy&quot;' />
+        </column>
+      </datasource-dependencies>
+      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+        <objects>
+          <object caption='new_political_chan_tag_preds_20200709.samp.txt' id='new_political_chan_tag_preds_20200709.samp.txt_6CBB5C973A2C4E8F9138B63D29D64C71'>
+            <properties context=''>
+              <relation all='true' name='new_political_chan_tag_preds_20200709.samp.txt+' type='union'>
+                <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+                  <column datatype='string' name='ID' />
+                  <column datatype='string' name='Channel' />
+                  <column datatype='integer' name='Subs' />
+                  <column datatype='integer' name='CommentSubs' />
+                  <column datatype='real' name='Political' />
+                  <column datatype='integer' name='MSM' />
+                  <column datatype='integer' name='YouTube' />
+                  <column datatype='integer' name='PartisanLeft' />
+                  <column datatype='integer' name='PartisanRight' />
+                  <column datatype='integer' name='SocialJustice' />
+                  <column datatype='integer' name='AntiSJW' />
+                  <column datatype='integer' name='Conspiracy' />
+                  <column datatype='string' name='Table Name' />
+                </columns>
+                <relation connection='textscan.1rtv12d03f2pop129fgzw03vjcb8' name='new_political_chan_tag_preds_20200709.samp.txt' table='[new_political_chan_tag_preds_20200709.samp#txt]' type='table'>
+                  <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+                    <column datatype='string' name='ID' ordinal='0' />
+                    <column datatype='string' name='Channel' ordinal='1' />
+                    <column datatype='integer' name='Subs' ordinal='2' />
+                    <column datatype='integer' name='CommentSubs' ordinal='3' />
+                    <column datatype='real' name='Political' ordinal='4' />
+                    <column datatype='integer' name='MSM' ordinal='5' />
+                    <column datatype='integer' name='YouTube' ordinal='6' />
+                    <column datatype='integer' name='PartisanLeft' ordinal='7' />
+                    <column datatype='integer' name='PartisanRight' ordinal='8' />
+                    <column datatype='integer' name='SocialJustice' ordinal='9' />
+                    <column datatype='integer' name='AntiSJW' ordinal='10' />
+                    <column datatype='integer' name='Conspiracy' ordinal='11' />
+                  </columns>
+                </relation>
+                <relation connection='textscan.1rtv12d03f2pop129fgzw03vjcb8' name='recfluence_tag_preds_20200709.txt' table='[recfluence_tag_preds_20200709#txt]' type='table'>
+                  <columns character-set='UTF-8' header='yes' locale='en_US' separator='&#9;'>
+                    <column datatype='string' name='ID' ordinal='0' />
+                    <column datatype='string' name='Channel' ordinal='1' />
+                    <column datatype='integer' name='Subs' ordinal='2' />
+                    <column datatype='integer' name='CommentSubs' ordinal='3' />
+                    <column datatype='real' name='Political' ordinal='4' />
+                    <column datatype='integer' name='MSM' ordinal='5' />
+                    <column datatype='integer' name='YouTube' ordinal='6' />
+                    <column datatype='integer' name='PartisanLeft' ordinal='7' />
+                    <column datatype='integer' name='PartisanRight' ordinal='8' />
+                    <column datatype='integer' name='SocialJustice' ordinal='9' />
+                    <column datatype='integer' name='AntiSJW' ordinal='10' />
+                    <column datatype='integer' name='Conspiracy' ordinal='11' />
+                  </columns>
+                </relation>
+              </relation>
+            </properties>
+          </object>
+        </objects>
+      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    </datasource>
+  </datasources>
+  <actions>
+    <action caption='YouTube' name='[Action1]'>
+      <source datasource='federated.1h1x6no1xb8mjw0zmun021pw1jpw' type='datasource'>
+        <exclude-sheet name='Channels - Recfluence vs New (2)' />
+        <exclude-sheet name='Subs - Recfluence vs New' />
+        <exclude-sheet name='Subs - Recfluence vs New (2)' />
+      </source>
+      <link caption='' expression='https://www.youtube.com/channel/&lt;[ID]&gt;' />
+    </action>
+    <datasources>
+      <datasource caption='new_political_chan_tag_preds_20200709.samp' name='federated.1h1x6no1xb8mjw0zmun021pw1jpw' />
+    </datasources>
+    <datasource-dependencies datasource='federated.1h1x6no1xb8mjw0zmun021pw1jpw'>
+      <column datatype='string' name='[ID]' role='dimension' type='nominal' />
+    </datasource-dependencies>
+  </actions>
+  <worksheets>
+    <worksheet name='Channels - Recfluence vs New (2)'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='new_political_chan_tag_preds_20200709.samp' name='federated.1h1x6no1xb8mjw0zmun021pw1jpw' />
+          </datasources>
+          <datasource-dependencies datasource='federated.1h1x6no1xb8mjw0zmun021pw1jpw'>
+            <column caption='Anti SJW' datatype='integer' name='[AntiSJW]' role='measure' type='quantitative' />
+            <column caption='Subs Group' datatype='string' name='[Calculation_1828742926860058641]' role='dimension' type='nominal'>
+              <calculation class='tableau' formula='STR(10 ^ floor(log([Subs], 10))) + &quot;+&quot;' />
+            </column>
+            <column datatype='integer' name='[Conspiracy]' role='measure' type='quantitative' />
+            <column datatype='integer' name='[MSM]' role='measure' type='quantitative' />
+            <column caption='Partisan Left' datatype='integer' name='[PartisanLeft]' role='measure' type='quantitative' />
+            <column caption='Partisan Right' datatype='integer' name='[PartisanRight]' role='measure' type='quantitative' />
+            <column caption='Social Justice' datatype='integer' name='[SocialJustice]' role='measure' type='quantitative' />
+            <column datatype='integer' name='[Subs]' role='measure' type='quantitative' />
+            <column caption='File' datatype='string' name='[Table Name]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='&quot;recfluence_tag_preds_20200709.txt&quot;' value='Recfluence' />
+              </aliases>
+            </column>
+            <column caption='You Tube' datatype='integer' name='[YouTube]' role='measure' type='quantitative' />
+            <column-instance column='[Calculation_1828742926860058641]' derivation='None' name='[none:Calculation_1828742926860058641:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Table Name]' derivation='None' name='[none:Table Name:nk]' pivot='key' type='nominal' />
+            <column-instance column='[AntiSJW]' derivation='Sum' name='[sum:AntiSJW:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Conspiracy]' derivation='Sum' name='[sum:Conspiracy:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[MSM]' derivation='Sum' name='[sum:MSM:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[PartisanLeft]' derivation='Sum' name='[sum:PartisanLeft:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[PartisanRight]' derivation='Sum' name='[sum:PartisanRight:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[SocialJustice]' derivation='Sum' name='[sum:SocialJustice:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[YouTube]' derivation='Sum' name='[sum:YouTube:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]'>
+            <groupfilter function='union' user:op='manual'>
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Conspiracy:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:AntiSJW:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:SocialJustice:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:PartisanRight:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:PartisanLeft:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:MSM:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:YouTube:qk]&quot;' />
+            </groupfilter>
+          </filter>
+          <manual-sort column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' direction='ASC'>
+            <dictionary>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Conspiracy:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:AntiSJW:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:SocialJustice:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:PartisanRight:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:PartisanLeft:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:MSM:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:YouTube:qk]&quot;</bucket>
+            </dictionary>
+          </manual-sort>
+          <filter class='categorical' column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]'>
+            <groupfilter function='except' user:ui-domain='relevant' user:ui-enumeration='exclusive' user:ui-marker='enumerate'>
+              <groupfilter function='level-members' level='[none:Calculation_1828742926860058641:nk]' />
+              <groupfilter function='union'>
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='%null%' />
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='&quot;1+&quot;' />
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='&quot;10+&quot;' />
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='&quot;100+&quot;' />
+              </groupfilter>
+            </groupfilter>
+          </filter>
+          <slices>
+            <column>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]</column>
+            <column>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='axis'>
+            <format attr='title' class='0' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values]' scope='cols' value='Channels' />
+            <encoding attr='space' class='0' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values]' field-type='quantitative' scale='symlog' scope='cols' type='space' />
+          </style-rule>
+          <style-rule element='header'>
+            <format attr='width' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' value='196' />
+            <format attr='width' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]' value='128' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' />
+            </encodings>
+          </pane>
+        </panes>
+        <rows>([federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk] / [federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names])</rows>
+        <cols>([federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Table Name:nk] * [federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values])</cols>
+      </table>
+      <simple-id uuid='{337BA215-E0CE-43A4-965F-62A31C6CA70C}' />
+    </worksheet>
+    <worksheet name='Sheet 4'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='new_political_chan_tag_preds_20200709.samp' name='federated.1h1x6no1xb8mjw0zmun021pw1jpw' />
+            <datasource name='Parameters' />
+          </datasources>
+          <datasource-dependencies datasource='Parameters'>
+            <column caption='Tag' datatype='string' name='[Parameter 2]' param-domain-type='list' role='measure' type='nominal' value='&quot;Conspiracy&quot;'>
+              <calculation class='tableau' formula='&quot;Conspiracy&quot;' />
+            </column>
+          </datasource-dependencies>
+          <datasource-dependencies datasource='federated.1h1x6no1xb8mjw0zmun021pw1jpw'>
+            <column caption='Anti SJW' datatype='integer' name='[AntiSJW]' role='measure' type='quantitative' />
+            <column caption='Subs - Tag' datatype='integer' name='[Calculation_1194016854429855744]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='CASE [Parameters].[Parameter 2]&#13;&#10;when &quot;Anti-SJW&quot; then [Calculation_1828742926856433665]&#13;&#10;when &quot;Conspiracy&quot; then [Subs - Anti-SJW  (copy)_1828742926856802306]&#13;&#10;when &quot;MSM&quot; then [Subs - Conspiracy (copy)_1828742926857097219]&#13;&#10;when &quot;Partisan Left&quot; then [Subs - MSM (copy)_1828742926857596932]&#13;&#10;when &quot;Partisan Right&quot; then [Subs - Partisan Left (copy)_1828742926857728005]&#13;&#10;when &quot;Social Justice&quot; then [Subs - Partisan Right (copy)_1828742926857846790]&#13;&#10;when &quot;YouTuber&quot; then [Subs - Social Justice (copy)_1828742926858059783]&#13;&#10;END' />
+            </column>
+            <column caption='Subs - Anti-SJW ' datatype='integer' name='[Calculation_1828742926856433665]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([AntiSJW]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Set' datatype='string' name='[Calculation_1828742926904885267]' role='dimension' type='nominal'>
+              <calculation class='tableau' formula='CASE [Table Name]&#13;&#10;when &quot;new_political_chan_tag_preds_20200709.samp.txt&quot; then &quot;New&quot;&#13;&#10;else &quot;Recfluence&quot;&#13;&#10;END' />
+            </column>
+            <column caption='Subs (With factor)' datatype='integer' name='[Calculation_1828742926906187796]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='iif([Calculation_1828742926904885267]=&quot;New&quot;, [Subs]*5, [Subs])' />
+            </column>
+            <column datatype='string' name='[Channel]' role='dimension' type='nominal' />
+            <column datatype='integer' name='[Conspiracy]' role='measure' type='quantitative' />
+            <column datatype='string' name='[ID]' role='dimension' type='nominal' />
+            <column datatype='integer' name='[MSM]' role='measure' type='quantitative' />
+            <column caption='Partisan Left' datatype='integer' name='[PartisanLeft]' role='measure' type='quantitative' />
+            <column caption='Partisan Right' datatype='integer' name='[PartisanRight]' role='measure' type='quantitative' />
+            <column caption='Social Justice' datatype='integer' name='[SocialJustice]' role='measure' type='quantitative' />
+            <column caption='Subs - Conspiracy' datatype='integer' name='[Subs - Anti-SJW  (copy)_1828742926856802306]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([Conspiracy]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - MSM' datatype='integer' name='[Subs - Conspiracy (copy)_1828742926857097219]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([MSM]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - Partisan Left' datatype='integer' name='[Subs - MSM (copy)_1828742926857596932]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([PartisanLeft]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - Partisan Right' datatype='integer' name='[Subs - Partisan Left (copy)_1828742926857728005]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([PartisanRight]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - Social Justice' datatype='integer' name='[Subs - Partisan Right (copy)_1828742926857846790]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([SocialJustice]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - YouTuber' datatype='integer' name='[Subs - Social Justice (copy)_1828742926858059783]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([YouTube]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column datatype='integer' name='[Subs]' role='measure' type='quantitative' />
+            <column caption='File' datatype='string' name='[Table Name]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='&quot;recfluence_tag_preds_20200709.txt&quot;' value='Recfluence' />
+              </aliases>
+            </column>
+            <column caption='You Tube' datatype='integer' name='[YouTube]' role='measure' type='quantitative' />
+            <column-instance column='[Calculation_1828742926904885267]' derivation='None' name='[none:Calculation_1828742926904885267:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Channel]' derivation='None' name='[none:Channel:nk]' pivot='key' type='nominal' />
+            <column-instance column='[ID]' derivation='None' name='[none:ID:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Calculation_1194016854429855744]' derivation='Sum' name='[sum:Calculation_1194016854429855744:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926904885267:nk]'>
+            <groupfilter function='member' level='[none:Calculation_1828742926904885267:nk]' member='&quot;New&quot;' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='categorical' column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Channel:nk]'>
+            <groupfilter function='except' user:ui-domain='relevant' user:ui-enumeration='exclusive' user:ui-marker='enumerate'>
+              <groupfilter function='level-members' level='[none:Channel:nk]' />
+              <groupfilter function='member' level='[none:Channel:nk]' member='%null%' />
+            </groupfilter>
+          </filter>
+          <shelf-sorts>
+            <shelf-sort-v2 dimension-to-sort='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Channel:nk]' direction='DESC' is-on-innermost-dimension='true' measure-to-sort-by='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Calculation_1194016854429855744:qk]' shelf='rows' />
+          </shelf-sorts>
+          <slices>
+            <column>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926904885267:nk]</column>
+            <column>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Channel:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='cell'>
+            <format attr='height' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Channel:nk]' value='24' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <encodings>
+              <lod column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:ID:nk]' />
+              <text column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Calculation_1194016854429855744:qk]' />
+            </encodings>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-show' value='true' />
+              </style-rule>
+              <style-rule element='pane'>
+                <format attr='minheight' value='-1' />
+                <format attr='maxheight' value='-1' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Channel:nk]</rows>
+        <cols />
+      </table>
+      <simple-id uuid='{9F459FFF-EA15-4519-BBE9-5A56F05B0CD1}' />
+    </worksheet>
+    <worksheet name='Subs - Recfluence vs New'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='new_political_chan_tag_preds_20200709.samp' name='federated.1h1x6no1xb8mjw0zmun021pw1jpw' />
+          </datasources>
+          <datasource-dependencies datasource='federated.1h1x6no1xb8mjw0zmun021pw1jpw'>
+            <column caption='Anti SJW' datatype='integer' name='[AntiSJW]' role='measure' type='quantitative' />
+            <column caption='Subs - Anti-SJW ' datatype='integer' name='[Calculation_1828742926856433665]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([AntiSJW]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs Group' datatype='string' name='[Calculation_1828742926860058641]' role='dimension' type='nominal'>
+              <calculation class='tableau' formula='STR(10 ^ floor(log([Subs], 10))) + &quot;+&quot;' />
+            </column>
+            <column caption='Set' datatype='string' name='[Calculation_1828742926904885267]' role='dimension' type='nominal'>
+              <calculation class='tableau' formula='CASE [Table Name]&#13;&#10;when &quot;new_political_chan_tag_preds_20200709.samp.txt&quot; then &quot;New&quot;&#13;&#10;else &quot;Recfluence&quot;&#13;&#10;END' />
+            </column>
+            <column caption='Subs (With factor)' datatype='integer' name='[Calculation_1828742926906187796]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='iif([Calculation_1828742926904885267]=&quot;New&quot;, [Subs]*5, [Subs])' />
+            </column>
+            <column datatype='integer' name='[Conspiracy]' role='measure' type='quantitative' />
+            <column datatype='integer' name='[MSM]' role='measure' type='quantitative' />
+            <column caption='Partisan Left' datatype='integer' name='[PartisanLeft]' role='measure' type='quantitative' />
+            <column caption='Partisan Right' datatype='integer' name='[PartisanRight]' role='measure' type='quantitative' />
+            <column caption='Social Justice' datatype='integer' name='[SocialJustice]' role='measure' type='quantitative' />
+            <column caption='Subs - Conspiracy' datatype='integer' name='[Subs - Anti-SJW  (copy)_1828742926856802306]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([Conspiracy]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - MSM' datatype='integer' name='[Subs - Conspiracy (copy)_1828742926857097219]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([MSM]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - Partisan Left' datatype='integer' name='[Subs - MSM (copy)_1828742926857596932]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([PartisanLeft]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - Partisan Right' datatype='integer' name='[Subs - Partisan Left (copy)_1828742926857728005]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([PartisanRight]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - Social Justice' datatype='integer' name='[Subs - Partisan Right (copy)_1828742926857846790]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([SocialJustice]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - YouTuber' datatype='integer' name='[Subs - Social Justice (copy)_1828742926858059783]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([YouTube]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column datatype='integer' name='[Subs]' role='measure' type='quantitative' />
+            <column caption='File' datatype='string' name='[Table Name]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='&quot;recfluence_tag_preds_20200709.txt&quot;' value='Recfluence' />
+              </aliases>
+            </column>
+            <column caption='You Tube' datatype='integer' name='[YouTube]' role='measure' type='quantitative' />
+            <column-instance column='[Calculation_1828742926860058641]' derivation='None' name='[none:Calculation_1828742926860058641:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Table Name]' derivation='None' name='[none:Table Name:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Calculation_1828742926856433665]' derivation='Sum' name='[sum:Calculation_1828742926856433665:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - Anti-SJW  (copy)_1828742926856802306]' derivation='Sum' name='[sum:Subs - Anti-SJW  (copy)_1828742926856802306:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - Conspiracy (copy)_1828742926857097219]' derivation='Sum' name='[sum:Subs - Conspiracy (copy)_1828742926857097219:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - MSM (copy)_1828742926857596932]' derivation='Sum' name='[sum:Subs - MSM (copy)_1828742926857596932:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - Partisan Left (copy)_1828742926857728005]' derivation='Sum' name='[sum:Subs - Partisan Left (copy)_1828742926857728005:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - Partisan Right (copy)_1828742926857846790]' derivation='Sum' name='[sum:Subs - Partisan Right (copy)_1828742926857846790:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - Social Justice (copy)_1828742926858059783]' derivation='Sum' name='[sum:Subs - Social Justice (copy)_1828742926858059783:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]'>
+            <groupfilter function='union' user:op='manual'>
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Anti-SJW  (copy)_1828742926856802306:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Calculation_1828742926856433665:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Partisan Right (copy)_1828742926857846790:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Partisan Left (copy)_1828742926857728005:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - MSM (copy)_1828742926857596932:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Conspiracy (copy)_1828742926857097219:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Social Justice (copy)_1828742926858059783:qk]&quot;' />
+            </groupfilter>
+          </filter>
+          <manual-sort column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' direction='ASC'>
+            <dictionary>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Anti-SJW  (copy)_1828742926856802306:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Calculation_1828742926856433665:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Partisan Right (copy)_1828742926857846790:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Partisan Left (copy)_1828742926857728005:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - MSM (copy)_1828742926857596932:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Conspiracy (copy)_1828742926857097219:qk]&quot;</bucket>
+            </dictionary>
+          </manual-sort>
+          <filter class='categorical' column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]'>
+            <groupfilter function='except' user:ui-domain='relevant' user:ui-enumeration='exclusive' user:ui-marker='enumerate'>
+              <groupfilter function='level-members' level='[none:Calculation_1828742926860058641:nk]' />
+              <groupfilter function='union'>
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='%null%' />
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='&quot;1+&quot;' />
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='&quot;10+&quot;' />
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='&quot;100+&quot;' />
+              </groupfilter>
+            </groupfilter>
+          </filter>
+          <slices>
+            <column>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]</column>
+            <column>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='axis'>
+            <format attr='title' class='0' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values]' scope='cols' value='Subs' />
+            <encoding attr='space' class='0' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values]' field-type='quantitative' range-type='uniform' scope='cols' type='space' />
+          </style-rule>
+          <style-rule element='header'>
+            <format attr='width' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' value='196' />
+            <format attr='width' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]' value='128' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' />
+            </encodings>
+          </pane>
+        </panes>
+        <rows>([federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk] / [federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names])</rows>
+        <cols total='true'>([federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Table Name:nk] * [federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values])</cols>
+      </table>
+      <simple-id uuid='{D153AFEF-605D-43A0-B40F-167027575D20}' />
+    </worksheet>
+    <worksheet name='Subs - Recfluence vs New (2)'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='new_political_chan_tag_preds_20200709.samp' name='federated.1h1x6no1xb8mjw0zmun021pw1jpw' />
+          </datasources>
+          <datasource-dependencies datasource='federated.1h1x6no1xb8mjw0zmun021pw1jpw'>
+            <column caption='Anti SJW' datatype='integer' name='[AntiSJW]' role='measure' type='quantitative' />
+            <column caption='Subs - Anti-SJW ' datatype='integer' name='[Calculation_1828742926856433665]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([AntiSJW]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs Group' datatype='string' name='[Calculation_1828742926860058641]' role='dimension' type='nominal'>
+              <calculation class='tableau' formula='STR(10 ^ floor(log([Subs], 10))) + &quot;+&quot;' />
+            </column>
+            <column caption='Set' datatype='string' name='[Calculation_1828742926904885267]' role='dimension' type='nominal'>
+              <calculation class='tableau' formula='CASE [Table Name]&#13;&#10;when &quot;new_political_chan_tag_preds_20200709.samp.txt&quot; then &quot;New&quot;&#13;&#10;else &quot;Recfluence&quot;&#13;&#10;END' />
+            </column>
+            <column caption='Subs (With factor)' datatype='integer' name='[Calculation_1828742926906187796]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='iif([Calculation_1828742926904885267]=&quot;New&quot;, [Subs]*5, [Subs])' />
+            </column>
+            <column datatype='integer' name='[Conspiracy]' role='measure' type='quantitative' />
+            <column datatype='integer' name='[MSM]' role='measure' type='quantitative' />
+            <column caption='Partisan Left' datatype='integer' name='[PartisanLeft]' role='measure' type='quantitative' />
+            <column caption='Partisan Right' datatype='integer' name='[PartisanRight]' role='measure' type='quantitative' />
+            <column caption='Social Justice' datatype='integer' name='[SocialJustice]' role='measure' type='quantitative' />
+            <column caption='Subs - Conspiracy' datatype='integer' name='[Subs - Anti-SJW  (copy)_1828742926856802306]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([Conspiracy]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - MSM' datatype='integer' name='[Subs - Conspiracy (copy)_1828742926857097219]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([MSM]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - Partisan Left' datatype='integer' name='[Subs - MSM (copy)_1828742926857596932]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([PartisanLeft]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - Partisan Right' datatype='integer' name='[Subs - Partisan Left (copy)_1828742926857728005]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([PartisanRight]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column caption='Subs - Social Justice' datatype='integer' name='[Subs - Partisan Right (copy)_1828742926857846790]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='IIF([SocialJustice]=1, [Calculation_1828742926906187796], 0)' />
+            </column>
+            <column datatype='integer' name='[Subs]' role='measure' type='quantitative' />
+            <column caption='File' datatype='string' name='[Table Name]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='&quot;recfluence_tag_preds_20200709.txt&quot;' value='Recfluence' />
+              </aliases>
+            </column>
+            <column-instance column='[Calculation_1828742926860058641]' derivation='None' name='[none:Calculation_1828742926860058641:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Table Name]' derivation='None' name='[none:Table Name:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Calculation_1828742926856433665]' derivation='Sum' name='[sum:Calculation_1828742926856433665:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - Anti-SJW  (copy)_1828742926856802306]' derivation='Sum' name='[sum:Subs - Anti-SJW  (copy)_1828742926856802306:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - Conspiracy (copy)_1828742926857097219]' derivation='Sum' name='[sum:Subs - Conspiracy (copy)_1828742926857097219:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - MSM (copy)_1828742926857596932]' derivation='Sum' name='[sum:Subs - MSM (copy)_1828742926857596932:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - Partisan Left (copy)_1828742926857728005]' derivation='Sum' name='[sum:Subs - Partisan Left (copy)_1828742926857728005:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Subs - Partisan Right (copy)_1828742926857846790]' derivation='Sum' name='[sum:Subs - Partisan Right (copy)_1828742926857846790:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]'>
+            <groupfilter function='union' user:op='manual'>
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Anti-SJW  (copy)_1828742926856802306:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Calculation_1828742926856433665:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Partisan Right (copy)_1828742926857846790:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Partisan Left (copy)_1828742926857728005:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - MSM (copy)_1828742926857596932:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Conspiracy (copy)_1828742926857097219:qk]&quot;' />
+            </groupfilter>
+          </filter>
+          <manual-sort column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' direction='ASC'>
+            <dictionary>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Anti-SJW  (copy)_1828742926856802306:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Calculation_1828742926856433665:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Partisan Right (copy)_1828742926857846790:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Partisan Left (copy)_1828742926857728005:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - MSM (copy)_1828742926857596932:qk]&quot;</bucket>
+              <bucket>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Conspiracy (copy)_1828742926857097219:qk]&quot;</bucket>
+            </dictionary>
+          </manual-sort>
+          <filter class='categorical' column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]'>
+            <groupfilter function='except' user:ui-domain='relevant' user:ui-enumeration='exclusive' user:ui-marker='enumerate'>
+              <groupfilter function='level-members' level='[none:Calculation_1828742926860058641:nk]' />
+              <groupfilter function='union'>
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='%null%' />
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='&quot;1+&quot;' />
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='&quot;10+&quot;' />
+                <groupfilter function='member' level='[none:Calculation_1828742926860058641:nk]' member='&quot;100+&quot;' />
+              </groupfilter>
+            </groupfilter>
+          </filter>
+          <slices>
+            <column>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]</column>
+            <column>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='axis'>
+            <format attr='title' class='0' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values]' scope='cols' value='Subs' />
+            <encoding attr='space' class='0' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values]' field-type='quantitative' range-type='uniform' scope='cols' type='space' />
+          </style-rule>
+          <style-rule element='header'>
+            <format attr='width' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' value='196' />
+            <format attr='width' field='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]' value='128' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' />
+            </encodings>
+          </pane>
+        </panes>
+        <rows>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]</rows>
+        <cols total='true'>([federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Table Name:nk] * [federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values])</cols>
+      </table>
+      <simple-id uuid='{71EC7EF4-7E0B-4EC2-992B-273C223C11DC}' />
+    </worksheet>
+  </worksheets>
+  <windows saved-dpi-scale-factor='1.25' source-height='89'>
+    <window class='worksheet' name='Subs - Recfluence vs New'>
+      <cards>
+        <edge name='left'>
+          <strip size='247'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+            <card type='measures' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='title' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card pane-specification-id='0' param='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' type='color' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+        <highlight>
+          <color-one-way>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]</field>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]</field>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Subs (bin):ok]</field>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Table Name:nk]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{502CED0D-CBAE-430C-8888-01A801521786}' />
+    </window>
+    <window class='worksheet' name='Subs - Recfluence vs New (2)'>
+      <cards>
+        <edge name='left'>
+          <strip size='268'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+            <card type='measures' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='title' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card pane-specification-id='0' param='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' type='color' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+        <selection-collection>
+          <tuple-selection>
+            <tuple-reference>
+              <tuple-descriptor>
+                <pane-descriptor>
+                  <x-fields>
+                    <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Table Name:nk]</field>
+                    <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values]</field>
+                  </x-fields>
+                  <y-fields>
+                    <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]</field>
+                  </y-fields>
+                </pane-descriptor>
+                <columns>
+                  <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Table Name:nk]</field>
+                  <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]</field>
+                  <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[Multiple Values]</field>
+                </columns>
+              </tuple-descriptor>
+              <tuple>
+                <value>%all%</value>
+                <value>&quot;[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[sum:Subs - Anti-SJW  (copy)_1828742926856802306:qk]&quot;</value>
+                <value>193221705.0</value>
+              </tuple>
+            </tuple-reference>
+          </tuple-selection>
+        </selection-collection>
+        <highlight>
+          <color-one-way>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]</field>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]</field>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Subs (bin):ok]</field>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Table Name:nk]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{75B395D7-AFA3-463A-A947-0080D6DDDAFB}' />
+    </window>
+    <window class='worksheet' name='Channels - Recfluence vs New (2)'>
+      <cards>
+        <edge name='left'>
+          <strip size='246'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+            <card type='measures' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='title' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card pane-specification-id='0' param='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]' type='color' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+        <highlight>
+          <color-one-way>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[:Measure Names]</field>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926860058641:nk]</field>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Subs (bin):ok]</field>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Table Name:nk]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{8FA4C73A-C23E-44FA-ABB5-104F28DEE769}' />
+    </window>
+    <window class='worksheet' maximized='true' name='Sheet 4'>
+      <cards>
+        <edge name='left'>
+          <strip size='280'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='title' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card param='[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Calculation_1828742926904885267:nk]' type='filter' />
+            <card mode='compact' param='[Parameters].[Parameter 2]' type='parameter' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <highlight>
+          <color-one-way>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:Channel:nk]</field>
+            <field>[federated.1h1x6no1xb8mjw0zmun021pw1jpw].[none:ID:nk]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{A182B67B-845E-4740-86A3-8236B0A5C052}' />
+    </window>
+  </windows>
+  <thumbnails>
+    <thumbnail height='192' name='Channels - Recfluence vs New (2)' width='192'>
+      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
+    </thumbnail>
+    <thumbnail height='192' name='Sheet 4' width='192'>
+      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
+      +BVOWwvJjuGaNQAAAABJRU5ErkJggg==
+    </thumbnail>
+    <thumbnail height='192' name='Subs - Recfluence vs New' width='192'>
+      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
+      YII=
+    </thumbnail>
+    <thumbnail height='192' name='Subs - Recfluence vs New (2)' width='192'>
+      iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAABJ0AAASdAHeZh94
+      AAASe0lEQVR4nO3dyVIjW37H8W8OkjI1IwQCxFhVwK07tLvDjrAd4fDKC7+Ad975WfwcvfTK
+      D+CNN45oR7fb3bev7701Q1EggZDQPCszjxdUUUMXlMRUlM7/E1FRIP3Jk5niR6Yyj84xlFIK
+      ITRlfu4VEOJzkgAIrdmfewXEl2Xvp9/ztOrxYDHNq70K3/7dXzMTsjAMA8MwPvfqTUwCICbS
+      bTboey6DxjEvXpYYWv/JT//7A//wT//Ct6uZz716E5NTIDEZw+Sbv/gVCTeEaRhgWPzyb/6e
+      5Uz0c6/ZpRjTchXozWZ8iYfhq1BKabnNcD2v9dQcAfr9Pp7nfe7VuHXtdvtzr8KtC4KAbrd7
+      LcuamgC8oYIAPwhQSuH7p/+/+++0SOH7PkopgiAgCBSv9vfptNtUTiqMPJ92u40KgtPnfZ9A
+      KQ7299+283r5R0eHr9sLztp7s+zTuoDj4zLBO4/7r5f3RvC6nbfr8/brw8Pi2WO36U9/+B0/
+      /vwYP1DvbdfRwUsOCnvsF2tn+zQ425c+QaDe7rfg7X64q6buTfCjH//EwDNww/Dk+T7rmw+I
+      GgMCK0pyPs/iTAy8Jr//fo9E0sHrtlCWQ8QNMywc0urU6OTWGLabDIdtZhfWOHj2A4PQDPMp
+      96ydly+eokIxes0yr4ol7i2k+a///oHtXzwkFPSIpjfI5xIEoz4///SI777Z4re/+y337n/N
+      KBhhhFy+3doA4Ocfv2c4sojGLBw3wdOffiCWzZNybQY+HBf2iM6tsrmWv7X92Ov3iEXi7Dz5
+      Px492WF96yscx6VZOiC/tkKrXeHZywajapPdw33y9+7hNVpEZ9Iw6jA7N8cf/uePzCyt87d/
+      +d2trfekpu4IEE/Nsjg3gxl22H74kLVcioYfpXZyTDb19o2a73tYdggDUIDB6WW8+WwWPwgw
+      DAPTMFBqgI+LE3r/nNM0TQKlSKQy5LIZTmotVhfSDI0I9x6so0anp2NW2GEmGaVSOWFlY5Vh
+      t0+ggvf+MgaBj2FZONEEq0s5srklNlbz+L6PgUFuYZHK8fFZfbfdotvtMPRu7qiQyc5hKQVm
+      mK2HX5N0Q6ggIJPNMZdNY1ghaqUinlIsLK+ysjhPbmmFRDTyer9BdiHPxurthfYyDHXqzh+q
+      PqXf72PbNrZ9/kGtWj6iUmuSTEYxQjPkZmMTtuKz8/QFHrB6bxPHPv9NWKtW4bBcxY2nWVma
+      f7uEYZfnO69wYzH6vR5m2CUZDTM/n7uwZRX47O68wFMma+sbREIWcPoeIB6PT7gdXzbf9xkM
+      BkSjV7/ydBaATqdzDav2+QwGAyzLujAA7/J9H8uyxl7+JPU3uewP67vd7kS/CJO0Fbw+Eo57
+      teW29lEQBAyHQxzHuXJbNpwe2r/0vyJvfvlDodBY9Z7njR2WSetvctkf1iulJnrtJmnL931M
+      0xw7ALe1j978Qsdi4x3BL2pr6t4DCDGJqbsKJPTwm9/8Zuz7PkEQYJof/1s/VQHoNQuM7PEO
+      akophhPcSZyk/mO1lu0Qic2f8xOXpwKPbuPVe48ZhoWbvNtXX67q3379r/zzPyavvJypCkDg
+      9wkmOKub9LrXJPUf1hrGzZxtnt6I6r/fljlVL+tHpRNh/uq7q/9BkfcAQmsSAKE1CYDQmgRA
+      aE0CILQmARBakwAIrUkAhNYkAEJr1xcApTgpFSkclc8e6nW7nPeRjcAbsbuzQ3/46f4cnfaX
+      3VVb3F3Xd89c+ewVSmxubVE+LhOx4PikxiAIWJibpVSucf/BAyKv++rs7jxnce0+waDNz8+L
+      5BYWKR0VSWWydBs1ZudzHB8eEU1lcMMmrcYJyorQadVJZnK0qyXsSJTZ+Xl67Q6xmPuJFRTi
+      z13fEcCw2N7c4PHTZ9Rrddq1EzwzwsbqIpVKDUP59AcjyocHtHpDAgUh26ZaKrN6f4PSfoGZ
+      +UW8fhvTNOl2WziJWYbdJrVanXZnwEzCod8fcbD7mCCSJr+Y5cWjH1Gh8T4YIcSHrrHXlKJS
+      qTCfWyAeCqjU2szPxdk/OCafX6R4WCIStkktLgPgrK2y+/w5C0sLFF++YuXeBqZt4YcMqicn
+      uI7D8+f7bGw+IGQoLMskFA4TcRyyuQW8XpNGJ4phhZlNRhn0e9e3KUIb1xcAw2Rt48HZt7Ov
+      O+plMrMAbG0m3isPOTG2trcASG6/063VdUimZkAFJH6VIRx+fxU3N9+0kcX3hoTuP8DUa1wo
+      cY3ubr9ZwyQcvvgMzbLDJO7uFogvgFwGFVqTAAitSQCE1iQAQmsSAKE1CYDQmgRAaE0CILQ2
+      VbeR7HAc2xov04FSp3NcjWmS+o/VmvbN9FcyDBM7/P7YoDqMC3RY7vLv/7Fz5eVMzRxhvV5P
+      y8FxW60WiUTiEz9xubbu8uC4jx8/Pne4ww99cnRoIb406+vrMjq0EFclARBakwAIrUkAhNYk
+      AEJrEgChtam6DHpSKGONeW34dG7g8b2pj6bixFJ3Z0JB3/Mpvzoau/687XbiURKZq8+4clvq
+      pSpduzVW7UWv9VQFwPc8MMefevMyAv/mJqe+LN/zr7yMILh723UR3/Pxr+EERk6BhNYkAEJr
+      EgChNQmA0JoEQGhNAiC0JgEQWpMACK1JAITWbigAikqpwO6rwtkjg06L0QU3GwuFAu9+NnM0
+      HELg0e72ASgfFXi5X0QBtdoJjUaLSrnEyPdoNts3sxli6t1QVwhFoVhi5d4mR0eHJByLUrlG
+      axiQy2Y4qVS5t7mJ+3roc3/YoVQs4KZmKL3cJRyNUdzf5etvvmVIiHg0QqF4yNr9bQAOCoe4
+      joPfa9Dr9cFJkQ3dbBcIMZ1u6AhgsLm5xd6zZ1SbTTrNGkPfYm1tmXqjiWUEtLt9qseH1Ns9
+      yodFCIU5LB4QjWewTYPcwhKZhEOtXuPV/iGbW9vsvXjOyPcxTQtTDYmkFygeHDCbHv9D4UK8
+      68Y6wzXqJ8wu5ZmJWhxXmywuZDg+OmZtZZlisUgi5uKkT3tVNoMcv1pL0mrWMc0IBj6jQZdq
+      x2N5YYFk3KG4v8fsQp5KcZ/l1Q1sr4NykrhhGzdsIRPEiMu4oQAYLC6vnX2XSGcBSKXTANy/
+      f/+96mQy+fr/9NsH4+93OV5aWf+gjdNxduJO7hrWV+hKrgIJrUkAhNYkAEJrEgChNQmA0JoE
+      QGhNAiC0JgEQWpMACK1N1bhAbiJ27kQIH1JBgDHmIFrv1oci403AcVsMw8BNjjdOPpy/3WEn
+      fJ2rdeOcmEskEhmr9qLXeqoCkMgk78QMMbfJtEwSE3QGvKvbMalYOi4TZAhxVRIAoTUJgNCa
+      BEBoTQIgtCYBEFqTAAitffkXhN9ROKlgXnAjLOG6zMSn6wP0nu/zqnw8Vm3McUm57g2v0e04
+      qtcIdTtj1WozQ0ygFCh17vMXPPVFC8bcMDVFO0ApNfZ2A5xXKadAQmsSAKE1CYDQmgRAaE0C
+      ILQmARBakwAIrUkAhNYkAEJrlw6AN+jy5MkTqs23t6ObjcbHi5Vi/+UOe4WjP3uq03778/Vq
+      jTeTyJQrlT+r7ff7780aI8RVXborRLtWYUCIWMTisHRM4I84KRWx3DTxMBhOktWl06HLVTDi
+      +KTG/a0F9l48pTM0SCfD9D0bxzLodxocVTtELIhnZjCBo9IRo2EfhcGo18FyE+w9e8xXDx/S
+      VxYHL3dIz87SqFWZmc+TcO/Wh9XFl+HSR4Boeo57i2mePHlBp9OhWquTmsliExCORGg26gT+
+      iJd7+2DYbG9vs/viCf2RImb5VJp9VvI5Op0O5UqF0v4+o9fL9r0RhmHRbrepVqtEIg6NZou5
+      hUVmky7NWhU7niHoVqm1B/ied027Q+jm0kcA0zQoHVfZ+mqLylGBmaVlvF6TaDJDSPXJhuOY
+      Voj1tRWUUjRqFVbW7hMxRrSHsJ2IcHR8wtLyEsNem8RMjlQqjgUcHha5d/8B7eoxnhXBMX3m
+      nASxkOKk47O2tk6nXsbJrLHIEclkApSEQEzOUFPSRbDX63FYr13YHTrpRskkTrtD3+SwKDc9
+      5Mq79bV6ncZwMNbPxR2XdDQ6dlu+72OaJoZxXmfi89frOms/rPd9n93DInb46mMZyVUgoTUJ
+      gNCaBEBoTQIgtCYBEFqTAAitSQCE1iQAQmsSAKG1qRoXKBmNYlnnb1JkzMkzviSmYZCKjjdR
+      RCQ0PS933HGJOM5YtUoFGIYGM8SkorGxZ4iZFqZpkorHx673pqTjYMJ1ZYYYIa5KAiC0JgEQ
+      WpMACK1JAITWJABCa1N1GXRwUsW3xst0ECg8c7xPOk1af2GtYeBks2O3+ynK9+mXy2PVhhIJ
+      mIJJsgGG9TpWtztW7UWvx3TsjdcG1RP8c2543BnXHYAgYFA5GavWDIcxpyUAtfqFH38d1x3/
+      bRHiZkkAhNYkAEJrEgChNQmA0JoEQGhNAiC0JgEQWpMACK1dKgC+7+P7/tn3F42vGwQ+I887
+      tyYIgo8+/rYtD8/zUUq9swx1YZtCjGvi++Iq8PnT939kNpcnO5PEAA5Lh1hWmPziPPuFEuvr
+      a7zpevHk0U+EbJtQPIM/6LKUX6bdrFPce0Uyv0o8ZBCMBoRiMwxbVULxGUyvS2cE+YV5fvz+
+      j1ihMLmlZSJujGblkNhMioMXRRZXl9h59oQHD7/DDV/9trjQz+QdQwyT3FyGarNJv9cmrMCz
+      TeZTEZ48eg7hEENf0SwXiKbnUUrhBeCqEfVGjae9PnbIJZ1IMb84z/6zx3iDISkjRKvRpF48
+      IZ10sUOnQ18Hgc9g4GGMehyeVEjPL1A+LBB247QadWYys2RScXq93nXvG6GBS/SMUvQHQ2w7
+      RNj0qda65BYz7BfK5JYWqJRLjDyf+cVlAJIzWZbzeZqVIxqOS8SJkcnMQq/BUfGYaDSGb4UY
+      Dvr4CuLxGOmZ1Flr84srhKwAT5mk0mkqxVcEWOSyKWBEr12n2mjLEUBcysQBMAyT+5tfnX2/
+      8eaL/Ol/c3Pv93Rczp8+kcwu8HV24e0TqTgzY7SXX86ffe2N+rTqdebyq6Tj7umDuXkAOQKI
+      S/mi+sbaIYfN7e3PvRpiishlUKE1CYDQmgRAaE0CILQmARBakwAIrUkAhNYkAEJrX9SNsE8x
+      TAuM8Qe7+hwM8wb+5oy7zDu+byZhmOb4232BqQpA4v69sSfIuGjShKvWT7rsqzBDIRLbW2PX
+      T8sEGbG1VZkgQ4irkgAIrUkAhNYkAEJrEgChNQmA0JoEQGhtqu4DHFebn5w0IWRbZNOJW1qj
+      m+f7AYeV+tj1KlAYY850o5TCwIAx75+9WXYmGSMSvtkJy08abZq90UTr9TFTFYB6q3t6N/gC
+      Tjg0VQEIlKLWHG+qoNuSiDo3HoBmu4dp+58u/AQ5BRJakwAIrUkAhNYkAEJrEgChNQmA0JoE
+      QGhNAiC0JgEQWrtSAJQKaDYbeP6bWV4Unnfe3TlFu9mg1x989NnA9/AvmC1GBf477QBK0em0
+      kYlixFVcqStE+dUOdRVmXkHIjhD4fXaf7zK3sobt9wjsKLnsm0HQPZ493cUK2+SX5ugMIJN0
+      aLVavHixw/ZXDwk7LuXjY/KLOQrFI/JLi5RKR6SzC7iqw1HXYnk2xt5+kZRr8rufdog7Ib75
+      7pcyP4C4lCsFYHZphfqL51RO+oTsGYb9KvFUhlatjG0oLNck8Aa8KlRYX5un3+uQSS/RbjbZ
+      K1boZpOs3dsm1+lgBV3qjRH9/pB6rUanccLuyCc1m6VeOcadPf0A9MHOc5r9EbaVYvvrX+C3
+      T2SGGHFpVzoF6nXbBFjE42najSOMkIM37GCFYziOg+/7mHaE9bU8YLLxYIvtBxsoFKlkikx2
+      HjdsY6qAEWFiroNtKjzfJ+xGSSQSJOJR4okYZihC/bhAOJEmHHZIp1LE3QhO2KLaaF/T7hC6
+      MdSUTLfY6/XYKVTG6g16b3nuTg2LcpX6aq3OUe1u9QZdXcgQjzoX1lxlm33f59GLfUw7fKX1
+      BLkKJDQnARBakwAIrUkAhNYkAEJrEgChNQmA0JoEQGhNAiC0NlXjAoVs65N3gm17ujJvcLrd
+      d4l5CzPR2LaFdQ3bPVUB2MjPjT1DzLSwbYvN1dzY9ZN0QfB9H9M0Mcb8hb7NmXFWchmZIUaI
+      q5IACK1JAITWJABCaxIAoTUJgNCaBEBobaruA9Q7fSxrzFlDlMIwhmPV2pZF9I6OOhEEimpr
+      /I9ETrLdSsEk97SUUiSjxq3cmGt2BwyCCWa6OWebpyoAveEIy7r+jziHbXVnA6CUojf0Pvdq
+      nIkFitu4FTkYeQTm1bdbToGE1iQAQmsSAKE1CYDQmgRAaO3/AZz/tykeNIEbAAAAAElFTkSu
+      QmCC
+    </thumbnail>
+  </thumbnails>
+</workbook>

@@ -175,18 +175,31 @@ limit :DiscoverChannels
       var remaining = RCfg.DiscoverChannels - pendingSansVideo.Count;
       var newDiscover = remaining > 0
         ? await db.Query<(string channel_id, string channel_title)>("channels to classify",
-          @"with tc as (
-    select to_channel_id, any_value(to_channel_title) as channel_title, count(*) as recs
-    from rec
-    where to_channel_id is not null
-    group by to_channel_id
-  )
-, tc2 as (
-    select to_channel_id as channel_id, channel_title from tc
-  where not exists(select * from channel_stage c where c.v:ChannelId::string = to_channel_id)
-
+          @"with sam as (
+  select $1::string as channel_id, $2::int as subs, $3::int as not_sure, $4::double as political, $5::string as channel_title
+  from (@yt_data/import/samclark_is_political_all_preds_20200707.ts (file_format => tsv)) s
+  where political>0.9
+    and subs>10000
 )
-select * from tc2 sample (:remaining rows)", param: new {remaining})
+   , sam_filtered as (
+  select channel_id, channel_title
+  from sam
+  --where not exists(select * from channel_stage c where c.v:ChannelId::string=s.$1)
+)
+   , rec_channels as (
+  select to_channel_id as channel_id, any_value(to_channel_title) as channel_title
+  from rec
+  where to_channel_id is not null
+  group by to_channel_id
+)
+, s as (
+  select channel_id, channel_title, 'sam' as source
+  from sam_filtered sample (:remaining rows)
+  union all
+  select channel_id, channel_title, 'rec' as source
+  from rec_channels sample (:remaining rows)
+)
+select * from s limit :remaining", param: new {remaining})
         : new (string channel_id, string channel_title)[] { };
 
       log.Debug("Collect - found {Channels} new channels for discovery", newDiscover.Count);

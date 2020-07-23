@@ -297,43 +297,6 @@ namespace YtCli {
         new PipeRunOptions {Location = Location, Exclusive = true}, Log, console.GetCancellationToken());
     }
   }
-  
-  [Command("fix-reviews")]
-  public class FixReviewsCmd : ICommand {
-    readonly SheetsCfg SheetsCfg;
-    readonly ILogger   Log;
-    readonly YtStore   Store;
-    readonly SnowflakeConnectionProvider Sf;
-    
-    static string[] FixTags = {"Mainstream News", "Politician"};
-
-    public FixReviewsCmd(SheetsCfg sheetsCfg, ILogger log, YtStore store, SnowflakeConnectionProvider sf) {
-      SheetsCfg = sheetsCfg;
-      Log = log;
-      Store = store;
-      Sf = sf;
-    }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      using var db = await Sf.OpenConnection(Log);
-      var oldTags = (await db.Query<(string channelId, string hardTags)>("channels", "select channel_id, hard_tags from channel_latest"))
-        .ToDictionary(c => c.channelId, c => c.hardTags.NullOrEmpty() ? new string[] {} : JArray.Parse(c.hardTags).Values<string>().ToArray() );
-      var reviews = (await Store.ChannelReviews.Items().SelectManyList())
-        .GroupBy(r => (r.Email, r.ChannelId)).Select(g => g.OrderByDescending(i => i.Updated).First()).ToArray();
-      
-      var toSave = new List<UserChannelReview>();
-      foreach (var r in reviews) {
-        var old = oldTags[r.ChannelId];
-        if (old == default) continue;
-        var toAdd = FixTags.Where(f => old.Contains(f) && !r.SoftTags.Contains(f)).ToArray();
-        if (!toAdd.Any()) continue;
-        r.SoftTags = r.SoftTags.Concat(toAdd).ToArray();
-        r.Updated = DateTime.UtcNow;
-        toSave.Add(r);
-      }
-      await Store.ChannelReviews.Append(toSave);
-    }
-  }
 
   [Command("build-container")]
   public class BuildContainerCmd : ICommand {
