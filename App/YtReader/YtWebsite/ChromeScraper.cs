@@ -64,7 +64,7 @@ namespace YtReader.YtWebsite {
       }, parallel);
 
       log.Information("ChromeScraper - finished loading all {Videos} videos in {Duration}", videos.Count, sw.HumanizeShort());
-      return recs.SelectMany().NotNull().ToReadOnly();
+      return recs.NotNull().SelectMany().NotNull().ToReadOnly();
     }
 
     async Task<IReadOnlyCollection<RecsAndExtra>> VideoBatch(ILogger log, ProxyConnectionCfg[] proxies, IReadOnlyCollection<string> b, Stopwatch sw, int i) {
@@ -326,6 +326,7 @@ return el ? el.innerText : null
 
     async Task<Rec[]> GetRecs(Page page, bool hasError, ILogger log) {
       var recsSel = @"() => {
+    if(!ytInitialData || !ytInitialData.contents) return null
     var watchNext = ytInitialData.contents.twoColumnWatchNextResults
     if(!watchNext || !watchNext.secondaryResults || !watchNext.secondaryResults.secondaryResults) return null
     return watchNext.secondaryResults.secondaryResults.results
@@ -372,7 +373,7 @@ return el ? el.innerText : null
           Log.Warning("ChromeScraper - unable to find recs in video at url {Url}. See {Html} {Img}", page.Url, html, img);
           return new Rec[] { };
         }
-        await 1.Seconds().Delay();
+        await 2.Seconds().Delay();
         attempts--;
       }
     }
