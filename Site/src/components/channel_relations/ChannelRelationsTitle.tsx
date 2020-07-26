@@ -15,17 +15,16 @@ import { ytTheme } from '../MainLayout'
 
 const TitleStyle = styled.div`
   background-color: ${ytTheme.backColorBolder};
-  padding: 0px 0.5em;
+  padding: 0.5em;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  min-height:127px;
-
+  
   > .title {
     display: flex;
     flex: 2 2 20em;
     align-items: center;
-    min-height:8em;
+    min-height:127px;
   }
 
   .search {
@@ -34,7 +33,6 @@ const TitleStyle = styled.div`
     flex-direction: column;
     justify-content: center;
     flex: 1 1 12em;
-    padding: 0.5em;
   }`
 
 interface State extends InteractiveDataState { }

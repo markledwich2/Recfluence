@@ -388,7 +388,6 @@ export class ChannelRelations extends React.Component<Props, State> {
       let trans = d3.zoomIdentity.translate(t.x, t.y).scale(t.scale)
       let s = svg.transition().duration(duration)
       s.call(zoomHandler.transform, trans)
-      console.log("zoomed")
     }
 
     zoomHandler(svg)
@@ -402,13 +401,11 @@ export class ChannelRelations extends React.Component<Props, State> {
         svg.attr('height', this.props.height)
 
         zoomToExpectedScale(this.props.width, this.props.height)
-        console.log("state rendered - size change")
       }
 
       updateVisibility()
       updateColor()
       updateEffects()
-      console.log("state rendered")
     }
 
     await delay(1)

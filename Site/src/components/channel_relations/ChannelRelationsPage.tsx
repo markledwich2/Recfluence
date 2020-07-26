@@ -252,8 +252,6 @@ export class ChannelRelationsPage extends React.Component<Props, State> {
       updateUrl()
     }
 
-    console.log('onSelection', action)
-
     if (this.state.model) {
       this.state.model.selectionState = this.selections.applyAction(action)
       this.graphComponents().forEach(g => {
