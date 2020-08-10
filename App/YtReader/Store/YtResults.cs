@@ -96,7 +96,7 @@ namespace YtReader.Store {
           new FileQuery("vis_channel_recs", "sql/vis_channel_recs.sql",
             "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams, inSharedZip: true),
 
-          new ResQuery("channel_classification",
+          new FileQuery("channel_review", "sql/channel_review.sql",
             desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip: true),
 
           // userscrape data
