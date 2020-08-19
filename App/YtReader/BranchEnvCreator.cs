@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.Azure.Storage.Blob;
 using Serilog;
+using SysExtensions;
 using YtReader.Db;
 using YtReader.Store;
 
@@ -14,7 +15,8 @@ namespace YtReader {
 
   public enum BranchState {
     Fresh,
-    CopyProd
+    Clone,
+    CloneBasic
   }
 
   public class BranchEnvCreator {
@@ -55,11 +57,18 @@ namespace YtReader {
       await branchContainer.CreateAsync();
       await branchContainer.SetPermissionsAsync(new BlobContainerPermissions {PublicAccess = BlobContainerPublicAccessType.Container});
 
-      if (state == BranchState.CopyProd) {
+      if (state.In(BranchState.Clone, BranchState.CloneBasic)) {
+        var db = StorageCfg.DbPath;
+        var paths = state == BranchState.Clone
+          ? new[] {db, StorageCfg.ImportPath}
+          : new[] {StorageCfg.ImportPath, $"{db}/channels", $"{db}/channel_reviews", $"{db}/videos", $"{db}/video_extra"};
         var prodContainer = StorageCfg.Container(VersionInfo.ProdVersion);
-        var sourceBlob = prodContainer.GetDirectoryReference(StorageCfg.DbPath);
-        var destBlob = branchContainer.GetDirectoryReference(StorageCfg.DbPath);
-        await YtBackup.CopyBlobs(nameof(BranchEnvCreator), sourceBlob, destBlob, log);
+        
+        foreach (var path in paths) {
+          var sourceBlob = prodContainer.GetDirectoryReference(path);
+          var destBlob = branchContainer.GetDirectoryReference(path);
+          await YtBackup.CopyBlobs(nameof(BranchEnvCreator), sourceBlob, destBlob, log);
+        }
       }
     }
   }

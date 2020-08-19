@@ -167,6 +167,7 @@ namespace YtReader {
 
     [Required] public string BackupCs       { get; set; }
     [Required] public string BackupRootPath { get; set; }
+    [Required] public string ImportPath { get; set; } = "import";
   }
 
   public class SeqCfg {

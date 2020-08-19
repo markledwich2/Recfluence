@@ -162,49 +162,34 @@ qualify row_number() over (partition by v:ChannelId::string order by v:Updated::
     }
 
     async Task<ChannelStored2[]> ChannelsToDiscover(LoggedConnection db, IKeyedCollection<string, ChannelStored2> channelPev, ILogger log) {
-      var pendingSansVideo = await db.Query<(string channel_id, string channel_title)>("channels pending classification",
-        @"select distinct channel_id, channel_title
-from channel_latest c
-where review_status in ('Pending')
-  and not exists(select * from video_extra_stage e where e.v:ChannelId::string=c.channel_id)
-limit :DiscoverChannels
-        ", param: new {RCfg.DiscoverChannels});
-
-      log.Debug("Collect - found {Channels} channels pending discovery", pendingSansVideo.Count);
-
-      var remaining = RCfg.DiscoverChannels - pendingSansVideo.Count;
-      var newDiscover = remaining > 0
-        ? await db.Query<(string channel_id, string channel_title)>("channels to classify",
-          @"with sam as (
-  select $1::string as channel_id, $2::int as subs, $3::int as not_sure, $4::double as political, $5::string as channel_title
-  from (@yt_data/import/samclark_is_political_all_preds_20200707.ts (file_format => tsv)) s
-  where political>0.9
-    and subs>10000
-)
-   , sam_filtered as (
-  select channel_id, channel_title
-  from sam
-  --where not exists(select * from channel_stage c where c.v:ChannelId::string=s.$1)
+      var newDiscover = await db.Query<(string channel_id, string channel_title, string source)>("channels to classify",
+          @"with review_channels as (
+  select channel_id
+       , channel_title -- probably missing values. reviews without channels don't have titles
+  from channel_review r
+  where not exists(select * from channel_stage c where c.v:ChannelId::string=r.channel_id)
 )
    , rec_channels as (
   select to_channel_id as channel_id, any_value(to_channel_title) as channel_title
-  from rec
+  from rec r
   where to_channel_id is not null
+    and not exists(select * from channel_stage c where c.v:ChannelId::string=r.to_channel_id)
   group by to_channel_id
 )
-, s as (
-  select channel_id, channel_title, 'sam' as source
-  from sam_filtered sample (:remaining rows)
+   , s as (
+  select channel_id, channel_title, 'review' as source
+  from review_channels sample (:remaining rows)
   union all
   select channel_id, channel_title, 'rec' as source
   from rec_channels sample (:remaining rows)
 )
-select * from s limit :remaining", param: new {remaining})
-        : new (string channel_id, string channel_title)[] { };
+select *
+from s
+limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
       log.Debug("Collect - found {Channels} new channels for discovery", newDiscover.Count);
 
-      var toDiscover = pendingSansVideo.Concat(newDiscover)
+      var toDiscover = newDiscover
         .Select(c => channelPev[c.channel_id] ?? new ChannelStored2 {
           ChannelId = c.channel_id,
           ChannelTitle = c.channel_title,
@@ -238,18 +223,18 @@ select * from s limit :remaining", param: new {remaining})
         .BlockFunc(async item => {
           var (c, i) = item;
           var sw = Stopwatch.StartNew();
-          log = log
+          var cLog = log
             .ForContext("ChannelId", c.ChannelId)
             .ForContext("Channel", c.ChannelTitle);
           try {
-            await using var conn = new Defer<LoggedConnection>(() => Sf.OpenConnection(log));
-            await UpdateAllInChannel(c, forceUpdate, channelChromeVideos.TryGet(c.ChannelId), log);
-            log.Information("Collect - {Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
+            await using var conn = new Defer<LoggedConnection>(() => Sf.OpenConnection(cLog));
+            await UpdateAllInChannel(c, forceUpdate, channelChromeVideos.TryGet(c.ChannelId), cLog);
+            cLog.Information("Collect - {Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
               c.ChannelTitle, sw.Elapsed.HumanizeShort(), i + 1, channels.Count);
             return (c, Success: true);
           }
           catch (Exception ex) {
-            log.Error(ex, "Collect - Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
+            cLog.Error(ex, "Collect - Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
             return (c, Success: false);
           }
         }, RCfg.ParallelChannels, cancel: cancel);

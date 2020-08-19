@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Storage.Blob;
 using Newtonsoft.Json;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
@@ -50,7 +51,7 @@ namespace YtReader.Db {
         Expires = DateTime.UtcNow.AddDays(2),
         Email = EnvCfg.Email
       }.ToJson(JCfg);
-      if (state == BranchState.CopyProd)
+      if (state.In(BranchState.Clone, BranchState.CloneBasic))
         scripts = new[] {
             new Script("db copy", @$"create database if not exists {db} clone {Sf.Cfg.Db} comment='{dbComment}'")
           }

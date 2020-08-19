@@ -20,7 +20,7 @@ namespace YtReader {
     [Required] public string      Stage              { get; set; } = "yt_data";
     [Required] public OptimiseCfg Optimise           { get; set; } = new OptimiseCfg();
     [Required] public int         LoadTablesParallel { get; set; } = 4;
-    public            string[]    Roles              { get; set; } = {"sysadmin"};
+    public            string[]    Roles              { get; set; } = {"sysadmin", "recfluence"};
     public            int         MetadataParallel   { get; set; } = 8;
   }
 

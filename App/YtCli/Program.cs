@@ -226,8 +226,8 @@ namespace YtCli {
     readonly BranchEnvCreator Creator;
     readonly ILogger          Log;
 
-    [CommandOption('c', Description = "will copy prod data to this new environment, otherwise it will be fresh")]
-    public bool CopyProd { get; set; }
+    [CommandOption('m', Description = "the mode to copy the database Fresh|Clone|CloneBasic")]
+    public BranchState Mode { get; set; }
 
     public CreateEnvCmd(BranchEnvCreator creator, ILogger log) {
       Creator = creator;
@@ -235,7 +235,7 @@ namespace YtCli {
     }
 
     public async ValueTask ExecuteAsync(IConsole console) =>
-      await Creator.Create(CopyProd ? BranchState.CopyProd : BranchState.Fresh, Log);
+      await Creator.Create(Mode, Log);
   }
 
   [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]

@@ -93,7 +93,10 @@ namespace YtReader.Store {
           new FileQuery("vis_category_recs", "sql/vis_category_recs.sql",
             "aggregate recommendations between all combinations of the categories available on recfluence.net", dateRangeParams, inSharedZip: true),
 
-          new FileQuery("vis_channel_recs", "sql/vis_channel_recs.sql",
+          new FileQuery("vis_channel_recs2", "sql/vis_channel_recs.sql",
+            "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams, inSharedZip: true),
+          
+          new FileQuery("vis_tag_recs", "sql/vis_tag_recs.sql",
             "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams, inSharedZip: true),
 
           new FileQuery("channel_review", "sql/channel_review.sql",
