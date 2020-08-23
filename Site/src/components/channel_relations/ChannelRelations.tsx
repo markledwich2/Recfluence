@@ -2,7 +2,7 @@ import * as React from 'react'
 import * as d3 from 'd3'
 import { layoutTextLabel, layoutGreedy, layoutLabel } from 'd3fc-label-layout'
 import { YtModel, ChannelData } from '../../common/YtModel'
-import { SelectableCell, DimQuery, Dim } from '../../common/Dim'
+import { SelectableCell, DimQuery, Dim, ColEx } from '../../common/Dim'
 import { YtInteractiveChartHelper } from "../../common/YtInteractiveChartHelper"
 import * as _ from 'lodash'
 import { ChartProps, InteractiveDataState } from '../../common/Chart'
@@ -96,10 +96,33 @@ export class ChannelRelations extends React.Component<Props, State> {
 
   private renderLegendHtml(): JSX.Element {
     let colorBy = this.chart.selections.params().colorBy
-    let legendNodes = this.props.model.channels.cells({
-      group: [colorBy], // if the group has a color, it should be colored
-      order: { col: 'dailyViews', order: 'desc' }
-    }) as SelectableCell<ChannelData>[]
+
+
+
+    const tagNodes = () => {
+      let tagsCol = YtModel.channelDimStatic.col('tags')
+      let tagsLabel = ColEx.labelFunc(tagsCol)
+      let tagsColor = ColEx.colorFunc(tagsCol)
+
+      const tags = tagsCol.values
+        .filter(v => !['Politician'].find(t => t == v.value))
+        .map(v => v.value) // don't show some tags in the legend
+
+      return _(tags).map(t => ({
+        keys: { tags: [t] },
+        label: tagsLabel(t),
+        color: tagsColor(t),
+        props: {}, measures: { dailyViews: this.props.model.tagViews[t] }
+      } as SelectableCell<ChannelData>))
+        .orderBy(t => t.measures.dailyViews, 'desc')
+        .value()
+    }
+
+    let legendNodes = colorBy == 'tags' ? tagNodes()
+      : this.props.model.channels.cells({
+        group: [colorBy], // if the group has a color, it should be colored
+        order: { col: 'dailyViews', order: 'desc' }
+      }) as SelectableCell<ChannelData>[]
 
     let selections = this.chart.selections
 
@@ -134,7 +157,7 @@ export class ChannelRelations extends React.Component<Props, State> {
                 out: (e: React.MouseEvent<Element, MouseEvent>) => selections.clearHighlight()
               })
 
-              return (<g key={d.color} transform={`translate(10, ${10 + (i * 21)})`}
+              return (<g key={d.label} transform={`translate(10, ${10 + (i * 21)})`}
                 onClick={events.click} onMouseEnter={events.in} onMouseLeave={events.out}>
                 <circle r={8} fill={d.color} className={'node ' + className} ></circle>
                 <text x={14} y={5} className={'label ' + className}>{d.label}</text>
@@ -151,11 +174,6 @@ export class ChannelRelations extends React.Component<Props, State> {
 
   getData() {
     const channelCells = this.dim.rowCells(this.channelQuery(false))
-
-    // channelCells.forEach(c => {
-    //   c.cell.props.fromChannelId = c.row.channelId,
-    //   c.cell.props.toChannelId = c.row.channelId
-    // })
 
     let nodes: Node[] = _(channelCells)
       .filter(c => c.row.relevantDailyViews > 0)

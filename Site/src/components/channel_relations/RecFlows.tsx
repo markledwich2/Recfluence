@@ -63,7 +63,7 @@ export class RecFlows extends React.Component<Props, State> {
     const from = (r: RecData) => r[fromCol]
     const to = (r: RecData) => r[toCol]
 
-    const recs = this.props.model.recCats
+    const recs = colorBy == 'tags' ? this.props.model.recTags : this.props.model.recCats
     const recRows = recs.rows.filter(r => r[toCol] && r[fromCol]) // filter out null (recommends to channels outside dataset)
 
     const nodes = (dir: RecDir) => {
@@ -113,7 +113,8 @@ export class RecFlows extends React.Component<Props, State> {
 
     if (!selectionCol) return null
 
-    const recs = selectionCol == 'channelId' ? this.props.model.recs : this.props.model.recCats
+    const recs = selectionCol == 'channelId' ? this.props.model.recs :
+      (colorBy == 'tags' ? this.props.model.recTags : this.props.model.recCats)
 
     /*
 
@@ -244,6 +245,8 @@ export class RecFlows extends React.Component<Props, State> {
       let highlightedOrSelected =
         (hl && hl.source != RecFlows.source ? hl.record : null) // ignore highlights from this component for changing center node
         ?? selections.selected.find(_ => true)?.record
+
+      const colorBy = this.chart.selections.params().colorBy
 
       let { nodes, links } = this.centerNodeLayout(highlightedOrSelected) ?? this.betweenColorLayout()
       this.chart.selections.updateSelectableCells(nodes)

@@ -169,7 +169,7 @@ const MainChartStyled = styled.div`
   > .Flows {
     position: relative;
     height: 50vh;
-    min-height: 800px;
+    min-height: 1280px;
     flex: 1 100%;
     width: 100%;
   }

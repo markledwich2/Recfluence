@@ -205,17 +205,20 @@ export class SelectionStateHelper<T, TParams> {
     }
 
     selectableContains(cell: SelectableCell<any>, selection: Selection<string>) {
-        return this.overlaps(merge(cell.keys, cell.props), selection.record)
+        const cellRecord = merge(cell.props, cell.keys)
+        return this.overlaps(cellRecord, selection.record)
     }
 
-    overlaps = (a: Record<string, string>, b: Record<string, string>) => {
-        return a && b && _.entries(b).some(bv => bv[0] in a && bv[1] == a[bv[0]])
-    }
+    overlaps = (a: Record<string, string | string[]>, b: Record<string, string | string[]>) =>
+        a && b && _.entries(b).some(bv => bv[0] in a && this.valueOverlaps(bv[1], a[bv[0]]))
+
+    valueOverlaps = (a: string | string[], b: string | string[]) =>
+        Array.isArray(a) ? _.intersection(a, b).length > 0 : a == b
 
     /** **true** if a is a super-set of b */
-    superSetMatch = (a: Record<string, string>, b: Record<string, string>) => {
-        return a && b && _.entries(b).every(bv => bv[0] in a && bv[1] == a[bv[0]])
-    }
+    superSetMatch = (a: Record<string, string>, b: Record<string, string>) =>
+        a && b && _.entries(b).every(bv => bv[0] in a && bv[1] == a[bv[0]])
+
 }
 
 

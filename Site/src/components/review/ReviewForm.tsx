@@ -8,7 +8,7 @@ import styled from 'styled-components'
 import Select from 'react-select'
 import _ from 'lodash'
 import { useHotkeys, Options } from 'react-hotkeys-hook'
-import { ChannelReview, Option, lrOptions, LrCustomLabel, tagCustomOption, tagOptions } from './ReviewCommon'
+import { ChannelReview, Option, lrOptions, LrCustomLabel, tagCustomOption, tagOptions, createChannelOptions } from './ReviewCommon'
 import ReactTooltip from 'react-tooltip'
 import ReactMarkdown from 'react-markdown'
 import { HelpOutline } from '@styled-icons/material'
@@ -123,15 +123,7 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
 
   const updateReviewProp = (p: keyof Review, v: any) => onChange({ ...review, review: { ...r, [p]: v } })
 
-  console.log('channels', channels)
-
-  const { channelOptions, channelDic } = useMemo(() => {
-    const channelOptions = _(channels)
-      .map(c => ({ label: c.ChannelTitle, value: c.ChannelId }))
-      .orderBy(c => c.label).value()
-    const channelDic = _(channelOptions).keyBy(c => c.value).value()
-    return { channelOptions, channelDic }
-  }, [channels])
+  const { channelOptions, channelDic } = createChannelOptions(channels)
 
   return <>{c && r && (<>
     <FlexRow>

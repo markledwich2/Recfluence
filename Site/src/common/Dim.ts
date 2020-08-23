@@ -22,11 +22,11 @@ export interface SelectableCell<T> extends Cell<T> {
 
 
 export class CellEx {
-  
-  static cellValue<T>(c: Cell<T>|T, name: keyof T) {
+
+  static cellValue<T>(c: Cell<T> | T, name: keyof T) {
     return CellEx.isCell(c) ?
-       c.keys[name] ?? c.props[name] ?? c.measures[name]
-       : c[name]
+      c.keys[name] ?? c.props[name] ?? c.measures[name]
+      : c[name]
   }
 
   static isCell<T>(o: Object): o is Cell<T> {
@@ -38,7 +38,7 @@ export class CellEx {
 
 export interface Cell<T> {
   /**  coordinates to this piece of aggregated data */
-  keys: Record<keyof T, string>
+  keys: Record<keyof T, any>
 
   /** property values for this cell */
   props: Record<keyof T, any>
@@ -180,6 +180,7 @@ export class Dim<T> {
     let colorByValue = _(colorBy?.values ?? []).keyBy(c => c.value).value()
     let getColor = (r: T | Cell<T>) => {
       let value = CellEx.isCell(r) ? CellEx.cellValue(r, colorBy.name) : r[colorBy.name]
+      if (Array.isArray(value)) value = value.length > 0 ? value[0] : null
       return colorBy ? colorByValue[value?.toString()]?.color ?? pallet(value?.toString()) : null
     }
 
@@ -199,7 +200,7 @@ export class Dim<T> {
     let keys = toRecord(x.groupCols, c => c, c => g[0][c]?.toString())
     let measures = toRecord(x.q.measures, m => m, m => this.colValue(this.col(m), g) as number)
     let props = toRecord(x.props, p => p, p => this.colValue(this.col(p), g))
-    let cell:Cell<T> = {
+    let cell: Cell<T> = {
       keys,
       props,
       color: x.getColor(g[0]),
@@ -235,10 +236,8 @@ export class Dim<T> {
     if (col.type && col.type == ColType.Measure || typeof (g[0][col.name]) == "number") {
       return this.agg(col, g)
     }
-    let uniqValues = _(g).groupBy(col.name).keys().value()
-    return uniqValues.length == 1 ?
-      uniqValues[0].toString()
-      : uniqValues
+    const uniqValues: any[] = _(g).map(g => g[col.name]).uniq().value() //_(g).groupBy(col.name).keys().value()
+    return uniqValues.length == 1 ? uniqValues[0] : uniqValues
   }
 
   private agg(col: Col<T>, g: T[]): number {

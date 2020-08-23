@@ -2,7 +2,7 @@ import styled from 'styled-components'
 import { Dim, ColEx } from '../../common/Dim'
 import { ChannelData, YtModel } from '../../common/YtModel'
 import { ytTheme } from '../MainLayout'
-import React from 'react'
+import React, { useMemo } from 'react'
 import { tagColor } from '../channel_relations/ChannelTags'
 import ReactMarkdown from 'react-markdown'
 import { Tag } from '../Tag'
@@ -12,7 +12,7 @@ import { Review, BasicChannel } from '../../common/YtApi'
 
 const chanDim = new Dim<ChannelData>(YtModel.channelDimStatic.meta)
 const tagCol = chanDim.col('tags')
-const tagFunc = { label: (t: string) => YtModel.tagAlias[t] ?? _.startCase(t), color: ColEx.colorFunc(tagCol) }
+const tagFunc = { label: ColEx.labelFunc(tagCol), color: ColEx.colorFunc(tagCol) }
 
 
 export interface ChannelReview {
@@ -49,7 +49,7 @@ export const tagOptions: TagOption[] = _([
   { value: 'StateFunded', md: 'Channels largely funded by a government. Examples:[PBS NewsHour](https://www.youtube.com/user/PBSNewsHour), [Al Jazeera](https://www.youtube.com/user/AlJazeeraEnglish), [RT](https://www.youtube.com/user/RussiaToday)' },
   { value: 'Mainstream News', md: 'Media institutions from TV, Cable or Newspaper that are also creating content for YouTube. Examples: [CNN](https://www.youtube.com/user/CNN), [Fox](https://www.youtube.com/user/FoxNewsChannel), [NYT](https://www.youtube.com/user/TheNewYorkTimes)' },
   { value: 'Politician', md: 'The channel is on behalf of a currently running/in-office Politician. Examples [Alexandria Ocasio-Cortez](https://www.youtube.com/channel/UCElqfal0wzzpLsHlRuqZjaA), [Donald J Trump](https://www.youtube.com/channel/UCAql2DyGU2un1Ei2nMYsqOA)' },
-  { value: 'Black', md: 'African American creators focused on cultural/political issues of their community/identity (e.g. Police Violence, Racism). Examples:[African Diaspora News Channel](https://www.youtube.com/channel/UCKZGcrxRAhdUi58Mdr565mw), [Roland S. Martin](https://www.youtube.com/channel/UCjXB7nX8bL2U2sje8d212Yw), [Lisa Cabrera](https://www.youtube.com/channel/UCcTzK_2JDmFYGnUiaUleQYg) ' },
+  { value: 'Black', md: 'Black creators focused on cultural/political issues of their community/identity (e.g. Police Violence, Racism). Examples:[African Diaspora News Channel](https://www.youtube.com/channel/UCKZGcrxRAhdUi58Mdr565mw), [Roland S. Martin](https://www.youtube.com/channel/UCjXB7nX8bL2U2sje8d212Yw), [Lisa Cabrera](https://www.youtube.com/channel/UCcTzK_2JDmFYGnUiaUleQYg) ' },
   { value: 'LGBT', md: 'LGBT creators focused on cultural/political issues of their community/identity (e.g. gender and sexuality, trans experiences). Examples: [ContraPoints](https://www.youtube.com/user/ContraPoints), [Kat Blaque](https://www.youtube.com/channel/UCxFWzKZa74SyAqpJyVlG5Ew)' }
 ]).map(t => ({ ...t, label: tagFunc.label(t.value) })).orderBy(t => t.label).value()
 
@@ -82,6 +82,22 @@ export const tagCustomOption = ({ innerRef, innerProps, isDisabled, data, isFocu
     </div>
   </TagDiv>
 
+
+export function createChannelOptions(channels: _.Dictionary<BasicChannel>): {
+  channelOptions: {
+    label: string
+    value: string
+  }[]; channelDic: _.Dictionary<{
+    label: string
+    value: string
+  }>
+} {
+  const channelOptions = _(channels)
+    .map(c => ({ label: c.ChannelTitle, value: c.ChannelId }))
+    .orderBy(c => c.label).value()
+  const channelDic = _(channelOptions).keyBy(c => c.value).value()
+  return { channelOptions, channelDic }
+}
 
 const lrCol = chanDim.col('lr')
 const lrFunc = { label: ColEx.labelFunc(lrCol), color: ColEx.colorFunc(lrCol) }

@@ -50,6 +50,8 @@ export interface RecData {
   toLr?: string
   fromMedia?: string
   toMedia?: string
+  fromTags?: string,
+  toTags?: string,
   relevantImpressionsDaily: number
   recommendsViewChannelPercent?: number
 }
@@ -77,22 +79,26 @@ interface VIS_CHANNEL_REC {
 export class YtModel {
   recs: Dim<RecData>
   recCats: Dim<RecData>
+  recTags: Dim<RecData>
   channels: Dim<ChannelData>
-  selectionState: SelectionState
+  tagViews: { [x: string]: number }
 
+  selectionState: SelectionState
   static version = 'v2.4'
 
   constructor() {
     this.recs = new Dim<RecData>(YtModel.recDimStatic.meta)
     this.recCats = new Dim<RecData>(YtModel.recCatDimStatic.meta)
+    this.recTags = new Dim<RecData>(YtModel.recCatDimStatic.meta)
     this.channels = new Dim<ChannelData>(YtModel.channelDimStatic.meta)
-    this.selectionState = { selected: [], parameters: { record: { colorBy: 'ideology' } } }
+    this.selectionState = { selected: [], parameters: { record: { colorBy: 'tags' } } }
   }
 
   static async dataSet(path: Uri): Promise<YtModel> {
     const channelsTask = d3.csv(path.addPath('vis_channel_stats.csv.gz').url)
-    const recTask = d3.csv(path.addPath('vis_channel_recs.csv.gz').url)
+    const recTask = d3.csv(path.addPath('vis_channel_recs2.csv.gz').url)
     const recCatTask = d3.csv(path.addPath('vis_category_recs.csv.gz').url)
+    const recTagTask = d3.csv(path.addPath('vis_tag_recs.csv.gz').url)
     await delay(1)
     const channels = (await channelsTask).map((c: any) => DbModel.ChannelData(c))
     const channelDic = _(channels).keyBy(c => c.channelId).value()
@@ -132,14 +138,35 @@ export class YtModel {
     })
     await delay(1)
 
+    let recTags = (await recTagTask)
+      .map(r => ({
+        fromTags: r.FROM_TAG,
+        toTags: r.TO_TAG,
+        relevantImpressionsDaily: +r.RELEVANT_IMPRESSIONS_DAILY
+      } as RecData))
+
+
+    const tagViews = _(this.channelDimStatic.col('tags').values.map(v => v.value))
+      .map(tag => ({
+        tag: tag,
+        dailyViews: _(channels)
+          .filter(c => c.tags.includes(tag))
+          .sumBy(c => c.dailyViews)
+      })).keyBy(t => t.tag).mapValues(t => t.dailyViews).value()
+
+    // sort the tags according to views. Color will use the first tag, so we want the most distinguishing
+    channels.forEach(c => c.tags = _.orderBy(c.tags, t => tagViews[t], 'asc'))
+
     const m = new YtModel()
     m.channels = new Dim(this.channelDimStatic.meta, channels)
     m.recs = new Dim(this.recDimStatic.meta, recs)
     m.recCats = new Dim(this.recCatDimStatic.meta, recCats)
+    m.recTags = new Dim(this.recCatDimStatic.meta, recTags)
+    m.tagViews = tagViews
     return m
   }
 
-  static categoryCols: (keyof ChannelData)[] = ['ideology', 'lr', 'media']
+  static categoryCols: (keyof ChannelData)[] = ['ideology', 'lr', 'media', 'tags']
 
 
   static channelDimStatic = new Dim<ChannelData>({
@@ -147,7 +174,7 @@ export class YtModel {
     cols: [
       {
         name: 'channelId',
-        props: ['lr', 'ideology', 'media'],
+        props: ['lr', 'ideology', 'media', 'tags'],
         labelCol: 'title'
       },
       {
@@ -168,21 +195,23 @@ export class YtModel {
       },
       {
         name: 'ideology',
-        label: 'Ledwich & Zaitsev Group',
+        label: 'Group',
         pallet: ['#333'],
         values: [
           { value: 'Anti-SJW', color: '#8a8acb' },
           { value: 'Partisan Right', color: '#e0393e' },
-          { value: 'Provocative Anti-SJW', color: '#e55e5e' },
           { value: 'White Identitarian', color: '#c68143' },
           { value: 'MRA', color: '#ed6498' },
           { value: 'Social Justice', color: '#56b881' },
           { value: 'Socialist', color: '#6ec9e0' },
           { value: 'Partisan Left', color: '#3887be' },
           { value: 'Anti-theist', color: '#96cbb3' },
-          { value: 'Libertarian', color: '#b7b7b7' },
+          { value: 'Libertarian', color: '#ccc' },
           { value: 'Religious Conservative', color: '#41afa5' },
           { value: 'Conspiracy', color: '#ffc168' },
+          { value: 'QAnon', color: '#e55e5e' },
+          { value: 'Black', color: '#aaa' },
+          { value: 'LGBT', color: '#ed6498' },
           { value: 'Center/Left MSM', color: '#aa557f' },
           { value: 'Unclassified', label: 'No Group' },
           { value: '', label: 'Non-Political' },
@@ -197,23 +226,33 @@ export class YtModel {
           { value: 'YouTube', label: 'YouTube Creator', color: '#e55e5e' },
           { value: 'Missing Link Media', color: '#41afa5' },
         ]
+      },
+      {
+        name: 'tags',
+        label: 'Tag',
+        pallet: ['#333'],
+        values: [
+          { value: 'AntiSJW', label: 'Anti-SJW', color: '#8a8acb' },
+          { value: 'AntiTheist', label: 'Anti-theist', color: '#96cbb3' },
+          { value: 'Black', color: '#666' },
+          { value: 'Conspiracy', color: '#e0990b' },
+          { value: 'LGBT', color: '#ed6498' },
+          { value: 'LateNightTalkShow', label: 'Late night talk show', color: '#00b1b8' },
+          { value: 'Libertarian', color: '#ccc' },
+          { value: 'MRA', color: '#003e78' },
+          { value: 'Mainstream News', label: 'MSM', color: '#aa557f' },
+          { value: 'PartisanLeft', label: 'Partisan Left', color: '#3887be' },
+          { value: 'PartisanRight', label: 'Partisan Right', color: '#e0393e' },
+          { value: 'Politician' },
+          { value: 'QAnon', color: '#e55e5e' },
+          { value: 'ReligiousConservative', label: 'Religious Conservative', color: '#41afa5' },
+          { value: 'SocialJustice', label: 'Social Justice', color: '#56b881' },
+          { value: 'Socialist', color: '#6ec9e0' },
+          { value: 'WhiteIdentitarian', label: 'White Identitarian', color: '#b8b500' },
+        ]
       }
     ]
   })
-
-  static tagAlias: Record<string, string> = {
-    AntiSJW: 'Anti-SJW',
-    SocialJusticeL: 'Social Justice',
-    WhiteIdentitarian: 'White Identitarian',
-    PartisanLeft: 'Partisan Left',
-    PartisanRight: 'Partisan Right',
-    AntiTheist: 'Anti-theist',
-    ReligiousConservative: 'Religious Conservative',
-    MissingLinkMedia: 'Missing Link Media',
-    StateFunded: 'State Funded',
-    AntiWhiteness: 'Anti-whiteness',
-    'Mainstream News': 'MSM'
-  }
 
   private static recCol(dir: RecDir, name: keyof ChannelData) {
     const col = YtModel.channelDimStatic.col(name)
@@ -236,10 +275,3 @@ export class YtModel {
       .flatMap(c => ([YtModel.recCol('from', c), YtModel.recCol('to', c)])).value()
   })
 }
-
-
-
-
-
-
-

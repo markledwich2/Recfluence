@@ -37,7 +37,7 @@ export const ReviewedGrid = ({ reviews, page, onEditReview, onShowMore, channels
   }) => {
 
   page = page ?? 1
-  const reviewsToDisplay = page * 50
+  const reviewsToDisplay = page * 200
 
   return <ReviewedTableStyle>
     <thead>
@@ -52,12 +52,12 @@ export const ReviewedGrid = ({ reviews, page, onEditReview, onShowMore, channels
       {reviews?.slice(0, reviewsToDisplay).map(cr => {
         var c = cr.channel
         var r = cr.review
-        return <tr key={`${c.ChannelId}|${r.Updated}`}>
+        return <tr key={`${r.ChannelId}|${r.Updated}`}>
           <td>
             <div style={{ display: 'flex', flexDirection: 'row' }}>
-              <ChannelLogo channelId={r.ChannelId} thumb={c.LogoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
+              <ChannelLogo channelId={r.ChannelId} thumb={c?.LogoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
               <div>
-                <h4>{c.ChannelTitle ?? r.ChannelId}</h4>
+                <h4>{c?.ChannelTitle ?? r.ChannelId}</h4>
                 <div>{timeAgo.format(Date.parse(r.Updated))}</div>
                 {r.MainChannelId ? <div> Main: <b>{channels[r.MainChannelId]?.ChannelTitle ?? r.MainChannelId}</b></div> : null}
               </div>

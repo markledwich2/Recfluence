@@ -3,7 +3,7 @@ import { useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { UserContext, LoginOverlay } from '../UserContext'
 import { channelsReviewed, saveReview as apiSaveReview, BasicChannel, reviewChannels, Review } from '../../common/YtApi'
 import { Spinner } from '../Spinner'
-import { ytTheme, mainLayoutId } from '../MainLayout'
+import { ytTheme, mainLayoutId, selectStyle, selectTheme } from '../MainLayout'
 import styled from 'styled-components'
 import _ from 'lodash'
 import { jsonClone } from '../../common/Utils'
@@ -12,7 +12,8 @@ import Modal from 'react-modal'
 import { ReviewForm } from './ReviewForm'
 import { ReviewedGrid } from './ReviewGrid'
 import { useHotkeys, Options as HotkeyOptions } from 'react-hotkeys-hook'
-import { ChannelReview } from './ReviewCommon'
+import { ChannelReview, createChannelOptions, Option } from './ReviewCommon'
+import Select from 'react-select'
 
 const ReviewPageDiv = styled.div`
   padding: 2em;
@@ -53,6 +54,14 @@ export const ReviewControl = () => {
       channels={channels} />,
     [reviews, channels, reviewsPage])
 
+  const reviewChannelSelect = useMemo(() => {
+    const channelOptions = createChannelOptions(channels)
+    return <div style={{ width: '50em' }}> <Select
+      options={channelOptions.channelOptions}
+      onChange={(o: Option) => setEditing(reviews.find(r => r.review.ChannelId == o.value))}
+      styles={selectStyle} theme={selectTheme} /></div>
+  }, [channels])
+
   useEffect(() => {
     const go = async () => {
       const email = user?.email
@@ -61,6 +70,7 @@ export const ReviewControl = () => {
         await init(email)
       } catch (e) {
         addToast(`unable to load reviews: ${e}`, { appearance: 'warning', autoDismiss: false })
+        console.log('unable to load reviews', e)
       }
     }
     go()
@@ -93,7 +103,7 @@ export const ReviewControl = () => {
       .map(r => ({ channel: channels[r.ChannelId], review: r }))
       .orderBy(r => r.review.Updated, 'desc')
       .value()
-    const reviewedDic = _.keyBy(reviews, r => r.channel.ChannelId)
+    const reviewedDic = _.keyBy(reviews, r => r.review.ChannelId)
     const pending = _(channels).filter(c => c.ReviewStatus == 'Pending' && !reviewedDic[c.ChannelId])
       .shuffle().value()
     const review = nextPending(pending)
@@ -128,6 +138,7 @@ export const ReviewControl = () => {
     saveReview({ review: { ...review, Relevance: 0 }, channel }, isEditing)
 
 
+
   // fetch some channels for review & list existing
   return <ReviewPageDiv id='review-page'>
     <LoginOverlay verb='to review channels' />
@@ -150,6 +161,8 @@ export const ReviewControl = () => {
           reviewValid={reviewValid}
         />}
 
+      <h3>Create/override review</h3>
+      {reviewChannelSelect}
 
       {reviews && <>
         <h3>Reviewed</h3>
