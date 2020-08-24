@@ -30,7 +30,7 @@ export async function saveSearch(search: UserSearch): Promise<void> {
 }
 
 export async function reviewChannels(): Promise<BasicChannel[]> {
-  return await getJsonl<BasicChannel>(resultsUrl.addPath('review_channels.jsonl.gz').url)
+  return await getJsonl<BasicChannel>(resultsUrl.addPath('review_channels.jsonl.gz').url, { headers: { cache: "no-store" } })
 }
 
 export async function saveReview(review: Review): Promise<Response> {

@@ -120,7 +120,6 @@ where c.reviews_all>0";
      , description as ""Description""
      , logo_url as ""LogoUrl""
      , channel_views as ""ChannelViews""
-     , review_status as ""ReviewStatus""
      , reviews_all as ""ReviewsAll""
     , reviews_algo as ""ReviewsAlgo""
 from channel_latest where meets_sub_criteria", fileType: ResFilType.Json),

@@ -58,9 +58,12 @@ export const ReviewControl = () => {
     const channelOptions = createChannelOptions(channels)
     return <div style={{ width: '50em' }}> <Select
       options={channelOptions.channelOptions}
-      onChange={(o: Option) => setEditing(reviews.find(r => r.review.ChannelId == o.value))}
+      onChange={(o: Option) => {
+        console.log('editing', o.value)
+        setEditing(reviews?.find(r => r.review.ChannelId == o.value))
+      }}
       styles={selectStyle} theme={selectTheme} /></div>
-  }, [channels])
+  }, [channels, reviews])
 
   useEffect(() => {
     const go = async () => {
@@ -117,8 +120,8 @@ export const ReviewControl = () => {
   const nextPending = (pending: BasicChannel[]): ChannelReview => {
     // take one from the top 50
     const c = _(pending).take(50).shuffle().head()
-    if (c)
-      setPending(pending.filter(p => p.ChannelId != c.ChannelId))
+    if (!c) return null
+    setPending(pending.filter(p => p.ChannelId != c.ChannelId))
     return {
       channel: c,
       review: c ? { ChannelId: c.ChannelId, SoftTags: [] } : null
