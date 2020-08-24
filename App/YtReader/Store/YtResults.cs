@@ -84,7 +84,14 @@ namespace YtReader.Store {
       var now = DateTime.Now;
       var dateRangeParams = new {from = "2019-11-01", to = now.ToString("yyyy-MM-01")};
 
-      const string pendingChannelsSelect = "select * from channel_latest where review_status='Pending'";
+      const string classChannelsSelect = @"
+select c.*
+     , cr.lr_human
+     , cr.tags_human
+     , cr.relevance_human
+from channel_latest c
+       left join channel_review cr on cr.channel_id=c.channel_id
+where c.reviews_all>0";
 
       var queries = new[] {
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
@@ -114,28 +121,59 @@ namespace YtReader.Store {
      , logo_url as ""LogoUrl""
      , channel_views as ""ChannelViews""
      , review_status as ""ReviewStatus""
-     , review_count as ""ReviewCount""
+     , reviews_all as ""ReviewsAll""
+    , reviews_algo as ""ReviewsAlgo""
 from channel_latest where meets_sub_criteria", fileType: ResFilType.Json),
           
-          new ResQuery("class_channels", pendingChannelsSelect, fileType: ResFilType.Json),
+          new ResQuery("class_channels", classChannelsSelect, fileType: ResFilType.Json),
 
-          new ResQuery("class_videos", $@"with pending as ({pendingChannelsSelect})
-select c.* from pending p inner join video_comments c on p.channel_id=c.channel_id
-order by  channel_id, video_id",
+          new ResQuery("class_snippets", $@"with reviewed as ({classChannelsSelect})
+  , video_snippets as (
+  select channel_id
+       , listagg(video_title, '\n') as titles
+       , listagg(keywords, '\n') as keywords
+       , listagg(description, '\n') as descriptions
+  from (
+         select channel_id
+              , v.video_title
+              , v.description
+              , array_to_string(v.keywords, ', ') as keywords
+         from video_latest v
+           qualify row_number() over (partition by channel_id order by random())<=20
+       )
+  group by channel_id
+)
+select c.channel_id, c.channel_title
+     , concat_ws('\n\n\n', c.channel_title, c.description, v.titles, v.keywords, v.descriptions) as snippets
+from reviewed c
+       left join video_snippets v on v.channel_id=c.channel_id",
             fileType: ResFilType.Json),
 
-          new ResQuery("class_comments", $@"with pending as ({pendingChannelsSelect})
-select c.*
-from pending p
-       inner join video_comments c on p.channel_id=c.channel_id
-order by channel_id, video_id, created",
+          new ResQuery("class_comments", $@"with reviewed as ({classChannelsSelect})
+select channel_id
+     , any_value(channel_title) as channel_title
+     , listagg(comment, '\n') as comments
+     , count(comment) as comment_count
+from (
+       select c.channel_id, c.channel_title, vc.comment
+       from reviewed c
+              left join video_comments vc on vc.channel_id=c.channel_id
+         qualify row_number() over (partition by c.channel_id order by random())<=500
+     )
+group by channel_id",
             fileType: ResFilType.Json),
 
-          new ResQuery("class_captions", $@"with pending as ({pendingChannelsSelect})
-select c.channel_id, video_id, caption_group, offset_seconds, caption
-from pending p
-       inner join caption c on p.channel_id=c.channel_id
-order by channel_id, video_id, caption_group",
+          new ResQuery("class_captions", $@"with reviewed as ({classChannelsSelect})
+select channel_id
+     , any_value(channel_title) as channel_title
+     , listagg(caption, '\n') as captions
+from (
+       select c.channel_id, c.channel_title, vc.caption
+       from reviewed c
+              left join caption vc on vc.channel_id=c.channel_id
+         qualify row_number() over (partition by c.channel_id order by random())<=100
+     )
+group by channel_id",
             fileType: ResFilType.Json),
 
           /*new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
