@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { UserContext, LoginOverlay } from '../UserContext'
-import { channelsReviewed, saveReview as apiSaveReview, BasicChannel, reviewChannels, Review } from '../../common/YtApi'
+import { channelsReviewed, saveReview as apiSaveReview, BasicChannel, reviewChannels, Review, humanReviews } from '../../common/YtApi'
 import { Spinner } from '../Spinner'
 import { ytTheme, mainLayoutId, selectStyle, selectTheme } from '../MainLayout'
 import styled from 'styled-components'
@@ -104,8 +104,10 @@ export const ReviewControl = () => {
       .orderBy(r => r.review.Updated, 'desc')
       .value()
     const reviewedDic = _.keyBy(reviews, r => r.review.ChannelId)
-    const pending = _(channels).filter(c => c.ReviewStatus == 'Pending' && !reviewedDic[c.ChannelId])
-      .shuffle().value()
+    const pending = _(channels)
+      .filter(c => humanReviews(c) <= 2 && !reviewedDic[c.ChannelId]) // > 2 human reviews is considered accepted/not-pending
+      .orderBy(c => humanReviews(c), 'asc')
+      .value()
     const review = nextPending(pending)
     setChannels(channels)
     setReview(review)
@@ -113,7 +115,8 @@ export const ReviewControl = () => {
   }
 
   const nextPending = (pending: BasicChannel[]): ChannelReview => {
-    const c = pending.length > 0 ? pending[0] : null
+    // take one from the top 50
+    const c = _(pending).take(50).shuffle().head()
     if (c)
       setPending(pending.filter(p => p.ChannelId != c.ChannelId))
     return {

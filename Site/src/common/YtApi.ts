@@ -41,6 +41,11 @@ export async function channelsReviewed(email: string): Promise<Review[]> {
   return await getJson<Review[]>(uri(apiUrl).addPath('channels_reviewed').addQuery({ email }).url)
 }
 
+
+export function humanReviews(channel: BasicChannel) {
+  return channel.ReviewsAll - channel.ReviewsAlgo
+}
+
 export interface Review {
   ChannelId: string
   Email?: string
@@ -59,7 +64,8 @@ export interface BasicChannel {
   LogoUrl: string
   ChannelViews: number
   ReviewStatus: string
-  ReviewCount: number
+  ReviewsAll: number
+  ReviewsAlgo: number
 }
 
 export interface UserSearch {
