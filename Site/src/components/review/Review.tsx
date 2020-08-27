@@ -139,7 +139,7 @@ export const ReviewControl = () => {
     setReviews(newReviews)
     const newPending = _(channels).filter(c => channelIsPending(c, newReviews)).value()
     setPending(newPending)
-    if (!isEditing) nextReviewFromPending(pending)
+    if (!isEditing) nextReviewFromPending(newPending)
     else setEditing(null)
     return toSave
   }
