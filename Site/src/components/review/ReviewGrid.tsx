@@ -49,35 +49,36 @@ export const ReviewedGrid = ({ reviews, page, onEditReview, onShowMore, channels
       </tr>
     </thead>
     <tbody>
-      {reviews?.slice(0, reviewsToDisplay).map(cr => {
-        var c = cr.channel
-        var r = cr.review
-        return <tr key={`${r.ChannelId}|${r.Updated}`}>
-          <td>
-            <div style={{ display: 'flex', flexDirection: 'row' }}>
-              <ChannelLogo channelId={r.ChannelId} thumb={c?.LogoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
-              <div>
-                <h4>{c?.ChannelTitle ?? r.ChannelId}</h4>
-                <div>{timeAgo.format(Date.parse(r.Updated))}</div>
-                {r.MainChannelId ? <div> Main: <b>{channels[r.MainChannelId]?.ChannelTitle ?? r.MainChannelId}</b></div> : null}
+      {reviews && _(reviews).orderBy(r => r.review.Updated, 'desc').slice(0, reviewsToDisplay).value()
+        .map(cr => {
+          var c = cr.channel
+          var r = cr.review
+          return <tr key={`${r.ChannelId}|${r.Updated}`}>
+            <td>
+              <div style={{ display: 'flex', flexDirection: 'row' }}>
+                <ChannelLogo channelId={r.ChannelId} thumb={c?.LogoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
+                <div>
+                  <h4>{c?.ChannelTitle ?? r.ChannelId}</h4>
+                  <div>{timeAgo.format(Date.parse(r.Updated))}</div>
+                  {r.MainChannelId ? <div> Main: <b>{channels[r.MainChannelId]?.ChannelTitle ?? r.MainChannelId}</b></div> : null}
+                </div>
               </div>
-            </div>
-          </td>
-          <td>
-            <div style={{ margin: '0.3em' }} ><LrTag tag={r.LR} /></div>
-            <div>
-              {_.uniq(r.SoftTags)
-                .map(t => tagOptions.find(o => o.value == t))
-                .filter(t => t)
-                .map(o => <Tag key={o.value} label={o.label} style={{ margin: '0.3em' }} />)}
-            </div>
-          </td>
-          <td style={{ maxWidth: '20em' }}>{r?.Notes}</td>
-          <td style={{ textAlign: 'right' }}>{r.Relevance}</td>
-          <td><Button onclick={_ => onEditReview(cr)} icon={<EditIcon />} /></td>
-        </tr>
-      }
-      )}
+            </td>
+            <td>
+              <div style={{ margin: '0.3em' }} ><LrTag tag={r.LR} /></div>
+              <div>
+                {_.uniq(r.SoftTags)
+                  .map(t => tagOptions.find(o => o.value == t))
+                  .filter(t => t)
+                  .map(o => <Tag key={o.value} label={o.label} style={{ margin: '0.3em' }} />)}
+              </div>
+            </td>
+            <td style={{ maxWidth: '20em' }}>{r?.Notes}</td>
+            <td style={{ textAlign: 'right' }}>{r.Relevance}</td>
+            <td><Button onclick={_ => onEditReview(cr)} icon={<EditIcon />} /></td>
+          </tr>
+        }
+        )}
     </tbody>
     {reviewsToDisplay < reviews.length && <div><a onClick={() => onShowMore()}>show more reviews</a></div>}
   </ReviewedTableStyle>

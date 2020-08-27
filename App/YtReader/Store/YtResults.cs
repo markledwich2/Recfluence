@@ -143,7 +143,7 @@ from channel_latest where meets_sub_criteria", fileType: ResFilType.Json),
   group by channel_id
 )
 select c.channel_id, c.channel_title
-     , concat_ws('\n\n\n', c.channel_title, c.description, v.titles, v.keywords, v.descriptions) as snippets
+     , concat_ws('\n', c.channel_title, c.description, coalesce(v.titles, ''), coalesce(v.keywords, ''), coalesce(v.descriptions, '')) as snippets
 from reviewed c
        left join video_snippets v on v.channel_id=c.channel_id",
             fileType: ResFilType.Json),

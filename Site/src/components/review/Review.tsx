@@ -98,6 +98,8 @@ export const ReviewControl = () => {
     }, keyOption, [editing, review])
   })
 
+  const channelIsPending = (c: BasicChannel, reviews: ChannelReview[]) => humanReviews(c) <= 2 && reviews && !reviews.find(r => r.review.ChannelId == c.ChannelId)
+
   const init = async (email: string) => {
     const channelsTask = reviewChannels()
     const reviewedTask = channelsReviewed(email)
@@ -106,26 +108,25 @@ export const ReviewControl = () => {
       .map(r => ({ channel: channels[r.ChannelId], review: r }))
       .orderBy(r => r.review.Updated, 'desc')
       .value()
-    const reviewedDic = _.keyBy(reviews, r => r.review.ChannelId)
     const pending = _(channels)
-      .filter(c => humanReviews(c) <= 2 && !reviewedDic[c.ChannelId]) // > 2 human reviews is considered accepted/not-pending
-      .orderBy(c => humanReviews(c), 'asc')
+      .filter(c => channelIsPending(c, reviews)) // > 2 human reviews is considered accepted/not-pending
+      .orderBy(c => [humanReviews(c), c.ReviewsAlgo], ['asc', 'desc']) // order by human reviews asc, then by algo reviews desc
       .value()
-    const review = nextPending(pending)
+
+    setPending(pending)
+    nextReviewFromPending(pending)
     setChannels(channels)
-    setReview(review)
     setReviews(reviews)
   }
 
-  const nextPending = (pending: BasicChannel[]): ChannelReview => {
-    // take one from the top 50
+  const nextReviewFromPending = (pending: BasicChannel[]) => {
+    // take one from the top 50 at random to try and avoid too many double up reviews from different people
     const c = _(pending).take(50).shuffle().head()
-    if (!c) return null
-    setPending(pending.filter(p => p.ChannelId != c.ChannelId))
-    return {
+    const newReview: ChannelReview = c ? {
       channel: c,
       review: c ? { ChannelId: c.ChannelId, SoftTags: [] } : null
-    }
+    } : null
+    setReview(newReview)
   }
 
   const saveReview = async ({ review, channel }: ChannelReview, isEditing: boolean): Promise<ChannelReview> => {
@@ -134,16 +135,17 @@ export const ReviewControl = () => {
     res.ok ? addToast(`Saved channel :  ${channel.ChannelTitle}`, { appearance: 'success', autoDismiss: true })
       : addToast(`Couldn't save:  ${await res.text()}`, { appearance: 'warning', autoDismiss: true })
     if (!res.ok) return
-    setReviews(reviews.concat(toSave))
-    if (!isEditing) setReview(nextPending(pending))
+    const newReviews = reviews.concat(toSave)
+    setReviews(newReviews)
+    const newPending = _(channels).filter(c => channelIsPending(c, newReviews)).value()
+    setPending(newPending)
+    if (!isEditing) nextReviewFromPending(pending)
     else setEditing(null)
     return toSave
   }
 
   const saveNonPoliticalReview = ({ review, channel }: ChannelReview, isEditing: boolean) =>
     saveReview({ review: { ...review, Relevance: 0 }, channel }, isEditing)
-
-
 
   // fetch some channels for review & list existing
   return <ReviewPageDiv id='review-page'>
@@ -163,6 +165,7 @@ export const ReviewControl = () => {
           channels={channels}
           onChange={r => setReview(r)}
           onSave={async r => { await saveReview(r, false) }}
+          onSkip={() => nextReviewFromPending(pending)}
           onSaveNonPolitical={async r => { await saveNonPoliticalReview(r, false) }}
           reviewValid={reviewValid}
         />}

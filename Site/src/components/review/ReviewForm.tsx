@@ -99,12 +99,13 @@ const Field: FunctionComponent<FieldProps> = ({ name, size, label, children, req
     </label>
   </div>
 
-export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCancel, reviewValid, channels }: {
+export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCancel, onSkip, reviewValid, channels }: {
   review: ChannelReview,
   onSave: (r: ChannelReview) => Promise<void>,
   onSaveNonPolitical: (r: ChannelReview) => Promise<void>,
   onChange: (r: ChannelReview) => void,
   onCancel?: () => void,
+  onSkip?: () => void,
   reviewValid: (r: Review) => boolean,
   channels: _.Dictionary<BasicChannel>
 }) => {
@@ -202,7 +203,8 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
             e.preventDefault()
             onSaveNonPolitical(review)
           }} data-tip='nonPolitical' />
-          {onCancel && <button onClick={onCancel} >Cancel</button>}
+          {onSkip && <button onClick={onSkip} type='button'>Skip</button>}
+          {onCancel && <button onClick={onCancel} type='button'>Cancel</button>}
         </div>
 
         <ReactTooltip
