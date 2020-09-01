@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Humanizer;
 using Mutuo.Etl.Blob;
+using Nito.AsyncEx;
 using PuppeteerSharp;
 using Serilog;
 using SysExtensions;
@@ -21,19 +22,23 @@ namespace YtReader.YtWebsite {
     readonly ProxyCfg         ProxyCfg;
     readonly YtCollectCfg     CollectCfg;
     readonly ISimpleFileStore LogStore;
+    readonly AsyncLazy<string> ExecutablePath;
 
     public ChromeScraper(ProxyCfg proxyCfg, YtCollectCfg collectCfg, ISimpleFileStore logStore) {
       ProxyCfg = proxyCfg;
       CollectCfg = collectCfg;
       LogStore = logStore;
+      ExecutablePath = new AsyncLazy<string>(async () => {
+        var revisionInfo = await new BrowserFetcher().DownloadAsync(802497); //revision needs to be recent to be able to use optional chaining
+        return revisionInfo.ExecutablePath;
+      });
     }
-
-    public async Task Init() => await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultRevision);
 
     async Task<Browser> CreateBrowser(ILogger log, ProxyConnectionCfg proxy) {
       var browser = await Puppeteer.LaunchAsync(new LaunchOptions {
         Headless = CollectCfg.Headless,
         DefaultViewport = new ViewPortOptions {Width = 1024, Height = 1200},
+        ExecutablePath = await ExecutablePath,
         Args = new[] {
           "--disable-dev-shm-usage", "--no-sandbox",
           proxy != null ? $"--proxy-server={proxy.Url}" : null
@@ -46,7 +51,7 @@ namespace YtReader.YtWebsite {
 
     public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) {
       if (videos.None()) return new RecsAndExtra[] { };
-
+      
       var sw = Stopwatch.StartNew();
       log = log.ForContext("Module", nameof(ChromeScraper));
       var proxies = ProxyCfg.DirectAndProxies().Take(2)
@@ -126,6 +131,7 @@ namespace YtReader.YtWebsite {
     #region Request handling
 
     static readonly Regex AbortPathRe = new Regex("\\.(woff2|png|ico)$", RegexOptions.Compiled);
+    
 
     static bool AbortRequest(Request req) {
       if (req.ResourceType.In(ResourceType.Image, ResourceType.Media, ResourceType.Font, ResourceType.TextTrack, ResourceType.Ping, ResourceType.Manifest))
@@ -326,11 +332,9 @@ return el ? el.innerText : null
 
     async Task<Rec[]> GetRecs(Page page, bool hasError, ILogger log) {
       var recsSel = @"() => {
-    if(!ytInitialData || !ytInitialData.contents) return null
-    var watchNext = ytInitialData.contents.twoColumnWatchNextResults
-    if(!watchNext || !watchNext.secondaryResults || !watchNext.secondaryResults.secondaryResults) return null
-    return watchNext.secondaryResults.secondaryResults.results
-    .map(r => r.compactAutoplayRenderer && Object.assign({}, r.compactAutoplayRenderer.contents[0].compactVideoRenderer, {autoPlay:true}) 
+    var watchNext = document.querySelector('ytd-app')?.__data?.data?.response?.contents?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results
+    if(!watchNext) return;    
+    return watchNext.map(r => r.compactAutoplayRenderer && Object.assign({}, r.compactAutoplayRenderer.contents[0].compactVideoRenderer, {autoPlay:true}) 
         || r.compactVideoRenderer &&  Object.assign({}, r.compactVideoRenderer, {autoPlay:false}) 
         || null)
     .filter(r => r != null)
@@ -420,7 +424,7 @@ return el ? el.innerText : null
 
     async Task<(VideoExtraStored2, string error)> VideoDetails(Page page, string videoId) {
       var details = await page.EvaluateFunctionAsync<VideDetails>(@"() => {
-     var v = typeof(ytInitialData) != 'undefined' && ytInitialPlayerResponse.videoDetails
+     var v = ytInitialPlayerResponse?.videoDetails || document.querySelector('ytd-app')?.__data?.data?.playerResponse?.videoDetails
      if(!v) return null
      return {
         author:v.author,

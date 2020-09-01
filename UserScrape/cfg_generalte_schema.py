@@ -2,5 +2,6 @@ import json
 from userscrape.cfg import Cfg
 
 with open('userscrape.schema.json', "w") as w:
-    schemaTxt = json.dumps(Cfg.json_schema(), indent='  ')
+    jSchema = Cfg.json_schema()
+    schemaTxt = json.dumps(jSchema, indent='  ')
     w.write(schemaTxt)

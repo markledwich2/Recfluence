@@ -72,8 +72,7 @@
       "required": [
         "email",
         "password",
-        "telephone_number",
-        "ideology"
+        "tag"
       ],
       "properties": {
         "email": {
@@ -84,11 +83,7 @@
           "type": "string",
           "description": "password for the user "
         },
-        "telephone_number": {
-          "type": "string",
-          "description": "telephone number to verify account "
-        },
-        "ideology": {
+        "tag": {
           "type": "string",
           "examples": [
             "Partisan Right",
@@ -105,14 +100,18 @@
             "Conspiracy",
             "Social Justice"
           ],
-          "description": "The users ideology, expected to be unique between users"
+          "description": "The users tag, expected to be unique between users"
+        },
+        "telephone_number": {
+          "type": "string",
+          "description": "telephone number to verify account "
         },
         "notify_discord_user_id": {
           "type": "integer",
           "description": "the user id (e.g. 123465448467005488) in discord to notify"
         }
       },
-      "description": "UserCfg(email: str, password: str, telephone_number: str, ideology: str, notify_discord_user_id: Union[int, NoneType])"
+      "description": "UserCfg(email: str, password: str, tag: str, telephone_number: Union[str, NoneType] = None, notify_discord_user_id: Union[int, NoneType] = None)"
     },
     "DiscordCfg": {
       "type": "object",

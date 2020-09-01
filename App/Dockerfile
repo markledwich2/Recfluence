@@ -22,7 +22,7 @@ FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build-env
 
 # restore all csproj frst and docker wil cache this layer nicely
 COPY */*.csproj ./
-RUN for projectName in *.csproj; do dotnet restore $projectName; done
+#RUN for projectName in *.csproj; do dotnet restore $projectName; done
 
 COPY YtCli YtCli/
 COPY YtReader YtReader/

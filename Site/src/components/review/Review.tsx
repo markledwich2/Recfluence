@@ -45,6 +45,11 @@ export const ReviewControl = () => {
 
   const { addToast } = useToasts()
 
+  const newReview = (c: BasicChannel): ChannelReview => ({
+    channel: c,
+    review: c ? { ChannelId: c.ChannelId, SoftTags: [] } : null
+  })
+
   const reviewedGrid = useMemo(
     () => <ReviewedGrid
       reviews={reviews}
@@ -60,7 +65,9 @@ export const ReviewControl = () => {
       options={channelOptions.channelOptions}
       onChange={(o: Option) => {
         console.log('editing', o.value)
-        setEditing(reviews?.find(r => r.review.ChannelId == o.value))
+        const existingReview = reviews?.find(r => r.review.ChannelId == o.value)
+        const r = existingReview ? jsonClone(existingReview) : newReview(channels[o.value])
+        setEditing(r)
       }}
       styles={selectStyle} theme={selectTheme} /></div>
   }, [channels, reviews])
@@ -88,7 +95,6 @@ export const ReviewControl = () => {
     'ctrl+d': () => { saveNonPoliticalReview(currentReview, isEditing) },
     'esc': () => setEditing(null)
   }
-
 
   _.forEach(handlers, (handler, key: keyof typeof handlers) => {
     useHotkeys(key, e => {
@@ -122,11 +128,7 @@ export const ReviewControl = () => {
   const nextReviewFromPending = (pending: BasicChannel[]) => {
     // take one from the top 50 at random to try and avoid too many double up reviews from different people
     const c = _(pending).take(50).shuffle().head()
-    const newReview: ChannelReview = c ? {
-      channel: c,
-      review: c ? { ChannelId: c.ChannelId, SoftTags: [] } : null
-    } : null
-    setReview(newReview)
+    setReview(newReview(c))
   }
 
   const saveReview = async ({ review, channel }: ChannelReview, isEditing: boolean): Promise<ChannelReview> => {
@@ -170,8 +172,11 @@ export const ReviewControl = () => {
           reviewValid={reviewValid}
         />}
 
-      <h3>Create/override review</h3>
-      {reviewChannelSelect}
+
+      {channels && reviews && <>
+        <h3>Create/override review</h3>
+        {reviewChannelSelect}
+      </>}
 
       {reviews && <>
         <h3>Reviewed</h3>

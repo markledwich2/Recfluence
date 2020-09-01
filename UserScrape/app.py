@@ -22,15 +22,15 @@ import random
 
 
 async def experiment(initialization: bool, accounts: List[str], trial_id=None):
-    env = os.getenv('env') or 'dev'
     cfg: Cfg = await load_cfg()
+    env = os.getenv('env') or 'dev'
     trial_id = trial_id if trial_id else new_trial_id()
     log = configure_log(cfg.seqUrl, trial_id=trial_id, env=env)
     users: List[UserCfg] = [u for u in cfg.users if accounts == None or u.ideology in accounts]
     random.shuffle(users)
 
     log.info("Trail {trial_id} started - Init={initialization}, Accounts={accounts}",
-             trial_id=trial_id, initialization=initialization, accounts='|'.join([user.email for user in users]))
+             trial_id=trial_id, initialization=initialization, accounts='|'.join([user.tag for user in users]))
 
     trial_start_time = time.time()
 
@@ -50,41 +50,40 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
     try:
         for user in users:
             if(detected_as_bot):
-                failedUsers.append(user.email)
+                failedUsers.append(user.tag)
                 continue
 
-            log.info('{email} - started scraping', email=user.email)
+            log.info('{tag} - started scraping', tag=user.tag)
             start = time.time()
 
             crawler = Crawler(store, bot, user, cfg.headless, trial_id, log, cfg.max_watch_secs)
-            user_seed_videos = videos_to_seed[user.ideology] if user.ideology in videos_to_seed else []
+            user_seed_videos = videos_to_seed[user.tag] if user.tag in videos_to_seed else []
             user_seed_video_ids: List[str] = [video.video_id for video in user_seed_videos]
 
             try:
                 await crawler.load_home_and_login()
-                log.info("{email} - logged in", email=user.email)
-                crawler.delete_history()
+                log.info("{tag} - logged in", tag=user.tag)
 
-                log.info("{email} - seeding with {videos}", email=user.email, videos='|'.join(user_seed_video_ids))
+                log.info("{tag} - seeding with {videos}", tag=user.tag, videos='|'.join(user_seed_video_ids))
+                crawler.history_resume()
                 await crawler.watch_videos(user_seed_video_ids)
                 for i in range(cfg.feed_scans):
                     crawler.scan_feed(i)
 
-                log.info("{email} - collecting recommendations for {video_number} videos",
-                         email=user.email, video_number=len(videos_to_test))
+                log.info("{tag} - collecting recommendations for {video_number} videos",
+                         tag=user.tag, video_number=len(videos_to_test))
+                crawler.history_pause()
                 for video in videos_to_test:
-                    if await crawler.get_recommendations_for_video(video.video_id):
-                        await crawler.delete_last_video_from_history(video.video_id)
-                # crawler.delete_history()
-                log.info("{email} - complete in {duration}", email=user.email,
+                    await crawler.get_recommendations_for_video(video.video_id)
+                log.info("{tag} - complete in {duration}", tag=user.tag,
                          duration=format_seconds(time.time() - start))
             except DetectedAsBotException:
-                log.error('{email} - detected as bot. aborting scraping for all users', email=user.email, exc_info=1)
-                failedUsers.append(user.email)
+                log.error('{tag} - detected as bot. aborting scraping for all users', tag=user.tag, exc_info=1)
+                failedUsers.append(user.tag)
                 detected_as_bot = True
             except BaseException:
-                log.error('{email} - unhandled error. aborting scraping for this user', email=user.email, exc_info=1)
-                failedUsers.append(user.email)
+                log.error('{tag} - unhandled error. aborting scraping for this user', tag=user.tag, exc_info=1)
+                failedUsers.append(user.tag)
             finally:
                 crawler.shutdown()
     finally:
@@ -116,23 +115,11 @@ if __name__ == "__main__":
 
     parser.add_argument("--accounts", "-a",
                         help="A | separeted list users for which the corresponding accounts will be included in this run of the experiment. \
-     Possible options are \n \
-        White Identitarian \n \
+     Examples: \n \
+        WhiteIdentitarian \n \
         MRA \n \
         Conspiracy \n \
         Libertarian \n \
-        Provocative Anti-SJW \n \
-        Anti-SJW \n \
-        Socialist \n \
-        Religious Conservative \n \
-        Social Justice \n \
-        Center/Left MSM \n \
-        Partisan Left \n \
-        Partisan Right \n \
-        Anti-Theist \n \
-        Uniform (An equal number of videos from each class) \n \
-        Proportional (Videos are watched proportional to their Viewcount) \n \
-        Non-Political (Non-political videos) \n \
         Fresh (a fresh account without viewing history)",
                         default=None)
     args = parser.parse_args()

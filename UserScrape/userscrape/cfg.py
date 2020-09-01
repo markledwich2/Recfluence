@@ -16,8 +16,8 @@ class UserCfg(JsonSchemaMixin):
     email: str = field(
         metadata={"description": "email of the user e.g. mra.userscrape@gmail.com"})
     password: str = field(metadata={"description": "password for the user "})
-    ideology: str = field(metadata=JsonSchemaMeta({
-        "description": "The users ideology, expected to be unique between users",
+    tag: str = field(metadata=JsonSchemaMeta({
+        "description": "The users tag, expected to be unique between users",
         "examples": [
             "Partisan Right",
             "White Identitarian",
@@ -33,7 +33,7 @@ class UserCfg(JsonSchemaMixin):
             "Social Justice"
         ]}))
     telephone_number: Optional[str] = field(default=None, metadata=JsonSchemaMeta(
-        description="telephone number to verify account ", required=False)),
+        description="telephone number to verify account ", required=False))
     notify_discord_user_id: Optional[int] = field(default=None, metadata=JsonSchemaMeta(
         description="the user id (e.g. 123465448467005488) in discord to notify", required=False))
 
@@ -114,6 +114,10 @@ async def load_cfg() -> Cfg:
     else:
         with open('userscrape.json', "r") as r:
             cfg = Cfg.from_json(r.read())
+
+    env = os.getenv('env')
+    if (env and env != 'prod' and cfg.branch_env == None):
+        cfg.branch_env = env
 
     if(cfg.branch_env):
         cfg.store.container = f'{cfg.store.container}-{cfg.branch_env}'

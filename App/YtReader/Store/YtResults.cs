@@ -110,8 +110,8 @@ where c.reviews_all>0";
             desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip: true),
 
           // userscrape data
-          new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_ideology = UserScrapeCfg.SeedsPerIdeology}),
-          new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos_per_ideology = UserScrapeCfg.TestsPerIdeology}),
+          new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_tag = UserScrapeCfg.SeedsPerTag}),
+          new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos = UserScrapeCfg.Tests}),
           
           // classification data
           

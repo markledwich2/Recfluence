@@ -13,12 +13,11 @@ class BasicVideo:
     video_title: str
     channel_id: str
     channel_title: str
-    ideology: str
 
 
 @dataclass
 class SeedVideo(BasicVideo):
-    ideology_rank: int
+    tag: str
 
 
 class UserScrapeData:
@@ -44,14 +43,14 @@ class UserScrapeData:
 
     def test_videos(self, num: Optional[int]) -> List[BasicVideo]:
         """gets the top 5 videos in the last 7 days for each ideology (distinct channels)"""
-        # this SQL generates this file https://github.com/markledwich2/YouTubeNetworks_Dataform/blob/master/sql/user_scrape_tests.sql
+        # this SQL generates this file https://github.com/markledwich2/YouTubeNetworks_Dataform/blob/master/sql/us_tests.sql
         # I would like to use snowflake directly, but the python client is incompatible with azure blob storage client v12.
         # https://github.com/snowflakedb/snowflake-connector-python/issues/314
         # for the moment. Recfluence iwll write out the data we need to results each run.
         # for a trail copy that data so that it is the same every run
         def ld(df: pd.DataFrame):
             test_videos = [
-                BasicVideo(row.VIDEO_ID, row.VIDEO_TITLE, row.CHANNEL_ID, row.CHANNEL_TITLE, row.IDEOLOGY)
+                BasicVideo(row.VIDEO_ID, row.VIDEO_TITLE, row.CHANNEL_ID, row.CHANNEL_TITLE)
                 for i, row in df.iterrows()
             ]
             return test_videos if num == None else test_videos[0:num]
@@ -70,13 +69,12 @@ class UserScrapeData:
         def ld(df: pd.DataFrame):
             def videos(rows: Iterable[Any]):
                 return [
-                    SeedVideo(row.VIDEO_ID, row.VIDEO_TITLE, row.CHANNEL_ID,
-                              row.CHANNEL_TITLE, row.IDEOLOGY, row.IDEOLOGY_RANK)
+                    SeedVideo(row.VIDEO_ID, row.VIDEO_TITLE, row.CHANNEL_ID, row.CHANNEL_TITLE, row.TAG)
                     for i, row in rows
                 ][0:num]
 
             # this SQL generates this file https://github.com/markledwich2/YouTubeNetworks_Dataform/blob/master/sql/user_scape_seeds.sql
             # todo: this list should be queries directly form snowflake. cheaper during development to start like this
-            d = df.groupby(['IDEOLOGY']).apply(lambda g: videos(g.iterrows())).to_dict()
+            d = df.groupby(['TAG']).apply(lambda g: videos(g.iterrows())).to_dict()
             return d
         return self.__load_res_csv('us_seeds', ld)
