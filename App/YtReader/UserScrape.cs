@@ -63,7 +63,7 @@ namespace YtReader {
 
       var usCfg = (await cfgBlob.LoadAsText()).ParseJObject();
       var accounts = usCfg.SelectTokens("$.users[*]")
-        .Select(t => t.Value<string>("ideology")).ToArray();
+        .Select(t => t.Value<string>("tag")).ToArray();
 
       var fullName = Cfg.Container.FullContainerImageName("latest");
       var env = new (string name, string value)[] {

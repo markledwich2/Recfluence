@@ -26,7 +26,7 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
     env = os.getenv('env') or 'dev'
     trial_id = trial_id if trial_id else new_trial_id()
     log = configure_log(cfg.seqUrl, trial_id=trial_id, env=env)
-    users: List[UserCfg] = [u for u in cfg.users if accounts == None or u.ideology in accounts]
+    users: List[UserCfg] = [u for u in cfg.users if accounts == None or u.tag in accounts]
     random.shuffle(users)
 
     log.info("Trail {trial_id} started - Init={initialization}, Accounts={accounts}",

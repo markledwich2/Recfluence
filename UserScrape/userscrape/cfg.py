@@ -93,7 +93,7 @@ class Cfg(JsonSchemaMixin):
     run_test_vids: Optional[int] = field(default=None, metadata=JsonSchemaMeta(
         description="the number recommendations to collect. Only define if you want to restrict for test purposes", required=False))
 
-    branch_env: str = field(default=None, metadata=JsonSchemaMeta(
+    branch_env: Optional[str] = field(default=None, metadata=JsonSchemaMeta(
         description="a name to prefix/suffix names of environment objects to have clean branch environments", required=False))
 
     max_watch_secs: int = field(default=300, metadata=JsonSchemaMeta(
@@ -119,7 +119,7 @@ async def load_cfg() -> Cfg:
     if (env and env != 'prod' and cfg.branch_env == None):
         cfg.branch_env = env
 
-    if(cfg.branch_env):
+    if(cfg.branch_env is not None):
         cfg.store.container = f'{cfg.store.container}-{cfg.branch_env}'
 
     return cfg
