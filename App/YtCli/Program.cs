@@ -264,6 +264,9 @@ namespace YtCli {
 
     [CommandOption("us-init", Description = "Run userscrape in init mode (additional seed videos)")]
     public bool UserScrapeInit { get; set; }
+    
+    [CommandOption("us-trial", Description = "Run userscrape with an existing trial")]
+    public string UserScrapeTrial { get; set; }
 
     [CommandOption("disable-discover", Description = "when collecting, don't go and find new channels to classify")]
     public bool DisableChannelDiscover { get; set; }
@@ -291,6 +294,8 @@ namespace YtCli {
           var (index, condition, _) = t.UnJoin(':');
           return (index.ParseEnum<SearchIndex>(), condition);
         }).ToArray(),
+        UserScrapeInit = UserScrapeInit,
+        UserScrapeTrial = UserScrapeTrial
       };
 
       await PipeCtx.Run((YtUpdater u) => u.Update(options, PipeArg.Inject<CancellationToken>()),

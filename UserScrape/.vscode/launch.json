@@ -1,10 +1,12 @@
 {
   "configurations": [
     {
-      "name": "start experiment",
+      "name": "start experiment (prompt for args)",
       "args": [
         "-t",
-        "${input:pickTrial}"
+        "${input:pickTrial}",
+        "-a",
+        "${input:pickAccounts}"
       ],
       "type": "python",
       "request": "launch",
@@ -23,6 +25,11 @@
     {
       "id": "pickTrial",
       "description": "Enter a trail ID (blank for none)",
+      "type": "promptString"
+    },
+    {
+      "id": "pickAccounts",
+      "description": "Enter | seperated account names (e.g. MRA, AntiSJW)",
       "type": "promptString"
     }
   ]

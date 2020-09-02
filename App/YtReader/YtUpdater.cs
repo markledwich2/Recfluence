@@ -23,6 +23,7 @@ namespace YtReader {
     public string[]                                Channels               { get; set; }
     public bool                                    DisableChannelDiscover { get; set; }
     public bool                                    UserScrapeInit         { get; set; }
+    public string                                  UserScrapeTrial        { get; set; }
     public (SearchIndex index, string condition)[] SearchConditions       { get; set; }
   }
 
@@ -79,8 +80,8 @@ namespace YtReader {
       _backup.Backup(Log);
 
     [DependsOn(nameof(Results), nameof(Collect), nameof(Dataform))]
-    Task UserScrape(bool init, CancellationToken cancel) =>
-      _userScrape.Run(Log, init, cancel);
+    Task UserScrape(bool init, string trial, CancellationToken cancel) =>
+      _userScrape.Run(Log, init, trial, cancel);
 
     [Pipe]
     public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
@@ -95,7 +96,7 @@ namespace YtReader {
         c => Stage(fullLoad, options.Tables),
         c => Search(fullLoad, options.SearchConditions, c),
         c => Results(options.Results),
-        c => UserScrape(options.UserScrapeInit, c),
+        c => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, c),
         c => Dataform(fullLoad, options.Tables, c),
         c => Backup());
 

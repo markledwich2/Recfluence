@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,14 +21,14 @@ namespace YtReader {
   public class UserScrapeCfg {
     public ContainerCfg Container { get; set; } = new ContainerCfg {
       Cores = 1,
-      Mem = 3,
+      Mem = 6,
       ImageName = "userscrape",
       Exe = "python"
     };
 
     public int MaxContainers { get; set; } = 10;
-    public int SeedsPerTag { get; set; } = 50;
-    public int Tests { get; set; } = 100;
+    public int SeedsPerTag   { get; set; } = 50;
+    public int Tests         { get; set; } = 100;
   }
 
   public class UserScrape {
@@ -43,7 +44,7 @@ namespace YtReader {
       Version = version;
     }
 
-    public async Task Run(ILogger log, bool init, CancellationToken cancel) {
+    public async Task Run(ILogger log, bool init, string trial, CancellationToken cancel) {
       var storage = CloudStorageAccount.Parse(RootCfg.AppStoreCs);
       var client = new CloudBlobClient(storage.BlobEndpoint, storage.Credentials);
       var container = client.GetContainerReference(Setup.CfgContainer);
@@ -76,28 +77,38 @@ namespace YtReader {
       if (init)
         args = args.Concat("-i").ToArray();
 
-      await accounts.Batch(batchSize: 1, maxBatches: Cfg.MaxContainers)
-        .BlockAction(async b => {
-          var trial = $"{DateTime.UtcNow:yyyy-MM-dd_HH-mm-ss}_{Guid.NewGuid().ToShortString(4)}";
-          var trialLog = log.ForContext("Trail", trial);
+      if (trial.HasValue())
+        await RunTrial(cancel, trial, fullName, env, args, null, log);
+      else
+        await accounts.Batch(batchSize: 1, maxBatches: Cfg.MaxContainers)
+          .BlockAction(async b => {
+            trial = $"{DateTime.UtcNow:yyyy-MM-dd_HH-mm-ss}_{Guid.NewGuid().ToShortString(4)}";
+            await RunTrial(cancel, trial, fullName, env, args, b, log);
+          }, Containers.AzureCfg.Parallel, cancel: cancel);
+    }
 
-          await Policy.Handle<CommandException>().RetryAsync(retryCount: 3,
-              (e, i) => trialLog.Warning(e, "UserScrape - trial {Trial} failed ({Attempt}): Error: {Error}", trial, i, e.Message))
-            .ExecuteAsync(async c => {
-              var groupName = $"userscrape-{ShortGuid.Create(5).ToLower().Replace(oldChar: '_', newChar: '-')}";
-              var groupLog = trialLog.ForContext("ContainerGroup", groupName);
-              const string containerName = "userscrape";
-              var (group, dur) = await Containers.Launch(
-                Cfg.Container, groupName, containerName, fullName,
-                env,
-                args.Concat("-t", trial, "-a", b.Join("|")).ToArray(),
-                log: groupLog,
-                cancel: c
-              ).WithDuration();
-              await group.EnsureSuccess(containerName, groupLog);
-              groupLog.Information("UserScrape - container completed in {Duration}", dur.HumanizeShort());
-            }, cancel);
-        }, Containers.AzureCfg.Parallel, cancel: cancel);
+    async Task RunTrial(CancellationToken cancel, string trial, string fullName, (string name, string value)[] env, string[] args,
+      IReadOnlyCollection<string> accounts, ILogger log) {
+      var trialLog = log.ForContext("Trail", trial);
+      await Policy.Handle<CommandException>().RetryAsync(retryCount: 3,
+          (e, i) => trialLog.Warning(e, "UserScrape - trial {Trial} failed ({Attempt}): Error: {Error}", trial, i, e.Message))
+        .ExecuteAsync(async c => {
+          var groupName = $"userscrape-{ShortGuid.Create(5).ToLower().Replace(oldChar: '_', newChar: '-')}";
+          var groupLog = trialLog.ForContext("ContainerGroup", groupName);
+          const string containerName = "userscrape";
+          var finalArgs = new List<string>(args);
+          if (trial.HasValue()) finalArgs.AddRange("-t", trial);
+          if (accounts != null) finalArgs.AddRange("-a", accounts.Join("|"));
+          var (group, dur) = await Containers.Launch(
+            Cfg.Container, groupName, containerName, fullName,
+            env,
+            finalArgs.ToArray(),
+            log: groupLog,
+            cancel: c
+          ).WithDuration();
+          await group.EnsureSuccess(containerName, groupLog);
+          groupLog.Information("UserScrape - container completed in {Duration}", dur.HumanizeShort());
+        }, cancel);
     }
 
     const int RetryErrorCode = 13;

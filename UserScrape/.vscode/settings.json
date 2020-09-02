@@ -41,5 +41,5 @@
         "__azurite_*.json": true,
     },
     "editor.formatOnSave": true,
-    "python.pythonPath": "c:\\Users\\mark\\AppData\\Local\\Programs\\Python\\Python38\\python.exe"
+    "python.pythonPath": "C:\\Users\\mark\\AppData\\Local\\Programs\\Python\\Python38\\python.exe"
 }

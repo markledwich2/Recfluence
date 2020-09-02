@@ -1,8 +1,6 @@
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+
 from typing import List, Optional
-import json
 from dataclasses import dataclass, field
-from dataclasses_json import dataclass_json
 from dataclasses_jsonschema import JsonSchemaMixin, SchemaType
 from dataclasses_jsonschema.type_defs import JsonSchemaMeta
 from dotenv import load_dotenv
@@ -10,7 +8,6 @@ import os
 import aiohttp
 
 
-@dataclass_json
 @dataclass
 class UserCfg(JsonSchemaMixin):
     email: str = field(
@@ -38,14 +35,12 @@ class UserCfg(JsonSchemaMixin):
         description="the user id (e.g. 123465448467005488) in discord to notify", required=False))
 
 
-@dataclass_json
 @dataclass
 class DiscordCfg(JsonSchemaMixin):
     bot_token: str = field(metadata={"description": "The auth token for the discord bot"})
     channel_id: int = field(metadata={"description": "The channel to ask for user validation codes"})
 
 
-@dataclass_json
 @dataclass
 class StoreCfg(JsonSchemaMixin):
 
@@ -63,7 +58,6 @@ class StoreCfg(JsonSchemaMixin):
         description="the root folder path to store data (e.g. folder1/folder2", required=False))
 
 
-@dataclass_json
 @dataclass
 class Cfg(JsonSchemaMixin):
     '''UserScrape configuration'''
@@ -85,6 +79,8 @@ class Cfg(JsonSchemaMixin):
 
     feed_scans: int = field(default=20, metadata=JsonSchemaMeta(
         description="number of times to collect the list of videos in the feed", required=False))
+    videos_parallel: int = field(default=5, metadata=JsonSchemaMeta(
+        description="number of video's to watch in parallel", required=False))
 
     init_seed_vids: int = field(default=50, metadata=JsonSchemaMeta(
         description="the number of videos to watch when initializing", required=False))

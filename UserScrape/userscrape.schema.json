@@ -40,6 +40,11 @@
       "default": 20,
       "description": "number of times to collect the list of videos in the feed"
     },
+    "videos_parallel": {
+      "type": "integer",
+      "default": 5,
+      "description": "number of video's to watch in parallel"
+    },
     "init_seed_vids": {
       "type": "integer",
       "default": 50,

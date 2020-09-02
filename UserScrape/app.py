@@ -5,12 +5,12 @@ from userscrape.data import UserScrapeData
 from userscrape.store import BlobStore, new_trial_id
 from userscrape.discord_bot import DiscordBot
 from userscrape.log import configure_log
-from userscrape.results import save_complete_trial
+from userscrape.results import load_incomplete_trial, save_complete_trial, TrialCfg, save_incomplete_trial
 from userscrape.format import format_seconds
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
 import asyncio
 import argparse
-from typing import List
+from typing import List, Any
 from azure.storage.blob import PublicAccess
 import logging
 import time
@@ -24,9 +24,25 @@ import random
 async def experiment(initialization: bool, accounts: List[str], trial_id=None):
     cfg: Cfg = await load_cfg()
     env = os.getenv('env') or 'dev'
+    store = BlobStore(cfg.store)
+
+    load_trial = trial_id is not None
     trial_id = trial_id if trial_id else new_trial_id()
-    log = configure_log(cfg.seqUrl, trial_id=trial_id, env=env)
+    log = configure_log(cfg.seqUrl, trial_id=trial_id, env=env, branch_env=cfg.branch_env)
+
+    if load_trial:
+        trial_cfg = load_incomplete_trial(trial_id, store, log) if load_trial else None
+        if accounts:
+            accounts = list(set(accounts).intersection(trial_cfg.accounts)) if trial_cfg else accounts
+        else:
+            accounts = trial_cfg.accounts if trial_cfg else None
+    else:
+        save_incomplete_trial(TrialCfg(trial_id, accounts), store, log)
+
+    # get users from trial if exists.
+
     users: List[UserCfg] = [u for u in cfg.users if accounts == None or u.tag in accounts]
+
     random.shuffle(users)
 
     log.info("Trail {trial_id} started - Init={initialization}, Accounts={accounts}",
@@ -34,7 +50,6 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
 
     trial_start_time = time.time()
 
-    store = BlobStore(cfg.store)
     store.ensure_container_exits(PublicAccess.Container)
     data = UserScrapeData(store, trial_id)
 
@@ -56,7 +71,7 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
             log.info('{tag} - started scraping', tag=user.tag)
             start = time.time()
 
-            crawler = Crawler(store, bot, user, cfg.headless, trial_id, log, cfg.max_watch_secs)
+            crawler = Crawler(store, bot, user, cfg.headless, trial_id, log, cfg.max_watch_secs, cfg.videos_parallel)
             user_seed_videos = videos_to_seed[user.tag] if user.tag in videos_to_seed else []
             user_seed_video_ids: List[str] = [video.video_id for video in user_seed_videos]
 

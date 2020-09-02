@@ -58,12 +58,14 @@ class DetectedAsBotException(Exception):
     pass
 
 
-def create_driver(headless: bool) -> WebDriver:
+def create_chrome_driver(headless: bool) -> WebDriver:
     options = Options()
     if(headless):
         options.add_argument('--headless')
     options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
+    # options.add_argument('--disable-dev-shm-usage')
+    options.add_argument("--disable-infobars")
+    options.add_argument("--disable-extensions")
     # to load more recommendations on the feed
     options.add_argument("--window-size=1920,1080")
     # this is mark@ledwich.com's recently used user agent.
@@ -77,10 +79,10 @@ def create_driver(headless: bool) -> WebDriver:
 
 
 class Crawler:
-    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, trial_id: str, log: Logger, max_watch_secs: int, lang='en'):
+    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, trial_id: str, log: Logger, max_watch_secs: int, videos_parallel: int, lang='en'):
         self.store = store
         self.bot = bot
-        self.driver = create_driver(headless)
+        self.driver = create_chrome_driver(headless)
         self.wait = WebDriverWait(self.driver, 10)
         self.user = user
         self.init_time = datetime.now()
@@ -88,6 +90,7 @@ class Crawler:
         self.lang = lang
         self.trial_id = trial_id
         self.max_watch_secs = max_watch_secs
+        self.videos_parallel = videos_parallel
         self.session_id = file_date_str()
         self.path = BlobPaths(store.cfg, trial_id, user, self.session_id)
 
@@ -105,7 +108,7 @@ class Crawler:
         self.__load_cookies()
 
         wd.get('https://www.youtube.com')
-        self.wait_for_visible('#contents')
+        self.wait_for_visible('#contents', timeout=10)
         self.__log_driver_status('home')
 
         try:
@@ -124,10 +127,10 @@ class Crawler:
             self.handle_driver_ex(e, cssSelector, error_expected)
         raise e
 
-    def wait_for_visible(self, cssSelector: str, error_expected: bool = False) -> WebElement:
+    def wait_for_visible(self, cssSelector: str, error_expected: bool = False, timeout: int = 5) -> WebElement:
         """waits for an element to be visible  at the given css selector, logs errors to seq & discord"""
         try:
-            return WebDriverWait(self.driver, 5).until(EC.visibility_of_element_located((By.CSS_SELECTOR, cssSelector)))
+            return WebDriverWait(self.driver, timeout).until(EC.visibility_of_element_located((By.CSS_SELECTOR, cssSelector)))
         except WebDriverException as e:
             self.handle_driver_ex(e, cssSelector, error_expected)
         raise e
@@ -271,10 +274,12 @@ class Crawler:
         rank:i+1
     }))
     ''')
+                if all_recs is None:
+                    all_recs = []
             except WebDriverException as e:
                 findRecsEx = e
                 break
-            if(all_recs is not None and len(all_recs) >= 20):
+            if(len(all_recs) >= 20):
                 break
             rec_attempt = rec_attempt+1
             if(rec_attempt > 3):
@@ -485,7 +490,7 @@ class Crawler:
         """
 
         main_window = self.driver.window_handles[-1]
-        for video_batch in chunked(videos, 5):
+        for video_batch in chunked(videos, self.videos_parallel):
             tasks = []
             for video_id in video_batch:
 

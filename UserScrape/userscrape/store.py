@@ -58,7 +58,7 @@ class BlobStore:
                              overwrite=True,
                              content_settings=ContentSettings(content_type=content_type) if content_type else None)
 
-    def load(self, path: PurePath):
+    def load(self, path: PurePath) -> str:
         try:
             blob = self.container.download_blob(path.as_posix())
         except ResourceNotFoundError:
@@ -127,19 +127,22 @@ class BlobPaths:
         return PurePosixPath(f'{self.storeCfg.root_path}/run/{catalog}/{self.trial_id}')
 
     def session_path(self) -> PurePath:
-        return PurePosixPath(f'{self.storeCfg.root_path}/run/session_logs/{self.trial_id}/{self.user.email}/{self.session_id}')
+        return PurePosixPath(f'{self.storeCfg.root_path}/run/session_logs/{self.trial_id}/{self.user.tag}/{self.session_id}')
 
     def user_path(self) -> PurePath:
-        return PurePosixPath(f'{self.storeCfg.root_path}/run/user/{self.user.email}')
+        return PurePosixPath(f'{self.storeCfg.root_path}/run/user/{self.user.tag}')
 
     def __trial_user_path(self, catalog: str) -> PurePath:
-        return self.__trial_path(catalog) / self.user.email
+        return self.__trial_path(catalog) / self.user.tag
 
     def __trial_video(self, catalog: str, video_id: str) -> PurePath:
         return PurePosixPath(f'{self.__trial_user_path(catalog)}_{video_id}.json')
 
     def cookies_json(self) -> PurePath:
         return self.user_path() / 'cookies.json'
+
+    def trial_cfg_json(self) -> PurePath:
+        return self.__trial_path("cfg") / 'cfg.json'
 
     def rec_path(self) -> PurePath:
         return self.__trial_path("recommendations")

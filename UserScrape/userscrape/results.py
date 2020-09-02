@@ -1,16 +1,31 @@
 
 
-from azure.storage.blob import PublicAccess, BlobProperties
-from azure.core.paging import ItemPaged
-from typing import Iterator, Iterable, Dict, Any
+from typing import Any, Iterable, Iterator, List
 from pathlib import Path, PurePath, PurePosixPath
 import tempfile
 import json
 import os
 import shortuuid
-from userscrape.cfg import load_cfg
 from logging import Logger
 from .store import BlobPaths, BlobStore, file_date_str
+from dataclasses import dataclass
+from dataclasses_jsonschema import JsonSchemaMixin
+
+
+@dataclass
+class TrialCfg(JsonSchemaMixin):
+    trial_id: str
+    accounts: List[str]
+
+
+def load_incomplete_trial(trial_id: str, store: BlobStore, log: Logger) -> TrialCfg:
+    path = BlobPaths(store.cfg, trial_id)
+    return TrialCfg.from_json(store.load(path.trial_cfg_json()))
+
+
+def save_incomplete_trial(trial_cfg: TrialCfg, store: BlobStore, log: Logger):
+    path = BlobPaths(store.cfg, trial_cfg.trial_id)
+    store.save(path.trial_cfg_json(), trial_cfg.to_json())
 
 
 def save_complete_trial(trial_id: str, store: BlobStore, log: Logger):
