@@ -94,7 +94,7 @@ namespace YtReader {
     and (
       update_day=(dayofweekiso(current_date())-1) 
       or datediff(d, updated, current_timestamp())>7 
-      or channel_id in ({SqlList(limitChans)})
+      {(limitChans.None() ? "" : $"or channel_id in ({SqlList(limitChans)})")}
     )
 )
 select v from to_update u inner join stage_latest s on u.channel_id = s.v:ChannelId::string"))
