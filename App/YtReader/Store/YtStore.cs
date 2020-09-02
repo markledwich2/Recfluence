@@ -130,7 +130,6 @@ namespace YtReader.Store {
     public ChannelSubscription[] Subscriptions      { get; set; }
 
     public ChannelStatus       Status       { get; set; }
-    public ChannelReviewStatus ReviewStatus { get; set; }
 
     public IReadOnlyCollection<string>            HardTags     { get; set; }
     public IReadOnlyCollection<string>            SoftTags     { get; set; }

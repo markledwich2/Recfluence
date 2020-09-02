@@ -20,7 +20,6 @@ using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
 using static Mutuo.Etl.Pipe.PipeArg;
-using static YtReader.Store.ChannelReviewStatus;
 using VideoItem = YtReader.YtWebsite.VideoItem;
 
 namespace YtReader {
@@ -68,53 +67,78 @@ namespace YtReader {
         nameof(Collect), allChannelResults.Count(c => c.Success), allChannelResults.Length, dur.HumanizeShort());
     }
 
-    async Task<IEnumerable<ChannelStored2>> UpdateAllChannels(bool disableDiscover, string[] limitChannels, ILogger log, CancellationToken cancel) {
+    static string SqlList<T>(IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
+    
+    async Task<IReadOnlyCollection<(ChannelStored2 c, UpdateChannelType update)>> UpdateAllChannels(bool disableDiscover, string[] limitChannels, ILogger log,
+      CancellationToken cancel) {
       var store = Store.Channels;
-      var limitChannelHash = limitChannels.HasItems() ? limitChannels.ToHashSet() : Cfg.LimitedToSeedChannels?.ToHashSet() ?? new HashSet<string>();
+      var limitChans = limitChannels.HasItems() ? limitChannels.ToHashSet() : Cfg.LimitedToSeedChannels?.ToHashSet() ?? new HashSet<string>();
       log.Information("Collect - Starting channels update. Limited to ({Included})",
-        limitChannelHash.Any() ? limitChannelHash.Join("|") : "All");
+        limitChans.Any() ? limitChans.Join("|") : "All");
 
-      IKeyedCollection<string, ChannelStored2> channelNotRejected;
-      ChannelStored2[] toDiscover;
+      IKeyedCollection<string, ChannelStored2> existingChannels;
+      (ChannelStored2 c, UpdateChannelType update)[] toAdd;
       using (var db = await Sf.OpenConnection(log)) {
-        var channelLimitSql = limitChannelHash.Any() ? $" and v:ChannelId::string in ({limitChannelHash.Join(",", c => $"'{c}'")})" : "";
         // retrieve previous channel state to update with new classification (algos and human) and stats form the API
-        channelNotRejected = (await db.Query<string>("channels - previous", $@"select v
-from channel_stage
-where v:Status::string is null or v:Status::string not in ('ManualRejected', 'AlgoRejected') {channelLimitSql}
-qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc) = 1"))
+        // spread out channel updates over the week
+        existingChannels = (await db.Query<string>("channels - previous", $@"with stage_latest as (
+  select v  from channel_stage
+    {(limitChans.None() ? "" : $"where v:ChannelId::string in ({SqlList(limitChans)})")}
+    qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc)=1
+)
+   , to_update as (
+  select channel_id, abs(hash(channel_id))%7 as update_day
+  from channel_latest
+  where meets_review_criteria
+    and meets_sub_criteria
+    and (
+      update_day=(dayofweekiso(current_date())-1) 
+      or datediff(d, updated, current_timestamp())>7 
+      or channel_id in ({SqlList(limitChans)})
+    )
+)
+select v from to_update u inner join stage_latest s on u.channel_id = s.v:ChannelId::string"))
           .Select(s => s.ToObject<ChannelStored2>(Store.Channels.JCfg)).ToKeyedCollection(c => c.ChannelId);
-        toDiscover = disableDiscover ? new ChannelStored2[] { } : await ChannelsToDiscover(db, channelNotRejected, log);
+        toAdd = disableDiscover ? default : await ChannelsToAdd(db, log);
       }
 
-      var toUpdate = channelNotRejected.Where(c => c.ReviewStatus.Accepted())
-        .Where(c => limitChannelHash.IsEmpty() || limitChannelHash.Contains(c.ChannelId))
-        .ToArray();
+      var toUpdate = existingChannels.Where(c => limitChans.IsEmpty() || limitChans.Contains(c.ChannelId)).ToArray();
 
-      // perform full update on channels older than 30 days (max X at a time because of quota limit).
+      // perform full update on channels older than 90 days (max X at a time because of quota limit).
       var fullUpdate = toUpdate
-        .Where(c => c.Updated == default || c.Updated - c.LastFullUpdate > 30.Days())
-        .Take(600)
+        .Where(c => c.Updated == default || c.Updated - c.LastFullUpdate > 90.Days())
+        .Randomize()
+        .Take(50)
         .Select(c => c.ChannelId).ToHashSet();
 
-      var (channels, dur) = await toUpdate.Concat(toDiscover)
-        .BlockFunc(async c => await UpdateChannel(c, fullUpdate.Contains(c.ChannelId), log), Cfg.DefaultParallel, cancel: cancel,
+      var (channels, dur) = await toUpdate
+        .Select(c => (c, update: UpdateChannelType.Update))
+        .Concat(toAdd)
+        .BlockFunc(async c => await UpdateChannel(c.c, fullUpdate.Contains(c.c.ChannelId) ? UpdateChannelType.Full : c.update, log),
+          Cfg.DefaultParallel, cancel: cancel,
           progressUpdate: p => log.Debug("Collect - Reading channels {ChannelCount}/{ChannelTotal}", p.CompletedTotal, toUpdate.Length))
         .WithDuration();
 
       if (cancel.IsCancellationRequested) return channels;
 
       if (channels.Any())
-        await store.Append(channels, log);
+        await store.Append(channels.Select(c => c.c).ToArray(), log);
 
       log.Information("Collect - Updated stats for {Channels} existing and {Discovered} discovered channels in {Duration}",
-        toUpdate.Length, toDiscover.Length, dur);
+        toUpdate.Length, toAdd.Length, dur);
 
       return channels;
     }
 
-    async Task<ChannelStored2> UpdateChannel(ChannelStored2 channel, bool full, ILogger log) {
+    public enum UpdateChannelType {
+      Update,
+      Full,
+      Discover
+    }
+
+    async Task<(ChannelStored2 c, UpdateChannelType update)> UpdateChannel(ChannelStored2 channel, UpdateChannelType update, ILogger log) {
       var channelLog = log.ForContext("Channel", channel.ChannelId).ForContext("ChannelId", channel.ChannelId);
+      var full = update == UpdateChannelType.Full;
       var c = channel.JsonClone();
       try {
         c.Updated = DateTime.Now;
@@ -137,33 +161,17 @@ qualify row_number() over (partition by v:ChannelId::string order by v:Updated::
         else {
           c.Status = ChannelStatus.Dead;
         }
-        channelLog.Information("Collect - {Channel} - read {Full} channel details ({ReviewStatus})",
-          c.ChannelTitle, full ? "full" : "simple", c.ReviewStatus.EnumString());
+        channelLog.Information("Collect - {Channel} - channel details ({Update})", c.ChannelTitle, update.EnumString());
       }
       catch (Exception ex) {
         channelLog.Error(ex, "Collect - {Channel} - Error when updating details for channel : {Error}", c.ChannelTitle, ex.Message);
       }
-      return c;
+      return (c, update);
     }
 
-    ChannelStored2 ChannelStored(ChannelSheet sheet, IKeyedCollection<string, ChannelStored2> channelPev) {
-      var stored = channelPev[sheet.Id] ?? new ChannelStored2 {
-        ChannelId = sheet.Id,
-        ChannelTitle = sheet.Title,
-        HardTags = sheet.HardTags,
-        SoftTags = sheet.SoftTags,
-        Relevance = sheet.Relevance,
-        LR = sheet.LR,
-        MainChannelId = sheet.MainChannelId,
-        UserChannels = sheet.UserChannels,
-        ReviewStatus = ManualAccepted
-      };
-      return stored;
-    }
-
-    async Task<ChannelStored2[]> ChannelsToDiscover(LoggedConnection db, IKeyedCollection<string, ChannelStored2> channelPev, ILogger log) {
-      var newDiscover = await db.Query<(string channel_id, string channel_title, string source)>("channels to classify",
-          @"with review_channels as (
+    async Task<(ChannelStored2 c, UpdateChannelType update)[]> ChannelsToAdd(LoggedConnection db, ILogger log) {
+      var toAdd = await db.Query<(string channel_id, string channel_title, string source)>("channels to classify",
+        @"with review_channels as (
   select channel_id
        , channel_title -- probably missing values. reviews without channels don't have titles
   from channel_review r
@@ -187,48 +195,43 @@ select *
 from s
 limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
-      log.Debug("Collect - found {Channels} new channels for discovery", newDiscover.Count);
+      log.Debug("Collect - found {Channels} new channels for discovery", toAdd.Count);
 
-      var toDiscover = newDiscover
-        .Select(c => channelPev[c.channel_id] ?? new ChannelStored2 {
+      var toDiscover = toAdd
+        .Select(c => (c:new ChannelStored2 {
           ChannelId = c.channel_id,
-          ChannelTitle = c.channel_title,
-          ReviewStatus = Pending
-        }).ToArray();
+          ChannelTitle = c.channel_title
+        }, update: c.source == "review" ? UpdateChannelType.Update : UpdateChannelType.Discover )).ToArray();
 
       return toDiscover;
     }
 
     [Pipe]
-    public async Task<ProcessChannelResults> ProcessChannels(IReadOnlyCollection<ChannelStored2> channels,
+    public async Task<ProcessChannelResults> ProcessChannels(IReadOnlyCollection<(ChannelStored2 c, UpdateChannelType update)> channels,
       bool forceUpdate, ILogger log = null, CancellationToken cancel = default) {
       log ??= Logger.None;
       var workSw = Stopwatch.StartNew();
 
-
-      var toUpdate = channels
-        .Where(c => c.Status == ChannelStatus.Alive &&
-                    c.ReviewStatus.In(Pending, AlgoAccepted, ManualAccepted)).ToArray();
+      var toUpdate = channels.Where(c => c.c.Status == ChannelStatus.Alive).ToArray();
 
       // to save on db costs, get anything we need in advance of collection
-      IDictionary<string, string[]> channelChromeVideos;
+      MultiValueDictionary<string, string> channelChromeVideos;
       using (var db = await Sf.OpenConnection(log)) {
-        var forChromeUpdate = await toUpdate.Where(u => u.ReviewStatus != Pending)
-          .BlockFunc(async c => new {c.ChannelId, ForChromeUpdate = await VideosForChromeUpdate(c, db, log)});
-        channelChromeVideos = forChromeUpdate.ToDictionary(c => c.ChannelId, c => c.ForChromeUpdate.ToArray());
+        var forChromeUpdate = await toUpdate.Select(c => c.c).Batch(100).BlockFunc(c => VideosForChromeUpdate(c, db, log));
+        channelChromeVideos = forChromeUpdate.SelectMany().ToMultiValueDictionary(c => c.ChannelId, c => c.VideoId);
       }
 
       var channelResults = await toUpdate
         .Select((c, i) => (c, i))
         .BlockFunc(async item => {
-          var (c, i) = item;
+          var ((c, update), i) = item;
           var sw = Stopwatch.StartNew();
           var cLog = log
             .ForContext("ChannelId", c.ChannelId)
             .ForContext("Channel", c.ChannelTitle);
           try {
             await using var conn = new Defer<LoggedConnection>(() => Sf.OpenConnection(cLog));
-            await UpdateAllInChannel(c, forceUpdate, channelChromeVideos.TryGet(c.ChannelId), cLog);
+            await UpdateAllInChannel(c, update, forceUpdate, channelChromeVideos.TryGet(c.ChannelId), cLog);
             cLog.Information("Collect - {Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
               c.ChannelTitle, sw.Elapsed.HumanizeShort(), i + 1, channels.Count);
             return (c, Success: true);
@@ -251,7 +254,8 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       return res;
     }
 
-    async Task UpdateAllInChannel(ChannelStored2 c, bool forceUpdate, string[] videosForChromeUpdate, ILogger log) {
+    async Task UpdateAllInChannel(ChannelStored2 c, UpdateChannelType update, bool forceUpdate, IReadOnlyCollection<string> videosForChromeUpdate,
+      ILogger log) {
       if (c.StatusMessage.HasValue()) {
         log.Information("Collect - {Channel} - Not updating videos/recs/captions because it has a status msg: {StatusMessage} ",
           c.ChannelTitle, c.StatusMessage);
@@ -270,13 +274,9 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
         log.Information("Collect - {Channel} - skipping update, video stats have been updated recently {LastModified}", c.ChannelTitle, lastModified);
         return;
       }
-      var discover = c.ReviewStatus == Pending;
-      if (discover && lastModified != null) {
-        log.Information("Collect - {Channel} - skipping update of pending channel, already populated videos", c.ChannelTitle, lastModified);
-        return;
-      }
 
       // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.
+      var discover = update == UpdateChannelType.Discover;
       var uploadedFrom = md == null ? RCfg.From : DateTime.UtcNow - RCfg.RefreshVideosWithin;
       var vids = await ChannelVidItems(c, uploadedFrom, discover ? RCfg.DiscoverChannelVids : (int?) null, log).ToListAsync();
       await SaveVids(c, vids, Store.Videos, lastUpload, log);
@@ -406,44 +406,40 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           Updated = updated
         }) ?? new RecStored2[] { }).ToArray();
 
-    async Task<IReadOnlyCollection<string>> VideosForChromeUpdate(ChannelStored2 c, LoggedConnection db, ILogger log) {
+    async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> VideosForChromeUpdate(IReadOnlyCollection<ChannelStored2> channels, LoggedConnection db,
+      ILogger log) {
       // use chrome when its +1 week old and +1 month old. We should get most of the comments that way
-      var ids = await db.Query<string>("videos sans-comments",
-        @"with chrome_extra_latest as (
+      var ids = await db.Query<(string ChannelId, string VideoId)>("videos sans-comments",
+        $@"with chrome_extra_latest as (
   select video_id
        , updated
-       , channel_id
-       , error
-       , source
-       , views
        , row_number() over (partition by video_id order by updated desc) as age_no
        , count(1) over (partition by video_id) as extras
   from video_extra v
-  where channel_id = :channel_id
-        and source = 'Chrome'
-    qualify age_no = 1
+  where source='Chrome'
+    qualify age_no=1
 )
    , videos_to_update as (
-  select v.video_id
-       , v.video_title
-       , v.upload_date
-       , e.extras
-       , e.source
-       , e.views
-       , datediff(d, e.updated, convert_timezone('UTC', current_timestamp())) as extra_ago
-  from video_latest v
-         left join chrome_extra_latest e on e.video_id = v.video_id
-  where v.channel_id = :channel_id
-    and (e.updated is null
-    or extra_ago > 7 and extras <= 1
-    or extra_ago > 30 and extras <= 2)
+  select *
+       , row_number() over (partition by channel_id order by views desc) as channel_rank
+  from (
+         select v.video_id
+              , v.channel_id
+              , v.views
+              , datediff(d, e.updated, convert_timezone('UTC', current_timestamp())) as extra_ago
+              , datediff(d, v.upload_date, convert_timezone('UTC', current_timestamp())) as upload_ago
+
+         from video_latest v
+                left join chrome_extra_latest e on e.video_id=v.video_id
+         where v.channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
+           and upload_ago>7
+           and e.updated is null -- update only 7 days after being uploaded
+       )
+    qualify channel_rank<:videos_per_channel
 )
-select video_id
-from videos_to_update
-order by views desc
-limit :limit",
-        param: new {channel_id = c.ChannelId, limit = RCfg.PopulateMissingCommentsLimit});
-      log.Information("Collect - {Channel} - found {Videos} in need of chrome update", c.ChannelTitle, ids.Count);
+select channel_id, video_id
+from videos_to_update",
+        param: new {videos_per_channel = RCfg.PopulateMissingCommentsLimit});
       return ids;
     }
 

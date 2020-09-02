@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -179,17 +180,20 @@ namespace Mutuo.Etl.Pipe {
       if (cancel.IsCancellationRequested)
         return;
 
-      var pipeParams = await method.GetParameters().BlockFunc(async p => {
+      var pipeParamValues = await method.GetParameters().BlockFunc(async p => {
         if (args.TryGetValue(p.Name ?? throw new NotImplementedException("parameters must have names"), out var arg))
           switch (arg.ArgMode) {
             case ArgMode.SerializableValue:
               return ChangeToType(arg.Value, p.ParameterType);
             case ArgMode.InRows: {
-              var genericStateType = p.ParameterType.GenericTypeArguments.FirstOrDefault() ??
-                                     throw new InvalidOperationException(
-                                       $"Expecting arg method {pipeType.Type}.{method.Name} parameter {p.Name} to be IEnumerable<Type>");
+              var rowsType = p.ParameterType.GenericTypeArguments.FirstOrDefault() ??
+                             p.ParameterType.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                               ?.GenericTypeArguments.FirstOrDefault()
+                             ?? throw new InvalidOperationException(
+                               $"Expecting arg method {pipeType.Type}.{method.Name} parameter {p.Name} to be IEnumerable<Type>");
+
               var rows = await typeof(Pipes).GetMethod(nameof(LoadInRows), new[] {typeof(IPipeCtx), typeof(PipeRunId)})
-                .CallStaticGenericTask<IReadOnlyCollection<object>>(new[] {genericStateType}, ctx, id);
+                .CallStaticGenericTask<object>(new[] {rowsType}, ctx, id);
               return rows;
             }
           }
@@ -197,7 +201,7 @@ namespace Mutuo.Etl.Pipe {
       }, cancel: cancel);
 
       try {
-        dynamic task = method.Invoke(pipeInstance, pipeParams.ToArray()) ??
+        dynamic task = method.Invoke(pipeInstance, pipeParamValues.ToArray()) ??
                        throw new InvalidOperationException($"Method '{method.Name}' returned null, should be Task");
         if (method.ReturnType == typeof(Task)) {
           await task;
