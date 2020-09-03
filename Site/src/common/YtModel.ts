@@ -106,7 +106,6 @@ export class YtModel {
 
     let recCol = (dir: RecDir, c: keyof ChannelData) => ({ recCol: RecEx.recCol(dir, c), channelCol: c, dir })
 
-
     const createRec = (r: VIS_CHANNEL_REC): RecData => {
       const recCols = _(YtModel.categoryCols.concat('channelId', 'title'))
         .flatMap(c => [recCol('from', c), recCol('to', c)]).value()
@@ -144,7 +143,6 @@ export class YtModel {
         toTags: r.TO_TAG,
         relevantImpressionsDaily: +r.RELEVANT_IMPRESSIONS_DAILY
       } as RecData))
-
 
     const tagViews = _(this.channelDimStatic.col('tags').values.map(v => v.value))
       .map(tag => ({

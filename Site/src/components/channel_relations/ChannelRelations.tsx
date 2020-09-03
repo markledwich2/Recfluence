@@ -39,7 +39,6 @@ const LegendStyle = styled.div`
   }
   `
 
-
 interface State extends InteractiveDataState { }
 interface Props extends ChartProps<YtModel> { }
 interface Link extends d3.SimulationLinkDatum<Node> {
@@ -96,8 +95,6 @@ export class ChannelRelations extends React.Component<Props, State> {
 
   private renderLegendHtml(): JSX.Element {
     let colorBy = this.chart.selections.params().colorBy
-
-
 
     const tagNodes = () => {
       let tagsCol = YtModel.channelDimStatic.col('tags')
@@ -173,7 +170,13 @@ export class ChannelRelations extends React.Component<Props, State> {
   stateRender: (prevProps: Props, prevState: State) => void
 
   getData() {
-    const channelCells = this.dim.rowCells(this.channelQuery(false))
+
+    const coloredTags = YtModel.channelDimStatic.col('tags').values
+
+    const channelCells = _(this.dim.rowCells(this.channelQuery(false)))
+      .filter(c => c.row.tags.filter(t => coloredTags.find(v => v.value == t)).length > 0)
+      .orderBy(c => c.row.relevantDailyViews, 'desc')
+      .take(1000).value()
 
     let nodes: Node[] = _(channelCells)
       .filter(c => c.row.relevantDailyViews > 0)
@@ -238,7 +241,7 @@ export class ChannelRelations extends React.Component<Props, State> {
           .forceLink<Node, Link>(links)
           .distance(1)
           .id(d => d.channelId)
-          .strength(d => (d.strength / maxStrength) * 0.6)
+          .strength(d => (d.strength / maxStrength) * 1.1)
       )
       .force('collide', d3.forceCollide<Node>(getNodeRadius))
 
@@ -437,7 +440,7 @@ export class ChannelRelations extends React.Component<Props, State> {
 
     await delay(1)
     updatePositions()
-    this.stateRender(null, null)
+    this.stateRender(this.props, this.state)
     await delay(1)
     updateLabels(false)
   }
