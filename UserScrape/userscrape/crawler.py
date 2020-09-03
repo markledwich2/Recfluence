@@ -1,4 +1,5 @@
 
+from more_itertools.more import difference
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -6,30 +7,27 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import ElementNotInteractableException, ElementNotVisibleException, NoSuchElementException, TimeoutException, WebDriverException
-from selenium.webdriver.chrome.options import Options
+#from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium import webdriver
 from datetime import datetime
 import time
 import os
-import uuid
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 from pathlib import Path
 import json
 from urllib.parse import urlparse
 from dataclasses import asdict, dataclass
 from dataclasses_json import dataclass_json
-from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath, WindowsPath
+from pathlib import Path
 import tempfile
 import asyncio
 from typing import Any, List, Dict
 from .store import BlobStore, BlobPaths, file_date_str
 from .discord_bot import DiscordBot
-from .cfg import UserCfg
+from .cfg import Cfg, UserCfg
 import logging
 from logging import Logger
-from .format import format_seconds
-from azure.storage.blob._models import ContentSettings
 from more_itertools import chunked
 
 
@@ -58,8 +56,14 @@ class DetectedAsBotException(Exception):
     pass
 
 
+def create_firefox_driver(headless: bool) -> WebDriver:
+    options = webdriver.firefox.options.Options()
+    options.headless = headless
+    return webdriver.Firefox(options=options)
+
+
 def create_chrome_driver(headless: bool) -> WebDriver:
-    options = Options()
+    options = webdriver.chrome.options.Options()
     if(headless):
         options.add_argument('--headless')
     options.add_argument('--no-sandbox')
@@ -79,18 +83,19 @@ def create_chrome_driver(headless: bool) -> WebDriver:
 
 
 class Crawler:
-    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, headless: bool, trial_id: str, log: Logger, max_watch_secs: int, videos_parallel: int, lang='en'):
+    def __init__(self, store: BlobStore, bot: DiscordBot, user: UserCfg, cfg: Cfg, trial_id: str, log: Logger, lang='en'):
         self.store = store
         self.bot = bot
-        self.driver = create_chrome_driver(headless)
+        self.driver = create_chrome_driver(
+            cfg.headless) if cfg.browser == 'chrome' else create_firefox_driver(cfg.headless)
         self.wait = WebDriverWait(self.driver, 10)
         self.user = user
         self.init_time = datetime.now()
         self.log = log
         self.lang = lang
         self.trial_id = trial_id
-        self.max_watch_secs = max_watch_secs
-        self.videos_parallel = videos_parallel
+        self.max_watch_secs = cfg.max_watch_secs
+        self.videos_parallel = cfg.videos_parallel
         self.session_id = file_date_str()
         self.path = BlobPaths(store.cfg, trial_id, user, self.session_id)
 
@@ -367,6 +372,31 @@ class Crawler:
             duration_time = datetime.strptime(duration, "%M:%S")
         return (duration_time-datetime(1900, 1, 1)).total_seconds()
 
+    async def watch_videos(self, videos: List[str]):
+        """
+        This methods starts watching multiple videos in different tabs asynchronously, I.e. while one watch_video method is in the
+        state of just sleeping, it already opens the next tab with another video.
+        As soon as video is finished watching, the tab is closed
+
+        Arguments:
+            videos {list[str]} -- a list with all the video id's that are supposed to be watched
+        """
+
+        main_window = self.driver.window_handles[-1]
+        for video_batch in chunked(videos, self.videos_parallel):
+            tasks = []
+            for video_id in video_batch:
+
+                if self.store.exists(self.path.watch_time_json(video_id)):
+                    self.log.info('{tag} - skipping watching video {video}', tag=self.user.tag, video=video_id)
+                    continue
+
+                handles_before = set(self.driver.window_handles)
+                self.driver.execute_script("window.open('');")
+                new_tab = (set(self.driver.window_handles)-handles_before).pop()
+                tasks.append(self.watch_video(video_id, main_window, new_tab))
+            await asyncio.gather(*tasks)
+
     async def watch_video(self, video_id: str, main_tab: str, current_tab: str):
         """[summary]
         starts video, skips any ads in the beginning and then watches video for an amount of time that is dependent on video length
@@ -385,7 +415,9 @@ class Crawler:
 
         try:
             # no need to click, it auto-plays
-            self.wait_for_clickable('.ytp-play-button.ytp-button', error_expected=True)
+            play_button = self.wait_for_clickable('.ytp-play-button.ytp-button', error_expected=True)
+            if play_button.get_attribute('aria-label') == 'Play (k)':
+                play_button.click()
         except TimeoutException as e:
             unavailable = self.get_video_unavailable()
             if(unavailable == None):
@@ -478,30 +510,6 @@ class Crawler:
         self.driver.switch_to.window(current_tab)
         self.driver.close()
         self.driver.switch_to.window(main_tab)
-
-    async def watch_videos(self, videos: List[str]):
-        """
-        This methods starts watching multiple videos in different tabs asynchronously, I.e. while one watch_video method is in the
-        state of just sleeping, it already opens the next tab with another video.
-        As soon as video is finished watching, the tab is closed
-
-        Arguments:
-            videos {list[str]} -- a list with all the video id's that are supposed to be watched
-        """
-
-        main_window = self.driver.window_handles[-1]
-        for video_batch in chunked(videos, self.videos_parallel):
-            tasks = []
-            for video_id in video_batch:
-
-                if self.store.exists(self.path.watch_time_json(video_id)):
-                    self.log.info('{tag} - skipping watching video {video}', tag=self.user.tag, video=video_id)
-                    continue
-
-                self.driver.execute_script("window.open('');")
-                new_tab = self.driver.window_handles[-1]
-                tasks.append(self.watch_video(video_id, main_window, new_tab))
-            await asyncio.gather(*tasks)
 
     def scan_feed(self, scan_num: int):
         # especially during the corona crisis, YouTube is offering a lot of extra information

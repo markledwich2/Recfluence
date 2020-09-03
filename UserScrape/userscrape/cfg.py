@@ -95,6 +95,10 @@ class Cfg(JsonSchemaMixin):
     max_watch_secs: int = field(default=300, metadata=JsonSchemaMeta(
         description="the maximum time to watch a seed video for", required=False))
 
+    browser: str = field(default="firefox", metadata=JsonSchemaMeta(
+        description="The browser to use for scraping", examples=["chrome", "firefox"],
+        required=False))
+
 
 async def load_cfg() -> Cfg:
     '''loads application configuration form a blob (if defined in .env cfg_sas) or ./userscrape.json

@@ -90,7 +90,7 @@ namespace Mutuo.Etl.Pipe {
         if (group.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0)) await DeleteContainer(containerGroup, log);
 
         return md;
-      }, ctx.PipeCfg.Azure.Parallel);
+      }, returnOnRunning ? ctx.PipeCfg.Azure.Parallel : ids.Count);
 
       return res;
     }
