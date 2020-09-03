@@ -19,8 +19,11 @@ class TrialCfg(JsonSchemaMixin):
 
 
 def load_incomplete_trial(trial_id: str, store: BlobStore, log: Logger) -> TrialCfg:
-    path = BlobPaths(store.cfg, trial_id)
-    return TrialCfg.from_json(store.load(path.trial_cfg_json()))
+    paths = BlobPaths(store.cfg, trial_id)
+    p = paths.trial_cfg_json()
+    if not store.exists(p):
+        return None
+    return TrialCfg.from_json(store.load())
 
 
 def save_incomplete_trial(trial_cfg: TrialCfg, store: BlobStore, log: Logger):
