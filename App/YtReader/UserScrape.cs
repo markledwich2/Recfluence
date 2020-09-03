@@ -44,7 +44,7 @@ namespace YtReader {
       Version = version;
     }
 
-    public async Task Run(ILogger log, bool init, string trial, CancellationToken cancel) {
+    public async Task Run(ILogger log, bool init, string trial, string[] limitAccounts, CancellationToken cancel) {
       var storage = CloudStorageAccount.Parse(RootCfg.AppStoreCs);
       var client = new CloudBlobClient(storage.BlobEndpoint, storage.Credentials);
       var container = client.GetContainerReference(Setup.CfgContainer);
@@ -63,8 +63,10 @@ namespace YtReader {
       });
 
       var usCfg = (await cfgBlob.LoadAsText()).ParseJObject();
-      var accounts = usCfg.SelectTokens("$.users[*]")
+      var cfgAccounts = usCfg.SelectTokens("$.users[*]")
         .Select(t => t.Value<string>("tag")).ToArray();
+
+      var accounts = cfgAccounts.Where(c => limitAccounts == null || limitAccounts.Contains(c)).ToArray();
 
       var fullName = Cfg.Container.FullContainerImageName("latest");
       var env = new (string name, string value)[] {

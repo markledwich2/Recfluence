@@ -267,6 +267,9 @@ namespace YtCli {
     
     [CommandOption("us-trial", Description = "Run userscrape with an existing trial")]
     public string UserScrapeTrial { get; set; }
+    
+    [CommandOption("us-accounts", Description = "Run userscrape with a list of | separated accounts")]
+    public string UserScrapeAccounts { get; set; }
 
     [CommandOption("disable-discover", Description = "when collecting, don't go and find new channels to classify")]
     public bool DisableChannelDiscover { get; set; }
@@ -295,7 +298,8 @@ namespace YtCli {
           return (index.ParseEnum<SearchIndex>(), condition);
         }).ToArray(),
         UserScrapeInit = UserScrapeInit,
-        UserScrapeTrial = UserScrapeTrial
+        UserScrapeTrial = UserScrapeTrial,
+        UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|')
       };
 
       await PipeCtx.Run((YtUpdater u) => u.Update(options, PipeArg.Inject<CancellationToken>()),

@@ -25,6 +25,7 @@ namespace YtReader {
     public bool                                    UserScrapeInit         { get; set; }
     public string                                  UserScrapeTrial        { get; set; }
     public (SearchIndex index, string condition)[] SearchConditions       { get; set; }
+    public string[]                                UserScrapeAccounts     { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -80,8 +81,8 @@ namespace YtReader {
       _backup.Backup(Log);
 
     [DependsOn(nameof(Results), nameof(Collect), nameof(Dataform))]
-    Task UserScrape(bool init, string trial, CancellationToken cancel) =>
-      _userScrape.Run(Log, init, trial, cancel);
+    Task UserScrape(bool init, string trial, string[] accounts, CancellationToken cancel) =>
+      _userScrape.Run(Log, init, trial, accounts, cancel);
 
     [Pipe]
     public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
@@ -96,7 +97,7 @@ namespace YtReader {
         c => Stage(fullLoad, options.Tables),
         c => Search(fullLoad, options.SearchConditions, c),
         c => Results(options.Results),
-        c => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, c),
+        c => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, c),
         c => Dataform(fullLoad, options.Tables, c),
         c => Backup());
 
