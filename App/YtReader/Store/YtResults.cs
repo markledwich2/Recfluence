@@ -88,7 +88,7 @@ namespace YtReader.Store {
 select c.*
      , cr.lr_human
      , cr.tags_human
-     , cr.relevance_human
+     , cr.relevance_humanCfg
 from channel_latest c
        left join channel_review cr on cr.channel_id=c.channel_id
 where c.reviews_all>0";

@@ -241,7 +241,7 @@ export class ChannelRelations extends React.Component<Props, State> {
           .forceLink<Node, Link>(links)
           .distance(1)
           .id(d => d.channelId)
-          .strength(d => (d.strength / maxStrength) * 1.1)
+          .strength(d => (d.strength / maxStrength) * 0.8)
       )
       .force('collide', d3.forceCollide<Node>(getNodeRadius))
 

@@ -68,7 +68,7 @@ namespace YtReader {
     }
 
     static string SqlList<T>(IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
-    
+
     async Task<IReadOnlyCollection<(ChannelStored2 c, UpdateChannelType update)>> UpdateAllChannels(bool disableDiscover, string[] limitChannels, ILogger log,
       CancellationToken cancel) {
       var store = Store.Channels;
@@ -77,7 +77,8 @@ namespace YtReader {
         limitChans.Any() ? limitChans.Join("|") : "All");
 
       IKeyedCollection<string, ChannelStored2> existingChannels;
-      (ChannelStored2 c, UpdateChannelType update)[] toAdd;
+      var toAdd = new (ChannelStored2 c, UpdateChannelType update)[] { };
+
       using (var db = await Sf.OpenConnection(log)) {
         // retrieve previous channel state to update with new classification (algos and human) and stats form the API
         // spread out channel updates over the week
@@ -99,7 +100,8 @@ namespace YtReader {
 )
 select v from to_update u inner join stage_latest s on u.channel_id = s.v:ChannelId::string"))
           .Select(s => s.ToObject<ChannelStored2>(Store.Channels.JCfg)).ToKeyedCollection(c => c.ChannelId);
-        toAdd = disableDiscover ? default : await ChannelsToAdd(db, log);
+        if (!disableDiscover)
+          toAdd = await ChannelsToAdd(db, log);
       }
 
       var toUpdate = existingChannels.Where(c => limitChans.IsEmpty() || limitChans.Contains(c.ChannelId)).ToArray();
@@ -198,10 +200,10 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       log.Debug("Collect - found {Channels} new channels for discovery", toAdd.Count);
 
       var toDiscover = toAdd
-        .Select(c => (c:new ChannelStored2 {
+        .Select(c => (c: new ChannelStored2 {
           ChannelId = c.channel_id,
           ChannelTitle = c.channel_title
-        }, update: c.source == "review" ? UpdateChannelType.Update : UpdateChannelType.Discover )).ToArray();
+        }, update: c.source == "review" ? UpdateChannelType.Update : UpdateChannelType.Discover)).ToArray();
 
       return toDiscover;
     }
