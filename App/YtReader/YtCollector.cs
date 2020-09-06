@@ -72,9 +72,9 @@ namespace YtReader {
     async Task<IReadOnlyCollection<(ChannelStored2 c, UpdateChannelType update)>> UpdateAllChannels(bool disableDiscover, string[] limitChannels, ILogger log,
       CancellationToken cancel) {
       var store = Store.Channels;
-      var limitChans = limitChannels.HasItems() ? limitChannels.ToHashSet() : Cfg.LimitedToSeedChannels?.ToHashSet() ?? new HashSet<string>();
+      var explicitChannels = limitChannels.HasItems() ? limitChannels.ToHashSet() : Cfg.LimitedToSeedChannels?.ToHashSet() ?? new HashSet<string>();
       log.Information("Collect - Starting channels update. Limited to ({Included})",
-        limitChans.Any() ? limitChans.Join("|") : "All");
+        explicitChannels.Any() ? explicitChannels.Join("|") : "All");
 
       IKeyedCollection<string, ChannelStored2> existingChannels;
       var toAdd = new List<(ChannelStored2 c, UpdateChannelType update)>();
@@ -84,7 +84,7 @@ namespace YtReader {
         // spread out channel updates over the week
         existingChannels = (await db.Query<string>("channels - previous", $@"with stage_latest as (
   select v  from channel_stage
-    {(limitChans.None() ? "" : $"where v:ChannelId::string in ({SqlList(limitChans)})")}
+    {(explicitChannels.None() ? "" : $"where v:ChannelId::string in ({SqlList(explicitChannels)})")}
     qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc)=1
 )
    , to_update as (
@@ -95,21 +95,20 @@ namespace YtReader {
     and (
       update_day=(dayofweekiso(current_date())-1) 
       or datediff(d, updated, current_timestamp())>7 
-      {(limitChans.None() ? "" : $"or channel_id in ({SqlList(limitChans)})")}
+      {(explicitChannels.None() ? "" : $"or channel_id in ({SqlList(explicitChannels)})")}
     )
 )
 select v from to_update u inner join stage_latest s on u.channel_id = s.v:ChannelId::string"))
           .Select(s => s.ToObject<ChannelStored2>(Store.Channels.JCfg)).ToKeyedCollection(c => c.ChannelId);
-        
-        toAdd.AddRange(limitChannels.Where(c => !existingChannels.ContainsKey(c))
-          .Select(c => (new ChannelStored2 { ChannelId = c }, UpdateChannelType.Discover )));
-        
-        if (!disableDiscover) {
-          toAdd.AddRange(await ChannelsToAdd(db, log)); 
-        }
+
+        if (limitChannels != null) // discover channels specified in limit if they aren't in our dataset
+          toAdd.AddRange(limitChannels.Where(c => !existingChannels.ContainsKey(c))
+            .Select(c => (new ChannelStored2 {ChannelId = c}, UpdateChannelType.Discover)));
+
+        if (!disableDiscover) toAdd.AddRange(await ChannelsToAdd(db, log));
       }
 
-      var toUpdate = existingChannels.Where(c => limitChans.IsEmpty() || limitChans.Contains(c.ChannelId)).ToArray();
+      var toUpdate = existingChannels.Where(c => explicitChannels.IsEmpty() || explicitChannels.Contains(c.ChannelId)).ToArray();
 
       // perform full update on channels older than 90 days (max X at a time because of quota limit).
       var fullUpdate = toUpdate
