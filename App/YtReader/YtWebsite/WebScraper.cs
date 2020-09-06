@@ -341,9 +341,7 @@ namespace YtReader.YtWebsite {
       var raw = await GetRaw(url, "video watch", log);
       return (Html.ParseDocument(raw), raw, url);
     }
-
-    static readonly Regex _ytAdRegex = new Regex(@"""yt_ad"":""??([0-1])""?", RegexOptions.Compiled);
-
+    
     public const string RestrictedVideoError = "Restricted";
 
     public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) =>
@@ -393,9 +391,6 @@ namespace YtReader.YtWebsite {
         await LogStore.Save(path, raw.AsStream(), log);
         log.Warning("WebScraper - Unable to find recs at ({Url}). error: {Error}", logUrl, recEx?.ToString());
       }
-
-      var match = _ytAdRegex.Match(raw);
-      extra.HasAd = match.Success && match.Groups[1].Value == "1";
 
       return new RecsAndExtra(extra, recs);
     }
@@ -465,6 +460,9 @@ namespace YtReader.YtWebsite {
 
     static VideoItem GetVideo(string videoId, IReadOnlyDictionary<string, string> videoInfoDic,
       (HtmlDocument html, string raw, string url) videoWatchPage) {
+      if (!videoInfoDic.ContainsKey("player_response"))
+        return null;
+      
       var responseJson = JToken.Parse(videoInfoDic["player_response"]);
       var renderer = responseJson.SelectToken("microformat.playerMicroformatRenderer");
 

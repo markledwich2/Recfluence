@@ -1,5 +1,6 @@
 
 
+from typing import List
 from userscrape.cfg import load_cfg, UserCfg, Cfg
 from userscrape.crawler import Crawler
 import asyncio
@@ -18,7 +19,7 @@ async def setup_test_crawler() -> Crawler:
     user = cfg.users[0]
     trial_id = new_trial_id()
     log = configure_log(cfg.seqUrl, os.getenv('env'), cfg.branch_env, trial_id)
-    crawler = Crawler(store, None, user, cfg.headless, trial_id, log)
+    crawler = Crawler(store, None, user, cfg, trial_id, log)
     return crawler
 
 
@@ -38,9 +39,15 @@ async def test_log():
     sys.exit(1)
 
 
-async def test_watch(video_id: str):
+async def test_watch(videos: List[str]):
     crawler: Crawler = await setup_test_crawler()
-    await crawler.watch_videos([video_id])
+    for video in videos:
+        await crawler.get_recommendations_for_video(video)
+    await crawler.watch_videos(videos)
 
-# asyncio.run(test_watch('hYx2t-iEZu0'))
-asyncio.run(test_log())
+asyncio.run(test_watch([
+    'SmOl2EcpdKg'  # normal
+    # 'rBu0BRTx2x8',  # invavailable in AU
+    # 'Ms9WOSXU5tY'  # members only
+]))  # hYx2t-iEZu0
+# asyncio.run(test_log())

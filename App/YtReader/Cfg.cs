@@ -141,7 +141,7 @@ namespace YtReader {
     public bool Headless       { get; set; } = true;
 
     /// <summary>the max number of channels to discover each collect</summary>
-    public int DiscoverChannels { get; set; } = 10000;
+    public int DiscoverChannels { get; set; } = 100;
 
     /// <summary>the number of vids to populate with data when discovering new channels (i.e. preparing data to be classified)</summary>
     public int DiscoverChannelVids { get; set; } = 3;

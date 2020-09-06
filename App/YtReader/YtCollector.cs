@@ -77,7 +77,7 @@ namespace YtReader {
         limitChans.Any() ? limitChans.Join("|") : "All");
 
       IKeyedCollection<string, ChannelStored2> existingChannels;
-      var toAdd = new (ChannelStored2 c, UpdateChannelType update)[] { };
+      var toAdd = new List<(ChannelStored2 c, UpdateChannelType update)>();
 
       using (var db = await Sf.OpenConnection(log)) {
         // retrieve previous channel state to update with new classification (algos and human) and stats form the API
@@ -100,8 +100,13 @@ namespace YtReader {
 )
 select v from to_update u inner join stage_latest s on u.channel_id = s.v:ChannelId::string"))
           .Select(s => s.ToObject<ChannelStored2>(Store.Channels.JCfg)).ToKeyedCollection(c => c.ChannelId);
-        if (!disableDiscover)
-          toAdd = await ChannelsToAdd(db, log);
+        
+        toAdd.AddRange(limitChannels.Where(c => !existingChannels.ContainsKey(c))
+          .Select(c => (new ChannelStored2 { ChannelId = c }, UpdateChannelType.Discover )));
+        
+        if (!disableDiscover) {
+          toAdd.AddRange(await ChannelsToAdd(db, log)); 
+        }
       }
 
       var toUpdate = existingChannels.Where(c => limitChans.IsEmpty() || limitChans.Contains(c.ChannelId)).ToArray();
@@ -127,7 +132,7 @@ select v from to_update u inner join stage_latest s on u.channel_id = s.v:Channe
         await store.Append(channels.Select(c => c.c).ToArray(), log);
 
       log.Information("Collect - Updated stats for {Channels} existing and {Discovered} discovered channels in {Duration}",
-        toUpdate.Length, toAdd.Length, dur);
+        toUpdate.Length, toAdd.Count, dur);
 
       return channels;
     }

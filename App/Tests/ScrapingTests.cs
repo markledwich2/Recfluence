@@ -15,7 +15,7 @@ namespace Tests {
       // get comments, does watch page html have it
       using var ctx = await TextCtx();
       var chrome = ctx.Resolve<ChromeScraper>();
-      var vids = new[] {"0pn2bwa2zZc", "n_vzBGB3F_Y", "xxQOtOCbASs" /* (tall video) #1#, "DLq1DUcMh1Q", "n_vzBGB3F_Y", "xxQOtOCbASs"*/};
+      var vids = new[] {"rBu0BRTx2x8", "Ms9WOSXU5tY", "0pn2bwa2zZc", "n_vzBGB3F_Y", "xxQOtOCbASs" /* (tall video) #1#, "DLq1DUcMh1Q", "n_vzBGB3F_Y", "xxQOtOCbASs"*/};
       var chromeExtras = await chrome.GetRecsAndExtra(vids, ctx.Log);
     }
 
@@ -23,7 +23,7 @@ namespace Tests {
     public static async Task WebRecsAndExtra() {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<WebScraper>();
-      var extra = await ws.GetRecsAndExtra(new[] {"n_vzBGB3F_Y", "xxQOtOCbASs" /* (tall video) */, "DLq1DUcMh1Q", "n_vzBGB3F_Y", "xxQOtOCbASs"}, ctx.Log);
+      var extra = await ws.GetRecsAndExtra(new[] {"rBu0BRTx2x8", "Ms9WOSXU5tY", "n_vzBGB3F_Y", "xxQOtOCbASs" /* (tall video) */, "DLq1DUcMh1Q"}, ctx.Log);
     }
 
     [Test]

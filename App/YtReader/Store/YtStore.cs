@@ -137,7 +137,7 @@ namespace YtReader.Store {
 
     public string   StatusMessage  { get; set; }
     public DateTime LastFullUpdate { get; set; }
-    public override string ToString() => $"{ChannelTitle}";
+    public override string ToString() => ChannelTitle ?? ChannelId;
   }
 
   public class UserChannelReviewCommon : IHasUpdated {

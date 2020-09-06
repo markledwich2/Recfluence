@@ -19,9 +19,9 @@ using YtReader.Store;
 
 namespace YtReader.YtWebsite {
   public class ChromeScraper {
-    readonly ProxyCfg         ProxyCfg;
-    readonly YtCollectCfg     CollectCfg;
-    readonly ISimpleFileStore LogStore;
+    readonly ProxyCfg          ProxyCfg;
+    readonly YtCollectCfg      CollectCfg;
+    readonly ISimpleFileStore  LogStore;
     readonly AsyncLazy<string> ExecutablePath;
 
     public ChromeScraper(ProxyCfg proxyCfg, YtCollectCfg collectCfg, ISimpleFileStore logStore) {
@@ -51,7 +51,7 @@ namespace YtReader.YtWebsite {
 
     public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) {
       if (videos.None()) return new RecsAndExtra[] { };
-      
+
       var sw = Stopwatch.StartNew();
       log = log.ForContext("Module", nameof(ChromeScraper));
       var proxies = ProxyCfg.DirectAndProxies().Take(2)
@@ -131,7 +131,6 @@ namespace YtReader.YtWebsite {
     #region Request handling
 
     static readonly Regex AbortPathRe = new Regex("\\.(woff2|png|ico)$", RegexOptions.Compiled);
-    
 
     static bool AbortRequest(Request req) {
       if (req.ResourceType.In(ResourceType.Image, ResourceType.Media, ResourceType.Font, ResourceType.TextTrack, ResourceType.Ping, ResourceType.Manifest))
@@ -171,7 +170,11 @@ namespace YtReader.YtWebsite {
 
     const string CommentCountSel = "#comments #count";
     const string CommentErrorSel = "#comments #message";
-    const string VideoErrorSel   = "#info > .reason.yt-player-error-message-renderer";
+
+    class VideoReason {
+      public string reason    { get; set; }
+      public string subReason { get; set; }
+    }
 
     async Task<(RecsAndExtra video, Response notOkResponse)> GetVideo(Page page, string videoId, ILogger log) {
       log = log.ForContext("Video", videoId);
@@ -183,34 +186,26 @@ namespace YtReader.YtWebsite {
 
       if (response.Status != HttpStatusCode.OK)
         return (default, response);
-      // wait for either a single comment, or a message that the coments are turned off. This is the slowest part to load.
-      /*await WaitForSelector(page,
-        new[] {CommentCountSel, CommentErrorSel, VideoErrorSel}.Join(", "),
-        2.Minutes(), log);*/
+
       var (video, error) = await VideoDetails(page, videoId);
-      string subError = null;
-      if (error == null) {
-        error = await page.EvaluateFunctionAsync<string>(@$"() => {{
-        var el = document.querySelector('{VideoErrorSel}')
-        return el ? el.innerText : null
-      }}");
+      video ??= new VideoExtraStored2 {VideoId = videoId};
 
-        subError = await page.EvaluateFunctionAsync<string>(@"() => {
-var el = document.querySelector('#info > .subreason.yt-player-error-message-renderer')
-return el ? el.innerText : null
-}");
-      }
-
-      if (video == null)
-        return (new RecsAndExtra(new VideoExtraStored2 {
-          VideoId = videoId,
-          Error = error,
-          SubError = subError
-        }, recs: default), default);
-
-      video.Error = error;
-      video.SubError = subError;
-
+      var reason = await page.EvaluateFunctionAsync<VideoReason>(@"() => { 
+    var p = ytInitialPlayerResponse.playabilityStatus
+    if(!p || p.status == 'OK') return null
+    var reason = p.errorScreen?.playerErrorMessageRenderer?.reason?.simpleTex
+        ?? p.errorScreen?.playerLegacyDesktopYpcOfferRenderer?.itemTitle
+        ?? document.querySelector('#reason.yt-player-error-message-renderer')?.innerText
+    var subReason = p.errorScreen?.subreason?.runs?.map(r => r.text).join('|') 
+        ?? p.errorScreen?.playerLegacyDesktopYpcOfferRenderer?.offerDescription
+        ?? document.querySelector('#subreason.yt-player-error-message-renderer')?.innerText
+    return reason ? {reason, subReason} : null
+  }
+");
+      video.Error = error ?? reason?.reason;
+      video.SubError = reason?.subReason;
+      if(video.Error.HasValue()) return (new RecsAndExtra(video, default), default);
+      
       await ScrollDown(page, maxScroll: null, videoId, log);
       (video.Ad, video.HasAd) = await GetAd(page);
       var recs = await GetRecs(page, error.HasValue(), log);

@@ -261,8 +261,9 @@ class Crawler:
         while True:
             try:
                 all_recs = self.driver.execute_script('''
- return document.querySelector('ytd-app')?.__data?.data?.response?.contents
-    ?.twoColumnWatchNextResults?.secondaryResults?.secondaryResults?.results
+ return (ytInitialData.contents.twoColumnWatchNextResults ?? 
+ document.querySelector('ytd-app')?.__data?.data?.response?.contents?.twoColumnWatchNextResults)
+    ?.secondaryResults?.secondaryResults?.results
     ?.map(r => r.compactAutoplayRenderer && Object.assign({}, r.compactAutoplayRenderer.contents[0].compactVideoRenderer, {autoPlay:true}) 
         || r.compactVideoRenderer &&  Object.assign({}, r.compactVideoRenderer, {autoPlay:false}) 
         || null)
@@ -309,14 +310,18 @@ class Crawler:
         return True
 
     def get_video_unavailable(self):
-        reason: List[WebElement] = self.driver.find_elements_by_css_selector(
-            '#reason.yt-player-error-message-renderer')
-        subReason: List[WebElement] = self.driver.find_elements_by_css_selector(
-            '#subreason.yt-player-error-message-renderer')
-        if(reason):
-            unavalable = VideoUnavailable(reason[0].text, subReason[0].text if subReason else None)
-            return unavalable
-        return None
+        reason = self.driver.execute_script('''
+var p = ytInitialPlayerResponse.playabilityStatus
+if(!p || p.status == 'OK') return null
+var reason = p.errorScreen?.playerErrorMessageRenderer?.reason?.simpleTex
+    ?? p.errorScreen?.playerLegacyDesktopYpcOfferRenderer?.itemTitle
+    ?? document.querySelector('#reason.yt-player-error-message-renderer')?.innerText
+var subReason = p.errorScreen?.subreason?.runs?.map(r => r.text).join('|') 
+    ?? p.errorScreen?.playerLegacyDesktopYpcOfferRenderer?.offerDescription
+    ?? document.querySelector('#subreason.yt-player-error-message-renderer')?.innerText
+return reason ? {reason, subReason} : null
+       ''')
+        return VideoUnavailable(reason['reason'], reason['subReason']) if reason else None
 
     SELECTOR_HISTORY = '#button[aria-label="Pause watch history"], #button[aria-label="Turn on watch history"]'
 
