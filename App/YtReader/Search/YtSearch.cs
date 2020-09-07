@@ -47,8 +47,12 @@ namespace YtReader.Search {
       (SearchIndex index, string condition)[] conditions = null, CancellationToken cancel = default) {
       string[] Conditions(SearchIndex index) => conditions?.Where(c => c.index == index).Select(c => c.condition).ToArray();
 
-      await BasicSync<EsChannel>(log, "select * from channel_latest", fullLoad, limit, Conditions(Channel), cancel);
-      await BasicSync<EsVideo>(log, "select * from video_latest", fullLoad, limit, Conditions(Video), cancel);
+      await BasicSync<EsChannel>(log, "select * from channel_accepted", fullLoad, limit, Conditions(Channel), cancel);
+      await BasicSync<EsVideo>(log, @"select *
+from video_latest v", 
+        fullLoad, limit, 
+        Conditions(Video).Concat("exists(select * from channel_accepted c where c.channel_id = v.channel_id)").ToArray(), 
+        cancel);
       await SyncCaptions(log, fullLoad, limit, Conditions(Caption), cancel);
     }
 
