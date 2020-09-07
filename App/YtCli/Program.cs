@@ -277,6 +277,9 @@ namespace YtCli {
     [CommandOption("search-conditions", Description = @"filter for tables when updating search indexes (channel|video|caption). 
 (e.g. 'channel:channel_id=2|video:video_field is null:caption:false' ) ")]
     public string SearchConditions { get; set; }
+    
+    [CommandOption("search-full", Description = "when true, search will be loaded fully")]
+    public bool SearchFullLoad { get; set; }
 
     public UpdateCmd(YtUpdater updater, IPipeCtx pipeCtx, ILogger log) {
       Updater = updater;
@@ -297,6 +300,7 @@ namespace YtCli {
           var (index, condition, _) = t.UnJoin(':');
           return (index.ParseEnum<SearchIndex>(), condition);
         }).ToArray(),
+        SearchFullLoad = SearchFullLoad,
         UserScrapeInit = UserScrapeInit,
         UserScrapeTrial = UserScrapeTrial,
         UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|')

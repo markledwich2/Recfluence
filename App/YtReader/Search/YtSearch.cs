@@ -34,10 +34,12 @@ namespace YtReader.Search {
   public class YtSearch {
     readonly SnowflakeConnectionProvider Db;
     readonly ElasticClient               Es;
+    readonly SearchCfg                   Cfg;
 
-    public YtSearch(SnowflakeConnectionProvider db, ElasticClient es) {
+    public YtSearch(SnowflakeConnectionProvider db, ElasticClient es, SearchCfg cfg) {
       Db = db;
       Es = es;
+      Cfg = cfg;
     }
 
     [Pipe]
@@ -117,15 +119,16 @@ namespace YtReader.Search {
 
     async Task UpdateIndex<T>(ILogger log, bool fullLoad) where T : class {
       var index = Es.GetIndexFor<T>() ?? throw new InvalidOperationException("The ElasticClient must have default indexes created for types used");
-      var exists = await Es.Indices.ExistsAsync(index);
+      var exists = (await Es.Indices.ExistsAsync(index)).Exists;
 
-      if (!exists.Exists) {
+      if (fullLoad && exists) {
+        await Es.Indices.DeleteAsync(index);
+        exists = false;
+      }
+
+      if (!exists) {
         await Es.Indices.CreateAsync(index, c => c.Map<T>(m => m.AutoMap()));
         log.Information("Created ElasticSearch Index {Index}", index);
-      }
-      else if (fullLoad) {
-        await Es.MapAsync<T>(c => c.AutoMap());
-        log.Information("Updated index mapping {Index}", index);
       }
     }
 
@@ -139,10 +142,10 @@ namespace YtReader.Search {
 
     async Task BatchToEs<T>(ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy, CancellationToken cancel) where T : class =>
       await enumerable
-        .Batch(3_000).WithIndex()
+        .Batch(Cfg.BatchSize).WithIndex()
         .BlockFunc(b => BatchToEs(b.item, b.index, esPolicy, log),
-          parallel: 2, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
-          capacity: 2,
+          parallel: Cfg.Parallel, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
+          capacity: Cfg.Parallel,
           cancel: cancel);
 
     async Task<int> BatchToEs<T>(IReadOnlyCollection<T> items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {

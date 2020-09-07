@@ -58,6 +58,7 @@ namespace YtReader {
     [Required] public AzureCleanerCfg Cleaner               { get; set; } = new AzureCleanerCfg();
     [Required] public YtUpdaterCfg    Updater               { get; set; } = new YtUpdaterCfg();
     [Required] public UserScrapeCfg   UserScrape            { get; set; } = new UserScrapeCfg();
+    [Required] public SearchCfg       Search                { get; set; } = new SearchCfg();
   }
 
   public class YtApiCfg {
@@ -167,11 +168,16 @@ namespace YtReader {
 
     [Required] public string BackupCs       { get; set; }
     [Required] public string BackupRootPath { get; set; }
-    [Required] public string ImportPath { get; set; } = "import";
+    [Required] public string ImportPath     { get; set; } = "import";
   }
 
   public class SeqCfg {
     public Uri    SeqUrl             { get; set; }
     public string ContainerGroupName { get; set; } = "seq";
+  }
+
+  public class SearchCfg {
+    public int BatchSize { get; set; } = 50_000;
+    public int Parallel  { get; set; } = 2;
   }
 }
