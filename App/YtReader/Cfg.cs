@@ -7,6 +7,7 @@ using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
+using Serilog.Events;
 using SysExtensions.Collections;
 using SysExtensions.Configuration;
 using SysExtensions.Security;
@@ -39,6 +40,7 @@ namespace YtReader {
   public class AppCfg {
     public            string          AppInsightsKey        { get; set; }
     public            int             DefaultParallel       { get; set; } = 8;
+    public            LogEventLevel   LogLevel              { get; set; } = LogEventLevel.Debug;
     [Required] public BranchEnvCfg    Env                   { get; set; } = new BranchEnvCfg();
     [Required] public YtCollectCfg    Collect               { get; set; } = new YtCollectCfg();
     [Required] public StorageCfg      Storage               { get; set; } = new StorageCfg();
@@ -177,7 +179,7 @@ namespace YtReader {
   }
 
   public class SearchCfg {
-    public int BatchSize { get; set; } = 100_000;
+    public int BatchSize { get; set; } = 20_000;
     public int Parallel  { get; set; } = 1;
   }
 }

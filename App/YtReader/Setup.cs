@@ -43,28 +43,18 @@ namespace YtReader {
     public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
     public static FPath LocalDataDir    => "Data".AsPath().InAppData(AppName);
 
-    public static Logger CreateTestLogger() =>
-      new LoggerConfiguration()
-        .WriteTo.Seq("http://localhost:5341", LogEventLevel.Debug).MinimumLevel.Debug()
-        .WriteTo.Console().MinimumLevel.Debug()
-        .CreateLogger();
-
-    public static ILogger ConsoleLogger(LogEventLevel level = LogEventLevel.Information) =>
-      new LoggerConfiguration()
-        .WriteTo.Console(level).CreateLogger();
-
     public static Logger CreateLogger(string env, string app, VersionInfo version, AppCfg cfg = null) {
       var c = new LoggerConfiguration()
         .WriteTo.Console(LogEventLevel.Information);
 
       if (cfg?.AppInsightsKey != null)
-        c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces, LogEventLevel.Debug);
+        c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces, cfg.LogLevel);
 
       if (cfg != null)
         c = c.ConfigureSeq(cfg);
 
       var log = c.YtEnrich(env, app, version.Version)
-        .MinimumLevel.Debug()
+        .MinimumLevel.ControlledBy(new LoggingLevelSwitch(cfg?.LogLevel ?? LogEventLevel.Debug))
         .CreateLogger();
 
       Log.Logger = log;
@@ -84,9 +74,19 @@ namespace YtReader {
     static LoggerConfiguration ConfigureSeq(this LoggerConfiguration loggerCfg, AppCfg cfg) {
       var seqCfg = cfg?.Seq;
       if (seqCfg?.SeqUrl == null) return loggerCfg;
-      var resCfg = loggerCfg.WriteTo.Seq(seqCfg.SeqUrl.OriginalString, LogEventLevel.Debug);
+      var resCfg = loggerCfg.WriteTo.Seq(seqCfg.SeqUrl.OriginalString, cfg.LogLevel);
       return resCfg;
     }
+
+    public static Logger CreateTestLogger() =>
+      new LoggerConfiguration()
+        .WriteTo.Seq("http://localhost:5341", LogEventLevel.Debug).MinimumLevel.Debug()
+        .WriteTo.Console().MinimumLevel.Debug()
+        .CreateLogger();
+
+    public static ILogger ConsoleLogger(LogEventLevel level = LogEventLevel.Information) =>
+      new LoggerConfiguration()
+        .WriteTo.Console(level).CreateLogger();
 
     /// <summary>Will pass root & app config to pipes from the calling process. Only configuration that should come from the
     ///   caller is passed. e.g. all root cfg's and a few app ones</summary>
@@ -133,7 +133,6 @@ namespace YtReader {
         .AddJsonFile("default.appcfg.json")
         .AddJsonFile($"{cfgRoot.Env}.appcfg.json", true);
 
-
       foreach (var s in secrets) cfg.AddJsonStream(s.AsStream());
 
       var builtCfg = cfg.AddJsonFile("local.appcfg.json", true)
@@ -141,7 +140,6 @@ namespace YtReader {
         .Build();
 
       var appCfg = builtCfg.Get<AppCfg>();
-
 
       PostLoadConfiguration(appCfg, cfgRoot, secrets.ToArray(), version.Version);
 

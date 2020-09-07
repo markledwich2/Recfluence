@@ -86,7 +86,7 @@ namespace YtReader {
           .BlockAction(async b => {
             trial = $"{DateTime.UtcNow:yyyy-MM-dd_HH-mm-ss}_{Guid.NewGuid().ToShortString(4)}";
             await RunTrial(cancel, trial, fullName, env, args, b, log);
-          }, Containers.AzureCfg.Parallel, cancel: cancel);
+          }, Cfg.MaxContainers, cancel: cancel);
     }
 
     async Task RunTrial(CancellationToken cancel, string trial, string fullName, (string name, string value)[] env, string[] args,

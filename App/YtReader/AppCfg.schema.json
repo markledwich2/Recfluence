@@ -222,6 +222,17 @@
         }
       }
     },
+    "SearchCfg": {
+      "type": "object",
+      "properties": {
+        "batchSize": {
+          "type": "integer"
+        },
+        "parallel": {
+          "type": "integer"
+        }
+      }
+    },
     "SeqCfg": {
       "type": "object",
       "properties": {
@@ -255,10 +266,10 @@
         "mainChannelSheetId": {
           "type": "string"
         },
-        "userChannelSheetIds": {
+        "userSheets": {
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/definitions/UserSheetCfg"
           }
         },
         "parallel": {
@@ -272,7 +283,7 @@
         "creds": {
           "type": "string"
         },
-        "account": {
+        "host": {
           "type": "string"
         },
         "warehouse": {
@@ -337,6 +348,9 @@
           "type": "string"
         },
         "backupRootPath": {
+          "type": "string"
+        },
+        "importPath": {
           "type": "string"
         }
       }
@@ -432,11 +446,22 @@
         "maxContainers": {
           "type": "integer"
         },
-        "seedsPerIdeology": {
+        "seedsPerTag": {
           "type": "integer"
         },
-        "testsPerIdeology": {
+        "tests": {
           "type": "integer"
+        }
+      }
+    },
+    "UserSheetCfg": {
+      "type": "object",
+      "properties": {
+        "sheetId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
         }
       }
     },
@@ -518,9 +543,6 @@
         "parallelChannels": {
           "type": "integer"
         },
-        "channelsPerContainer": {
-          "type": "integer"
-        },
         "chromeParallel": {
           "type": "integer"
         },
@@ -548,6 +570,17 @@
     },
     "defaultParallel": {
       "type": "integer"
+    },
+    "logLevel": {
+      "type": "string",
+      "enum": [
+        "Verbose",
+        "Debug",
+        "Information",
+        "Warning",
+        "Error",
+        "Fatal"
+      ]
     },
     "env": {
       "$ref": "#/definitions/BranchEnvCfg"
@@ -608,6 +641,9 @@
     },
     "userScrape": {
       "$ref": "#/definitions/UserScrapeCfg"
+    },
+    "search": {
+      "$ref": "#/definitions/SearchCfg"
     }
   }
 }
