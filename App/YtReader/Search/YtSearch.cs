@@ -45,7 +45,7 @@ namespace YtReader.Search {
     [Pipe]
     public async Task SyncToElastic(ILogger log, bool fullLoad = false, long? limit = null,
       (SearchIndex index, string condition)[] conditions = null, CancellationToken cancel = default) {
-      string[] Conditions(SearchIndex index) => conditions?.Where(c => c.index == index).Select(c => c.condition).ToArray();
+      string[] Conditions(SearchIndex index) => conditions?.Where(c => c.index == index).Select(c => c.condition).ToArray() ?? new string[] {};
 
       await BasicSync<EsChannel>(log, "select * from channel_accepted", fullLoad, limit, Conditions(Channel), cancel);
       await BasicSync<EsVideo>(log, @"select *
@@ -117,7 +117,8 @@ from video_latest v",
       if (param?.max_updated != null && conditions.IsEmpty())
         conditions = conditions.Concat("updated > :max_updated").ToArray();
       var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
-      var sql = $"{selectSql}{sqlWhere}{SqlLimit(limit)}";
+      var sql = $"{selectSql}{sqlWhere}{SqlLimit(limit)}" +
+                $" order by updated"; // always order by updated so that if sync fails, we can resume where we left of safely.
       return (sql, param);
     }
 
