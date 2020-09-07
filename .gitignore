@@ -31,3 +31,4 @@ __pycache__/
 .Rhistory
 .RData
 UserScrape/.env
+UserScrape/geckodriver.log

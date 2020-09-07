@@ -1,13 +1,29 @@
 {
   "configurations": [
     {
-      "name": "start experiment (prompt for args)",
+      "name": "start experiment (trial)",
       "args": [
         "-t",
-        "${input:pickTrial}",
+        "${input:pickTrial}"
+      ],
+      "type": "python",
+      "request": "launch",
+      "program": "app.py",
+      "console": "integratedTerminal",
+    },
+    {
+      "name": "start experiment (accounts)",
+      "args": [
         "-a",
         "${input:pickAccounts}"
       ],
+      "type": "python",
+      "request": "launch",
+      "program": "app.py",
+      "console": "integratedTerminal",
+    },
+    {
+      "name": "start experiment",
       "type": "python",
       "request": "launch",
       "program": "app.py",

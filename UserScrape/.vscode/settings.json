@@ -1,45 +1,44 @@
 {
-    "cSpell.words": [
-        "Identitarian",
-        "aiohttp",
-        "appcfg",
-        "asdict",
-        "asyncio",
-        "creds",
-        "dotenv",
-        "getenv",
-        "groupby",
-        "iterrows",
-        "jdbc",
-        "jsonl",
-        "jsons",
-        "nargs",
-        "sesh",
-        "spawnl",
-        "strftime",
-        "userscrape",
-        "vids",
-        "visibles"
-    ],
-    "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true,
-    "json.schemas": [
-        {
-            "fileMatch": [
-                "userscrape.json"
-            ],
-            "url": "/userscrape.schema.json"
-        }
-    ],
-    "files.exclude": {
-        "**/.git": true,
-        "**/.svn": true,
-        "**/.hg": true,
-        "**/CVS": true,
-        "**/.DS_Store": true,
-        "**/__*__": true,
-        "__azurite_*.json": true,
-    },
-    "editor.formatOnSave": true,
-    "python.pythonPath": "C:\\Users\\mark\\AppData\\Local\\Programs\\Python\\Python38\\python.exe"
+  "cSpell.words": [
+    "Identitarian",
+    "aiohttp",
+    "appcfg",
+    "asdict",
+    "asyncio",
+    "creds",
+    "dotenv",
+    "getenv",
+    "groupby",
+    "iterrows",
+    "jdbc",
+    "jsonl",
+    "jsons",
+    "nargs",
+    "sesh",
+    "spawnl",
+    "strftime",
+    "userscrape",
+    "vids",
+    "visibles"
+  ],
+  "python.linting.pylintEnabled": true,
+  "python.linting.enabled": true,
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "userscrape.json"
+      ],
+      "url": "/userscrape.schema.json"
+    }
+  ],
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/__*__": true,
+    "__azurite_*.json": true,
+  },
+  "editor.formatOnSave": true
 }

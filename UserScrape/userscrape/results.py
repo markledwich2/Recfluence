@@ -23,7 +23,7 @@ def load_incomplete_trial(trial_id: str, store: BlobStore, log: Logger) -> Trial
     p = paths.trial_cfg_json()
     if not store.exists(p):
         return None
-    return TrialCfg.from_json(store.load())
+    return TrialCfg.from_json(store.load(p))
 
 
 def save_incomplete_trial(trial_cfg: TrialCfg, store: BlobStore, log: Logger):
