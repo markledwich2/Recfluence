@@ -1,0 +1,20 @@
+// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.134.1/containers/alpine
+{
+	"name": "Alpine",
+	"build": {
+		"dockerfile": "Dockerfile",
+		// Update 'VARIANT' to pick an Alpine version: 3.10, 3.11, 3.12
+		"args": { "VARIANT": "3.12" }
+	},
+	
+	// Set *default* container specific settings.json values on container create. 
+	"settings": {
+		"terminal.integrated.shell.linux": "/bin/ash"
+	},
+
+	"extensions": [],
+	
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "npm i"
+}

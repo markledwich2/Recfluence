@@ -5,8 +5,15 @@ registryPass=`az keyvault secret show --name "ytnetworks-registry-password" --va
 cs=`az storage account show-connection-string --name ytapp --output tsv`
 
 az container create --name update-manual --image ytnetworks.azurecr.io/recfluence:latest --cpu 2 --memory 4 \
-    --command-line "./recfluence update -a Search -f" \
+    --command-line "./recfluence update -a Search --search-full" \
     --environment-variables env=prod appStoreCs=$cs \
     --registry-username ytnetworks  --registry-password $registryPass \
     --restart-policy Never
     
+sas_end=`date -u -d "120 minutes" '+%Y-%m-%dT%H:%MZ'`
+us_cfg_sas=`az storage blob generate-sas --connection-string $cs --container-name cfg --name userscrape.json  --permissions r --expiry $sas_end --full-uri --output tsv`
+az container create --name userscrape-manual3 --image ytnetworks.azurecr.io/userscrape:latest --cpu 1 --memory 2 \
+    --command-line "python app.py -t 2020-09-07_21-21-36_3VW" \
+    --environment-variables cfg_sas=$us_cfg_sas env=prod  \
+    --registry-username ytnetworks  --registry-password $registryPass \
+    --restart-policy Never

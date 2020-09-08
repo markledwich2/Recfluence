@@ -1,9 +1,7 @@
 FROM node:alpine
 
 RUN apk --update add git 
-
-RUN npm i -g @dataform/cli
-RUN npm i -g typescript ts-node
+RUN npm i -g @dataform/cli typescript ts-node
 
 COPY package*.json ./
 COPY tsconfig.json ./

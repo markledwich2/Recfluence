@@ -11,21 +11,25 @@ const env = process.env
 const logCfg: LoggerOptions = {
     name: 'recfluence_dataform',
     streams: [{
-        level: 'debug',
+        level: 'info',
         type: 'raw',
         stream: bunyanDebugStream({
             basepath: __dirname, // this should be the root folder of your project.
-            forceColor: true
+            forceColor: true,
+            showProcess: false,
+            showDate: false,
+            showLevel: false,
+            showMetadata: false
         })
     }],
-    serializers: bunyanDebugStream.serializers
+    serializers: bunyanDebugStream.serializers,
 }
 const seqUrl = env.SEQ
 if (seqUrl)
     logCfg.streams.push(
         seq.createStream({
             serverUrl: seqUrl,
-            level: 'debug'
+            level: 'info'
         }))
 
 var log = bunyan.createLogger(logCfg)
