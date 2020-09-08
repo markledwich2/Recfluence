@@ -453,6 +453,7 @@ return reason ? {reason, subReason} : null
             account=self.user.tag,
             trial=self.trial_id,
             video_id=video_id,
+            updated=datetime.utcnow().isoformat(),
             advertisers=[]
         )
 

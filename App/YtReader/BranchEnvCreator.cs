@@ -4,8 +4,10 @@ using Humanizer;
 using Microsoft.Azure.Storage.Blob;
 using Serilog;
 using SysExtensions;
+using SysExtensions.Text;
 using YtReader.Db;
 using YtReader.Store;
+using static YtReader.BranchState;
 
 namespace YtReader {
   public class BranchEnvCfg {
@@ -16,7 +18,8 @@ namespace YtReader {
   public enum BranchState {
     Fresh,
     Clone,
-    CloneBasic
+    CloneBasic,
+    CloneDb
   }
 
   public class BranchEnvCreator {
@@ -39,36 +42,35 @@ namespace YtReader {
     /// <summary>Creates an empty environment for a branch</summary>
     /// <returns></returns>
     public async Task Create(BranchState state, ILogger log) {
-      if (VersionInfo.Version.Prerelease == null) throw new InvalidOperationException("can't create environment, it needs to be a pre-release");
+      if (VersionInfo.Version.Prerelease.NullOrEmpty()) throw new InvalidOperationException("can't create environment, it needs to be a pre-release");
       await Task.WhenAll(
         CreateContainer(state, log),
-        WhCreator.CreateIfNotExists(state, log));
+        WhCreator.CreateOrReplace(state, log));
     }
 
     async Task CreateContainer(BranchState state, ILogger log) {
       var branchContainer = StorageCfg.Container(VersionInfo.Version);
+      var containerExists = await branchContainer.ExistsAsync();
+      if (containerExists) log.Information("container {Container} exists, leaving as is", branchContainer.Uri);
 
-      var exists = await branchContainer.ExistsAsync();
-      if (exists) {
-        log.Information("container {Container} exists, leaving as is", branchContainer.Uri);
-        return;
+      if (!containerExists) {
+        await branchContainer.CreateAsync();
+        await branchContainer.SetPermissionsAsync(new BlobContainerPermissions {PublicAccess = BlobContainerPublicAccessType.Container});
       }
 
-      await branchContainer.CreateAsync();
-      await branchContainer.SetPermissionsAsync(new BlobContainerPermissions {PublicAccess = BlobContainerPublicAccessType.Container});
+      var db = StorageCfg.DbPath;
+      var paths = state switch {
+        Clone => new[] {db, StorageCfg.ImportPath},
+        CloneBasic => new[] {StorageCfg.ImportPath, $"{db}/channels", $"{db}/channel_reviews", $"{db}/videos", $"{db}/video_extra"},
+        _ => null
+      };
+      if (paths == null) return;
 
-      if (state.In(BranchState.Clone, BranchState.CloneBasic)) {
-        var db = StorageCfg.DbPath;
-        var paths = state == BranchState.Clone
-          ? new[] {db, StorageCfg.ImportPath}
-          : new[] {StorageCfg.ImportPath, $"{db}/channels", $"{db}/channel_reviews", $"{db}/videos", $"{db}/video_extra"};
-        var prodContainer = StorageCfg.Container(VersionInfo.ProdVersion);
-        
-        foreach (var path in paths) {
-          var sourceBlob = prodContainer.GetDirectoryReference(path);
-          var destBlob = branchContainer.GetDirectoryReference(path);
-          await YtBackup.CopyBlobs(nameof(BranchEnvCreator), sourceBlob, destBlob, log);
-        }
+      var prodContainer = StorageCfg.Container(VersionInfo.ProdVersion);
+      foreach (var path in paths) {
+        var sourceBlob = prodContainer.GetDirectoryReference(path);
+        var destBlob = branchContainer.GetDirectoryReference(path);
+        await YtBackup.CopyBlobs(nameof(BranchEnvCreator), sourceBlob, destBlob, log);
       }
     }
   }

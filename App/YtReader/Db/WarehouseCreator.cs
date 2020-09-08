@@ -13,6 +13,7 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
 using static YtReader.Db.ScriptMode;
+using static YtReader.BranchState;
 
 namespace YtReader.Db {
   public class WarehouseCreator {
@@ -32,7 +33,7 @@ namespace YtReader.Db {
 
     static readonly JsonSerializerSettings JCfg = JsonExtensions.DefaultSettings(Formatting.None);
 
-    public async Task CreateIfNotExists(BranchState state, ILogger log) {
+    public async Task CreateOrReplace(BranchState state, ILogger log) {
       var sw = Stopwatch.StartNew();
 
       var schema = Sf.Cfg.Schema;
@@ -51,16 +52,16 @@ namespace YtReader.Db {
         Expires = DateTime.UtcNow.AddDays(2),
         Email = EnvCfg.Email
       }.ToJson(JCfg);
-      if (state.In(BranchState.Clone, BranchState.CloneBasic))
+      if (state.In(Clone, CloneBasic, CloneDb))
         scripts = new[] {
-            new Script("db copy", @$"create database if not exists {db} clone {Sf.Cfg.Db} comment='{dbComment}'")
+            new Script("db copy", @$"create or replace database {db} clone {Sf.Cfg.Db} comment='{dbComment}'")
           }
           .Concat(WhCfg.Roles.Select(r =>
             new Script($"init role {r}", $"grant all on database {db} to role {r}")
           ));
       else
         scripts = new[] {
-            new Script("db create", @$"create database if not exists {db} comment='{dbComment}'"),
+            new Script("db create", @$"create or replace database {db} comment='{dbComment}'"),
             new Script("schema", $"create schema if not exists {db}.{schema}")
           }
           .Concat(WhCfg.Roles.Select(r =>

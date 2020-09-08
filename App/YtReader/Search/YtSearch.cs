@@ -45,13 +45,13 @@ namespace YtReader.Search {
     [Pipe]
     public async Task SyncToElastic(ILogger log, bool fullLoad = false, long? limit = null,
       (SearchIndex index, string condition)[] conditions = null, CancellationToken cancel = default) {
-      string[] Conditions(SearchIndex index) => conditions?.Where(c => c.index == index).Select(c => c.condition).ToArray() ?? new string[] {};
+      string[] Conditions(SearchIndex index) => conditions?.Where(c => c.index == index).Select(c => c.condition).ToArray() ?? new string[] { };
 
       await BasicSync<EsChannel>(log, "select * from channel_accepted", fullLoad, limit, Conditions(Channel), cancel);
       await BasicSync<EsVideo>(log, @"select *
-from video_latest v", 
-        fullLoad, limit, 
-        Conditions(Video).Concat("exists(select * from channel_accepted c where c.channel_id = v.channel_id)").ToArray(), 
+from video_latest v",
+        fullLoad, limit,
+        Conditions(Video).Concat("exists(select * from channel_accepted c where c.channel_id = v.channel_id)").ToArray(),
         cancel);
       await SyncCaptions(log, fullLoad, limit, Conditions(Caption), cancel);
     }
@@ -67,41 +67,25 @@ from video_latest v",
     async Task SyncCaptions(ILogger log, bool fullLoad, long? limit, string[] conditions, CancellationToken cancel) {
       await UpdateIndex<EsCaption>(log, fullLoad);
       var lastUpdate = await Es.MaxDateField<EsCaption>(m => m.Field(p => p.updated));
-      var sql = CreateSql("select * from caption", fullLoad, lastUpdate, limit, conditions);
+      var sql = CreateSql("select * from caption_es", fullLoad, lastUpdate, limit, conditions);
       using var conn = await OpenConnection(log);
-      var allItems = Query<DbCaption>(sql, conn)
-        .SelectMany(c => {
-          // instead of searching across title, description, captions. We create new caption records for each part
-          var caps = c.caption_group == 0
-            ? new[] {
-              c,
-              CreatePart(c, CaptionPart.Title),
-              CreatePart(c, CaptionPart.Description),
-              CreatePart(c, CaptionPart.Keywords)
-            }
-            : new[] {c};
-          foreach (var newCap in caps) {
-            // even tho we use EsCaption  in the NEST api, it will still serialize and store instance properties. Remove the extra ones
-            newCap.keywords = null;
-            newCap.description = null;
-          }
-          return caps;
-        });
-
-      await BatchToEs<EsCaption>(log, allItems, EsExtensions.EsPolicy(log), cancel);
-
-      DbCaption CreatePart(DbCaption c, CaptionPart part) {
-        var partCaption = c.JsonClone();
-        partCaption.caption_id = $"{c.video_id}|{part.ToString().ToLowerInvariant()}";
-        partCaption.caption = part switch {
-          CaptionPart.Title => c.video_title,
-          CaptionPart.Description => c.description,
-          CaptionPart.Keywords => c.keywords,
-          _ => throw new NotImplementedException($"can't create part `{part}`")
-        };
-        partCaption.part = part;
-        return partCaption;
-      }
+      var allItems = Query<DbEsCaption>(sql, conn).Select(c => new EsCaption {
+        caption_id = c.caption_id,
+        caption = c.caption,
+        channel_id = c.caption_id,
+        channel_title = c.channel_title,
+        ideology = c.ideology,
+        lr = c.lr,
+        offset_seconds = c.offset_seconds,
+        part = c.part,
+        tags = c.tags.ToObject<string[]>(),
+        updated = c.updated,
+        upload_date = c.upload_date,
+        video_id = c.video_id,
+        video_title = c.video_title,
+        views = c.views
+      });
+      await BatchToEs(log, allItems, EsExtensions.EsPolicy(log), cancel);
     }
 
     async Task<LoggedConnection> OpenConnection(ILogger log) {
@@ -118,7 +102,7 @@ from video_latest v",
         conditions = conditions.Concat("updated > :max_updated").ToArray();
       var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
       var sql = $"{selectSql}{sqlWhere}{SqlLimit(limit)}" +
-                $" order by updated"; // always order by updated so that if sync fails, we can resume where we left of safely.
+                " order by updated"; // always order by updated so that if sync fails, we can resume where we left of safely.
       return (sql, param);
     }
 
@@ -199,7 +183,7 @@ from video_latest v",
 
   public static class EsIndex {
     public const string Video   = "video";
-    public const string Caption = "caption2";
+    public const string Caption = "caption";
     public const string Channel = "channel";
 
     public static ConnectionSettings ElasticConnectionSettings(this ElasticCfg cfg) {
@@ -228,36 +212,43 @@ from video_latest v",
     DateTime updated { get; }
   }
 
+  public class DbEsCaption {
+    public string      caption_id     { get; set; }
+    public string      video_id       { get; set; }
+    public string      channel_id     { get; set; }
+    public string      video_title    { get; set; }
+    public string      channel_title  { get; set; }
+    public DateTime    upload_date    { get; set; }
+    public DateTime    updated        { get; set; }
+    public long        views          { get; set; }
+    public string      ideology       { get; set; }
+    public string      lr             { get; set; }
+    public string      tags           { get; set; }
+    public long        offset_seconds { get; set; }
+    public string      caption        { get; set; }
+    public CaptionPart part           { get; set; }
+  }
+
   public abstract class VideoCaptionCommon : IHasUpdated {
-    [Keyword] public string video_id      { get; set; }
-    [Keyword] public string channel_id    { get; set; }
-    public           string video_title   { get; set; }
-    public           string channel_title { get; set; }
-    [Keyword] public string thumb_high    { get; set; }
-
-    public DateTime upload_date { get; set; }
-    public DateTime updated     { get; set; }
-
-    public long views { get; set; }
-
-    [Keyword] public string ideology { get; set; }
-    [Keyword] public string lr       { get; set; }
+    [Keyword] public string   video_id      { get; set; }
+    [Keyword] public string   channel_id    { get; set; }
+    public           string   video_title   { get; set; }
+    public           string   channel_title { get; set; }
+    public           DateTime upload_date   { get; set; }
+    public           DateTime updated       { get; set; }
+    public           long     views         { get; set; }
+    [Keyword] public string   ideology      { get; set; }
+    [Keyword] public string   lr            { get; set; }
   }
 
   [ElasticsearchType(IdProperty = nameof(video_id))]
   [Table(EsIndex.Video)]
   public class EsVideo : VideoCaptionCommon {
-    public string description { get; set; }
-    public string KeyWords    { get; set; }
-
-    public           long    likes            { get; set; }
-    public           long    dislikes         { get; set; }
-    [Keyword] public string  error_type       { get; set; }
-    [Keyword] public string  copyright_holder { get; set; }
-    public           double? pcd_ads          { get; set; }
-
-    [Keyword] public string media   { get; set; }
-    [Keyword] public string country { get; set; }
+    public           string description { get; set; }
+    public           string KeyWords    { get; set; }
+    public           long   likes       { get; set; }
+    public           long   dislikes    { get; set; }
+    [Keyword] public string error_type  { get; set; }
   }
 
   [ElasticsearchType(IdProperty = nameof(caption_id))]
@@ -265,15 +256,9 @@ from video_latest v",
   public class EsCaption : VideoCaptionCommon {
     [Keyword] public              string      caption_id     { get; set; }
     public                        long        offset_seconds { get; set; }
-    public                        long        caption_group  { get; set; }
     public                        string      caption        { get; set; }
     [Keyword] [StringEnum] public CaptionPart part           { get; set; }
-  }
-
-  /// <summary>Extra types on EsCaption that we don't want to store</summary>
-  public class DbCaption : EsCaption {
-    public string description { get; set; }
-    public string keywords    { get; set; }
+    [Keyword]              public string[]    tags           { get; set; }
   }
 
   [ElasticsearchType(IdProperty = nameof(channel_id))]
@@ -303,8 +288,6 @@ from video_latest v",
     [Keyword] public string   lr                                    { get; set; }
     [Keyword] public string   ideology                              { get; set; }
     [Keyword] public string   media                                 { get; set; }
-    [Keyword] public string   manoel                                { get; set; }
-    [Keyword] public string   ain                                   { get; set; }
   }
 
   public enum CaptionPart {
