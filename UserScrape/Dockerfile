@@ -5,8 +5,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
-    chromium-driver curl unzip wget bzip2
-
+    curl unzip wget bzip2
+#chromium-driver
 
 RUN GECKODRIVER_VERSION=`curl https://github.com/mozilla/geckodriver/releases/latest | grep -Po 'v[0-9]+.[0-9]+.[0-9]+'` && \
     wget https://github.com/mozilla/geckodriver/releases/download/$GECKODRIVER_VERSION/geckodriver-$GECKODRIVER_VERSION-linux64.tar.gz && \
@@ -25,6 +25,7 @@ RUN FIREFOX_SETUP=firefox-setup.tar.bz2 && \
 # Clean up
 RUN apt-get autoremove -y \
     && apt-get clean -y \
+    && apt-get remove curl unzip wget bzip2 -y \
     && rm -rf /var/lib/apt/lists/*
 
 ENV DEBIAN_FRONTEND=dialog
