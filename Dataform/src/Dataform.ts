@@ -81,8 +81,9 @@ export async function run(branch: string, repo: string, sfCfg: YtSfCfg, runArgs:
         task.stdout.on('data', (d: string) => {
             const msg: DataformLogLine | false = tryParseJSON(d)
             if (!msg || !['TRACE', 'DEBUG'].includes(msg.level))
-                execLog.info(stripAnsi(d))
+                execLog.info(stripAnsi(d).trim())
         })
+        
         const res = await task
         return res
     }
@@ -90,7 +91,6 @@ export async function run(branch: string, repo: string, sfCfg: YtSfCfg, runArgs:
     await fsp.mkdir(runPath, { recursive: true })
     await exe('git clone', `git clone -b ${branch} ${repo} .`)
     await writeDataformCreds(sfCfg, runPath)
-
     await exe('npm i', `npm i`)
 
     const dfCmd = `dataform run ${runArgs ?? ''}`

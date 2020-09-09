@@ -5,9 +5,23 @@ import * as bunyan from 'bunyan'
 import * as seq from 'bunyan-seq'
 import { LoggerOptions } from 'bunyan'
 import bunyanDebugStream from 'bunyan-debug-stream'
+import * as yargs from 'yargs'
+import stripAnsi from 'strip-ansi'
+import { delay } from 'lodash'
 
 dotenvCfg()
 const env = process.env
+
+const argv = yargs.options({
+    dataformArgs: {
+        type: 'string',
+        alias: 'd',
+        default: <string>null,
+        description: 'The raw dataform arguments to pass through (e.g. "--include-deps --tags standard")'
+    }
+}).argv
+const dfRunArgs = (argv.dataformArgs ?? process.env.DATAFORM_RUN_ARGS)
+
 const logCfg: LoggerOptions = {
     name: 'recfluence_dataform',
     streams: [{
@@ -22,18 +36,17 @@ const logCfg: LoggerOptions = {
             showMetadata: false
         })
     }],
-    serializers: bunyanDebugStream.serializers,
+    serializers: bunyanDebugStream.serializers
 }
 const seqUrl = env.SEQ
-if (seqUrl)
-    logCfg.streams.push(
-        seq.createStream({
-            serverUrl: seqUrl,
-            level: 'info'
-        }))
-
-var log = bunyan.createLogger(logCfg)
-log.info('recfluence dataform container started')
+const seqStream = seqUrl ? seq.createStream({
+    serverUrl: seqUrl,
+    level: 'info',
+    maxBatchingTime: 1000,
+    onError: (e) => console.log('seq error', e)
+}) : null
+if (seqStream)
+    logCfg.streams.push(seqStream)
 
 const sfJson = process.env.SNOWFLAKE_JSON
 if (!sfJson) throw new Error('no snowflake connection details provided in env:SNOWFLAKE_JSON')
@@ -42,18 +55,14 @@ const repo = process.env.REPO
 if (!repo) throw new Error('no dataform repo provided env:REPO')
 const branch = process.env.BRANCH ?? 'master'
 
-const dfRunArgs = process.env.DATAFORM_RUN_ARGS;
+var log = bunyan.createLogger(logCfg).child({repo, db:sfCfg.db})
+log.info('recfluence dataform container started');
 
 (async () => {
     // get latest code & configure dataform settings
     await run(branch, repo, sfCfg, dfRunArgs, log)
-
 })().catch((e: any) => {
-    if (e instanceof Error) {
-        log.error(e, e.message)
-        process.exit(1) 
-    }
-    else
-        log.error(e)
-    throw e
+    const msg:string = (e instanceof Error) ? e.message : e
+    log.error(stripAnsi(msg))
+    delay(() => process.exit(), 1500) // no flush option. give streams a chance to finish
 })

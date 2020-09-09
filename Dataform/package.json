@@ -10,24 +10,26 @@
   "author": "Mark Ledwich",
   "license": "MIT",
   "dependencies": {
-    "@dataform/cli": "^1.6.13",
-    "@types/lodash": "^4.14.157",
-    "bunyan": "^1.8.12",
+    "@dataform/cli": "^1.10.0",
+    "@types/lodash": "^4.14.161",
+    "@types/yargs": "^15.0.5",
+    "bunyan": "^1.8.14",
     "bunyan-debug-stream": "^2.0.0",
     "bunyan-seq": "^0.4.0",
     "dateformat": "^3.0.3",
     "dotenv": "^8.2.0",
-    "humanize-duration": "^3.22.0",
-    "lodash": "^4.17.15",
-    "promisify-child-process": "^4.1.0",
+    "humanize-duration": "^3.23.1",
+    "lodash": "^4.17.20",
+    "promisify-child-process": "^4.1.1",
     "strip-ansi": "^6.0.0",
-    "ts-node": "^8.10.1",
-    "typescript": "^3.9.2"
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.7",
+    "yargs": "^15.4.1"
   },
   "devDependencies": {
     "@types/bunyan": "^1.8.6",
     "@types/bunyan-seq": "^0.2.2",
     "@types/dateformat": "^3.0.1",
-    "@types/humanize-duration": "^3.18.0"
+    "@types/humanize-duration": "^3.18.1"
   }
 }

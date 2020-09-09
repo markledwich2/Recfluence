@@ -88,7 +88,7 @@ namespace YtReader.Store {
 select c.*
      , cr.lr_human
      , cr.tags_human
-     , cr.relevance_humanCfg
+     , cr.relevance_human
 from channel_latest c
        left join channel_review cr on cr.channel_id=c.channel_id
 where c.reviews_all>0";
@@ -169,7 +169,9 @@ select channel_id
 from (
        select c.channel_id, c.channel_title, vc.caption
        from reviewed c
-              left join caption vc on vc.channel_id=c.channel_id
+              left join video_latest v on v.channel_id=c.channel_id
+              left join caption vc on vc.video_id=v.video_id
+       where caption is not null
          qualify row_number() over (partition by c.channel_id order by random())<=100
      )
 group by channel_id",
