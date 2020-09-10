@@ -111,8 +111,8 @@ namespace Mutuo.Etl.Pipe {
       };
       await EnsureNotRunning(groupName, options, Az.Value, AzureCfg.ResourceGroup);
 
-      log.Information("Launching container group {Container} ({FullImage}), Args ({Args})",
-        groupName, options.Image, args.Join(" "));
+      log.Information("Launching container group {Container} ({FullImage}), args {Args}, region {Region}",
+        groupName, options.Image, args.Join(" "), options.Region);
       var groupDef = ContainerGroup(cfg, groupName, options);
       var group = await Create(groupDef, log);
       var run = await Run(group, returnOnStart, sw, log, cancel);

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
+using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
@@ -15,6 +16,7 @@ using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using Troschuetz.Random;
 using YtReader.Db;
 using YtReader.Store;
 using YtReader.YtApi;
@@ -27,6 +29,13 @@ namespace YtReader {
   public static class RefreshHelper {
     public static bool IsOlderThan(this DateTime updated, TimeSpan age, DateTime? now = null) => (now ?? DateTime.UtcNow) - updated > age;
     public static bool IsYoungerThan(this DateTime updated, TimeSpan age, DateTime? now = null) => !updated.IsOlderThan(age, now);
+  }
+
+  public static class YtCollectorRegion {
+    static readonly Region[] Regions = {Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral};
+    static readonly TRandom  Rand    = new TRandom();
+
+    public static Region RandomUsRegion() => Rand.Choice(Regions);
   }
 
   public enum UpdateChannelType {

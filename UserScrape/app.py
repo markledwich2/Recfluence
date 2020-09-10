@@ -95,10 +95,10 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
 
                 except DetectedAsBotException:
                     detected_as_bot = True
-                    log.warn('{tag} - detected as bot in trial {trial_id}. Aborting for all users.',
+                    log.warning('{tag} - detected as bot in trial {trial_id}. Aborting for all users.',
                              tag=user.tag, trial_id=trial_id, exc_info=1)
                 except BaseException:
-                    log.warn('{tag} - unhandled error in trial {trial_id} (attempt {attempt})',
+                    log.warning('{tag} - unhandled error in trial {trial_id} (attempt {attempt})',
                              tag=user.tag, trial_id=trial_id, exc_info=1)
                 finally:
                     crawler.shutdown()

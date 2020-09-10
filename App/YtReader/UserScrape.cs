@@ -105,6 +105,7 @@ namespace YtReader {
             Cfg.Container, groupName, containerName, fullName,
             env,
             finalArgs.ToArray(),
+            customRegion: YtCollectorRegion.RandomUsRegion,
             log: groupLog,
             cancel: c
           ).WithDuration();

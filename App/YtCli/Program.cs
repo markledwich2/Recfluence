@@ -66,9 +66,6 @@ namespace YtCli {
       PipeCtx = pipeCtx;
     }
 
-    static readonly Region[] Regions = {Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral};
-    static readonly TRandom  Rand    = new TRandom();
-
     [CommandOption("channels", shortName: 'c', Description = "optional '|' separated list of channels to process")]
     public string ChannelIds { get; set; }
 
@@ -79,7 +76,7 @@ namespace YtCli {
       var channels = ChannelIds?.UnJoin('|').ToArray();
 
       // make a new app context with a custom region defined
-      var appCtx = new PipeAppCtx(AppCtx) {CustomRegion = () => Rand.Choice(Regions)};
+      var appCtx = new PipeAppCtx(AppCtx) {CustomRegion = YtCollectorRegion.RandomUsRegion};
 
       // run the work using the pipe entry point, forced to be local
       PipeAppCfg.Location = PipeRunLocation.Local;
