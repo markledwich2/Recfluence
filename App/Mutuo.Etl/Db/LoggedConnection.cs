@@ -29,27 +29,28 @@ namespace Mutuo.Etl.Db {
     }
 
     public async Task<long> Execute(string operation, string sql, object param = null, DbTransaction transaction = null) =>
-      await ExecWithLog(() => Conn.ExecuteAsync(sql, param, transaction), sql, operation);
+      await ExecWithLog(() => Conn.ExecuteAsync(sql, param, transaction), sql, operation, param);
 
     /// <summary>Like the dapper Query function. use when you need to stream the rows non-greedily</summary>
     public IEnumerable<T> QueryBlocking<T>(string operation, string sql,
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = false) =>
-      ExecWithLog(() => Conn.Query<T>(sql, param, transaction, commandTimeout: timeout?.TotalSeconds.RoundToInt(), buffered: buffered), sql, operation);
+      ExecWithLog(() => Conn.Query<T>(sql, param, transaction, 
+        commandTimeout: timeout?.TotalSeconds.RoundToInt(), buffered: buffered), sql, operation, param);
 
     public async Task<IReadOnlyCollection<T>> Query<T>(string operation, string sql,
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
-      (await ExecWithLog(() => Conn.QueryAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation))
+      (await ExecWithLog(() => Conn.QueryAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation, param))
       .ToArray(); // make greedy load explicit load because that is what dapper does under the covers for async anyway.
 
     /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
     /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>
     public async Task<T> ExecuteScalar<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
-      await ExecWithLog(() => Conn.ExecuteScalarAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation);
+      await ExecWithLog(() => Conn.ExecuteScalarAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation, param);
 
     public async Task<DbDataReader> ExecuteReader(string operation, string sql, object param, DbTransaction transaction = null) =>
-      await ExecWithLog(() => Conn.ExecuteReaderAsync(sql, param, transaction), sql, operation);
+      await ExecWithLog(() => Conn.ExecuteReaderAsync(sql, param, transaction), sql, operation, param);
 
-    T ExecWithLog<T>(Func<T> exec, string sql, string operation) {
+    T ExecWithLog<T>(Func<T> exec, string sql, string operation, object param) {
       T res;
       var sw = Stopwatch.StartNew();
       try {
@@ -59,11 +60,11 @@ namespace Mutuo.Etl.Db {
         Log.Error(ex, "{Operation} - Error ({Error}) with sql: {Sql}", operation, ex.Message, sql);
         throw;
       }
-      Log.Debug("{Operation} - completed in {Duration}: {Sql}", operation, sw.Elapsed.HumanizeShort(), sql);
+      Log.Debug("{Operation} - completed in {Duration}: {Sql}\nparams:{@Params}", operation, sw.Elapsed.HumanizeShort(), sql, param);
       return res;
     }
 
-    async Task<T> ExecWithLog<T>(Func<Task<T>> exec, string sql, string operation) {
+    async Task<T> ExecWithLog<T>(Func<Task<T>> exec, string sql, string operation, object param) {
       T res;
       TimeSpan duration;
       try {
@@ -74,7 +75,7 @@ namespace Mutuo.Etl.Db {
         Log.Error(ex, "{Operation} - Error ({Error}) with sql: {Sql}", operation, ex.Message, sql);
         throw;
       }
-      Log.Debug("{Operation} - completed in {Duration}: {Sql}", operation, duration.HumanizeShort(), sql);
+      Log.Debug("{Operation} - completed in {Duration}: {Sql}\nparams:{@Params}", operation, duration.HumanizeShort(), sql, param);
       return res;
     }
   }

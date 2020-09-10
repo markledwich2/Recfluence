@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -143,10 +144,10 @@ namespace YtReader.Search {
         log.Error(
           "Error indexing. Indexed {Success}/{Total} documents to {Index} (batch {Batch}). Server error: {@ServerError} {@OriginalException}. Top 5 item errors: {@ItemsWithErrors}",
           res.Items.Count - res.ItemsWithErrors.Count(), items.Count, Es.GetIndexFor<T>(), i,
-          res.ServerError, res.OriginalException, res.ItemsWithErrors.Select(r => $"{r.Error} ({r.Status})" ).Take(5));
+          res.ServerError, res.OriginalException, res.ItemsWithErrors.Select(r => $"{r.Error} ({r.Status})").Take(5));
         throw new InvalidOperationException("Error indexing documents. Best to stop now so the documents are contiguous.");
       }
-      
+
       log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch})",
         res.Items.Count, items.Count, Es.GetIndexFor<T>(), i);
 
@@ -164,7 +165,8 @@ namespace YtReader.Search {
       .DefaultIndex(defaultIndex));
 
     public static AsyncRetryPolicy<BulkResponse> EsPolicy(ILogger log) => Policy
-      .HandleResult<BulkResponse>(r => r.ItemsWithErrors.Any(i => i.Status == 429) || r.ServerError?.Status == 429)
+      .HandleResult<BulkResponse>(r =>
+        r.ItemsWithErrors.Any(i => i.Status == 429) || r.ServerError?.Status == 429 || r.OriginalException is OperationCanceledException)
       .RetryAsync(retryCount: 3, async (r, i) => {
         var delay = i.ExponentialBackoff(5.Seconds());
         log?.Information("Retryable error indexing captions: Retrying in {Duration}, attempt {Attempt}/{Total}",
@@ -177,7 +179,7 @@ namespace YtReader.Search {
       var res = await es.SearchAsync<T>(c => c
         .Aggregations(a => a.Max("max", selector))
       );
-      var val = res.Aggregations.Max("max")?.ValueAsString?.ParseDate();
+      var val = res.Aggregations.Max("max")?.ValueAsString?.ParseDate(style: DateTimeStyles.RoundtripKind);
       return val;
     }
 
