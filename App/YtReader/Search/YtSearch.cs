@@ -47,9 +47,8 @@ namespace YtReader.Search {
       (SearchIndex index, string condition)[] conditions = null, CancellationToken cancel = default) {
       string[] Conditions(SearchIndex index) => conditions?.Where(c => c.index == index).Select(c => c.condition).ToArray() ?? new string[] { };
 
-      await BasicSync<EsChannel>(log, "select * from channel_accepted", fullLoad, limit, Conditions(Channel), cancel);
-      await BasicSync<EsVideo>(log, @"select *
-from video_latest v",
+      await BasicSync<EsChannel>(log, "select * from channel_latest", fullLoad, limit, Conditions(Channel), cancel);
+      await BasicSync<EsVideo>(log, @"select * from video_latest v",
         fullLoad, limit,
         Conditions(Video).Concat("exists(select * from channel_accepted c where c.channel_id = v.channel_id)").ToArray(),
         cancel);
@@ -83,7 +82,7 @@ from video_latest v",
         upload_date = c.upload_date,
         video_id = c.video_id,
         video_title = c.video_title,
-        views = c.views
+        views = c.views,
       });
       await BatchToEs(log, allItems, EsExtensions.EsPolicy(log), cancel);
     }
@@ -139,13 +138,17 @@ from video_latest v",
 
     async Task<int> BatchToEs<T>(IReadOnlyCollection<T> items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {
       var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(items));
-      if (res.ItemsWithErrors.Any())
-        log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch}). Top 5 Error items: {@ItemsWithErrors}",
+
+      if (!res.IsValid) {
+        log.Error(
+          "Error indexing. Indexed {Success}/{Total} documents to {Index} (batch {Batch}). Server error: {@ServerError}. Top 5 item errors: {@ItemsWithErrors}",
           res.Items.Count - res.ItemsWithErrors.Count(), items.Count, Es.GetIndexFor<T>(), i,
-          res.ItemsWithErrors.Select(r => r.Error).Take(5));
-      else
-        log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch})",
-          res.Items.Count, items.Count, Es.GetIndexFor<T>(), i);
+          res.ServerError, res.ItemsWithErrors.Select(r => r.Error).Take(5));
+        throw new InvalidOperationException("Error indexing documents. Best to stop now so the documents are contiguous.");
+      }
+      
+      log.Information("Indexed {Success}/{Total} documents to {Index} (batch {Batch})",
+        res.Items.Count, items.Count, Es.GetIndexFor<T>(), i);
 
       return items.Count;
     }
@@ -161,10 +164,10 @@ from video_latest v",
       .DefaultIndex(defaultIndex));
 
     public static AsyncRetryPolicy<BulkResponse> EsPolicy(ILogger log) => Policy
-      .HandleResult<BulkResponse>(r => r.ItemsWithErrors.Any(i => i.Status == 403))
-      .RetryAsync(3, async (r, i) => {
-        var delay = i.ExponentialBackoff(1.Seconds());
-        log?.Debug("Retryable error indexing captions: Retrying in {Duration}, attempt {Attempt}/{Total}",
+      .HandleResult<BulkResponse>(r => r.ItemsWithErrors.Any(i => i.Status == 429) || r.ServerError?.Status == 429)
+      .RetryAsync(retryCount: 3, async (r, i) => {
+        var delay = i.ExponentialBackoff(5.Seconds());
+        log?.Information("Retryable error indexing captions: Retrying in {Duration}, attempt {Attempt}/{Total}",
           delay, i, 3);
         await Task.Delay(delay);
       });

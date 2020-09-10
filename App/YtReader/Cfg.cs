@@ -192,7 +192,7 @@ namespace YtReader {
   }
 
   public class SearchCfg {
-    public int BatchSize { get; set; } = 20_000;
+    public int BatchSize { get; set; } = 10_000;
     public int Parallel  { get; set; } = 2;
   }
 }
