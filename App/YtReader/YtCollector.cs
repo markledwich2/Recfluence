@@ -101,7 +101,7 @@ namespace YtReader {
         existingChannels = (await db.Query<string>("channels - previous", $@"with latest as (
   select v {(noExplicit ? "" : $", v:ChannelId::string in ({SqlList(explicitChannels)}) as included")}
   from channel_stage -- query from stage because it can be deserialized without modification
-    where included
+    {(noExplicit ? "" : "where included")}
     qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc)=1
 )
 select v
