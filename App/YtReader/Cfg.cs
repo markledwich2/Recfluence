@@ -125,7 +125,8 @@ namespace YtReader {
 
     /// <summary>How old a video before we stop collecting video stats. This is cheap, due to video stats being returned in a
     ///   video's playlist</summary>
-    public TimeSpan RefreshVideosWithin { get; set; } = 120.Days();
+    public TimeSpan RefreshVideosWithinDaily { get; set; } = 120.Days();
+    public TimeSpan RefreshVideosWithinWeekly { get; set; } = 730.Days();
 
     /// <summary>How old a video before we stop collecting recs this is fairly expensive so we keep it within</summary>
     public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
@@ -134,8 +135,8 @@ namespace YtReader {
     ///   number of recs per channel</summary>
     public int RefreshRecsMin { get; set; } = 2;
 
-    /// <summary>The maximum number of recs to collect from a channel on any given day</summary>
-    public int RefreshRecsMax { get; set; } = 30;
+    /// <summary>The maximum number of videos to collect recs from a channel on any given day</summary>
+    public int RefreshRecsMax { get; set; } = 10;
 
     /// <summary>How frequently to refresh channel & video stats</summary>
     public TimeSpan RefreshAllAfter { get; set; } = 23.Hours();
@@ -144,7 +145,7 @@ namespace YtReader {
     public bool Headless       { get; set; } = true;
 
     /// <summary>the max number of channels to discover each collect</summary>
-    public int DiscoverChannels { get; set; } = 100;
+    public int DiscoverChannels { get; set; } = 10000;
 
     /// <summary>the number of vids to populate with data when discovering new channels (i.e. preparing data to be classified)</summary>
     public int DiscoverChannelVids { get; set; } = 3;
@@ -157,6 +158,18 @@ namespace YtReader {
     public int ChromeParallel { get; set; } = 2;
     public int WebParallel    { get; set; } = 8;
     public int ChromeAttempts { get; set; } = 3;
+    
+    /// <summary>
+    /// maximum number of videos (in total for all channels in a process update).
+    /// </summary>
+    public int ChromeUpdateMax { get; set; } = 1000;
+
+    /// <summary>
+    /// These thresholds shortcut the collection for channels to save costs.
+    /// Bellow the analysis thresholds because we want to collect ones that might tip over
+    /// </summary>
+    public ulong MinChannelSubs { get;  set; } = 8000;
+    public ulong MinChannelViews { get; set; } = 1_000_000; // some channels don't have subs, so we fallback to a minimum views for the channels. 
   }
 
   public class StorageCfg {

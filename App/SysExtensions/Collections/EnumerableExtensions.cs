@@ -36,7 +36,7 @@ namespace SysExtensions.Collections {
 
     public static async IAsyncEnumerable<T> SelectMany<T>(this IAsyncEnumerable<IEnumerable<T>> items) {
       await foreach (var g in items)
-      foreach (var i in g) 
+      foreach (var i in g)
         yield return i;
     }
 
@@ -47,6 +47,17 @@ namespace SysExtensions.Collections {
         yield return item;
         foreach (var c in children(item)) toRecurse.Enqueue(c);
       }
+    }
+
+    public static (IReadOnlyCollection<T> included, IReadOnlyCollection<T> excluded) Split<T>(this IEnumerable<T> items, Func<T, bool> where) {
+      var included = new List<T>();
+      var excluded = new List<T>();
+      foreach (var item in items)
+        if (@where(item))
+          included.Add(item);
+        else
+          excluded.Add(item);
+      return (included, excluded);
     }
 
     /// <summary>Batches items into batchsize or maxBatches batches, whatever has the last batches</summary>
