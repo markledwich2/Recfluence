@@ -97,7 +97,7 @@ namespace YtReader.Search {
       conditions ??= new string[] { };
 
       var param = lastUpdate == null || fullLoad ? null : new {max_updated = lastUpdate};
-      if (param?.max_updated != null && conditions.IsEmpty())
+      if (param?.max_updated != null)
         conditions = conditions.Concat("updated > :max_updated").ToArray();
       var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
       var sql = $"{selectSql}{sqlWhere}{SqlLimit(limit)}" +
@@ -141,9 +141,9 @@ namespace YtReader.Search {
 
       if (!res.IsValid) {
         log.Error(
-          "Error indexing. Indexed {Success}/{Total} documents to {Index} (batch {Batch}). Server error: {@ServerError}. Top 5 item errors: {@ItemsWithErrors}",
+          "Error indexing. Indexed {Success}/{Total} documents to {Index} (batch {Batch}). Server error: {@ServerError} {@OriginalException}. Top 5 item errors: {@ItemsWithErrors}",
           res.Items.Count - res.ItemsWithErrors.Count(), items.Count, Es.GetIndexFor<T>(), i,
-          res.ServerError, res.ItemsWithErrors.Select(r => r.Error).Take(5));
+          res.ServerError, res.OriginalException, res.ItemsWithErrors.Select(r => $"{r.Error} ({r.Status})" ).Take(5));
         throw new InvalidOperationException("Error indexing documents. Best to stop now so the documents are contiguous.");
       }
       
