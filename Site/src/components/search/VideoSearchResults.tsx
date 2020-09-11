@@ -12,7 +12,7 @@ import ReactMarkdown from 'react-markdown/with-html'
 import { Spinner } from '../Spinner'
 import { SadTear as IconSad } from '@styled-icons/fa-solid'
 import { UserContext, LoginOverlay } from '../UserContext'
-import { EsCaption, CaptionPart } from '../../common/YtApi'
+import { EsCaption, CaptionPart, videoThumbHigh } from '../../common/YtApi'
 
 
 interface CaptionSearchResult extends EsCaption {
@@ -226,21 +226,22 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
   var cd: ChannelTagData = {
     ideology: c.ideology,
     lr: c.lr,
-    tags: [],
+    tags: c.tags,
   }
   var maxCaptions = 4
   return (
     <ResultsRow key={c.caption_id}>
-      <VideoA id={c.video_id} offset={c.offset_seconds}><VideoImage src={c.thumb_high} /></VideoA>
+      <VideoA id={c.video_id} offset={c.offset_seconds}><VideoImage src={videoThumbHigh(c.video_id)} /></VideoA>
       <div style={{ width: "100%" }}>
         <h2>
           <Highlighter
             searchWords={p.searchWords}
             autoEscape
+            caseSensitive={false}
             textToHighlight={c.video_title ?? ""}
           />
         </h2>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: '0.4em 0' }}>
           <DetailsRow>
             <b>{c.channel_title}</b>
             <span><b>{compactInteger(c.views)}</b> views</span>
@@ -256,6 +257,7 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
               <Highlighter
                 searchWords={p.searchWords}
                 autoEscape
+                caseSensitive={false}
                 textToHighlight={t.caption}
                 className={`caption part-${t.part}`}
               />
@@ -263,8 +265,9 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
           ))}
           {c.captions.length > maxCaptions ? <p>{c.captions.length - maxCaptions} more...</p> : <></>}
         </span>
+
       </div>
-    </ResultsRow>
+    </ResultsRow >
   )
 }
 

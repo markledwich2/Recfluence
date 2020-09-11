@@ -35,7 +35,7 @@ export const ChannelTags = (props: ChannelComponentProps) => {
     const tagLabel = ColEx.labelFunc(tagCol)
     const colorFunc = ColEx.colorFunc(tagCol)
     return <TagDiv>
-        <ColTag colName="lr" channel={c} style={{ marginRight: '0.8em' }} />
+        {/* <ColTag colName="lr" channel={c} style={{ marginRight: '0.8em' }} /> */}
         {c.tags.map(t => <Tag key={t} label={tagLabel(t)} color={tagColor(colorFunc(t))} />)}
     </TagDiv>
 }

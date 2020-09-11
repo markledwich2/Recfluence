@@ -46,6 +46,10 @@ export function humanReviews(channel: BasicChannel) {
   return channel.ReviewsAll - channel.ReviewsAlgo
 }
 
+export function videoThumbHigh(videoId: string) {
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+}
+
 export interface Review {
   ChannelId: string
   Email?: string
@@ -72,7 +76,7 @@ export interface UserSearch {
   origin: string
   email: string
   query: string
-  ideologies: string[]
+  tags: string[]
   channels: string[]
   updated: Date
 }
@@ -92,16 +96,14 @@ interface EsCaptionVideoCommon {
   channel_id: string
   video_title: string
   channel_title: string
-  thumb_high: string
   keywords: string
   upload_date: Date
   updated: string
-  pcd_ads: number
   views: number
   ideology: string
   lr: string
-  media: string
   country: string
+  tags: string[]
 }
 
 export interface EsCaption extends EsCaptionVideoCommon {

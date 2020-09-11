@@ -21,7 +21,7 @@ export function esCfgFromEnv(): EsCfg {
     creds: process.env.ES_CREDS,
     prefix: process.env.ES_PREFIX,
     indexes: {
-      caption: `${prefix}caption2`,
+      caption: `${prefix}caption`,
       channel: `${prefix}channel`,
       video: `${prefix}video`
     }

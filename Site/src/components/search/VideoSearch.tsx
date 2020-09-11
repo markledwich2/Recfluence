@@ -67,7 +67,7 @@ const FiltersPane = styled.div`
       min-height:300px; /*needed for column wrap to kick in*/
     }
 
-    > .multi-list.ideology {
+    > .multi-list.tags {
       flex: 4 1 auto
     }
 
@@ -192,10 +192,10 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
 
                   return <ReactiveList
                     componentId="result"
-                    react={{ and: ['q', 'views', 'sort', 'ideology', 'channel', 'upload', 'part'] }}
+                    react={{ and: ['q', 'views', 'sort', 'tags', 'channel', 'upload', 'part'] }}
                     infiniteScroll
                     scrollTarget="results"
-                    size={30}
+                    size={50}
                     dataField={sort.field}
                     sortBy={sort.sort}
                     showResultStats={false}
@@ -244,7 +244,7 @@ const SearchTexBox: React.FunctionComponent = () => {
               email: user?.email,
               query: q,
               channels: searchState.channel.value,
-              ideologies: searchState.ideology.value,
+              tags: searchState.tags.value,
               updated: new Date()
             })
           }
@@ -323,10 +323,10 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
     />
 
     <MultiList
-      className="multi-list ideology"
-      componentId="ideology"
-      title="Ledwich & Zaitsev Group" filterLabel="Group"
-      dataField="ideology"
+      className="multi-list tag"
+      componentId="tags"
+      title="Tag" filterLabel="Group"
+      dataField="tags"
       showCheckbox={false}
       showCount showMissing
       showSearch={false}
@@ -334,7 +334,7 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
       style={FilteredListStyle}
       defaultQuery={_ => ({
         aggs: {
-          "ideology": {
+          "tags": {
             aggs: {
               video_count: {
                 cardinality: {
@@ -343,7 +343,7 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
               }
             },
             terms: {
-              field: "ideology",
+              field: "tags",
               size: 50,
               order: { "video_count": "desc" },
               missing: "N/A"
@@ -367,7 +367,7 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
       showCheckbox={false}
       showCount
       showSearch={true}
-      react={{ and: ['q', 'views', 'ideology', 'upload', 'part'] }}
+      react={{ and: ['q', 'views', 'tags', 'upload', 'part'] }}
       style={FilteredListStyle}
       defaultQuery={_ => ({
         aggs: {
