@@ -64,5 +64,5 @@ log.info('recfluence dataform container started');
 })().catch((e: any) => {
     const msg:string = (e instanceof Error) ? e.message : e
     log.error(stripAnsi(msg))
-    delay(() => process.exit(), 1500) // no flush option. give streams a chance to finish
+    delay(() => process.exit(1), 1500) // no flush option. give streams a chance to finish
 })
