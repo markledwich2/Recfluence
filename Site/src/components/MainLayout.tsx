@@ -9,6 +9,8 @@ import { UserContextProvider } from './UserContext'
 import { Theme as STheme, PropsWithStyles } from 'react-select/lib/types'
 import { StylesConfig } from 'react-select/lib/styles'
 import { ToastProvider } from 'react-toast-notifications'
+import { EsContextProvider } from './SearchContext'
+import { esCfgFromEnv } from '../common/Elastic'
 
 export function isGatsbyServer() { return typeof window === 'undefined' }
 
@@ -49,14 +51,16 @@ export const MainLayout: FunctionComponent<RouteComponentProps> = ({ children })
           scope: "openid profile email",
           cacheLocation: 'localstorage'
         }}>
-          <ToastProvider>
-            <Helmet>
-              <title>{data.site.siteMetadata.title}</title>
-            </Helmet>
-            <MainStyleDiv id={mainLayoutId}>
-              {children}
-            </MainStyleDiv>
-          </ToastProvider>
+          <EsContextProvider esCfg={esCfgFromEnv()} >
+            <ToastProvider>
+              <Helmet>
+                <title>{data.site.siteMetadata.title}</title>
+              </Helmet>
+              <MainStyleDiv id={mainLayoutId}>
+                {children}
+              </MainStyleDiv>
+            </ToastProvider>
+          </EsContextProvider>
         </UserContextProvider>
       )}
     />

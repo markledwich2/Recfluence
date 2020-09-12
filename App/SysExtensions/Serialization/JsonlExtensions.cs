@@ -4,6 +4,8 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 
 namespace SysExtensions.Serialization {
   public static class JsonlExtensions {
@@ -38,6 +40,14 @@ namespace SysExtensions.Serialization {
         yield return line.ToObject<T>(settings);
       }
     }
+
+    public static JsonSerializerSettings DefaultSettingsForJs() => new JsonSerializerSettings {
+      NullValueHandling = NullValueHandling.Ignore,
+      DefaultValueHandling = DefaultValueHandling.Include,
+      Formatting = Formatting.None,
+      Converters = {new StringEnumConverter()},
+      ContractResolver = new DefaultContractResolver {NamingStrategy = new CamelCaseNamingStrategy(true, true)}
+    };
 
     public static IReadOnlyCollection<T> LoadJsonlGz<T>(this Stream stream, JsonSerializerSettings settings = null) {
       using var zr = new GZipStream(stream, CompressionMode.Decompress);

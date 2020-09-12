@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -200,5 +201,21 @@ namespace SysExtensions.Serialization {
 
       throw new InvalidOperationException($"Unable to convert value of {value.GetType()} to {typeof(T)}");
     }
+
+    public static JObject ToCamelCase(this JObject original) {
+      var newObj = new JObject();
+      foreach (var property in original.Properties()) {
+        var newPropertyName = property.Name.ToCamelCase();
+        newObj[newPropertyName] = property.Value.ToCamelCaseJToken();
+      }
+      return newObj;
+    }
+
+    public static JToken ToCamelCaseJToken(this JToken original) =>
+      original.Type switch {
+        JTokenType.Object => ((JObject) original).ToCamelCase(),
+        JTokenType.Array => new JArray(((JArray) original).Select(x => x.ToCamelCaseJToken())),
+        _ => original.DeepClone()
+      };
   }
 }

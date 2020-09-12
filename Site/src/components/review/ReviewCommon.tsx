@@ -2,23 +2,21 @@ import styled from 'styled-components'
 import { Dim, ColEx } from '../../common/Dim'
 import { ChannelData, YtModel } from '../../common/YtModel'
 import { ytTheme } from '../MainLayout'
-import React, { useMemo } from 'react'
+import React, { useMemo, FunctionComponent } from 'react'
 import { tagColor } from '../channel_relations/ChannelTags'
 import ReactMarkdown from 'react-markdown'
 import { Tag } from '../Tag'
 import _ from 'lodash'
 import { OptionProps } from 'react-select/lib/components/Option'
-import { Review, BasicChannel } from '../../common/YtApi'
+import { Review, BasicChannel, channelSearch } from '../../common/YtApi'
+import { inlineButtonStyle } from '../Button'
+import { HelpOutline } from '@styled-icons/material'
+import { EsCfg } from '../../common/Elastic'
 
 const chanDim = new Dim<ChannelData>(YtModel.channelDimStatic.meta)
 const tagCol = chanDim.col('tags')
 const tagFunc = { label: ColEx.labelFunc(tagCol), color: ColEx.colorFunc(tagCol) }
 
-
-export interface ChannelReview {
-  channel: BasicChannel
-  review: Review
-}
 
 export interface Option {
   value?: string
@@ -51,6 +49,38 @@ export const tagOptions: TagOption[] = _([
   { value: 'Black', md: 'Black creators focused on cultural/political issues of their community/identity (e.g. Police Violence, Racism). Examples:[African Diaspora News Channel](https://www.youtube.com/channel/UCKZGcrxRAhdUi58Mdr565mw), [Roland S. Martin](https://www.youtube.com/channel/UCjXB7nX8bL2U2sje8d212Yw), [Lisa Cabrera](https://www.youtube.com/channel/UCcTzK_2JDmFYGnUiaUleQYg) ' },
   { value: 'LGBT', md: 'LGBT creators focused on cultural/political issues of their community/identity (e.g. gender and sexuality, trans experiences). Examples: [ContraPoints](https://www.youtube.com/user/ContraPoints), [Kat Blaque](https://www.youtube.com/channel/UCxFWzKZa74SyAqpJyVlG5Ew)' }
 ]).map(t => ({ ...t, label: tagFunc.label(t.value) })).orderBy(t => t.label).value()
+
+export const fieldSizes = {
+  's': '10em',
+  'l': '50em'
+}
+
+export const FlexRow = styled.div<{ space?: string }>`
+  display:flex;
+  flex-direction: row;
+  > * {
+    padding-right: ${p => p.space ?? '0.6em'};
+  }
+`
+
+export const FlexCol = styled.div<{ space?: string }>`
+  display:flex;
+  flex-direction: column;
+  > * {
+    padding-bottom: ${p => p.space ?? '0.6em'};
+  }
+`
+
+export const FormStyle = styled(FlexCol)`
+  label {
+    line-height:2em;
+    color:${ytTheme.fontColorSubtler}
+  }
+
+  input[type=submit] {
+    margin-right:1em;
+  }
+`
 
 const TagDiv = styled.div`
   padding: 0.5em;
@@ -92,7 +122,7 @@ export function createChannelOptions(channels: _.Dictionary<BasicChannel>): {
   }>
 } {
   const channelOptions = _(channels)
-    .map(c => ({ label: c.ChannelTitle, value: c.ChannelId }))
+    .map(c => ({ label: c.channelTitle, value: c.channelId }))
     .orderBy(c => c.label).value()
   const channelDic = _(channelOptions).keyBy(c => c.value).value()
   return { channelOptions, channelDic }
@@ -104,3 +134,34 @@ export const lrOptions = lrCol.values.filter(v => v.value)
 
 export const LrTag = ({ tag }: { tag: string }) => <Tag key={tag} label={lrFunc.label(tag)} color={tagColor(lrFunc.color(tag))} />
 export const LrCustomLabel = ({ value }: any) => <LrTag tag={value} />
+
+
+export const Help = (p: { name: string }) => <HelpOutline
+  color={ytTheme.backColorBolder3}
+  style={{ ...inlineButtonStyle, marginLeft: '0.5em' }}
+  data-tip={p.name}
+  {...p} />
+
+export interface FieldProps {
+  name?: string
+  size?: keyof typeof fieldSizes
+  label: string
+  required?: boolean
+}
+
+export const Field: FunctionComponent<FieldProps> = ({ name, size, label, children, required }) =>
+  <div style={{ maxWidth: fieldSizes[size ?? 's'] }}>
+    <label>{label} {required && <Mandatory />} {name && <Help name={name} />}
+      {children}
+    </label>
+  </div>
+
+const Mandatory = () => <span data-tip="required" aria-label="required">*</span>
+
+export interface ChannelOption extends Option { channel: BasicChannel }
+
+export const loadChannelOptions = (esCfg: EsCfg, s: string): Promise<ChannelOption[]> => {
+  console.log('loadChannelOptions', s)
+  return channelSearch(esCfg, `channel_title:${s}`)
+    .then(channels => channels.map(c => ({ value: c.channelId, label: c.channelTitle, channel: c })))
+}

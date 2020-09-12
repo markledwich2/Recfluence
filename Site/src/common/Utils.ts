@@ -1,6 +1,7 @@
 import _ from "lodash"
 import * as dateformat from 'dateformat'
 
+
 export function toRecord<T, V>(items: T[], getKey: (r: T) => string, getValue: (r: T) => V): Record<string, V> {
     return _.mapValues(_.keyBy(items, getKey), getValue)
 }
@@ -34,7 +35,7 @@ export function merge<T>(a: T, b: any, c?: any): T { return Object.assign({}, a,
 /** GET a json object and deserialize it */
 export async function getJson<T>(url: RequestInfo, cfg?: RequestInit): Promise<T> {
     const res = await fetch(url, Object.assign({ method: 'GET' }, cfg))
-    const json = await res.json()
+    let json = await res.json()
     return json as T
 }
 

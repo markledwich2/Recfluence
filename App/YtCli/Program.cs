@@ -9,27 +9,19 @@ using CliFx;
 using CliFx.Attributes;
 using CliFx.Exceptions;
 using Medallion.Shell;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
-using Newtonsoft.Json.Linq;
 using Semver;
 using Serilog;
-using SysExtensions;
 using SysExtensions.Build;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
-using SysExtensions.Threading;
-using Troschuetz.Random;
 using YtReader;
-using YtReader.Db;
-using YtReader.Search;
 using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
-using DbCaption = YtReader.Db.DbCaption;
 
 namespace YtCli {
   class Program {
@@ -261,10 +253,10 @@ namespace YtCli {
 
     [CommandOption("us-init", Description = "Run userscrape in init mode (additional seed videos)")]
     public bool UserScrapeInit { get; set; }
-    
+
     [CommandOption("us-trial", Description = "Run userscrape with an existing trial")]
     public string UserScrapeTrial { get; set; }
-    
+
     [CommandOption("us-accounts", Description = "Run userscrape with a list of | separated accounts")]
     public string UserScrapeAccounts { get; set; }
 
@@ -274,7 +266,10 @@ namespace YtCli {
     [CommandOption("search-conditions", Description = @"filter for tables when updating search indexes (channel|video|caption). 
 (e.g. 'channel:channel_id=2|video:video_field is null:caption:false' ) ")]
     public string SearchConditions { get; set; }
-    
+
+    [CommandOption("search-indexes", Description = @"| separated list of indexes to update. leave empty for all indexes")]
+    public string SearchIndexes { get; set; }
+
     [CommandOption("search-full", Description = "when true, search will be loaded fully")]
     public bool SearchFullLoad { get; set; }
 
@@ -295,8 +290,9 @@ namespace YtCli {
         DisableChannelDiscover = DisableChannelDiscover,
         SearchConditions = SearchConditions?.UnJoin('|').Select(t => {
           var (index, condition, _) = t.UnJoin(':');
-          return (index.ParseEnum<SearchIndex>(), condition);
+          return (index, condition);
         }).ToArray(),
+        SearchIndexes = SearchIndexes?.UnJoin('|'),
         SearchFullLoad = SearchFullLoad,
         UserScrapeInit = UserScrapeInit,
         UserScrapeTrial = UserScrapeTrial,
@@ -311,7 +307,7 @@ namespace YtCli {
   [Command("test-chrome-scraper")]
   public class TestChromeScraperCmd : ICommand {
     readonly ChromeScraper Scraper;
-    readonly ILogger Log;
+    readonly ILogger       Log;
 
     public TestChromeScraperCmd(ChromeScraper scraper, ILogger log) {
       Scraper = scraper;

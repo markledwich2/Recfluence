@@ -23,6 +23,7 @@ export function esCfgFromEnv(): EsCfg {
     indexes: {
       caption: `${prefix}caption`,
       channel: `${prefix}channel`,
+      channelTitle: `${prefix}channel_title`,
       video: `${prefix}video`
     }
   }
@@ -39,4 +40,18 @@ export interface EsIndexes {
   caption: string
   video: string
   channel: string
+  channelTitle: string
+}
+
+export interface EsSearchRes<T> {
+  hits: { hits: EsDocRes<T>[] }
+}
+
+export interface EsDocRes<T> {
+  found: boolean
+  _source: T
+}
+
+export interface EsDocsRes<T> {
+  docs: EsDocRes<T>[]
 }

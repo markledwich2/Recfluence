@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using Humanizer;
 using SysExtensions.Collections;
 
 namespace SysExtensions.Text {
@@ -87,8 +88,8 @@ namespace SysExtensions.Text {
 
     /// <summary>Provides an append method with terse defintiions of the format and condition for appending the item.</summary>
     public static string Add<T>(this string s, T item, Func<T, string> format = null, Func<T, bool> condition = null) {
-      format = format ?? (o => o.ToString());
-      condition = condition ?? (o => o != null);
+      format ??= o => o.ToString();
+      condition ??= o => o != null;
       return condition(item) ? s + format(item) : s;
     }
 
@@ -137,6 +138,11 @@ namespace SysExtensions.Text {
       first = list.Length > 0 ? list[0] : default;
       second = list.Length > 1 ? list[1] : default;
       rest = list.Skip(2).ToList();
+    }
+
+    public static string ToCamelCase(this string s) {
+      if (s.Contains("_") || s.All(char.IsUpper)) s = s.ToLowerInvariant();
+      return s.Camelize();
     }
   }
 }

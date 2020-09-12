@@ -16,17 +16,18 @@ namespace YtReader {
   }
 
   public class UpdateOptions {
-    public bool                                    FullLoad               { get; set; }
-    public string[]                                Actions                { get; set; }
-    public string[]                                Tables                 { get; set; }
-    public string[]                                Results                { get; set; }
-    public string[]                                Channels               { get; set; }
-    public bool                                    DisableChannelDiscover { get; set; }
-    public bool                                    UserScrapeInit         { get; set; }
-    public string                                  UserScrapeTrial        { get; set; }
-    public (SearchIndex index, string condition)[] SearchConditions       { get; set; }
-    public string[]                                UserScrapeAccounts     { get; set; }
-    public bool                                    SearchFullLoad         { get; set; }
+    public bool                               FullLoad               { get; set; }
+    public string[]                           Actions                { get; set; }
+    public string[]                           Tables                 { get; set; }
+    public string[]                           Results                { get; set; }
+    public string[]                           Channels               { get; set; }
+    public bool                               DisableChannelDiscover { get; set; }
+    public bool                               UserScrapeInit         { get; set; }
+    public string                             UserScrapeTrial        { get; set; }
+    public (string index, string condition)[] SearchConditions       { get; set; }
+    public string[]                           SearchIndexes          { get; set; }
+    public string[]                           UserScrapeAccounts     { get; set; }
+    public bool                               SearchFullLoad         { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -70,8 +71,8 @@ namespace YtReader {
       YtDataform.Update(Log, fullLoad, tables, cancel);
 
     [DependsOn(nameof(Dataform))]
-    Task Search(bool fullLoad, (SearchIndex index, string condition)[] conditions, CancellationToken cancel) =>
-      _search.SyncToElastic(Log, fullLoad, limit: null, conditions, cancel: cancel);
+    Task Search(bool fullLoad, string[] optionsSearchIndexes, (string index, string condition)[] conditions, CancellationToken cancel) =>
+      _search.SyncToElastic(Log, fullLoad, indexes: optionsSearchIndexes, conditions, cancel: cancel);
 
     [DependsOn(nameof(Dataform))]
     Task Results(string[] results) =>
@@ -96,7 +97,7 @@ namespace YtReader {
       var actionMethods = TaskGraph.FromMethods(
         c => Collect(fullLoad, options.DisableChannelDiscover, options.Channels, c),
         c => Stage(fullLoad, options.Tables),
-        c => Search(options.SearchFullLoad, options.SearchConditions, c),
+        c => Search(options.SearchFullLoad, options.SearchIndexes, options.SearchConditions, c),
         c => Results(options.Results),
         c => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, c),
         c => Dataform(fullLoad, options.Tables, c),

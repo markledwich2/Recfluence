@@ -1,11 +1,11 @@
 import { ChannelLogo } from '../channel/Channel'
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en'
-import { BasicChannel } from '../../common/YtApi'
+import { BasicChannel, ChannelReview, Review } from '../../common/YtApi'
 import styled from 'styled-components'
 import * as React from "react"
 import _ from 'lodash'
-import { tagOptions, LrTag, ChannelReview } from './ReviewCommon'
+import { tagOptions, LrTag } from './ReviewCommon'
 import { Tag } from '../Tag'
 import { Button } from '../Button'
 import { Edit as EditIcon } from '@styled-icons/material'
@@ -27,17 +27,11 @@ const ReviewedTableStyle = styled.table`
   }
 `
 
-export const ReviewedGrid = ({ reviews, page, onEditReview, onShowMore, channels }:
+export const ReviewedGrid = ({ reviews, onEditReview }:
   {
     reviews: ChannelReview[],
-    page?: number,
-    onEditReview: (c: ChannelReview) => void,
-    onShowMore: () => void,
-    channels: _.Dictionary<BasicChannel>
+    onEditReview: (c: ChannelReview) => void
   }) => {
-
-  page = page ?? 1
-  const reviewsToDisplay = page * 200
 
   return <ReviewedTableStyle>
     <thead>
@@ -49,37 +43,36 @@ export const ReviewedGrid = ({ reviews, page, onEditReview, onShowMore, channels
       </tr>
     </thead>
     <tbody>
-      {reviews && _(reviews).orderBy(r => r.review.Updated, 'desc').slice(0, reviewsToDisplay).value()
-        .map(cr => {
+      {reviews &&
+        reviews.map(cr => {
           var c = cr.channel
           var r = cr.review
-          return <tr key={`${r.ChannelId}|${r.Updated}`}>
+          return <tr key={`${r.channelId}|${r.updated}`}>
             <td>
               <div style={{ display: 'flex', flexDirection: 'row' }}>
-                <ChannelLogo channelId={r.ChannelId} thumb={c?.LogoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
+                <ChannelLogo channelId={r.channelId} thumb={c?.logoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
                 <div>
-                  <h4>{c?.ChannelTitle ?? r.ChannelId}</h4>
-                  <div>{timeAgo.format(Date.parse(r.Updated))}</div>
-                  {r.MainChannelId ? <div> Main: <b>{channels[r.MainChannelId]?.ChannelTitle ?? r.MainChannelId}</b></div> : null}
+                  <h4>{c?.channelTitle ?? r.channelId}</h4>
+                  <div>{timeAgo.format(Date.parse(r.updated))}</div>
+                  {r.mainChannelId ? <div> Main: <b>{cr.mainChannel?.channelTitle ?? r.mainChannelId}</b></div> : null}
                 </div>
               </div>
             </td>
             <td>
-              <div style={{ margin: '0.3em' }} ><LrTag tag={r.LR} /></div>
+              <div style={{ margin: '0.3em' }} ><LrTag tag={r.lr} /></div>
               <div>
-                {_.uniq(r.SoftTags)
+                {_.uniq(r.softTags)
                   .map(t => tagOptions.find(o => o.value == t))
                   .filter(t => t)
                   .map(o => <Tag key={o.value} label={o.label} style={{ margin: '0.3em' }} />)}
               </div>
             </td>
-            <td style={{ maxWidth: '20em' }}>{r?.Notes}</td>
-            <td style={{ textAlign: 'right' }}>{r.Relevance}</td>
+            <td style={{ maxWidth: '20em' }}>{r?.notes}</td>
+            <td style={{ textAlign: 'right' }}>{r.relevance}</td>
             <td><Button onclick={_ => onEditReview(cr)} icon={<EditIcon />} /></td>
           </tr>
         }
         )}
     </tbody>
-    {reviewsToDisplay < reviews.length && <div><a onClick={() => onShowMore()}>show more reviews</a></div>}
   </ReviewedTableStyle>
 }

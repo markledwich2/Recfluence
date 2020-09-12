@@ -56,7 +56,7 @@ namespace Mutuo.Etl.Blob {
     /// <summary>The land path for a given partition is where files are first put before being optimised. Default -
     ///   [Path]/[Partition], LandAndStage - [Path]/land/[partition]</summary>
     StringPath FilePath(string partition = null) => partition.NullOrEmpty() ? Path : Path.Add(partition);
-    
+
     /// <summary>Returns the most recent file within this path (any child directories)</summary>
     public async Task<StoreFileMd> LatestFile(StringPath path = null) {
       var files = await Files(path, allDirectories: true).SelectManyList();
@@ -64,7 +64,7 @@ namespace Mutuo.Etl.Blob {
       return latest;
     }
 
-    public IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false) => 
+    public IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false) =>
       Store.Files(FilePath(path), allDirectories);
 
     public readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {
@@ -89,7 +89,7 @@ namespace Mutuo.Etl.Blob {
 
     public async IAsyncEnumerable<IReadOnlyCollection<T>> Items(string partition = null) {
       await foreach (var dir in Files(partition, allDirectories: true))
-      await foreach (var item in dir.BlockTrans(f => LoadJsonl(f.Path), Parallel, capacity:10))
+      await foreach (var item in dir.BlockTrans(f => LoadJsonl(f.Path), Parallel, capacity: 10))
         yield return item;
     }
 

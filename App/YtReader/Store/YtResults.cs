@@ -12,38 +12,19 @@ using CsvHelper;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Net;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 
 namespace YtReader.Store {
-  class ResQuery {
-    public ResQuery(string name, string query = null, string desc = null, object parameters = null, bool inSharedZip = false,
-      ResFilType fileType = ResFilType.Csv, JsonSource jsonSource = default) {
-      Name = name;
-      Query = query;
-      Desc = desc;
-      Parameters = parameters;
-      InSharedZip = inSharedZip;
-      FileType = fileType;
-      JsonSource = jsonSource;
-    }
-
-    public string     Name        { get; }
-    public string     Query       { get; }
-    public string     Desc        { get; }
-    public object     Parameters  { get; }
-    public bool       InSharedZip { get; }
-    public ResFilType FileType    { get; }
-    public JsonSource JsonSource { get; }
-  }
-
   public enum JsonSource {
     AllColumns,
     FirstColumn
@@ -54,17 +35,45 @@ namespace YtReader.Store {
     Json
   }
 
+  public enum JsonCasingStrategy {
+    None,
+    Camel
+  }
+
+  class ResQuery {
+    public ResQuery(string name, string query = null, string desc = null, object parameters = null, bool inSharedZip = false,
+      ResFilType fileType = ResFilType.Csv, JsonSource jsonSource = default, JsonCasingStrategy jsonNaming = default) {
+      Name = name;
+      Query = query;
+      Desc = desc;
+      Parameters = parameters;
+      InSharedZip = inSharedZip;
+      FileType = fileType;
+      JsonSource = jsonSource;
+      JsonNaming = jsonNaming;
+    }
+
+    public string             Name        { get; }
+    public string             Query       { get; }
+    public string             Desc        { get; }
+    public object             Parameters  { get; }
+    public bool               InSharedZip { get; }
+    public ResFilType         FileType    { get; }
+    public JsonSource         JsonSource  { get; }
+    public JsonCasingStrategy JsonNaming  { get; }
+  }
+
   class FileQuery : ResQuery {
-    public FileQuery(string name, StringPath path, string desc = null, object parameters = null, bool inSharedZip = false)
-      : base(name, desc: desc, parameters: parameters, inSharedZip: inSharedZip) =>
+    public FileQuery(string name, StringPath path, string desc = null, object parameters = null, bool inSharedZip = false,
+      ResFilType fileType = ResFilType.Csv, JsonCasingStrategy jsonNaming = default)
+      : base(name, desc: desc, parameters: parameters, inSharedZip: inSharedZip, fileType: fileType, jsonNaming: jsonNaming) =>
       Path = path;
 
     public StringPath Path { get; set; }
   }
 
   public class YtResults {
-    const    string                      Version = "v2.4";
-    readonly HttpClient                  Http    = new HttpClient();
+    readonly HttpClient                  Http = new HttpClient();
     readonly SnowflakeConnectionProvider Sf;
     readonly ResultsCfg                  ResCfg;
     readonly ISimpleFileStore            Store;
@@ -102,28 +111,21 @@ where c.reviews_all>0";
 
           new FileQuery("vis_channel_recs2", "sql/vis_channel_recs.sql",
             "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams, inSharedZip: true),
-          
+
           new FileQuery("vis_tag_recs", "sql/vis_tag_recs.sql",
             "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams, inSharedZip: true),
 
           new FileQuery("channel_review", "sql/channel_review.sql",
             desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip: true),
 
+          new FileQuery("channel_review_lists", @"sql/channel_review_lists.sql", parameters: new {limit = 500},
+            fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+
           // userscrape data
           new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_tag = UserScrapeCfg.SeedsPerTag}),
           new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos = UserScrapeCfg.Tests}),
-          
-          // classification data
-          
-          new ResQuery("review_channels", @"select channel_id as ""ChannelId""
-     , channel_title as ""ChannelTitle""
-     , description as ""Description""
-     , logo_url as ""LogoUrl""
-     , channel_views as ""ChannelViews""
-     , reviews_all as ""ReviewsAll""
-    , reviews_algo as ""ReviewsAlgo""
-from channel_latest where meets_sub_criteria", fileType: ResFilType.Json),
-          
+
+
           new ResQuery("class_channels", classChannelsSelect, fileType: ResFilType.Json),
 
           new ResQuery("class_snippets", $@"with reviewed as ({classChannelsSelect})
@@ -240,7 +242,7 @@ group by channel_id",
       using (var sw = new StreamWriter(zw)) {
         var task = q.FileType switch {
           ResFilType.Csv => reader.WriteCsvGz(sw, fileName, log),
-          ResFilType.Json => reader.WriteJsonGz(sw, q.JsonSource),
+          ResFilType.Json => reader.WriteJsonGz(sw, q.JsonSource, q.JsonNaming),
           _ => throw new NotImplementedException()
         };
         await task;
@@ -298,14 +300,24 @@ group by channel_id",
       }
     }
 
-    public static async Task WriteJsonGz(this IDataReader reader, StreamWriter stream, JsonSource jsonSource) {
+    public static async Task WriteJsonGz(this IDataReader reader, StreamWriter stream, JsonSource jsonSource, JsonCasingStrategy naming) {
+      var serializer = (naming == JsonCasingStrategy.Camel
+        ? JsonlExtensions.DefaultSettingsForJs()
+        : new JsonSerializerSettings {Converters = {new StringEnumConverter()}, Formatting = Formatting.None}).Serializer();
+
       while (reader.Read()) {
         var j = new JObject();
-        if (jsonSource == JsonSource.FirstColumn)
+        if (jsonSource == JsonSource.FirstColumn) {
           j = JObject.Parse(reader.GetString(0));
-        else
-          foreach (var i in reader.FieldRange())
-            j.Add(reader.GetName(i), JToken.FromObject(reader[i]));
+          if (naming == JsonCasingStrategy.Camel)
+            j = j.ToCamelCase();
+        }
+        else {
+          foreach (var i in reader.FieldRange()) {
+            var name = reader.GetName(i);
+            j.Add(naming == JsonCasingStrategy.Camel ? name.ToCamelCase() : name, JToken.FromObject(reader[i], serializer));
+          }
+        }
         await stream.WriteLineAsync(j.ToString(Formatting.None));
       }
     }

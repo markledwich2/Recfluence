@@ -76,18 +76,20 @@ namespace YtFunctions {
         return new HttpResponseMessage(HttpStatusCode.OK);
       });
 
+    static readonly JsonSerializerSettings JsSerializer = JsonlExtensions.DefaultSettingsForJs();
+
     [FunctionName("channel_review")]
     public async Task<HttpResponseMessage> ChannelReview([HttpTrigger(AuthorizationLevel.Anonymous, "put")]
       HttpRequest req, ExecutionContext exec) =>
       await Ctx.Run(exec, async c => {
-        var review = req.Body.ToObject<UserChannelReview>();
+        var review = req.Body.ToObject<UserChannelReview>(JsSerializer);
         if (review.Email.NullOrEmpty())
           return new HttpResponseMessage(HttpStatusCode.BadRequest) {Content = new StringContent("email must be provided")};
         review.Updated = DateTime.UtcNow;
         var log = c.Resolve<ILogger>();
         var store = c.Scope.Resolve<YtStore>();
         await store.ChannelReviews.Append(new[] {review}, log);
-        
+
         // if we have lots of small files, clean them up
         var files = await store.ChannelReviews.Files(review.Email).SelectManyList();
         var optimiseCfg = c.Resolve<WarehouseCfg>().Optimise;
@@ -100,14 +102,17 @@ namespace YtFunctions {
     [FunctionName("channels_reviewed")]
     public async Task<HttpResponseMessage> ChannelsReviewed([HttpTrigger(AuthorizationLevel.Anonymous, "get")]
       HttpRequest req, ExecutionContext exec) =>
-      await Ctx.Run(exec, async c => {
+      await Ctx.Run(exec, async ctx => {
         var (email, response) = EmailOrResponse(req);
         if (response != null) return response;
-        var store = c.Scope.Resolve<YtStore>();
+        var store = ctx.Scope.Resolve<YtStore>();
         var reviews = await store.ChannelReviews.Items(email).SelectManyList();
-        return reviews
-          .GroupBy(r => r.ChannelId).Select(g => g.OrderByDescending(g => g.Updated).First()) // only return the latest edit for a channel
-          .JsonResponse(store.ChannelReviews.JCfg);
+        var json = reviews.SerializeToJToken(JsonlExtensions.DefaultSettingsForJs())
+          .ToCamelCaseJToken().ToString(Formatting.None);
+
+        return new HttpResponseMessage(HttpStatusCode.OK) {
+          Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
       });
 
     static (string email, HttpResponseMessage response) EmailOrResponse(HttpRequest req) {

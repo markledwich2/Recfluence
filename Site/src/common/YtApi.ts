@@ -1,9 +1,11 @@
 import { ChannelData } from "./YtModel"
 import { getJson, putJson, getJsonl } from "./Utils"
-import _ from 'lodash'
+import _, { Dictionary, camelCase } from 'lodash'
 import { DbModel } from './DbModel'
-import { EsCfg } from './Elastic'
-import { uri } from './Uri'
+import { EsCfg, EsSearchRes, EsDocRes, EsDocsRes } from './Elastic'
+import { uri, Uri } from './Uri'
+import * as base64 from 'base-64'
+import * as camelKeys from 'camelcase-keys'
 
 export const apiUrl = process.env.FUNC_URL
 
@@ -25,12 +27,75 @@ export async function getCaptions(cfg: EsCfg, videoId: string): Promise<EsCaptio
   return res
 }
 
+export async function channelSearch(cfg: EsCfg, q: string) {
+  const sources = await esQuery(cfg, cfg.indexes.channel, q)
+  const channels = sources.map(c => camelKeys(c) as BasicChannel)
+  return channels
+}
+
+export async function getChannel(cfg: EsCfg, channelId: string) {
+  const res = await esDoc(cfg, cfg.indexes.channel, channelId)
+  return camelKeys(res._source)
+}
+
+export async function getChannels(cfg: EsCfg, ids: string[]) {
+  const get = async (index: string, ids: string[]) => {
+    const res = await esDocs(cfg, index, ids)
+    return res.docs.filter(d => d.found).map(d => camelKeys(d._source) as BasicChannel)
+  }
+
+  const bChannels = await get(cfg.indexes.channel, ids)
+  const tChannels = await get(cfg.indexes.channelTitle, ids.filter(id => !bChannels.find(c => c.channelId == id)))
+  return bChannels.concat(tChannels)
+}
+
+export const esHeaders = (cfg: EsCfg) => ({
+  "Authorization": `Basic ${base64.encode(cfg.creds)}`
+})
+
+export async function esDoc(cfg: EsCfg, index: string, id: string) {
+  {
+    var res = await fetch(
+      new Uri(cfg.url).addPath(index, '_doc', id).url, {
+      headers: new Headers(esHeaders(cfg))
+    })
+    var j = await res.json() as EsDocRes<any>
+    return j
+  }
+}
+
+export async function esDocs(cfg: EsCfg, index: string, ids: string[]) {
+  {
+    var res = await fetch(new Uri(cfg.url).addPath(index, '_mget').url,
+      {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+        headers: new Headers({ ...esHeaders(cfg), 'Content-Type': 'application/json' })
+      })
+    var j = await res.json() as EsDocsRes<any>
+    return j
+  }
+}
+
+export async function esQuery(cfg: EsCfg, index: string, q: string) {
+  {
+    let res = await fetch(
+      new Uri(cfg.url).addPath(index, '_search').addQuery({ q }).url, {
+      headers: new Headers(esHeaders(cfg))
+    })
+    let j = (await res.json()) as EsSearchRes<any>
+    let sources = j.hits.hits.map(h => h._source)
+    return sources
+  }
+}
+
 export async function saveSearch(search: UserSearch): Promise<void> {
   await putJson(`${apiUrl}/search`, search)
 }
 
-export async function reviewChannels(): Promise<BasicChannel[]> {
-  return await getJsonl<BasicChannel>(resultsUrl.addPath('review_channels.jsonl.gz').url, { headers: { cache: "no-store" } })
+export async function reviewChannelLists(): Promise<Dictionary<BasicChannel[]>> {
+  const list = await getJsonl<BasicChannel & { list: string }>(resultsUrl.addPath('channel_review_lists.jsonl.gz').url, { headers: { cache: "no-store" } })
+  return _(list).groupBy(l => l.list).value()
 }
 
 export async function saveReview(review: Review): Promise<Response> {
@@ -41,35 +106,41 @@ export async function channelsReviewed(email: string): Promise<Review[]> {
   return await getJson<Review[]>(uri(apiUrl).addPath('channels_reviewed').addQuery({ email }).url)
 }
 
-
-export function humanReviews(channel: BasicChannel) {
-  return channel.ReviewsAll - channel.ReviewsAlgo
-}
-
 export function videoThumbHigh(videoId: string) {
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
 }
 
+
+
 export interface Review {
-  ChannelId: string
-  Email?: string
-  LR?: string
-  Relevance?: number
-  SoftTags: string[]
-  Notes?: string
-  Updated?: string
-  MainChannelId?: string
+  channelId: string
+  email?: string
+  lr?: string
+  relevance?: number
+  softTags: string[]
+  notes?: string
+  updated?: string
+  mainChannelId?: string
 }
 
-export interface BasicChannel {
-  ChannelId: string
-  ChannelTitle: string
-  Description: string
-  LogoUrl: string
-  ChannelViews: number
-  ReviewStatus: string
-  ReviewsAll: number
-  ReviewsAlgo: number
+export interface ChannelTitle {
+  channelId: string
+  channelTitle: string
+  description: string
+}
+
+export interface ChannelReview {
+  review: Review
+  channel: BasicChannel
+  mainChannel?: BasicChannel
+}
+
+export interface BasicChannel extends ChannelTitle {
+  logoUrl?: string
+  channelViews?: number
+  reviewStatus?: string
+  reviewsAll?: number
+  reviewsAlgo?: number
 }
 
 export interface UserSearch {
@@ -84,6 +155,11 @@ export interface UserSearch {
 export interface VideoData {
   video: EsVideo
   channel: ChannelData
+}
+
+interface EsChannelTitle {
+  channel_id: string
+  channel_title: string
 }
 
 interface EsVideoResponse {
