@@ -164,10 +164,10 @@ namespace YtReader.Store {
     public string                Title        { get; set; }
     public string                ChannelId    { get; set; }
     public string                ChannelTitle { get; set; }
-    public DateTime              UploadDate   { get; set; }
+    public DateTime?              UploadDate   { get; set; }
     public string                Description  { get; set; }
     public VideoThumbnail        Thumbnail    { get; set; } = new VideoThumbnail();
-    public TimeSpan              Duration     { get; set; }
+    public TimeSpan?              Duration     { get; set; }
     public IReadOnlyList<string> Keywords     { get; set; } = new List<string>();
     public Statistics            Statistics   { get; set; }
     public override string ToString() => $"{Title}";

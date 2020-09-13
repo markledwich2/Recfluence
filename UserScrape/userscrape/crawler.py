@@ -311,15 +311,16 @@ class Crawler:
 
     def get_video_unavailable(self):
         reason = self.driver.execute_script('''
-var p = ytInitialPlayerResponse.playabilityStatus
-if(!p || p.status == 'OK') return null
-var reason = p.errorScreen?.playerErrorMessageRenderer?.reason?.simpleTex
-    ?? p.errorScreen?.playerLegacyDesktopYpcOfferRenderer?.itemTitle
-    ?? document.querySelector('#reason.yt-player-error-message-renderer')?.innerText
-var subReason = p.errorScreen?.subreason?.runs?.map(r => r.text).join('|') 
-    ?? p.errorScreen?.playerLegacyDesktopYpcOfferRenderer?.offerDescription
-    ?? document.querySelector('#subreason.yt-player-error-message-renderer')?.innerText
-return reason ? {reason, subReason} : null
+    var p = ytInitialPlayerResponse.playabilityStatus
+    if(!p || p.status == 'OK') return null
+    var reason = p.errorScreen?.playerErrorMessageRenderer?.reason?.simpleTex
+        ?? p.errorScreen?.playerLegacyDesktopYpcOfferRenderer?.itemTitle
+        ?? document.querySelector('#reason.yt-player-error-message-renderer')?.innerText
+    var subReason = p.errorScreen?.subreason?.simpleText 
+        ?? p.errorScreen?.subreason?.runs?.map(r => r.text).join('|') 
+        ?? p.errorScreen?.playerLegacyDesktopYpcOfferRenderer?.offerDescription
+        ?? document.querySelector('#subreason.yt-player-error-message-renderer')?.innerText
+    return reason ? {reason, subReason} : null
        ''')
         return VideoUnavailable(reason['reason'], reason['subReason']) if reason else None
 

@@ -15,7 +15,13 @@ namespace Tests {
       // get comments, does watch page html have it
       using var ctx = await TextCtx();
       var chrome = ctx.Resolve<ChromeScraper>();
-      var vids = new[] {"rBu0BRTx2x8", "Ms9WOSXU5tY", "0pn2bwa2zZc", "n_vzBGB3F_Y", "xxQOtOCbASs" /* (tall video) #1#, "DLq1DUcMh1Q", "n_vzBGB3F_Y", "xxQOtOCbASs"*/};
+      var vids = new[] {
+        "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
+        "-ryPLVEExA0", // private 
+        /*"Ms9WOSXU5tY", "n_vzBGB3F_Y",
+        "xxQOtOCbASs", // tall
+        "DLq1DUcMh1Q"*/
+      };
       var chromeExtras = await chrome.GetRecsAndExtra(vids, ctx.Log);
     }
 
@@ -23,7 +29,13 @@ namespace Tests {
     public static async Task WebRecsAndExtra() {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<WebScraper>();
-      var extra = await ws.GetRecsAndExtra(new[] {"rBu0BRTx2x8", "Ms9WOSXU5tY", "n_vzBGB3F_Y", "xxQOtOCbASs" /* (tall video) */, "DLq1DUcMh1Q"}, ctx.Log);
+      var extra = await ws.GetRecsAndExtra(new[] {
+        "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
+        "-ryPLVEExA0", // private 
+        "Ms9WOSXU5tY", "n_vzBGB3F_Y",
+        "xxQOtOCbASs", // tall
+        "DLq1DUcMh1Q"
+      }, ctx.Log);
     }
 
     [Test]
@@ -35,7 +47,7 @@ namespace Tests {
     }
 
     static async Task<TestCtx> TextCtx() {
-      var (cfg, rootCfg, version ) = await Setup.LoadCfg(basePath: Setup.SolutionDir.Combine("YtCli").FullPath);
+      var (cfg, rootCfg, version) = await Setup.LoadCfg(basePath: Setup.SolutionDir.Combine("YtCli").FullPath);
       var log = Setup.CreateTestLogger();
       log.Information("Starting {TestName}", TestContext.CurrentContext.Test.Name);
       var appCtx = Setup.PipeAppCtxEmptyScope(rootCfg, cfg, version.Version);

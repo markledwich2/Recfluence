@@ -417,6 +417,12 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       var webExtra = await Scraper.GetRecsAndExtra(forWebUpdate, log);
       var allExtra = chromeExtra.Concat(webExtra).ToArray();
       var extra = allExtra.Select(v => v.Extra).NotNull().ToArray();
+
+      foreach (var e in extra) {
+        e.ChannelId ??= c.ChannelId; // if the video has an error, it may not have picked up the channel
+        e.ChannelTitle ??= c.ChannelTitle;
+      }
+
       var updated = DateTime.UtcNow;
       var recs = ToRecStored(allExtra, updated);
 

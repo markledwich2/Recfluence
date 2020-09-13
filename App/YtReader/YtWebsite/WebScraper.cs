@@ -357,31 +357,40 @@ namespace YtReader.YtWebsite {
       var extra = new VideoExtraStored2 {
         VideoId = videoId,
         Updated = DateTime.UtcNow,
-        ChannelId = videoItem.ChannelId,
-        ChannelTitle = videoItem.ChannelTitle,
-        Description = videoItem.Description,
-        Duration = videoItem.Duration,
-        Keywords = videoItem.Keywords,
-        Title = videoItem.Title,
-        UploadDate = videoItem.UploadDate.UtcDateTime,
-        Statistics = videoItem.Statistics,
+        ChannelId = videoItem?.ChannelId,
+        ChannelTitle = videoItem?.ChannelTitle,
+        Description = videoItem?.Description,
+        Duration = videoItem?.Duration,
+        Keywords = videoItem?.Keywords,
+        Title = videoItem?.Title,
+        UploadDate = videoItem?.UploadDate.UtcDateTime,
+        Statistics = videoItem?.Statistics,
         Source = ScrapeSource.Web,
         Thumbnail = VideoThumbnail.FromVideoId(videoId)
       };
 
-      var restrictedMode = html.QueryElements("head > meta[property=\"og:restrictions:age\"]").FirstOrDefault()?.GetAttribute("content")?.Value == "18+";
-      if (restrictedMode) {
-        extra.Error = RestrictedVideoError;
-        extra.SubError = "Unable to find recommended video because it is age restricted and requires to log in";
+      var ytInitPr = GetClientObjectFromWatchPage(html, "ytInitialPlayerResponse");
+      if (ytInitPr != null && ytInitPr.Value<string>("status") != "OK") {
+        var playerError = ytInitPr.SelectToken("playabilityStatus.errorScreen.playerErrorMessageRenderer");
+        extra.Error = playerError?.SelectToken("reason.simpleText")?.Value<string>();
+        extra.SubError = (playerError?.SelectToken("subreason.simpleText") ?? 
+                          playerError?.SelectToken("subreason.runs[0].text"))
+          ?.Value<string>();
       }
-      else {
+      if (extra.Error == null) {
+        var restrictedMode = html.QueryElements("head > meta[property=\"og:restrictions:age\"]").FirstOrDefault()?.GetAttribute("content")?.Value == "18+";
+        if (restrictedMode) {
+          extra.Error = RestrictedVideoError;
+          extra.SubError = "Unable to find recommended video because it is age restricted and requires to log in";
+        }
+      }
+      if (extra.Error == null) {
         extra.SubError = html.QueryElements("#unavailable-submessage").FirstOrDefault()?.GetInnerText();
         if (extra.SubError == "") extra.SubError = null;
         if (extra.SubError.HasValue()) // all pages have the error, but not a sub-error
           extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
       }
       if (extra.Error != null) return new RecsAndExtra(extra, new Rec[] { });
-
 
       var (recs, recEx) = Def.New(() => GetRecs2(html)).Try();
       if (recs?.Any() != true || recEx != null) {
@@ -410,16 +419,7 @@ namespace YtReader.YtWebsite {
       RegexOptions.Compiled | RegexOptions.Multiline);
 
     public Rec[] GetRecs2(HtmlDocument html) {
-      var scripts = html.QueryElements("script")
-        .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
-
-      var windowObjects = scripts
-        .SelectMany(t => WindowObjectsRe.Matches(t))
-        .ToDictionary(m => m.Groups["name"].Value, m => m.Groups["json"].Value);
-
-      var initData = windowObjects.TryGet("ytInitialData") ?? throw new InvalidOperationException("can't find ytInitialData data script");
-
-      var jInit = JObject.Parse(initData);
+      var jInit = GetClientObjectFromWatchPage(html) ?? throw new InvalidOperationException("can't find ytInitialData data script to get recs from");
       var resultsSel = "$.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results";
       var jResults = (JArray) jInit.SelectToken(resultsSel) ?? throw new InvalidOperationException($"can't find {resultsSel}");
       var recs = jResults
@@ -441,6 +441,21 @@ namespace YtReader.YtWebsite {
           };
         }).ToArray();
       return recs;
+    }
+
+    static JObject GetClientObjectFromWatchPage(HtmlDocument html, string name = "ytInitialData") {
+      var scripts = html.QueryElements("script")
+        .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
+
+      var windowObjects = scripts
+        .SelectMany(t => WindowObjectsRe.Matches(t))
+        .ToDictionary(m => m.Groups["name"].Value, m => m.Groups["json"].Value);
+
+      var initData = windowObjects.TryGet(name);
+      if (initData == null) return null;
+
+      var jInit = JObject.Parse(initData);
+      return jInit;
     }
 
     public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptions(string videoId, ILogger log) {
@@ -484,8 +499,7 @@ namespace YtReader.YtWebsite {
       var channelId = VideoValue<string>("channelId");
       var channelTitle = VideoValue<string>("author");
 
-      var videoUploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseDateTimeOffset("yyyy-MM-dd") ??
-                            throw new InvalidOperationException("No upload date found in page");
+      var videoUploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseDateTimeOffset("yyyy-MM-dd") ?? default;
 
       var videoLikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-like-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();

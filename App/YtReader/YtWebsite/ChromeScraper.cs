@@ -190,13 +190,15 @@ namespace YtReader.YtWebsite {
       var (video, error) = await VideoDetails(page, videoId);
       video ??= new VideoExtraStored2 {VideoId = videoId};
 
+      // keep this in sync with UserScrape/crawler.py get_video_unavailable()
       var reason = await page.EvaluateFunctionAsync<VideoReason>(@"() => { 
     var p = ytInitialPlayerResponse.playabilityStatus
     if(!p || p.status == 'OK') return null
     var reason = p.errorScreen?.playerErrorMessageRenderer?.reason?.simpleTex
         ?? p.errorScreen?.playerLegacyDesktopYpcOfferRenderer?.itemTitle
         ?? document.querySelector('#reason.yt-player-error-message-renderer')?.innerText
-    var subReason = p.errorScreen?.subreason?.runs?.map(r => r.text).join('|') 
+    var subReason = p.errorScreen?.subreason?.simpleText 
+        ?? p.errorScreen?.subreason?.runs?.map(r => r.text).join('|') 
         ?? p.errorScreen?.playerLegacyDesktopYpcOfferRenderer?.offerDescription
         ?? document.querySelector('#subreason.yt-player-error-message-renderer')?.innerText
     return reason ? {reason, subReason} : null
