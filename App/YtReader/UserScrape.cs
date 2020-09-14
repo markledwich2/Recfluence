@@ -29,6 +29,7 @@ namespace YtReader {
     public int MaxContainers { get; set; } = 20;
     public int SeedsPerTag   { get; set; } = 50;
     public int Tests         { get; set; } = 100;
+    public int Retries       { get; set; } = 6;
   }
 
   public class UserScrape {
@@ -92,7 +93,7 @@ namespace YtReader {
     async Task RunTrial(CancellationToken cancel, string trial, string fullName, (string name, string value)[] env, string[] args,
       IReadOnlyCollection<string> accounts, ILogger log) {
       var trialLog = log.ForContext("Trail", trial);
-      await Policy.Handle<CommandException>().RetryAsync(retryCount: 3,
+      await Policy.Handle<CommandException>().RetryAsync(retryCount: Cfg.Retries,
           (e, i) => trialLog.Warning(e, "UserScrape - trial {Trial} failed ({Attempt}): Error: {Error}", trial, i, e.Message))
         .ExecuteAsync(async c => {
           var groupName = $"userscrape-{ShortGuid.Create(5).ToLower().Replace(oldChar: '_', newChar: '-')}";
