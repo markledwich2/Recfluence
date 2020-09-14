@@ -26,7 +26,7 @@ namespace YtReader {
       Exe = "python"
     };
 
-    public int MaxContainers { get; set; } = 10;
+    public int MaxContainers { get; set; } = 20;
     public int SeedsPerTag   { get; set; } = 50;
     public int Tests         { get; set; } = 100;
   }
