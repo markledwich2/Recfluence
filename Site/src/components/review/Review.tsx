@@ -187,11 +187,6 @@ export const ReviewControl = () => {
         </>}
 
       {reviews && <>
-        <h3>Create/override review</h3>
-        {/* {reviewChannelSelect} */}
-      </>}
-
-      {reviews && <>
         <h3>Reviewed</h3>
         <div>
           {reviews?.length <= 0 ?
