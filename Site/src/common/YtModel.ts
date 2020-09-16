@@ -144,16 +144,16 @@ export class YtModel {
         relevantImpressionsDaily: +r.RELEVANT_IMPRESSIONS_DAILY
       } as RecData))
 
-    const tagViews = _(this.channelDimStatic.col('tags').values.map(v => v.value))
-      .map(tag => ({
-        tag: tag,
-        dailyViews: _(channels)
-          .filter(c => c.tags.includes(tag))
-          .sumBy(c => c.dailyViews)
-      })).keyBy(t => t.tag).mapValues(t => t.dailyViews).value()
+    const tagMd = _(this.channelDimStatic.col('tags').values).keyBy(t => t.value).value()
+    const tagViews = _(tagMd).map(tag => ({
+      tag: tag,
+      dailyViews: _(channels)
+        .filter(c => c.tags.includes(tag.value))
+        .sumBy(c => c.dailyViews)
+    })).keyBy(t => t.tag.value).mapValues(t => t.dailyViews).value()
 
     // sort the tags according to views. Color will use the first tag, so we want the most distinguishing
-    channels.forEach(c => c.tags = _.orderBy(c.tags, t => tagViews[t], 'asc'))
+    channels.forEach(c => c.tags = _.orderBy(c.tags, [t => tagMd[t]?.color ? 0 : 1, t => tagViews[t]], ['asc', 'asc']))
 
     const m = new YtModel()
     m.channels = new Dim(this.channelDimStatic.meta, channels)
@@ -247,6 +247,9 @@ export class YtModel {
           { value: 'SocialJustice', label: 'Social Justice', color: '#56b881' },
           { value: 'Socialist', color: '#6ec9e0' },
           { value: 'WhiteIdentitarian', label: 'White Identitarian', color: '#b8b500' },
+          { value: 'OrganizedReligion', label: 'Organized Religion' },
+          { value: 'MissingLinkMedia', label: 'Missing Link Media' },
+          { value: 'StateFunded', label: 'State Funded' },
         ]
       }
     ]

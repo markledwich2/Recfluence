@@ -40,4 +40,5 @@
   "prettier.jsxSingleQuote": true,
   "prettier.singleQuote": true,
   "typescript.tsdk": "node_modules\\typescript\\lib",
+  "debug.javascript.warnOnLongPrediction": false,
 }

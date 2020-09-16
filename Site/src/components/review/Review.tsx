@@ -42,9 +42,9 @@ export const ReviewControl = () => {
   const { user } = useContext(UserContext)
   const [review, setReview] = useState<ChannelReview>(null)
   const [reviews, setReviews] = useState<Review[]>()
-  const [reviewLists, setReviewsLists] = useState<_.Dictionary<ChannelTitle[]>>(null)
+  const [reviewLists, setReviewsLists] = useState<_.Dictionary<BasicChannel[]>>(null)
   const [reviewListName, setReviewListName] = useState<string>('auto')
-  const [pending, setPending] = useState<ChannelTitle[]>()
+  const [pending, setPending] = useState<BasicChannel[]>()
   const [editing, setEditing] = useState<ChannelReview>(null)
   const [reviewsPage, setReviewPage] = useState<number>(1)
   const [reviewsShown, setReviewsShown] = useState<ChannelReview[]>()
@@ -182,8 +182,6 @@ export const ReviewControl = () => {
           />
         </Field>
 
-
-
         <Field label={`Reviewing`} size='l'>
           <Async
             value={review?.channel ? { value: review.review?.channelId, label: review.channel?.channelTitle, channel: review.channel } : null}
@@ -199,20 +197,23 @@ export const ReviewControl = () => {
         {pending.length == 0 && <span>You're up to date. You hard worker you!</span>}
       </FormStyle>}
 
-      <hr style={{ margin: '0.5em 0 ' }} />
 
-      {!reviews ?
-        <Spinner size='50px' /> :
-        <ReviewForm
-          review={review}
-          onChange={r => setReview(r)}
-          onSave={async r => { await saveReview(r, false) }}
-          onSkip={() => updateReviewAndPending()}
-          onSaveNonPolitical={async r => { await saveNonPoliticalReview(r, false) }}
-          reviewValid={reviewValid}
-        />}
 
-      <hr style={{ margin: '0.5em 0 ' }} />
+      {!reviews && <Spinner size='50px' />}
+
+      {review &&
+        <>
+          <hr style={{ margin: '0.5em 0 ' }} />
+          <ReviewForm
+            review={review}
+            onChange={r => setReview(r)}
+            onSave={async r => { await saveReview(r, false) }}
+            onSkip={() => updateReviewAndPending()}
+            onSaveNonPolitical={async r => { await saveNonPoliticalReview(r, false) }}
+            reviewValid={reviewValid}
+          />
+          <hr style={{ margin: '0.5em 0 ' }} />
+        </>}
 
       {reviews && <>
         <h3>Create/override review</h3>

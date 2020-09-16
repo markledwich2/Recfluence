@@ -102,7 +102,7 @@ export class ChannelRelations extends React.Component<Props, State> {
       let tagsColor = ColEx.colorFunc(tagsCol)
 
       const tags = tagsCol.values
-        .filter(v => !['Politician'].find(t => t == v.value))
+        .filter(v => v.color)
         .map(v => v.value) // don't show some tags in the legend
 
       return _(tags).map(t => ({
