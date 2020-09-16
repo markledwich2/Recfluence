@@ -1,7 +1,7 @@
 import styled from 'styled-components'
 import { Dim, ColEx } from '../../common/Dim'
 import { ChannelData, YtModel } from '../../common/YtModel'
-import { ytTheme } from '../MainLayout'
+import { ytTheme, StyleProps } from '../MainLayout'
 import React, { useMemo, FunctionComponent } from 'react'
 import { tagColor } from '../channel_relations/ChannelTags'
 import ReactMarkdown from 'react-markdown'
@@ -143,16 +143,16 @@ export const Help = (p: { name: string }) => <HelpOutline
   data-tip={p.name}
   {...p} />
 
-export interface FieldProps {
+export interface FieldProps extends StyleProps {
   name?: string
   size?: keyof typeof fieldSizes
   label: string
   required?: boolean
 }
 
-export const Field: FunctionComponent<FieldProps> = ({ name, size, label, children, required }) =>
-  <div style={{ maxWidth: fieldSizes[size ?? 's'] }}>
-    <label>{label} {required && <Mandatory />} {name && <Help name={name} />}
+export const Field: FunctionComponent<FieldProps> = ({ name, size, label, children, required, style }) =>
+  <div style={{ width: size ? fieldSizes[size ?? 's'] : null, ...style }}>
+    <label>{label} {required && <Mandatory />} {name && <Help name={name} />}<br />
       {children}
     </label>
   </div>
@@ -162,7 +162,6 @@ const Mandatory = () => <span data-tip="required" aria-label="required">*</span>
 export interface ChannelOption extends Option { channel: BasicChannel }
 
 export const loadChannelOptions = (esCfg: EsCfg, s: string): Promise<ChannelOption[]> => {
-  console.log('loadChannelOptions', s)
   return channelSearch(esCfg, `channel_title:${s}`)
     .then(channels => channels.map(c => ({ value: c.channelId, label: c.channelTitle, channel: c })))
 }

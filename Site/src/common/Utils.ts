@@ -30,7 +30,7 @@ export function capitalCase(s: string) { return _.kebabCase(s).replace('-', '_')
 //export function capitalize(s: string) { return s?.length >= 1 ? s.charAt(0).toUpperCase() + s.slice(1) : s }
 
 /** like Object.assign, but doesn't mutate a */
-export function merge<T>(a: T, b: any, c?: any): T { return Object.assign({}, a, b, c) }
+export function assign<T>(a: T, b: any, c?: any): T { return Object.assign({}, a, b, c) }
 
 /** GET a json object and deserialize it */
 export async function getJson<T>(url: RequestInfo, cfg?: RequestInit): Promise<T> {

@@ -8,7 +8,7 @@ import { compactInteger } from 'humanize-plus'
 import * as _ from 'lodash'
 import { ChartProps, InteractiveDataState } from '../../common/Chart'
 import { SelectableCell, ColEx, Cell, CellEx, DimQuery, Dim } from '../../common/Dim'
-import { typedKeys, merge, toRecord } from '../../common/Utils'
+import { typedKeys, assign, toRecord } from '../../common/Utils'
 
 interface State extends InteractiveDataState { }
 interface Props extends ChartProps<YtModel> { }
@@ -182,7 +182,7 @@ export class RecFlows extends React.Component<Props, State> {
         shapeId: nodeId(mode, r),
         mode: mode,
         keys: cKey,
-        props: merge(r.props, cProps)
+        props: assign(r.props, cProps)
       })
     }
 

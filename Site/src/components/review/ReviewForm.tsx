@@ -105,7 +105,7 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
       onSave(review)
     }}>
       <FormStyle space='1.5em'>
-        <Field name='lr' label='Left/Center/Right' >
+        <Field name='lr' label='Left/Center/Right' size='l' >
           <Select
             id='LR'
             ref={lrRef}

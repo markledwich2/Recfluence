@@ -1,7 +1,7 @@
 import { Dic } from "./YtModel"
-import _, { assign } from "lodash"
+import _ from "lodash"
 import { Col, ColEx, SelectableCell, CellEx } from "./Dim"
-import { merge } from './Utils'
+import { assign } from './Utils'
 
 
 export type SelectionHandler = (action: Action) => void
@@ -205,7 +205,7 @@ export class SelectionStateHelper<T, TParams> {
     }
 
     selectableContains(cell: SelectableCell<any>, selection: Selection<string>) {
-        const cellRecord = merge(cell.props, cell.keys)
+        const cellRecord = assign(cell.props, cell.keys)
         return this.overlaps(cellRecord, selection.record)
     }
 

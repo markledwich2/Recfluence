@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import * as _ from 'lodash'
-import { capitalCase, merge, toRecord, delay } from '../common/Utils'
+import { capitalCase, assign, toRecord, delay } from '../common/Utils'
 import { SelectionState } from './Chart'
 import { Col, Dim } from './Dim'
 import { DbModel } from './DbModel'
@@ -110,7 +110,7 @@ export class YtModel {
       const recCols = _(YtModel.categoryCols.concat('channelId', 'title'))
         .flatMap(c => [recCol('from', c), recCol('to', c)]).value()
 
-      let rec = merge<RecData>({
+      let rec = assign<RecData>({
         recommendsViewChannelPercent: +r.PERCENT_OF_CHANNEL_RECS,
         relevantImpressionsDaily: +r.RELEVANT_IMPRESSIONS_DAILY
       },
@@ -130,7 +130,7 @@ export class YtModel {
       let recCols = _(YtModel.categoryCols)
         .flatMap(c => [RecEx.recCol('from', c), RecEx.recCol('to', c)]).value()
 
-      let rec = merge<RecData>({
+      let rec = assign<RecData>({
         relevantImpressionsDaily: +r.RELEVANT_IMPRESSIONS_DAILY
       }, toRecord(recCols, c => c, c => r[capitalCase(c)]?.toString()))
       return rec
@@ -257,7 +257,7 @@ export class YtModel {
 
   private static recCol(dir: RecDir, name: keyof ChannelData) {
     const col = YtModel.channelDimStatic.col(name)
-    return merge(col as any as Col<RecData>, {
+    return assign(col as any as Col<RecData>, {
       name: RecEx.recCol(dir, col.name),
       labelCol: col.labelCol ? RecEx.recCol(dir, col.labelCol) : null,
     })

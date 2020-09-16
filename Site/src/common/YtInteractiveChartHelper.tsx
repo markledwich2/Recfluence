@@ -4,7 +4,7 @@ import { SelectableCell } from './Dim'
 import { ChannelData } from './YtModel'
 import React from 'react'
 import { range } from 'd3'
-import { merge } from './Utils'
+import { assign } from './Utils'
 import { renderToString } from 'react-dom/server'
 
 

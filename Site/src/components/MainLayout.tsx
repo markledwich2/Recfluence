@@ -16,6 +16,11 @@ export function isGatsbyServer() { return typeof window === 'undefined' }
 
 export function safeLocation(): Location { return isGatsbyServer() ? null : location }
 
+export interface StyleProps {
+  style?: React.CSSProperties
+  className?: string
+}
+
 export const mainLayoutId = 'main-layout'
 
 const themeIntent: ThemeIntent = {

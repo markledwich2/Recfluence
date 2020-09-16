@@ -41,13 +41,11 @@ const reviewValid = (r: Review): boolean => r.relevance != null && r.lr != null
 export const ReviewControl = () => {
   const { user } = useContext(UserContext)
   const [review, setReview] = useState<ChannelReview>(null)
-  const [reviews, setReviews] = useState<Review[]>()
+  const [reviews, setReviews] = useState<ChannelReview[]>()
   const [reviewLists, setReviewsLists] = useState<_.Dictionary<BasicChannel[]>>(null)
   const [reviewListName, setReviewListName] = useState<string>('auto')
   const [pending, setPending] = useState<BasicChannel[]>()
   const [editing, setEditing] = useState<ChannelReview>(null)
-  const [reviewsPage, setReviewPage] = useState<number>(1)
-  const [reviewsShown, setReviewsShown] = useState<ChannelReview[]>()
 
   const { addToast } = useToasts()
 
@@ -89,22 +87,21 @@ export const ReviewControl = () => {
     }, keyOption, [editing, review])
   })
 
-  const channelIsPending = (c: ChannelTitle, reviews: Review[]) => reviews && !reviews.find(r => r.channelId == c.channelId)
+  const channelIsPending = (c: ChannelTitle, reviews: ChannelReview[]) => reviews && !reviews.find(r => r.review.channelId == c.channelId)
 
   const init = async (email: string) => {
     const reviewListsTask = reviewChannelLists()
-    const reviewedTask = channelsReviewed(email)
-    const reviews = _(await reviewedTask)
-      .orderBy(r => r.updated, 'desc')
-      .value()
-
+    const reviews = await channelsReviewed(email)
+    const ids = _(reviews).flatMap(r => [r.channelId, r.mainChannelId]).filter(id => id != null).uniq().value()
+    const channels = _.keyBy(await getChannels(esCfg, ids), c => c.channelId)
+    const channelReviews = reviews.map(r => ({ review: r, channel: channels[r.channelId], mainChannel: channels[r.mainChannelId] }))
     const reviewLists = await reviewListsTask
     setReviewsLists(reviewLists)
-    updateReviewAndPending(reviewListName, reviewLists, reviews)
-    setReviews(reviews)
+    updateReviewAndPending(reviewListName, reviewLists, channelReviews)
+    setReviews(channelReviews)
   }
 
-  const updateReviewAndPending = (listName?: string, lists?: _.Dictionary<ChannelTitle[]>, reviewsParam?: Review[]) => {
+  const updateReviewAndPending = (listName?: string, lists?: _.Dictionary<ChannelTitle[]>, reviewsParam?: ChannelReview[]) => {
     listName = listName ?? reviewListName
     lists = lists ?? reviewLists
     reviewsParam = reviewsParam ?? reviews
@@ -115,50 +112,24 @@ export const ReviewControl = () => {
     setPending(newPending)
   }
 
-  const saveReview = async ({ review, channel }: ChannelReview, isEditing: boolean): Promise<Review> => {
-    const toSave = { ...review, updated: new Date().toISOString(), email: user?.email }
-    const res = await apiSaveReview(toSave)
-    res.ok ? addToast(`Saved channel :  ${channel.channelTitle}`, { appearance: 'success', autoDismiss: true })
+  const saveReview = async (review: ChannelReview, isEditing: boolean): Promise<ChannelReview> => {
+    review = {
+      review: { ...review.review, updated: new Date().toISOString(), email: user?.email },
+      channel: review.channel
+    }
+    const res = await apiSaveReview(review.review)
+    res.ok ? addToast(`Saved channel :  ${review.channel.channelTitle}`, { appearance: 'success', autoDismiss: true })
       : addToast(`Couldn't save:  ${await res.text()}`, { appearance: 'warning', autoDismiss: true })
     if (!res.ok) return
-    const newReviews = reviews.filter(r => r.channelId != toSave.channelId).concat(toSave)
+    const newReviews = reviews.filter(r => r.review.channelId != review.review.channelId).concat(review)
     setReviews(newReviews)
     if (!isEditing) updateReviewAndPending(reviewListName, reviewLists, newReviews)
     else setEditing(null)
-    return toSave
+    return review
   }
 
   const saveNonPoliticalReview = ({ review, channel }: ChannelReview, isEditing: boolean) =>
     saveReview({ review: { ...review, relevance: 0 }, channel }, isEditing)
-
-  useEffect(() => {
-    if (!user || !reviews) return
-    const go = async () => {
-      const rShown = _(reviews)
-        .groupBy(r => r.channelId).map(g => _(g).orderBy(r => r.updated, 'desc').head()) // remove dupes
-        .orderBy(r => r.updated, 'desc').slice(0, reviewsPage * 50).value() // take recent 50
-      const ids = _(rShown).flatMap(c => [c.channelId, c.mainChannelId]).filter(id => id != null).uniq().value()
-      const channels = _(await getChannels(esCfg, ids)).keyBy(r => r.channelId).value()
-      const crShown: ChannelReview[] = rShown.map(r => (
-        {
-          review: r,
-          channel: channels[r.channelId],
-          mainChannel: r.mainChannelId ? channels[r.mainChannelId] : null
-        }))
-      setReviewsShown(crShown)
-    }
-    go()
-  }, [reviews, reviewsPage, user])
-
-  const reviewedGrid = useMemo(
-    () => <><ReviewedGrid
-      reviews={reviewsShown}
-      onEditReview={c => setEditing(jsonClone(c))} />
-      {reviewsShown && reviews && reviewsShown.length < reviews.length && <div>
-        <a onClick={() => setReviewPage(reviewsPage + 1)}>show more reviews</a>
-      </div>}
-    </>,
-    [reviewsShown])
 
   const listNameOptions: Option[] = _.keys(reviewLists).map(k => ({ value: k, label: k }))
   const pendingOptions: ChannelOption[] = pending?.map(p => ({ value: p.channelId, label: p.channelTitle, channel: p }))
@@ -224,7 +195,8 @@ export const ReviewControl = () => {
         <h3>Reviewed</h3>
         <div>
           {reviews?.length <= 0 ?
-            <>You haven't reviewed anything yet</> : reviewedGrid
+            <>You haven't reviewed anything yet</>
+            : <ReviewedGrid reviews={reviews} onEditReview={c => setEditing(jsonClone(c))} />
           }
         </div>
       </>
