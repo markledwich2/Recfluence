@@ -74,7 +74,7 @@ namespace YtReader.Search {
       var lastUpdate = await Es.MaxDateField<EsChannel>(m => m.Field(p => p.updated));
       var sql = CreateSql(selectSql, fullLoad, lastUpdate, conditions);
       using var conn = await OpenConnection(log);
-      var dbChannels = conn.Conn.Query(sql.sql);
+      var dbChannels = conn.Conn.Query(sql.sql, sql.param);
 
       var esChannels = dbChannels.Select(c => new EsChannel {
         channel_id = c.CHANNEL_ID,

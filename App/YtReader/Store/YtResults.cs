@@ -130,6 +130,7 @@ select channel_title
      , subs
      , channel_views
      , tags
+     , lr
      , logo_url
      , v.*
 from views_by_channel v
