@@ -86,10 +86,10 @@ namespace SysExtensions.Serialization {
       return JsonConvert.SerializeObject(o, settings);
     }
 
-    public static Stream ToJsonStream<T>(this T o, JsonSerializerSettings settings = null) {
+    public static Stream ToJsonStream<T>(this T o, JsonSerializerSettings settings = null, Encoding encoding = null) {
       settings ??= _defaultSettings;
       var ms = new MemoryStream();
-      using (var sw = new StreamWriter(ms, leaveOpen: true))
+      using (var sw = new StreamWriter(ms, leaveOpen: true, encoding:encoding ?? Encoding.UTF8))
       using (var jw = new JsonTextWriter(sw))
         settings.Serializer().Serialize(jw, o);
       ms.Seek(0, SeekOrigin.Begin);

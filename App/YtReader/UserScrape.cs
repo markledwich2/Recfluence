@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CliFx.Exceptions;
@@ -8,6 +9,7 @@ using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
+using Newtonsoft.Json;
 using Polly;
 using Semver;
 using Serilog;
@@ -142,8 +144,11 @@ namespace YtReader {
                       .ToListAsync();
       
       await inCfg.BlockAction(async cfg => {
-          var name = $"userscrape/run/incomplete_trial/{cfg.trial_id}";
-          await Store.Set(name, cfg, zip:false);
+          var name = $"userscrape/run/incomplete_trial/{cfg.trial_id}.json";
+          var stream = cfg.ToJsonStream(
+            new JsonSerializerSettings { Formatting = Formatting.None }, 
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: false)); // python library balks at BOM encoding by default
+          await Store.Save(name, stream);
           log.Information("upgraded incomplete trial to {File}", name);
         });
     }
