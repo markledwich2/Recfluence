@@ -322,6 +322,21 @@ namespace YtCli {
       Log.Information("Scraping of {VideoIds} complete", VideoIds, res);
     }
   }
+  
+  [Command("upgrade-incomplete-trials")]
+  public class UpgradeIncompleteTrialsCmd : ICommand {
+    readonly UserScrape UserScrape;
+    readonly ILogger    Log;
+
+    public UpgradeIncompleteTrialsCmd(UserScrape userScrape, ILogger log) {
+      UserScrape = userScrape;
+      Log = log;
+    }
+
+    public async ValueTask ExecuteAsync(IConsole console) {
+      await UserScrape.UpgradeIncompleteTrials(Log);
+    }
+  }
 
   [Command("build-container")]
   public class BuildContainerCmd : ICommand {

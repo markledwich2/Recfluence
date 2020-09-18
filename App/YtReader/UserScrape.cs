@@ -59,59 +59,51 @@ namespace YtReader {
         return branchBlob != null && await branchBlob.ExistsAsync() ? branchBlob : standardBlob;
       }
 
-
-
       // use branch env cfg if it exists
       var cfgBlob = await CfgBlob();
       var sas = cfgBlob.GetSharedAccessSignature(new SharedAccessBlobPolicy {
         SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddDays(2),
         Permissions = SharedAccessBlobPermissions.Read
       });
-
       var usCfg = (await cfgBlob.LoadAsText()).ParseJObject();
       var cfgAccounts = usCfg.SelectTokens("$.users[*]")
         .Select(t => t.Value<string>("tag")).ToArray();
-
       var accounts = cfgAccounts.Where(c => limitAccounts == null || limitAccounts.Contains(c)).ToArray();
-      
-      if ((limitAccounts?.Length ?? 0) == 0) { }
-
-      var fullName = Cfg.Container.FullContainerImageName("latest");
       var env = new (string name, string value)[] {
         ("cfg_sas", $"{cfgBlob.Uri}{sas}"),
         ("env", RootCfg.Env),
         ("branch_env", Version.Prerelease)
       };
-
       var args = new[] {"app.py"};
       if (init)
         args = args.Concat("-i").ToArray();
 
 
-      if (trial.HasValue())
-        await RunTrial(cancel, trial, fullName, env, args, null, log);
+      if (trial.HasValue()) {
+        await RunTrial(cancel, trial, env, args, null, log);
+      }
       else {
         var blobs = await Store.List("userscrape/run/incomplete_trial", allDirectories: false, log).SelectManyList();
-
-        var incompleteTrials = (await blobs.BlockFunc(f => Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip:false)))
+        var incompleteTrials = (await blobs.BlockFunc(f => Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip: false)))
           .Where(t => limitAccounts == null || limitAccounts.Any(a => t.accounts?.Contains(a) == true)).ToArray();
-        
+
         log.Information("UserScrape - about to run {Trials} incomplete trials", incompleteTrials.Length);
-        await incompleteTrials.BlockAction(async incompleteTrial => {
-            await RunTrial(cancel, incompleteTrial.trial_id, fullName, env, args, null, log);
-          }, Cfg.MaxContainers, cancel: cancel);
-        
+        await incompleteTrials.BlockAction(async incompleteTrial => { await RunTrial(cancel, incompleteTrial.trial_id, env, args, null, log); },
+          Cfg.MaxContainers, cancel: cancel);
+
         log.Information("UserScrape - about to new trails for accounts {Accounts}", accounts.Join("|"));
         await accounts.Batch(batchSize: 1, maxBatches: Cfg.MaxContainers)
           .BlockAction(async b => {
             trial = $"{DateTime.UtcNow:yyyy-MM-dd_HH-mm-ss}_{Guid.NewGuid().ToShortString(4)}";
-            await RunTrial(cancel, trial, fullName, env, args, b, log);
+            await RunTrial(cancel, trial, env, args, b, log);
           }, Cfg.MaxContainers, cancel: cancel);
       }
     }
 
-    async Task RunTrial(CancellationToken cancel, string trial, string fullName, (string name, string value)[] env, string[] args,
+    async Task RunTrial(CancellationToken cancel, string trial, (string name, string value)[] env, string[] args,
       IReadOnlyCollection<string> accounts, ILogger log) {
+      var fullName = Cfg.Container.FullContainerImageName("latest");
+      
       var trialLog = log.ForContext("Trail", trial);
       await Policy.Handle<CommandException>().RetryAsync(Cfg.Retries,
           (e, i) => trialLog.Warning(e, "UserScrape - trial {Trial} failed (attempt {Attempt}/{Attempts}): Error: {Error}",
@@ -141,6 +133,19 @@ namespace YtReader {
     class IncompleteTrial {
       public string   trial_id { get; set; }
       public string[] accounts { get; set; }
+    }
+
+    public async Task UpgradeIncompleteTrials(ILogger log) {
+      var inCfg = await Store.List("userscrape/run/cfg", allDirectories: true, log).SelectMany()
+        .Where(f => f.Path.Extensions.Last() == "json" && f.Modified > new DateTimeOffset(new DateTime(2020, 9, 17), TimeSpan.Zero))
+                      .SelectAwait(async f => await Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip: false))
+                      .ToListAsync();
+      
+      await inCfg.BlockAction(async cfg => {
+          var name = $"userscrape/run/incomplete_trial/{cfg.trial_id}";
+          await Store.Set(name, cfg, zip:false);
+          log.Information("upgraded incomplete trial to {File}", name);
+        });
     }
   }
 }
