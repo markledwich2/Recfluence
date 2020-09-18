@@ -60,5 +60,10 @@ namespace SysExtensions {
         return (default, ex);
       }
     }
+
+    public static void ThrowIfUnrecoverable(this Exception ex) {
+      if (ex is OutOfMemoryException)
+        throw ex; // nothing is going to work now
+    }
   }
 }

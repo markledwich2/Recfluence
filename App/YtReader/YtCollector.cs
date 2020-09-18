@@ -78,7 +78,7 @@ namespace YtReader {
       if (cancel.IsCancellationRequested)
         return;
       var (result, dur) = await channels
-        .Randomize() // randomize to even the load. Without this the large channels at the beginning make the first batch go way slower
+        .Randomize() // randomize to even the load
         .Process(PipeCtx,
           b => ProcessChannels(b, forceUpdate, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
         .WithDuration();
@@ -261,6 +261,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
             return (c, Success: true);
           }
           catch (Exception ex) {
+            ex.ThrowIfUnrecoverable();
             cLog.Error(ex, "Collect - Error updating channel {Channel}: {Error}", c.ChannelTitle, ex.Message);
             return (c, Success: false);
           }

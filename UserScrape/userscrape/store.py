@@ -50,6 +50,9 @@ class BlobStore:
         self.save_file(localPath, path)
         os.remove(localPath)
 
+    def delete(self, path: PurePath):
+        self.container.delete_blob(path.as_posix())
+
     def save_file(self, localFile: PurePath, remotePath: PurePath, content_type: str = None):
         """uploads a local file to the container"""
         with open(localFile, 'rb') as f:
@@ -141,8 +144,8 @@ class BlobPaths:
     def cookies_json(self) -> PurePath:
         return self.user_path() / 'cookies.json'
 
-    def trial_cfg_json(self) -> PurePath:
-        return self.__trial_path("cfg") / 'cfg.json'
+    def trial_incomplete_json(self) -> PurePath:
+        return PurePosixPath(f'{self.storeCfg.root_path}/run/incomplete_trial/{self.trial_id}.json')
 
     def rec_path(self) -> PurePath:
         return self.__trial_path("recommendations")

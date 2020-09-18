@@ -130,7 +130,6 @@ class Crawler:
             return WebDriverWait(self.driver, 5).until(EC.visibility_of_all_elements_located((By.CSS_SELECTOR, cssSelector)))
         except WebDriverException as e:
             self.handle_driver_ex(e, cssSelector, error_expected)
-        raise e
 
     def wait_for_visible(self, cssSelector: str, error_expected: bool = False, timeout: int = 5) -> WebElement:
         """waits for an element to be visible  at the given css selector, logs errors to seq & discord"""
@@ -138,7 +137,13 @@ class Crawler:
             return WebDriverWait(self.driver, timeout).until(EC.visibility_of_element_located((By.CSS_SELECTOR, cssSelector)))
         except WebDriverException as e:
             self.handle_driver_ex(e, cssSelector, error_expected)
-        raise e
+
+    def wait_for_presence(self, cssSelector: str, error_expected: bool = False, timeout: int = 5) -> WebElement:
+        """waits for an element to be visible  at the given css selector, logs errors to seq & discord"""
+        try:
+            return WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, cssSelector)))
+        except WebDriverException as e:
+            self.handle_driver_ex(e, cssSelector, error_expected)
 
     def wait_for_clickable(self, cssSelector: str, error_expected: bool = False) -> WebElement:
         """waits for an element to be clickable at the given css selector, logs errors to seq & discord"""
@@ -210,19 +215,17 @@ class Crawler:
         return CrawlResult()
 
     def get_video_features(self, video_id, rec_result: RecResult):
+
+        wfp = self.wait_for_visible
+
         available = rec_result.unavailable == None
         video_info = {
             'account': self.user.tag,
             'trial': self.trial_id,
             'video_id': video_id,
-            'title': self.wait.until(EC.presence_of_element_located(
-                (By.CSS_SELECTOR, "#container > h1 > yt-formatted-string"))).text if available else None,
-            'channel': self.wait.until(EC.presence_of_element_located(
-                (By.CSS_SELECTOR,
-                 "ytd-channel-name.ytd-video-owner-renderer > div:nth-child(1) > "
-                 "div:nth-child(1)"))).text if available else None,
-            'channel_id': self.wait.until(EC.presence_of_element_located(
-                (By.CSS_SELECTOR, "#text > a"))).get_attribute('href').strip(
+            'title': wfp("#container > h1 > yt-formatted-string").text if available else None,
+            'channel': wfp("ytd-channel-name.ytd-video-owner-renderer > div:nth-child(1) > div:nth-child(1)").text if available else None,
+            'channel_id': wfp("#text > a").get_attribute('href').strip(
                 'https://www.youtube.com/channel/') if available else None,  # read this from our own data if we have it. unavailable video's don't show the channel
             'recommendations': rec_result.recs if available else None,
             'unavailable': asdict(rec_result.unavailable) if rec_result.unavailable else None,
@@ -554,7 +557,7 @@ class Crawler:
                     try:
                         button.click()
                         feed_is_bannerfree = False
-                        print("information closed")
+                        self.log.debug("{tag} - banner closed A", tag=self.user.tag)
                     except ElementNotInteractableException:
                         pass
                     except ElementNotVisibleException:
@@ -576,7 +579,7 @@ class Crawler:
                 feed_is_bannerfree = False
                 for button in themed_content:
                     button.click()
-                    print("banner closed")
+                    self.log.debug("{tag} - banner closed B", tag=self.user.tag)
             loop_break_index += 1
 
         all_videos = self.wait.until(

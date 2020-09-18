@@ -152,7 +152,7 @@ namespace YtReader {
 
     /// <summary>The maximum number of videos to refresh exta info on (per run) because they have no comments (we didn't used
     ///   to collect them)</summary>
-    public int PopulateMissingCommentsLimit { get; set; } = 1;
+    public int PopulateMissingCommentsLimit { get; set; } = 0; // disabled for now due to performance costs
     public int ParallelChannels { get;             set; } = 2;
 
     public int ChromeParallel { get; set; } = 2;

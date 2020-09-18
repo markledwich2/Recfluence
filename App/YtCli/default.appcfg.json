@@ -60,7 +60,7 @@
       {
         "pipeName": "ProcessChannels",
         "container": {
-          "mem": 3,
+          "mem": 5,
           "cores": 2
         },
         "maxParallel": 16,

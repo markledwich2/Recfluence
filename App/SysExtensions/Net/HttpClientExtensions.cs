@@ -163,7 +163,8 @@ namespace SysExtensions.Net {
 
     /// <summary>Reads the content as a string (and unzip if required)</summary>
     public static async Task<string> ContentAsString(this HttpResponseMessage response) {
-      using (var stream = await response.ContentAsStream()) return stream.ReadToEnd();
+      using var stream = await response.ContentAsStream();
+      return await stream.ReadToEndAsync();
     }
 
     /// <summary>Reads the content as a text stream (and unzip if required)</summary>

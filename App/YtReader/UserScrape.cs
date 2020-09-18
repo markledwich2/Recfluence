@@ -16,6 +16,7 @@ using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.Store;
 
 namespace YtReader {
   public class UserScrapeCfg {
@@ -33,16 +34,18 @@ namespace YtReader {
   }
 
   public class UserScrape {
-    readonly AzureContainers Containers;
-    readonly RootCfg         RootCfg;
-    readonly UserScrapeCfg   Cfg;
-    readonly SemVersion      Version;
+    readonly AzureContainers  Containers;
+    readonly RootCfg          RootCfg;
+    readonly UserScrapeCfg    Cfg;
+    readonly SemVersion       Version;
+    readonly ISimpleFileStore Store;
 
-    public UserScrape(AzureContainers containers, RootCfg rootCfg, UserScrapeCfg cfg, SemVersion version) {
+    public UserScrape(AzureContainers containers, RootCfg rootCfg, UserScrapeCfg cfg, SemVersion version, YtStore store) {
       Containers = containers;
       RootCfg = rootCfg;
       Cfg = cfg;
       Version = version;
+      Store = store.Store;
     }
 
     public async Task Run(ILogger log, bool init, string trial, string[] limitAccounts, CancellationToken cancel) {
@@ -56,6 +59,8 @@ namespace YtReader {
         return branchBlob != null && await branchBlob.ExistsAsync() ? branchBlob : standardBlob;
       }
 
+
+
       // use branch env cfg if it exists
       var cfgBlob = await CfgBlob();
       var sas = cfgBlob.GetSharedAccessSignature(new SharedAccessBlobPolicy {
@@ -68,6 +73,8 @@ namespace YtReader {
         .Select(t => t.Value<string>("tag")).ToArray();
 
       var accounts = cfgAccounts.Where(c => limitAccounts == null || limitAccounts.Contains(c)).ToArray();
+      
+      if ((limitAccounts?.Length ?? 0) == 0) { }
 
       var fullName = Cfg.Container.FullContainerImageName("latest");
       var env = new (string name, string value)[] {
@@ -80,21 +87,35 @@ namespace YtReader {
       if (init)
         args = args.Concat("-i").ToArray();
 
+
       if (trial.HasValue())
         await RunTrial(cancel, trial, fullName, env, args, null, log);
-      else
+      else {
+        var blobs = await Store.List("userscrape/run/incomplete_trial", allDirectories: false, log).SelectManyList();
+
+        var incompleteTrials = (await blobs.BlockFunc(f => Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip:false)))
+          .Where(t => limitAccounts == null || limitAccounts.Any(a => t.accounts?.Contains(a) == true)).ToArray();
+        
+        log.Information("UserScrape - about to run {Trials} incomplete trials", incompleteTrials.Length);
+        await incompleteTrials.BlockAction(async incompleteTrial => {
+            await RunTrial(cancel, incompleteTrial.trial_id, fullName, env, args, null, log);
+          }, Cfg.MaxContainers, cancel: cancel);
+        
+        log.Information("UserScrape - about to new trails for accounts {Accounts}", accounts.Join("|"));
         await accounts.Batch(batchSize: 1, maxBatches: Cfg.MaxContainers)
           .BlockAction(async b => {
             trial = $"{DateTime.UtcNow:yyyy-MM-dd_HH-mm-ss}_{Guid.NewGuid().ToShortString(4)}";
             await RunTrial(cancel, trial, fullName, env, args, b, log);
           }, Cfg.MaxContainers, cancel: cancel);
+      }
     }
 
     async Task RunTrial(CancellationToken cancel, string trial, string fullName, (string name, string value)[] env, string[] args,
       IReadOnlyCollection<string> accounts, ILogger log) {
       var trialLog = log.ForContext("Trail", trial);
-      await Policy.Handle<CommandException>().RetryAsync(retryCount: Cfg.Retries,
-          (e, i) => trialLog.Warning(e, "UserScrape - trial {Trial} failed ({Attempt}): Error: {Error}", trial, i, e.Message))
+      await Policy.Handle<CommandException>().RetryAsync(Cfg.Retries,
+          (e, i) => trialLog.Warning(e, "UserScrape - trial {Trial} failed (attempt {Attempt}/{Attempts}): Error: {Error}",
+            trial, i, Cfg.Retries, e.Message))
         .ExecuteAsync(async c => {
           var groupName = $"userscrape-{ShortGuid.Create(5).ToLower().Replace(oldChar: '_', newChar: '-')}";
           var groupLog = trialLog.ForContext("ContainerGroup", groupName);
@@ -116,5 +137,10 @@ namespace YtReader {
     }
 
     const int RetryErrorCode = 13;
+
+    class IncompleteTrial {
+      public string   trial_id { get; set; }
+      public string[] accounts { get; set; }
+    }
   }
 }

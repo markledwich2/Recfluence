@@ -1,4 +1,5 @@
 import os
+from selenium.common.exceptions import WebDriverException
 from userscrape.cfg import load_cfg, UserCfg, Cfg
 from userscrape.crawler import Crawler, DetectedAsBotException
 from userscrape.data import UserScrapeData
@@ -87,8 +88,14 @@ async def experiment(initialization: bool, accounts: List[str], trial_id=None):
                     log.info("{tag} - collecting recommendations for {video_number} videos",
                              tag=user.tag, video_number=len(videos_to_test))
                     crawler.history_pause()
+                    rec_failures = 0
                     for video in videos_to_test:
-                        await crawler.get_recommendations_for_video(video.video_id)
+                        try:
+                            await crawler.get_recommendations_for_video(video.video_id)
+                        except WebDriverException as e:
+                            rec_failures = rec_failures + 1
+                            log.warning('{tag} - scraping error collecting recommendations for video {video_id} (failed this trial: {rec_failures}): {error}',
+                                        tag=user.tag, video_id=video.video_id, rec_failures=rec_failures, error=e)
                     success = True
                     log.info("{tag} - complete in {duration}", tag=user.tag,
                              duration=format_seconds(time.time() - start))
