@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Humanizer;
@@ -49,7 +52,7 @@ namespace YtReader.YtWebsite {
         Timeout = Proxy.TimeoutSeconds.Seconds()
       };
 
-    async Task<string> GetRaw(string url, string desc, ILogger log) {
+    async Task<HttpResponseMessage> GetHttp(string url, string desc, ILogger log) {
       log.Debug("WebScraper -  {Desc} {Url}", desc, url);
 
       var attempts = 0;
@@ -59,7 +62,7 @@ namespace YtReader.YtWebsite {
         try {
           var resp = http.SendAsync(Get(url));
           if (await Task.WhenAny(resp, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) != resp)
-            throw new TaskCanceledException($"GetStringAsync on {url} took to long without timing out itself");
+            throw new TaskCanceledException($"SendAsync on {url} took to long without timing out itself");
           var innerRes = await resp;
           ThrowMissingResourceInvalidOpIfNeeded(innerRes);
           if (
@@ -72,7 +75,7 @@ namespace YtReader.YtWebsite {
           }
           innerRes.EnsureSuccessStatusCode();
           log.Debug("WebScraper - {Desc} {Url}. Proxy: {Proxy}", desc, url, proxy.Url ?? "Direct");
-          return await innerRes.ContentAsString();
+          return innerRes;
         }
         catch (Exception ex) {
           log.Warning(ex, "WebScraper - error requesting {url} attempt {Attempt} : {Error} ", url, attempts, ex.Message);
@@ -95,7 +98,10 @@ namespace YtReader.YtWebsite {
         throw new InvalidOperationException(MissingYtResourceMessage);
     }
 
-    async Task<HtmlDocument> GetHtml(string url, string desc, ILogger log) => Html.ParseDocument(await GetRaw(url, desc, log));
+    async Task<HtmlDocument> GetHtml(string url, string desc, ILogger log) {
+      var res = await GetHttp(url, desc, log);
+      return Html.ParseDocument(await res.ContentAsString());
+    }
 
     #region Public Static
 
@@ -211,8 +217,10 @@ namespace YtReader.YtWebsite {
     }
 
     async Task<JToken> GetPlaylistJsonAsync(string playlistId, int index, ILogger log) {
-      var raw = await GetRaw($"https://youtube.com/list_ajax?style=json&action_get_list=1&list={playlistId}&index={index}&hl=en", "playlist", log);
-      return JToken.Parse(raw);
+      using var res = await GetHttp($"https://youtube.com/list_ajax?style=json&action_get_list=1&list={playlistId}&index={index}&hl=en", "playlist", log);
+      using var jr = await res.ContentAsJsonReader();
+      var j = await JToken.LoadAsync(jr);
+      return j;
     }
 
     async Task<Playlist> GetPlaylistAsync(string playlistId, ILogger log) {
@@ -338,8 +346,8 @@ namespace YtReader.YtWebsite {
 
     public async Task<(HtmlDocument html, string raw, string url)> GetVideoWatchPageHtmlAsync(string videoId, ILogger log) {
       var url = $"https://youtube.com/watch?v={videoId}&bpctr=9999999999&hl=en-us";
-      var raw = await GetRaw(url, "video watch", log);
-      return (Html.ParseDocument(raw), raw, url);
+      var raw = await (await GetHttp(url, "video watch", log)).ContentAsString();
+      return (Html.ParseDocument(raw), raw, url); // think about using parser than can use stream to avoid large strings using mem
     }
     
     public const string RestrictedVideoError = "Restricted";
@@ -529,15 +537,18 @@ namespace YtReader.YtWebsite {
     async Task<IReadOnlyDictionary<string, string>> GetVideoInfoDicAsync(string videoId, ILogger log) {
       // This parameter does magic and a lot of videos don't work without it
       var eurl = $"https://youtube.googleapis.com/v/{videoId}".UrlEncode();
-      var raw = await GetRaw($"https://youtube.com/get_video_info?video_id={videoId}&el=embedded&eurl={eurl}&hl=en", "video dictionary", log);
-      var result = SplitQuery(raw);
+      var res = await GetHttp($"https://youtube.com/get_video_info?video_id={videoId}&el=embedded&eurl={eurl}&hl=en", "video dictionary", log);
+      using var sr = await res.ContentAsStream();
+      var result = SplitQuery(sr);
       return result;
     }
 
-    static IReadOnlyDictionary<string, string> SplitQuery(string query) {
+    static IReadOnlyDictionary<string, string> SplitQuery(StreamReader query) {
       var dic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-      var paramsEncoded = query.TrimStart('?').Split("&");
-      foreach (var paramEncoded in paramsEncoded) {
+      var i = 0;
+      foreach (var p in SplitStream(query, '&')) {
+        var paramEncoded = i == 0 ? p.TrimStart('?') : p;
+        
         var param = paramEncoded.UrlDecode();
 
         // Look for the equals sign
@@ -553,9 +564,29 @@ namespace YtReader.YtWebsite {
 
         // Add to dictionary
         dic[key] = value;
+        
+        i++;
       }
-
       return dic;
+    }
+
+    static IEnumerable<string> SplitStream(StreamReader sr, char separator) {
+      var buffer = new char[1024];
+      var trail = "";
+      while (true) {
+        var n = sr.Read(buffer);
+        if (n == 0) break;
+        var chars = buffer[..n];
+        var split = new string(chars).Split(separator);
+        if (split.Length == 1) {
+          trail += split[0]; // no split char, append to trail
+          continue;
+        }
+        yield return trail + split[0];
+        foreach (var part in split[1..^1]) yield return part; // middle complete parts
+        trail = split[^1];
+      }
+      if (trail != "") yield return trail;
     }
 
     #endregion
@@ -576,8 +607,10 @@ namespace YtReader.YtWebsite {
     }
 
     async Task<XElement> GetClosedCaptionTrackXmlAsync(string url, ILogger log) {
-      var raw = await GetRaw(url, "caption", log);
-      return XElement.Parse(raw, LoadOptions.PreserveWhitespace).StripNamespaces();
+      var raw = await GetHttp(url, "caption", log);
+      using var s = await raw.Content.ReadAsStreamAsync();
+      var xml = await XElement.LoadAsync(s, LoadOptions.PreserveWhitespace, CancellationToken.None);
+      return xml.StripNamespaces();
     }
 
     #endregion

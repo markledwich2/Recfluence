@@ -83,7 +83,7 @@ namespace YtReader {
           b => ProcessChannels(b, forceUpdate, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
         .WithDuration();
 
-      var allChannelResults = result.SelectMany(r => r.OutState.Channels).ToArray();
+      var allChannelResults = result.SelectMany(r => r.OutState?.Channels).NotNull().ToArray();
       log.Information("Collect - {Pipe} Complete - {Success}/{Total} channels updated in {Duration}",
         nameof(Collect), allChannelResults.Count(c => c.Success), allChannelResults.Length, dur.HumanizeShort());
     }
