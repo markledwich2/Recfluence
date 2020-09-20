@@ -83,7 +83,7 @@ namespace YtReader {
           b => ProcessChannels(b, forceUpdate, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
         .WithDuration();
 
-      var allChannelResults = result.SelectMany(r => r.OutState?.Channels).NotNull().ToArray();
+      var allChannelResults = result.Where(r => r.OutState != null).SelectMany(r => r.OutState.Channels).ToArray();
       log.Information("Collect - {Pipe} Complete - {Success}/{Total} channels updated in {Duration}",
         nameof(Collect), allChannelResults.Count(c => c.Success), allChannelResults.Length, dur.HumanizeShort());
     }
@@ -105,7 +105,7 @@ namespace YtReader {
       var noExplicit = explicitChannels.None();
 
       using (var db = await Sf.OpenConnection(log)) {
-        // retrieve previous channel state to update with new classification (algos and human) and stats form the API
+        // retrieve previous channel state to update with new classibfication (algos and human) and stats form the API
         // spread out channel updates over the week
         existingChannels = (await db.Query<string>("channels - previous", $@"with latest as (
   select v {(noExplicit ? "" : $", v:ChannelId::string in ({SqlList(explicitChannels)}) as included")}
@@ -388,6 +388,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           track = await Scraper.GetClosedCaptionTrackAsync(enInfo, videoLog);
         }
         catch (Exception ex) {
+          ex.ThrowIfUnrecoverable();
           log.Warning(ex, "Unable to get captions for {VideoID}: {Error}", v.Id, ex.Message);
           return null;
         }
@@ -404,7 +405,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
       var captionsToStore =
         (await vids.Where(v => lastUpload == null || v.UploadDate.UtcDateTime > lastUpload)
-          .BlockFunc(GetCaption, Cfg.DefaultParallel)).NotNull().ToList();
+          .BlockFunc(GetCaption, RCfg.CaptionParallel)).NotNull().ToList();
 
       if (captionsToStore.Any())
         await Store.Captions.Append(captionsToStore, log);

@@ -411,18 +411,7 @@ namespace YtReader.YtWebsite {
 
       return new RecsAndExtra(extra, recs);
     }
-
-    static (string channelTitle, string channelId) ChannelInfoFromWatchPage(HtmlDocument html) {
-      var userInfo = html.QueryElements("div.yt-user-info > a").FirstOrDefault();
-      if (userInfo == null) return (null, null);
-
-      var title = userInfo.GetInnerText();
-      var url = userInfo.GetAttribute("href")?.Value;
-      var id = url?.Split('/').Last();
-
-      return (title, id);
-    }
-
+    
     static readonly Regex WindowObjectsRe = new Regex("^.*window\\[\"(?<name>\\w+)\"\\]\\s*=\\s*(?<json>{.*?});?$",
       RegexOptions.Compiled | RegexOptions.Multiline);
 

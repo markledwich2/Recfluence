@@ -125,7 +125,7 @@ namespace YtReader {
 
     /// <summary>How old a video before we stop collecting video stats. This is cheap, due to video stats being returned in a
     ///   video's playlist</summary>
-    public TimeSpan RefreshVideosWithinDaily { get; set; } = 120.Days();
+    public TimeSpan RefreshVideosWithinDaily { get;  set; } = 120.Days();
     public TimeSpan RefreshVideosWithinWeekly { get; set; } = 730.Days();
 
     /// <summary>How old a video before we stop collecting recs this is fairly expensive so we keep it within</summary>
@@ -155,19 +155,16 @@ namespace YtReader {
     public int PopulateMissingCommentsLimit { get; set; } = 0; // disabled for now due to performance costs
     public int ParallelChannels { get;             set; } = 2;
 
-    public int ChromeParallel { get; set; } = 2;
-    public int WebParallel    { get; set; } = 8;
-    public int ChromeAttempts { get; set; } = 3;
-    
-    /// <summary>
-    /// maximum number of videos (in total for all channels in a process update).
-    /// </summary>
+    public int ChromeParallel  { get; set; } = 2;
+    public int WebParallel     { get; set; } = 6; // parallelism for plain html scraping of video's, recs
+    public int CaptionParallel { get; set; } = 3; // smaller than Web to try and reduce changes of out-of-mem failures
+    public int ChromeAttempts  { get; set; } = 3;
+
+    /// <summary>maximum number of videos (in total for all channels in a process update).</summary>
     public int ChromeUpdateMax { get; set; } = 1000;
 
-    /// <summary>
-    /// These thresholds shortcut the collection for channels to save costs.
-    /// Bellow the analysis thresholds because we want to collect ones that might tip over
-    /// </summary>
+    /// <summary>These thresholds shortcut the collection for channels to save costs. Bellow the analysis thresholds because we
+    ///   want to collect ones that might tip over</summary>
     public ulong MinChannelSubs { get;  set; } = 8000;
     public ulong MinChannelViews { get; set; } = 1_000_000; // some channels don't have subs, so we fallback to a minimum views for the channels. 
   }
