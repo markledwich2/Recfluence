@@ -7,7 +7,7 @@ import { ChannelLogo, channelUrl } from '../channel/Channel'
 import styled from 'styled-components'
 import Select from 'react-select'
 import _ from 'lodash'
-import { Option, lrOptions, LrCustomLabel, tagCustomOption, tagOptions, Field, FlexRow, FlexCol, FormStyle, loadChannelOptions } from './ReviewCommon'
+import { Option, lrOptions, LrCustomLabel, tagCustomOption, tagOptions, Field, FlexRow, FlexCol, FormStyle, loadChannelOptions, channelCustomOption, ChannelOption } from './ReviewCommon'
 import ReactTooltip from 'react-tooltip'
 import ReactMarkdown from 'react-markdown'
 import Async, { makeAsyncSelect } from 'react-select/async'
@@ -130,12 +130,13 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
         <Field name='mainChannel' label='Main (Parent) Channel' size='l' >
           <Async
             id='MainChannelId'
-            value={r.mainChannelId ? { value: r.mainChannelId, label: mainChannel?.channelTitle ?? r.mainChannelId } : null}
+            value={r.mainChannelId ? { value: r.mainChannelId, label: mainChannel?.channelTitle ?? r.mainChannelId, channel: mainChannel } : null}
             isClearable
             backspaceRemovesValue
             loadOptions={s => loadChannelOptions(esCfg, s)}
-            onChange={(o: Option) => updateReviewProp('mainChannelId', o?.value)}
+            onChange={(o: ChannelOption) => updateReviewProp('mainChannelId', o?.value)}
             styles={selectStyle} theme={selectTheme}
+            components={{ Option: channelCustomOption }}
           />
         </Field>
 

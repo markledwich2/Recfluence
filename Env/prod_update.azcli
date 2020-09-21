@@ -5,10 +5,12 @@ registryPass=`az keyvault secret show --name "ytnetworks-registry-password" --va
 cs=`az storage account show-connection-string --name ytapp --output tsv`
 
 az container create --name update-manual --image ytnetworks.azurecr.io/recfluence:latest --cpu 2 --memory 4 \
-    --command-line "./recfluence update -a Search --search-full" \
+    --command-line "./recfluence update" \
     --environment-variables env=prod appStoreCs=$cs \
     --registry-username ytnetworks  --registry-password $registryPass \
     --restart-policy Never
+
+#az container delete --name update-manual
     
 sas_end=`date -u -d "120 minutes" '+%Y-%m-%dT%H:%MZ'`
 us_cfg_sas=`az storage blob generate-sas --connection-string $cs --container-name cfg --name userscrape.json  --permissions r --expiry $sas_end --full-uri --output tsv`

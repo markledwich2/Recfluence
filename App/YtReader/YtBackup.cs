@@ -26,7 +26,7 @@ namespace YtReader {
 
 
       if (dest == null) {
-        log.Debug("not running backup. Normal for pre-release");
+        log.Information("not running backup. Normal for pre-release");
         return;
       }
       var sourceBlob = source.DirectoryRef();

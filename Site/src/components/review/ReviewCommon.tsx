@@ -2,7 +2,7 @@ import styled from 'styled-components'
 import { Dim, ColEx } from '../../common/Dim'
 import { ChannelData, YtModel } from '../../common/YtModel'
 import { ytTheme, StyleProps } from '../MainLayout'
-import React, { useMemo, FunctionComponent } from 'react'
+import React, { useMemo, FunctionComponent, OptionHTMLAttributes } from 'react'
 import { tagColor } from '../channel_relations/ChannelTags'
 import ReactMarkdown from 'react-markdown'
 import { Tag } from '../Tag'
@@ -12,6 +12,7 @@ import { Review, BasicChannel, channelSearch } from '../../common/YtApi'
 import { inlineButtonStyle } from '../Button'
 import { HelpOutline } from '@styled-icons/material'
 import { EsCfg } from '../../common/Elastic'
+import { ChannelLogo } from '../channel/Channel'
 
 const chanDim = new Dim<ChannelData>(YtModel.channelDimStatic.meta)
 const tagCol = chanDim.col('tags')
@@ -112,7 +113,6 @@ export const tagCustomOption = ({ innerRef, innerProps, isDisabled, data, isFocu
     </div>
   </TagDiv>
 
-
 export function createChannelOptions(channels: _.Dictionary<BasicChannel>): {
   channelOptions: {
     label: string
@@ -164,4 +164,24 @@ export interface ChannelOption extends Option { channel: BasicChannel }
 export const loadChannelOptions = (esCfg: EsCfg, s: string): Promise<ChannelOption[]> => {
   return channelSearch(esCfg, `channel_title:${s}`)
     .then(channels => channels.map(c => ({ value: c.channelId, label: c.channelTitle, channel: c })))
+}
+
+const ChannelOptionDiv = styled.div`
+  margin:5px 0;
+  &.focused {
+    background-color: ${ytTheme.backColorBolder2}
+  }
+  &.selected {
+    background-color: ${ytTheme.backColorBolder3}
+  }
+`
+export const channelCustomOption = ({ innerRef, innerProps, isDisabled, data, isFocused, isSelected, getValue }: OptionProps<ChannelOption>) => {
+  const c: BasicChannel = data.channel
+  return <ChannelOptionDiv ref={innerRef} {...innerProps}
+    className={[isSelected ? 'selected' : null, isFocused ? 'focused' : null].filter(n => n).join(' ')}>
+    <FlexRow style={{ alignItems: 'center' }}>
+      <ChannelLogo channelId={c.channelId} thumb={c.logoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
+      <b>{c.channelTitle}</b>
+    </FlexRow>
+  </ChannelOptionDiv>
 }

@@ -12,7 +12,7 @@ import Modal from 'react-modal'
 import { ReviewForm } from './ReviewForm'
 import { ReviewedGrid } from './ReviewGrid'
 import { useHotkeys, Options as HotkeyOptions } from 'react-hotkeys-hook'
-import { createChannelOptions, Option, fieldSizes, Field, FormStyle, loadChannelOptions, ChannelOption } from './ReviewCommon'
+import { createChannelOptions, Option, fieldSizes, Field, FormStyle, loadChannelOptions, ChannelOption, tagCustomOption, channelCustomOption } from './ReviewCommon'
 import Select from 'react-select'
 import Async from 'react-select/async'
 import { EsContext } from '../SearchContext'
@@ -53,6 +53,18 @@ export const ReviewControl = () => {
     channel: c,
     review: c ? { channelId: c.channelId, softTags: [] } : null
   }) : null
+
+
+  const existingOrNewReview = (c: ChannelTitle): ChannelReview => {
+    if (!c) return null
+    const existing = reviews.find(r => r.review.channelId == c.channelId)
+    if (existing) return {
+      channel: existing.channel,
+      review: { ...jsonClone(existing.review), updated: null },
+      mainChannel: existing.mainChannel
+    }
+    return newReview(c)
+  }
 
   useEffect(() => {
     const go = async () => {
@@ -160,8 +172,9 @@ export const ReviewControl = () => {
             backspaceRemovesValue
             loadOptions={s => loadChannelOptions(esCfg, s)}
             defaultOptions={pendingOptions}
-            onChange={(o: ChannelOption) => setReview(newReview(o?.channel))}
+            onChange={(o: ChannelOption) => setReview(existingOrNewReview(o?.channel))}
             styles={selectStyle} theme={selectTheme}
+            components={{ Option: channelCustomOption }}
           />
         </Field>
 
