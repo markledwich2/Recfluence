@@ -1,0 +1,622 @@
+<?xml version='1.0' encoding='utf-8' ?>
+
+<!-- build 20203.20.0801.1333                               -->
+<workbook original-version='18.1' source-build='2020.3.0 (20203.20.0801.1333)' source-platform='win' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <document-format-change-manifest>
+    <_.fcp.MarkAnimation.true...MarkAnimation />
+    <_.fcp.ObjectModelEncapsulateLegacy.true...ObjectModelEncapsulateLegacy />
+    <_.fcp.ObjectModelExtractV2.true...ObjectModelExtractV2 />
+    <_.fcp.ObjectModelTableType.true...ObjectModelTableType />
+    <_.fcp.SchemaViewerObjectModel.true...SchemaViewerObjectModel />
+    <SheetIdentifierTracking />
+    <WindowsPersistSimpleIdentifiers />
+  </document-format-change-manifest>
+  <preferences>
+    <preference name='ui.encoding.shelf.height' value='24' />
+    <preference name='ui.shelf.height' value='26' />
+  </preferences>
+  <datasources>
+    <datasource caption='VIDEO_WATCH_TIME (PUBLIC)' inline='true' name='federated.1xrww2c0ca38mw19qun7x0fsqui4' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='ql98184.west-us-2.azure.snowflakecomputing.com' name='snowflake.0qhjz5u0wp9vw510hnbtj0ebc3fv'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='ql98184.west-us-2.azure.snowflakecomputing.com' service='' username='mledwich' warehouse='' />
+          </named-connection>
+        </named-connections>
+        <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.0qhjz5u0wp9vw510hnbtj0ebc3fv' name='VIDEO_WATCH_TIME' table='[PUBLIC].[VIDEO_WATCH_TIME]' type='table' />
+        <_.fcp.ObjectModelEncapsulateLegacy.true...relation connection='snowflake.0qhjz5u0wp9vw510hnbtj0ebc3fv' name='VIDEO_WATCH_TIME' table='[PUBLIC].[VIDEO_WATCH_TIME]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_CODE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_CODE]</local-name>
+            <parent-name>[VIDEO_WATCH_TIME]</parent-name>
+            <remote-alias>CHANNEL_CODE</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[VIDEO_WATCH_TIME_6657A8EE5F994B34A6BFCEE4387485B0]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>MONTH</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[MONTH]</local-name>
+            <parent-name>[VIDEO_WATCH_TIME]</parent-name>
+            <remote-alias>MONTH</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>date</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_DATE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_DATE&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[VIDEO_WATCH_TIME_6657A8EE5F994B34A6BFCEE4387485B0]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>WATCH_HRS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[WATCH_HRS]</local-name>
+            <parent-name>[VIDEO_WATCH_TIME]</parent-name>
+            <remote-alias>WATCH_HRS</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[VIDEO_WATCH_TIME_6657A8EE5F994B34A6BFCEE4387485B0]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>VIEW_SECONDS_AVG</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[VIEW_SECONDS_AVG]</local-name>
+            <parent-name>[VIDEO_WATCH_TIME]</parent-name>
+            <remote-alias>VIEW_SECONDS_AVG</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[VIDEO_WATCH_TIME_6657A8EE5F994B34A6BFCEE4387485B0]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>VIDEO_SECONDS_AVG</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[VIDEO_SECONDS_AVG]</local-name>
+            <parent-name>[VIDEO_WATCH_TIME]</parent-name>
+            <remote-alias>VIDEO_SECONDS_AVG</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[VIDEO_WATCH_TIME_6657A8EE5F994B34A6BFCEE4387485B0]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>VIEWS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[VIEWS]</local-name>
+            <parent-name>[VIDEO_WATCH_TIME]</parent-name>
+            <remote-alias>VIEWS</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[VIDEO_WATCH_TIME_6657A8EE5F994B34A6BFCEE4387485B0]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='Channel Code' datatype='string' name='[CHANNEL_CODE]' role='dimension' type='nominal' />
+      <column caption='Month' datatype='date' name='[MONTH]' role='dimension' type='ordinal' />
+      <column caption='Video Seconds Avg' datatype='integer' name='[VIDEO_SECONDS_AVG]' role='measure' type='quantitative' />
+      <column caption='Views' datatype='real' name='[VIEWS]' role='measure' type='quantitative' />
+      <column caption='View Seconds Avg' datatype='integer' name='[VIEW_SECONDS_AVG]' role='measure' type='quantitative' />
+      <column caption='Watch Hrs' datatype='integer' name='[WATCH_HRS]' role='measure' type='quantitative' />
+      <_.fcp.ObjectModelTableType.true...column caption='VIDEO_WATCH_TIME' datatype='table' name='[__tableau_internal_object_id__].[VIDEO_WATCH_TIME_6657A8EE5F994B34A6BFCEE4387485B0]' role='measure' type='quantitative' />
+      <column-instance column='[CHANNEL_CODE]' derivation='None' name='[none:CHANNEL_CODE:nk]' pivot='key' type='nominal' />
+      <extract _.fcp.ObjectModelExtractV2.true...object-id='' count='-1' enabled='false' units='records'>
+        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks2/Analysis/.Data/VIDEO_WATCH_TIME (PUBLIC).hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='09/22/2020 11:15:42 PM' username='tableau_internal_user'>
+          <_.fcp.ObjectModelEncapsulateLegacy.false...relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <_.fcp.ObjectModelEncapsulateLegacy.true...relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <refresh>
+            <refresh-event add-from-file-path='VIDEO_WATCH_TIME (PUBLIC)' increment-value='%null%' refresh-type='create' rows-inserted='22' timestamp-start='2020-09-22 23:15:42.290' />
+          </refresh>
+          <metadata-records>
+            <metadata-record class='column'>
+              <remote-name>TO_CHANNEL_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_CHANNEL_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_CHANNEL_ID</remote-alias>
+              <ordinal>0</ordinal>
+              <family>VIDEO_WATCH_TIME</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>7</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_CHANNEL_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_CHANNEL_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_CHANNEL_TITLE</remote-alias>
+              <ordinal>1</ordinal>
+              <family>VIDEO_WATCH_TIME</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>7</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_HASH</remote-name>
+              <remote-type>20</remote-type>
+              <local-name>[CHANNEL_HASH]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_HASH</remote-alias>
+              <ordinal>2</ordinal>
+              <family>VIDEO_WATCH_TIME</family>
+              <local-type>integer</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>7</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>MONTH</remote-name>
+              <remote-type>133</remote-type>
+              <local-name>[MONTH]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>MONTH</remote-alias>
+              <ordinal>3</ordinal>
+              <family>VIDEO_WATCH_TIME</family>
+              <local-type>date</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>12</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>WATCH_HRS</remote-name>
+              <remote-type>20</remote-type>
+              <local-name>[WATCH_HRS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>WATCH_HRS</remote-alias>
+              <ordinal>4</ordinal>
+              <family>VIDEO_WATCH_TIME</family>
+              <local-type>integer</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>22</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>REC_VIEWS</remote-name>
+              <remote-type>20</remote-type>
+              <local-name>[REC_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>REC_VIEWS</remote-alias>
+              <ordinal>5</ordinal>
+              <family>VIDEO_WATCH_TIME</family>
+              <local-type>integer</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>22</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>VIEW_SECONDS_AVG</remote-name>
+              <remote-type>20</remote-type>
+              <local-name>[VIEW_SECONDS_AVG]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>VIEW_SECONDS_AVG</remote-alias>
+              <ordinal>6</ordinal>
+              <family>VIDEO_WATCH_TIME</family>
+              <local-type>integer</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>21</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>VIDEO_SECONDS_AVG</remote-name>
+              <remote-type>20</remote-type>
+              <local-name>[VIDEO_SECONDS_AVG]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>VIDEO_SECONDS_AVG</remote-alias>
+              <ordinal>7</ordinal>
+              <family>VIDEO_WATCH_TIME</family>
+              <local-type>integer</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>21</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+          </metadata-records>
+        </connection>
+      </extract>
+      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-structure='true' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[none:CHANNEL_CODE:nk]' type='palette'>
+            <map to='#4e79a7'>
+              <bucket>&quot;LTg1M&quot;</bucket>
+            </map>
+            <map to='#59a14f'>
+              <bucket>&quot;NjExN&quot;</bucket>
+            </map>
+            <map to='#76b7b2'>
+              <bucket>&quot;Mjc2O&quot;</bucket>
+            </map>
+            <map to='#b07aa1'>
+              <bucket>&quot;ODg3N&quot;</bucket>
+            </map>
+            <map to='#e15759'>
+              <bucket>&quot;LTYwN&quot;</bucket>
+            </map>
+            <map to='#edc948'>
+              <bucket>&quot;NzQ4M&quot;</bucket>
+            </map>
+            <map to='#f28e2b'>
+              <bucket>&quot;LTg2M&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+        <objects>
+          <object caption='VIDEO_WATCH_TIME' id='VIDEO_WATCH_TIME_6657A8EE5F994B34A6BFCEE4387485B0'>
+            <properties context=''>
+              <relation connection='snowflake.0qhjz5u0wp9vw510hnbtj0ebc3fv' name='VIDEO_WATCH_TIME' table='[PUBLIC].[VIDEO_WATCH_TIME]' type='table' />
+            </properties>
+          </object>
+          <object caption='VIDEO_WATCH_TIME' id='VIDEO_WATCH_TIME_CC4ACAC2569F4C4CA0128B2CFE22EF5B'>
+            <properties context='extract'>
+              <relation name='Extract' table='[Extract].[Extract]' type='table' />
+            </properties>
+          </object>
+        </objects>
+      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Sheet 1'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='VIDEO_WATCH_TIME (PUBLIC)' name='federated.1xrww2c0ca38mw19qun7x0fsqui4' />
+          </datasources>
+          <datasource-dependencies datasource='federated.1xrww2c0ca38mw19qun7x0fsqui4'>
+            <column caption='Channel Code' datatype='string' name='[CHANNEL_CODE]' role='dimension' type='nominal' />
+            <column caption='Month' datatype='date' name='[MONTH]' role='dimension' type='ordinal' />
+            <column caption='Video Seconds Avg' datatype='integer' name='[VIDEO_SECONDS_AVG]' role='measure' type='quantitative' />
+            <column caption='View Seconds Avg' datatype='integer' name='[VIEW_SECONDS_AVG]' role='measure' type='quantitative' />
+            <column-instance column='[CHANNEL_CODE]' derivation='None' name='[none:CHANNEL_CODE:nk]' pivot='key' type='nominal' />
+            <column-instance column='[VIDEO_SECONDS_AVG]' derivation='Sum' name='[sum:VIDEO_SECONDS_AVG:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[VIEW_SECONDS_AVG]' derivation='Sum' name='[sum:VIEW_SECONDS_AVG:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[MONTH]' derivation='Month-Trunc' name='[tmn:MONTH:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='quantitative' column='[federated.1xrww2c0ca38mw19qun7x0fsqui4].[sum:VIDEO_SECONDS_AVG:qk]' included-values='non-null' />
+          <slices>
+            <column>[federated.1xrww2c0ca38mw19qun7x0fsqui4].[sum:VIDEO_SECONDS_AVG:qk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='axis'>
+            <encoding attr='space' class='0' field='[federated.1xrww2c0ca38mw19qun7x0fsqui4].[sum:VIEW_SECONDS_AVG:qk]' field-type='quantitative' range-type='uniform' scope='rows' type='space' />
+            <encoding attr='space' class='0' field='[federated.1xrww2c0ca38mw19qun7x0fsqui4].[sum:VIDEO_SECONDS_AVG:qk]' field-type='quantitative' range-type='uniform' scope='cols' type='space' />
+            <format attr='height' field='[federated.1xrww2c0ca38mw19qun7x0fsqui4].[sum:VIDEO_SECONDS_AVG:qk]' value='61' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <mark-sizing mark-sizing-setting='marks-scaling-off' />
+            <encodings>
+              <color column='[federated.1xrww2c0ca38mw19qun7x0fsqui4].[none:CHANNEL_CODE:nk]' />
+              <lod column='[federated.1xrww2c0ca38mw19qun7x0fsqui4].[tmn:MONTH:qk]' />
+            </encodings>
+            <style>
+              <style-rule element='mark'>
+                <format attr='shape' value=':filled/circle' />
+                <format attr='size' value='1.6591712236404419' />
+              </style-rule>
+              <style-rule element='pane'>
+                <format attr='minwidth' value='1117' />
+                <format attr='maxwidth' value='1117' />
+                <format attr='minheight' value='708' />
+                <format attr='maxheight' value='708' />
+                <format attr='aspect' value='0' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows>[federated.1xrww2c0ca38mw19qun7x0fsqui4].[sum:VIEW_SECONDS_AVG:qk]</rows>
+        <cols>[federated.1xrww2c0ca38mw19qun7x0fsqui4].[sum:VIDEO_SECONDS_AVG:qk]</cols>
+      </table>
+      <simple-id uuid='{83A3A8DB-E12B-4655-A7ED-B053F5D75C35}' />
+    </worksheet>
+  </worksheets>
+  <windows saved-dpi-scale-factor='1.25' source-height='37'>
+    <window class='worksheet' maximized='true' name='Sheet 1'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='128'>
+            <card pane-specification-id='0' param='[federated.1xrww2c0ca38mw19qun7x0fsqui4].[none:CHANNEL_CODE:nk]' type='color' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+        <highlight>
+          <color-one-way>
+            <field>[federated.1xrww2c0ca38mw19qun7x0fsqui4].[none:CHANNEL_CODE:nk]</field>
+            <field>[federated.1xrww2c0ca38mw19qun7x0fsqui4].[yr:MONTH:ok]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{493271BD-3461-4C7E-AC00-9389D5465403}' />
+    </window>
+  </windows>
+  <thumbnails>
+    <thumbnail height='384' name='Sheet 1' width='384'>
+      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
+      QmCC
+    </thumbnail>
+  </thumbnails>
+</workbook>

@@ -9,7 +9,7 @@ import * as camelKeys from 'camelcase-keys'
 
 export const apiUrl = process.env.FUNC_URL
 
-// On a build+server, or in prod. the server will breifly show the main page before replacing with the correct rout
+// On a build+server, or in prod. the server will briefly show the main page before replacing with the correct rout
 // This is because when /video/ is requested, the redirects aren't pointing to /index.html.
 // i think I should use a static page 
 // https://stackoverflow.com/questions/52051090/gatsbyjs-client-only-paths-goes-to-404-page-when-the-url-is-directly-accessed-in
@@ -38,10 +38,10 @@ export async function getChannel(cfg: EsCfg, channelId: string) {
   return camelKeys(res._source)
 }
 
-export async function getChannels(cfg: EsCfg, ids: string[]) {
+export async function getChannels(cfg: EsCfg, ids: string[]): Promise<BasicChannel[]> {
   const get = async (index: string, ids: string[]) => {
     const res = await esDocs(cfg, index, ids)
-    return res.docs.filter(d => d.found).map(d => camelKeys(d._source) as BasicChannel)
+    return res.docs?.filter(d => d.found).map(d => camelKeys(d._source) as BasicChannel) ?? []
   }
 
   const bChannels = await get(cfg.indexes.channel, ids)

@@ -148,7 +148,7 @@ export const ReviewControl = () => {
 
   // fetch some channels for review & list existing
   return <ReviewPageDiv id='review-page'>
-    <LoginOverlay verb='to review channels' />
+    <LoginOverlay verb='review channels' />
 
     {user && <>
 

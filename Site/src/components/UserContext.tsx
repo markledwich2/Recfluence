@@ -17,6 +17,7 @@ export interface User {
 }
 
 export interface UserCtx {
+  loading: boolean
   /** the logged in user. If null then consider logged out */
   user?: User
   logIn: () => Promise<User>
@@ -26,6 +27,7 @@ export interface UserCtx {
 export const UserContextProvider: FunctionComponent<{ authOptions: Auth0ClientOptions }> = ({ children, authOptions }) => {
   const [user, setUser] = useState<User>(null)
   const [client, setClient] = useState<Auth0Client>(null)
+  const [loading, setLoading] = useState(false)
 
   const getOrInitClient = async () => {
     if (client) return client
@@ -37,10 +39,12 @@ export const UserContextProvider: FunctionComponent<{ authOptions: Auth0ClientOp
   useEffect(() => {
     if (isGatsbyServer()) return null
     async function init() {
+      setLoading(true)
       try {
         const c = await getOrInitClient()
         const u: User = await c.getUser()
         setUser(u)
+        setLoading(false)
       }
       catch (error) {
         console.log('error in UserContextProvider.init', error)
@@ -68,7 +72,7 @@ export const UserContextProvider: FunctionComponent<{ authOptions: Auth0ClientOp
     c.logout({ localOnly: false, returnTo: location.origin })
   }
 
-  return <UserContext.Provider value={{ user, logIn, logOut }} children={children} />
+  return <UserContext.Provider value={{ user, logIn, logOut, loading }} children={children} />
 }
 
 const LoginOverlayDiv = styled.div`
@@ -87,8 +91,8 @@ const LoginOverlayDiv = styled.div`
 `
 
 export const LoginOverlay: FunctionComponent<{ verb: string }> = ({ verb, children }) => {
-  const { user, logIn } = useContext(UserContext)
-  return <>{!user && <LoginOverlayDiv>
+  const { user, logIn, loading } = useContext(UserContext)
+  return <>{!user && !loading && <LoginOverlayDiv>
     <div style={{ backgroundColor: ytTheme.backColorTransparent }}>
       <big><a onClick={_ => logIn()}>Sign in</a> to {verb}</big><br /><br />
       <div>{children}</div>
