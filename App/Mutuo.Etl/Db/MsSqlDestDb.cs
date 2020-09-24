@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
 using Serilog;
@@ -12,14 +13,17 @@ using SysExtensions.Text;
 
 namespace Mutuo.Etl.Db {
   public interface IDestDb : ICommonDb {
+    public string DataSource { get; }
     Task RenameTable(TableId from, TableId to, DbTransaction transaction = null);
     Task DropTable(TableId table, DbTransaction transaction = null);
     Task<TableSchema> Schema(TableId table);
     Task CreateTable(TableSchema schema, TableId table, bool withColumnStore = true, DbTransaction transaction = null);
-    Task<long> BulkCopy(IDataReader reader, TableId table, ILogger log);
+    Task<long> BulkCopy(IDataReader reader, TableId table, ILogger log, CancellationToken cancel);
     string CreateTableSql(TableSchema schema, TableId table, bool withColumnStore = true);
-    Task<long> Merge(TableId destTable, TableId tmpTable, string idCol, IReadOnlyCollection<ColumnSchema> cols);
-    Task CreateIndex(TableId table, IndexType type, string[] cols);
+    Task<long> Merge(TableId destTable, TableId tmpTable, string[] idCols, IReadOnlyCollection<ColumnSchema> cols);
+    Task CreateIndex(TableId table, string[] cols);
+    Task LoadFrom(IEnumerable<StringPath> paths, TableId destTable);
+    Task Init(Uri container);
   }
 
   public class MsSqlDestDb : IDestDb {
@@ -42,34 +46,41 @@ namespace Mutuo.Etl.Db {
     static readonly int     DeaultVarcharSize = 400;
     static readonly int     MaxVarcharSize    = 8000;
     readonly        ILogger Log;
-    readonly        string  TextCatalog;
 
-    public MsSqlDestDb(SqlConnection conn, string defaultSchema, string textCatalog, ILogger log) {
-      TextCatalog = textCatalog;
+    public MsSqlDestDb(SqlConnection conn, string defaultSchema, ILogger log) {
       Log = log.ForContext("DataSource", conn.DataSource).ForContext("Database", conn.Database);
-      Connection = conn.AsLogged(log);
+      Conn = conn.AsLogged(log);
       DefaultSchema = defaultSchema;
     }
 
-    public LoggedConnection Connection    { get; }
+    public LoggedConnection Conn          { get; }
     public string           DefaultSchema { get; }
 
     public string Sql(string name) => name.SquareBrackets();
 
+    public string DataSource => $"{DefaultSchema}_blob";
+
     public async Task RenameTable(TableId from, TableId to, DbTransaction transaction = null) =>
-      await Connection.Execute(nameof(RenameTable), $"EXEC sp_rename '{this.Sql(from)}', '{to.Table}'", transaction);
+      await Conn.Execute(nameof(RenameTable), $"EXEC sp_rename '{this.Sql(from)}', '{to.Table}'", transaction);
 
     public async Task DropTable(TableId table, DbTransaction transaction = null) =>
-      await Connection.Execute(nameof(DropTable), $"drop table {this.Sql(table)}", transaction);
+      await Conn.Execute(nameof(DropTable), $"drop table {this.Sql(table)}", transaction);
+
+    public async Task Init(Uri container) {
+      if (await Conn.ExecuteScalar<int>("schema exists", $"select count(*) from sys.schemas where name = '{DefaultSchema}'") == 0)
+        await Conn.Execute(nameof(Init), $"create schema {DefaultSchema}");
+      if (await Conn.ExecuteScalar<int>("data source exists", $"select count(*) from sys.external_data_sources where name = '{DataSource}'") == 0)
+        await Conn.Execute(nameof(Init), $"create external data source {DataSource} with ( type = BLOB_STORAGE, location = '{container}')");
+    }
 
     public async Task<TableSchema> Schema(TableId table) {
-      var exists = await Connection.ExecuteScalar<int>(nameof(Schema), @$"select count(*) from information_schema.tables 
+      var exists = await Conn.ExecuteScalar<int>(nameof(Schema), @$"select count(*) from information_schema.tables 
         where table_name='{table.Table}' and table_schema='{table.Schema}'");
 
       if (exists == 0)
         return null;
 
-      var cols = await Connection.Query<(string name, string type)>(nameof(Schema),
+      var cols = await Conn.Query<(string name, string type)>(nameof(Schema),
         @$"select column_name, data_type from information_schema.columns 
         where table_name='{table.Table}' and table_schema='{table.Schema}'");
 
@@ -84,7 +95,7 @@ namespace Mutuo.Etl.Db {
     }
 
     public async Task CreateTable(TableSchema schema, TableId table, bool withColumnStore = true, DbTransaction transaction = null) =>
-      await Connection.Execute(nameof(CreateTable), CreateTableSql(schema, table, withColumnStore), transaction);
+      await Conn.Execute(nameof(CreateTable), CreateTableSql(schema, table, withColumnStore), transaction);
 
     public string CreateTableSql(TableSchema schema, TableId table, bool withColumnStore = true) {
       var statements = schema.Columns.Select(c => ColumnSql(table, c)).ToList();
@@ -94,28 +105,25 @@ namespace Mutuo.Etl.Db {
       return createStatement;
     }
 
-    public async Task CreateIndex(TableId table, IndexType type, string[] cols) {
-      if (type == IndexType.FullText) {
-        if (TextCatalog.NullOrEmpty()) throw new InvalidOperationException($"text index on {table.Table}, but no text catalog specified");
-        if (await Connection.ExecuteScalar<int>(nameof(CreateIndex),
-          "select count(*) from sys.fulltext_catalogs where name= @name", new {name = TextCatalog}) == 0)
-          await Connection.Execute(nameof(CreateIndex), $"create fulltext catalog {TextCatalog} as default");
-      }
-
-      var sql = type switch {
-        IndexType.Default => @$"create index {Sql($"{table.Table}_{cols.Join("_")}_idx")} on {this.Sql(table)} ({cols.Join(", ", Sql)})",
-        IndexType.FullText => $"create fulltext index on {Sql(table.Table)} ({cols.Join(", ", Sql)}) key index {PkName(table)}",
-        _ => throw new InvalidOperationException($"unsupported index type {type}")
-      };
-
-      await Connection.Execute(nameof(CreateIndex), sql);
+    public async Task CreateIndex(TableId table, string[] cols) {
+      var sql = @$"create index {Sql($"{table.Table}_{cols.Join("_")}_idx")} on {this.Sql(table)} ({cols.Join(", ", Sql)})";
+      await Conn.Execute(nameof(CreateIndex), sql);
     }
 
-    public async Task<long> Merge(TableId destTable, TableId tmpTable, string idCol, IReadOnlyCollection<ColumnSchema> cols) {
-      if (idCol.NullOrEmpty()) throw new ArgumentNullException(nameof(idCol), "merge needs and id column");
+    public async Task LoadFrom(IEnumerable<StringPath> paths, TableId destTable) {
+      foreach (var path in paths) {
+        var sql = @$"bulk insert {this.Sql(destTable)}
+        from '{path}'
+        with (data_source = '{DataSource}', format='CSV')";
+        await Conn.Execute(nameof(LoadFrom), sql, timeout: 1.Hours());
+      }
+    }
+
+    public async Task<long> Merge(TableId destTable, TableId tmpTable, string[] idCols, IReadOnlyCollection<ColumnSchema> cols) {
+      if (idCols.None()) throw new ArgumentNullException(nameof(idCols), "merge needs and id column");
       var mergeSql = @$"
 merge {this.Sql(destTable)} t using {this.Sql(tmpTable)} s 
-on t.{Sql(idCol)} = s.{Sql(idCol)}
+on {idCols.Join("and", i => $"t.{Sql(i)} = s.{Sql(i)}")}
 when matched then update set 
   {cols.Join(",\n\t", c => $"t.{this.Sql(c)} = s.{this.Sql(c)}")}
 when not matched by target then 
@@ -123,11 +131,11 @@ insert ({cols.Join(",", c => this.Sql(c))})
 values ({cols.Join(",", c => $"s.{this.Sql(c)}")})
 ;";
       // mege operations can take a v long time when large
-      return await Connection.ExecuteScalar<int>(nameof(Merge), mergeSql, timeout: 2.Hours());
+      return await Conn.ExecuteScalar<int>(nameof(Merge), mergeSql, timeout: 2.Hours());
     }
 
-    public async Task<long> BulkCopy(IDataReader reader, TableId table, ILogger log) {
-      using var bc = new SqlBulkCopy((SqlConnection) Connection.Conn) {
+    public async Task<long> BulkCopy(IDataReader reader, TableId table, ILogger log, CancellationToken cancel) {
+      using var bc = new SqlBulkCopy((SqlConnection) Conn.Conn) {
         EnableStreaming = true,
         BatchSize = 100_000,
         DestinationTableName = this.Sql(table),
@@ -136,7 +144,7 @@ values ({cols.Join(",", c => $"s.{this.Sql(c)}")})
       };
       bc.SqlRowsCopied += (sender, args) => log.Debug("{Table} - bulk copied {Rows}", table, args.RowsCopied);
 
-      await bc.WriteToServerAsync(reader);
+      await bc.WriteToServerAsync(reader, cancel);
       return bc.GetRowsCopied();
     }
 
@@ -151,8 +159,8 @@ values ({cols.Join(",", c => $"s.{this.Sql(c)}")})
                       _ => throw new InvalidOperationException($"no type found for col {col}")
                     };
       var sqlNull = col.AllowDBNull == false ? "not null" : null;
-      var sqlConstraint = col.Key == true ? $"constraint {PkName(table)}  primary key nonclustered" : null;
-      return new[] {col.ColumnName, sqlType, sqlNull, sqlConstraint}.Join(" ");
+      //var sqlConstraint = col.Key == true ? $"constraint {PkName(table)}  primary key nonclustered" : null;
+      return new[] {col.ColumnName, sqlType, sqlNull}.Join(" ");
     }
 
     static string VarcharSize(ColumnSchema col) {

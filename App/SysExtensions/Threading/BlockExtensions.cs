@@ -151,8 +151,10 @@ namespace SysExtensions.Threading {
       var result = new List<R>();
       var newResults = new List<R>();
       while (true) {
-        var outputAvailableTask = block.OutputAvailableAsync();
+        if (produceTask.IsFaulted)
+          break;
 
+        var outputAvailableTask = block.OutputAvailableAsync();
         var completedTask = await Task.WhenAny(outputAvailableTask, Task.Delay(progressPeriod));
         if (completedTask == outputAvailableTask) {
           var available = await outputAvailableTask;

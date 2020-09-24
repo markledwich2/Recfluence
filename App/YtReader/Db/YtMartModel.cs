@@ -1,6 +1,8 @@
 ﻿using System;
 
 namespace YtReader.Db {
+  /* These are out of date. Update before using again */
+
   public class DbVideo {
     public string   VIDEO_ID      { get; set; }
     public string   VIDEO_TITLE   { get; set; }

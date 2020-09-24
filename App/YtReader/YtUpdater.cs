@@ -44,9 +44,10 @@ namespace YtReader {
     readonly YtBackup     _backup;
     readonly string       _updated;
     readonly UserScrape   _userScrape;
+    readonly YtSync       _sync;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, YtStage warehouse, YtSearch search,
-      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape) {
+      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtSync sync) {
       Cfg = cfg;
       _updated = Guid.NewGuid().ToShortString(6);
       Log = log.ForContext("UpdateId", _updated);
@@ -57,6 +58,7 @@ namespace YtReader {
       YtDataform = ytDataform;
       _backup = backup;
       _userScrape = userScrape;
+      _sync = sync;
     }
 
     Task Collect(bool fullLoad, bool disableDiscover, string[] channels, CancellationToken cancel) =>
@@ -77,6 +79,10 @@ namespace YtReader {
     [DependsOn(nameof(Dataform))]
     Task Results(string[] results) =>
       _results.SaveBlobResults(Log, results);
+
+    [DependsOn(nameof(Dataform))]
+    Task Sync(string[] tables, bool fullLoad, CancellationToken cancel) =>
+      _sync.SyncDb(Log, cancel, tables, fullLoad);
 
     [DependsOn(nameof(Collect))]
     Task Backup() =>
@@ -99,6 +105,7 @@ namespace YtReader {
         c => Stage(fullLoad, options.Tables),
         c => Search(options.SearchFullLoad, options.SearchIndexes, options.SearchConditions, c),
         c => Results(options.Results),
+        c => Sync(options.Tables, fullLoad, c),
         c => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, c),
         c => Dataform(fullLoad, options.Tables, c),
         c => Backup());

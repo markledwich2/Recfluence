@@ -1,25 +1,39 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using Humanizer.Localisation;
+using Humanizer;
+using Humanizer.Bytes;
+using Mutuo.Etl.Blob;
 using Serilog;
+using SysExtensions;
+using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Db {
   public class DbSync {
-    readonly IDestDb   Dest;
-    readonly ISourceDb Source;
+    readonly IDestDb            Dest;
+    readonly AzureBlobFileStore Store;
+    readonly ISourceDb          Source;
 
-    public DbSync(ISourceDb source, IDestDb dest) {
+    public DbSync(ISourceDb source, IDestDb dest, AzureBlobFileStore store) {
       Source = source;
       Dest = dest;
+      Store = store;
     }
 
-    public async Task UpdateTable(SyncTableCfg tableCfg, ILogger log, bool fullLoad = false, int limit = 0) {
+    /// <summary>Legacy bulk copy, tmp table switching version</summary>
+    public async Task UpdateTable(SyncTableCfg tableCfg, ILogger log, CancellationToken cancel, bool fullLoad = false, int limit = 0,
+      SyncMode mode = SyncMode.Blob) {
       var sw = Stopwatch.StartNew();
-      var sourceTable = new TableId(Source.DefaultSchema, tableCfg.Name);
+
+
+      await Dest.Init(Store.ContainerUrl);
+
+      var sourceSql = tableCfg.Sql ?? $"select * from {Source.DefaultSchema}.tableCfg.Name";
+
       var destTable = new TableId(Dest.DefaultSchema, tableCfg.Name);
       var destSchema = await Dest.Schema(destTable);
       var destExists = destSchema != null;
@@ -31,18 +45,18 @@ namespace Mutuo.Etl.Db {
       if (syncType.IsIncremental() && tableCfg.TsCol.NullOrEmpty())
         throw new InvalidOperationException("table configured for incremental, but no ts column was found");
       var maxTs = syncType.IsIncremental()
-        ? await Dest.Connection.ExecuteScalar<object>(nameof(UpdateTable), $"select max({Dest.Sql(tableCfg.TsCol)}) from {Dest.Sql(destTable)}")
+        ? await Dest.Conn.ExecuteScalar<object>(nameof(UpdateTable), $"select max({Dest.Sql(tableCfg.TsCol)}) from {Dest.Sql(destTable)}")
         : null;
 
-      // start reading and get schema
-      using var reader = await Source.Read(sourceTable, tableCfg, maxTs, limit);
+      // start reading and get schema. if we are blowwing, do this to get the schema without loading any rows
+      using var reader = await Source.Read(sourceSql, tableCfg, maxTs, mode == SyncMode.Blob ? 0 : limit);
       var querySchema = reader.Schema();
       destSchema ??= querySchema; // if there is no final destination schema, then it should match the source
       // apply overrides to dest schema
       destSchema = new TableSchema(destSchema.Columns.Select(c => {
         var cfg = tableCfg.Cols[c.ColumnName];
         return new ColumnSchema(c.ColumnName, c.DataType) {
-          ProviderTypeExpression = cfg?.TypeOverride,
+          ProviderTypeExpression = cfg?.SqlType,
           Key = cfg?.Id,
           AllowDBNull = cfg?.Null
         };
@@ -59,31 +73,65 @@ namespace Mutuo.Etl.Db {
         await CreateTmpTable(tmpTable, querySchema);
 
       // copy data
-      var newRows = await Dest.BulkCopy(reader, loadTable, log);
-      log.Debug("{Table} - loaded {Rows} into {LoadTable} ({SyncType})", tableCfg.Name, newRows, loadTable, syncType);
+      var newRows = 0L;
+      var newBytes = 0.Bytes();
+      var loadId = DateTime.UtcNow.FileSafeTimestamp();
+      if (mode == SyncMode.Blob) {
+        newBytes += await LoadBLobData(tableCfg, log, loadId, sourceSql, maxTs, loadTable);
+      }
+      else {
+        newRows = await Dest.BulkCopy(reader, loadTable, log, cancel);
+        log.Debug("Sync {Table} - loaded {Rows} into {LoadTable} ({SyncType})", tableCfg.Name, newRows, loadTable, syncType);
+      }
 
       // if we loaded in to temp table, work out best way to switch this in without downtime
       if (loadTable == tmpTable) {
-        if (newRows == 0) {
+        if (newRows == 0 && newBytes == 0.Bytes()) {
           await Dest.DropTable(tmpTable); // no new rows, nothing to do
         }
         else if (syncType.IsIncremental() || tableCfg.ManualSchema) { // incremental load, or manual schema. Move the rows into the desitntion table
           var cols = destSchema.Columns;
-          var mergeRes = await Dest.Merge(destTable, tmpTable, tableCfg.IdCol, cols);
-          log.Debug("{Table} - merged {Records} from {TempTable}", tableCfg.Name, mergeRes, tmpTable);
+          var mergeRes = await Dest.Merge(destTable, tmpTable, tableCfg.IdCols, cols);
+          log.Debug("Sync {Table} - merged {Records} from {TempTable}", tableCfg.Name, mergeRes, tmpTable);
           await Dest.DropTable(tmpTable);
         }
         else {
-          using (var trans = Dest.Connection.Conn.BeginTransaction()) {
-            await Dest.DropTable(destTable, trans);
-            await Dest.RenameTable(tmpTable, destTable, trans);
-            await trans.CommitAsync();
-            log.Debug("{Table} - switch out temp table {TempTable}", tableCfg.Name, tmpTable);
-          }
+          // there may be moments where the table dissapears.I removed the transaction to get past this error: BeginExecuteNonQuery requires the command to have a transaction when the connection assigned to the command is in a pending local transaction.  The Transaction property of the command has not been initialized.
+          //using (var trans = await Dest.Conn.Conn.BeginTransactionAsync(IsolationLevel.ReadUncommitted, cancel)) {
+          await Dest.DropTable(destTable);
+          await Dest.RenameTable(tmpTable, destTable);
+          /*await trans.CommitAsync();
+        }*/
+          log.Debug("Sync {Table} - switch out temp table {TempTable}", tableCfg.Name, tmpTable);
         }
       }
 
-      log.Information("{Table} - completed loading {Rows} in {Duration}", tableCfg.Name, newRows, sw.Elapsed.HumanizeShort());
+      log.Information("Sync {Table} - completed loading {Size} in {Duration}",
+        tableCfg.Name, newBytes > 0.Bytes() ? newBytes.Humanize("#,#") : newRows.ToString("#,#"), sw.Elapsed.HumanizeShort());
+    }
+
+    async Task<ByteSize> LoadBLobData(SyncTableCfg tableCfg, ILogger log, string loadId, string sourceSql, object maxTs, TableId loadTable) {
+      var path = StringPath.Relative("sync", tableCfg.Name, loadId);
+      var copyTask = Source.CopyTo(path, sourceSql, tableCfg, maxTs);
+      var loadedFiles = new KeyedCollection<StringPath, FileListItem>(f => f.Path);
+      while (true) { // load as the files are created
+        if (copyTask.IsFaulted) break;
+        var toLoad = (await Store.List(path).SelectManyList())
+          .Where(f => !loadedFiles.ContainsKey(f.Path)).ToArray();
+        if (toLoad.None()) {
+          if (copyTask.IsCompleted)
+            break;
+          await 5.Seconds().Delay();
+          continue;
+        }
+        log.Debug("Sync {Table} - loading: {Files}", tableCfg.Name, toLoad.Join("|", l => l.Path.ToString()));
+        await Dest.LoadFrom(toLoad.Select(f => f.Path), loadTable);
+        loadedFiles.AddRange(toLoad);
+        await toLoad.BlockAction(f => Store.Delete(f.Path, log), parallelism: 8);
+      }
+
+      log.Information("Sync {Table} - copied {Files} files ({Size})", tableCfg.Name, loadedFiles.Count, loadedFiles.Sum(f => f.Bytes).Bytes().Humanize("#,#"));
+      return loadedFiles.Sum(f => f.Bytes).Bytes();
     }
 
     async Task CreateTmpTable(TableId tmpTable, TableSchema querySchema) {
@@ -96,13 +144,10 @@ namespace Mutuo.Etl.Db {
       await Dest.CreateTable(destSchema, destTable, tableCfg.ColStore);
       var descColCfgs = destSchema.Columns.Select(c => tableCfg.Cols[c.ColumnName]).ToArray();
       await descColCfgs.Where(c => c?.Index == true)
-        .BlockAction(c => Dest.CreateIndex(destTable, IndexType.Default, new[] {c.Name}));
+        .BlockAction(c => Dest.CreateIndex(destTable, new[] {c.Name}));
 
-      var fullTextCols = descColCfgs.Where(c => c?.FullText == true).ToArray();
-      if (fullTextCols.Any())
-        await Dest.CreateIndex(destTable, IndexType.FullText, fullTextCols.Select(t => t.Name).ToArray());
 
-      log.Debug("{Table} - created because it didn't exist", tableCfg.Name);
+      log.Debug("Sync {Table} - created because it didn't exist", tableCfg.Name);
     }
   }
 
@@ -122,13 +167,13 @@ namespace Mutuo.Etl.Db {
   }
 
   public interface ICommonDb {
-    public LoggedConnection Connection    { get; }
+    public LoggedConnection Conn          { get; }
     public string           DefaultSchema { get; }
     string Sql(string name);
   }
 
-  public enum IndexType {
-    Default,
-    FullText
+  public enum SyncMode {
+    Blob,
+    BulkCopy
   }
 }

@@ -18,10 +18,12 @@ using YtReader.Store;
 namespace YtReader {
   public class WarehouseCfg {
     [Required] public string      Stage              { get; set; } = "yt_data";
+    [Required] public string      Private            { get; set; } = "yt_private";
     [Required] public OptimiseCfg Optimise           { get; set; } = new OptimiseCfg();
     [Required] public int         LoadTablesParallel { get; set; } = 4;
     public            string[]    Roles              { get; set; } = {"sysadmin", "recfluence"};
     public            int         MetadataParallel   { get; set; } = 8;
+    public            int         FileMb             { get; set; } = 80;
   }
 
   public class YtStage {
@@ -29,11 +31,9 @@ namespace YtReader {
     readonly StorageCfg                  StorageCfg;
     readonly SnowflakeConnectionProvider Conn;
     readonly WarehouseCfg                Cfg;
-    readonly AzureBlobFileStore          DbStore;
 
     public YtStage(YtStores stores, StorageCfg storageCfg, SnowflakeConnectionProvider conn, WarehouseCfg cfg) {
       Stores = stores;
-      DbStore = stores.Store(DataStoreType.Db);
       StorageCfg = storageCfg;
       Conn = conn;
       Cfg = cfg;
@@ -61,16 +61,20 @@ namespace YtReader {
       log.Information("StageUpdate - {Tables} updated in {Duration}", tables.Join("|", t => t.Table), sw.Elapsed.HumanizeShort());
     }
 
+    AzureBlobFileStore Store(StageTableCfg t) => Stores.Store(t.StoreType);
+
     async Task Incremental(LoggedConnection db, string table, StageTableCfg t, DateTime latestTs) {
-      await DbStore.Optimise(Cfg.Optimise, t.Dir, latestTs.FileSafeTimestamp(), db.Log); // optimise files newer than the last load
+      var store = Store(t);
+      await store.Optimise(Cfg.Optimise, t.Dir, latestTs.FileSafeTimestamp(), db.Log); // optimise files newer than the last load
       var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();
       db.Log.Information("StageUpdate - {Table} incremental load of {Rows} rows ({Size}) took {Duration}",
         table, rows, size.Humanize("#.#"), dur.HumanizeShort());
     }
 
     async Task FullLoad(LoggedConnection db, string table, StageTableCfg t) {
+      var store = Store(t);
       if (t.IsNativeStore)
-        await DbStore.Optimise(Cfg.Optimise, t.Dir, null, db.Log); // optimise all files when performing a full load
+        await store.Optimise(Cfg.Optimise, t.Dir, null, db.Log); // optimise all files when performing a full load
       await db.Execute("truncate table", $"truncate table {table}"); // no transaction, stage tables aren't reported on so don't need to be available
       var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();
       db.Log.Information("StageUpdate - {Table} full load of {Rows} rows ({Size}) took {Duration}",
@@ -79,8 +83,14 @@ namespace YtReader {
 
     async Task<(string[] files, long rows, ByteSize size)> CopyInto(LoggedConnection db, string table, StageTableCfg t) {
       var startTime = await db.ExecuteScalar<string>("current time", "select current_timestamp()::string");
+      var (stage, path) = t.StoreType switch {
+        DataStoreType.Db => (Cfg.Stage, StorageCfg.DbPath),
+        DataStoreType.Private => (Cfg.Private, null),
+        _ => throw new InvalidOperationException($"No warehouse stage for store type {t.StoreType}")
+      };
 
-      var sql = $"copy into {table} from @{Cfg.Stage}/{StorageCfg.DbPath}/{t.Dir}/ file_format=(type=json)";
+
+      var sql = $"copy into {table} from @{new[] {stage, path}.Concat(t.Dir.Tokens).NotNull().Join("/")}/ file_format=(type=json)";
       await db.Execute("copy into", sql);
 
       // sf should return this info form copy_into (its in their UI, but not in .net or jdbc drivers)
@@ -112,22 +122,25 @@ namespace YtReader {
       new StageTableCfg("video_extra", "video_extra_stage"),
       new StageTableCfg("searches", "search_stage"),
       new StageTableCfg("captions", "caption_stage"),
+      new StageTableCfg("rec_exports_processed", "rec_export_stage", storeType: DataStoreType.Private),
       new StageTableCfg(dir: null, "dbv1_video_stage", isNativeStore: false),
       new StageTableCfg(dir: null, "dbv1_rec_stage", isNativeStore: false),
     };
   }
 
   public class StageTableCfg {
-    public StageTableCfg(string dir, string table, bool isNativeStore = true, string tsCol = null) {
+    public StageTableCfg(string dir, string table, bool isNativeStore = true, string tsCol = null, DataStoreType storeType = DataStoreType.Db) {
       Dir = dir;
       Table = table;
       IsNativeStore = isNativeStore;
+      StoreType = storeType;
       TsCol = tsCol ?? (isNativeStore ? "Updated" : null);
     }
 
-    public StringPath Dir           { get; }
-    public string     Table         { get; }
-    public bool       IsNativeStore { get; }
-    public string     TsCol         { get; }
+    public StringPath    Dir           { get; }
+    public string        Table         { get; }
+    public bool          IsNativeStore { get; }
+    public DataStoreType StoreType     { get; }
+    public string        TsCol         { get; }
   }
 }

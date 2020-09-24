@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Autofac;
+using Dapper;
 using Humanizer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs;
@@ -121,6 +126,63 @@ namespace YtFunctions {
         return (null, new HttpResponseMessage(HttpStatusCode.Unauthorized) {Content = new StringContent("email must be provided")});
       return (email, null);
     }
+
+    static readonly SHA256 Sha = SHA256.Create();
+
+    [FunctionName("video_views")]
+    public async Task<HttpResponseMessage> VideoViews([HttpTrigger(AuthorizationLevel.Anonymous, "get")]
+      HttpRequest req, ExecutionContext exec) =>
+      await Ctx.Run(exec, async ctx => {
+        var p = new {
+          channelId = req.Query["channelId"].FirstOrDefault(),
+          from = req.Query["from"].FirstOrDefault()?.ParseDate(style: DateTimeStyles.AssumeUniversal),
+          to = req.Query["to"].FirstOrDefault()?.ParseDate(style: DateTimeStyles.AssumeUniversal),
+          top = req.Query["top"].FirstOrDefault()?.ParseInt() ?? 80
+        };
+
+        var conditions = new List<string>();
+
+        void Condition(object value, string expression) {
+          if (value == null) return;
+          conditions.Add(expression);
+        }
+
+        Condition(p.channelId, "channel_id = @channelId");
+        Condition(p.from, "date >= @from");
+        Condition(p.to, "date <= @to");
+
+        var sql = @$"select top (@top) video_id, sum(views) views
+from ml.video_stats {(conditions.Any() ? $"\n where {conditions.Join(" and ")}" : "")}
+group by video_id
+order by views desc
+";
+
+        var store = ctx.Resolve<YtStores>().Store(DataStoreType.Results);
+        var cacheHash = Sha.ComputeHash((sql + p.ToJson()).ToBytesUtf8()).ToBase64String();
+        var path = StringPath.FromString($"cache/{cacheHash}.jsonl.gz");
+        var (file, dur) = await store.Info(path).WithDuration();
+        ctx.Log.Debug("checking cache took {Duration}", dur.HumanizeShort());
+        if (file == null || DateTimeOffset.UtcNow - file.Modified!.Value > 24.Hours()) {
+          var sw = Stopwatch.StartNew();
+          using var conn = await ctx.Resolve<SqlServerCfg>().OpenConnection(ctx.Log);
+          var rows = await conn.QueryAsync(sql, p);
+          using var stream = await rows.ToJsonlGzStream();
+          await store.Save(path, stream);
+          ctx.Log.Debug("video_views - {Query} took {Duration}", req.QueryString, sw.Elapsed.HumanizeShort());
+        }
+        else {
+          ctx.Log.Debug("video_views - cache hit for: {Query}", req.QueryString.ToString());
+        }
+
+        var res = new DataResult {
+          JsonlUrl = store.Url(path).ToString()
+        };
+        return res.JsonResponse();
+      });
+  }
+
+  public class DataResult {
+    public string JsonlUrl { get; set; }
   }
 
   public static class HttpResponseEx {

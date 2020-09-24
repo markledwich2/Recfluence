@@ -12,7 +12,6 @@ using CsvHelper;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions;
@@ -106,35 +105,7 @@ where c.reviews_all>0";
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip: true),
 
-          new ResQuery("vis_channel_stats2", @"with views_by_day as (
-  select channel_id
-       , datediff(day, date, (select max(date) from video_stats_daily)) as ago
-       , sum(views) as views
-  from video_stats_daily v
-  where exists(select * from channel_accepted c where v.channel_id=c.channel_id)
-  group by 1, 2
-)
-   , views_by_channel as (
-  select channel_id
-       , (select max(date) from video_stats_daily) as date_to
-       , sum(iff(ago<7, views, 0))/7 as views_7
-       , sum(iff(ago between 7 and 13, views, 0))/7 as views_p7
-       , sum(iff(ago<30, views, 0))/30 as views_30
-       , sum(iff(ago between 30 and 59, views, 0))/30 as views_p30
-       , sum(iff(ago<365, views, 0))/365 as views_365
-       , sum(iff(ago between 365 and 729, views, 0))/365 as views_p365
-  from views_by_day
-  group by 1
-)
-select channel_title
-     , subs
-     , channel_views
-     , tags
-     , lr
-     , logo_url
-     , v.*
-from views_by_channel v
-       inner join channel_accepted c on c.channel_id=v.channel_id", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+          new ResQuery("ttube_channel_stats", @"select * from channel_stats", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
 
           new FileQuery("vis_category_recs", "sql/vis_category_recs.sql",
             "aggregate recommendations between all combinations of the categories available on recfluence.net", dateRangeParams, inSharedZip: true),

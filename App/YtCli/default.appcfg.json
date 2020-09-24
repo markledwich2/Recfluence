@@ -60,7 +60,7 @@
       {
         "pipeName": "ProcessChannels",
         "container": {
-          "mem": 5,
+          "mem": 3,
           "cores": 2
         },
         "maxParallel": 16,
@@ -73,82 +73,6 @@
   },
   "appDb": {
     "host": "recfluence.database.windows.net",
-    "db": "recfluence"
-  },
-  "syncDb": {
-    "defaultTsCol": "updated",
-    "tables": [
-      {
-        "name": "channel_latest",
-        "syncType": "Incremental",
-        "cols": [
-          {
-            "name": "channel_id",
-            "id": true
-          }
-        ]
-      },
-      {
-        "name": "video_latest",
-        "syncType": "Incremental",
-        // "filter": "channel_id in ('UCzQUP1qoWDoEbmsQxvdjxgQ', 'UCupvZG-5ko_eiXAupbDfxWw')",
-        "cols": [
-          {
-            "name": "video_id",
-            "typeOverride": "nvarchar(100)",
-            "id": true
-          },
-          {
-            "name": "channel_id",
-            "typeOverride": "nvarchar(100)",
-            "index": true
-          },
-          {
-            "name": "video_title",
-            "fullText": true
-          },
-          {
-            "name": "description",
-            "fullText": true
-          }
-        ]
-      },
-      {
-        "name": "caption",
-        "syncType": "Incremental",
-        "manualSchema": true,
-        "colStore": false,
-        // "filter": "channel_id in ('UCzQUP1qoWDoEbmsQxvdjxgQ', 'UCupvZG-5ko_eiXAupbDfxWw') ",
-        "selectedCols": [
-          "caption_id",
-          "video_id",
-          "channel_id",
-          "caption",
-          "offset_seconds"
-        ],
-        "cols": [
-          {
-            "name": "caption_id",
-            "id": true,
-            "typeOverride": "nvarchar(100)"
-          },
-          {
-            "name": "caption",
-            "typeOverride": "nvarchar(max)",
-            "fullText": true
-          },
-          {
-            "name": "video_id",
-            "typeOverride": "nvarchar(100)",
-            "index": true
-          },
-          {
-            "name": "channel_id",
-            "typeOverride": "nvarchar(100)",
-            "index": true
-          }
-        ]
-      }
-    ]
+    "db": "yt"
   }
 }

@@ -17,7 +17,8 @@ namespace YtReader.Store {
     Results,
     Private,
     Backup,
-    Logs
+    Logs,
+    Root
   }
 
   /// <summary>Access to any of the stores</summary>
@@ -37,8 +38,10 @@ namespace YtReader.Store {
       _ => new AzureBlobFileStore(Cfg.DataStorageCs, StoragePath(type), Log)
     };
 
-    public StringPath StoragePath(DataStoreType type) =>
-      Cfg.RootPath(Version) + "/" + type switch {
+    public StringPath StoragePath(DataStoreType type) {
+      var root = Cfg.RootPath(Version);
+      if (type == DataStoreType.Root) return root;
+      return root + "/" + type switch {
         DataStoreType.Pipe => Cfg.PipePath,
         DataStoreType.Db => Cfg.DbPath,
         DataStoreType.Private => Cfg.PrivatePath,
@@ -46,6 +49,7 @@ namespace YtReader.Store {
         DataStoreType.Logs => Cfg.LogsPath,
         _ => throw new NotImplementedException($"StoryType {type} not supported")
       };
+    }
   }
 
   public static class StoreEx {
@@ -129,7 +133,7 @@ namespace YtReader.Store {
     public string                Keywords           { get; set; }
     public ChannelSubscription[] Subscriptions      { get; set; }
 
-    public ChannelStatus       Status       { get; set; }
+    public ChannelStatus Status { get; set; }
 
     public IReadOnlyCollection<string>            HardTags     { get; set; }
     public IReadOnlyCollection<string>            SoftTags     { get; set; }
@@ -150,8 +154,8 @@ namespace YtReader.Store {
   }
 
   public class UserChannelReview : UserChannelReviewCommon {
-    public string ChannelId    { get; set; }
-    public string Email        { get; set; }
+    public string ChannelId { get; set; }
+    public string Email     { get; set; }
   }
 
   public class UserChannelStore2 : UserChannelReview {
@@ -164,10 +168,10 @@ namespace YtReader.Store {
     public string                Title        { get; set; }
     public string                ChannelId    { get; set; }
     public string                ChannelTitle { get; set; }
-    public DateTime?              UploadDate   { get; set; }
+    public DateTime?             UploadDate   { get; set; }
     public string                Description  { get; set; }
     public VideoThumbnail        Thumbnail    { get; set; } = new VideoThumbnail();
-    public TimeSpan?              Duration     { get; set; }
+    public TimeSpan?             Duration     { get; set; }
     public IReadOnlyList<string> Keywords     { get; set; } = new List<string>();
     public Statistics            Statistics   { get; set; }
     public override string ToString() => $"{Title}";

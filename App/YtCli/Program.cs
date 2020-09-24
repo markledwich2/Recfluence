@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -14,7 +13,6 @@ using Mutuo.Etl.Pipe;
 using Semver;
 using Serilog;
 using SysExtensions.Build;
-using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
@@ -140,30 +138,6 @@ namespace YtCli {
     }
 
     public async ValueTask ExecuteAsync(IConsole console) => await Stage.StageUpdate(Log, FullLoad, Tables?.Split('|').ToArray());
-  }
-
-  [Command("sync-db")]
-  public class SyncDbCmd : ICommand {
-    readonly YtSync    Sync;
-    readonly SyncDbCfg Cfg;
-    readonly ILogger   Log;
-
-    [CommandOption('t', Description = "list of tables to sync")]
-    public IEnumerable<string> Tables { get; set; }
-
-    [CommandOption('l', Description = "limit rows. For Debugging")]
-    public int Limit { get; set; }
-
-    [CommandOption('f', Description = "if true, will clear and load data")]
-    public bool FullLoad { get; set; }
-
-    public SyncDbCmd(YtSync sync, SyncDbCfg cfg, ILogger log) {
-      Sync = sync;
-      Cfg = cfg;
-      Log = log;
-    }
-
-    public async ValueTask ExecuteAsync(IConsole console) => await Sync.SyncDb(Cfg, Log, Tables.ToReadOnly(), FullLoad, Limit);
   }
 
   [Command("traffic", Description = "Process source traffic data for comparison")]
@@ -322,7 +296,7 @@ namespace YtCli {
       Log.Information("Scraping of {VideoIds} complete", VideoIds, res);
     }
   }
-  
+
   [Command("upgrade-incomplete-trials")]
   public class UpgradeIncompleteTrialsCmd : ICommand {
     readonly UserScrape UserScrape;
@@ -333,9 +307,7 @@ namespace YtCli {
       Log = log;
     }
 
-    public async ValueTask ExecuteAsync(IConsole console) {
-      await UserScrape.UpgradeIncompleteTrials(Log);
-    }
+    public async ValueTask ExecuteAsync(IConsole console) => await UserScrape.UpgradeIncompleteTrials(Log);
   }
 
   [Command("build-container")]

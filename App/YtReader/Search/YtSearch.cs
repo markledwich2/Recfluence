@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac.Util;
-using Dapper;
 using Elasticsearch.Net;
 using Humanizer;
 using Mutuo.Etl.Db;
@@ -24,6 +23,8 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 using Policy = Polly.Policy;
+
+// ReSharper disable InconsistentNaming
 
 namespace YtReader.Search {
   public class YtSearch {
@@ -44,91 +45,103 @@ namespace YtReader.Search {
       string[] Conditions(string index) => conditions?.Where(c => c.index == index).Select(c => c.condition).ToArray() ?? new string[] { };
       bool ShouldRun(string index) => indexes == null || indexes.Any(i => string.Equals(i, index, StringComparison.OrdinalIgnoreCase));
 
-      if (ShouldRun(EsIndex.Channel))
-        await SyncChannel(log, "select * from channel_latest", fullLoad,
-          Conditions(EsIndex.Channel).Concat("source='recfluence'").ToArray(), cancel);
+      async Task Sync<TDb, TEs>(string index, string sql, Func<TDb, TEs> map, params string[] extraConditions)
+        where TDb : class where TEs : class, IHasUpdated {
+        TEs Map(TDb o) {
+          try {
+            return map(o);
+          }
+          catch (Exception ex) {
+            log.Warning(ex, "Search - Error when mapping db row: {row}", o);
+            throw;
+          }
+        }
 
-      if (ShouldRun(EsIndex.ChannelTitle))
-        await BasicSync<EsChannelTitle>(log, "select channel_id, channel_title, description, updated from channel_latest",
-          fullLoad, Conditions(EsIndex.ChannelTitle), cancel);
+        if (ShouldRun(index))
+          await BasicSync<TDb, TEs>(log, sql, fullLoad, Map, Conditions(index).Concat(extraConditions).ToArray(), cancel);
+      }
 
-      if (ShouldRun(EsIndex.Video))
-        await BasicSync<EsVideo>(log, @"select * from video_latest v",
-          fullLoad,
-          Conditions(EsIndex.Video).Concat("exists(select * from channel_accepted c where c.channel_id = v.channel_id)").ToArray(),
-          cancel);
-      if (ShouldRun(EsIndex.Caption))
-        await SyncCaptions(log, fullLoad, Conditions(EsIndex.Caption), cancel);
+      await Sync<dynamic, EsChannel>(EsIndex.Channel, @"select * from channel_latest", MapChannel, "source='recfluence'");
+
+      await Sync(EsIndex.ChannelTitle, "select channel_id, channel_title, description, updated from channel_latest",
+        (EsChannelTitle c) => c);
+
+      await Sync<dynamic, EsVideo>(EsIndex.Video, @"select l.*, c.lr, c.tags from video_latest l
+inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
+
+      await Sync(EsIndex.Caption, "select * from caption_es", (DbEsCaption c) => MapCaption(c));
     }
 
-    async Task BasicSync<T>(ILogger log, string selectSql, bool fullLoad, string[] conditions = null, CancellationToken cancel = default)
-      where T : class, IHasUpdated {
-      var lastUpdate = await Es.MaxDateField<T>(m => m.Field(p => p.updated));
+    async Task BasicSync<TDb, TEs>(ILogger log, string selectSql, bool fullLoad, Func<TDb, TEs> map, string[] conditions = null,
+      CancellationToken cancel = default)
+      where TEs : class, IHasUpdated where TDb : class {
+      var lastUpdate = await Es.MaxDateField<TEs>(m => m.Field(p => p.updated));
       var sql = CreateSql(selectSql, fullLoad, lastUpdate, conditions);
-      await UpdateIndex<T>(log, fullLoad);
-      await BatchToEs<T>(log, sql, cancel);
-    }
-
-    async Task SyncChannel(ILogger log, string selectSql, bool fullLoad, string[] conditions = null, CancellationToken cancel = default) {
-      await UpdateIndex<EsChannel>(log, fullLoad);
-      var lastUpdate = await Es.MaxDateField<EsChannel>(m => m.Field(p => p.updated));
-      var sql = CreateSql(selectSql, fullLoad, lastUpdate, conditions);
+      await UpdateIndex<TEs>(log, fullLoad);
       using var conn = await OpenConnection(log);
-      var dbChannels = conn.Conn.Query(sql.sql, sql.param);
-
-      var esChannels = dbChannels.Select(c => new EsChannel {
-        channel_id = c.CHANNEL_ID,
-        channel_title = c.CHANNEL_TITLE,
-        age = c.AGE,
-        avg_minutes = c.AVG_MINUTES,
-        channel_lifetime_daily_views = c.CHANNEL_LIFETIME_DAILY_VIEWS,
-        channel_lifetime_daily_views_relevant = c.CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT,
-        channel_video_views = c.CHANNEL_VIDEO_VIEWS,
-        channel_views = c.CHANNEL_VIEWS,
-        country = c.COUNTRY,
-        day_range = c.DAY_RANGE,
-        description = c.DESCRIPTION,
-        from_date = c.FROM_DATE,
-        ideology = c.IDEOLOGY,
-        logo_url = c.LOGO_URL,
-        lr = c.LR,
-        main_channel_id = c.MAIN_CHANNEL_ID,
-        main_channel_title = c.MAIN_CHANNEL_TITLE,
-        media = c.MEDIA,
-        relevance = c.RELEVANCE,
-        status_msg = c.STATUS_MSG,
-        subs = c.SUBS,
-        tags = c.TAGS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(c.TAGS),
-        to_date = c.TO_DATE,
-        updated = c.UPDATED
-      }).ToArray();
-
-      await BatchToEs(log, esChannels, EsExtensions.EsPolicy(log), cancel);
+      var rows = Query<TDb>(sql, conn).Select(map);
+      await BatchToEs(log, rows, EsExtensions.EsPolicy(log), cancel);
     }
 
-    async Task SyncCaptions(ILogger log, bool fullLoad, string[] conditions, CancellationToken cancel) {
-      await UpdateIndex<EsCaption>(log, fullLoad);
-      var lastUpdate = await Es.MaxDateField<EsCaption>(m => m.Field(p => p.updated));
-      var sql = CreateSql("select * from caption_es", fullLoad, lastUpdate, conditions);
-      using var conn = await OpenConnection(log);
-      var allItems = Query<DbEsCaption>(sql, conn).Select(c => new EsCaption {
-        caption_id = c.caption_id,
-        caption = c.caption,
-        channel_id = c.caption_id,
-        channel_title = c.channel_title,
-        ideology = c.ideology,
-        lr = c.lr,
-        offset_seconds = c.offset_seconds,
-        part = c.part,
-        tags = c.tags.ToObject<string[]>(),
-        updated = c.updated,
-        upload_date = c.upload_date,
-        video_id = c.video_id,
-        video_title = c.video_title,
-        views = c.views,
-      });
-      await BatchToEs(log, allItems, EsExtensions.EsPolicy(log), cancel);
-    }
+    static EsVideo MapVideo(dynamic v) => new EsVideo {
+      channel_id = v.CHANNEL_ID,
+      channel_title = v.CHANNEL_TITLE,
+      description = v.DESCRIPTION,
+      dislikes = v.DISLIKES,
+      error_type = v.ERROR_TYPE,
+      likes = v.LIKES,
+      lr = v.LR,
+      tags = v.TAGS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(v.TAGS),
+      updated = v.UPDATED,
+      upload_date = v.UPLOAD_DATE,
+      video_id = v.video_id,
+      video_title = v.VIDEO_TITLE,
+      views = v.VIEWS,
+      keywords = v.KEYWORDS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(v.KEYWORDS),
+    };
+
+    static EsChannel MapChannel(dynamic c) => new EsChannel {
+      channel_id = c.CHANNEL_ID,
+      channel_title = c.CHANNEL_TITLE,
+      age = c.AGE,
+      avg_minutes = c.AVG_MINUTES,
+      channel_lifetime_daily_views = c.CHANNEL_LIFETIME_DAILY_VIEWS,
+      channel_lifetime_daily_views_relevant = c.CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT,
+      channel_video_views = c.CHANNEL_VIDEO_VIEWS,
+      channel_views = c.CHANNEL_VIEWS,
+      country = c.COUNTRY,
+      day_range = c.DAY_RANGE,
+      description = c.DESCRIPTION,
+      from_date = c.FROM_DATE,
+      ideology = c.IDEOLOGY,
+      logo_url = c.LOGO_URL,
+      lr = c.LR,
+      main_channel_id = c.MAIN_CHANNEL_ID,
+      main_channel_title = c.MAIN_CHANNEL_TITLE,
+      media = c.MEDIA,
+      relevance = c.RELEVANCE,
+      status_msg = c.STATUS_MSG,
+      subs = c.SUBS,
+      tags = c.TAGS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(c.TAGS),
+      to_date = c.TO_DATE,
+      updated = c.UPDATED,
+    };
+
+    static EsCaption MapCaption(DbEsCaption c) => new EsCaption {
+      caption_id = c.caption_id,
+      caption = c.caption,
+      channel_id = c.caption_id,
+      channel_title = c.channel_title,
+      lr = c.lr,
+      offset_seconds = c.offset_seconds,
+      part = c.part,
+      tags = c.tags.ToObject<string[]>(),
+      updated = c.updated,
+      upload_date = c.upload_date,
+      video_id = c.video_id,
+      video_title = c.video_title,
+      views = c.views,
+    };
 
     async Task<LoggedConnection> OpenConnection(ILogger log) {
       var conn = await Db.OpenConnection(log);
@@ -143,8 +156,9 @@ namespace YtReader.Search {
       if (param?.max_updated != null)
         conditions = conditions.Concat("updated >= :max_updated").ToArray();
       var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
-      var sql = $"{selectSql}{sqlWhere}" +
-                " order by updated"; // always order by updated so that if sync fails, we can resume where we left of safely.
+      var sql = $@"with q as ({selectSql}) 
+select * from q{sqlWhere}
+order by updated"; // always order by updated so that if sync fails, we can resume where we left of safely.
       return (sql, param);
     }
 
@@ -161,12 +175,6 @@ namespace YtReader.Search {
         await Es.Indices.CreateAsync(index, c => c.Map<T>(m => m.AutoMap()));
         log.Information("Created ElasticSearch Index {Index}", index);
       }
-    }
-
-    async Task BatchToEs<T>(ILogger log, (string sql, object param) sql, CancellationToken cancel) where T : class {
-      var esPolicy = EsExtensions.EsPolicy(log);
-      using var conn = await OpenConnection(log);
-      await BatchToEs(log, Query<T>(sql, conn), esPolicy, cancel);
     }
 
     async Task BatchToEs<T>(ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy, CancellationToken cancel) where T : class =>
@@ -267,7 +275,6 @@ namespace YtReader.Search {
     public DateTime    upload_date    { get; set; }
     public DateTime    updated        { get; set; }
     public long        views          { get; set; }
-    public string      ideology       { get; set; }
     public string      lr             { get; set; }
     public string      tags           { get; set; }
     public long        offset_seconds { get; set; }
@@ -283,19 +290,21 @@ namespace YtReader.Search {
     public           DateTime upload_date   { get; set; }
     public           DateTime updated       { get; set; }
     public           long     views         { get; set; }
-    [Keyword] public string   ideology      { get; set; }
     [Keyword] public string   lr            { get; set; }
+    [Keyword] public string[] tags          { get; set; }
   }
 
   [ElasticsearchType(IdProperty = nameof(video_id))]
   [Table(EsIndex.Video)]
   public class EsVideo : VideoCaptionCommon {
-    public           string description { get; set; }
-    public           string KeyWords    { get; set; }
-    public           long   likes       { get; set; }
-    public           long   dislikes    { get; set; }
-    [Keyword] public string error_type  { get; set; }
+    public           string      description { get; set; }
+    public           string[]    keywords    { get; set; }
+    public           long        likes       { get; set; }
+    public           long        dislikes    { get; set; }
+    [Keyword] public string      error_type  { get; set; }
   }
+
+  public class MetricStats : Dictionary<string, long> { }
 
   [ElasticsearchType(IdProperty = nameof(caption_id))]
   [Table(EsIndex.Caption)]
@@ -304,32 +313,31 @@ namespace YtReader.Search {
     public                        long        offset_seconds { get; set; }
     public                        string      caption        { get; set; }
     [Keyword] [StringEnum] public CaptionPart part           { get; set; }
-    [Keyword]              public string[]    tags           { get; set; }
   }
 
   [ElasticsearchType(IdProperty = nameof(channel_id))]
   [Table(EsIndex.Channel)]
   public class EsChannel : EsChannelTitle, IHasUpdated {
-    [Keyword] public string    main_channel_id                       { get; set; }
-    [Keyword] public string    logo_url                              { get; set; }
-    public           decimal?  relevance                             { get; set; }
-    public           long?     subs                                  { get; set; }
-    public           long?     channel_views                         { get; set; }
-    [Keyword] public string    country                               { get; set; }
-    [Keyword] public string    status_msg                            { get; set; }
-    public           decimal?  channel_video_views                   { get; set; }
-    public           DateTime? from_date                             { get; set; }
-    public           DateTime? to_date                               { get; set; }
-    public           long?     day_range                             { get; set; }
-    public           decimal?  channel_lifetime_daily_views          { get; set; }
-    public           decimal?  avg_minutes                           { get; set; }
-    public           decimal?  channel_lifetime_daily_views_relevant { get; set; }
-    public           string    main_channel_title                    { get; set; }
-    public           long?     age                                   { get; set; }
-    [Keyword] public string[]  tags                                  { get; set; }
-    [Keyword] public string    lr                                    { get; set; }
-    [Keyword] public string    ideology                              { get; set; }
-    [Keyword] public string    media                                 { get; set; }
+    [Keyword] public string      main_channel_id                       { get; set; }
+    [Keyword] public string      logo_url                              { get; set; }
+    public           decimal?    relevance                             { get; set; }
+    public           long?       subs                                  { get; set; }
+    public           long?       channel_views                         { get; set; }
+    [Keyword] public string      country                               { get; set; }
+    [Keyword] public string      status_msg                            { get; set; }
+    public           decimal?    channel_video_views                   { get; set; }
+    public           DateTime?   from_date                             { get; set; }
+    public           DateTime?   to_date                               { get; set; }
+    public           long?       day_range                             { get; set; }
+    public           decimal?    channel_lifetime_daily_views          { get; set; }
+    public           decimal?    avg_minutes                           { get; set; }
+    public           decimal?    channel_lifetime_daily_views_relevant { get; set; }
+    public           string      main_channel_title                    { get; set; }
+    public           long?       age                                   { get; set; }
+    [Keyword] public string[]    tags                                  { get; set; }
+    [Keyword] public string      lr                                    { get; set; }
+    [Keyword] public string      ideology                              { get; set; }
+    [Keyword] public string      media                                 { get; set; }
   }
 
   [ElasticsearchType(IdProperty = nameof(channel_id))]

@@ -4,7 +4,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Humanizer;
 using Mutuo.Etl.AzureManagement;
-using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Serilog.Events;
@@ -74,9 +73,7 @@ namespace YtReader {
   }
 
   public class SyncDbCfg {
-    public SyncTableCfg[] Tables       { get; set; } = { };
-    public string         DefaultTsCol { get; set; } = "updated";
-    public int            Parallel     { get; set; } = 4;
+    public int Parallel { get; set; } = 4;
   }
 
   public enum MergeStrategy {
@@ -177,6 +174,7 @@ namespace YtReader {
     [Required] public string PrivatePath   { get; set; } = "private";
     [Required] public string PipePath      { get; set; } = "pipe";
     [Required] public string LogsPath      { get; set; } = "logs";
+    [Required] public string SyncPath      { get; set; } = "sync";
 
     [Required] public string BackupCs       { get; set; }
     [Required] public string BackupRootPath { get; set; }

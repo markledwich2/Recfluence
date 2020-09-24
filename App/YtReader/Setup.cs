@@ -12,7 +12,6 @@ using Microsoft.Azure.Management.Fluent;
 using Microsoft.Extensions.Configuration;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Blob;
-using Mutuo.Etl.Db;
 using Mutuo.Etl.DockerRegistry;
 using Mutuo.Etl.Pipe;
 using Nest;
@@ -179,11 +178,6 @@ namespace YtReader {
       }
       appCfg.Sheets.CredJson = creds;
 
-      appCfg.SyncDb.Tables = appCfg.SyncDb.Tables.JsonClone();
-      foreach (var table in appCfg.SyncDb.Tables)
-        if (table.TsCol == null && table.SyncType != SyncType.Full)
-          table.Cols.Add(new SyncColCfg {Name = appCfg.SyncDb.DefaultTsCol, Ts = true});
-
       // merge default properties from the pipe config
       appCfg.Dataform.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.Dataform.Container);
       appCfg.UserScrape.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.UserScrape.Container);
@@ -232,6 +226,8 @@ namespace YtReader {
       b.Register(_ => cfg.YtApi).SingleInstance();
       b.Register(_ => cfg.Sheets).SingleInstance();
       b.Register(_ => cfg.Search).SingleInstance();
+      b.Register(_ => cfg.SyncDb).SingleInstance();
+      b.Register(_ => cfg.AppDb).SingleInstance();
 
       b.RegisterType<SnowflakeConnectionProvider>().SingleInstance();
       b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();
@@ -261,6 +257,7 @@ namespace YtReader {
       b.RegisterType<AzureContainers>().SingleInstance();
       b.RegisterType<LocalPipeWorker>().SingleInstance();
       b.RegisterType<UserScrape>();
+      b.RegisterType<YtSync>().SingleInstance();
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>().SingleInstance();

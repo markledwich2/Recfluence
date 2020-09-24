@@ -41,7 +41,7 @@ namespace Mutuo.Etl.Blob {
     /// <summary>the Working directory of this storage wrapper. The first part of the path is the container</summary>
     public StringPath BasePath { get; }
 
-    StringPath BasePathSansContainer => new StringPath(BasePath.Tokens.Skip(1));
+    public StringPath BasePathSansContainer => new StringPath(BasePath.Tokens.Skip(1));
 
     //public CloudStorageAccount Storage { get; }
     HttpClient H { get; }
@@ -85,16 +85,27 @@ namespace Mutuo.Etl.Blob {
     /// <summary>Gets metadata for the given file. Returns null if it doesn't exist</summary>
     public async Task<FileListItem> Info(StringPath path) {
       var blob = BlobRef(path);
-      var exists = await blob.ExistsAsync();
-      if (!exists) return null;
-      await blob.FetchAttributesAsync();
-      return new FileListItem {
-        Path = path,
-        Modified = blob.Properties.LastModified,
-        Bytes = blob.Properties.Length
-      };
+      try {
+        await blob.FetchAttributesAsync();
+        return new FileListItem {
+          Path = path,
+          Modified = blob.Properties.LastModified,
+          Bytes = blob.Properties.Length
+        };
+      }
+      catch (StorageException e) {
+        if (e.Message == "The specified blob does not exist.")
+          return null;
+        throw;
+      }
     }
 
+    public async Task<bool> Exists(StringPath path) {
+      var blob = BlobRef(path);
+      return await blob.ExistsAsync();
+    }
+
+    public Uri ContainerUrl => Container.Uri;
     public Uri Url(StringPath path) => BlobRef(path).Uri;
 
     public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) {
