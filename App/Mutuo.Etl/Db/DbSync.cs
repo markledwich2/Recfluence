@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Data;
+using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -7,6 +9,7 @@ using Humanizer;
 using Humanizer.Bytes;
 using Mutuo.Etl.Blob;
 using Serilog;
+using Snowflake.Data.Client;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
@@ -167,8 +170,8 @@ namespace Mutuo.Etl.Db {
   }
 
   public interface ICommonDb {
-    public LoggedConnection Conn          { get; }
-    public string           DefaultSchema { get; }
+    public ILoggedConnection<IDbConnection> Conn          { get; }
+    public string                          DefaultSchema { get; }
     string Sql(string name);
   }
 

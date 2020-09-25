@@ -309,6 +309,19 @@ namespace YtCli {
 
     public async ValueTask ExecuteAsync(IConsole console) => await UserScrape.UpgradeIncompleteTrials(Log);
   }
+  
+  [Command("convert-watch-time-files")]
+  public class ConvertWatchTimeFiles : ICommand {
+    readonly YtConvertWatchTimeFiles Converter;
+    readonly         ILogger             Log;
+
+    public ConvertWatchTimeFiles(YtConvertWatchTimeFiles converter, ILogger log) {
+      Converter = converter;
+      Log = log;
+    }
+
+    public async ValueTask ExecuteAsync(IConsole console) => await Converter.Convert(Log);
+  }
 
   [Command("build-container")]
   public class BuildContainerCmd : ICommand {

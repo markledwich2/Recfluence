@@ -45,6 +45,8 @@ namespace SysExtensions.Text {
       }
     }
 
+    public string ExtensionsString => Extensions.Join(".");
+
     /// <summary>A name minus a file extension, except anything after the first "." is considered part of the extension</summary>
     public string NameSansExtension => Name?.Split('.').FirstOrDefault();
 

@@ -1,12 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
+using Mutuo.Etl.Db;
 using Polly;
 using Serilog;
 using SysExtensions.Net;
 using SysExtensions.Security;
 
-namespace YtReader {
+namespace YtReader.Db {
   public class SqlServerCfg {
     [Required] public string     Host          { get; set; }
     [Required] public string     Db            { get; set; }
@@ -15,11 +16,11 @@ namespace YtReader {
   }
 
   public static class MsSqlEx {
-    public static async Task<SqlConnection> OpenConnection(this SqlServerCfg cfg, ILogger log) {
+    public static async Task<ILoggedConnection<SqlConnection>> OpenConnection(this SqlServerCfg cfg, ILogger log) {
       var policy = Policy.Handle<SqlException>(e => e.Number == 40143).RetryWithBackoff("connecting to sql server", 3, log);
       var conn = cfg.Connection();
       await policy.ExecuteAsync(() => conn.OpenAsync());
-      return conn;
+      return conn.AsLogged(log);
     }
 
     public static SqlConnection Connection(this SqlServerCfg cfg) =>

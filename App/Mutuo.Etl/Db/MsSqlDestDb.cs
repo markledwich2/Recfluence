@@ -43,18 +43,17 @@ namespace Mutuo.Etl.Db {
     static readonly Dictionary<string, (Type Type, string ProviderName, string[] TypeArgs)> ProviderToType =
       TypeToProvider.ToDictionary(t => t.Value.ProviderName, t => t.Value);
 
-    static readonly int     DeaultVarcharSize = 400;
-    static readonly int     MaxVarcharSize    = 8000;
-    readonly        ILogger Log;
+    static readonly int              DeaultVarcharSize = 400;
+    static readonly int              MaxVarcharSize    = 8000;
+    ILoggedConnection<SqlConnection> _c;
 
     public MsSqlDestDb(SqlConnection conn, string defaultSchema, ILogger log) {
-      Log = log.ForContext("DataSource", conn.DataSource).ForContext("Database", conn.Database);
-      Conn = conn.AsLogged(log);
+      _c = conn.AsLogged(log);
       DefaultSchema = defaultSchema;
     }
 
-    public LoggedConnection Conn          { get; }
-    public string           DefaultSchema { get; }
+    public ILoggedConnection<IDbConnection> Conn          => _c;
+    public string                           DefaultSchema { get; }
 
     public string Sql(string name) => name.SquareBrackets();
 
@@ -114,7 +113,7 @@ namespace Mutuo.Etl.Db {
       foreach (var path in paths) {
         var sql = @$"bulk insert {this.Sql(destTable)}
         from '{path}'
-        with (data_source = '{DataSource}', format='CSV')";
+        with (data_source = '{DataSource}', format='CSV', tablock)";
         await Conn.Execute(nameof(LoadFrom), sql, timeout: 1.Hours());
       }
     }
@@ -135,7 +134,7 @@ values ({cols.Join(",", c => $"s.{this.Sql(c)}")})
     }
 
     public async Task<long> BulkCopy(IDataReader reader, TableId table, ILogger log, CancellationToken cancel) {
-      using var bc = new SqlBulkCopy((SqlConnection) Conn.Conn) {
+      using var bc = new SqlBulkCopy(_c.Conn) {
         EnableStreaming = true,
         BatchSize = 100_000,
         DestinationTableName = this.Sql(table),

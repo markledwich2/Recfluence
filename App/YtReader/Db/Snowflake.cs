@@ -26,7 +26,7 @@ namespace YtReader.Db {
 
     public SnowflakeConnectionProvider(SnowflakeCfg cfg) => Cfg = cfg;
 
-    public async Task<LoggedConnection> OpenConnection(ILogger log, string db = null, string schema = null, string role = null) {
+    public async Task<ILoggedConnection<SnowflakeDbConnection>> OpenConnection(ILogger log, string db = null, string schema = null, string role = null) {
       var conn = Cfg.Connection(db, schema, role);
       await conn.OpenAsync();
       return conn.AsLogged(log);
@@ -51,7 +51,7 @@ namespace YtReader.Db {
 
     public static string Cs(params (string name, string value)[] values) => values.Join(";", v => $"{v.name}={v.value}");
 
-    public static async Task SetSessionParams(this LoggedConnection db, params (SfParam param, object value)[] @params) => await db.Execute("alter session",
+    public static async Task SetSessionParams(this ILoggedConnection<SnowflakeDbConnection> db, params (SfParam param, object value)[] @params) => await db.Execute("alter session",
       $"alter session set {@params.Join(" ", v => $"{v.param.EnumString()}={ValueSql(v.value)}")}"); // reduce mem usage (default 4)
 
     static string ValueSql(object value) =>

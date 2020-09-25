@@ -23,6 +23,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
+using YtReader.Db;
 using YtReader.Search;
 using YtReader.Store;
 
@@ -158,14 +159,14 @@ order by views desc
 ";
 
         var store = ctx.Resolve<YtStores>().Store(DataStoreType.Results);
-        var cacheHash = Sha.ComputeHash((sql + p.ToJson()).ToBytesUtf8()).ToBase64String();
+        var cacheHash = Sha.ComputeHash((sql + p.ToJson()).ToBytesUtf8()).ToBase64String().Replace('/', '_');
         var path = StringPath.FromString($"cache/{cacheHash}.jsonl.gz");
         var (file, dur) = await store.Info(path).WithDuration();
         ctx.Log.Debug("checking cache took {Duration}", dur.HumanizeShort());
         if (file == null || DateTimeOffset.UtcNow - file.Modified!.Value > 24.Hours()) {
           var sw = Stopwatch.StartNew();
           using var conn = await ctx.Resolve<SqlServerCfg>().OpenConnection(ctx.Log);
-          var rows = await conn.QueryAsync(sql, p);
+          var rows = await conn.Query<dynamic>("video_views", sql, p);
           using var stream = await rows.ToJsonlGzStream();
           await store.Save(path, stream);
           ctx.Log.Debug("video_views - {Query} took {Duration}", req.QueryString, sw.Elapsed.HumanizeShort());

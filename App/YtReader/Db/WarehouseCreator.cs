@@ -77,7 +77,7 @@ namespace YtReader.Db {
       scripts = scripts
         .Concat(new Script("stage",
           $"create or replace stage {db}.{schema}.yt_data url='{stageUrl}' credentials=(azure_sas_token='{sas}') file_format=(type=json compression=gzip)",
-          $"create or replace file format {db}.{schema}.tsv type = 'csv' field_delimiter = '\t' validate_UTF8 = false"
+          $"create or replace file format {db}.{schema}.tsv type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('')"
         ));
 
       foreach (var s in scripts)

@@ -230,7 +230,7 @@ group by channel_id",
     }
 
     /// <summary>Saves the result for the given query to Storage and a local tmp file</summary>
-    async Task<FPath> SaveResult(ILogger log, LoggedConnection db, FPath tempDir, ResQuery q) {
+    async Task<FPath> SaveResult(ILogger log, ILoggedConnection<IDbConnection> db, FPath tempDir, ResQuery q) {
       var reader = await ResQuery(db, q);
       var fileName = q.FileType switch {
         ResFilType.Csv => $"{q.Name}.csv.gz",
@@ -252,7 +252,7 @@ group by channel_id",
       return tempFile;
     }
 
-    async Task<IDataReader> ResQuery(LoggedConnection db, ResQuery q) {
+    async Task<IDataReader> ResQuery(ILoggedConnection<IDbConnection> db, ResQuery q) {
       var query = q.Query ?? $"select * from {q.Name}";
       if (q is FileQuery f) {
         var req = new Uri(ResCfg.FileQueryUri + "/" + f.Path.StringValue).Get()

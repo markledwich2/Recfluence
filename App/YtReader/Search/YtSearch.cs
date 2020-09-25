@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -16,6 +17,7 @@ using Polly;
 using Polly.Retry;
 using Semver;
 using Serilog;
+using Snowflake.Data.Client;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Serialization;
@@ -94,7 +96,7 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
       tags = v.TAGS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(v.TAGS),
       updated = v.UPDATED,
       upload_date = v.UPLOAD_DATE,
-      video_id = v.video_id,
+      video_id = v.VIDEO_ID,
       video_title = v.VIDEO_TITLE,
       views = v.VIEWS,
       keywords = v.KEYWORDS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(v.KEYWORDS),
@@ -143,7 +145,7 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
       views = c.views,
     };
 
-    async Task<LoggedConnection> OpenConnection(ILogger log) {
+    async Task<ILoggedConnection<SnowflakeDbConnection>> OpenConnection(ILogger log) {
       var conn = await Db.OpenConnection(log);
       await conn.SetSessionParams((SfParam.ClientPrefetchThreads, 2));
       return conn;
@@ -202,7 +204,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
       return items.Count;
     }
 
-    IEnumerable<T> Query<T>((string sql, object param) sql, LoggedConnection conn) where T : class =>
+    IEnumerable<T> Query<T>((string sql, object param) sql, ILoggedConnection<IDbConnection> conn) where T : class =>
       conn.QueryBlocking<T>(nameof(SyncToElastic), sql.sql, sql.param, buffered: false);
   }
 

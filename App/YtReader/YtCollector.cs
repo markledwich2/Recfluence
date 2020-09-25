@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -191,7 +192,7 @@ where meets_review_criteria and meets_sub_criteria {(noExplicit ? "" : " or incl
       return (c, update);
     }
 
-    async Task<(ChannelStored2 c, UpdateChannelType update)[]> ChannelsToDiscover(LoggedConnection db, ILogger log) {
+    async Task<(ChannelStored2 c, UpdateChannelType update)[]> ChannelsToDiscover(ILoggedConnection<IDbConnection> db, ILogger log) {
       var toAdd = await db.Query<(string channel_id, string channel_title, string source)>("channels to classify",
         @"with review_channels as (
   select channel_id
@@ -254,7 +255,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
             .ForContext("ChannelId", c.ChannelId)
             .ForContext("Channel", c.ChannelTitle);
           try {
-            await using var conn = new Defer<LoggedConnection>(() => Sf.OpenConnection(cLog));
+            await using var conn = new Defer<ILoggedConnection<IDbConnection>>(async () => await Sf.OpenConnection(cLog));
             await UpdateAllInChannel(c, update, forceUpdate, channelChromeVideos.TryGet(c.ChannelId), cLog);
             cLog.Information("Collect - {Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
               c.ChannelTitle, sw.Elapsed.HumanizeShort(), i + 1, channels.Count);
@@ -458,7 +459,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
     /// <summary>Find videos that we should update to collect comments (chrome update). We do this once x days after a video is
     ///   uploaded.</summary>
-    async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> VideosForChromeUpdate(IReadOnlyCollection<ChannelStored2> channels, LoggedConnection db,
+    async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> VideosForChromeUpdate(IReadOnlyCollection<ChannelStored2> channels, ILoggedConnection<IDbConnection> db,
       ILogger log) {
       var ids = await db.Query<(string ChannelId, string VideoId)>("videos sans-comments",
         $@"with chrome_extra_latest as (

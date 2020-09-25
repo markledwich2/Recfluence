@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
@@ -11,17 +12,33 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Db {
-  public class LoggedConnection : IDisposable {
+
+  public interface ILoggedConnection<out TC> : IDisposable where TC : IDbConnection  {
+    TC      Conn { get; }
+    ILogger Log  { get; }
+    Task<long> Execute(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
+    /// <summary>Like the dapper Query function. use when you need to stream the rows non-greedily</summary>
+    IEnumerable<T> QueryBlocking<T>(string operation, string sql,
+      object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = false);
+    Task<IReadOnlyCollection<T>> Query<T>(string operation, string sql,
+      object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
+    /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
+    /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>
+    Task<T> ExecuteScalar<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
+    Task<DbDataReader> ExecuteReader(string operation, string sql, object param, DbTransaction transaction = null);
+  }
+  
+  public class LoggedConnection<TC> : ILoggedConnection<TC>  where TC : IDbConnection   {
     readonly bool CloseConnection;
 
     /// <summary>Wraps a connection with logging.</summary>
-    public LoggedConnection(DbConnection conn, ILogger log, bool closeConnection = true) {
+    public LoggedConnection(TC conn, ILogger log, bool closeConnection = true) {
       CloseConnection = closeConnection;
       Conn = conn;
       Log = log;
     }
 
-    public DbConnection Conn { get; }
+    public TC Conn { get; }
     public ILogger      Log  { get; }
 
     public void Dispose() {
@@ -48,7 +65,7 @@ namespace Mutuo.Etl.Db {
       await ExecWithLog(() => Conn.ExecuteScalarAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation, param);
 
     public async Task<DbDataReader> ExecuteReader(string operation, string sql, object param, DbTransaction transaction = null) =>
-      await ExecWithLog(() => Conn.ExecuteReaderAsync(sql, param, transaction), sql, operation, param);
+      await ExecWithLog(() => (Conn as DbConnection).ExecuteReaderAsync(sql, param, transaction), sql, operation, param);
 
     T ExecWithLog<T>(Func<T> exec, string sql, string operation, object param) {
       T res;
@@ -81,6 +98,6 @@ namespace Mutuo.Etl.Db {
   }
 
   public static class LoggedConnectionEx {
-    public static LoggedConnection AsLogged(this DbConnection conn, ILogger log) => new LoggedConnection(conn, log);
+    public static ILoggedConnection<T> AsLogged<T>(this T conn, ILogger log) where T : DbConnection  => new LoggedConnection<T>(conn, log);
   }
 }

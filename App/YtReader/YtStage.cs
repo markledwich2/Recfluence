@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -63,7 +64,7 @@ namespace YtReader {
 
     AzureBlobFileStore Store(StageTableCfg t) => Stores.Store(t.StoreType);
 
-    async Task Incremental(LoggedConnection db, string table, StageTableCfg t, DateTime latestTs) {
+    async Task Incremental(ILoggedConnection<IDbConnection> db, string table, StageTableCfg t, DateTime latestTs) {
       var store = Store(t);
       await store.Optimise(Cfg.Optimise, t.Dir, latestTs.FileSafeTimestamp(), db.Log); // optimise files newer than the last load
       var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();
@@ -71,7 +72,7 @@ namespace YtReader {
         table, rows, size.Humanize("#.#"), dur.HumanizeShort());
     }
 
-    async Task FullLoad(LoggedConnection db, string table, StageTableCfg t) {
+    async Task FullLoad(ILoggedConnection<IDbConnection> db, string table, StageTableCfg t) {
       var store = Store(t);
       if (t.IsNativeStore)
         await store.Optimise(Cfg.Optimise, t.Dir, null, db.Log); // optimise all files when performing a full load
@@ -81,7 +82,7 @@ namespace YtReader {
         table, rows, size.Humanize("#.#"), dur.HumanizeShort());
     }
 
-    async Task<(string[] files, long rows, ByteSize size)> CopyInto(LoggedConnection db, string table, StageTableCfg t) {
+    async Task<(string[] files, long rows, ByteSize size)> CopyInto(ILoggedConnection<IDbConnection> db, string table, StageTableCfg t) {
       var startTime = await db.ExecuteScalar<string>("current time", "select current_timestamp()::string");
       var (stage, path) = t.StoreType switch {
         DataStoreType.Db => (Cfg.Stage, StorageCfg.DbPath),

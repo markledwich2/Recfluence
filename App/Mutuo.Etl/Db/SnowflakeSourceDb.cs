@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Data.SqlClient;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Humanizer.Bytes;
@@ -19,7 +20,7 @@ namespace Mutuo.Etl.Db {
       int? limit = null);
   }
 
-  public class SnowflakeSourceDb : ISourceDb, ICommonDb {
+  public class SnowflakeSourceDb : ISourceDb {
     readonly        string   StageName;
     readonly        ByteSize FileSize;
     static readonly Regex    SafeRegex = new Regex("^[A-Za-z_]+$", RegexOptions.Compiled);
@@ -32,8 +33,8 @@ namespace Mutuo.Etl.Db {
       DefaultSchema = defaultSchema;
     }
 
-    public LoggedConnection Conn          { get; }
-    public string           DefaultSchema { get; }
+    public ILoggedConnection<IDbConnection> Conn          { get; }
+    public string                          DefaultSchema { get; }
 
     public async Task<DbDataReader> Read(string selectSql, SyncTableCfg tableCfg, object tsValue = null, int? limit = null) {
       var sql = SelectSql(selectSql, tableCfg, tsValue, limit);
@@ -59,7 +60,7 @@ namespace Mutuo.Etl.Db {
     public async Task CopyTo(string path, string selectSql, SyncTableCfg tableCfg, object tsValue = null, int? limit = null) {
       var sql = SelectSql(selectSql, tableCfg, tsValue, limit);
       var copySql = $@"copy into @{StageName}/{path}/ from ({sql})
-file_format = (TYPE=CSV, COMPRESSION=NONE, FIELD_OPTIONALLY_ENCLOSED_BY ='""', RECORD_DELIMITER ='\r\n')
+file_format = (TYPE=CSV, COMPRESSION=NONE, FIELD_OPTIONALLY_ENCLOSED_BY ='""', RECORD_DELIMITER ='\r\n', NULL_IF=(''))
 MAX_FILE_SIZE = {FileSize.Bytes:#}
       ";
       await Conn.Execute(nameof(CopyTo), copySql);
