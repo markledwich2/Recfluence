@@ -291,7 +291,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     public           string   channel_title { get; set; }
     public           DateTime upload_date   { get; set; }
     public           DateTime updated       { get; set; }
-    public           long     views         { get; set; }
+    public           long?     views         { get; set; }
     [Keyword] public string   lr            { get; set; }
     [Keyword] public string[] tags          { get; set; }
   }
@@ -301,8 +301,8 @@ order by updated"; // always order by updated so that if sync fails, we can resu
   public class EsVideo : VideoCaptionCommon {
     public           string      description { get; set; }
     public           string[]    keywords    { get; set; }
-    public           long        likes       { get; set; }
-    public           long        dislikes    { get; set; }
+    public           long?        likes       { get; set; }
+    public           long?        dislikes    { get; set; }
     [Keyword] public string      error_type  { get; set; }
   }
 
