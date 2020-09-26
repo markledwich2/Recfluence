@@ -13,6 +13,7 @@ namespace YtReader.Db {
     [Required] public string     Db            { get; set; }
     [Required] public NameSecret Creds         { get; set; }
     [Required] public string     DefaultSchema { get; set; } = "dbo";
+    public            int        MinPoolSize   { get; set; } = 4;
   }
 
   public static class MsSqlEx {
@@ -27,6 +28,6 @@ namespace YtReader.Db {
       new SqlConnection(cfg.ConnectionStirng(), new SqlCredential(cfg.Creds.Name, cfg.Creds.SecureString()));
 
     public static string ConnectionStirng(this SqlServerCfg cfg) =>
-      $"Server={cfg.Host};Initial Catalog={cfg.Db};Persist Security Info=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=10;";
+      $"Server={cfg.Host};Initial Catalog={cfg.Db};Persist Security Info=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=10;Pooling=true;Min Pool Size={cfg.MinPoolSize}";
   }
 }

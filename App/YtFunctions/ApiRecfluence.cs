@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -9,7 +8,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Autofac;
-using Dapper;
 using Humanizer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs;
@@ -18,6 +16,7 @@ using Microsoft.Extensions.Primitives;
 using Mutuo.Etl.Blob;
 using Nest;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
@@ -136,8 +135,8 @@ namespace YtFunctions {
       await Ctx.Run(exec, async ctx => {
         var p = new {
           channelId = req.Query["channelId"].FirstOrDefault(),
-          from = req.Query["from"].FirstOrDefault()?.ParseDate(style: DateTimeStyles.AssumeUniversal),
-          to = req.Query["to"].FirstOrDefault()?.ParseDate(style: DateTimeStyles.AssumeUniversal),
+          from = req.Query["from"].FirstOrDefault(),
+          to = req.Query["to"].FirstOrDefault(),
           top = req.Query["top"].FirstOrDefault()?.ParseInt() ?? 80
         };
 
@@ -152,24 +151,29 @@ namespace YtFunctions {
         Condition(p.from, "date >= @from");
         Condition(p.to, "date <= @to");
 
-        var sql = @$"select top (@top) video_id, sum(views) views
-from ml.video_stats {(conditions.Any() ? $"\n where {conditions.Join(" and ")}" : "")}
+        var sql = @$"select top (@top) video_id, sum(views) views, sum(watch_hours) watch_hours
+from video_stats {(conditions.Any() ? $"\n where {conditions.Join(" and ")}" : "")}
 group by video_id
 order by views desc
 ";
 
         var store = ctx.Resolve<YtStores>().Store(DataStoreType.Results);
-        var cacheHash = Sha.ComputeHash((sql + p.ToJson()).ToBytesUtf8()).ToBase64String().Replace('/', '_');
+        var cacheHash = Sha.ComputeHash((sql + JObject.FromObject(p)).ToBytesUtf8()).ToBase64String().Replace(oldChar: '/', newChar: '_');
         var path = StringPath.FromString($"cache/{cacheHash}.jsonl.gz");
-        var (file, dur) = await store.Info(path).WithDuration();
+
+        var noCache = req.Headers["Cache-Control"].Contains("no-cache");
+        var (file, dur) = noCache ? default : await store.Info(path).WithDuration();
         ctx.Log.Debug("checking cache took {Duration}", dur.HumanizeShort());
-        if (file == null || DateTimeOffset.UtcNow - file.Modified!.Value > 24.Hours()) {
+        if (file == default || DateTimeOffset.UtcNow - file.Modified!.Value > 24.Hours()) {
           var sw = Stopwatch.StartNew();
-          using var conn = await ctx.Resolve<SqlServerCfg>().OpenConnection(ctx.Log);
-          var rows = await conn.Query<dynamic>("video_views", sql, p);
-          using var stream = await rows.ToJsonlGzStream();
-          await store.Save(path, stream);
-          ctx.Log.Debug("video_views - {Query} took {Duration}", req.QueryString, sw.Elapsed.HumanizeShort());
+          var sqlServerCfg = ctx.Resolve<SqlServerCfg>();
+          using (var conn = await sqlServerCfg.OpenConnection(ctx.Log)) {
+            ctx.Log.Debug("opening connection took {Duration}", sw.Elapsed.HumanizeShort());
+            var rows = await conn.Query<dynamic>("video_views", sql, p, timeout: 10.Minutes());
+            using var stream = await rows.ToJsonlGzStream();
+            await store.Save(path, stream);
+            ctx.Log.Debug("video_views - {Query} returned {Rows} took {Duration}", req.QueryString, rows.Count, sw.Elapsed.HumanizeShort());
+          }
         }
         else {
           ctx.Log.Debug("video_views - cache hit for: {Query}", req.QueryString.ToString());
