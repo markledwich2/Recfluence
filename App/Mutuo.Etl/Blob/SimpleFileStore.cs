@@ -44,17 +44,19 @@ namespace Mutuo.Etl.Blob {
 
     /// <summary>Serializes item into the object store</summary>
     /// <param name="path">The path to the object (no extensions)</param>
-    public static async Task Set<T>(this ISimpleFileStore store, StringPath path, T item, bool zip = true, ILogger log = null) {
+    public static async Task Set<T>(this ISimpleFileStore store, StringPath path, T item, bool zip = true, ILogger log = default, 
+      JsonSerializerSettings jCfg = default) {
       await using var memStream = new MemoryStream();
 
+      var serializer =  jCfg != null ? JsonSerializer.Create(jCfg) : JsonExtensions.DefaultSerializer;
       if (zip)
         await using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true)) {
           await using var tw = new StreamWriter(zipWriter, Encoding.UTF8);
-          JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
+          serializer.Serialize(new JsonTextWriter(tw), item);
         }
       else
         await using (var tw = new StreamWriter(memStream, Encoding.UTF8, leaveOpen: true))
-          JsonExtensions.DefaultSerializer.Serialize(new JsonTextWriter(tw), item);
+          serializer.Serialize(new JsonTextWriter(tw), item);
 
       var fullPath = path.AddJsonExtention(zip);
       memStream.Seek(0, SeekOrigin.Begin);

@@ -259,6 +259,7 @@ namespace YtReader {
       b.RegisterType<UserScrape>();
       b.RegisterType<YtSync>().SingleInstance();
       b.RegisterType<YtConvertWatchTimeFiles>().SingleInstance();
+      b.RegisterType<YtIndexResults>().SingleInstance();
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>().SingleInstance();

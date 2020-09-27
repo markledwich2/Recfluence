@@ -44,10 +44,10 @@ namespace YtReader {
     readonly YtBackup     _backup;
     readonly string       _updated;
     readonly UserScrape   _userScrape;
-    readonly YtSync       _sync;
+    readonly YtIndexResults        _index;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, YtStage warehouse, YtSearch search,
-      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtSync sync) {
+      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtIndexResults index) {
       Cfg = cfg;
       _updated = Guid.NewGuid().ToShortString(6);
       Log = log.ForContext("UpdateId", _updated);
@@ -58,7 +58,7 @@ namespace YtReader {
       YtDataform = ytDataform;
       _backup = backup;
       _userScrape = userScrape;
-      _sync = sync;
+      _index = index;
     }
 
     Task Collect(bool fullLoad, bool disableDiscover, string[] channels, CancellationToken cancel) =>
@@ -77,18 +77,18 @@ namespace YtReader {
       _search.SyncToElastic(Log, fullLoad, indexes: optionsSearchIndexes, conditions, cancel: cancel);
 
     [DependsOn(nameof(Dataform))]
-    Task Results(string[] results) =>
+    Task Result(string[] results) =>
       _results.SaveBlobResults(Log, results);
 
     [DependsOn(nameof(Dataform))]
-    Task Sync(string[] tables, bool fullLoad, CancellationToken cancel) =>
-      _sync.SyncDb(Log, cancel, tables, fullLoad);
+    Task Index(string[] tables, CancellationToken cancel) =>
+      _index.Run(tables, Log, cancel);
 
     [DependsOn(nameof(Collect))]
     Task Backup() =>
       _backup.Backup(Log);
 
-    [DependsOn(nameof(Results), nameof(Collect), nameof(Dataform))]
+    [DependsOn(nameof(Result), nameof(Collect), nameof(Dataform))]
     Task UserScrape(bool init, string trial, string[] accounts, CancellationToken cancel) =>
       _userScrape.Run(Log, init, trial, accounts, cancel);
 
@@ -104,8 +104,8 @@ namespace YtReader {
         c => Collect(fullLoad, options.DisableChannelDiscover, options.Channels, c),
         c => Stage(fullLoad, options.Tables),
         c => Search(options.SearchFullLoad, options.SearchIndexes, options.SearchConditions, c),
-        c => Results(options.Results),
-        c => Sync(options.Tables, fullLoad, c),
+        c => Result(options.Results),
+        c => Index(options.Tables, c),
         c => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, c),
         c => Dataform(fullLoad, options.Tables, c),
         c => Backup());

@@ -272,13 +272,9 @@ group by channel_id",
     }
 
     async Task Save(ILogger log, string fileName, FPath tempFile) {
-      async Task Save() {
-        await Store.Save(fileName, tempFile, log);
-        var url = Store.Url(fileName);
-        Log.Information("Result - saved {Name} to {Url}", fileName, url);
-      }
-
-      await Save();
+      await Store.Save(fileName, tempFile, log);
+      var url = Store.Url(fileName);
+      Log.Information("Result - saved {Name} to {Url}", fileName, url);
     }
   }
 

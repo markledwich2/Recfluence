@@ -153,6 +153,7 @@ namespace Mutuo.Etl.Blob {
         blob.Properties.ContentType = ex switch {
           "csv" => "text/css",
           "json" => "application/json",
+          "jsonl" => "application/json",
           _ => null
         };
     }
