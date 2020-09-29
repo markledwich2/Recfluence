@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
 using NUnit.Framework;
@@ -30,12 +31,20 @@ namespace Tests {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<WebScraper>();
       var extra = await ws.GetRecsAndExtra(new[] {
-        "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
-        "-ryPLVEExA0", // private 
-        "Ms9WOSXU5tY", "n_vzBGB3F_Y",
-        "xxQOtOCbASs", // tall
-        "DLq1DUcMh1Q"
+        "MbXbFchrTgw",
+        //"rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
+        //"-ryPLVEExA0", // private 
+        //"Ms9WOSXU5tY", "n_vzBGB3F_Y",
+        //"xxQOtOCbASs", // tall
+        //"DLq1DUcMh1Q"
       }, ctx.Log);
+    }
+    
+    [Test]
+    public static async Task ChannelVideos() {
+      using var x = await TextCtx();
+      var ws = x.Scope.Resolve<WebScraper>();
+      var res = await ws.GetChannelUploadsAsync("UCl49yaTf95CnN_w-Y3yY5fg", x.Log).ToListAsync();
     }
 
     [Test]

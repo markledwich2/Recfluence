@@ -473,7 +473,6 @@ namespace YtReader.YtWebsite {
         ChannelTitle = details.author,
         UploadDate = detailsScript.uploadDate,
         Statistics = new Statistics(details.viewCount, likeDislike.likes, likeDislike.dislikes),
-        Thumbnail = VideoThumbnail.FromVideoId(videoId),
         Updated = DateTime.UtcNow,
         Source = ScrapeSource.Chrome
       };

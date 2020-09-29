@@ -347,10 +347,10 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
         Duration = v.Duration,
         Keywords = v.Keywords.ToList(),
         Statistics = v.Statistics,
-        Thumbnail = VideoThumbnail.FromVideoId(v.Id),
         ChannelId = c.ChannelId,
         ChannelTitle = c.ChannelTitle,
-        UploadDate = v.UploadDate.UtcDateTime,
+        UploadDate = v.UploadDate,
+        AddedDate = v.AddedDate,
         Updated = updated
       }).ToList();
 
@@ -368,7 +368,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       await foreach (var vids in Scraper.GetChannelUploadsAsync(c.ChannelId, log))
       foreach (var v in vids) {
         count++;
-        if (v.UploadDate.UtcDateTime > uploadFrom && (max == null || count <= max)) yield return v;
+        if (v.UploadDate > uploadFrom && (max == null || count <= max)) yield return v;
         else yield break;
       }
     }
@@ -397,7 +397,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
         return new VideoCaptionStored2 {
           ChannelId = channel.ChannelId,
           VideoId = v.Id,
-          UploadDate = v.UploadDate.UtcDateTime,
+          UploadDate = v.UploadDate,
           Updated = DateTime.Now,
           Info = track.Info,
           Captions = track.Captions
@@ -405,7 +405,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       }
 
       var captionsToStore =
-        (await vids.Where(v => lastUpload == null || v.UploadDate.UtcDateTime > lastUpload)
+        (await vids.Where(v => lastUpload == null || v.UploadDate > lastUpload)
           .BlockFunc(GetCaption, RCfg.CaptionParallel)).NotNull().ToList();
 
       if (captionsToStore.Any())
@@ -504,7 +504,7 @@ from videos_to_update",
         ? vidsDesc //  all videos if this is the first time for this channel
         :
         // new vids since the last rec update, or the vid was created in the last RefreshRecsWithin (e.g. 30d)
-        vidsDesc.Where(v => v.UploadDate > prevUpdate || v.UploadDate.UtcDateTime.IsYoungerThan(RCfg.RefreshRecsWithin))
+        vidsDesc.Where(v => v.UploadDate > prevUpdate || v.UploadDate.IsYoungerThan(RCfg.RefreshRecsWithin))
           .Take(RCfg.RefreshRecsMax)
           .ToList();
       var deficit = RCfg.RefreshRecsMin - toUpdate.Count;

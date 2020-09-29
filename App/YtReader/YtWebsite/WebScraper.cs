@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -247,37 +248,32 @@ namespace YtReader.YtWebsite {
         // Get videos
         var newVideos = new List<VideoItem>();
         foreach (var videoJson in playlistJson.SelectToken("video").NotNull()) {
-          var epoch = new DateTimeOffset(1970, 1, 1, 0, 0, 0, TimeSpan.Zero);
-
-          // Extract video info
-          var videoId = videoJson.SelectToken("encrypted_id").Value<string>();
-          var videoAuthor = videoJson.SelectToken("author").Value<string>();
-          var videoUploadDate = epoch + TimeSpan.FromSeconds(videoJson.SelectToken("time_created").Value<long>());
-          var videoTitle = videoJson.SelectToken("title").Value<string>();
-          var videoDescription = videoJson.SelectToken("description").Value<string>();
-          var videoDuration = TimeSpan.FromSeconds(videoJson.SelectToken("length_seconds").Value<double>());
-          var videoViewCount = videoJson.SelectToken("views").Value<string>().StripNonDigit().ParseLong();
-          var videoLikeCount = videoJson.SelectToken("likes").Value<long>();
-          var videoDislikeCount = videoJson.SelectToken("dislikes").Value<long>();
-
-          // Extract video keywords
-          var videoKeywordsJoined = videoJson.SelectToken("keywords").Value<string>();
+          
+          JToken St(string field) => videoJson.SelectToken(field);
+          
+          var videoId = St("encrypted_id").Value<string>();
+          var videoAuthor = St("author").Value<string>();
+          var videoUploadDate = DateTime.UnixEpoch + St("time_created").Value<long>().Seconds();
+          var videoTitle = St("title").Value<string>();
+          var videoDescription = St("description").Value<string>();
+          var videoDuration = TimeSpan.FromSeconds(St("length_seconds").Value<double>());
+          var videoViewCount = St("views").Value<string>().StripNonDigit().ParseLong();
+          var videoLikeCount = St("likes").Value<long>();
+          var videoDislikeCount = St("dislikes").Value<long>();
+          var videoAddedDate = St("added").Value<string>().ParseExact("M/d/yy");
+          var videoKeywordsJoined = St("keywords").Value<string>();
           var videoKeywords = Regex.Matches(videoKeywordsJoined, "\"[^\"]+\"|\\S+")
             .Select(m => m.Value)
             .Where(s => !s.IsNullOrWhiteSpace())
             .Select(s => s.Trim('"'))
             .ToArray();
-
-          // Create statistics and thumbnails
           var videoStatistics = new Statistics(videoViewCount, videoLikeCount, videoDislikeCount);
-          var videoThumbnails = new ThumbnailSet(videoId);
-
-          // Add video to the list if it's not already there
-          if (videoIds.Add(videoId)) {
-            var video = new VideoItem(videoId, videoAuthor, videoUploadDate, videoTitle, videoDescription,
-              videoThumbnails, videoDuration, videoKeywords, videoStatistics, null, null); // TODO: is channelId in the playlist?
-            newVideos.Add(video);
-          }
+          
+          
+          if (!videoIds.Add(videoId)) continue;// only add video to the list if it's not already there
+          var video = new VideoItem(videoId, videoAuthor, videoUploadDate, videoAddedDate, videoTitle, videoDescription,
+            videoDuration, videoKeywords, videoStatistics, null, null);
+          newVideos.Add(video);
         }
 
         // If no distinct videos were added to the list - break
@@ -371,10 +367,10 @@ namespace YtReader.YtWebsite {
         Duration = videoItem?.Duration,
         Keywords = videoItem?.Keywords,
         Title = videoItem?.Title,
-        UploadDate = videoItem?.UploadDate.UtcDateTime,
+        UploadDate = videoItem?.UploadDate,
+        AddedDate = videoItem?.AddedDate,
         Statistics = videoItem?.Statistics,
-        Source = ScrapeSource.Web,
-        Thumbnail = VideoThumbnail.FromVideoId(videoId)
+        Source = ScrapeSource.Web
       };
 
       var ytInitPr = GetClientObjectFromWatchPage(html, "ytInitialPlayerResponse");
@@ -496,7 +492,7 @@ namespace YtReader.YtWebsite {
       var channelId = VideoValue<string>("channelId");
       var channelTitle = VideoValue<string>("author");
 
-      var videoUploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseDateTimeOffset("yyyy-MM-dd") ?? default;
+      var videoUploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseExact("yyyy-MM-dd", style:DateTimeStyles.AssumeUniversal) ?? default;
 
       var videoLikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-like-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
@@ -506,10 +502,8 @@ namespace YtReader.YtWebsite {
       var videoDislikeCount = !videoDislikeCountRaw.IsNullOrWhiteSpace() ? videoDislikeCountRaw.ParseLong() : 0;
 
       var statistics = new Statistics(videoViewCount, videoLikeCount, videoDislikeCount);
-      var thumbnails = new ThumbnailSet(videoId);
-
-      return new VideoItem(videoId, videoAuthor, videoUploadDate, videoTitle, videoDescription,
-        thumbnails, videoDuration, videoKeywords, statistics, channelId, channelTitle);
+      return new VideoItem(videoId, videoAuthor, videoUploadDate, addedDate: default, videoTitle, videoDescription,
+        videoDuration, videoKeywords, statistics, channelId, channelTitle);
     }
 
     static IReadOnlyCollection<ClosedCaptionTrackInfo> GetCaptions(JToken playerResponseJson) =>

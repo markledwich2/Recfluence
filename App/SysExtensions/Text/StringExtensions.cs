@@ -117,7 +117,10 @@ namespace SysExtensions.Text {
       return long.Parse(s, styles, format);
     }
 
-    public static DateTime ParseDate(this string s, IFormatProvider format = null, DateTimeStyles style = default) => DateTime.Parse(s, format, style);
+    public static DateTime ParseExact(this string date, string pattern, IFormatProvider format = default, DateTimeStyles style = default) =>
+      DateTime.ParseExact(date, pattern, format, style);
+
+    public static DateTime ParseDate(this string s, IFormatProvider format = default, DateTimeStyles style = default) => DateTime.Parse(s, format, style);
 
     public static decimal ParseDecimal(this string s) => decimal.Parse(s, NumberFormatInfo.InvariantInfo);
 

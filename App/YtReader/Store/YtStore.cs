@@ -169,8 +169,8 @@ namespace YtReader.Store {
     public string                ChannelId    { get; set; }
     public string                ChannelTitle { get; set; }
     public DateTime?             UploadDate   { get; set; }
+    public DateTime?             AddedDate    { get; set; }
     public string                Description  { get; set; }
-    public VideoThumbnail        Thumbnail    { get; set; } = new VideoThumbnail();
     public TimeSpan?             Duration     { get; set; }
     public IReadOnlyList<string> Keywords     { get; set; } = new List<string>();
     public Statistics            Statistics   { get; set; }
@@ -229,6 +229,7 @@ namespace YtReader.Store {
     public string                CommentsMsg  { get; set; }
     public ScrapeSource          Source       { get; set; }
     public long?                 CommentCount { get; set; }
+    
   }
 
   public interface IHasUpdated {

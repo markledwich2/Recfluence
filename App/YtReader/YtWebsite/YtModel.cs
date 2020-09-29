@@ -12,7 +12,13 @@ namespace YtReader.YtWebsite {
     public string Author { get; }
 
     /// <summary>Upload date of this video.</summary>
-    public DateTimeOffset UploadDate { get; }
+    public DateTime UploadDate { get; }
+    
+    
+    /// <summary>
+    /// This is the same as upload date. But sometimes there are discrepancies and we need both to resolve
+    /// </summary>
+    public DateTime? AddedDate { get; }
 
     /// <summary>Title of this video.</summary>
     public string Title { get; }
@@ -36,14 +42,13 @@ namespace YtReader.YtWebsite {
     public string ChannelTitle { get; }
 
     /// <summary>Initializes an instance of <see cref="Video" />.</summary>
-    public VideoItem(string id, string author, DateTimeOffset uploadDate, string title, string description,
-      ThumbnailSet thumbnails, TimeSpan duration, IReadOnlyList<string> keywords, Statistics statistics, string channelId, string channelTitle) {
+    public VideoItem(string id, string author, DateTime uploadDate, DateTime? addedDate, string title, string description, TimeSpan duration, IReadOnlyList<string> keywords, Statistics statistics, string channelId, string channelTitle) {
       Id = id;
       Author = author;
       UploadDate = uploadDate;
+      AddedDate = addedDate;
       Title = title;
       Description = description;
-      Thumbnails = thumbnails;
       Duration = duration;
       Keywords = keywords;
       Statistics = statistics;
