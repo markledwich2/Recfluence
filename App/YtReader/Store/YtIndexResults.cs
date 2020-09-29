@@ -27,7 +27,7 @@ namespace YtReader.Store {
     }
 
     public async Task Run(IReadOnlyCollection<string> include, ILogger log, CancellationToken cancel = default) {
-      var taskGraph = TaskGraph.FromMethods(c => TopVideos(log), c => TopChannelVideos(log));
+      var taskGraph = TaskGraph.FromMethods(c => TopVideos(log), c => TopChannelVideos(log), c => ChannelStats(log));
       taskGraph.IgnoreNotIncluded(include);
       var (res, dur) = await taskGraph.Run(parallel: 4, log, cancel).WithDuration();
       var errors = res.Where(r => r.Error).ToArray();
@@ -74,6 +74,38 @@ namespace YtReader.Store {
       await SavePeriods(path, uniqPeriods, log);
     }
 
+    string TopVideoResSql(int rank, string[] index) =>
+      $@"select video_id
+     , channel_id
+     , period_type
+     , period_value::string period_value
+     , views
+     , watch_hours
+     , rank() over (partition by {index.Join(",")} order by views desc) rank
+from ttube_top_videos
+  qualify rank<{rank}
+order by {index.Join(",")}, rank";
+
+
+    const string ChannelStatsName = "channel_stats";
+
+    [GraphTask(Name = ChannelStatsName)]
+    async Task ChannelStats(ILogger log) {
+      var sql = $@"select channel_id
+     , period_type
+     , period_value::string period_value
+     , sum(views) views
+     , sum(watch_hours) watch_hours
+from ttube_top_videos
+group by channel_id, period_type, period_value
+order by {VideoPeriodCols.Join(",")}";
+      
+      var uniqPeriods = new Dictionary<string, JObject>(); // store unique periods to show in UI dynamically before loading data
+      var (_, path) = await UpdateBlobIndex(log, ChannelStatsName, VideoPeriodCols, sql,
+        100.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
+      await SavePeriods(path, uniqPeriods, log);
+    }
+
     async Task SavePeriods(StringPath path, IDictionary<string, JObject> uniqPeriods, ILogger log) {
       var stream = await uniqPeriods.Values.ToJsonlGzStream();
       await Store.Save(path.Add("periods.jsonl.gz"), stream, log);
@@ -86,17 +118,5 @@ namespace YtReader.Store {
       if (!uniqPeriods.ContainsKey(s))
         uniqPeriods[s] = r.JCloneProps(JVideoPeriodCols);
     }
-
-    string TopVideoResSql(int rank, string[] index) =>
-      $@"select video_id
-     , channel_id
-     , period_type
-     , period_value::string period_value
-     , views
-     , watch_hours
-     , rank() over (partition by {index.Join(",")} order by views desc) rank
-from ttube_top_videos
-  qualify rank<{rank}
-order by {index.Join(",")}, rank";
   }
 }

@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using Humanizer;
 using Humanizer.Bytes;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -19,8 +20,11 @@ namespace Mutuo.Etl.Blob {
     public BlobIndex(ISimpleFileStore store) => Store = store;
 
     /// <summary>Indexes into blob storage the given data. Reader needs to be ordered by the index columns.</summary>
-    public async Task<BlobIndexMeta> SaveIndexedJsonl(StringPath path, IEnumerator<JObject> rows, string[] indexNames, 
+    public async Task<BlobIndexMeta> SaveIndexedJsonl(StringPath path, IEnumerator<JObject> rows, string[] indexNames,
       ByteSize size, ILogger log, Action<JObject> onProcessed = null) {
+      var indexPath = path.Add("index");
+      var oldIndex = await Store.Get<BlobIndexMeta>(indexPath) ?? new BlobIndexMeta();
+      oldIndex.RunIds ??= new RunId[] { };
       var runId = DateTime.UtcNow.FileSafeTimestamp();
       var files = await IndexFiles(rows, indexNames, size, log, onProcessed)
         .Select((b, i) => (b.first, b.last, b.stream, i))
@@ -33,8 +37,22 @@ namespace Mutuo.Etl.Blob {
             Last = b.last
           };
         }, parallel: 4).ToListAsync();
-      var index = new BlobIndexMeta {KeyFiles = files.ToArray()};
-      await Store.Set(path.Add("index"), index);
+
+      var toDelete = oldIndex.RunIds
+        .Where(r => DateTime.UtcNow - r.Created > 12.Hours())
+        .Select(r => r.Id).ToArray();
+      await toDelete.BlockAction(async id => {
+        var deletePath = path.Add(id);
+        await Store.List(deletePath).SelectMany().BlockTrans(f => Store.Delete(f.Path, log)).ToListAsync();
+      });
+      
+      var index = new BlobIndexMeta {
+        KeyFiles = files.ToArray(),
+        RunIds = oldIndex.RunIds.Where(r => !toDelete.Contains(r.Id))
+          .Concat(new RunId { Id = runId, Created = DateTime.UtcNow }).ToArray()
+      };
+      await Store.Set(indexPath, index);
+      
       return index;
     }
 
@@ -42,7 +60,6 @@ namespace Mutuo.Etl.Blob {
 
     async IAsyncEnumerable<(Stream stream, JObject first, JObject last)> IndexFiles(IEnumerator<JObject> rows, string[] indexNames, ByteSize size, ILogger log,
       Action<JObject> onProcessed) {
-      
       var hasRows = true;
       while (hasRows) {
         var memStream = new MemoryStream();
@@ -76,26 +93,30 @@ namespace Mutuo.Etl.Blob {
   }
 
   public static class BlobIndexEx {
-
     public static JObject JCloneProps(this JObject j, params string[] props) {
       var k = new JObject();
       foreach (var p in props)
         k[p] = j[p];
       return k;
     }
-    
-    public static IEnumerable<string> JStringValues(this JObject j, params string[] props) {
-      return j.Properties()
+
+    public static IEnumerable<string> JStringValues(this JObject j, params string[] props) =>
+      j.Properties()
         .Where(p => props.None() || props.Contains(p.Name))
         .Select(p => p.Value.Value<string>());
-    }
   }
 
   public class BlobIndexMeta {
     public BlobIndexFileMeta[] KeyFiles { get; set; }
+    public RunId[]             RunIds   { get; set; }
   }
 
- public class BlobIndexFileMeta {
+  public class RunId {
+    public string   Id      { get; set; }
+    public DateTime Created { get; set; }
+  }
+
+  public class BlobIndexFileMeta {
     public string  File  { get; set; }
     public JObject First { get; set; }
     public JObject Last  { get; set; }

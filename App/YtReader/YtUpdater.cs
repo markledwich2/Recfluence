@@ -105,7 +105,7 @@ namespace YtReader {
         c => Stage(fullLoad, options.Tables),
         c => Search(options.SearchFullLoad, options.SearchIndexes, options.SearchConditions, c),
         c => Result(options.Results),
-        c => Index(options.Tables, c),
+        c => Index(options.Results, c),
         c => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, c),
         c => Dataform(fullLoad, options.Tables, c),
         c => Backup());
