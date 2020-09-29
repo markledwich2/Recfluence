@@ -64,6 +64,10 @@ namespace YtReader.Db {
 
   public enum SfParam {
     [EnumMember(Value = "CLIENT_PREFETCH_THREADS")]
-    ClientPrefetchThreads
+    ClientPrefetchThreads,
+    [EnumMember(Value = "TIMEZONE")]
+    Timezone,
+    [EnumMember(Value = "CLIENT_TIMESTAMP_TYPE_MAPPING")]
+    ClientTimestampTypeMapping
   }
 }

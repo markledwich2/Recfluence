@@ -64,31 +64,31 @@ namespace YtReader {
     Task Collect(bool fullLoad, bool disableDiscover, string[] channels, CancellationToken cancel) =>
       _collector.Collect(Log, forceUpdate: fullLoad, disableDiscover, channels, cancel);
 
-    [DependsOn(nameof(Collect))]
+    [GraphTask(nameof(Collect))]
     Task Stage(bool fullLoad, string[] tables) =>
       _warehouse.StageUpdate(Log, fullLoad, tables);
 
-    [DependsOn(nameof(Stage))]
+    [GraphTask(nameof(Stage))]
     Task Dataform(bool fullLoad, string[] tables, CancellationToken cancel) =>
       YtDataform.Update(Log, fullLoad, tables, cancel);
 
-    [DependsOn(nameof(Dataform))]
+    [GraphTask(nameof(Dataform))]
     Task Search(bool fullLoad, string[] optionsSearchIndexes, (string index, string condition)[] conditions, CancellationToken cancel) =>
       _search.SyncToElastic(Log, fullLoad, indexes: optionsSearchIndexes, conditions, cancel: cancel);
 
-    [DependsOn(nameof(Dataform))]
+    [GraphTask(nameof(Dataform))]
     Task Result(string[] results) =>
       _results.SaveBlobResults(Log, results);
 
-    [DependsOn(nameof(Dataform))]
+    [GraphTask(nameof(Dataform))]
     Task Index(string[] tables, CancellationToken cancel) =>
       _index.Run(tables, Log, cancel);
 
-    [DependsOn(nameof(Collect))]
+    [GraphTask(nameof(Collect))]
     Task Backup() =>
       _backup.Backup(Log);
 
-    [DependsOn(nameof(Result), nameof(Collect), nameof(Dataform))]
+    [GraphTask(nameof(Result), nameof(Collect), nameof(Dataform))]
     Task UserScrape(bool init, string trial, string[] accounts, CancellationToken cancel) =>
       _userScrape.Run(Log, init, trial, accounts, cancel);
 

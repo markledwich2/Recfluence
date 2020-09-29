@@ -5,16 +5,26 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace SysExtensions.Serialization {
   public static class JsonlExtensions {
     public static async Task ToJsonl<T>(this IEnumerable<T> items, TextWriter tw, JsonSerializerSettings settings = null) {
-      var serializer = settings?.Serializer() ?? JsonExtensions.DefaultSerializer;
-      serializer.Formatting = Formatting.None;
-      foreach (var row in items) {
-        serializer.Serialize(tw, row);
-        await tw.WriteLineAsync();
+      if (typeof(JObject) is T) {
+        var jw = new JsonTextWriter(tw) {Formatting = Formatting.None}; //ignore settings if it is json allready
+        foreach (var row in items.Cast<JObject>()) {
+          row.WriteTo(jw);
+          await tw.WriteLineAsync();
+        }
+      }
+      else {
+        var serializer = settings?.Serializer() ?? JsonExtensions.DefaultSerializer;
+        serializer.Formatting = Formatting.None;
+        foreach (var row in items) {
+          serializer.Serialize(tw, row);
+          await tw.WriteLineAsync();
+        }
       }
     }
 

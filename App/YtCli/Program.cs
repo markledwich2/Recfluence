@@ -17,6 +17,7 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
+using YtReader.Db;
 using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
@@ -309,18 +310,28 @@ namespace YtCli {
 
     public async ValueTask ExecuteAsync(IConsole console) => await UserScrape.UpgradeIncompleteTrials(Log);
   }
-  
-  [Command("convert-watch-time-files")]
-  public class ConvertWatchTimeFiles : ICommand {
-    readonly YtConvertWatchTimeFiles Converter;
-    readonly         ILogger             Log;
 
-    public ConvertWatchTimeFiles(YtConvertWatchTimeFiles converter, ILogger log) {
-      Converter = converter;
+  [Command("sandbox")]
+  public class SandboxCmd : ICommand {
+    readonly SnowflakeConnectionProvider Sf;
+    readonly ILogger                     Log;
+
+    public SandboxCmd(SnowflakeConnectionProvider sf, ILogger log) {
+      Sf = sf;
       Log = log;
     }
 
-    public async ValueTask ExecuteAsync(IConsole console) => await Converter.Convert(Log);
+    public async ValueTask ExecuteAsync(IConsole console) {
+      using var conn = await Sf.OpenConnection(Log);
+      //await conn.SetSessionParams((SfParam.ClientTimestampTypeMapping, "TIMESTAMP_NTZ"));
+      var res = await conn.Query<DbVideo2>("test", "select video_id, channel_id, updated from video_latest where video_id = '7eRR7j1OCOs'");
+    }
+
+    public class DbVideo2 {
+      public string VIDEO_ID   { get; set; }
+      public string CHANNEL_ID { get; set; }
+      public DateTime UPDATED    { get; set; }
+    }
   }
 
   [Command("build-container")]

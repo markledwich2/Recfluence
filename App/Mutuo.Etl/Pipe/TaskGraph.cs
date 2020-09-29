@@ -67,10 +67,10 @@ namespace Mutuo.Etl.Pipe {
     public static GraphTask GraphTask(Expression<Func<CancellationToken, Task>> expression, params string[] dependsOn) {
       var runTask = expression.Compile();
       var m = expression.Body as MethodCallExpression ?? throw new InvalidOperationException("expected an expression that calls a method");
-      var deps = m.Method.GetCustomAttribute<DependsOnAttribute>()?.Deps;
-      if (deps != null)
-        dependsOn = dependsOn.Concat(deps).ToArray();
-      return new GraphTask(m.Method.Name, dependsOn, runTask);
+      var attribute = m.Method.GetCustomAttribute<GraphTaskAttribute>();
+      if (attribute != null)
+        dependsOn = dependsOn.Concat(attribute.Deps).ToArray();
+      return new GraphTask(attribute?.Name ?? m.Method.Name, dependsOn, runTask);
     }
 
     public bool AllComplete => _graph.Nodes.All(v => v.Status.IsComplete());
@@ -103,13 +103,20 @@ namespace Mutuo.Etl.Pipe {
   }
 
   [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-  public sealed class DependsOnAttribute : Attribute {
+  public sealed class GraphTaskAttribute : Attribute {
+    public GraphTaskAttribute(params string[] deps) => Deps = deps;
     public string[] Deps { get; }
-
-    public DependsOnAttribute(params string[] deps) => Deps = deps;
+    public string   Name { get; set; }
   }
 
   public static class TaskGraphEx {
+
+    public static void IgnoreNotIncluded(this TaskGraph graph, IReadOnlyCollection<string> included) {
+      if (included.None()) return;
+      foreach (var m in graph.All.Where(m => !included.Contains(m.Name)))
+        m.Status = Ignored;
+    }
+    
     public static Task<IReadOnlyCollection<GraphTaskResult>> Run(this IEnumerable<GraphTask> tasks, int parallel, ILogger log, CancellationToken cancel) =>
       Run(new TaskGraph(tasks), parallel, log, cancel);
 

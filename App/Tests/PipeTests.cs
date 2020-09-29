@@ -50,7 +50,7 @@ namespace Tests {
       }
     }
 
-    [DependsOn(nameof(Generate))]
+    [GraphTask(nameof(Generate))]
     async Task Shorten(ILogger log) {
       await 100.Milliseconds().Delay();
       shortened = generated.Select(g => g.ToShortString()).ToArray();

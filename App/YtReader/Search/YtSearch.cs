@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac.Util;
@@ -18,12 +18,14 @@ using Polly.Retry;
 using Semver;
 using Serilog;
 using Snowflake.Data.Client;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
+using static YtReader.Search.IndexType;
 using Policy = Polly.Policy;
 
 // ReSharper disable InconsistentNaming
@@ -44,10 +46,10 @@ namespace YtReader.Search {
     public async Task SyncToElastic(ILogger log, bool fullLoad = false,
       string[] indexes = null,
       (string index, string condition)[] conditions = null, CancellationToken cancel = default) {
-      string[] Conditions(string index) => conditions?.Where(c => c.index == index).Select(c => c.condition).ToArray() ?? new string[] { };
-      bool ShouldRun(string index) => indexes == null || indexes.Any(i => string.Equals(i, index, StringComparison.OrdinalIgnoreCase));
+      string[] Conditions(IndexType index) => conditions?.Where(c => c.index == index.BaseName()).Select(c => c.condition).ToArray() ?? new string[] { };
+      bool ShouldRun(IndexType index) => indexes == null || indexes.Any(i => string.Equals(i, index.BaseName(), StringComparison.OrdinalIgnoreCase));
 
-      async Task Sync<TDb, TEs>(string index, string sql, Func<TDb, TEs> map, params string[] extraConditions)
+      async Task Sync<TDb, TEs>(IndexType type, string sql, Func<TDb, TEs> map, params string[] extraConditions)
         where TDb : class where TEs : class, IHasUpdated {
         TEs Map(TDb o) {
           try {
@@ -59,30 +61,58 @@ namespace YtReader.Search {
           }
         }
 
-        if (ShouldRun(index))
-          await BasicSync<TDb, TEs>(log, sql, fullLoad, Map, Conditions(index).Concat(extraConditions).ToArray(), cancel);
+        if (ShouldRun(type))
+          await CoreSync<TDb, TEs>(log, sql, fullLoad, Map, Conditions(type).Concat(extraConditions).ToArray(), cancel);
       }
 
-      await Sync<dynamic, EsChannel>(EsIndex.Channel, @"select * from channel_latest", MapChannel, "source='recfluence'");
+      await Sync<dynamic, EsChannel>(Channel, @"select * from channel_latest", MapChannel, "source='recfluence'");
 
-      await Sync(EsIndex.ChannelTitle, "select channel_id, channel_title, description, updated from channel_latest",
+      await Sync(ChannelTitle, "select channel_id, channel_title, description, updated from channel_latest",
         (EsChannelTitle c) => c);
 
-      await Sync<dynamic, EsVideo>(EsIndex.Video, @"select l.*, c.lr, c.tags from video_latest l
+      await Sync<dynamic, EsVideo>(Video, @"select l.*, c.lr, c.tags, timediff(seconds, '0'::time, duration) as duration_secs
+from video_latest l
 inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
 
-      await Sync(EsIndex.Caption, "select * from caption_es", (DbEsCaption c) => MapCaption(c));
+      await Sync(Caption, "select * from caption_es", (DbEsCaption c) => MapCaption(c));
     }
 
-    async Task BasicSync<TDb, TEs>(ILogger log, string selectSql, bool fullLoad, Func<TDb, TEs> map, string[] conditions = null,
+    async Task CoreSync<TDb, TEs>(ILogger log, string selectSql, bool fullLoad, Func<TDb, TEs> map, string[] conditions = null,
       CancellationToken cancel = default)
       where TEs : class, IHasUpdated where TDb : class {
       var lastUpdate = await Es.MaxDateField<TEs>(m => m.Field(p => p.updated));
       var sql = CreateSql(selectSql, fullLoad, lastUpdate, conditions);
-      await UpdateIndex<TEs>(log, fullLoad);
+
+      var alias = Es.GetIndexFor<TEs>() ?? throw new InvalidOperationException("The ElasticClient must have default indexes created for types used");
+      var existingIndex = (await Es.GetIndicesPointingToAliasAsync(alias)).FirstOrDefault();
+      var existingIndexCheck = (await Es.Indices.GetAsync(alias)).Indices.FirstOrDefault();
+      if (existingIndexCheck.Key == alias) throw new InvalidOperationException($"Existing index with the alias {alias}. Not supported for update");
+      // full load into random indexes and use aliases. This is to avoid downtime on full loads
+      var newIndex = fullLoad || existingIndex == null || lastUpdate == null ? $"{alias}-{ShortGuid.Create(5).ToLower()}" : null;
+
+      if (newIndex != null) {
+        await Es.Indices.CreateAsync(newIndex, c => c.Map<TEs>(m => m.AutoMap()));
+        log.Information("Search - Created new ElasticSearch Index {Index} ({Alias})", newIndex, alias);
+      }
+
       using var conn = await OpenConnection(log);
       var rows = Query<TDb>(sql, conn).Select(map);
-      await BatchToEs(log, rows, EsExtensions.EsPolicy(log), cancel);
+      var (docs, dur) = await BatchToEs(newIndex ?? existingIndex, log, rows, EsExtensions.EsPolicy(log), cancel).WithDuration();
+      if (newIndex != null) {
+        if (existingIndex != null) {
+          (await Es.Indices.BulkAliasAsync(b =>
+            b.Remove(r => r.Index(existingIndex).Alias(alias))
+              .Add(a => a.Index(newIndex).Alias(alias))))
+            .EnsureValid("switching index aliases");
+          (await Es.Indices.DeleteAsync(existingIndex, ct: cancel)).EnsureValid("deleting index");
+          log.Information("Search - switched {Old} with {New} index ({Alias})", existingIndex, newIndex, alias);
+        }
+        else {
+          (await Es.Indices.PutAliasAsync(new PutAliasDescriptor(newIndex, alias))).EnsureValid("creating alias");
+          log.Debug("Search - {New} index now has alias ({Alias})", newIndex, alias);
+        }
+      }
+      log.Information("Search - completed indexing {Docs} docs to {Alias} in {Duration}", docs, alias, dur.HumanizeShort());
     }
 
     static EsVideo MapVideo(dynamic v) => new EsVideo {
@@ -100,6 +130,7 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
       video_title = v.VIDEO_TITLE,
       views = v.VIEWS,
       keywords = v.KEYWORDS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(v.KEYWORDS),
+      duration_secs = v.DURATION_SECS
     };
 
     static EsChannel MapChannel(dynamic c) => new EsChannel {
@@ -147,7 +178,9 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
 
     async Task<ILoggedConnection<SnowflakeDbConnection>> OpenConnection(ILogger log) {
       var conn = await Db.OpenConnection(log);
-      await conn.SetSessionParams((SfParam.ClientPrefetchThreads, 2));
+      await conn.SetSessionParams(
+        (SfParam.ClientPrefetchThreads, 2),
+        (SfParam.Timezone, "GMT"));
       return conn;
     }
 
@@ -156,39 +189,24 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
 
       var param = lastUpdate == null || fullLoad ? null : new {max_updated = lastUpdate};
       if (param?.max_updated != null)
-        conditions = conditions.Concat("updated >= :max_updated").ToArray();
+        conditions = conditions.Concat("updated > :max_updated").ToArray();
       var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
-      var sql = $@"with q as ({selectSql}) 
+      var sql = $@"with q as ({selectSql})
 select * from q{sqlWhere}
 order by updated"; // always order by updated so that if sync fails, we can resume where we left of safely.
       return (sql, param);
     }
 
-    async Task UpdateIndex<T>(ILogger log, bool fullLoad) where T : class {
-      var index = Es.GetIndexFor<T>() ?? throw new InvalidOperationException("The ElasticClient must have default indexes created for types used");
-      var exists = (await Es.Indices.ExistsAsync(index)).Exists;
-
-      if (fullLoad && exists) {
-        await Es.Indices.DeleteAsync(index);
-        exists = false;
-      }
-
-      if (!exists) {
-        await Es.Indices.CreateAsync(index, c => c.Map<T>(m => m.AutoMap()));
-        log.Information("Created ElasticSearch Index {Index}", index);
-      }
-    }
-
-    async Task BatchToEs<T>(ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy, CancellationToken cancel) where T : class =>
-      await enumerable
+    async Task<int> BatchToEs<T>(string indexName, ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy, CancellationToken cancel)
+      where T : class =>  (await enumerable
         .Batch(Cfg.BatchSize).WithIndex()
-        .BlockFunc(b => BatchToEs(b.item, b.index, esPolicy, log),
+        .BlockFunc(b => BatchToEs(indexName, b.item, b.index, esPolicy, log),
           parallel: Cfg.Parallel, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
           capacity: Cfg.Parallel,
-          cancel: cancel);
+          cancel: cancel)).Sum();
 
-    async Task<int> BatchToEs<T>(IReadOnlyCollection<T> items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {
-      var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(items));
+    async Task<int> BatchToEs<T>(string indexName, IReadOnlyCollection<T> items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {
+      var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(items, indexName));
 
       if (!res.IsValid) {
         log.Error(
@@ -234,24 +252,35 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     }
 
     public static string GetIndexFor<T>(this ElasticClient es) => es.ConnectionSettings.DefaultIndices.TryGetValue(typeof(T), out var i) ? i : null;
+
+    public static void EnsureValid(this ResponseBase res, string verb) {
+      if (!res.IsValid)
+        throw new InvalidOperationException($"error when {verb}", res.OriginalException);
+    }
+  }
+
+  public enum IndexType {
+    [EnumMember(Value = "video")]         Video,
+    [EnumMember(Value = "caption")]       Caption,
+    [EnumMember(Value = "channel")]       Channel,
+    [EnumMember(Value = "channel_title")] ChannelTitle
   }
 
   public static class EsIndex {
-    public const string Video        = "video";
-    public const string Caption      = "caption";
-    public const string Channel      = "channel";
-    public const string ChannelTitle = "channel_title";
+    public const string Version = "2";
+    public static string BaseName(this IndexType type) => type.EnumString();
+    public static string IndexName(this IndexType type) => $"{type.BaseName()}-{Version}";
 
     public static ConnectionSettings ElasticConnectionSettings(this ElasticCfg cfg) {
       var esMappngTypes = typeof(EsIndex).Assembly.GetLoadableTypes()
-        .Select(t => (t, es: t.GetCustomAttribute<ElasticsearchTypeAttribute>(), table: t.GetCustomAttribute<TableAttribute>()))
+        .Select(t => (t, es: t.GetCustomAttribute<ElasticsearchTypeAttribute>(), table: t.GetCustomAttribute<YtEsTableAttribute>()))
         .Where(t => t.es != null)
         .ToArray();
       if (esMappngTypes.Any(t => t.table == null))
         throw new InvalidOperationException("All document types must have a mapping to and index. Add a Table(\"Index name\") attribute.");
       var clrMap = esMappngTypes.Select(t => new ClrTypeMapping(t.t) {
         IdPropertyName = t.es.IdProperty,
-        IndexName = IndexName(cfg, t.table.Name)
+        IndexName = IndexName(cfg, t.table.Index)
       });
       var cs = new ConnectionSettings(
         cfg.CloudId,
@@ -261,7 +290,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     }
 
     public static string IndexPrefix(SemVersion version) => version.Prerelease;
-    static string IndexName(ElasticCfg cfg, string table) => cfg.IndexPrefix.HasValue() ? $"{cfg.IndexPrefix}-{table}" : table;
+    static string IndexName(ElasticCfg cfg, IndexType table) => new[] {cfg.IndexPrefix, table.IndexName()}.Where(p => p.HasValue()).Join("-");
   }
 
   public interface IHasUpdated {
@@ -269,19 +298,19 @@ order by updated"; // always order by updated so that if sync fails, we can resu
   }
 
   public class DbEsCaption {
-    public string      caption_id     { get; set; }
-    public string      video_id       { get; set; }
-    public string      channel_id     { get; set; }
-    public string      video_title    { get; set; }
-    public string      channel_title  { get; set; }
-    public DateTime    upload_date    { get; set; }
-    public DateTime    updated        { get; set; }
-    public long        views          { get; set; }
-    public string      lr             { get; set; }
-    public string      tags           { get; set; }
-    public long        offset_seconds { get; set; }
-    public string      caption        { get; set; }
-    public CaptionPart part           { get; set; }
+    public                     string      caption_id     { get; set; }
+    public                     string      video_id       { get; set; }
+    public                     string      channel_id     { get; set; }
+    public                     string      video_title    { get; set; }
+    public                     string      channel_title  { get; set; }
+    public                     DateTime    upload_date    { get; set; }
+    [Date(Format = "")] public DateTime    updated        { get; set; }
+    public                     long        views          { get; set; }
+    public                     string      lr             { get; set; }
+    public                     string      tags           { get; set; }
+    public                     long        offset_seconds { get; set; }
+    public                     string      caption        { get; set; }
+    public                     CaptionPart part           { get; set; }
   }
 
   public abstract class VideoCaptionCommon : IHasUpdated {
@@ -291,25 +320,24 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     public           string   channel_title { get; set; }
     public           DateTime upload_date   { get; set; }
     public           DateTime updated       { get; set; }
-    public           long?     views         { get; set; }
+    public           long?    views         { get; set; }
     [Keyword] public string   lr            { get; set; }
     [Keyword] public string[] tags          { get; set; }
   }
 
   [ElasticsearchType(IdProperty = nameof(video_id))]
-  [Table(EsIndex.Video)]
+  [YtEsTableAttribute(Video)]
   public class EsVideo : VideoCaptionCommon {
-    public           string      description { get; set; }
-    public           string[]    keywords    { get; set; }
-    public           long?        likes       { get; set; }
-    public           long?        dislikes    { get; set; }
-    [Keyword] public string      error_type  { get; set; }
+    public           string   description   { get; set; }
+    public           string[] keywords      { get; set; }
+    public           long?    likes         { get; set; }
+    public           long?    dislikes      { get; set; }
+    [Keyword] public string   error_type    { get; set; }
+    public           long?    duration_secs { get; set; }
   }
 
-  public class MetricStats : Dictionary<string, long> { }
-
   [ElasticsearchType(IdProperty = nameof(caption_id))]
-  [Table(EsIndex.Caption)]
+  [YtEsTableAttribute(Caption)]
   public class EsCaption : VideoCaptionCommon {
     [Keyword] public              string      caption_id     { get; set; }
     public                        long        offset_seconds { get; set; }
@@ -318,37 +346,42 @@ order by updated"; // always order by updated so that if sync fails, we can resu
   }
 
   [ElasticsearchType(IdProperty = nameof(channel_id))]
-  [Table(EsIndex.Channel)]
+  [YtEsTableAttribute(Channel)]
   public class EsChannel : EsChannelTitle, IHasUpdated {
-    [Keyword] public string      main_channel_id                       { get; set; }
-    [Keyword] public string      logo_url                              { get; set; }
-    public           decimal?    relevance                             { get; set; }
-    public           long?       subs                                  { get; set; }
-    public           long?       channel_views                         { get; set; }
-    [Keyword] public string      country                               { get; set; }
-    [Keyword] public string      status_msg                            { get; set; }
-    public           decimal?    channel_video_views                   { get; set; }
-    public           DateTime?   from_date                             { get; set; }
-    public           DateTime?   to_date                               { get; set; }
-    public           long?       day_range                             { get; set; }
-    public           decimal?    channel_lifetime_daily_views          { get; set; }
-    public           decimal?    avg_minutes                           { get; set; }
-    public           decimal?    channel_lifetime_daily_views_relevant { get; set; }
-    public           string      main_channel_title                    { get; set; }
-    public           long?       age                                   { get; set; }
-    [Keyword] public string[]    tags                                  { get; set; }
-    [Keyword] public string      lr                                    { get; set; }
-    [Keyword] public string      ideology                              { get; set; }
-    [Keyword] public string      media                                 { get; set; }
+    [Keyword] public string    main_channel_id                       { get; set; }
+    [Keyword] public string    logo_url                              { get; set; }
+    public           decimal?  relevance                             { get; set; }
+    public           long?     subs                                  { get; set; }
+    public           long?     channel_views                         { get; set; }
+    [Keyword] public string    country                               { get; set; }
+    [Keyword] public string    status_msg                            { get; set; }
+    public           decimal?  channel_video_views                   { get; set; }
+    public           DateTime? from_date                             { get; set; }
+    public           DateTime? to_date                               { get; set; }
+    public           long?     day_range                             { get; set; }
+    public           decimal?  channel_lifetime_daily_views          { get; set; }
+    public           decimal?  avg_minutes                           { get; set; }
+    public           decimal?  channel_lifetime_daily_views_relevant { get; set; }
+    public           string    main_channel_title                    { get; set; }
+    public           long?     age                                   { get; set; }
+    [Keyword] public string[]  tags                                  { get; set; }
+    [Keyword] public string    lr                                    { get; set; }
+    [Keyword] public string    ideology                              { get; set; }
+    [Keyword] public string    media                                 { get; set; }
   }
 
   [ElasticsearchType(IdProperty = nameof(channel_id))]
-  [Table(EsIndex.ChannelTitle)]
+  [YtEsTableAttribute(ChannelTitle)]
   public class EsChannelTitle : IHasUpdated {
     [Keyword] public string   channel_id    { get; set; }
     public           string   channel_title { get; set; }
     public           string   description   { get; set; }
     public           DateTime updated       { get; set; }
+  }
+
+  public class YtEsTableAttribute : Attribute {
+    public YtEsTableAttribute(IndexType index) => Index = index;
+    public IndexType Index { get; set; }
   }
 
   public enum CaptionPart {
