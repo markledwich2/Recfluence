@@ -408,7 +408,7 @@ namespace YtReader.YtWebsite {
       return new RecsAndExtra(extra, recs);
     }
     
-    static readonly Regex WindowObjectsRe = new Regex("^.*window\\[\"(?<name>\\w+)\"\\]\\s*=\\s*(?<json>{.*?});?$",
+    static readonly Regex ClientObjectsRe = new Regex("^.*(window\\[\"(?<name>\\w+)\"\\]|var ytInitialData = )\\s*=\\s*(?<json>{.*?});?$",
       RegexOptions.Compiled | RegexOptions.Multiline);
 
     public Rec[] GetRecs2(HtmlDocument html) {
@@ -441,7 +441,7 @@ namespace YtReader.YtWebsite {
         .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
 
       var windowObjects = scripts
-        .SelectMany(t => WindowObjectsRe.Matches(t))
+        .SelectMany(t => ClientObjectsRe.Matches(t))
         .ToDictionary(m => m.Groups["name"].Value, m => m.Groups["json"].Value);
 
       var initData = windowObjects.TryGet(name);

@@ -61,35 +61,35 @@ namespace YtReader {
       _index = index;
     }
 
-    Task Collect(bool fullLoad, bool disableDiscover, string[] channels, CancellationToken cancel) =>
-      _collector.Collect(Log, forceUpdate: fullLoad, disableDiscover, channels, cancel);
+    Task Collect(bool fullLoad, bool disableDiscover, string[] channels, ILogger logger, CancellationToken cancel) =>
+      _collector.Collect(logger, forceUpdate: fullLoad, disableDiscover, channels, cancel);
 
     [GraphTask(nameof(Collect))]
-    Task Stage(bool fullLoad, string[] tables) =>
-      _warehouse.StageUpdate(Log, fullLoad, tables);
+    Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
+      _warehouse.StageUpdate(logger, fullLoad, tables);
 
     [GraphTask(nameof(Stage))]
-    Task Dataform(bool fullLoad, string[] tables, CancellationToken cancel) =>
-      YtDataform.Update(Log, fullLoad, tables, cancel);
+    Task Dataform(bool fullLoad, string[] tables, ILogger logger, CancellationToken cancel) =>
+      YtDataform.Update(logger, fullLoad, tables, cancel);
 
     [GraphTask(nameof(Dataform))]
-    Task Search(bool fullLoad, string[] optionsSearchIndexes, (string index, string condition)[] conditions, CancellationToken cancel) =>
-      _search.SyncToElastic(Log, fullLoad, indexes: optionsSearchIndexes, conditions, cancel: cancel);
+    Task Search(bool fullLoad, string[] optionsSearchIndexes, (string index, string condition)[] conditions, ILogger logger, CancellationToken cancel) =>
+      _search.SyncToElastic(logger, fullLoad, indexes: optionsSearchIndexes, conditions, cancel: cancel);
 
     [GraphTask(nameof(Dataform))]
-    Task Result(string[] results) =>
-      _results.SaveBlobResults(Log, results);
+    Task Result(string[] results, ILogger logger) =>
+      _results.SaveBlobResults(logger, results);
 
     [GraphTask(nameof(Dataform))]
-    Task Index(string[] tables, CancellationToken cancel) =>
-      _index.Run(tables, Log, cancel);
+    Task Index(string[] tables, ILogger logger, CancellationToken cancel) =>
+      _index.Run(tables, logger, cancel);
 
     [GraphTask(nameof(Collect))]
-    Task Backup() =>
-      _backup.Backup(Log);
+    Task Backup(ILogger logger) =>
+      _backup.Backup(logger);
 
     [GraphTask(nameof(Result), nameof(Collect), nameof(Dataform))]
-    Task UserScrape(bool init, string trial, string[] accounts, CancellationToken cancel) =>
+    Task UserScrape(bool init, string trial, string[] accounts, ILogger logger, CancellationToken cancel) =>
       _userScrape.Run(Log, init, trial, accounts, cancel);
 
     [Pipe]
@@ -101,14 +101,14 @@ namespace YtReader {
       var fullLoad = options.FullLoad;
 
       var actionMethods = TaskGraph.FromMethods(
-        c => Collect(fullLoad, options.DisableChannelDiscover, options.Channels, c),
-        c => Stage(fullLoad, options.Tables),
-        c => Search(options.SearchFullLoad, options.SearchIndexes, options.SearchConditions, c),
-        c => Result(options.Results),
-        c => Index(options.Results, c),
-        c => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, c),
-        c => Dataform(fullLoad, options.Tables, c),
-        c => Backup());
+        (l,c) => Collect(fullLoad, options.DisableChannelDiscover, options.Channels, l, c),
+        (l,c) => Stage(fullLoad, options.Tables, l),
+        (l,c) => Search(options.SearchFullLoad, options.SearchIndexes, options.SearchConditions, l, c),
+        (l,c) => Result(options.Results, l),
+        (l,c) => Index(options.Results, l, c),
+        (l,c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
+        (l,c) => Dataform(fullLoad, options.Tables, l, c),
+        (l,c) => Backup(l));
 
       var actions = options.Actions;
       if (actions?.Any() == true) {

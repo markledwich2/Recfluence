@@ -31,7 +31,8 @@ namespace Tests {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<WebScraper>();
       var extra = await ws.GetRecsAndExtra(new[] {
-        "MbXbFchrTgw",
+        "gRJnTYHID3w" // var ytInitialData instead of window["ytInitialData"]
+        //"MbXbFchrTgw",
         //"rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
         //"-ryPLVEExA0", // private 
         //"Ms9WOSXU5tY", "n_vzBGB3F_Y",

@@ -27,7 +27,7 @@ namespace YtReader.Store {
     }
 
     public async Task Run(IReadOnlyCollection<string> include, ILogger log, CancellationToken cancel = default) {
-      var taskGraph = TaskGraph.FromMethods(c => TopVideos(log), c => TopChannelVideos(log), c => ChannelStats(log));
+      var taskGraph = TaskGraph.FromMethods((l,c) => TopVideos(l), (l,c) => TopChannelVideos(l), (l,c) => ChannelStats(l));
       taskGraph.IgnoreNotIncluded(include);
       var (res, dur) = await taskGraph.Run(parallel: 4, log, cancel).WithDuration();
       var errors = res.Where(r => r.Error).ToArray();

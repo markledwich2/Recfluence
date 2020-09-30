@@ -39,12 +39,16 @@ namespace Mutuo.Etl.Blob {
         }, parallel: 4).ToListAsync();
 
       var toDelete = oldIndex.RunIds
-        .Where(r => DateTime.UtcNow - r.Created > 12.Hours())
+        .OrderByDescending(r => r.Created).Skip(1) // leave latest
+        .Where(r => DateTime.UtcNow - r.Created > 12.Hours()) // 1 older than latest if its old enough
         .Select(r => r.Id).ToArray();
+      
       await toDelete.BlockAction(async id => {
         var deletePath = path.Add(id);
         await Store.List(deletePath).SelectMany().BlockTrans(f => Store.Delete(f.Path, log)).ToListAsync();
       });
+      
+      log.Debug("deleted expired {Files}", toDelete);
       
       var index = new BlobIndexMeta {
         KeyFiles = files.ToArray(),

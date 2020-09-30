@@ -10,6 +10,7 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
+using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Core;
 using SysExtensions;
@@ -101,25 +102,42 @@ namespace YtReader {
       log.Information("Collect - Starting channels update. Limited to ({Included})",
         explicitChannels.Any() ? explicitChannels.Join("|") : "All");
 
-      IKeyedCollection<string, ChannelStored2> existingChannels;
+      
       var toDiscover = new List<(ChannelStored2 c, UpdateChannelType update)>();
       var noExplicit = explicitChannels.None();
-
+      
+      IKeyedCollection<string, (ChannelStored2 channel, bool topViewed)> existingChannels;
       using (var db = await Sf.OpenConnection(log)) {
         // retrieve previous channel state to update with new classibfication (algos and human) and stats form the API
-        // spread out channel updates over the week
-        existingChannels = (await db.Query<string>("channels - previous", $@"with latest as (
+        existingChannels = (await db.Query<(string j, bool topViewed)>("channels - previous", $@"with
+  -- daily views for the 30d most recent views
+  daily_views as (
+    select channel_id, sum(views) recent_views
+    from video_stats_daily d
+    where date>=dateadd(days, -60, current_date)
+    group by 1
+  )
+   , top_channels as (
+  select channel_id
+  from daily_views
+    qualify percent_rank() over (order by recent_views desc)<0.3
+)
+   , latest as (
   select v {(noExplicit ? "" : $", v:ChannelId::string in ({SqlList(explicitChannels)}) as included")}
   from channel_stage -- query from stage because it can be deserialized without modification
-    {(noExplicit ? "" : "where included")}
+       {(noExplicit ? "" : "where included")}
     qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc)=1
 )
-select v
-from latest
-       inner join channel_latest c on c.channel_id=v:ChannelId
-where meets_review_criteria and meets_sub_criteria {(noExplicit ? "" : " or included")}"))
-          .Select(s => s.ToObject<ChannelStored2>(Store.Channels.JCfg)).ToKeyedCollection(c => c.ChannelId);
-
+   , accepted_or_explicit as (
+  select v, exists(select * from top_channels d where v:ChannelId::string = d.channel_id) top_viewed
+  from latest l
+         inner join channel_accepted c on c.channel_id=v:ChannelId
+  {(noExplicit ? "" : "where included")}
+)
+select * from accepted_or_explicit"))
+          .Select(r => (channel:r.j.ToObject<ChannelStored2>(Store.Channels.JCfg), r.topViewed))
+          .ToKeyedCollection(r => r.channel.ChannelId);
+    
         if (limitChannels != null) // discover channels specified in limit if they aren't in our dataset
           toDiscover.AddRange(limitChannels.Where(c => !existingChannels.ContainsKey(c))
             .Select(c => (new ChannelStored2 {ChannelId = c}, Discover)));
@@ -129,17 +147,17 @@ where meets_review_criteria and meets_sub_criteria {(noExplicit ? "" : " or incl
 
       // perform full update on channels with a last full update older than 90 days (max X at a time because of quota limit).
       var fullUpdate = existingChannels
-        .Where(c => c.Updated == default || c.Updated - c.LastFullUpdate > 90.Days())
-        .Randomize().Take(50)
-        .Select(c => c.ChannelId).ToHashSet();
+        .Where(c => c.channel!.Updated == default || c.channel.Updated - c.channel.LastFullUpdate > 90.Days())
+        .Randomize().Take(200)
+        .Select(c => c.channel!.ChannelId).ToHashSet();
 
-      UpdateChannelType GetUpdateType(ChannelStored2 c) {
+      UpdateChannelType GetUpdateType(ChannelStored2 c, bool topViewed) {
         if (fullUpdate.Contains(c.ChannelId)) return Full;
-        return ChannelInTodaysUpdate(c, cycleDays: 7) ? Standard : None;
+        return topViewed || ChannelInTodaysUpdate(c, cycleDays: 7) ? Standard : None;
       }
 
       var channels = existingChannels
-        .Select(c => (c, update: GetUpdateType(c)))
+        .Select(c => (c:c.channel, update: GetUpdateType(c.channel, c.topViewed)))
         .Concat(toDiscover).ToArray();
 
       var (updatedChannels, duration) = await channels.Where(c => c.update != None)
@@ -154,8 +172,8 @@ where meets_review_criteria and meets_sub_criteria {(noExplicit ? "" : " or incl
         updatedChannels.Count, channels.Length, updatedChannels.Count(c => c.update == Discover), updatedChannels.Count(c => c.update == Full),
         duration.HumanizeShort());
 
-      var updatedIds = updatedChannels.Select(c => c.c.ChannelId).ToHashSet();
-      var res = updatedChannels.Concat(channels.Where(c => !updatedIds.Contains(c.c.ChannelId))).ToArray();
+      var updatedIds = updatedChannels.Select(c => c.c!.ChannelId).ToHashSet();
+      var res = updatedChannels.Concat(channels.Where(c => !updatedIds.Contains(c.c!.ChannelId))).ToArray();
       return res;
     }
 

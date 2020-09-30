@@ -69,9 +69,9 @@ namespace Tests {
       log.Information("hey there");
 
       var res = await TaskGraph.FromMethods(
-          c => Shorten(log),
-          c => Generate(log, true),
-          c => NotDependent(log))
+          (l,c) => Shorten(l),
+          (l,c) => Generate(l, true),
+          (l,c) => NotDependent(l))
         .Run(parallel: 2, log, CancellationToken.None);
 
       var resByName = res.ToKeyedCollection(r => r.Name);

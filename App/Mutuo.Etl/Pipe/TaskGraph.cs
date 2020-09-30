@@ -17,16 +17,16 @@ using static Mutuo.Etl.Pipe.GraphTaskStatus;
 
 namespace Mutuo.Etl.Pipe {
   public class GraphTask {
-    public GraphTask(string name, string[] dependsOn, Func<CancellationToken, Task> run) {
+    public GraphTask(string name, string[] dependsOn, Func<ILogger, CancellationToken, Task> run) {
       Run = run;
       Name = name;
       DependsOn = dependsOn;
     }
 
-    public Func<CancellationToken, Task> Run       { get; set; }
-    public string                        Name      { get; set; }
-    public string[]                      DependsOn { get; set; }
-    public GraphTaskStatus               Status    { get; set; }
+    public Func<ILogger, CancellationToken, Task> Run       { get; set; }
+    public string                                 Name      { get; set; }
+    public string[]                               DependsOn { get; set; }
+    public GraphTaskStatus                        Status    { get; set; }
   }
 
   public enum GraphTaskStatus {
@@ -61,10 +61,10 @@ namespace Mutuo.Etl.Pipe {
 
     public TaskGraph(IEnumerable<GraphTask> jobs) => _graph = CreateGraph(jobs.ToArray());
 
-    public static TaskGraph FromMethods(params Expression<Func<CancellationToken, Task>>[] methods) =>
+    public static TaskGraph FromMethods(params Expression<Func<ILogger, CancellationToken, Task>>[] methods) =>
       new TaskGraph(methods.Select(t => GraphTask(t)).ToArray());
 
-    public static GraphTask GraphTask(Expression<Func<CancellationToken, Task>> expression, params string[] dependsOn) {
+    public static GraphTask GraphTask(Expression<Func<ILogger, CancellationToken, Task>> expression, params string[] dependsOn) {
       var runTask = expression.Compile();
       var m = expression.Body as MethodCallExpression ?? throw new InvalidOperationException("expected an expression that calls a method");
       var attribute = m.Method.GetCustomAttribute<GraphTaskAttribute>();
@@ -138,7 +138,9 @@ namespace Mutuo.Etl.Pipe {
             return Result();
           }
           task.Status = Running;
-          await task.Run(cancel);
+          log = log.ForContext("Task", task.Name);
+          
+          await task.Run(log, cancel);
           if (cancel.IsCancellationRequested)
             task.Status = Cancelled;
           else
