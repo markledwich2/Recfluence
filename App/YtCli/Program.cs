@@ -232,17 +232,17 @@ namespace YtCli {
     [CommandOption("us-trial", Description = "Run userscrape with an existing trial")]
     public string UserScrapeTrial { get; set; }
 
-    [CommandOption("us-accounts", Description = "Run userscrape with a list of | separated accounts")]
+    [CommandOption("us-account", Description = "Run userscrape with a list of | separated accounts")]
     public string UserScrapeAccounts { get; set; }
 
     [CommandOption("disable-discover", Description = "when collecting, don't go and find new channels to classify")]
     public bool DisableChannelDiscover { get; set; }
 
-    [CommandOption("search-conditions", Description = @"filter for tables when updating search indexes (channel|video|caption). 
+    [CommandOption("search-condition", Description = @"filter for tables when updating search indexes (channel|video|caption). 
 (e.g. 'channel:channel_id=2|video:video_field is null:caption:false' ) ")]
     public string SearchConditions { get; set; }
 
-    [CommandOption("search-indexes", Description = @"| separated list of indexes to update. leave empty for all indexes")]
+    [CommandOption("search-index", Description = @"| separated list of indexes to update. leave empty for all indexes")]
     public string SearchIndexes { get; set; }
 
     [CommandOption("search-full", Description = "when true, search will be loaded fully")]

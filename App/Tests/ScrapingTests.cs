@@ -2,8 +2,10 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
+using LtGt;
 using NUnit.Framework;
 using Serilog;
+using SysExtensions.IO;
 using SysExtensions.Threading;
 using YtReader;
 using YtReader.YtApi;
@@ -31,14 +33,22 @@ namespace Tests {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<WebScraper>();
       var extra = await ws.GetRecsAndExtra(new[] {
-        "gRJnTYHID3w" // var ytInitialData instead of window["ytInitialData"]
-        //"MbXbFchrTgw",
-        //"rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
+        "tdUxfq6DYXY", // when retreived was var ytInitialData instead of window["ytInitialData"]
+        "gRJnTYHID3w", // var ytInitialData instead of window["ytInitialData"]
+        "MbXbFchrTgw",
+        "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
         //"-ryPLVEExA0", // private 
-        //"Ms9WOSXU5tY", "n_vzBGB3F_Y",
-        //"xxQOtOCbASs", // tall
-        //"DLq1DUcMh1Q"
       }, ctx.Log);
+    }
+
+    [Test]
+    public static async Task WatchPageParsing() {
+      using var x = await TextCtx();
+      var docs = Setup.SolutionDir.Combine("Tests", "WatchPageHtml")
+        .Files("*.html")
+        .Select(f => Html.ParseDocument(f.OpenText().ReadToEnd()));
+      
+      var clientObjects = docs.Select(WebScraper.GetRecs2).ToList();
     }
     
     [Test]

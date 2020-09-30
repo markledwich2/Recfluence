@@ -408,10 +408,7 @@ namespace YtReader.YtWebsite {
       return new RecsAndExtra(extra, recs);
     }
     
-    static readonly Regex ClientObjectsRe = new Regex("^.*(window\\[\"(?<name>\\w+)\"\\]|var ytInitialData = )\\s*=\\s*(?<json>{.*?});?$",
-      RegexOptions.Compiled | RegexOptions.Multiline);
-
-    public Rec[] GetRecs2(HtmlDocument html) {
+    public static Rec[] GetRecs2(HtmlDocument html) {
       var jInit = GetClientObjectFromWatchPage(html) ?? throw new InvalidOperationException("can't find ytInitialData data script to get recs from");
       var resultsSel = "$.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results";
       var jResults = (JArray) jInit.SelectToken(resultsSel) ?? throw new InvalidOperationException($"can't find {resultsSel}");
@@ -424,7 +421,7 @@ namespace YtReader.YtWebsite {
           return new Rec {
             ToVideoId = j.Value<string>("videoId"),
             ToVideoTitle = j["title"]?.Value<string>("simpleText") ?? j.SelectToken("title.runs[0].text")?.Value<string>(),
-            ToChannelId = j.Value<string>("channelId"),
+            ToChannelId = j.Value<string>("channelId") ?? j.SelectToken("longBylineText.runs[0].navigationEndpoint.browseEndpoint.browseId")?.Value<string>(),
             ToChannelTitle = j.SelectToken("longBylineText.runs[0].text")?.Value<string>(),
             Rank = i + 1,
             Source = ScrapeSource.Web,
@@ -435,14 +432,17 @@ namespace YtReader.YtWebsite {
         }).ToArray();
       return recs;
     }
-
-    static JObject GetClientObjectFromWatchPage(HtmlDocument html, string name = "ytInitialData") {
+    
+    static readonly Regex ClientObjectsRe = new Regex(@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?})\s*;",
+      RegexOptions.Compiled | RegexOptions.Singleline);
+    
+    public static JObject GetClientObjectFromWatchPage(HtmlDocument html, string name = "ytInitialData") {
       var scripts = html.QueryElements("script")
         .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
 
       var windowObjects = scripts
         .SelectMany(t => ClientObjectsRe.Matches(t))
-        .ToDictionary(m => m.Groups["name"].Value, m => m.Groups["json"].Value);
+        .ToDictionary(m => m.Groups["window"].Value.HasValue() ? m.Groups["window"].Value : m.Groups["var"].Value, m => m.Groups["json"].Value);
 
       var initData = windowObjects.TryGet(name);
       if (initData == null) return null;

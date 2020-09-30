@@ -350,7 +350,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
   public class EsChannel : EsChannelTitle, IHasUpdated {
     [Keyword] public string    main_channel_id                       { get; set; }
     [Keyword] public string    logo_url                              { get; set; }
-    public           decimal?  relevance                             { get; set; }
+    public           double?  relevance                             { get; set; }
     public           long?     subs                                  { get; set; }
     public           long?     channel_views                         { get; set; }
     [Keyword] public string    country                               { get; set; }
