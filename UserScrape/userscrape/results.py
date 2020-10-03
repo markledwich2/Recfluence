@@ -1,6 +1,6 @@
 
 
-from typing import Any, Iterable, Iterator, List
+from typing import Any, Iterable, Iterator, List, Optional
 from pathlib import Path, PurePath, PurePosixPath
 import tempfile
 import json
@@ -15,7 +15,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 @dataclass
 class TrialCfg(JsonSchemaMixin):
     trial_id: str
-    accounts: List[str]
+    accounts: Optional[List[str]]
 
 
 def load_incomplete_trial(trial_id: str, store: BlobStore, log: Logger) -> TrialCfg:
