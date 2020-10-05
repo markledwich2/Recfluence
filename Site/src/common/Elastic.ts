@@ -21,10 +21,10 @@ export function esCfgFromEnv(): EsCfg {
     creds: process.env.ES_CREDS,
     prefix: process.env.ES_PREFIX,
     indexes: {
-      caption: `${prefix}caption`,
-      channel: `${prefix}channel`,
-      channelTitle: `${prefix}channel_title`,
-      video: `${prefix}video`
+      caption: `${prefix}caption-2`,
+      channel: `${prefix}channel-2`,
+      channelTitle: `${prefix}channel_title-2`,
+      video: `${prefix}video-2`
     }
   }
 }
