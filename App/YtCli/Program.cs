@@ -245,9 +245,6 @@ namespace YtCli {
     [CommandOption("search-index", Description = @"| separated list of indexes to update. leave empty for all indexes")]
     public string SearchIndexes { get; set; }
 
-    [CommandOption("search-full", Description = "when true, search will be loaded fully")]
-    public bool SearchFullLoad { get; set; }
-
     public UpdateCmd(YtUpdater updater, IPipeCtx pipeCtx, ILogger log) {
       Updater = updater;
       PipeCtx = pipeCtx;
@@ -268,7 +265,6 @@ namespace YtCli {
           return (index, condition);
         }).ToArray(),
         SearchIndexes = SearchIndexes?.UnJoin('|'),
-        SearchFullLoad = SearchFullLoad,
         UserScrapeInit = UserScrapeInit,
         UserScrapeTrial = UserScrapeTrial,
         UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|')

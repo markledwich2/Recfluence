@@ -101,8 +101,8 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
       if (newIndex != null) {
         if (existingIndex != null) {
           (await Es.Indices.BulkAliasAsync(b =>
-            b.Remove(r => r.Index(existingIndex).Alias(alias))
-              .Add(a => a.Index(newIndex).Alias(alias))))
+              b.Remove(r => r.Index(existingIndex).Alias(alias))
+                .Add(a => a.Index(newIndex).Alias(alias))))
             .EnsureValid("switching index aliases");
           (await Es.Indices.DeleteAsync(existingIndex, ct: cancel)).EnsureValid("deleting index");
           log.Information("Search - switched {Old} with {New} index ({Alias})", existingIndex, newIndex, alias);
@@ -153,6 +153,7 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
       main_channel_title = c.MAIN_CHANNEL_TITLE,
       media = c.MEDIA,
       relevance = c.RELEVANCE,
+      reviews_human = c.REVIEWS_HUMAN,
       status_msg = c.STATUS_MSG,
       subs = c.SUBS,
       tags = c.TAGS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(c.TAGS),
@@ -198,12 +199,12 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     }
 
     async Task<int> BatchToEs<T>(string indexName, ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy, CancellationToken cancel)
-      where T : class =>  (await enumerable
-        .Batch(Cfg.BatchSize).WithIndex()
-        .BlockFunc(b => BatchToEs(indexName, b.item, b.index, esPolicy, log),
-          parallel: Cfg.Parallel, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
-          capacity: Cfg.Parallel,
-          cancel: cancel)).Sum();
+      where T : class => (await enumerable
+      .Batch(Cfg.BatchSize).WithIndex()
+      .BlockFunc(b => BatchToEs(indexName, b.item, b.index, esPolicy, log),
+        parallel: Cfg.Parallel, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
+        capacity: Cfg.Parallel,
+        cancel: cancel)).Sum();
 
     async Task<int> BatchToEs<T>(string indexName, IReadOnlyCollection<T> items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {
       var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(items, indexName));
@@ -350,7 +351,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
   public class EsChannel : EsChannelTitle, IHasUpdated {
     [Keyword] public string    main_channel_id                       { get; set; }
     [Keyword] public string    logo_url                              { get; set; }
-    public           double?  relevance                             { get; set; }
+    public           double?   relevance                             { get; set; }
     public           long?     subs                                  { get; set; }
     public           long?     channel_views                         { get; set; }
     [Keyword] public string    country                               { get; set; }
@@ -368,6 +369,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     [Keyword] public string    lr                                    { get; set; }
     [Keyword] public string    ideology                              { get; set; }
     [Keyword] public string    media                                 { get; set; }
+    public           long?     reviews_human                         { get; set; }
   }
 
   [ElasticsearchType(IdProperty = nameof(channel_id))]

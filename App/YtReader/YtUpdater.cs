@@ -27,7 +27,6 @@ namespace YtReader {
     public (string index, string condition)[] SearchConditions       { get; set; }
     public string[]                           SearchIndexes          { get; set; }
     public string[]                           UserScrapeAccounts     { get; set; }
-    public bool                               SearchFullLoad         { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -103,7 +102,7 @@ namespace YtReader {
       var actionMethods = TaskGraph.FromMethods(
         (l,c) => Collect(fullLoad, options.DisableChannelDiscover, options.Channels, l, c),
         (l,c) => Stage(fullLoad, options.Tables, l),
-        (l,c) => Search(options.SearchFullLoad, options.SearchIndexes, options.SearchConditions, l, c),
+        (l,c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
         (l,c) => Result(options.Results, l),
         (l,c) => Index(options.Results, l, c),
         (l,c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),

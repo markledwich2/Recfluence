@@ -126,64 +126,6 @@ namespace YtFunctions {
         return (null, new HttpResponseMessage(HttpStatusCode.Unauthorized) {Content = new StringContent("email must be provided")});
       return (email, null);
     }
-
-    static readonly SHA256 Sha = SHA256.Create();
-
-    [FunctionName("video_views")]
-    public async Task<HttpResponseMessage> VideoViews([HttpTrigger(AuthorizationLevel.Anonymous, "get")]
-      HttpRequest req, ExecutionContext exec) =>
-      await Ctx.Run(exec, async ctx => {
-        var p = new {
-          channelId = req.Query["channelId"].FirstOrDefault(),
-          from = req.Query["from"].FirstOrDefault(),
-          to = req.Query["to"].FirstOrDefault(),
-          top = req.Query["top"].FirstOrDefault()?.ParseInt() ?? 80
-        };
-
-        var conditions = new List<string>();
-
-        void Condition(object value, string expression) {
-          if (value == null) return;
-          conditions.Add(expression);
-        }
-
-        Condition(p.channelId, "channel_id = @channelId");
-        Condition(p.from, "date >= @from");
-        Condition(p.to, "date <= @to");
-
-        var sql = @$"select top (@top) video_id, sum(views) views, sum(watch_hours) watch_hours
-from video_stats {(conditions.Any() ? $"\n where {conditions.Join(" and ")}" : "")}
-group by video_id
-order by views desc
-";
-
-        var store = ctx.Resolve<YtStores>().Store(DataStoreType.Results);
-        var cacheHash = Sha.ComputeHash((sql + JObject.FromObject(p)).ToBytesUtf8()).ToBase64String().Replace(oldChar: '/', newChar: '_');
-        var path = StringPath.FromString($"cache/{cacheHash}.jsonl.gz");
-
-        var noCache = req.Headers["Cache-Control"].Contains("no-cache");
-        var (file, dur) = noCache ? default : await store.Info(path).WithDuration();
-        ctx.Log.Debug("checking cache took {Duration}", dur.HumanizeShort());
-        if (file == default || DateTimeOffset.UtcNow - file.Modified!.Value > 24.Hours()) {
-          var sw = Stopwatch.StartNew();
-          var sqlServerCfg = ctx.Resolve<SqlServerCfg>();
-          using (var conn = await sqlServerCfg.OpenConnection(ctx.Log)) {
-            ctx.Log.Debug("opening connection took {Duration}", sw.Elapsed.HumanizeShort());
-            var rows = await conn.Query<dynamic>("video_views", sql, p, timeout: 10.Minutes());
-            using var stream = await rows.ToJsonlGzStream();
-            await store.Save(path, stream);
-            ctx.Log.Debug("video_views - {Query} returned {Rows} took {Duration}", req.QueryString, rows.Count, sw.Elapsed.HumanizeShort());
-          }
-        }
-        else {
-          ctx.Log.Debug("video_views - cache hit for: {Query}", req.QueryString.ToString());
-        }
-
-        var res = new DataResult {
-          JsonlUrl = store.Url(path).ToString()
-        };
-        return res.JsonResponse();
-      });
   }
 
   public class DataResult {
