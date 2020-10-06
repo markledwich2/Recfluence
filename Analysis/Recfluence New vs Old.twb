@@ -1,0 +1,1017 @@
+<?xml version='1.0' encoding='utf-8' ?>
+
+<!-- build 20203.20.0801.1333                               -->
+<workbook original-version='18.1' source-build='2020.3.0 (20203.20.0801.1333)' source-platform='win' version='18.1' xml:base='https://public.tableau.com' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <document-format-change-manifest>
+    <_.fcp.MarkAnimation.true...MarkAnimation />
+    <_.fcp.ObjectModelEncapsulateLegacy.true...ObjectModelEncapsulateLegacy />
+    <_.fcp.ObjectModelExtractV2.true...ObjectModelExtractV2 />
+    <_.fcp.ObjectModelTableType.true...ObjectModelTableType />
+    <_.fcp.SchemaViewerObjectModel.true...SchemaViewerObjectModel />
+    <SheetIdentifierTracking />
+    <SortTagCleanup />
+    <WindowsPersistSimpleIdentifiers />
+  </document-format-change-manifest>
+  <repository-location id='RecfluenceNewvsOld' path='/workbooks' revision='1.0' />
+  <preferences>
+    <preference name='ui.encoding.shelf.height' value='24' />
+    <preference name='ui.shelf.height' value='26' />
+  </preferences>
+  <datasources>
+    <datasource caption='Tag Stats' inline='true' name='federated.10jezks1lcr0bp13evc8u1emoxhl' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='ql98184.west-us-2.azure.snowflakecomputing.com' name='snowflake.1t146fr1lh5ojv132gy8107gzan6'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='ql98184.west-us-2.azure.snowflakecomputing.com' service='' username='mledwich' warehouse='' workgroup-auth-mode='as-is' />
+          </named-connection>
+        </named-connections>
+        <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.1t146fr1lh5ojv132gy8107gzan6' name='Custom SQL Query' type='text'><![CDATA[with recfluence_reviews as (
+  select channel_id
+  from review
+  where updated<<'2020-07-02'
+    qualify row_number() over (partition by channel_id order by updated desc)=1
+)
+   , watch_time as (
+  select channel_id, sum(watch_hours) watch_hours
+  from video_stats_daily
+  group by 1
+)
+select c.channel_id
+     , channel_title
+     , t.value::string as tag
+     , channel_views
+     , channel_lifetime_daily_views
+     , channel_video_views
+     , reviews_all
+     , watch_hours
+     , subs
+      , exists(select * from recfluence_reviews r where r.channel_id = c.channel_id) recfluence
+from channel_accepted c
+       left join watch_time w on w.channel_id=c.channel_id
+   , table (flatten(tags)) t
+where tag not in ('AntiWhiteness','Revolutionary','Provocateur','Black')]]></_.fcp.ObjectModelEncapsulateLegacy.false...relation>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...relation connection='snowflake.1t146fr1lh5ojv132gy8107gzan6' name='Custom SQL Query' type='text'><![CDATA[with recfluence_reviews as (
+  select channel_id
+  from review
+  where updated<<'2020-07-02'
+    qualify row_number() over (partition by channel_id order by updated desc)=1
+)
+   , watch_time as (
+  select channel_id, sum(watch_hours) watch_hours
+  from video_stats_daily
+  group by 1
+)
+select c.channel_id
+     , channel_title
+     , t.value::string as tag
+     , channel_views
+     , channel_lifetime_daily_views
+     , channel_video_views
+     , reviews_all
+     , watch_hours
+     , subs
+      , exists(select * from recfluence_reviews r where r.channel_id = c.channel_id) recfluence
+from channel_accepted c
+       left join watch_time w on w.channel_id=c.channel_id
+   , table (flatten(tags)) t
+where tag not in ('AntiWhiteness','Revolutionary','Provocateur','Black')]]></_.fcp.ObjectModelEncapsulateLegacy.true...relation>
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_ID]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_ID</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_TITLE]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_TITLE</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TAG</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TAG]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>TAG</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[CHANNEL_VIEWS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_VIEWS</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>6</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_VIDEO_VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[CHANNEL_VIDEO_VIEWS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_VIDEO_VIEWS</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>REVIEWS_ALL</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[REVIEWS_ALL]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>REVIEWS_ALL</remote-alias>
+            <ordinal>7</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>18</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>WATCH_HOURS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[WATCH_HOURS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>WATCH_HOURS</remote-alias>
+            <ordinal>8</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>SUBS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[SUBS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>SUBS</remote-alias>
+            <ordinal>9</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>RECFLUENCE</remote-name>
+            <remote-type>11</remote-type>
+            <local-name>[RECFLUENCE]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>RECFLUENCE</remote-alias>
+            <ordinal>10</ordinal>
+            <local-type>boolean</local-type>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_BIT&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_BIT&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='# Channels - Recfluence' datatype='integer' name='[# Channels (copy)_1920503798335111177]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='COUNTD(iif([RECFLUENCE] , [CHANNEL_ID], null))' />
+      </column>
+      <column datatype='string' name='[:Measure Names]' role='dimension' type='nominal'>
+        <aliases>
+          <alias key='&quot;[federated.10jezks1lcr0bp13evc8u1emoxhl].[pcto:sum:Calculation_1920503798331392003:qk:4]&quot;' value='Recfluence' />
+          <alias key='&quot;[federated.10jezks1lcr0bp13evc8u1emoxhl].[pcto:sum:Channel Views (copy)_1920503798332043268:qk:4]&quot;' value='Clark &amp; Zaitsev' />
+        </aliases>
+      </column>
+      <column caption='ChannelID' datatype='string' name='[CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='Lifetime Daily Views' datatype='real' name='[CHANNEL_LIFETIME_DAILY_VIEWS]' role='measure' type='quantitative' />
+      <column caption='Channel' datatype='string' name='[CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='Channel Video Views' datatype='real' name='[CHANNEL_VIDEO_VIEWS]' role='measure' type='quantitative' />
+      <column caption='Channel Views' datatype='real' name='[CHANNEL_VIEWS]' role='measure' type='quantitative' />
+      <column caption='Sub Bucket' datatype='string' name='[Calculation_1920503798261891072]' role='dimension' type='nominal'>
+        <calculation class='tableau' formula='IIF([SUBS] &gt; 500000, &apos;500k+&apos;, &apos;&lt;500k&apos;)' />
+      </column>
+      <column aggregation='Avg' caption='Views Per Sub' datatype='real' name='[Calculation_1920503798288273409]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='[CHANNEL_VIEWS]/[SUBS]' />
+      </column>
+      <column aggregation='Avg' caption='Watch Hours Per Sub' datatype='real' name='[Calculation_1920503798291746818]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='[WATCH_HOURS]/[SUBS]' />
+      </column>
+      <column caption='Views - Recfluence' datatype='real' name='[Calculation_1920503798331392003]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='iif([RECFLUENCE], [CHANNEL_VIEWS], 0)' />
+      </column>
+      <column caption='# Channels' datatype='integer' name='[Calculation_2109373497335660546]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='COUNTD([CHANNEL_ID])' />
+      </column>
+      <column caption='Views - Clark' datatype='real' name='[Channel Views (copy)_1920503798332043268]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='[CHANNEL_VIEWS]' />
+      </column>
+      <column caption='Recfluence' datatype='boolean' name='[RECFLUENCE]' role='dimension' type='nominal'>
+        <aliases>
+          <alias key='false' value='Clark' />
+          <alias key='true' value='Recfluence' />
+        </aliases>
+      </column>
+      <column caption='Reviews All' datatype='integer' name='[REVIEWS_ALL]' role='measure' type='quantitative' />
+      <column caption='Subs' datatype='real' name='[SUBS]' role='measure' type='quantitative' />
+      <column caption='Tag' datatype='string' name='[TAG]' role='dimension' type='nominal' />
+      <column caption='Watch Hours' datatype='real' name='[WATCH_HOURS]' role='measure' type='quantitative' />
+      <_.fcp.ObjectModelTableType.true...column caption='Custom SQL Query' datatype='table' name='[__tableau_internal_object_id__].[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]' role='measure' type='quantitative' />
+      <column-instance column='[TAG]' derivation='None' name='[none:TAG:nk]' pivot='key' type='nominal' />
+      <column-instance column='[Calculation_1920503798331392003]' derivation='Sum' name='[pcto:sum:Calculation_1920503798331392003:qk:4]' pivot='key' type='quantitative'>
+        <table-calc ordering-type='Field' type='PctTotal'>
+          <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[TAG]' />
+          <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[Calculation_1920503798261891072]' />
+        </table-calc>
+      </column-instance>
+      <column-instance column='[Channel Views (copy)_1920503798332043268]' derivation='Sum' name='[pcto:sum:Channel Views (copy)_1920503798332043268:qk:4]' pivot='key' type='quantitative'>
+        <table-calc ordering-type='Field' type='PctTotal'>
+          <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[TAG]' />
+          <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[Calculation_1920503798261891072]' />
+        </table-calc>
+      </column-instance>
+      <extract _.fcp.ObjectModelExtractV2.true...object-id='' count='-1' enabled='true' units='records'>
+        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks2/Analysis/.Data/Tag Stats2.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='10/06/2020 12:21:51 AM' username='tableau_internal_user'>
+          <_.fcp.ObjectModelEncapsulateLegacy.false...relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <_.fcp.ObjectModelEncapsulateLegacy.true...relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <refresh>
+            <refresh-event add-from-file-path='Tag Stats' increment-value='%null%' refresh-type='create' rows-inserted='10804' timestamp-start='2020-10-06 00:21:51.626' />
+          </refresh>
+          <metadata-records>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[CHANNEL_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_ID</remote-alias>
+              <ordinal>0</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>4166</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[CHANNEL_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_TITLE</remote-alias>
+              <ordinal>1</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>4166</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TAG</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TAG]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TAG</remote-alias>
+              <ordinal>2</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>26</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_VIEWS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[CHANNEL_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_VIEWS</remote-alias>
+              <ordinal>3</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>4050</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS</remote-alias>
+              <ordinal>4</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>3684</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>CHANNEL_VIDEO_VIEWS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[CHANNEL_VIDEO_VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>CHANNEL_VIDEO_VIEWS</remote-alias>
+              <ordinal>5</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>3684</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>REVIEWS_ALL</remote-name>
+              <remote-type>20</remote-type>
+              <local-name>[REVIEWS_ALL]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>REVIEWS_ALL</remote-alias>
+              <ordinal>6</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>integer</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>5</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>WATCH_HOURS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[WATCH_HOURS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>WATCH_HOURS</remote-alias>
+              <ordinal>7</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>3719</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>SUBS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[SUBS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>SUBS</remote-alias>
+              <ordinal>8</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>1268</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>RECFLUENCE</remote-name>
+              <remote-type>11</remote-type>
+              <local-name>[RECFLUENCE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>RECFLUENCE</remote-alias>
+              <ordinal>9</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>boolean</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>2</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+          </metadata-records>
+        </connection>
+      </extract>
+      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' _.fcp.SchemaViewerObjectModel.true...common-percentage='1' _.fcp.SchemaViewerObjectModel.true...user-set-layout-v2='true' dim-ordering='alphabetic' measure-ordering='alphabetic' show-aliased-fields='true' show-structure='true' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[none:TAG:nk]' palette='superfishel_stone_10_0' type='palette'>
+            <map to='#499894'>
+              <bucket>&quot;Mainstream News&quot;</bucket>
+            </map>
+            <map to='#4e79a7'>
+              <bucket>&quot;AntiSJW&quot;</bucket>
+            </map>
+            <map to='#4e79a7'>
+              <bucket>&quot;StateFunded&quot;</bucket>
+            </map>
+            <map to='#59a14f'>
+              <bucket>&quot;Educational&quot;</bucket>
+            </map>
+            <map to='#6388b4'>
+              <bucket>&quot;OrganizedReligion&quot;</bucket>
+            </map>
+            <map to='#6388b4'>
+              <bucket>&quot;PartisanLeft&quot;</bucket>
+            </map>
+            <map to='#86bcb6'>
+              <bucket>&quot;MissingLinkMedia&quot;</bucket>
+            </map>
+            <map to='#8cd17d'>
+              <bucket>&quot;LateNightTalkShow&quot;</bucket>
+            </map>
+            <map to='#9d7660'>
+              <bucket>&quot;Socialist&quot;</bucket>
+            </map>
+            <map to='#a0cbe8'>
+              <bucket>&quot;AntiTheist&quot;</bucket>
+            </map>
+            <map to='#a0cbe8'>
+              <bucket>&quot;WhiteIdentitarian&quot;</bucket>
+            </map>
+            <map to='#b07aa1'>
+              <bucket>&quot;ReligiousConservative&quot;</bucket>
+            </map>
+            <map to='#b6992d'>
+              <bucket>&quot;LGBT&quot;</bucket>
+            </map>
+            <map to='#bab0ac'>
+              <bucket>&quot;Politician&quot;</bucket>
+            </map>
+            <map to='#cf3e53'>
+              <bucket>&quot;PartisanRight&quot;</bucket>
+            </map>
+            <map to='#d37295'>
+              <bucket>&quot;Provocateur&quot;</bucket>
+            </map>
+            <map to='#d4a6c8'>
+              <bucket>&quot;Revolutionary&quot;</bucket>
+            </map>
+            <map to='#d7b5a6'>
+              <bucket>&quot;SocialJustice&quot;</bucket>
+            </map>
+            <map to='#e15759'>
+              <bucket>&quot;MRA&quot;</bucket>
+            </map>
+            <map to='#f1ce63'>
+              <bucket>&quot;Libertarian&quot;</bucket>
+            </map>
+            <map to='#f28e2b'>
+              <bucket>&quot;Black&quot;</bucket>
+            </map>
+            <map to='#fabfd2'>
+              <bucket>&quot;QAnon&quot;</bucket>
+            </map>
+            <map to='#ffbe7d'>
+              <bucket>&quot;Conspiracy&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+        <objects>
+          <object caption='Custom SQL Query' id='CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF'>
+            <properties context=''>
+              <relation connection='snowflake.1t146fr1lh5ojv132gy8107gzan6' name='Custom SQL Query' type='text'><![CDATA[with recfluence_reviews as (
+  select channel_id
+  from review
+  where updated<<'2020-07-02'
+    qualify row_number() over (partition by channel_id order by updated desc)=1
+)
+   , watch_time as (
+  select channel_id, sum(watch_hours) watch_hours
+  from video_stats_daily
+  group by 1
+)
+select c.channel_id
+     , channel_title
+     , t.value::string as tag
+     , channel_views
+     , channel_lifetime_daily_views
+     , channel_video_views
+     , reviews_all
+     , watch_hours
+     , subs
+      , exists(select * from recfluence_reviews r where r.channel_id = c.channel_id) recfluence
+from channel_accepted c
+       left join watch_time w on w.channel_id=c.channel_id
+   , table (flatten(tags)) t
+where tag not in ('AntiWhiteness','Revolutionary','Provocateur','Black')]]></relation>
+            </properties>
+            <properties context='extract'>
+              <relation name='Extract' table='[Extract].[Extract]' type='table' />
+            </properties>
+          </object>
+        </objects>
+      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    </datasource>
+  </datasources>
+  <actions>
+    <action caption='Open' name='[Action1]'>
+      <source datasource='federated.10jezks1lcr0bp13evc8u1emoxhl' type='datasource' />
+      <link caption='' expression='https://www.youtube.com/channel/&lt;[CHANNEL_ID]&gt;' />
+    </action>
+    <datasources>
+      <datasource caption='Tag Stats' name='federated.10jezks1lcr0bp13evc8u1emoxhl' />
+    </datasources>
+    <datasource-dependencies datasource='federated.10jezks1lcr0bp13evc8u1emoxhl'>
+      <column caption='ChannelID' datatype='string' name='[CHANNEL_ID]' role='dimension' type='nominal' />
+    </datasource-dependencies>
+  </actions>
+  <worksheets>
+    <worksheet name='New vs Old'>
+      <layout-options>
+        <title>
+          <formatted-text>
+            <run>Recfluence New vs Old</run>
+          </formatted-text>
+        </title>
+      </layout-options>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='Tag Stats' name='federated.10jezks1lcr0bp13evc8u1emoxhl' />
+          </datasources>
+          <datasource-dependencies datasource='federated.10jezks1lcr0bp13evc8u1emoxhl'>
+            <column caption='# Channels - Recfluence' datatype='integer' name='[# Channels (copy)_1920503798335111177]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='COUNTD(iif([RECFLUENCE] , [CHANNEL_ID], null))' />
+            </column>
+            <column caption='ChannelID' datatype='string' name='[CHANNEL_ID]' role='dimension' type='nominal' />
+            <column caption='Channel Views' datatype='real' name='[CHANNEL_VIEWS]' role='measure' type='quantitative' />
+            <column caption='Sub Bucket' datatype='string' name='[Calculation_1920503798261891072]' role='dimension' type='nominal'>
+              <calculation class='tableau' formula='IIF([SUBS] &gt; 500000, &apos;500k+&apos;, &apos;&lt;500k&apos;)' />
+            </column>
+            <column caption='Views - Recfluence' datatype='real' name='[Calculation_1920503798331392003]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='iif([RECFLUENCE], [CHANNEL_VIEWS], 0)' />
+            </column>
+            <column caption='# Channels' datatype='integer' name='[Calculation_2109373497335660546]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='COUNTD([CHANNEL_ID])' />
+            </column>
+            <column caption='Views - Clark' datatype='real' name='[Channel Views (copy)_1920503798332043268]' role='measure' type='quantitative'>
+              <calculation class='tableau' formula='[CHANNEL_VIEWS]' />
+            </column>
+            <column caption='Recfluence' datatype='boolean' name='[RECFLUENCE]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='false' value='Clark' />
+                <alias key='true' value='Recfluence' />
+              </aliases>
+            </column>
+            <column caption='Subs' datatype='real' name='[SUBS]' role='measure' type='quantitative' />
+            <column caption='Tag' datatype='string' name='[TAG]' role='dimension' type='nominal' />
+            <column-instance column='[Calculation_1920503798261891072]' derivation='None' name='[none:Calculation_1920503798261891072:nk]' pivot='key' type='nominal' />
+            <column-instance column='[TAG]' derivation='None' name='[none:TAG:nk]' pivot='key' type='nominal' />
+            <column-instance column='[Calculation_1920503798331392003]' derivation='Sum' name='[pcto:sum:Calculation_1920503798331392003:qk:4]' pivot='key' type='quantitative'>
+              <table-calc ordering-type='Field' type='PctTotal'>
+                <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[TAG]' />
+                <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[Calculation_1920503798261891072]' />
+              </table-calc>
+            </column-instance>
+            <column-instance column='[Channel Views (copy)_1920503798332043268]' derivation='Sum' name='[pcto:sum:Channel Views (copy)_1920503798332043268:qk:4]' pivot='key' type='quantitative'>
+              <table-calc ordering-type='Field' type='PctTotal'>
+                <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[TAG]' />
+                <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[Calculation_1920503798261891072]' />
+              </table-calc>
+            </column-instance>
+            <column-instance column='[Calculation_1920503798331392003]' derivation='Sum' name='[sum:Calculation_1920503798331392003:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Channel Views (copy)_1920503798332043268]' derivation='Sum' name='[sum:Channel Views (copy)_1920503798332043268:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[# Channels (copy)_1920503798335111177]' derivation='User' name='[usr:# Channels (copy)_1920503798335111177:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[Calculation_2109373497335660546]' derivation='User' name='[usr:Calculation_2109373497335660546:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.10jezks1lcr0bp13evc8u1emoxhl].[:Measure Names]'>
+            <groupfilter function='union' user:op='manual'>
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.10jezks1lcr0bp13evc8u1emoxhl].[pcto:sum:Channel Views (copy)_1920503798332043268:qk:4]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.10jezks1lcr0bp13evc8u1emoxhl].[pcto:sum:Calculation_1920503798331392003:qk:4]&quot;' />
+            </groupfilter>
+          </filter>
+          <manual-sort column='[federated.10jezks1lcr0bp13evc8u1emoxhl].[:Measure Names]' direction='ASC'>
+            <dictionary>
+              <bucket>&quot;[federated.10jezks1lcr0bp13evc8u1emoxhl].[sum:Channel Views (copy)_1920503798332043268:qk]&quot;</bucket>
+              <bucket>&quot;[federated.10jezks1lcr0bp13evc8u1emoxhl].[sum:Calculation_1920503798331392003:qk]&quot;</bucket>
+            </dictionary>
+          </manual-sort>
+          <filter class='categorical' column='[federated.10jezks1lcr0bp13evc8u1emoxhl].[none:TAG:nk]' kind='hide'>
+            <groupfilter function='except' user:ui-domain='relevant' user:ui-enumeration='exclusive' user:ui-manual-selection='true' user:ui-manual-selection-all-when-empty='true' user:ui-marker='enumerate'>
+              <groupfilter function='level-members' level='[none:TAG:nk]' />
+              <groupfilter function='union'>
+                <groupfilter function='member' level='[none:TAG:nk]' member='&quot;Black&quot;' />
+                <groupfilter function='member' level='[none:TAG:nk]' member='&quot;Educational&quot;' />
+                <groupfilter function='member' level='[none:TAG:nk]' member='&quot;LGBT&quot;' />
+                <groupfilter function='member' level='[none:TAG:nk]' member='&quot;OrganizedReligion&quot;' />
+              </groupfilter>
+            </groupfilter>
+          </filter>
+          <computed-sort column='[federated.10jezks1lcr0bp13evc8u1emoxhl].[none:TAG:nk]' direction='DESC' using='[federated.10jezks1lcr0bp13evc8u1emoxhl].[sum:Channel Views (copy)_1920503798332043268:qk]' />
+          <slices>
+            <column>[federated.10jezks1lcr0bp13evc8u1emoxhl].[:Measure Names]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='axis'>
+            <format attr='title' class='0' field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[Multiple Values]' scope='cols' value='% of total' />
+          </style-rule>
+          <style-rule element='cell'>
+            <format attr='height' field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[none:Calculation_1920503798261891072:nk]' value='37' />
+          </style-rule>
+          <style-rule element='header'>
+            <format attr='width' field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[:Measure Names]' value='264' />
+            <format attr='width' field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[none:TAG:nk]' value='196' />
+          </style-rule>
+          <style-rule element='label'>
+            <format attr='text-format' field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[Multiple Values]' value='p0%' />
+          </style-rule>
+          <style-rule element='worksheet'>
+            <format attr='display-field-labels' scope='rows' value='false' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane id='2' selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <encodings>
+              <color column='[federated.10jezks1lcr0bp13evc8u1emoxhl].[none:Calculation_1920503798261891072:nk]' />
+              <tooltip column='[federated.10jezks1lcr0bp13evc8u1emoxhl].[sum:Calculation_1920503798331392003:qk]' />
+              <tooltip column='[federated.10jezks1lcr0bp13evc8u1emoxhl].[sum:Channel Views (copy)_1920503798332043268:qk]' />
+              <tooltip column='[federated.10jezks1lcr0bp13evc8u1emoxhl].[usr:# Channels (copy)_1920503798335111177:qk]' />
+              <tooltip column='[federated.10jezks1lcr0bp13evc8u1emoxhl].[usr:Calculation_2109373497335660546:qk]' />
+            </encodings>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-cull' value='true' />
+                <format attr='mark-labels-show' value='false' />
+              </style-rule>
+              <style-rule element='pane'>
+                <format attr='minheight' value='-1' />
+                <format attr='maxheight' value='-1' />
+                <format attr='minheight' value='-1' />
+                <format attr='maxheight' value='-1' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows>([federated.10jezks1lcr0bp13evc8u1emoxhl].[none:TAG:nk] / [federated.10jezks1lcr0bp13evc8u1emoxhl].[:Measure Names])</rows>
+        <cols>[federated.10jezks1lcr0bp13evc8u1emoxhl].[Multiple Values]</cols>
+      </table>
+      <simple-id uuid='{5E407833-4168-41F0-8539-30E0B29CADE3}' />
+    </worksheet>
+  </worksheets>
+  <windows saved-dpi-scale-factor='1.25' source-height='37'>
+    <window class='worksheet' maximized='true' name='New vs Old'>
+      <cards>
+        <edge name='left'>
+          <strip size='180'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+            <card type='measures' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card pane-specification-id='2' param='[federated.10jezks1lcr0bp13evc8u1emoxhl].[none:Calculation_1920503798261891072:nk]' type='color' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+        <highlight>
+          <color-one-way>
+            <field>[federated.10jezks1lcr0bp13evc8u1emoxhl].[:Measure Names]</field>
+            <field>[federated.10jezks1lcr0bp13evc8u1emoxhl].[none:Calculation_1920503798261891072:nk]</field>
+            <field>[federated.10jezks1lcr0bp13evc8u1emoxhl].[none:RECFLUENCE:nk]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{96873B4E-D23C-4437-8D2D-434297F2F1DE}' />
+    </window>
+  </windows>
+  <thumbnails>
+    <thumbnail height='192' name='New vs Old' width='192'>
+      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
+    </thumbnail>
+  </thumbnails>
+</workbook>

@@ -161,9 +161,11 @@ const Mandatory = () => <span data-tip="required" aria-label="required">*</span>
 
 export interface ChannelOption extends Option { channel: BasicChannel }
 
-export const loadChannelOptions = (esCfg: EsCfg, s: string): Promise<ChannelOption[]> => {
-  return channelSearch(esCfg, `channel_title:${s}`)
-    .then(channels => channels.map(c => ({ value: c.channelId, label: c.channelTitle, channel: c })))
+export const loadChannelOptions = async (esCfg: EsCfg, s: string): Promise<ChannelOption[]> => {
+  if (s == null) return []
+  const isId = s.length == 24 && s.startsWith('UC')
+  const searchRes = await channelSearch(esCfg, `${isId ? 'channel_id' : 'channel_title'}:${s}`)
+  return searchRes.map(c => ({ value: c.channelId, label: c.channelTitle, channel: c }))
 }
 
 const ChannelOptionDiv = styled.div`

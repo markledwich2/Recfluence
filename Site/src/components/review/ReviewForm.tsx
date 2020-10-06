@@ -89,6 +89,7 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
       <FlexCol>
         <div>
           <h2>{c?.channelTitle ?? "No channel to review"}</h2>
+          <p>{c.channelId}</p>
         </div>
         <FlexRow space='2em'>
           <div><a href={channelUrl(c.channelId)} target="_new">YouTube Channel</a></div>

@@ -36,7 +36,7 @@ namespace Mutuo.Etl.Blob {
             First = b.first,
             Last = b.last
           };
-        }, parallel: 4).ToListAsync();
+        }, parallel: 16).ToListAsync();
 
       var toDelete = oldIndex.RunIds
         .OrderByDescending(r => r.Created).Skip(1) // leave latest

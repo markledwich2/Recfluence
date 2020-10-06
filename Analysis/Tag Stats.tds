@@ -1,0 +1,504 @@
+<?xml version='1.0' encoding='utf-8' ?>
+
+<!-- build 20203.20.0801.1333                               -->
+<datasource formatted-name='federated.10jezks1lcr0bp13evc8u1emoxhl' inline='true' source-platform='win' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <document-format-change-manifest>
+    <_.fcp.ObjectModelEncapsulateLegacy.true...ObjectModelEncapsulateLegacy />
+    <_.fcp.ObjectModelExtractV2.true...ObjectModelExtractV2 />
+    <_.fcp.ObjectModelTableType.true...ObjectModelTableType />
+    <_.fcp.SchemaViewerObjectModel.true...SchemaViewerObjectModel />
+  </document-format-change-manifest>
+  <connection class='federated'>
+    <named-connections>
+      <named-connection caption='ql98184.west-us-2.azure.snowflakecomputing.com' name='snowflake.1t146fr1lh5ojv132gy8107gzan6'>
+        <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='ql98184.west-us-2.azure.snowflakecomputing.com' service='' username='mledwich' warehouse='' />
+      </named-connection>
+    </named-connections>
+    <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.1t146fr1lh5ojv132gy8107gzan6' name='Custom SQL Query' type='text'>with recfluence_reviews as (&#10;  select channel_id&#10;  from review&#10;  where updated&lt;&lt;&apos;2020-07-02&apos;&#10;    qualify row_number() over (partition by channel_id order by updated desc)=1&#10;)&#10;   , watch_time as (&#10;  select channel_id, sum(watch_hours) watch_hours&#10;  from video_stats_daily&#10;  group by 1&#10;)&#10;select c.channel_id&#10;     , channel_title&#10;     , t.value::string as tag&#10;     , channel_views&#10;     , channel_lifetime_daily_views&#10;     , channel_video_views&#10;     , reviews_all&#10;     , watch_hours&#10;     , subs&#10;      , exists(select * from recfluence_reviews r where r.channel_id = c.channel_id) recfluence&#10;from channel_accepted c&#10;       left join watch_time w on w.channel_id=c.channel_id&#10;   , table (flatten(tags)) t&#10;where tag not in (&apos;AntiWhiteness&apos;,&apos;Revolutionary&apos;,&apos;Provocateur&apos;,&apos;Black&apos;)</_.fcp.ObjectModelEncapsulateLegacy.false...relation>
+    <_.fcp.ObjectModelEncapsulateLegacy.true...relation connection='snowflake.1t146fr1lh5ojv132gy8107gzan6' name='Custom SQL Query' type='text'>with recfluence_reviews as (&#10;  select channel_id&#10;  from review&#10;  where updated&lt;&lt;&apos;2020-07-02&apos;&#10;    qualify row_number() over (partition by channel_id order by updated desc)=1&#10;)&#10;   , watch_time as (&#10;  select channel_id, sum(watch_hours) watch_hours&#10;  from video_stats_daily&#10;  group by 1&#10;)&#10;select c.channel_id&#10;     , channel_title&#10;     , t.value::string as tag&#10;     , channel_views&#10;     , channel_lifetime_daily_views&#10;     , channel_video_views&#10;     , reviews_all&#10;     , watch_hours&#10;     , subs&#10;      , exists(select * from recfluence_reviews r where r.channel_id = c.channel_id) recfluence&#10;from channel_accepted c&#10;       left join watch_time w on w.channel_id=c.channel_id&#10;   , table (flatten(tags)) t&#10;where tag not in (&apos;AntiWhiteness&apos;,&apos;Revolutionary&apos;,&apos;Provocateur&apos;,&apos;Black&apos;)</_.fcp.ObjectModelEncapsulateLegacy.true...relation>
+    <metadata-records>
+      <metadata-record class='column'>
+        <remote-name>CHANNEL_ID</remote-name>
+        <remote-type>129</remote-type>
+        <local-name>[CHANNEL_ID]</local-name>
+        <parent-name>[Custom SQL Query]</parent-name>
+        <remote-alias>CHANNEL_ID</remote-alias>
+        <ordinal>1</ordinal>
+        <local-type>string</local-type>
+        <aggregation>Count</aggregation>
+        <width>16777216</width>
+        <contains-null>true</contains-null>
+        <collation flag='0' name='binary' />
+        <attributes>
+          <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+          <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+          <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+        </attributes>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+      </metadata-record>
+      <metadata-record class='column'>
+        <remote-name>CHANNEL_TITLE</remote-name>
+        <remote-type>129</remote-type>
+        <local-name>[CHANNEL_TITLE]</local-name>
+        <parent-name>[Custom SQL Query]</parent-name>
+        <remote-alias>CHANNEL_TITLE</remote-alias>
+        <ordinal>2</ordinal>
+        <local-type>string</local-type>
+        <aggregation>Count</aggregation>
+        <width>16777216</width>
+        <contains-null>true</contains-null>
+        <collation flag='0' name='binary' />
+        <attributes>
+          <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+          <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+          <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+        </attributes>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+      </metadata-record>
+      <metadata-record class='column'>
+        <remote-name>TAG</remote-name>
+        <remote-type>129</remote-type>
+        <local-name>[TAG]</local-name>
+        <parent-name>[Custom SQL Query]</parent-name>
+        <remote-alias>TAG</remote-alias>
+        <ordinal>3</ordinal>
+        <local-type>string</local-type>
+        <aggregation>Count</aggregation>
+        <width>16777216</width>
+        <contains-null>true</contains-null>
+        <collation flag='0' name='binary' />
+        <attributes>
+          <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+          <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+          <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+        </attributes>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+      </metadata-record>
+      <metadata-record class='column'>
+        <remote-name>CHANNEL_VIEWS</remote-name>
+        <remote-type>131</remote-type>
+        <local-name>[CHANNEL_VIEWS]</local-name>
+        <parent-name>[Custom SQL Query]</parent-name>
+        <remote-alias>CHANNEL_VIEWS</remote-alias>
+        <ordinal>4</ordinal>
+        <local-type>real</local-type>
+        <aggregation>Sum</aggregation>
+        <precision>38</precision>
+        <scale>0</scale>
+        <contains-null>true</contains-null>
+        <attributes>
+          <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+          <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+        </attributes>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+      </metadata-record>
+      <metadata-record class='column'>
+        <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS</remote-name>
+        <remote-type>131</remote-type>
+        <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS]</local-name>
+        <parent-name>[Custom SQL Query]</parent-name>
+        <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS</remote-alias>
+        <ordinal>5</ordinal>
+        <local-type>real</local-type>
+        <aggregation>Sum</aggregation>
+        <precision>38</precision>
+        <scale>6</scale>
+        <contains-null>true</contains-null>
+        <attributes>
+          <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+          <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+        </attributes>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+      </metadata-record>
+      <metadata-record class='column'>
+        <remote-name>CHANNEL_VIDEO_VIEWS</remote-name>
+        <remote-type>131</remote-type>
+        <local-name>[CHANNEL_VIDEO_VIEWS]</local-name>
+        <parent-name>[Custom SQL Query]</parent-name>
+        <remote-alias>CHANNEL_VIDEO_VIEWS</remote-alias>
+        <ordinal>6</ordinal>
+        <local-type>real</local-type>
+        <aggregation>Sum</aggregation>
+        <precision>38</precision>
+        <scale>0</scale>
+        <contains-null>true</contains-null>
+        <attributes>
+          <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+          <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+        </attributes>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+      </metadata-record>
+      <metadata-record class='column'>
+        <remote-name>REVIEWS_ALL</remote-name>
+        <remote-type>131</remote-type>
+        <local-name>[REVIEWS_ALL]</local-name>
+        <parent-name>[Custom SQL Query]</parent-name>
+        <remote-alias>REVIEWS_ALL</remote-alias>
+        <ordinal>7</ordinal>
+        <local-type>integer</local-type>
+        <aggregation>Sum</aggregation>
+        <precision>18</precision>
+        <scale>0</scale>
+        <contains-null>true</contains-null>
+        <attributes>
+          <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+          <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+        </attributes>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+      </metadata-record>
+      <metadata-record class='column'>
+        <remote-name>WATCH_HOURS</remote-name>
+        <remote-type>5</remote-type>
+        <local-name>[WATCH_HOURS]</local-name>
+        <parent-name>[Custom SQL Query]</parent-name>
+        <remote-alias>WATCH_HOURS</remote-alias>
+        <ordinal>8</ordinal>
+        <local-type>real</local-type>
+        <aggregation>Sum</aggregation>
+        <precision>15</precision>
+        <contains-null>true</contains-null>
+        <attributes>
+          <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+          <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+        </attributes>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+      </metadata-record>
+      <metadata-record class='column'>
+        <remote-name>SUBS</remote-name>
+        <remote-type>131</remote-type>
+        <local-name>[SUBS]</local-name>
+        <parent-name>[Custom SQL Query]</parent-name>
+        <remote-alias>SUBS</remote-alias>
+        <ordinal>9</ordinal>
+        <local-type>real</local-type>
+        <aggregation>Sum</aggregation>
+        <precision>38</precision>
+        <scale>0</scale>
+        <contains-null>true</contains-null>
+        <attributes>
+          <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+          <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+        </attributes>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+      </metadata-record>
+      <metadata-record class='column'>
+        <remote-name>RECFLUENCE</remote-name>
+        <remote-type>11</remote-type>
+        <local-name>[RECFLUENCE]</local-name>
+        <parent-name>[Custom SQL Query]</parent-name>
+        <remote-alias>RECFLUENCE</remote-alias>
+        <ordinal>10</ordinal>
+        <local-type>boolean</local-type>
+        <aggregation>Count</aggregation>
+        <contains-null>true</contains-null>
+        <attributes>
+          <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_BIT&quot;</attribute>
+          <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_BIT&quot;</attribute>
+        </attributes>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+      </metadata-record>
+    </metadata-records>
+  </connection>
+  <aliases enabled='yes' />
+  <column caption='# Channels - Recfluence' datatype='integer' name='[# Channels (copy)_1920503798335111177]' role='measure' type='quantitative'>
+    <calculation class='tableau' formula='COUNTD(iif([RECFLUENCE] , [CHANNEL_ID], null))' />
+  </column>
+  <column datatype='string' name='[:Measure Names]' role='dimension' type='nominal'>
+    <aliases>
+      <alias key='&quot;[federated.10jezks1lcr0bp13evc8u1emoxhl].[pcto:sum:Calculation_1920503798331392003:qk:4]&quot;' value='Recfluence' />
+      <alias key='&quot;[federated.10jezks1lcr0bp13evc8u1emoxhl].[pcto:sum:Channel Views (copy)_1920503798332043268:qk:4]&quot;' value='Clark &amp; Zaitsev' />
+    </aliases>
+  </column>
+  <column caption='ChannelID' datatype='string' name='[CHANNEL_ID]' role='dimension' type='nominal' />
+  <column caption='Lifetime Daily Views' datatype='real' name='[CHANNEL_LIFETIME_DAILY_VIEWS]' role='measure' type='quantitative' />
+  <column caption='Channel' datatype='string' name='[CHANNEL_TITLE]' role='dimension' type='nominal' />
+  <column caption='Channel Video Views' datatype='real' name='[CHANNEL_VIDEO_VIEWS]' role='measure' type='quantitative' />
+  <column caption='Channel Views' datatype='real' name='[CHANNEL_VIEWS]' role='measure' type='quantitative' />
+  <column caption='Sub Bucket' datatype='string' name='[Calculation_1920503798261891072]' role='dimension' type='nominal'>
+    <calculation class='tableau' formula='IIF([SUBS] &gt; 500000, &apos;500k+&apos;, &apos;&lt;500k&apos;)' />
+  </column>
+  <column aggregation='Avg' caption='Views Per Sub' datatype='real' name='[Calculation_1920503798288273409]' role='measure' type='quantitative'>
+    <calculation class='tableau' formula='[CHANNEL_VIEWS]/[SUBS]' />
+  </column>
+  <column aggregation='Avg' caption='Watch Hours Per Sub' datatype='real' name='[Calculation_1920503798291746818]' role='measure' type='quantitative'>
+    <calculation class='tableau' formula='[WATCH_HOURS]/[SUBS]' />
+  </column>
+  <column caption='Views - Recfluence' datatype='real' name='[Calculation_1920503798331392003]' role='measure' type='quantitative'>
+    <calculation class='tableau' formula='iif([RECFLUENCE], [CHANNEL_VIEWS], 0)' />
+  </column>
+  <column caption='# Channels' datatype='integer' name='[Calculation_2109373497335660546]' role='measure' type='quantitative'>
+    <calculation class='tableau' formula='COUNTD([CHANNEL_ID])' />
+  </column>
+  <column caption='Views - Clark' datatype='real' name='[Channel Views (copy)_1920503798332043268]' role='measure' type='quantitative'>
+    <calculation class='tableau' formula='[CHANNEL_VIEWS]' />
+  </column>
+  <column caption='Recfluence' datatype='boolean' name='[RECFLUENCE]' role='dimension' type='nominal'>
+    <aliases>
+      <alias key='false' value='Clark' />
+      <alias key='true' value='Recfluence' />
+    </aliases>
+  </column>
+  <column caption='Reviews All' datatype='integer' name='[REVIEWS_ALL]' role='measure' type='quantitative' />
+  <column caption='Subs' datatype='real' name='[SUBS]' role='measure' type='quantitative' />
+  <column caption='Tag' datatype='string' name='[TAG]' role='dimension' type='nominal' />
+  <column caption='Watch Hours' datatype='real' name='[WATCH_HOURS]' role='measure' type='quantitative' />
+  <_.fcp.ObjectModelTableType.true...column caption='Custom SQL Query' datatype='table' name='[__tableau_internal_object_id__].[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]' role='measure' type='quantitative' />
+  <column-instance column='[TAG]' derivation='None' name='[none:TAG:nk]' pivot='key' type='nominal' />
+  <column-instance column='[Calculation_1920503798331392003]' derivation='Sum' name='[pcto:sum:Calculation_1920503798331392003:qk:4]' pivot='key' type='quantitative'>
+    <table-calc ordering-type='Field' type='PctTotal'>
+      <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[TAG]' />
+      <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[Calculation_1920503798261891072]' />
+    </table-calc>
+  </column-instance>
+  <column-instance column='[Channel Views (copy)_1920503798332043268]' derivation='Sum' name='[pcto:sum:Channel Views (copy)_1920503798332043268:qk:4]' pivot='key' type='quantitative'>
+    <table-calc ordering-type='Field' type='PctTotal'>
+      <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[TAG]' />
+      <order field='[federated.10jezks1lcr0bp13evc8u1emoxhl].[Calculation_1920503798261891072]' />
+    </table-calc>
+  </column-instance>
+  <extract _.fcp.ObjectModelExtractV2.true...object-id='' count='-1' enabled='true' units='records'>
+    <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks2/Analysis/.Data/Tag Stats.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='10/06/2020 12:21:51 AM' username='tableau_internal_user'>
+      <_.fcp.ObjectModelEncapsulateLegacy.false...relation name='Extract' table='[Extract].[Extract]' type='table' />
+      <_.fcp.ObjectModelEncapsulateLegacy.true...relation name='Extract' table='[Extract].[Extract]' type='table' />
+      <refresh>
+        <refresh-event add-from-file-path='Tag Stats' increment-value='%null%' refresh-type='create' rows-inserted='10804' timestamp-start='2020-10-06 00:21:51.626' />
+      </refresh>
+      <metadata-records>
+        <metadata-record class='column'>
+          <remote-name>CHANNEL_ID</remote-name>
+          <remote-type>129</remote-type>
+          <local-name>[CHANNEL_ID]</local-name>
+          <parent-name>[Extract]</parent-name>
+          <remote-alias>CHANNEL_ID</remote-alias>
+          <ordinal>0</ordinal>
+          <family>Custom SQL Query</family>
+          <local-type>string</local-type>
+          <aggregation>Count</aggregation>
+          <approx-count>4166</approx-count>
+          <contains-null>true</contains-null>
+          <collation flag='0' name='binary' />
+          <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+        </metadata-record>
+        <metadata-record class='column'>
+          <remote-name>CHANNEL_TITLE</remote-name>
+          <remote-type>129</remote-type>
+          <local-name>[CHANNEL_TITLE]</local-name>
+          <parent-name>[Extract]</parent-name>
+          <remote-alias>CHANNEL_TITLE</remote-alias>
+          <ordinal>1</ordinal>
+          <family>Custom SQL Query</family>
+          <local-type>string</local-type>
+          <aggregation>Count</aggregation>
+          <approx-count>4166</approx-count>
+          <contains-null>true</contains-null>
+          <collation flag='0' name='binary' />
+          <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+        </metadata-record>
+        <metadata-record class='column'>
+          <remote-name>TAG</remote-name>
+          <remote-type>129</remote-type>
+          <local-name>[TAG]</local-name>
+          <parent-name>[Extract]</parent-name>
+          <remote-alias>TAG</remote-alias>
+          <ordinal>2</ordinal>
+          <family>Custom SQL Query</family>
+          <local-type>string</local-type>
+          <aggregation>Count</aggregation>
+          <approx-count>26</approx-count>
+          <contains-null>true</contains-null>
+          <collation flag='0' name='binary' />
+          <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+        </metadata-record>
+        <metadata-record class='column'>
+          <remote-name>CHANNEL_VIEWS</remote-name>
+          <remote-type>5</remote-type>
+          <local-name>[CHANNEL_VIEWS]</local-name>
+          <parent-name>[Extract]</parent-name>
+          <remote-alias>CHANNEL_VIEWS</remote-alias>
+          <ordinal>3</ordinal>
+          <family>Custom SQL Query</family>
+          <local-type>real</local-type>
+          <aggregation>Sum</aggregation>
+          <approx-count>4050</approx-count>
+          <contains-null>true</contains-null>
+          <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+        </metadata-record>
+        <metadata-record class='column'>
+          <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS</remote-name>
+          <remote-type>5</remote-type>
+          <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS]</local-name>
+          <parent-name>[Extract]</parent-name>
+          <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS</remote-alias>
+          <ordinal>4</ordinal>
+          <family>Custom SQL Query</family>
+          <local-type>real</local-type>
+          <aggregation>Sum</aggregation>
+          <approx-count>3684</approx-count>
+          <contains-null>true</contains-null>
+          <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+        </metadata-record>
+        <metadata-record class='column'>
+          <remote-name>CHANNEL_VIDEO_VIEWS</remote-name>
+          <remote-type>5</remote-type>
+          <local-name>[CHANNEL_VIDEO_VIEWS]</local-name>
+          <parent-name>[Extract]</parent-name>
+          <remote-alias>CHANNEL_VIDEO_VIEWS</remote-alias>
+          <ordinal>5</ordinal>
+          <family>Custom SQL Query</family>
+          <local-type>real</local-type>
+          <aggregation>Sum</aggregation>
+          <approx-count>3684</approx-count>
+          <contains-null>true</contains-null>
+          <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+        </metadata-record>
+        <metadata-record class='column'>
+          <remote-name>REVIEWS_ALL</remote-name>
+          <remote-type>20</remote-type>
+          <local-name>[REVIEWS_ALL]</local-name>
+          <parent-name>[Extract]</parent-name>
+          <remote-alias>REVIEWS_ALL</remote-alias>
+          <ordinal>6</ordinal>
+          <family>Custom SQL Query</family>
+          <local-type>integer</local-type>
+          <aggregation>Sum</aggregation>
+          <approx-count>5</approx-count>
+          <contains-null>true</contains-null>
+          <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+        </metadata-record>
+        <metadata-record class='column'>
+          <remote-name>WATCH_HOURS</remote-name>
+          <remote-type>5</remote-type>
+          <local-name>[WATCH_HOURS]</local-name>
+          <parent-name>[Extract]</parent-name>
+          <remote-alias>WATCH_HOURS</remote-alias>
+          <ordinal>7</ordinal>
+          <family>Custom SQL Query</family>
+          <local-type>real</local-type>
+          <aggregation>Sum</aggregation>
+          <approx-count>3719</approx-count>
+          <contains-null>true</contains-null>
+          <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+        </metadata-record>
+        <metadata-record class='column'>
+          <remote-name>SUBS</remote-name>
+          <remote-type>5</remote-type>
+          <local-name>[SUBS]</local-name>
+          <parent-name>[Extract]</parent-name>
+          <remote-alias>SUBS</remote-alias>
+          <ordinal>8</ordinal>
+          <family>Custom SQL Query</family>
+          <local-type>real</local-type>
+          <aggregation>Sum</aggregation>
+          <approx-count>1268</approx-count>
+          <contains-null>true</contains-null>
+          <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+        </metadata-record>
+        <metadata-record class='column'>
+          <remote-name>RECFLUENCE</remote-name>
+          <remote-type>11</remote-type>
+          <local-name>[RECFLUENCE]</local-name>
+          <parent-name>[Extract]</parent-name>
+          <remote-alias>RECFLUENCE</remote-alias>
+          <ordinal>9</ordinal>
+          <family>Custom SQL Query</family>
+          <local-type>boolean</local-type>
+          <aggregation>Count</aggregation>
+          <approx-count>2</approx-count>
+          <contains-null>true</contains-null>
+          <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+        </metadata-record>
+      </metadata-records>
+    </connection>
+  </extract>
+  <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' _.fcp.SchemaViewerObjectModel.true...common-percentage='1' _.fcp.SchemaViewerObjectModel.true...user-set-layout-v2='true' dim-ordering='alphabetic' measure-ordering='alphabetic' show-aliased-fields='true' show-structure='true' />
+  <style>
+    <style-rule element='mark'>
+      <encoding attr='color' field='[none:TAG:nk]' palette='superfishel_stone_10_0' type='palette'>
+        <map to='#499894'>
+          <bucket>&quot;Mainstream News&quot;</bucket>
+        </map>
+        <map to='#4e79a7'>
+          <bucket>&quot;AntiSJW&quot;</bucket>
+        </map>
+        <map to='#4e79a7'>
+          <bucket>&quot;StateFunded&quot;</bucket>
+        </map>
+        <map to='#59a14f'>
+          <bucket>&quot;Educational&quot;</bucket>
+        </map>
+        <map to='#6388b4'>
+          <bucket>&quot;OrganizedReligion&quot;</bucket>
+        </map>
+        <map to='#6388b4'>
+          <bucket>&quot;PartisanLeft&quot;</bucket>
+        </map>
+        <map to='#86bcb6'>
+          <bucket>&quot;MissingLinkMedia&quot;</bucket>
+        </map>
+        <map to='#8cd17d'>
+          <bucket>&quot;LateNightTalkShow&quot;</bucket>
+        </map>
+        <map to='#9d7660'>
+          <bucket>&quot;Socialist&quot;</bucket>
+        </map>
+        <map to='#a0cbe8'>
+          <bucket>&quot;AntiTheist&quot;</bucket>
+        </map>
+        <map to='#a0cbe8'>
+          <bucket>&quot;WhiteIdentitarian&quot;</bucket>
+        </map>
+        <map to='#b07aa1'>
+          <bucket>&quot;ReligiousConservative&quot;</bucket>
+        </map>
+        <map to='#b6992d'>
+          <bucket>&quot;LGBT&quot;</bucket>
+        </map>
+        <map to='#bab0ac'>
+          <bucket>&quot;Politician&quot;</bucket>
+        </map>
+        <map to='#cf3e53'>
+          <bucket>&quot;PartisanRight&quot;</bucket>
+        </map>
+        <map to='#d37295'>
+          <bucket>&quot;Provocateur&quot;</bucket>
+        </map>
+        <map to='#d4a6c8'>
+          <bucket>&quot;Revolutionary&quot;</bucket>
+        </map>
+        <map to='#d7b5a6'>
+          <bucket>&quot;SocialJustice&quot;</bucket>
+        </map>
+        <map to='#e15759'>
+          <bucket>&quot;MRA&quot;</bucket>
+        </map>
+        <map to='#f1ce63'>
+          <bucket>&quot;Libertarian&quot;</bucket>
+        </map>
+        <map to='#f28e2b'>
+          <bucket>&quot;Black&quot;</bucket>
+        </map>
+        <map to='#fabfd2'>
+          <bucket>&quot;QAnon&quot;</bucket>
+        </map>
+        <map to='#ffbe7d'>
+          <bucket>&quot;Conspiracy&quot;</bucket>
+        </map>
+      </encoding>
+    </style-rule>
+  </style>
+  <semantic-values>
+    <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+  </semantic-values>
+  <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    <objects>
+      <object caption='Custom SQL Query' id='CustomSQL_EF8044AD741C4B479BCD6B549BAB5FBF'>
+        <properties context=''>
+          <relation connection='snowflake.1t146fr1lh5ojv132gy8107gzan6' name='Custom SQL Query' type='text'>with recfluence_reviews as (&#10;  select channel_id&#10;  from review&#10;  where updated&lt;&lt;&apos;2020-07-02&apos;&#10;    qualify row_number() over (partition by channel_id order by updated desc)=1&#10;)&#10;   , watch_time as (&#10;  select channel_id, sum(watch_hours) watch_hours&#10;  from video_stats_daily&#10;  group by 1&#10;)&#10;select c.channel_id&#10;     , channel_title&#10;     , t.value::string as tag&#10;     , channel_views&#10;     , channel_lifetime_daily_views&#10;     , channel_video_views&#10;     , reviews_all&#10;     , watch_hours&#10;     , subs&#10;      , exists(select * from recfluence_reviews r where r.channel_id = c.channel_id) recfluence&#10;from channel_accepted c&#10;       left join watch_time w on w.channel_id=c.channel_id&#10;   , table (flatten(tags)) t&#10;where tag not in (&apos;AntiWhiteness&apos;,&apos;Revolutionary&apos;,&apos;Provocateur&apos;,&apos;Black&apos;)</relation>
+        </properties>
+        <properties context='extract'>
+          <relation name='Extract' table='[Extract].[Extract]' type='table' />
+        </properties>
+      </object>
+    </objects>
+  </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+</datasource>
