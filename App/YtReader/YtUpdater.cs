@@ -27,6 +27,7 @@ namespace YtReader {
     public (string index, string condition)[] SearchConditions       { get; set; }
     public string[]                           SearchIndexes          { get; set; }
     public string[]                           UserScrapeAccounts     { get; set; }
+    public string[]                           Indexes                { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -104,7 +105,7 @@ namespace YtReader {
         (l,c) => Stage(fullLoad, options.Tables, l),
         (l,c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
         (l,c) => Result(options.Results, l),
-        (l,c) => Index(options.Results, l, c),
+        (l,c) => Index(options.Indexes, l, c),
         (l,c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
         (l,c) => Dataform(fullLoad, options.Tables, l, c),
         (l,c) => Backup(l));

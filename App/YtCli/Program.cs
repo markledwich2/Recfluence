@@ -219,6 +219,9 @@ namespace YtCli {
 
     [CommandOption('r', Description = "| delimited list of query names to restrict results to")]
     public string Results { get; set; }
+    
+    [CommandOption('i', Description = "| delimited list of indexes to limit indexing to")]
+    public string Indexes { get; set; }
 
     [CommandOption('l', Description = "The location to run the update")]
     public PipeRunLocation Location { get; set; }
@@ -258,6 +261,7 @@ namespace YtCli {
         Channels = Channels?.UnJoin('|'),
         Tables = Tables?.UnJoin('|'),
         Results = Results?.UnJoin('|'),
+        Indexes = Indexes?.UnJoin('|'),
         FullLoad = FullLoad,
         DisableChannelDiscover = DisableChannelDiscover,
         SearchConditions = SearchConditions?.UnJoin('|').Select(t => {
