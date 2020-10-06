@@ -175,6 +175,7 @@ export const ReviewControl = () => {
             onChange={(o: ChannelOption) => setReview(existingOrNewReview(o?.channel))}
             styles={selectStyle} theme={selectTheme}
             components={{ Option: channelCustomOption }}
+            placeholder='Dropdown channels in queue OR Search all by Title or ID'
           />
         </Field>
 
