@@ -16,7 +16,7 @@ namespace YtReader.YtWebsite {
     
     
     /// <summary>
-    /// This is the same as upload date. But sometimes there are discrepancies and we need both to resolve
+    /// This is the same as upload date. But sometimes there are discrepancies and added is more reliable
     /// </summary>
     public DateTime? AddedDate { get; }
 

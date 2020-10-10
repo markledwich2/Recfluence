@@ -3,7 +3,6 @@
     "backupRootPath": "backuptest"
   },
   "collect": {
-    "from": "2020-04-01",
-    "discoverChannels": 4
+    "discoverChannels": 0
   }
 }

@@ -117,13 +117,12 @@ namespace YtReader {
   }
 
   public class YtCollectCfg {
-    public DateTime  From { get; set; } = new DateTime(2019, 1, 1);
     public DateTime? To   { get; set; }
 
     /// <summary>How old a video before we stop collecting video stats. This is cheap, due to video stats being returned in a
     ///   video's playlist</summary>
-    public TimeSpan RefreshVideosWithinDaily { get;  set; } = 120.Days();
-    public TimeSpan RefreshVideosWithinWeekly { get; set; } = 730.Days();
+    public TimeSpan RefreshVideosWithinDaily { get; set; } = 360.Days();
+    public TimeSpan RefreshVideosWithinNew { get; set; } = (360*10).Days();
 
     /// <summary>How old a video before we stop collecting recs this is fairly expensive so we keep it within</summary>
     public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
