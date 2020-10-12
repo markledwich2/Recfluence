@@ -380,20 +380,29 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       }
     }
 
+    static int MaxConsecutiveCaptionsMissing = 10;
+
     /// <summary>Saves captions for all new videos from the vids list</summary>
     async Task SaveNewCaptions(ChannelStored2 channel, IEnumerable<VideoItem> vids, ILogger log) {
       var lastUpload =
         (await Store.Captions.LatestFile(channel.ChannelId))?.Ts.ParseFileSafeTimestamp(); // last video upload in this channel partition we have captions for
 
+      var consecutiveCaptionMissing = 0;
+      
       async Task<VideoCaptionStored2> GetCaption(VideoItem v) {
+        if (consecutiveCaptionMissing >= MaxConsecutiveCaptionsMissing) return null;
         var videoLog = log.ForContext("VideoId", v.Id);
-
         ClosedCaptionTrack track;
         try {
           var captions = await Scraper.GetCaptions(v.Id, log);
           var enInfo = captions.FirstOrDefault(t => t.Language.Code == "en");
-          if (enInfo == null) return null;
+          if (enInfo == null) {
+            if (Interlocked.Increment(ref consecutiveCaptionMissing) == MaxConsecutiveCaptionsMissing)
+              log.Debug("SaveCaptions - too many consecutive videos are missing captions. Assuming it won't have any.");
+            return null;
+          }
           track = await Scraper.GetClosedCaptionTrackAsync(enInfo, videoLog);
+          consecutiveCaptionMissing = 0;
         }
         catch (Exception ex) {
           ex.ThrowIfUnrecoverable();
@@ -511,7 +520,7 @@ from videos_to_update",
 
       var toUpdate = new List<VideoItem>();
       if (prevUpdate == null) {
-        Log.Debug("Collect - {Channel} - skipping rec update because it's not this channels day", c.ChannelTitle);
+        Log.Debug("Collect - {Channel} - first rec update, collecting max", c.ChannelTitle);
         toUpdate.AddRange(vidsDesc.Take(RCfg.RefreshRecsMax));
       }
       else if (inThisWeeksRecUpdate) {

@@ -353,6 +353,7 @@ namespace YtReader.YtWebsite {
 
     //ytInitialPlayerResponse.responseContext.serviceTrackingParams.filter(p => p.service == "CSI")[0].params
     public async Task<RecsAndExtra> GetRecsAndExtra(string videoId, ILogger log) {
+      log = log.ForContext("VideoId", videoId);
       var watchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
       var (html, raw, url) = watchPage;
       var infoDic = await GetVideoInfoDicAsync(videoId, log);
@@ -373,7 +374,7 @@ namespace YtReader.YtWebsite {
         Source = ScrapeSource.Web
       };
 
-      var ytInitPr = GetClientObjectFromWatchPage(html, "ytInitialPlayerResponse");
+      var ytInitPr = GetClientObjectFromWatchPage(log, html, "ytInitialPlayerResponse");
       if (ytInitPr != null && ytInitPr.Value<string>("status") != "OK") {
         var playerError = ytInitPr.SelectToken("playabilityStatus.errorScreen.playerErrorMessageRenderer");
         extra.Error = playerError?.SelectToken("reason.simpleText")?.Value<string>();
@@ -396,7 +397,7 @@ namespace YtReader.YtWebsite {
       }
       if (extra.Error != null) return new RecsAndExtra(extra, new Rec[] { });
 
-      var (recs, recEx) = Def.New(() => GetRecs2(html)).Try();
+      var (recs, recEx) = Def.New(() => GetRecs2(log, html)).Try();
       if (recs?.Any() != true || recEx != null) {
         var uri = new Uri(url);
         var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), $"{uri.PathAndQuery}.html");
@@ -408,8 +409,8 @@ namespace YtReader.YtWebsite {
       return new RecsAndExtra(extra, recs);
     }
     
-    public static Rec[] GetRecs2(HtmlDocument html) {
-      var jInit = GetClientObjectFromWatchPage(html) ?? throw new InvalidOperationException("can't find ytInitialData data script to get recs from");
+    public static Rec[] GetRecs2(ILogger log, HtmlDocument html) {
+      var jInit = GetClientObjectFromWatchPage(log, html) ?? throw new InvalidOperationException("error parsing ytInitialData data script to get recs from");
       var resultsSel = "$.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results";
       var jResults = (JArray) jInit.SelectToken(resultsSel) ?? throw new InvalidOperationException($"can't find {resultsSel}");
       var recs = jResults
@@ -436,7 +437,7 @@ namespace YtReader.YtWebsite {
     static readonly Regex ClientObjectsRe = new Regex(@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?})\s*;",
       RegexOptions.Compiled | RegexOptions.Singleline);
     
-    public static JObject GetClientObjectFromWatchPage(HtmlDocument html, string name = "ytInitialData") {
+    public static JObject GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, string name = "ytInitialData") {
       var scripts = html.QueryElements("script")
         .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
 
@@ -447,8 +448,14 @@ namespace YtReader.YtWebsite {
       var initData = windowObjects.TryGet(name);
       if (initData == null) return null;
 
-      var jInit = JObject.Parse(initData);
-      return jInit;
+      try {
+        var jInit = JObject.Parse(initData);
+        return jInit;
+      }
+      catch (Exception ex) {
+        log.Warning(ex, "Unable to parse {ClientObject} json from watch page script: {Script}", name, initData);
+        throw;
+      }
     }
 
     public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptions(string videoId, ILogger log) {

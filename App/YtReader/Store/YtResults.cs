@@ -105,7 +105,8 @@ where c.reviews_all>0";
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip: true),
 
-          new ResQuery("ttube_channels", @"select channel_id, channel_title, tags, lr, logo_url, channel_views, subs from channel_accepted order by channel_views desc", 
+          new ResQuery("ttube_channels", @"select channel_id, channel_title, tags, lr, logo_url, channel_views, subs 
+from channel_accepted order by channel_views desc", 
             fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
 
           new FileQuery("vis_category_recs", "sql/vis_category_recs.sql",

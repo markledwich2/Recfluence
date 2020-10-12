@@ -48,7 +48,7 @@ namespace Tests {
         .Files("*.html")
         .Select(f => Html.ParseDocument(f.OpenText().ReadToEnd()));
       
-      var clientObjects = docs.Select(WebScraper.GetRecs2).ToList();
+      var clientObjects = docs.Select(d =>  WebScraper.GetRecs2(x.Log, d)).ToList();
     }
     
     [Test]
