@@ -42,7 +42,7 @@ Discovered ${GitVersionInfo.DiscoverVersion(typeof(YtCollector))}";
     });
 
     [FunctionName("Update_Timer")]
-    public Task Update_Timer([TimerTrigger("0 0 21 * * *")] TimerInfo myTimer, ExecutionContext exec) =>
+    public Task Update_Timer([TimerTrigger("0 0 0 * * *")] TimerInfo myTimer, ExecutionContext exec) =>
       RunUpdate(exec);
 
     [FunctionName("Update")]
