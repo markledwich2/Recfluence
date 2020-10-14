@@ -27,7 +27,12 @@ namespace YtReader.Store {
     }
 
     public async Task Run(IReadOnlyCollection<string> include, ILogger log, CancellationToken cancel = default) {
-      var taskGraph = TaskGraph.FromMethods((l,c) => TopVideos(l), (l,c) => TopChannelVideos(l), (l,c) => ChannelStats(l));
+      var taskGraph = TaskGraph.FromMethods(
+        (l,c) => TopVideos(l), 
+        (l,c) => TopChannelVideos(l), 
+        (l,c) => ChannelStatsByPeriod(l), 
+        (l,c) => ChannelStatsById(l));
+      
       taskGraph.IgnoreNotIncluded(include);
       var (res, dur) = await taskGraph.Run(parallel: 4, log, cancel).WithDuration();
       var errors = res.Where(r => r.Error).ToArray();
@@ -53,23 +58,30 @@ namespace YtReader.Store {
     static string[] CamelIndex(string[] indexCols) => indexCols.Select(i => i.ToCamelCase()).ToArray();
 
     const           string   TopVideosName   = "top_videos";
-    static readonly string[] VideoPeriodCols = {"period_type", "period_value"};
+    static readonly string[] PeriodCols = {"period_type", "period_value"};
 
+    
+    /// <summary>
+    /// Top videos for all channels for a given time period
+    /// </summary>
     [GraphTask(Name = TopVideosName)]
     async Task TopVideos(ILogger log) {
       var uniqPeriods = new Dictionary<string, JObject>(); // store unique periods to show in UI dynamically before loading data
-      var (_, path) = await UpdateBlobIndex(log, TopVideosName, VideoPeriodCols, TopVideoResSql(1000, VideoPeriodCols),
-        50.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
+      var (_, path) = await UpdateBlobIndex(log, TopVideosName, PeriodCols, TopVideoResSql(rank: 20_000, PeriodCols),
+        100.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
       await SavePeriods(path, uniqPeriods, log);
     }
 
     const string TopChannelVideosName = "top_channel_videos";
 
+    /// <summary>
+    /// Top videos from a channel & time period
+    /// </summary>
     [GraphTask(Name = TopChannelVideosName)]
     async Task TopChannelVideos(ILogger log) {
-      var cols = new[] {"channel_id"}.Concat(VideoPeriodCols).ToArray();
+      var cols = new[] {"channel_id"}.Concat(PeriodCols).ToArray();
       var uniqPeriods = new Dictionary<string, JObject>(); // store unique periods to show in UI dynamically before loading data
-      var (_, path) = await UpdateBlobIndex(log, TopChannelVideosName, cols, TopVideoResSql(50, cols),
+      var (_, path) = await UpdateBlobIndex(log, TopChannelVideosName, cols, TopVideoResSql(rank: 50, cols),
         200.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
       await SavePeriods(path, uniqPeriods, log);
     }
@@ -87,31 +99,50 @@ from ttube_top_videos
 order by {index.Join(",")}, rank";
 
 
-    const string ChannelStatsName = "channel_stats";
-
-    [GraphTask(Name = ChannelStatsName)]
-    async Task ChannelStats(ILogger log) {
-      var sql = $@"select channel_id
-     , period_type
-     , period_value::string period_value
-     , sum(views) views
-     , sum(watch_hours) watch_hours
-from ttube_top_videos
-group by channel_id, period_type, period_value
-order by {VideoPeriodCols.Join(",")}";
-      
-      var uniqPeriods = new Dictionary<string, JObject>(); // store unique periods to show in UI dynamically before loading data
-      var (_, path) = await UpdateBlobIndex(log, ChannelStatsName, VideoPeriodCols, sql,
-        100.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
-      await SavePeriods(path, uniqPeriods, log);
+    const string ChannelStatsByPeriodName = "channel_stats_by_period";
+    /// <summary>
+    /// Aggregate stats for a channel at a given time period
+    /// </summary>
+    [GraphTask(Name = ChannelStatsByPeriodName)]
+    async Task ChannelStatsByPeriod(ILogger log) {
+      await UpdateBlobIndex(log, ChannelStatsByPeriodName, PeriodCols, ChannelStatsSql(PeriodCols), 100.Kilobytes());
     }
+    
+    static readonly string[] ByChannelCols        = { "channel_id" };
+    const           string   ChannelStatsByIdName = "channel_stats_by_id";
+    /// <summary>
+    /// Aggregate stats for a channel given a channel
+    /// </summary>
+    [GraphTask(Name = ChannelStatsByIdName)]
+    async Task ChannelStatsById(ILogger log) {
+      await UpdateBlobIndex(log, ChannelStatsByIdName, ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes());
+    }
+
+    static string ChannelStatsSql(string[] orderCols) =>
+      $@"with by_channel as (
+  select t.channel_id
+       , t.period_type
+       , t.period_value::string period_value
+       , sum(views) views
+       , sum(watch_hours) watch_hours
+
+  from ttube_top_videos t
+  group by t.channel_id, t.period_type, t.period_value
+)
+select t.*
+     , r.latest_refresh
+     , r.oldest_video_refreshed
+     , r.updates
+from by_channel t
+       left join ttube_refresh_stats r on r.channel_id=t.channel_id and r.period_type=t.period_type and r.period_value=t.period_value
+order by {orderCols.Join(",")}";
 
     async Task SavePeriods(StringPath path, IDictionary<string, JObject> uniqPeriods, ILogger log) {
       var stream = await uniqPeriods.Values.ToJsonlGzStream();
       await Store.Save(path.Add("periods.jsonl.gz"), stream, log);
     }
 
-    static readonly string[] JVideoPeriodCols = CamelIndex(VideoPeriodCols);
+    static readonly string[] JVideoPeriodCols = CamelIndex(PeriodCols);
 
     static void RecordPeriods(JObject r, IDictionary<string, JObject> uniqPeriods) {
       var s = r.JStringValues(JVideoPeriodCols).Join("|");

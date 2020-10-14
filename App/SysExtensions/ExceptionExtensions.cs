@@ -43,6 +43,16 @@ namespace SysExtensions {
       }
     }
     
+    
+    public static async Task<(T, Exception)> Try<T>(this Task<T> task) {
+      try {
+        return (await task, default);
+      }
+      catch (Exception ex) {
+        return (default, ex);
+      }
+    }
+    
     public static async Task<(T, Exception)> Try<T>(this Func<Task<T>> task) {
       try {
         return (await task(), default);
