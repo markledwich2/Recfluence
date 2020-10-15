@@ -64,7 +64,7 @@
           "cores": 2
         },
         "maxParallel": 16,
-        "minWorkItems": 2000
+        "minWorkItems": 1000
       }
     ]
   },
