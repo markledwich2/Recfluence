@@ -313,16 +313,8 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
       var md = await Store.Videos.LatestFile(c.ChannelId);
       var lastUpload = md?.Ts?.ParseFileSafeTimestamp();
-
       log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions. Last video stage {LastUpload}",
         c.ChannelTitle, lastUpload);
-
-      var lastModified = md?.Modified;
-      var recentlyUpdated = !forceUpdate && lastModified != null && lastModified.Value.IsYoungerThan(RCfg.RefreshAllAfter);
-      if (recentlyUpdated) {
-        log.Information("Collect - {Channel} - skipping update, video stats have been updated recently {LastModified}", c.ChannelTitle, lastModified);
-        return;
-      }
 
       // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.
       var discover = plan.Update == Discover;

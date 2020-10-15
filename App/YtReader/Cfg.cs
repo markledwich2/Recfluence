@@ -134,9 +134,6 @@ namespace YtReader {
     /// <summary>The maximum number of videos to collect recs from a channel on any given day</summary>
     public int RefreshRecsMax { get; set; } = 10;
 
-    /// <summary>How frequently to refresh channel & video stats</summary>
-    public TimeSpan RefreshAllAfter { get; set; } = 23.Hours();
-
     public bool AlwaysUseProxy { get; set; }
     public bool Headless       { get; set; } = true;
 
