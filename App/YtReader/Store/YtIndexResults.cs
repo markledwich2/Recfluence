@@ -130,9 +130,8 @@ order by {index.Join(",")}, rank";
   group by t.channel_id, t.period_type, t.period_value
 )
 select t.*
-     , r.latest_refresh
-     , r.oldest_video_refreshed
-     , r.updates
+  , r.latest_refresh
+  , r.videos
 from by_channel t
        left join ttube_refresh_stats r on r.channel_id=t.channel_id and r.period_type=t.period_type and r.period_value=t.period_value
 order by {orderCols.Join(",")}";
