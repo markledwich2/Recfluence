@@ -62,7 +62,7 @@ namespace Mutuo.Etl.Pipe {
           fullImageName, ctx.AppCtx.EnvironmentVariables,
           runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog, cancel).WithDuration();
 
-        var logTxt = await group.GetLogContentAsync(containerName);
+        var (logTxt, _) = await group.GetLogContentAsync(containerName).Try("");
         var logPath = new StringPath($"{runId.StatePath()}.log.txt");
 
         var launchState = group.State();

@@ -23,8 +23,7 @@ namespace Mutuo.Etl.Blob {
     public async Task<BlobIndexMeta> SaveIndexedJsonl(StringPath path, IEnumerator<JObject> rows, string[] indexNames,
       ByteSize size, ILogger log, Action<JObject> onProcessed = null) {
       var indexPath = path.Add("index");
-      var (oldIndex, _) = await Store.Get<BlobIndexMeta>(indexPath).Try();
-      oldIndex ??= new BlobIndexMeta(); 
+      var (oldIndex, _) = await Store.Get<BlobIndexMeta>(indexPath).Try(new BlobIndexMeta());
       oldIndex.RunIds ??= new RunId[] { };
       var runId = DateTime.UtcNow.FileSafeTimestamp();
       var files = await IndexFiles(rows, indexNames, size, log, onProcessed)

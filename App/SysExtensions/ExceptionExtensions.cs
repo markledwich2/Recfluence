@@ -44,30 +44,30 @@ namespace SysExtensions {
     }
     
     
-    public static async Task<(T, Exception)> Try<T>(this Task<T> task) {
+    public static async Task<(T, Exception)> Try<T>(this Task<T> task, T defaultValue = default) {
       try {
         return (await task, default);
       }
       catch (Exception ex) {
-        return (default, ex);
+        return (defaultValue, ex);
       }
     }
     
-    public static async Task<(T, Exception)> Try<T>(this Func<Task<T>> task) {
+    public static async Task<(T, Exception)> Try<T>(this Func<Task<T>> task, T defaultValue = default) {
       try {
         return (await task(), default);
       }
       catch (Exception ex) {
-        return (default, ex);
+        return (defaultValue, ex);
       }
     }
 
-    public static (T, Exception) Try<T>(this Func<T> task) {
+    public static (T, Exception) Try<T>(this Func<T> task, T defaultValue = default) {
       try {
         return (task(), default);
       }
       catch (Exception ex) {
-        return (default, ex);
+        return (defaultValue, ex);
       }
     }
 
