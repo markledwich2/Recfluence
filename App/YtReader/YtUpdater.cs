@@ -77,8 +77,8 @@ namespace YtReader {
       _search.SyncToElastic(logger, fullLoad, indexes: optionsSearchIndexes, conditions, cancel: cancel);
 
     [GraphTask(nameof(Dataform))]
-    Task Result(string[] results, ILogger logger) =>
-      _results.SaveBlobResults(logger, results);
+    Task Result(string[] results, ILogger logger, CancellationToken cancel) =>
+      _results.SaveBlobResults(logger, results, cancel);
 
     [GraphTask(nameof(Dataform))]
     Task Index(string[] tables, ILogger logger, CancellationToken cancel) =>
@@ -104,7 +104,7 @@ namespace YtReader {
         (l,c) => Collect(fullLoad, options.DisableChannelDiscover, options.Channels, l, c),
         (l,c) => Stage(fullLoad, options.Tables, l),
         (l,c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
-        (l,c) => Result(options.Results, l),
+        (l,c) => Result(options.Results, l, c),
         (l,c) => Index(options.Indexes, l, c),
         (l,c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
         (l,c) => Dataform(fullLoad, options.Tables, l, c),

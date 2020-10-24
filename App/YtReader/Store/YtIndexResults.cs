@@ -68,7 +68,7 @@ namespace YtReader.Store {
     async Task TopVideos(ILogger log) {
       var uniqPeriods = new Dictionary<string, JObject>(); // store unique periods to show in UI dynamically before loading data
       var (_, path) = await UpdateBlobIndex(log, TopVideosName, PeriodCols, TopVideoResSql(rank: 20_000, PeriodCols),
-        100.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
+        200.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
       await SavePeriods(path, uniqPeriods, log);
     }
 
@@ -82,19 +82,27 @@ namespace YtReader.Store {
       var cols = new[] {"channel_id"}.Concat(PeriodCols).ToArray();
       var uniqPeriods = new Dictionary<string, JObject>(); // store unique periods to show in UI dynamically before loading data
       var (_, path) = await UpdateBlobIndex(log, TopChannelVideosName, cols, TopVideoResSql(rank: 50, cols),
-        200.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
+        300.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
       await SavePeriods(path, uniqPeriods, log);
     }
 
     string TopVideoResSql(int rank, string[] index) =>
-      $@"select video_id
+      $@"with video_ex as (
+  select video_id, video_title, upload_date, views as video_views, duration from video_latest
+)
+select t.video_id
+     , video_title
      , channel_id
+     , upload_date
+     , timediff(seconds, '0'::time, v.duration) as duration_secs
      , period_type
      , period_value::string period_value
-     , views
+     , views as period_views
+     , video_views
      , watch_hours
-     , rank() over (partition by {index.Join(",")} order by views desc) rank
-from ttube_top_videos
+     , rank() over (partition by {index.Join(",")} order by period_views desc) rank
+from ttube_top_videos t
+left join video_ex v on v.video_id = t.video_id
   qualify rank<{rank}
 order by {index.Join(",")}, rank";
 

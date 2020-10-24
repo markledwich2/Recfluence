@@ -7,6 +7,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
 using Mutuo.Etl.Blob;
@@ -85,7 +86,7 @@ namespace YtReader.Store {
       UserScrapeCfg = userScrapeCfg;
     }
 
-    public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null) {
+    public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null, CancellationToken cancel = default) {
       using var db = await Sf.OpenConnection(log);
       queryNames ??= new string[] { };
 
@@ -105,7 +106,8 @@ where c.reviews_all>0";
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip: true),
 
-          new ResQuery("ttube_channels", @"select channel_id, channel_title, tags, lr, logo_url, channel_views, subs 
+          new ResQuery("ttube_channels", @"select channel_id, channel_title, tags, lr, logo_url, channel_views, subs, reviews_human, 
+  substr(description, 0, 301) description
 from channel_accepted order by channel_views desc", 
             fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
 
@@ -195,7 +197,7 @@ group by channel_id",
 
       var tmpDir = TempDir();
 
-      var results = await queries.BlockFunc(async q => (file: await SaveResult(log, db, tmpDir, q), query: q), ResCfg.Parallel);
+      var results = await queries.BlockFunc(async q => (file: await SaveResult(log, db, tmpDir, q), query: q), ResCfg.Parallel, cancel:cancel);
 
       if (queryNames?.Any() != true) await SaveResultsZip(log, results);
     }
