@@ -83,6 +83,7 @@ namespace YtReader {
 
   public class ResultsCfg {
     [Required] public string FileQueryUri { get; set; } = "https://raw.githubusercontent.com/markledwich2/YouTubeNetworks_Dataform/master";
+    
     [Required] public int    Parallel     { get; set; } = 4;
   }
 

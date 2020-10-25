@@ -14,6 +14,7 @@ using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Octokit;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Fluent.IO;
@@ -23,6 +24,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
+using FileMode = System.IO.FileMode;
 
 namespace YtReader.Store {
   public enum JsonSource {
@@ -259,11 +261,9 @@ group by channel_id",
     async Task<IDataReader> ResQuery(ILoggedConnection<IDbConnection> db, ResQuery q) {
       var query = q.Query ?? $"select * from {q.Name}";
       if (q is FileQuery f) {
-        var req = new Uri(ResCfg.FileQueryUri + "/" + f.Path.StringValue).Get()
-          .AddHeader("Cache-Control", "no-cache");
-
-        var res = await Http.SendAsync(req);
-        query = await res.ContentAsString();
+        var client = new GitHubClient(new ProductHeaderValue("Recfluence"));
+        var bytes = await client.Repository.Content.GetRawContent("markledwich2", "YouTubeNetworks_Dataform", f.Path);
+        query = bytes.ToStringFromUtf8();
       }
       Log.Information("Saving result {Name}: {Query}", q.Name, query);
       try {
