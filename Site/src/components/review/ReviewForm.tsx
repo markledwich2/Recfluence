@@ -42,6 +42,8 @@ const tips = {
   mainChannel: 'The parent channel (if applicable). \n\n Example: `Fox 10 Phoenix` should have this set as `Fox News`',
   relevance: 'The portion of content relevant to politics, cultural commentary or morally important sense-making. English speaking only. ',
   notes: 'Relevant notes about this channel. This is useful if we need to go back and ad new tags, or diagnose disagreements',
+  publicReviewerNotes: 'Justify our classifications and include the creators self identified political labels if they have provided them. This will appear on public websites when people look at the channel. this support markdown.',
+  publicCreatorNotes: 'Place the creator self-identification, or site-safe-feedback on their classification here. this support markdown.',
   save: '**Save** `crl+s`',
   nonPolitical: '**Save as non-political** `crl+n`'
 }
@@ -152,8 +154,17 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
         </Field>
 
         <Field name='notes' label='Notes' size='l' >
-          <textarea id='Notes' value={r?.notes ?? ''} onChange={e => updateReviewProp('notes', e.target.value)} placeholder='Notes...' rows={3} style={{ width: '100%' }}></textarea>
+          <textarea id='Notes' value={r?.notes ?? ''} onChange={e => updateReviewProp('notes', e.target.value)} placeholder='Notes...' rows={2} style={{ width: '100%' }}></textarea>
         </Field>
+
+        <Field name='publicReviewerNotes' label='Public Reviewer Notes' size='l' >
+          <textarea id='publicReviewerNotes' value={r?.publicReviewerNotes ?? ''} onChange={e => updateReviewProp('publicReviewerNotes', e.target.value)} placeholder='note from reviewer...' rows={2} style={{ width: '100%' }}></textarea>
+        </Field>
+
+        <Field name='publicCreatorNotes' label='Public Creator Notes' size='l' >
+          <textarea id='publicCreatorNotes' value={r?.publicCreatorNotes ?? ''} onChange={e => updateReviewProp('publicCreatorNotes', e.target.value)} placeholder='note from creator/self identification...' rows={2} style={{ width: '100%' }}></textarea>
+        </Field>
+
 
         <div>
           <input type='submit' value='save' disabled={!reviewValid(r)} name='save' data-tip='save' />

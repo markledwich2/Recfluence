@@ -110,8 +110,6 @@ export function videoThumbHigh(videoId: string) {
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
 }
 
-
-
 export interface Review {
   channelId: string
   email?: string
@@ -119,6 +117,8 @@ export interface Review {
   relevance?: number
   softTags: string[]
   notes?: string
+  publicReviewerNotes?: string
+  publicCreatorNotes?: string
   updated?: string
   mainChannelId?: string
 }

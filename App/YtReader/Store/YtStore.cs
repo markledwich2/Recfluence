@@ -137,7 +137,7 @@ namespace YtReader.Store {
 
     public IReadOnlyCollection<string>            HardTags     { get; set; }
     public IReadOnlyCollection<string>            SoftTags     { get; set; }
-    public IReadOnlyCollection<UserChannelStore2> UserChannels { get; set; }
+    public IReadOnlyCollection<UserChannelReview> UserChannels { get; set; }
 
     public string   StatusMessage  { get; set; }
     public DateTime LastFullUpdate { get; set; }
@@ -145,22 +145,19 @@ namespace YtReader.Store {
   }
 
   public class UserChannelReviewCommon : IHasUpdated {
-    public string                      LR            { get; set; }
-    public int                         Relevance     { get; set; }
-    public IReadOnlyCollection<string> SoftTags      { get; set; } = new List<string>();
-    public string                      Notes         { get; set; }
-    public DateTime                    Updated       { get; set; }
-    public string                      MainChannelId { get; set; }
+    public string                      LR                  { get; set; }
+    public int                         Relevance           { get; set; }
+    public IReadOnlyCollection<string> SoftTags            { get; set; } = new List<string>();
+    public string                      Notes               { get; set; }
+    public string                      PublicReviewerNotes { get; set; }
+    public string                      PublicCreatorNotes  { get; set; }
+    public DateTime                    Updated             { get; set; }
+    public string                      MainChannelId       { get; set; }
   }
 
   public class UserChannelReview : UserChannelReviewCommon {
     public string ChannelId { get; set; }
     public string Email     { get; set; }
-  }
-
-  public class UserChannelStore2 : UserChannelReview {
-    public string SheetId { get; set; }
-    public double Weight  { get; set; }
   }
 
   public class VideoStored2 : WithUpdatedItem {
@@ -229,7 +226,6 @@ namespace YtReader.Store {
     public string                CommentsMsg  { get; set; }
     public ScrapeSource          Source       { get; set; }
     public long?                 CommentCount { get; set; }
-    
   }
 
   public interface IHasUpdated {
