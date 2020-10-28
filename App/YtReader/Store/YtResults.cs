@@ -109,7 +109,7 @@ where c.reviews_all>0";
             "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip: true),
 
           new ResQuery("ttube_channels", @"select channel_id, channel_title, tags, lr, logo_url, channel_views, subs, reviews_human, 
-  substr(description, 0, 301) description
+  substr(description, 0, 301) description, public_reviewer_notes, public_creator_notes
 from channel_accepted order by channel_views desc", 
             fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
 
@@ -131,7 +131,6 @@ from channel_accepted order by channel_views desc",
           // userscrape data
           new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_tag = UserScrapeCfg.SeedsPerTag}),
           new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos = UserScrapeCfg.Tests}),
-
 
           new ResQuery("class_channels", classChannelsSelect, fileType: ResFilType.Json),
 
