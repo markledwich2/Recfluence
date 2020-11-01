@@ -126,7 +126,7 @@ export interface Review {
 export interface ChannelTitle {
   channelId: string
   channelTitle: string
-  description: string
+  description?: string
 }
 
 export interface ChannelReview {

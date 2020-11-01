@@ -4,3 +4,9 @@ declare module 'react-select/async' {
   export * from 'react-select/lib/Async'
   export default Async
 }
+
+declare module 'react-select/async-creatable' {
+  import AsyncCreatable from 'react-select/lib/AsyncCreatable'
+  export * from 'react-select/lib/AsyncCreatable'
+  export default AsyncCreatable
+}

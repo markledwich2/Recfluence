@@ -12,8 +12,9 @@ import Modal from 'react-modal'
 import { ReviewForm } from './ReviewForm'
 import { ReviewedGrid } from './ReviewGrid'
 import { useHotkeys, Options as HotkeyOptions } from 'react-hotkeys-hook'
-import { createChannelOptions, Option, fieldSizes, Field, FormStyle, loadChannelOptions, ChannelOption, tagCustomOption, channelCustomOption } from './ReviewCommon'
+import { createChannelOptions, Option, fieldSizes, Field, FormStyle, loadChannelOptions, ChannelOption, tagCustomOption, channelCustomOption, isChannelId } from './ReviewCommon'
 import Select from 'react-select'
+import AsyncCreatable from 'react-select/async-creatable'
 import Async from 'react-select/async'
 import { EsContext } from '../SearchContext'
 
@@ -166,16 +167,19 @@ export const ReviewControl = () => {
         </Field>
 
         <Field label={`Reviewing`} size='l'>
-          <Async
+          <AsyncCreatable<ChannelOption>
             value={review?.channel ? { value: review.review?.channelId, label: review.channel?.channelTitle, channel: review.channel } : null}
             isClearable
             backspaceRemovesValue
             loadOptions={s => loadChannelOptions(esCfg, s)}
             defaultOptions={pendingOptions}
             onChange={(o: ChannelOption) => setReview(existingOrNewReview(o?.channel))}
+            formatCreateLabel={l => `Review channel with manual ID: ${l}`}
             styles={selectStyle} theme={selectTheme}
             components={{ Option: channelCustomOption }}
             placeholder='Dropdown channels in queue OR Search all by Title or ID'
+            isValidNewOption={(s) => isChannelId(s)}
+            onCreateOption={(s: string) => setReview(existingOrNewReview({ channelId: s, channelTitle: '(Unknown)' }))}
           />
         </Field>
 

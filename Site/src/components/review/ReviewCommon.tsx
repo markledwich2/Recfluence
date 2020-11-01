@@ -161,10 +161,11 @@ const Mandatory = () => <span data-tip="required" aria-label="required">*</span>
 
 export interface ChannelOption extends Option { channel: BasicChannel }
 
+export const isChannelId = (s: string) => s.length == 24 && s.startsWith('UC')
+
 export const loadChannelOptions = async (esCfg: EsCfg, s: string): Promise<ChannelOption[]> => {
   if (s == null) return []
-  const isId = s.length == 24 && s.startsWith('UC')
-  const searchRes = await channelSearch(esCfg, `${isId ? 'channel_id' : 'channel_title'}:${s}`)
+  const searchRes = await channelSearch(esCfg, `${isChannelId(s) ? 'channel_id' : 'channel_title'}:${s}`)
   return searchRes.map(c => ({ value: c.channelId, label: c.channelTitle, channel: c }))
 }
 
@@ -182,8 +183,12 @@ export const channelCustomOption = ({ innerRef, innerProps, isDisabled, data, is
   return <ChannelOptionDiv ref={innerRef} {...innerProps}
     className={[isSelected ? 'selected' : null, isFocused ? 'focused' : null].filter(n => n).join(' ')}>
     <FlexRow style={{ alignItems: 'center' }}>
-      <ChannelLogo channelId={c.channelId} thumb={c.logoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
-      <b>{c.channelTitle}</b>
+      {c ? <>
+        <ChannelLogo channelId={c.channelId} thumb={c.logoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
+        <b>{c.channelTitle}</b>
+      </>
+        : <b style={{ padding: '0.5em' }}>{data.label}</b>}
+
     </FlexRow>
   </ChannelOptionDiv>
 }
