@@ -247,12 +247,17 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
       // to save on db costs, get anything we need in advance of collection
       MultiValueDictionary<string, string> channelChromeVideos;
+      MultiValueDictionary<string, string> channelDeadVideos;
       using (var db = await Sf.OpenConnection(log)) {
         var forChromeUpdate = await channels.Select(c => c.Channel).Batch(1000)
           .BlockFunc(c => VideosForChromeUpdate(c, db, log));
         channelChromeVideos = forChromeUpdate.SelectMany()
           .Randomize().Take(RCfg.ChromeUpdateMax)
           .ToMultiValueDictionary(c => c.ChannelId, c => c.VideoId);
+        
+        channelDeadVideos = (await channels.Select(c => c.Channel).Batch(1000)
+          .BlockFunc(c => DeadVideosForExtraUpdate(c, db, log)))
+          .SelectMany().ToMultiValueDictionary(v => v.ChannelId, c => c.VideoId);
       }
 
       var channelResults = await channels
@@ -266,7 +271,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
             .ForContext("Channel", c.ChannelTitle);
           try {
             await using var conn = new Defer<ILoggedConnection<IDbConnection>>(async () => await Sf.OpenConnection(cLog));
-            await UpdateAllInChannel(plan, forceUpdate, channelChromeVideos.TryGet(c.ChannelId), cLog);
+            await UpdateAllInChannel(plan, channelChromeVideos.TryGet(c.ChannelId), channelDeadVideos.TryGet(c.ChannelId), cLog);
             cLog.Information("Collect - {Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
               c.ChannelTitle, sw.Elapsed.HumanizeShort(), i + 1, channels.Count);
             return (c, Success: true);
@@ -290,7 +295,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       return res;
     }
 
-    async Task UpdateAllInChannel(ChannelUpdatePlan plan, bool forceUpdate, IReadOnlyCollection<string> videosForChromeUpdate,
+    async Task UpdateAllInChannel(ChannelUpdatePlan plan, IReadOnlyCollection<string> videosForChromeUpdate, IReadOnlyCollection<string> deadVideosForExtraUpdate,
       ILogger log) {
       var c = plan.Channel;
 
@@ -327,9 +332,16 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           ? discoverVids.Select(v => v.Id) // when discovering channels update all using chrome
           : videosForChromeUpdate ?? new string[] { }
         ).ToHashSet();
-      var forWebUpdate = discover ? new string[] { } : (await VideoToUpdateRecs(c, vids)).Where(v => !forChromeUpdate.Contains(v)).ToArray();
 
-      await SaveRecsAndExtra(c, forChromeUpdate, forWebUpdate, log);
+      var forWebUpdate = new List<string>();
+      if (!discover)
+          forWebUpdate.AddRange((await VideoToUpdateRecs(c, vids)).Where(v => !forChromeUpdate.Contains(v)));
+      if (deadVideosForExtraUpdate?.Any() == true) {
+        log.Debug("Collect -  {Channel} - updating video extra for {Videos} suspected dead videos", c.ChannelTitle, deadVideosForExtraUpdate.Count);
+        forWebUpdate.AddRange(deadVideosForExtraUpdate);
+      }
+      
+      await SaveRecsAndExtra(c, forChromeUpdate, forWebUpdate.ToArray(), log);
       var forCaptionSave = discover ? discoverVids : vids;
       await SaveNewCaptions(c, forCaptionSave, log);
     }
@@ -464,6 +476,17 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           ToUploadDate = r.ToUploadDate,
           Updated = updated
         }) ?? new RecStored2[] { }).ToArray();
+
+
+    async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> DeadVideosForExtraUpdate(IReadOnlyCollection<ChannelStored2> channels,
+      ILoggedConnection<IDbConnection> db,
+      ILogger log) {
+      var ids = await db.Query<(string ChannelId, string VideoId)>("missing videos", $@"select channel_id, video_id from video_missing 
+where error is null and
+channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
+");
+      return ids;
+    }
 
     /// <summary>Find videos that we should update to collect comments (chrome update). We do this once x days after a video is
     ///   uploaded.</summary>

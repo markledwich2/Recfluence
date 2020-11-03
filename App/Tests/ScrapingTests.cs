@@ -33,10 +33,11 @@ namespace Tests {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<WebScraper>();
       var extra = await ws.GetRecsAndExtra(new[] {
-        "tdUxfq6DYXY", // when retreived was var ytInitialData instead of window["ytInitialData"]
+        "4T8h_UY0NEU", // unlisted
+        /*"tdUxfq6DYXY", // when retreived was var ytInitialData instead of window["ytInitialData"]
         "gRJnTYHID3w", // var ytInitialData instead of window["ytInitialData"]
         "MbXbFchrTgw",
-        "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
+        "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)*/
         //"-ryPLVEExA0", // private 
       }, ctx.Log);
     }

@@ -109,8 +109,14 @@ namespace SysExtensions.Threading {
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
       var produceTask = ProduceAsync(source, block);
-      while (await block.OutputAvailableAsync())
+      while (true) {
+        if(produceTask.IsFaulted) {
+          block.Complete();
+          break;
+        }
+        if (!await block.OutputAvailableAsync()) break;
         yield return await block.ReceiveAsync();
+      }
       await Task.WhenAll(produceTask, block.Completion);
     }
 
@@ -118,8 +124,14 @@ namespace SysExtensions.Threading {
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
       var produceTask = ProduceAsync(source, block);
-      while (await block.OutputAvailableAsync())
+      while (true) {
+        if(produceTask.IsFaulted) {
+          block.Complete();
+          break;
+        }
+        if (!await block.OutputAvailableAsync()) break;
         yield return await block.ReceiveAsync();
+      }
       await Task.WhenAll(produceTask, block.Completion);
     }
 

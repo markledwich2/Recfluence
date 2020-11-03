@@ -11,16 +11,6 @@ az container create --name update-manual --image ytnetworks.azurecr.io/recfluenc
     --restart-policy Never
 
 az container delete --name update-manual
-    
-
-
-az container create --name update-dataform --image ytnetworks.azurecr.io/dataform:latest --cpu 2 --memory 4 \
-    --command-line "" \
-    --environment-variables env=prod appStoreCs=$cs \
-    --registry-username ytnetworks  --registry-password $registryPass \
-    --restart-policy Never
-
-
 
 sas_end=`date -u -d "120 minutes" '+%Y-%m-%dT%H:%MZ'`
 us_cfg_sas=`az storage blob generate-sas --connection-string $cs --container-name cfg --name userscrape.json  --permissions r --expiry $sas_end --full-uri --output tsv`

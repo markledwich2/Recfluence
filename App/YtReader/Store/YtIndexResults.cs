@@ -28,11 +28,13 @@ namespace YtReader.Store {
 
     public async Task Run(IReadOnlyCollection<string> include, ILogger log, CancellationToken cancel = default) {
       var taskGraph = TaskGraph.FromMethods(
-        (l,c) => TopVideos(l), 
-        (l,c) => TopChannelVideos(l), 
-        (l,c) => ChannelStatsByPeriod(l), 
-        (l,c) => ChannelStatsById(l));
-      
+        (l, c) => TopVideos(l),
+        (l, c) => TopChannelVideos(l),
+        (l, c) => ChannelStatsByPeriod(l),
+        (l, c) => ChannelStatsById(l),
+        (l, c) => VideosRemoved(l)
+      );
+
       taskGraph.IgnoreNotIncluded(include);
       var (res, dur) = await taskGraph.Run(parallel: 4, log, cancel).WithDuration();
       var errors = res.Where(r => r.Error).ToArray();
@@ -45,6 +47,7 @@ namespace YtReader.Store {
     async Task<(BlobIndexMeta index, StringPath path)> UpdateBlobIndex(ILogger log, string name, string[] indexCols, string sql,
       ByteSize size, Action<JObject> onProcessed = null) {
       using var con = await Sf.OpenConnection(log);
+      
       var rows = con.QueryBlocking<dynamic>(name, sql)
         .Select(d => (JObject) JObject.FromObject(d))
         .Select(j => j.ToCamelCase()).GetEnumerator();
@@ -57,13 +60,10 @@ namespace YtReader.Store {
 
     static string[] CamelIndex(string[] indexCols) => indexCols.Select(i => i.ToCamelCase()).ToArray();
 
-    const           string   TopVideosName   = "top_videos";
-    static readonly string[] PeriodCols = {"period_type", "period_value"};
+    const           string   TopVideosName = "top_videos";
+    static readonly string[] PeriodCols    = {"period_type", "period_value"};
 
-    
-    /// <summary>
-    /// Top videos for all channels for a given time period
-    /// </summary>
+    /// <summary>Top videos for all channels for a given time period</summary>
     [GraphTask(Name = TopVideosName)]
     async Task TopVideos(ILogger log) {
       var uniqPeriods = new Dictionary<string, JObject>(); // store unique periods to show in UI dynamically before loading data
@@ -74,9 +74,7 @@ namespace YtReader.Store {
 
     const string TopChannelVideosName = "top_channel_videos";
 
-    /// <summary>
-    /// Top videos from a channel & time period
-    /// </summary>
+    /// <summary>Top videos from a channel & time period</summary>
     [GraphTask(Name = TopChannelVideosName)]
     async Task TopChannelVideos(ILogger log) {
       var cols = new[] {"channel_id"}.Concat(PeriodCols).ToArray();
@@ -106,25 +104,19 @@ left join video_ex v on v.video_id = t.video_id
   qualify rank<{rank}
 order by {index.Join(",")}, rank";
 
-
     const string ChannelStatsByPeriodName = "channel_stats_by_period";
-    /// <summary>
-    /// Aggregate stats for a channel at a given time period
-    /// </summary>
+
+    /// <summary>Aggregate stats for a channel at a given time period</summary>
     [GraphTask(Name = ChannelStatsByPeriodName)]
-    async Task ChannelStatsByPeriod(ILogger log) {
+    async Task ChannelStatsByPeriod(ILogger log) =>
       await UpdateBlobIndex(log, ChannelStatsByPeriodName, PeriodCols, ChannelStatsSql(PeriodCols), 100.Kilobytes());
-    }
-    
-    static readonly string[] ByChannelCols        = { "channel_id" };
+
+    static readonly string[] ByChannelCols        = {"channel_id"};
     const           string   ChannelStatsByIdName = "channel_stats_by_id";
-    /// <summary>
-    /// Aggregate stats for a channel given a channel
-    /// </summary>
+
+    /// <summary>Aggregate stats for a channel given a channel</summary>
     [GraphTask(Name = ChannelStatsByIdName)]
-    async Task ChannelStatsById(ILogger log) {
-      await UpdateBlobIndex(log, ChannelStatsByIdName, ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes());
-    }
+    async Task ChannelStatsById(ILogger log) => await UpdateBlobIndex(log, ChannelStatsByIdName, ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes());
 
     static string ChannelStatsSql(string[] orderCols) =>
       $@"with by_channel as (
@@ -156,5 +148,29 @@ order by {orderCols.Join(",")}";
       if (!uniqPeriods.ContainsKey(s))
         uniqPeriods[s] = r.JCloneProps(JVideoPeriodCols);
     }
+
+    [GraphTask(Name = "video_removed")]
+    async Task VideosRemoved(ILogger log) =>
+      await UpdateBlobIndex(
+        log, "video_removed",
+        new[] {"last_seen"},
+        @"with videos_removed as (
+  select v.video_id
+     , v.channel_id
+     , v.video_title
+     , v.updated::date as last_seen
+     , coalesce(e.error_type, 'Detected missing')
+     , e.copyright_holder
+     , timediff(seconds, '0'::time, l.duration) as duration_secs
+     , l.views video_views
+     , e.updated as error_updated
+  from video_missing v
+         inner join video_latest l on l.video_id=v.video_id
+         left join video_extra_latest e on e.video_id=v.video_id
+  where (e.video_id is null and missing_days >=2 or e.error_type not in ('Restricted','Private','Not available in USA','Paywall','Unavailable','Device','Unknown'))
+)
+select *
+from videos_removed
+order by last_seen", 100.Kilobytes());
   }
 }
