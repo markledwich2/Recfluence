@@ -481,9 +481,11 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
     async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> DeadVideosForExtraUpdate(IReadOnlyCollection<ChannelStored2> channels,
       ILoggedConnection<IDbConnection> db,
       ILogger log) {
-      var ids = await db.Query<(string ChannelId, string VideoId)>("missing videos", $@"select channel_id, video_id from video_missing 
-where error is null and
-channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
+      var ids = await db.Query<(string ChannelId, string VideoId)>("missing videos", $@"
+select v.channel_id, v.video_id from video_missing v
+left join video_extra_latest e on e.video_id = v.video_id
+where e.error is null and
+v.channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
 ");
       return ids;
     }

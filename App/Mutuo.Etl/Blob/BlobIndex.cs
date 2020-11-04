@@ -107,7 +107,12 @@ namespace Mutuo.Etl.Blob {
     public static IEnumerable<string> JStringValues(this JObject j, params string[] props) =>
       j.Properties()
         .Where(p => props.None() || props.Contains(p.Name))
-        .Select(p => p.Value.Value<string>());
+        .Select(p => {
+          var v = p.Value;
+          if (v.Type == JTokenType.Date)
+            return v.Value<DateTime?>()?.FileSafeTimestamp() ?? "";
+          return v.Value<string>();
+        });
   }
 
   public class BlobIndexMeta {
