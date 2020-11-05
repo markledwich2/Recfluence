@@ -158,10 +158,10 @@ order by {orderCols.Join(",")}";
   select v.video_id
      , v.channel_id
      , v.video_title
-     , v.updated::date as last_seen
-     , coalesce(e.error_type, 'Detected missing')
+     , v.updated::date last_seen
+     , coalesce(e.error_type, 'Detected missing') error_type
      , e.copyright_holder
-     , timediff(seconds, '0'::time, l.duration) as duration_secs
+     , timediff(seconds, '0'::time, l.duration) duration_secs
      , l.views video_views
      , e.updated as error_updated
   from video_missing v
