@@ -28,23 +28,24 @@ namespace YtReader {
     public string[]                           SearchIndexes          { get; set; }
     public string[]                           UserScrapeAccounts     { get; set; }
     public string[]                           Indexes                { get; set; }
+    public CollectPart[]                      Parts                  { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
   ///   caption search. Many missing features (resume, better recording of tasks etc..). I intend to replace with dagster or
   ///   make Mutuo.Etl into a data application runner once I have evaluated it.</summary>
   public class YtUpdater {
-    readonly YtUpdaterCfg Cfg;
-    readonly ILogger      Log;
-    readonly YtCollector  _collector;
-    readonly YtStage      _warehouse;
-    readonly YtSearch     _search;
-    readonly YtResults    _results;
-    readonly YtDataform   YtDataform;
-    readonly YtBackup     _backup;
-    readonly string       _updated;
-    readonly UserScrape   _userScrape;
-    readonly YtIndexResults        _index;
+    readonly YtUpdaterCfg   Cfg;
+    readonly ILogger        Log;
+    readonly YtCollector    _collector;
+    readonly YtStage        _warehouse;
+    readonly YtSearch       _search;
+    readonly YtResults      _results;
+    readonly YtDataform     YtDataform;
+    readonly YtBackup       _backup;
+    readonly string         _updated;
+    readonly UserScrape     _userScrape;
+    readonly YtIndexResults _index;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, YtStage warehouse, YtSearch search,
       YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtIndexResults index) {
@@ -61,8 +62,8 @@ namespace YtReader {
       _index = index;
     }
 
-    Task Collect(bool fullLoad, bool disableDiscover, string[] channels, ILogger logger, CancellationToken cancel) =>
-      _collector.Collect(logger, forceUpdate: fullLoad, disableDiscover, channels, cancel);
+    Task Collect(string[] channels, CollectPart[] parts, ILogger logger, CancellationToken cancel) =>
+      _collector.Collect(logger, channels, parts, cancel);
 
     [GraphTask(nameof(Collect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
@@ -101,14 +102,15 @@ namespace YtReader {
       var fullLoad = options.FullLoad;
 
       var actionMethods = TaskGraph.FromMethods(
-        (l,c) => Collect(fullLoad, options.DisableChannelDiscover, options.Channels, l, c),
-        (l,c) => Stage(fullLoad, options.Tables, l),
-        (l,c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
-        (l,c) => Result(options.Results, l, c),
-        (l,c) => Index(options.Indexes, l, c),
-        (l,c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
-        (l,c) => Dataform(fullLoad, options.Tables, l, c),
-        (l,c) => Backup(l));
+        (l, c) => Collect(options.Channels, options.Parts, l, c),
+        (l, c) => Stage(fullLoad, options.Tables, l),
+        (l, c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
+        (l, c) => Result(options.Results, l, c),
+        (l, c) => Index(options.Indexes, l, c),
+        (l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
+        (l, c) => Dataform(fullLoad, options.Tables, l, c),
+        (l,c) => Backup(l)  
+      );
 
       var actions = options.Actions;
       if (actions?.Any() == true) {
@@ -122,9 +124,10 @@ namespace YtReader {
 
       // TODO: tasks should have frequencies within a dependency graph. But for now, full backups only on sundays, or if explicit
       var backup = actionMethods[nameof(Backup)];
-      if (backup.Status != GraphTaskStatus.Ignored && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
-        backup.Status = GraphTaskStatus.Ignored;
-
+      backup.Status = GraphTaskStatus.Ignored;
+      // too costly. TODO: update to incremtnal backup or de-partition the big db2 directories
+      //if (backup.Status != GraphTaskStatus.Ignored && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
+        
       var res = await actionMethods.Run(Cfg.Parallel, Log, cancel);
 
       var errors = res.Where(r => r.Error).ToArray();

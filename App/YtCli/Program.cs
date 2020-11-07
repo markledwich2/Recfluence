@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AngleSharp.Text;
 using Autofac;
 using CliFx;
 using CliFx.Attributes;
@@ -12,6 +13,7 @@ using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
 using Semver;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Build;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
@@ -40,39 +42,6 @@ namespace YtCli {
       var res = await app.RunAsync(args);
       log.Information("Completed cmd (recfluence {Args}) {Env} {Version}", args.Join(" "), root.Env, version.Version);
       return res;
-    }
-  }
-
-  [Command("collect", Description = "refresh new data from YouTube and collects it into results")]
-  public class CollectCmd : ICommand {
-    readonly AppCfg     Cfg;
-    readonly PipeAppCtx AppCtx;
-    readonly PipeAppCfg PipeAppCfg;
-    readonly IPipeCtx   PipeCtx;
-
-    public CollectCmd(AppCfg cfg, PipeAppCtx appCtx, PipeAppCfg pipeAppCfg, IPipeCtx pipeCtx) {
-      Cfg = cfg;
-      AppCtx = appCtx;
-      PipeAppCfg = pipeAppCfg;
-      PipeCtx = pipeCtx;
-    }
-
-    [CommandOption("channels", shortName: 'c', Description = "optional '|' separated list of channels to process")]
-    public string ChannelIds { get; set; }
-
-    [CommandOption("force", 'f', Description = "Force update of channels, so stats are refreshed even if they have been updated recently")]
-    public bool ForceUpdate { get; set; }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      var channels = ChannelIds?.UnJoin('|').ToArray();
-
-      // make a new app context with a custom region defined
-      var appCtx = new PipeAppCtx(AppCtx) {CustomRegion = YtCollectorRegion.RandomUsRegion};
-
-      // run the work using the pipe entry point, forced to be local
-      PipeAppCfg.Location = PipeRunLocation.Local;
-      var pipeCtx = new PipeCtx(PipeAppCfg, appCtx, PipeCtx.Store, PipeCtx.Log);
-      await pipeCtx.Run((YtCollector d) => d.Collect(PipeArg.Inject<ILogger>(), ForceUpdate, false, channels, PipeArg.Inject<CancellationToken>()));
     }
   }
 
@@ -228,6 +197,9 @@ namespace YtCli {
 
     [CommandOption('c', Description = "| delimited list of channels to collect")]
     public string Channels { get; set; }
+    
+    [CommandOption("collect-parts", shortName: 'p', Description = "optional '|' separated list of parts to run")]
+    public string Parts { get; set; }
 
     [CommandOption("us-init", Description = "Run userscrape in init mode (additional seed videos)")]
     public bool UserScrapeInit { get; set; }
@@ -259,6 +231,7 @@ namespace YtCli {
       var options = new UpdateOptions {
         Actions = Actions?.UnJoin('|'),
         Channels = Channels?.UnJoin('|'),
+        Parts = Parts?.UnJoin('|').Select(p => p.ParseEnum<CollectPart>()).ToArray(),
         Tables = Tables?.UnJoin('|'),
         Results = Results?.UnJoin('|'),
         Indexes = Indexes?.UnJoin('|'),
@@ -278,39 +251,7 @@ namespace YtCli {
         new PipeRunOptions {Location = Location, Exclusive = true}, Log, console.GetCancellationToken());
     }
   }
-
-  [Command("test-chrome-scraper")]
-  public class TestChromeScraperCmd : ICommand {
-    readonly ChromeScraper Scraper;
-    readonly ILogger       Log;
-
-    public TestChromeScraperCmd(ChromeScraper scraper, ILogger log) {
-      Scraper = scraper;
-      Log = log;
-    }
-
-    [CommandOption('v', Description = "| separated video id's")]
-    public string VideoIds { get; set; }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      var res = await Scraper.GetRecsAndExtra(VideoIds.UnJoin('|'), Log);
-      Log.Information("Scraping of {VideoIds} complete", VideoIds, res);
-    }
-  }
-
-  [Command("upgrade-incomplete-trials")]
-  public class UpgradeIncompleteTrialsCmd : ICommand {
-    readonly UserScrape UserScrape;
-    readonly ILogger    Log;
-
-    public UpgradeIncompleteTrialsCmd(UserScrape userScrape, ILogger log) {
-      UserScrape = userScrape;
-      Log = log;
-    }
-
-    public async ValueTask ExecuteAsync(IConsole console) => await UserScrape.UpgradeIncompleteTrials(Log);
-  }
-
+  
   [Command("sandbox")]
   public class SandboxCmd : ICommand {
     readonly SnowflakeConnectionProvider Sf;

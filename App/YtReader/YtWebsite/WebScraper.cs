@@ -380,7 +380,7 @@ namespace YtReader.YtWebsite {
         var playerError = ytInitPr.SelectToken("playabilityStatus.errorScreen.playerErrorMessageRenderer");
         extra.Error = playerError?.SelectToken("reason.simpleText")?.Value<string>();
         extra.SubError = (playerError?.SelectToken("subreason.simpleText") ??
-                          playerError?.SelectToken("subreason.runs[0].text"))
+                          playerError?.SelectTokens("subreason.runs[*].text")?.Join(""))
           ?.Value<string>();
       }
       if (extra.Error == null) {
