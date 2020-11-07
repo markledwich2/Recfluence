@@ -157,6 +157,7 @@ order by {orderCols.Join(",")}";
         @"with videos_removed as (
   select v.video_id
      , v.channel_id
+     , l.channel_title
      , v.video_title
      , v.updated::date last_seen
      , coalesce(e.error_type, 'Detected missing') error_type
@@ -167,7 +168,8 @@ order by {orderCols.Join(",")}";
   from video_missing v
          inner join video_latest l on l.video_id=v.video_id
          left join video_extra_latest e on e.video_id=v.video_id
-  where (e.video_id is null and missing_days >=2 or e.error_type not in ('Restricted','Private','Not available in USA','Paywall','Unavailable','Device','Unknown'))
+  where (e.video_id is null and missing_days >=2 
+           or error_type is not null and error_type not in ('Restricted','Not available in USA','Paywall','Device','Unknown'))
 )
 select *
 from videos_removed

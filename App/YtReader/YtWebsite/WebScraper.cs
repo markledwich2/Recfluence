@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -248,9 +247,8 @@ namespace YtReader.YtWebsite {
         // Get videos
         var newVideos = new List<VideoItem>();
         foreach (var videoJson in playlistJson.SelectToken("video").NotNull()) {
-          
           JToken St(string field) => videoJson.SelectToken(field);
-          
+
           var videoId = St("encrypted_id").Value<string>();
           var videoAuthor = St("author").Value<string>();
           var videoUploadDate = DateTime.UnixEpoch + St("time_created").Value<long>().Seconds();
@@ -268,9 +266,9 @@ namespace YtReader.YtWebsite {
             .Select(s => s.Trim('"'))
             .ToArray();
           var videoStatistics = new Statistics(videoViewCount, videoLikeCount, videoDislikeCount);
-          
-          
-          if (!videoIds.Add(videoId)) continue;// only add video to the list if it's not already there
+
+
+          if (!videoIds.Add(videoId)) continue; // only add video to the list if it's not already there
           var video = new VideoItem(videoId, videoAuthor, videoUploadDate, videoAddedDate, videoTitle, videoDescription,
             videoDuration, videoKeywords, videoStatistics, null, null);
           newVideos.Add(video);
@@ -345,14 +343,15 @@ namespace YtReader.YtWebsite {
       var raw = await (await GetHttp(url, "video watch", log)).ContentAsString();
       return (Html.ParseDocument(raw), raw, url); // think about using parser than can use stream to avoid large strings using mem
     }
-    
+
     public const string RestrictedVideoError = "Restricted";
 
-    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) =>
-      await videos.BlockFunc(async v => await GetRecsAndExtra(v, log), CollectCfg.WebParallel);
+    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log, 
+      string channelId = null, string channelTitle = null) =>
+      await videos.BlockFunc(async v => await GetRecsAndExtra(log, v, channelId, channelTitle), CollectCfg.WebParallel);
 
     //ytInitialPlayerResponse.responseContext.serviceTrackingParams.filter(p => p.service == "CSI")[0].params
-    public async Task<RecsAndExtra> GetRecsAndExtra(string videoId, ILogger log) {
+    public async Task<RecsAndExtra> GetRecsAndExtra(ILogger log, string videoId, string channelId = null, string channelTitle = null) {
       log = log.ForContext("VideoId", videoId);
       var watchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
       var (html, raw, url) = watchPage;
@@ -362,8 +361,10 @@ namespace YtReader.YtWebsite {
       var extra = new VideoExtraStored2 {
         VideoId = videoId,
         Updated = DateTime.UtcNow,
-        ChannelId = videoItem?.ChannelId,
-        ChannelTitle = videoItem?.ChannelTitle,
+        // some videos are listed under a channels playlist, but when you click on the vidoe, its channel is under enother (e.g. _iYT8eg1F8s)
+        // Record them as the channelId of the playlist.
+        ChannelId = channelId ?? videoItem?.ChannelId, 
+        ChannelTitle = channelTitle ?? videoItem?.ChannelTitle,
         Description = videoItem?.Description,
         Duration = videoItem?.Duration,
         Keywords = videoItem?.Keywords,
@@ -378,7 +379,7 @@ namespace YtReader.YtWebsite {
       if (ytInitPr != null && ytInitPr.Value<string>("status") != "OK") {
         var playerError = ytInitPr.SelectToken("playabilityStatus.errorScreen.playerErrorMessageRenderer");
         extra.Error = playerError?.SelectToken("reason.simpleText")?.Value<string>();
-        extra.SubError = (playerError?.SelectToken("subreason.simpleText") ?? 
+        extra.SubError = (playerError?.SelectToken("subreason.simpleText") ??
                           playerError?.SelectToken("subreason.runs[0].text"))
           ?.Value<string>();
       }
@@ -408,7 +409,7 @@ namespace YtReader.YtWebsite {
 
       return new RecsAndExtra(extra, recs);
     }
-    
+
     public static Rec[] GetRecs2(ILogger log, HtmlDocument html) {
       var jInit = GetClientObjectFromWatchPage(log, html) ?? throw new InvalidOperationException("error parsing ytInitialData data script to get recs from");
       var resultsSel = "$.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results";
@@ -433,10 +434,10 @@ namespace YtReader.YtWebsite {
         }).ToArray();
       return recs;
     }
-    
+
     static readonly Regex ClientObjectsRe = new Regex(@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?})\s*;",
       RegexOptions.Compiled | RegexOptions.Singleline);
-    
+
     public static JObject GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, string name = "ytInitialData") {
       var scripts = html.QueryElements("script")
         .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
@@ -477,7 +478,7 @@ namespace YtReader.YtWebsite {
       (HtmlDocument html, string raw, string url) videoWatchPage) {
       if (!videoInfoDic.ContainsKey("player_response"))
         return null;
-      
+
       var responseJson = JToken.Parse(videoInfoDic["player_response"]);
       var renderer = responseJson.SelectToken("microformat.playerMicroformatRenderer");
 
@@ -499,7 +500,7 @@ namespace YtReader.YtWebsite {
       var channelId = VideoValue<string>("channelId");
       var channelTitle = VideoValue<string>("author");
 
-      var videoUploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseExact("yyyy-MM-dd", style:DateTimeStyles.AssumeUniversal) ?? default;
+      var videoUploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseExact("yyyy-MM-dd", style: DateTimeStyles.AssumeUniversal) ?? default;
 
       var videoLikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-like-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
@@ -538,7 +539,7 @@ namespace YtReader.YtWebsite {
       var i = 0;
       foreach (var p in SplitStream(query, '&')) {
         var paramEncoded = i == 0 ? p.TrimStart('?') : p;
-        
+
         var param = paramEncoded.UrlDecode();
 
         // Look for the equals sign
@@ -554,7 +555,7 @@ namespace YtReader.YtWebsite {
 
         // Add to dictionary
         dic[key] = value;
-        
+
         i++;
       }
       return dic;

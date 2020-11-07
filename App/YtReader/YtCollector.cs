@@ -437,7 +437,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
     /// <summary>Saves recs for all of the given vids</summary>
     async Task SaveRecsAndExtra(ChannelStored2 c, HashSet<string> forChromeUpdate, string[] forWebUpdate, ILogger log) {
       var chromeExtra = await ChromeScraper.GetRecsAndExtra(forChromeUpdate, log);
-      var webExtra = await Scraper.GetRecsAndExtra(forWebUpdate, log);
+      var webExtra = await Scraper.GetRecsAndExtra(forWebUpdate, log, c.ChannelId, c.ChannelTitle);
       var allExtra = chromeExtra.Concat(webExtra).ToArray();
       var extra = allExtra.Select(v => v.Extra).NotNull().ToArray();
 
