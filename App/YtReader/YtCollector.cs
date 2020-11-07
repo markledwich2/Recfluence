@@ -100,7 +100,7 @@ namespace YtReader {
       var channels = await PlanAndUpdateChannelStats(parts, limitChannels, log, cancel);
       if (cancel.IsCancellationRequested)
         return;
-      
+
       var (result, dur) = await channels
         .Randomize() // randomize to even the load
         .Process(PipeCtx,
@@ -164,7 +164,7 @@ left join channel_collection_days_back b on b.channel_id = v:ChannelId"))
         .Concat(toDiscover).ToArray();
 
       if (!parts.ShouldRun(Channel)) return channels;
-      
+
       var (updatedChannels, duration) = await channels.Where(c => c.Update != None)
         .BlockFunc(async c => await UpdateChannelDetail(c, log), Cfg.DefaultParallel, cancel: cancel)
         .WithDuration();
@@ -176,7 +176,7 @@ left join channel_collection_days_back b on b.channel_id = v:ChannelId"))
       log.Information("Collect - Updated stats {Channels}/{AllChannels} channels. {Discovered} discovered, {Full} full {Duration}",
         updatedChannels.Count, channels.Length, updatedChannels.Count(c => c.Update == Discover), updatedChannels.Count(c => c.Update == Full),
         duration.HumanizeShort());
-      
+
       var updatedIds = updatedChannels.Select(c => c.Channel.ChannelId).ToHashSet();
       var res = updatedChannels.Concat(channels.Where(c => !updatedIds.Contains(c.Channel.ChannelId))).ToArray();
       return res;
@@ -262,7 +262,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       // to save on db costs, get anything we need in advance of collection
       var channelChromeVideos = new MultiValueDictionary<string, string>();
       var channelDeadVideos = new MultiValueDictionary<string, string>();
-      if (parts.ShouldRun(CollectPart.VidExtra)) {
+      if (parts.ShouldRun(VidExtra)) {
         using var db = await Sf.OpenConnection(log);
         var forChromeUpdate = await channels.Select(c => c.Channel).Batch(1000)
           .BlockFunc(c => VideosForChromeUpdate(c, db, log));
@@ -272,7 +272,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
         channelDeadVideos = (await channels.Select(c => c.Channel).Batch(1000)
             .BlockFunc(c => DeadVideosForExtraUpdate(c, db, log)))
-          .SelectMany().ToMultiValueDictionary(v => v.ChannelId, c => c.VideoId);
+          .SelectMany().ToMultiValueDictionary(v => v.ChannelId, v => v.VideoId);
       }
 
       var channelResults = await channels
@@ -346,7 +346,8 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
         var uploadedFrom = plan.VideosFrom ?? DateTime.UtcNow - (lastUpload == null ? RCfg.RefreshVideosWithinNew : RCfg.RefreshVideosWithinDaily);
         var vidsEnum = ChannelVidItems(c, uploadedFrom, log);
         vids = discover ? await vidsEnum.Take(RCfg.DiscoverChannelVids).ToListAsync() : await vidsEnum.ToListAsync();
-        await SaveVids(c, vids, Store.Videos, lastUpload, log);
+        if (parts.ShouldRun(VidStats))
+          await SaveVids(c, vids, Store.Videos, lastUpload, log);
         discoverVids = discover ? vids.OrderBy(v => v.Statistics.ViewCount).Take(RCfg.DiscoverChannelVids).ToList() : null;
         forChromeUpdate = (discover
             ? discoverVids.Select(v => v.Id) // when discovering channels update all using chrome
@@ -354,18 +355,18 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           ).ToHashSet();
       }
 
-      if (parts.ShouldRunAny(VidExtra, VidRecs)) {
+      if (parts.ShouldRunAny(VidRecs, VidExtra)) {
         var forWebUpdate = new List<string>();
         if (parts.ShouldRun(VidRecs) && !discover)
           forWebUpdate.AddRange((await VideoToUpdateRecs(c, vids)).Where(v => !forChromeUpdate.Contains(v)));
-        
+
         if (parts.ShouldRun(VidExtra) && deadVideosForExtraUpdate?.Any() == true) {
           var ids = vids.Select(v => v.Id).ToHashSet();
           deadVideosForExtraUpdate = deadVideosForExtraUpdate.Where(d => !ids.Contains(d)).ToList();
           log.Debug("Collect -  {Channel} - updating video extra for {Videos} suspected dead videos", c.ChannelTitle, deadVideosForExtraUpdate.Count);
           forWebUpdate.AddRange(deadVideosForExtraUpdate);
         }
-        await SaveRecsAndExtra(c, forChromeUpdate, forWebUpdate.ToArray(), log);
+        await SaveRecsAndExtra(c, parts, forChromeUpdate, forWebUpdate.ToArray(), log);
       }
 
       if (parts.ShouldRun(Caption)) {
@@ -407,12 +408,12 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       await foreach (var vids in Scraper.GetChannelUploadsAsync(c.ChannelId, log)) {
         foreach (var v in vids)
           yield return v;
-        if (vids.Any(v => v.AddedDate < uploadFrom)) 
-          yield break;// return all vids on a page because its free. But stop once we have a page with something older than uploadFrom
+        if (vids.Any(v => v.AddedDate < uploadFrom))
+          yield break; // return all vids on a page because its free. But stop once we have a page with something older than uploadFrom
       }
     }
 
-    static int MaxConsecutiveCaptionsMissing = 10;
+    static readonly int MaxConsecutiveCaptionsMissing = 10;
 
     /// <summary>Saves captions for all new videos from the vids list</summary>
     async Task SaveNewCaptions(ChannelStored2 channel, IEnumerable<VideoItem> vids, ILogger log) {
@@ -420,7 +421,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
         (await Store.Captions.LatestFile(channel.ChannelId))?.Ts.ParseFileSafeTimestamp(); // last video upload in this channel partition we have captions for
 
       var consecutiveCaptionMissing = 0;
-      
+
       async Task<VideoCaptionStored2> GetCaption(VideoItem v) {
         if (consecutiveCaptionMissing >= MaxConsecutiveCaptionsMissing) return null;
         var videoLog = log.ForContext("VideoId", v.Id);
@@ -463,7 +464,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
     }
 
     /// <summary>Saves recs for all of the given vids</summary>
-    async Task SaveRecsAndExtra(ChannelStored2 c, HashSet<string> forChromeUpdate, string[] forWebUpdate, ILogger log) {
+    async Task SaveRecsAndExtra(ChannelStored2 c, CollectPart[] parts, HashSet<string> forChromeUpdate, string[] forWebUpdate, ILogger log) {
       var chromeExtra = await ChromeScraper.GetRecsAndExtra(forChromeUpdate, log);
       var webExtra = await Scraper.GetRecsAndExtra(forWebUpdate, log, c.ChannelId, c.ChannelTitle);
       var allExtra = chromeExtra.Concat(webExtra).ToArray();
@@ -475,16 +476,18 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       }
 
       var updated = DateTime.UtcNow;
-      var recs = ToRecStored(allExtra, updated);
-
-      if (recs.Any())
-        await Store.Recs.Append(recs, log);
+      var recs = new List<RecStored2>();
+      if (parts.ShouldRun(VidRecs)) {
+        recs.AddRange(ToRecStored(allExtra, updated));
+        if (recs.Any())
+          await Store.Recs.Append(recs, log);
+      }
 
       if (extra.Any())
         await Store.VideoExtra.Append(extra, log);
 
       log.Information("Collect - {Channel} - Recorded {WebExtras} web-extras, {ChromeExtras} chrome-extras, {Recs} recs, {Comments} comments",
-        c.ChannelTitle, webExtra.Count, chromeExtra.Count, recs.Length, extra.Sum(e => e.Comments?.Length ?? 0));
+        c.ChannelTitle, webExtra.Count, chromeExtra.Count, recs.Count, extra.Sum(e => e.Comments?.Length ?? 0));
     }
 
     public static RecStored2[] ToRecStored(RecsAndExtra[] allExtra, DateTime updated) =>
@@ -505,32 +508,49 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           Updated = updated
         }) ?? new RecStored2[] { }).ToArray();
 
-
     async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> DeadVideosForExtraUpdate(IReadOnlyCollection<ChannelStored2> channels,
       ILoggedConnection<IDbConnection> db,
       ILogger log) {
       var ids = await db.Query<(string ChannelId, string VideoId)>("missing videos", $@"
-with missing as (
+with chans as (
+  select channel_id
+  from channel_accepted
+  where status_msg<>'Dead'
+   and channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
+)
+   , missing as (
   select v.channel_id
        , v.channel_title
        , v.video_id
+       , e.video_id is not null as has_extra
        , v.video_title
        , e.error
        , e.sub_error
+       , v.updated
        , v.latest_update
+       , v.video_no
        , datediff(d, e.updated, v.latest_update) days_since_extra_update -- check missing only if the video extra is older than the latest update
   from video_missing v
-         left join video_extra_latest e on e.video_id=v.video_id
+         left join video_extra e on e.video_id=v.video_id
+
   where (
       e.video_id is null
-      or days_since_extra_update>30
-      or e.sub_error='This video contains content from ' -- we wern't getting the full text before. consider this in need of update
-    )
-    and exists(select * from channel_accepted c where c.channel_id=v.channel_id)
-    and v.channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
+      or days_since_extra_update>30)
+    and exists(select * from chans c where c.channel_id=v.channel_id)
 )
-select channel_id, video_id
-from missing
+   , missing_and_fixes as (
+  select channel_id, video_id, 'missing'
+  from missing
+  union all
+  select channel_id, video_id, 'copyright'
+  from video_extra e
+  where (error like '%copyright%' or sub_error like '%copyright%')
+    and copyright_holder is null
+    and e.channel_id is not null
+    and exists(select * from chans c where c.channel_id=e.channel_id)
+)
+select *
+from missing_and_fixes
 ");
       return ids;
     }
@@ -611,7 +631,7 @@ from videos_to_update",
       public TimeSpan               Duration { get; set; }
     }
   }
-  
+
   public static class YtCollectExtensions {
     public static bool ShouldRunAny(this CollectPart[] parts, params CollectPart[] toRun) => parts == null || toRun.Any(parts.Contains);
     public static bool ShouldRun(this CollectPart[] parts, CollectPart part) => parts == null || parts.Contains(part);

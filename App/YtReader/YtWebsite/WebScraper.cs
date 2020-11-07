@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using AngleSharp.Html;
 using Humanizer;
 using LtGt;
 using Mutuo.Etl.Blob;
@@ -375,12 +376,12 @@ namespace YtReader.YtWebsite {
         Source = ScrapeSource.Web
       };
 
-      var ytInitPr = GetClientObjectFromWatchPage(log, html, "ytInitialPlayerResponse");
+      var ytInitPr = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialPlayerResponse");
       if (ytInitPr != null && ytInitPr.Value<string>("status") != "OK") {
         var playerError = ytInitPr.SelectToken("playabilityStatus.errorScreen.playerErrorMessageRenderer");
         extra.Error = playerError?.SelectToken("reason.simpleText")?.Value<string>();
         extra.SubError = (playerError?.SelectToken("subreason.simpleText") ??
-                          playerError?.SelectTokens("subreason.runs[*].text")?.Join(""))
+                          playerError?.SelectTokens("subreason.runs[*].text").Join(""))
           ?.Value<string>();
       }
       if (extra.Error == null) {
@@ -397,21 +398,13 @@ namespace YtReader.YtWebsite {
           extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
       }
       if (extra.Error != null) return new RecsAndExtra(extra, new Rec[] { });
-
-      var (recs, recEx) = Def.New(() => GetRecs2(log, html)).Try();
-      if (recs?.Any() != true || recEx != null) {
-        var uri = new Uri(url);
-        var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), $"{uri.PathAndQuery}.html");
-        var logUrl = LogStore.Url(path);
-        await LogStore.Save(path, raw.AsStream(), log);
-        log.Warning("WebScraper - Unable to find recs at ({Url}). error: {Error}", logUrl, recEx?.ToString());
-      }
-
+      
+      var recs = await GetRecs2(log, html, videoId);
       return new RecsAndExtra(extra, recs);
     }
 
-    public static Rec[] GetRecs2(ILogger log, HtmlDocument html) {
-      var jInit = GetClientObjectFromWatchPage(log, html) ?? throw new InvalidOperationException("error parsing ytInitialData data script to get recs from");
+    public async Task<Rec[]> GetRecs2(ILogger log, HtmlDocument html, string videoId) {
+      var jInit = await GetClientObjectFromWatchPage(log, html, videoId);
       var resultsSel = "$.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results";
       var jResults = (JArray) jInit.SelectToken(resultsSel) ?? throw new InvalidOperationException($"can't find {resultsSel}");
       var recs = jResults
@@ -438,7 +431,7 @@ namespace YtReader.YtWebsite {
     static readonly Regex ClientObjectsRe = new Regex(@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?})\s*;",
       RegexOptions.Compiled | RegexOptions.Singleline);
 
-    public static JObject GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, string name = "ytInitialData") {
+    public async Task<JObject> GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, string videoId, string name = "ytInitialData") {
       var scripts = html.QueryElements("script")
         .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
 
@@ -454,9 +447,17 @@ namespace YtReader.YtWebsite {
         return jInit;
       }
       catch (Exception ex) {
-        log.Warning(ex, "Unable to parse {ClientObject} json from watch page script: {Script}", name, initData);
-        throw;
+        await LogParseError($"Unable to parse {name} json from watch page", ex, videoId, html.ToHtml(), log);
+        return null;
       }
+    }
+
+    async Task LogParseError(string msg, Exception ex, string videoId, string rawHtml, ILogger log) {
+      var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), $"{videoId}.html");
+      var logUrl = LogStore.Url(path);
+      await LogStore.Save(path, rawHtml.AsStream(), log);
+      log.Warning(ex, "WebScraper - {VideoId} - saved html that we could not parse '{msg}' ({Url}). error: {Error}", 
+        videoId,  msg, logUrl, ex?.ToString());
     }
 
     public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptions(string videoId, ILogger log) {

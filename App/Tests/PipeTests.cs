@@ -66,8 +66,6 @@ namespace Tests {
     public async Task TestGraphRunner() {
       using var log = Setup.CreateTestLogger();
 
-      log.Information("hey there");
-
       var res = await TaskGraph.FromMethods(
           (l,c) => Shorten(l),
           (l,c) => Generate(l, true),

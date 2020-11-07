@@ -33,12 +33,15 @@ namespace Tests {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<WebScraper>();
       var extra = await ws.GetRecsAndExtra(new[] {
-          "-6oswxLuRyk",
-          /*"EqulyMs_M2M", // copyright
-          "tdUxfq6DYXY", // when retreived was var ytInitialData instead of window["ytInitialData"]
-          "gRJnTYHID3w", // var ytInitialData instead of window["ytInitialData"]
-          "MbXbFchrTgw",
-          "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)*/
+        "-sc6JCu5rZk",
+        //"y3oMtX8NyqY", //copyright2
+        //"EqulyMs_M2M", // copyright1
+        //"-6oswxLuRyk",
+        /*
+        "tdUxfq6DYXY", // when retreived was var ytInitialData instead of window["ytInitialData"]
+        "gRJnTYHID3w", // var ytInitialData instead of window["ytInitialData"]
+        "MbXbFchrTgw",
+        "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)*/
         //"-ryPLVEExA0", // private 
       }, ctx.Log);
     }
@@ -49,10 +52,12 @@ namespace Tests {
       var docs = Setup.SolutionDir.Combine("Tests", "WatchPageHtml")
         .Files("*.html")
         .Select(f => Html.ParseDocument(f.OpenText().ReadToEnd()));
-      
-      var clientObjects = docs.Select(d =>  WebScraper.GetRecs2(x.Log, d)).ToList();
+
+      var scrape = x.Resolve<WebScraper>();
+
+      var clientObjects = docs.Select(d => scrape.GetRecs2(x.Log, d, "(fake video id)")).ToList();
     }
-    
+
     [Test]
     public static async Task ChannelVideos() {
       using var x = await TextCtx();
