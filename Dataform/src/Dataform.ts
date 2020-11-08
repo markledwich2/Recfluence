@@ -6,6 +6,7 @@ import formatMs from 'humanize-duration'
 import { performance } from 'perf_hooks'
 import stripAnsi from 'strip-ansi'
 import _ from 'lodash'
+import isOnline from 'is-online'
 
 /** Dataform's config to provide in .df-credentials.json */
 export interface DataformSfCfg {
@@ -42,6 +43,8 @@ export async function writeDataformCreds(sfCfg: YtSfCfg, path: string): Promise<
     await fsp.writeFile(`${path}/.df-credentials.json`, JSON.stringify(dfCfg))
 }
 
+export const delay = (ms: number) => new Promise(_ => setTimeout(_, ms))
+
 function fDuration(from: number, to?: number) {
     return formatMs(to ?? performance.now() - from, { maxDecimalPoints: 1 })
 }
@@ -74,6 +77,15 @@ export async function run(branch: string, repo: string, sfCfg: YtSfCfg, runArgs:
 
     log = log.child({ runId: runId })
 
+    var attempt = 0
+    while(true) {
+        if(await isOnline()) break
+        log.debug('not online yet (attempt %s)', attempt)
+        if(attempt >= 10) break
+        await delay(1000);
+        attempt++
+    }
+
     const exe = async (name: string, cmd: string) => {
         const execLog = log.child({ cmdName: name })
         log.debug({ cmd: cmd }, 'executing sub-process ')
@@ -89,6 +101,7 @@ export async function run(branch: string, repo: string, sfCfg: YtSfCfg, runArgs:
     }
 
     await fsp.mkdir(runPath, { recursive: true })
+
     await exe('git clone', `git clone -b ${branch} ${repo} .`)
     await writeDataformCreds(sfCfg, runPath)
     await exe('npm i', `npm i`)

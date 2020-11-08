@@ -154,25 +154,25 @@ order by {orderCols.Join(",")}";
       await UpdateBlobIndex(
         log, "video_removed",
         new[] {"last_seen"},
-        @"with videos_removed as (
-  select v.video_id
-     , v.channel_id
-     , l.channel_title
-     , v.video_title
-     , v.updated::date last_seen
-     , coalesce(e.error_type, 'Detected missing') error_type
-     , e.copyright_holder
-     , timediff(seconds, '0'::time, l.duration) duration_secs
-     , l.views video_views
-     , e.updated as error_updated
-  from video_missing v
-         inner join video_latest l on l.video_id=v.video_id
-         left join video_extra_latest e on e.video_id=v.video_id
-  where (e.video_id is null and missing_days >=2 
-           or error_type is not null and error_type not in ('Restricted','Not available in USA','Paywall','Device','Unknown'))
+        @"with
+  video_errors as (
+  select e.video_id
+       , e.channel_id
+       , e.channel_title
+       , e.video_title
+       , e.error_type
+       , e.copyright_holder
+       , l.updated last_seen
+       , timediff(seconds, '0'::time, l.duration) duration_secs
+       , l.views video_views
+       , e.updated as error_updated
+  from video_extra e
+         inner join video_latest l on l.video_id=e.video_id
+         inner join channel_accepted c on e.channel_id=c.channel_id
+  where error_type is not null
+    and error_type not in ('Restricted','Not available in USA','Paywall','Device','Unknown')
 )
-select *
-from videos_removed
-order by last_seen", 100.Kilobytes());
+select * from video_errors
+order by video_views desc", 100.Kilobytes());
   }
 }
