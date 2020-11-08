@@ -130,17 +130,25 @@ namespace YtReader {
       IKeyedCollection<string, ChannelUpdatePlan> existingChannels;
       using (var db = await Sf.OpenConnection(log)) {
         // retrieve previous channel state to update with new classification (algos and human) and stats form the API
-        existingChannels = (await db.Query<(string j, long? daysBack)>("channels - previous", $@"with
- latest as (
+        existingChannels = (await db.Query<(string j, long? daysBack)>("channels - previous", $@"with review_filtered as (
+  select channel_id, channel_title
+  from channel_review
+  where meets_review_criteria
+     {(noExplicit ? "" : $"and channel_id in ({SqlList(explicitChannels)})")}--only explicit channel when provided
+)
+   , stage_latest as (
   select v
   from channel_stage -- query from stage because it can be deserialized without modification
-   where exists(select * from channel_accepted c where c.channel_id=v:ChannelId)
-   {(noExplicit ? "" : $"and v:ChannelId in ({SqlList(explicitChannels)})")} -- or it is explicit
-   qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc)=1
+  where exists(select * from review_filtered r where r.channel_id=v:ChannelId)
+    qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc)=1
 )
-select v, b.daily_update_days_back
-from latest l
-left join channel_collection_days_back b on b.channel_id = v:ChannelId"))
+select coalesce(v, object_construct('ChannelId', r.channel_id)), b.daily_update_days_back
+from review_filtered r
+       left join stage_latest on v:ChannelId=r.channel_id
+       left join channel_collection_days_back b on b.channel_id=v:ChannelId
+      left join channel_latest l on v:ChannelId = l.channel_id
+where l.meets_sub_criteria or l.subs is null or l.channel_views is null
+"))
           .Select(r => new ChannelUpdatePlan(r.j.ToObject<ChannelStored2>(Store.Channels.JCfg),
             videosFrom: r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : (DateTime?) null))
           .ToKeyedCollection(r => r.Channel.ChannelId);
