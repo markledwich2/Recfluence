@@ -79,7 +79,11 @@ export async function run(branch: string, repo: string, sfCfg: YtSfCfg, runArgs:
 
     var attempt = 0
     while(true) {
-        if(await isOnline()) break
+        await delay(1000);
+        if(await isOnline()) {
+            log.debug('internet connection online', attempt)
+            break
+        }
         log.debug('not online yet (attempt %s)', attempt)
         if(attempt >= 10) break
         await delay(1000);
