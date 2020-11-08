@@ -7,7 +7,7 @@ import { LoggerOptions } from 'bunyan'
 import bunyanDebugStream from 'bunyan-debug-stream'
 import * as yargs from 'yargs'
 import stripAnsi from 'strip-ansi'
-import { delay } from 'lodash'
+import dns from 'dns'
 
 dotenvCfg()
 const env = process.env
@@ -58,11 +58,28 @@ const branch = process.env.BRANCH ?? 'master'
 var log = bunyan.createLogger(logCfg).child({repo, db:sfCfg.db})
 log.info('recfluence dataform container started');
 
+export const delay = (ms: number) => new Promise(_ => setTimeout(_, ms));
+
 (async () => {
+    var attempt = 1
+    while(true) {
+        try {
+            const res = await dns.promises.lookup('github.com')
+            log.info('resolved github %s', res.address)
+            break
+        }
+        catch (ex) {
+            log.warn('not online yet (attempt %s)', attempt)
+        }
+        
+        if(attempt >= 10) break
+        await delay(1000);
+        attempt++
+    }
     // get latest code & configure dataform settings
     await run(branch, repo, sfCfg, dfRunArgs, log)
 })().catch((e: any) => {
     const msg:string = (e instanceof Error) ? e.message : e
     log.error(stripAnsi(msg))
-    delay(() => process.exit(1), 1500) // no flush option. give streams a chance to finish
+    delay(1500).then(() => process.exit(1)) // no flush option. give streams a chance to finish
 })

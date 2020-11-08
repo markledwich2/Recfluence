@@ -4,13 +4,17 @@ az configure --defaults location=westus2 group=ytnetworks
 registryPass=`az keyvault secret show --name "ytnetworks-registry-password" --vault-name "recfluence" --output json | jq -r '.value'`
 cs=`az storage account show-connection-string --name ytapp --output tsv`
 
+
+# update
 az container create --name update-manual --image ytnetworks.azurecr.io/recfluence:latest --cpu 2 --memory 4 \
-    --command-line "./recfluence update -a Index|Result|UserScrape -r ttube_channels" \
+    --command-line "./recfluence update -a Dataform" \
     --environment-variables env=prod appStoreCs=$cs \
     --registry-username ytnetworks  --registry-password $registryPass \
     --restart-policy Never
 
 az container delete --name update-manual
+
+# userscrape
 
 sas_end=`date -u -d "120 minutes" '+%Y-%m-%dT%H:%MZ'`
 us_cfg_sas=`az storage blob generate-sas --connection-string $cs --container-name cfg --name userscrape.json  --permissions r --expiry $sas_end --full-uri --output tsv`
@@ -19,3 +23,10 @@ az container create --name userscrape-manual3 --image ytnetworks.azurecr.io/user
     --environment-variables cfg_sas=$us_cfg_sas env=prod  \
     --registry-username ytnetworks  --registry-password $registryPass \
     --restart-policy Never
+
+
+#dataform
+
+az 
+
+{ "host":"ql98184.west-us-2.azure.snowflakecomputing.com", "warehouse":"yt", "db": "yt", "schema":"public", "creds":"recfluence:", "role":"recfluence" }
