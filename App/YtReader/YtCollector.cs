@@ -147,7 +147,6 @@ from review_filtered r
        left join stage_latest on v:ChannelId=r.channel_id
        left join channel_collection_days_back b on b.channel_id=v:ChannelId
       left join channel_latest l on v:ChannelId = l.channel_id
-where l.meets_sub_criteria or l.subs is null or l.channel_views is null
 "))
           .Select(r => new ChannelUpdatePlan(r.j.ToObject<ChannelStored2>(Store.Channels.JCfg),
             videosFrom: r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : (DateTime?) null))
