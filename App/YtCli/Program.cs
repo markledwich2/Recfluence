@@ -252,6 +252,25 @@ namespace YtCli {
     }
   }
   
+  [Command("test-chrome-scraper")]
+  public class TestChromeScraperCmd : ICommand {
+    readonly ChromeScraper Scraper;
+    readonly ILogger       Log;
+
+    public TestChromeScraperCmd(ChromeScraper scraper, ILogger log) {
+      Scraper = scraper;
+      Log = log;
+    }
+
+    [CommandOption('v', Description = "| separated video id's")]
+    public string VideoIds { get; set; }
+
+    public async ValueTask ExecuteAsync(IConsole console) {
+      var res = await Scraper.GetRecsAndExtra(VideoIds.UnJoin('|'), Log);
+      Log.Information("Scraping of {VideoIds} complete", VideoIds, res);
+    }
+  }
+  
   [Command("sandbox")]
   public class SandboxCmd : ICommand {
     readonly SnowflakeConnectionProvider Sf;
