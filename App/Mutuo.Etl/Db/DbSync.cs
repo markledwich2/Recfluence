@@ -130,7 +130,7 @@ namespace Mutuo.Etl.Db {
         log.Debug("Sync {Table} - loading: {Files}", tableCfg.Name, toLoad.Join("|", l => l.Path.ToString()));
         await Dest.LoadFrom(toLoad.Select(f => f.Path), loadTable);
         loadedFiles.AddRange(toLoad);
-        await toLoad.BlockAction(f => Store.Delete(f.Path, log), parallelism: 8);
+        await toLoad.BlockAction(f => Store.Delete(f.Path, log), parallel: 8);
       }
 
       log.Information("Sync {Table} - copied {Files} files ({Size})", tableCfg.Name, loadedFiles.Count, loadedFiles.Sum(f => f.Bytes).Bytes().Humanize("#,#"));

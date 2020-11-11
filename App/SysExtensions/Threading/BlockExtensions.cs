@@ -16,9 +16,9 @@ using SysExtensions.Text;
 
 namespace SysExtensions.Threading {
   public static class BlockExtensions {
-    public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallelism = 1, int? capacity = null,
+    public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallel = 1, int? capacity = null,
       CancellationToken cancel = default) {
-      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false, CancellationToken = cancel};
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
 
       var block = new ActionBlock<T>(action, options);
@@ -123,7 +123,7 @@ namespace SysExtensions.Threading {
     public static async IAsyncEnumerable<R> BlockTrans<T, R>(this IAsyncEnumerable<T> source,
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
-      var produceTask = ProduceAsync(source, block);
+      var produceTask = ProduceAsync(source, block, cancel);
       while (true) {
         if(produceTask.IsFaulted) {
           block.Complete();
@@ -191,9 +191,10 @@ namespace SysExtensions.Threading {
       return result;
     }
 
-    static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<T> block) {
+    static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<T> block, CancellationToken cancel = default) {
       var produced = 0;
       await foreach (var item in source) {
+        if (cancel.IsCancellationRequested) return produced;
         await block.SendAsync(item).ConfigureAwait(false);
         produced++;
       }

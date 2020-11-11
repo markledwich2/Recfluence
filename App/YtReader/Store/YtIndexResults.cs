@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
@@ -13,6 +15,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
+using IndexExpression = System.Linq.Expressions.Expression<System.Func<Serilog.ILogger, System.Threading.Tasks.Task<Mutuo.Etl.Blob.BlobIndexWork>>>;
 
 namespace YtReader.Store {
   public class YtIndexResults {
@@ -26,66 +29,71 @@ namespace YtReader.Store {
       BlobIndex = new BlobIndex(Store);
     }
 
-    public async Task Run(IReadOnlyCollection<string> include, ILogger log, CancellationToken cancel = default) {
-      var taskGraph = TaskGraph.FromMethods(
-        (l, c) => TopVideos(l),
-        (l, c) => TopChannelVideos(l),
-        (l, c) => ChannelStatsByPeriod(l),
-        (l, c) => ChannelStatsById(l),
-        (l, c) => VideosRemoved(l)
-      );
-
-      taskGraph.IgnoreNotIncluded(include);
-      var (res, dur) = await taskGraph.Run(parallel: 4, log, cancel).WithDuration();
-      var errors = res.Where(r => r.Error).ToArray();
-      if (errors.Any())
-        Log.Error("Index - failed in {Duration}: {@TaskResults}", dur.HumanizeShort(), res.Join("\n"));
-      else
-        Log.Information("Index - completed in {Duration}: {TaskResults}", dur.HumanizeShort(), res.Join("\n"));
+    static (string Name, Func<ILogger, Task<BlobIndexWork>> Run) IndexTask(IndexExpression expression) {
+      var run = expression.Compile();
+      var m = expression.Body as MethodCallExpression ?? throw new InvalidOperationException("expected an expression that calls a method");
+      var attribute = m.Method.GetCustomAttribute<GraphTaskAttribute>();
+      return (attribute?.Name ?? m.Method.Name, run);
     }
 
-    async Task<(BlobIndexMeta index, StringPath path)> UpdateBlobIndex(ILogger log, string name, string[] indexCols, string sql,
+    public async Task Run(IReadOnlyCollection<string> include, ILogger log, CancellationToken cancel = default) {
+      var toRun = new IndexExpression[] {
+        l => TopVideos(l, 20_000),
+        l => TopChannelVideos(l, 50),
+        l => ChannelStatsByPeriod(l),
+        l => ChannelStatsById(l),
+        l => VideosRemoved(l)
+      }.Select(IndexTask).Where(t => include == null || include.Contains(t.Name));
+      var (res, indexDuration) = await toRun.BlockFunc(async r => {
+        var work = await r!.Run(log);
+        return await BlobIndex.SaveIndexedJsonl(work, log, cancel);
+      }, parallel: 4, cancel: cancel).WithDuration();
+      log.Information("Completed writing indexes files {Indexes} in {Duration}. Starting commit.",
+        res.Select(i => i.IndexFilesPath), indexDuration.HumanizeShort());
+      if (cancel.IsCancellationRequested) return;
+      await res.BlockAction(r => BlobIndex.CommitIndexJson(r, log), parallel: 10, cancel: cancel);
+      log.Information("Committed indexes {Indexes}", res.Select(i => i.IndexPath));
+    }
+
+    public static string IndexVersion = "v2";
+
+    async Task<BlobIndexWork> IndexWork(ILogger log, string name, IndexCol[] cols, string sql,
       ByteSize size, Action<JObject> onProcessed = null) {
       using var con = await Sf.OpenConnection(log);
-      
       var rows = con.QueryBlocking<dynamic>(name, sql)
         .Select(d => (JObject) JObject.FromObject(d))
         .Select(j => j.ToCamelCase()).GetEnumerator();
-
-      var camelIndex = CamelIndex(indexCols);
-      var path = StringPath.Relative("index", name);
-      var index = await BlobIndex.SaveIndexedJsonl(path, rows, camelIndex, size, log, onProcessed);
-      return (index, path);
+      var path = StringPath.Relative("index", name, IndexVersion);
+      return new BlobIndexWork(path, cols, rows, size, onProcessed);
     }
 
-    static string[] CamelIndex(string[] indexCols) => indexCols.Select(i => i.ToCamelCase()).ToArray();
+    const           string     TopVideosName = "top_videos";
+    static readonly IndexCol[] PeriodCols    = new[] {"period"}.Select(c => CreateIndexCol(c, writeDistinct: true)).ToArray();
 
-    const           string   TopVideosName = "top_videos";
-    static readonly string[] PeriodCols    = {"period_type", "period_value"};
+    static IndexCol CreateIndexCol(string dbName, bool inIndex = true, bool writeDistinct = false) => new IndexCol {
+      Name = dbName.ToCamelCase(),
+      DbName = dbName,
+      InIndex = inIndex,
+      WriteDistinct = writeDistinct
+    };
 
     /// <summary>Top videos for all channels for a given time period</summary>
     [GraphTask(Name = TopVideosName)]
-    async Task TopVideos(ILogger log) {
-      var uniqPeriods = new Dictionary<string, JObject>(); // store unique periods to show in UI dynamically before loading data
-      var (_, path) = await UpdateBlobIndex(log, TopVideosName, PeriodCols, TopVideoResSql(rank: 20_000, PeriodCols),
-        200.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
-      await SavePeriods(path, uniqPeriods, log);
-    }
+    Task<BlobIndexWork> TopVideos(ILogger log, int topPerPeriod) =>
+      IndexWork(log, TopVideosName, PeriodCols, TopVideoResSql(rank: topPerPeriod, PeriodCols), 200.Kilobytes());
 
     const string TopChannelVideosName = "top_channel_videos";
 
     /// <summary>Top videos from a channel & time period</summary>
     [GraphTask(Name = TopChannelVideosName)]
-    async Task TopChannelVideos(ILogger log) {
-      var cols = new[] {"channel_id"}.Concat(PeriodCols).ToArray();
-      var uniqPeriods = new Dictionary<string, JObject>(); // store unique periods to show in UI dynamically before loading data
-      var (_, path) = await UpdateBlobIndex(log, TopChannelVideosName, cols, TopVideoResSql(rank: 50, cols),
-        300.Kilobytes(), r => RecordPeriods(r, uniqPeriods));
-      await SavePeriods(path, uniqPeriods, log);
+    Task<BlobIndexWork> TopChannelVideos(ILogger log, int topPerChannel) {
+      var cols = new[] {CreateIndexCol("channel_id")}.Concat(PeriodCols).ToArray();
+      return IndexWork(log, TopChannelVideosName, cols, TopVideoResSql(topPerChannel, cols), 300.Kilobytes());
     }
 
-    string TopVideoResSql(int rank, string[] index) =>
-      $@"with video_ex as (
+    string TopVideoResSql(int rank, IndexCol[] cols) {
+      var indexColString = cols.DbNames().Join(",");
+      return $@"with video_ex as (
   select video_id, video_title, upload_date, views as video_views, duration from video_latest
 )
 select t.video_id
@@ -93,39 +101,38 @@ select t.video_id
      , channel_id
      , upload_date
      , timediff(seconds, '0'::time, v.duration) as duration_secs
-     , period_type
-     , period_value::string period_value
+     , concat(period_type, '|', period_value) period
      , views as period_views
      , video_views
      , watch_hours
-     , rank() over (partition by {index.Join(",")} order by period_views desc) rank
+     , rank() over (partition by {indexColString} order by period_views desc) rank
 from ttube_top_videos t
 left join video_ex v on v.video_id = t.video_id
   qualify rank<{rank}
-order by {index.Join(",")}, rank";
+order by {indexColString}, rank";
+    }
 
     const string ChannelStatsByPeriodName = "channel_stats_by_period";
 
     /// <summary>Aggregate stats for a channel at a given time period</summary>
     [GraphTask(Name = ChannelStatsByPeriodName)]
-    async Task ChannelStatsByPeriod(ILogger log) =>
-      await UpdateBlobIndex(log, ChannelStatsByPeriodName, PeriodCols, ChannelStatsSql(PeriodCols), 100.Kilobytes());
+    Task<BlobIndexWork> ChannelStatsByPeriod(ILogger log) =>
+      IndexWork(log, ChannelStatsByPeriodName, PeriodCols, ChannelStatsSql(PeriodCols), 100.Kilobytes());
 
-    static readonly string[] ByChannelCols        = {"channel_id"};
-    const           string   ChannelStatsByIdName = "channel_stats_by_id";
+    static readonly IndexCol[] ByChannelCols        = {CreateIndexCol("channel_id")};
+    const           string     ChannelStatsByIdName = "channel_stats_by_id";
 
     /// <summary>Aggregate stats for a channel given a channel</summary>
     [GraphTask(Name = ChannelStatsByIdName)]
-    async Task ChannelStatsById(ILogger log) => await UpdateBlobIndex(log, ChannelStatsByIdName, ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes());
+    Task<BlobIndexWork> ChannelStatsById(ILogger log) =>
+      IndexWork(log, ChannelStatsByIdName, ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes());
 
-    static string ChannelStatsSql(string[] orderCols) =>
+    static string ChannelStatsSql(IndexCol[] orderCols) =>
       $@"with by_channel as (
   select t.channel_id
-       , t.period_type
-       , t.period_value::string period_value
+       , concat(t.period_type, '|', t.period_value) period
        , sum(views) views
        , sum(watch_hours) watch_hours
-
   from ttube_top_videos t
   group by t.channel_id, t.period_type, t.period_value
 )
@@ -133,27 +140,14 @@ select t.*
   , r.latest_refresh
   , r.videos
 from by_channel t
-       left join ttube_refresh_stats r on r.channel_id=t.channel_id and r.period_type=t.period_type and r.period_value=t.period_value
-order by {orderCols.Join(",")}";
-
-    async Task SavePeriods(StringPath path, IDictionary<string, JObject> uniqPeriods, ILogger log) {
-      var stream = await uniqPeriods.Values.ToJsonlGzStream();
-      await Store.Save(path.Add("periods.jsonl.gz"), stream, log);
-    }
-
-    static readonly string[] JVideoPeriodCols = CamelIndex(PeriodCols);
-
-    static void RecordPeriods(JObject r, IDictionary<string, JObject> uniqPeriods) {
-      var s = r.JStringValues(JVideoPeriodCols).Join("|");
-      if (!uniqPeriods.ContainsKey(s))
-        uniqPeriods[s] = r.JCloneProps(JVideoPeriodCols);
-    }
+       left join ttube_refresh_stats r on r.channel_id=t.channel_id and concat(r.period_type, '|', r.period_value)=t.period
+order by {orderCols.DbNames().Join(",")}";
 
     [GraphTask(Name = "video_removed")]
-    async Task VideosRemoved(ILogger log) =>
-      await UpdateBlobIndex(
+    Task<BlobIndexWork> VideosRemoved(ILogger log) =>
+      IndexWork(
         log, "video_removed",
-        new[] {"last_seen"},
+        new[] {CreateIndexCol("last_seen"), CreateIndexCol("error_type", inIndex: false, writeDistinct: true)},
         @"with
   video_errors as (
   select e.video_id

@@ -34,7 +34,7 @@ namespace YtReader {
         };
         var rows = await csv.GetRecordsAsync<dynamic>().ToListAsync();
         await Store.Save(f.Path.Parent.Add($"{f.Path.NameSansExtension}.json.gz"), await rows.ToJsonlGzStream(), log);
-      }, parallelism: 4);
+      }, parallel: 4);
     }
   }
 }

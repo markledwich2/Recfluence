@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
 using Humanizer.Bytes;
@@ -15,54 +16,113 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Blob {
+  public class IndexCol {
+    public string Name          { get; set; }
+    public bool   InIndex       { get; set; }
+    public bool   WriteDistinct { get; set; }
+    public string DbName        { get; set; }
+  }
+
+  public class BlobIndexResult {
+    public BlobIndexResult(BlobIndexMeta index, StringPath indexPath, StringPath indexFilesPath, StringPath[] toDelete) {
+      Index = index;
+      IndexPath = indexPath;
+      ToDelete = toDelete;
+      IndexFilesPath = indexFilesPath;
+    }
+
+    public BlobIndexMeta Index     { get; set; }
+    public StringPath    IndexPath { get; set; }
+    public StringPath    IndexFilesPath { get; set; }
+    public StringPath[]  ToDelete  { get; set; }
+  }
+
+  public class BlobIndexWork {
+    public StringPath           Path        { get; }
+    public IEnumerator<JObject> Rows        { get; }
+    public IndexCol[]           Cols        { get; }
+    public ByteSize             Size        { get; }
+    public Action<JObject>      OnProcessed { get; }
+
+    public BlobIndexWork(StringPath path, IndexCol[] cols, IEnumerator<JObject> rows,
+      ByteSize size, Action<JObject> onProcessed = null) {
+      Path = path;
+      Rows = rows;
+      Cols = cols;
+      Size = size;
+      OnProcessed = onProcessed;
+    }
+  }
+
   public class BlobIndex {
     readonly ISimpleFileStore Store;
     public BlobIndex(ISimpleFileStore store) => Store = store;
 
     /// <summary>Indexes into blob storage the given data. Reader needs to be ordered by the index columns.</summary>
-    public async Task<BlobIndexMeta> SaveIndexedJsonl(StringPath path, IEnumerator<JObject> rows, string[] indexNames,
-      ByteSize size, ILogger log, Action<JObject> onProcessed = null) {
-      var indexPath = path.Add("index");
+    public async Task<BlobIndexResult> SaveIndexedJsonl(BlobIndexWork work, ILogger log, CancellationToken cancel = default) {
+      var indexPath = work.Path.Add("index");
       var (oldIndex, _) = await Store.Get<BlobIndexMeta>(indexPath).Try(new BlobIndexMeta());
       oldIndex.RunIds ??= new RunId[] { };
       var runId = DateTime.UtcNow.FileSafeTimestamp();
-      var files = await IndexFiles(rows, indexNames, size, log, onProcessed)
+
+      IDictionary<string,HashSet<string>> colDistinctValues = work.Cols.Where(c => c.WriteDistinct).ToDictionary(c => c.Name, c => new HashSet<string>());
+
+      void OnProcessed(JObject j) {
+        work.OnProcessed?.Invoke(j);
+        RecordColDistinct(j, colDistinctValues);
+      }
+
+      var files = (await IndexFiles(work.Rows, work.Cols, work.Size, log, OnProcessed)
         .Select((b, i) => (b.first, b.last, b.stream, i))
         .BlockTrans(async b => {
+          if (cancel.IsCancellationRequested) return null;
           var file = new StringPath($"{runId}/{b.i:000000}.{JValueString(b.first)}.{JValueString(b.last)}.jsonl.gz");
-          await Store.Save(path.Add(file), b.stream);
+          await Store.Save(work.Path.Add(file), b.stream);
           return new BlobIndexFileMeta {
             File = file,
             First = b.first,
             Last = b.last
           };
-        }, parallel: 16).ToListAsync();
+        }, parallel: 16, cancel:cancel).ToListAsync()).NotNull();
+
+      var colMd = work.Cols
+        .Where(c => c.WriteDistinct)
+        .Select(c => new BlobIndexColMeta {
+          Name = c.Name,
+          DbName = c.DbName,
+          InIndex = c.InIndex,
+          Distinct = colDistinctValues.TryGet(c.Name)?.ToArray() ?? new string[]{}
+        }).ToArray();
 
       var toDelete = oldIndex.RunIds
         .OrderByDescending(r => r.Created).Skip(1) // leave latest
         .Where(r => DateTime.UtcNow - r.Created > 12.Hours()) // 1 older than latest if its old enough
-        .Select(r => r.Id).ToArray();
-      
-      await toDelete.BlockAction(async id => {
-        var deletePath = path.Add(id);
-        await Store.List(deletePath).SelectMany().BlockTrans(f => Store.Delete(f.Path, log)).ToListAsync();
-      });
-      
-      log.Debug("deleted expired {Files}", toDelete);
-      
+        .Select(r => (Path: work.Path.Add(r.Id), r.Id)).ToArray();
+
       var index = new BlobIndexMeta {
         KeyFiles = files.ToArray(),
-        RunIds = oldIndex.RunIds.Where(r => !toDelete.Contains(r.Id))
-          .Concat(new RunId { Id = runId, Created = DateTime.UtcNow }).ToArray()
+        RunIds = oldIndex.RunIds.Where(r => toDelete.All(d => d.Id != r.Id))
+          .Concat(new RunId {Id = runId, Created = DateTime.UtcNow}).ToArray(),
+        Cols = colMd
       };
-      await Store.Set(indexPath, index);
-      
-      return index;
+
+      var indexFilesPath = work.Path.Add(runId);
+      log.Information("Completed saving index files in {Index}. Not committed yet.", indexFilesPath);
+      return new BlobIndexResult(index, indexPath, indexFilesPath, toDelete.Select(d => d.Path).ToArray());
+    }
+
+    public async Task CommitIndexJson(BlobIndexResult indexWork, ILogger log) {
+      await indexWork.ToDelete.BlockAction(async deletePath => {
+        await Store.List(deletePath).SelectMany().BlockTrans(f => Store.Delete(f.Path, log)).ToListAsync();
+      });
+      log.Debug("deleted expired {Files}", indexWork.ToDelete);
+      await Store.Set(indexWork.IndexPath, indexWork.Index);
+      log.Information("Committed index {Index}", indexWork.IndexPath);
     }
 
     string JValueString(JObject j) => j.JStringValues().Join("|");
 
-    async IAsyncEnumerable<(Stream stream, JObject first, JObject last)> IndexFiles(IEnumerator<JObject> rows, string[] indexNames, ByteSize size, ILogger log,
+    async IAsyncEnumerable<(Stream stream, JObject first, JObject last)> IndexFiles(IEnumerator<JObject> rows, IndexCol[] cols, ByteSize size, ILogger log,
       Action<JObject> onProcessed) {
       var hasRows = true;
       while (hasRows) {
@@ -84,19 +144,29 @@ namespace Mutuo.Etl.Blob {
             r.WriteTo(jw);
             await tw.WriteLineAsync();
             onProcessed?.Invoke(r);
-
             if (memStream.Position > size.Bytes)
               break;
           }
-        memStream.Seek(0, SeekOrigin.Begin);
+        memStream.Seek(offset: 0, SeekOrigin.Begin);
         yield return (memStream, JCopy(first), JCopy(last));
       }
 
-      JObject JCopy(JObject j) => j.JCloneProps(indexNames);
+      JObject JCopy(JObject j) => j.JCloneProps(cols.Where(c => c.InIndex).Select(c => c.Name).ToArray());
+    }
+
+    static void RecordColDistinct(JObject r, IDictionary<string, HashSet<string>> colDistinctValues) {
+      foreach (var (colName, values) in colDistinctValues) {
+        var s = r[colName]?.Value<string>();
+        if (s != null)
+          values.Add(s);
+      }
     }
   }
 
   public static class BlobIndexEx {
+    public static string[] DbNames(this IEnumerable<IndexCol> cols) => cols.Where(c => c.InIndex).Select(c => c.DbName).ToArray();
+    public static string[] Names(this IEnumerable<IndexCol> cols) => cols.Where(c => c.InIndex).Select(c => c.Name).ToArray();
+
     public static JObject JCloneProps(this JObject j, params string[] props) {
       var k = new JObject();
       foreach (var p in props)
@@ -118,6 +188,11 @@ namespace Mutuo.Etl.Blob {
   public class BlobIndexMeta {
     public BlobIndexFileMeta[] KeyFiles { get; set; }
     public RunId[]             RunIds   { get; set; }
+    public BlobIndexColMeta[]  Cols     { get; set; }
+  }
+
+  public class BlobIndexColMeta : IndexCol {
+    public string[] Distinct { get; set; }
   }
 
   public class RunId {
