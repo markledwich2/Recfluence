@@ -167,17 +167,7 @@ namespace YtReader {
 
       // by default, backup to the app/root storage location
       appCfg.Storage.BackupCs ??= cfgRoot.AppStoreCs;
-
-
-      // the generic config doesn't know how to load arbitrary json objects. perform the load from secrets manually
-      var creds = new JObject();
-      foreach (var s in secrets) {
-        var credJson = s.ParseJToken().SelectToken("sheets.credJson") as JObject;
-        if (credJson != null)
-          creds.Merge(credJson);
-      }
-      appCfg.Sheets.CredJson = creds;
-
+      
       // merge default properties from the pipe config
       appCfg.Dataform.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.Dataform.Container);
       appCfg.UserScrape.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.UserScrape.Container);
@@ -224,7 +214,6 @@ namespace YtReader {
       b.Register(_ => cfg.Proxy).SingleInstance();
       b.Register(_ => cfg.Collect).SingleInstance();
       b.Register(_ => cfg.YtApi).SingleInstance();
-      b.Register(_ => cfg.Sheets).SingleInstance();
       b.Register(_ => cfg.Search).SingleInstance();
       b.Register(_ => cfg.SyncDb).SingleInstance();
       b.Register(_ => cfg.AppDb).SingleInstance();

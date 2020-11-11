@@ -46,7 +46,6 @@ namespace YtReader {
     [Required] public YtApiCfg        YtApi                 { get; set; } = new YtApiCfg();
     [Required] public HashSet<string> LimitedToSeedChannels { get; set; } = new HashSet<string>();
     [Required] public SeqCfg          Seq                   { get; set; } = new SeqCfg();
-    [Required] public SheetsCfg       Sheets                { get; set; } = new SheetsCfg();
     [Required] public ProxyCfg        Proxy                 { get; set; } = new ProxyCfg();
     [Required] public SnowflakeCfg    Snowflake             { get; set; } = new SnowflakeCfg();
     [Required] public WarehouseCfg    Warehouse             { get; set; } = new WarehouseCfg();
@@ -104,19 +103,7 @@ namespace YtReader {
 
     public bool IsDirect() => Url.NullOrEmpty();
   }
-
-  public class SheetsCfg {
-    [Required] [SkipRecursiveValidation] public JObject                   CredJson           { get; set; }
-    [Required]                           public string                    MainChannelSheetId { get; set; }
-    [Required]                           public ICollection<UserSheetCfg> UserSheets         { get; set; }
-    [Required]                           public int                       Parallel           { get; set; } = 4;
-  }
-
-  public class UserSheetCfg {
-    public string SheetId { get; set; }
-    public string Email   { get; set; }
-  }
-
+  
   public class YtCollectCfg {
     public DateTime? To   { get; set; }
 
