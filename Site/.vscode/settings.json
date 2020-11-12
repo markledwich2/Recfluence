@@ -41,4 +41,9 @@
   "prettier.singleQuote": true,
   "typescript.tsdk": "node_modules\\typescript\\lib",
   "debug.javascript.warnOnLongPrediction": false,
+  "workbench.colorCustomizations": {
+    "[Default Dark+]": {
+      "activityBar.background": "#1c2b1c"
+    }
+  }
 }

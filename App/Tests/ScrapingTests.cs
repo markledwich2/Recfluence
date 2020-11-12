@@ -33,7 +33,8 @@ namespace Tests {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<WebScraper>();
       var extra = await ws.GetRecsAndExtra(new[] {
-        "-sc6JCu5rZk",
+        "OijWK4Y6puI", //unlisted
+        //"-sc6JCu5rZk",
         //"y3oMtX8NyqY", //copyright2
         //"EqulyMs_M2M", // copyright1
         //"-6oswxLuRyk",

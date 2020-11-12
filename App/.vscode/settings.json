@@ -13,5 +13,11 @@
         "**/bin": true,
         "**/obj": true,
         "**/.data": true
+    },
+    "workbench.colorCustomizations": {
+        "[Default Dark+]": {
+            "activityBar.background": "#302230",
+            "statusBar.background": "#974597"
+        }
     }
 }

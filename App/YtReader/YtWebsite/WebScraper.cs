@@ -9,13 +9,11 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using AngleSharp.Html;
 using Humanizer;
 using LtGt;
 using Mutuo.Etl.Blob;
 using Newtonsoft.Json.Linq;
 using Serilog;
-using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Serialization;
@@ -347,7 +345,7 @@ namespace YtReader.YtWebsite {
 
     public const string RestrictedVideoError = "Restricted";
 
-    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log, 
+    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log,
       string channelId = null, string channelTitle = null) =>
       await videos.BlockFunc(async v => await GetRecsAndExtra(log, v, channelId, channelTitle), CollectCfg.WebParallel);
 
@@ -364,7 +362,7 @@ namespace YtReader.YtWebsite {
         Updated = DateTime.UtcNow,
         // some videos are listed under a channels playlist, but when you click on the vidoe, its channel is under enother (e.g. _iYT8eg1F8s)
         // Record them as the channelId of the playlist.
-        ChannelId = channelId ?? videoItem?.ChannelId, 
+        ChannelId = channelId ?? videoItem?.ChannelId,
         ChannelTitle = channelTitle ?? videoItem?.ChannelTitle,
         Description = videoItem?.Description,
         Duration = videoItem?.Duration,
@@ -397,14 +395,22 @@ namespace YtReader.YtWebsite {
         if (extra.SubError.HasValue()) // all pages have the error, but not a sub-error
           extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
       }
+      if (extra.Error == null) {
+        var ytInitialData = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialData");
+        var badgeLabels =
+          ytInitialData.SelectTokens(
+            "contents.twoColumnWatchNextResults.results.results.contents[*].videoPrimaryInfoRenderer.badges[*].metadataBadgeRenderer.label");
+        if(badgeLabels.Any(b => b.Value<string>() == "Unlisted"))
+          extra.Error = "Unlisted";
+      }
       if (extra.Error != null) return new RecsAndExtra(extra, new Rec[] { });
-      
+
       var recs = await GetRecs2(log, html, videoId);
       return new RecsAndExtra(extra, recs);
     }
 
     public async Task<Rec[]> GetRecs2(ILogger log, HtmlDocument html, string videoId) {
-      var jInit = await GetClientObjectFromWatchPage(log, html, videoId);
+      var jInit = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialData");
       var resultsSel = "$.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results";
       var jResults = (JArray) jInit.SelectToken(resultsSel) ?? throw new InvalidOperationException($"can't find {resultsSel}");
       var recs = jResults
@@ -431,13 +437,15 @@ namespace YtReader.YtWebsite {
     static readonly Regex ClientObjectsRe = new Regex(@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?})\s*;",
       RegexOptions.Compiled | RegexOptions.Singleline);
 
-    public async Task<JObject> GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, string videoId, string name = "ytInitialData") {
+    public async Task<JObject> GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, string videoId, string name) {
       var scripts = html.QueryElements("script")
         .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
 
+      string GroupValue(Match m, string group) => m.Groups[group].Value.HasValue() ? m.Groups[group].Value : null;
+
       var windowObjects = scripts
         .SelectMany(t => ClientObjectsRe.Matches(t))
-        .ToDictionary(m => m.Groups["window"].Value.HasValue() ? m.Groups["window"].Value : m.Groups["var"].Value, m => m.Groups["json"].Value);
+        .ToDictionary(m => GroupValue(m, "window") ?? GroupValue(m, "var"), m => m.Groups["json"].Value);
 
       var initData = windowObjects.TryGet(name);
       if (initData == null) return null;
@@ -456,8 +464,8 @@ namespace YtReader.YtWebsite {
       var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), $"{videoId}.html");
       var logUrl = LogStore.Url(path);
       await LogStore.Save(path, rawHtml.AsStream(), log);
-      log.Warning(ex, "WebScraper - {VideoId} - saved html that we could not parse '{msg}' ({Url}). error: {Error}", 
-        videoId,  msg, logUrl, ex?.ToString());
+      log.Warning(ex, "WebScraper - {VideoId} - saved html that we could not parse '{msg}' ({Url}). error: {Error}",
+        videoId, msg, logUrl, ex?.ToString());
     }
 
     public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptions(string videoId, ILogger log) {
