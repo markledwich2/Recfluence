@@ -177,7 +177,7 @@ order by video_views desc", 100.Kilobytes());
     WorkCfg NarrativeChannels() =>
       Work(NarrativeChannelsCols, $@"
 with by_channel as (
-  select n.channel_id, n.narrative
+  select n.channel_id, n.narrative, sum(v.views) views
   from video_narrative n
          left join video_latest v on v.video_id=n.video_id
   group by n.narrative, n.channel_id
@@ -200,7 +200,7 @@ select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}");
     WorkCfg NarrativeVideos() => Work(
     NarrativeVideoCols, $@"
 with s as (
-select n.narrative, n.video_id, n.video_title, n.channel_id, coalesce(n.label, 'unclassified') label, v.views video_views, v.upload_date::date upload_date
+select n.narrative, n.video_id, n.video_title, n.channel_id, support, supplement, v.views video_views, v.upload_date::date upload_date
   , timediff(seconds, '0'::time, v.duration) as duration_secs, n.captions
 from video_narrative n
 left join video_latest v on n.video_id = v.video_id
