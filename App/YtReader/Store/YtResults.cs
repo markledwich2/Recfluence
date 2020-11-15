@@ -306,20 +306,27 @@ group by channel_id",
         if (jsonSource == JsonSource.FirstColumn)
           j = JObject.Parse(reader.GetString(0));
         else
-          foreach (var i in reader.FieldRange()) {
-            var name = reader.GetName(i);
-            var jValue = reader.GetDataTypeName(i) switch {
-              "ARRAY" => reader.IsDBNull(i) ? null : JArray.Parse(reader.GetString(i)),
-              "OBJECT" => reader.IsDBNull(i) ? null : JObject.Parse(reader.GetString(i)),
-              _ => JToken.FromObject(reader[i])
-            };
-            j.Add(name, jValue);
-          }
+          j = ToSnowflakeJObject(reader);
+        
         if (naming == JsonCasingStrategy.Camel)
           j = j.ToCamelCase();
 
         await stream.WriteLineAsync(j.ToString(Formatting.None));
       }
+    }
+
+    public static JObject ToSnowflakeJObject(this IDataReader reader) {
+      var j = new JObject();
+      foreach (var i in reader.FieldRange()) {
+        var name = reader.GetName(i);
+        var jValue = reader.GetDataTypeName(i) switch {
+          "ARRAY" => reader.IsDBNull(i) ? null : JArray.Parse(reader.GetString(i)),
+          "OBJECT" => reader.IsDBNull(i) ? null : JObject.Parse(reader.GetString(i)),
+          _ => JToken.FromObject(reader[i])
+        };
+        j.Add(name, jValue);
+      }
+      return j;
     }
 
     static IEnumerable<int> FieldRange(this IDataRecord reader) => Enumerable.Range(0, reader.FieldCount);

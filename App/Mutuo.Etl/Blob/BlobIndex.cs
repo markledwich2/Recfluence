@@ -38,13 +38,13 @@ namespace Mutuo.Etl.Blob {
   }
 
   public class BlobIndexWork {
-    public StringPath           Path        { get; }
-    public IEnumerator<JObject> Rows        { get; }
-    public IndexCol[]           Cols        { get; }
-    public ByteSize             Size        { get; }
-    public Action<JObject>      OnProcessed { get; }
+    public StringPath                Path        { get; }
+    public IAsyncEnumerable<JObject> Rows        { get; }
+    public IndexCol[]                Cols        { get; }
+    public ByteSize                  Size        { get; }
+    public Action<JObject>           OnProcessed { get; }
 
-    public BlobIndexWork(StringPath path, IndexCol[] cols, IEnumerator<JObject> rows,
+    public BlobIndexWork(StringPath path, IndexCol[] cols, IAsyncEnumerable<JObject> rows,
       ByteSize size, Action<JObject> onProcessed = null) {
       Path = path;
       Rows = rows;
@@ -122,9 +122,10 @@ namespace Mutuo.Etl.Blob {
 
     string JValueString(JObject j) => j.JStringValues().Join("|");
 
-    async IAsyncEnumerable<(Stream stream, JObject first, JObject last)> IndexFiles(IEnumerator<JObject> rows, IndexCol[] cols, ByteSize size, ILogger log,
+    async IAsyncEnumerable<(Stream stream, JObject first, JObject last)> IndexFiles(IAsyncEnumerable<JObject> rows, IndexCol[] cols, ByteSize size, ILogger log,
       Action<JObject> onProcessed) {
       var hasRows = true;
+      var rowEnum = rows.GetAsyncEnumerator();
       while (hasRows) {
         var memStream = new MemoryStream();
         JObject first = null;
@@ -135,12 +136,11 @@ namespace Mutuo.Etl.Blob {
           Formatting = Formatting.None
         })
           while (true) {
-            hasRows = rows.MoveNext();
-            if (!hasRows || rows.Current == null) break;
-            var r = rows.Current;
+            hasRows = await rowEnum.MoveNextAsync();
+            if (!hasRows || rowEnum.Current == null) break;
+            var r = rowEnum.Current;
             first ??= r;
             last = r;
-
             r.WriteTo(jw);
             await tw.WriteLineAsync();
             onProcessed?.Invoke(r);
@@ -150,7 +150,7 @@ namespace Mutuo.Etl.Blob {
         memStream.Seek(offset: 0, SeekOrigin.Begin);
         yield return (memStream, JCopy(first), JCopy(last));
       }
-
+      
       JObject JCopy(JObject j) => j.JCloneProps(cols.Where(c => c.InIndex).Select(c => c.Name).ToArray());
     }
 

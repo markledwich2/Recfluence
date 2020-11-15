@@ -26,7 +26,7 @@ namespace Mutuo.Etl.Db {
     /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
     /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>
     Task<T> ExecuteScalar<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
-    Task<DbDataReader> ExecuteReader(string operation, string sql, object param, DbTransaction transaction = null);
+    Task<DbDataReader> ExecuteReader(string operation, string sql, object param = null, DbTransaction transaction = null);
   }
   
   public class LoggedConnection<TC> : ILoggedConnection<TC>  where TC : IDbConnection   {
