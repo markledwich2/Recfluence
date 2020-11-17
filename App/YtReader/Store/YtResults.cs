@@ -19,7 +19,6 @@ using Serilog;
 using SysExtensions;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
-using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
@@ -108,9 +107,11 @@ where c.reviews_all>0";
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip: true),
 
-          new ResQuery("ttube_channels", @"select channel_id, channel_title, tags, lr, logo_url, channel_views, subs, reviews_human, 
+          new ResQuery("ttube_channels", @"select channel_id, channel_title
+  , arrayExclude(tags, array_construct('MissingLinkMedia', 'OrganizedReligion', 'Educational')) tags
+  , lr, logo_url, channel_views, subs, reviews_human, 
   substr(description, 0, 301) description, public_reviewer_notes, public_creator_notes
-from channel_accepted order by channel_views desc", 
+from channel_accepted order by channel_views desc",
             fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
 
           new FileQuery("vis_category_recs", "sql/vis_category_recs.sql",
@@ -185,6 +186,21 @@ from (
 group by channel_id",
             fileType: ResFilType.Json),
 
+
+          new ResQuery("narrative_recs_support", @"
+with recs as (
+  select r.*, nt.narrative, nt.support as to_support, nf.support as from_support
+  from video_recs_monthly r
+  left join video_narrative nt on r.to_video_id = nt.video_id
+  left join video_narrative nf on r.from_video_id = nf.video_id
+  where nt.video_id is not null or nf.video_id is not null
+)
+select narrative, from_support, to_support, sum(impressions) impressions
+from recs
+where rec_month = '2020-11-01'
+group by 1,2,3
+", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel)
+
           /*new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
           new ResQuery("icc_lr", desc: "channel classifications in a format used to calculate how consistent reviewers are when deciding left/right/center"),
           new FileQuery("rec_accuracy", "sql/rec_accuracy.sql", "Calculates the accuracy of our estimates vs exported recommendations")*/
@@ -198,7 +214,7 @@ group by channel_id",
 
       var tmpDir = TempDir();
 
-      var results = await queries.BlockFunc(async q => (file: await SaveResult(log, db, tmpDir, q), query: q), ResCfg.Parallel, cancel:cancel);
+      var results = await queries.BlockFunc(async q => (file: await SaveResult(log, db, tmpDir, q), query: q), ResCfg.Parallel, cancel: cancel);
 
       if (queryNames?.Any() != true) await SaveResultsZip(log, results);
     }
@@ -307,7 +323,7 @@ group by channel_id",
           j = JObject.Parse(reader.GetString(0));
         else
           j = ToSnowflakeJObject(reader);
-        
+
         if (naming == JsonCasingStrategy.Camel)
           j = j.ToCamelCase();
 

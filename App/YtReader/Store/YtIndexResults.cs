@@ -185,7 +185,7 @@ with by_channel as (
 s as (
   select n.*
           , cl.channel_title
-         , cl.tags
+         , arrayExclude(cl.tags, array_construct('MissingLinkMedia', 'OrganizedReligion', 'Educational')) tags
          , cl.lr
          , logo_url
          , subs
@@ -200,12 +200,24 @@ select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}");
     WorkCfg NarrativeVideos() => Work(
     NarrativeVideoCols, $@"
 with s as (
-select n.narrative, n.video_id, n.video_title, n.channel_id, support, supplement, v.views video_views, v.upload_date::date upload_date
-  , timediff(seconds, '0'::time, v.duration) as duration_secs, n.captions
-from video_narrative n
-left join video_latest v on n.video_id = v.video_id
+  select n.narrative
+       , n.video_id
+       , n.video_title
+       , n.channel_id
+       , support
+       , supplement
+       , v.views video_views
+       , v.upload_date::date upload_date
+       , e.error_type
+       , timediff(seconds, '0'::time, v.duration) as duration_secs
+       , n.captions
+  from video_narrative n
+         left join video_latest v on n.video_id=v.video_id
+         left join video_extra e on e.video_id=v.video_id
 )
-select * from s order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc");
+select *
+from s
+order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc");
 
     #endregion
   }
