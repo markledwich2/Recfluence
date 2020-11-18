@@ -186,20 +186,8 @@ from (
 group by channel_id",
             fileType: ResFilType.Json),
 
-
-          new ResQuery("narrative_recs_support", @"
-with recs as (
-  select r.*, nt.narrative, nt.support as to_support, nf.support as from_support
-  from video_recs_monthly r
-  left join video_narrative nt on r.to_video_id = nt.video_id
-  left join video_narrative nf on r.from_video_id = nf.video_id
-  where nt.video_id is not null or nf.video_id is not null
-)
-select narrative, from_support, to_support, sum(impressions) impressions
-from recs
-where rec_month = '2020-11-01'
-group by 1,2,3
-", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel)
+          new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
+            parameters: new {from_date = "2020-11-03", to_date = "2020-11-10"})
 
           /*new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
           new ResQuery("icc_lr", desc: "channel classifications in a format used to calculate how consistent reviewers are when deciding left/right/center"),
