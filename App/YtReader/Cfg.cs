@@ -120,7 +120,7 @@ namespace YtReader {
     public int RefreshRecsMin { get; set; } = 2;
 
     /// <summary>The maximum number of videos to collect recs from a channel on any given day</summary>
-    public int RefreshRecsMax { get; set; } = 10;
+    public int RefreshRecsMax { get; set; } = 40;
 
     public bool AlwaysUseProxy { get; set; }
     public bool Headless       { get; set; } = true;

@@ -343,7 +343,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       var forChromeUpdate = new HashSet<string>();
       var vids = new List<VideoItem>();
       var discoverVids = new List<VideoItem>();
-      if (parts.ShouldRun(VidStats) || discover && parts.ShouldRun(DiscoverPart)) {
+      if (parts.ShouldRunAny(VidStats, VidRecs) || discover && parts.ShouldRun(DiscoverPart)) {
         var md = await Store.Videos.LatestFile(c.ChannelId);
         var lastUpload = md?.Ts?.ParseFileSafeTimestamp();
         log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions. Last video stage {LastUpload}",
@@ -382,8 +382,10 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       }
     }
 
-    static bool ChannelInTodaysUpdate(ChannelStored2 c, int cycleDays) =>
-      c.ChannelId.GetHashCode() % cycleDays == (DateTime.Today - DateTime.UnixEpoch).TotalDays.RoundToInt() % cycleDays;
+    static bool ChannelInTodaysUpdate(ChannelStored2 c, int cycleDays, DateTime? prevUpdate) =>
+      prevUpdate == null ||
+      DateTime.UtcNow - prevUpdate > 8.Days() ||
+      c.ChannelId.GetHashCode().Abs() % cycleDays == (DateTime.Today - DateTime.UnixEpoch).TotalDays.RoundToInt() % cycleDays;
 
     static async Task SaveVids(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, JsonlStore<VideoStored2> vidStore, DateTime? uploadedFrom,
       ILogger log) {
@@ -605,7 +607,7 @@ from videos_to_update",
       var prevUpdateMeta = await Store.Recs.LatestFile(c.ChannelId);
       var prevUpdate = prevUpdateMeta?.Ts.ParseFileSafeTimestamp();
       var vidsDesc = vids.OrderByDescending(v => v.UploadDate).ToList();
-      var inThisWeeksRecUpdate = ChannelInTodaysUpdate(c, cycleDays: 7);
+      var inThisWeeksRecUpdate = ChannelInTodaysUpdate(c, cycleDays: 7, prevUpdate);
 
       var toUpdate = new List<VideoItem>();
       if (prevUpdate == null) {
