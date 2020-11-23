@@ -468,13 +468,13 @@ namespace YtReader.YtWebsite {
         videoId, msg, logUrl, ex?.ToString());
     }
 
-    public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptions(string videoId, ILogger log) {
+    public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptionTracks(string videoId, ILogger log) {
       var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
       var playerResponseJson = JToken.Parse(videoInfoDic["player_response"]);
-      var captions = GetCaptions(playerResponseJson);
+      var captions = GetCaptionTracks(playerResponseJson);
       return captions;
     }
-
+    
     public async Task<VideoItem> GetVideo(string videoId, ILogger log) {
       if (!ValidateVideoId(videoId))
         throw new ArgumentException($"Invalid YouTube video ID [{videoId}].", nameof(videoId));
@@ -523,7 +523,7 @@ namespace YtReader.YtWebsite {
         videoDuration, videoKeywords, statistics, channelId, channelTitle);
     }
 
-    static IReadOnlyCollection<ClosedCaptionTrackInfo> GetCaptions(JToken playerResponseJson) =>
+    static IReadOnlyCollection<ClosedCaptionTrackInfo> GetCaptionTracks(JToken playerResponseJson) =>
       (from trackJson in playerResponseJson.SelectToken("..captionTracks").NotNull()
         let url = new UriBuilder(trackJson.SelectToken("baseUrl").Value<string>()).WithParameter("format", "3")
         let languageCode = trackJson.SelectToken("languageCode").Value<string>()

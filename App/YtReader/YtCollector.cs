@@ -263,23 +263,39 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
     [Pipe]
     public async Task<ProcessChannelResults> ProcessChannels(IReadOnlyCollection<ChannelUpdatePlan> channels,
       CollectPart[] parts, ILogger log = null, CancellationToken cancel = default) {
+      IEnumerable<IReadOnlyCollection<ChannelStored2>> ChannelBatches() => channels.Select(c => c.Channel).Batch(1000);
+
       log ??= Logger.None;
       var workSw = Stopwatch.StartNew();
 
       // to save on db costs, get anything we need in advance of collection
       var channelChromeVideos = new MultiValueDictionary<string, string>();
       var channelDeadVideos = new MultiValueDictionary<string, string>();
-      if (parts.ShouldRun(VidExtra)) {
-        using var db = await Sf.OpenConnection(log);
-        var forChromeUpdate = await channels.Select(c => c.Channel).Batch(1000)
-          .BlockFunc(c => VideosForChromeUpdate(c, db, log));
-        channelChromeVideos = forChromeUpdate.SelectMany()
-          .Randomize().Take(RCfg.ChromeUpdateMax)
-          .ToMultiValueDictionary(c => c.ChannelId, c => c.VideoId);
+      var missingCaptions = new MultiValueDictionary<string, string>();
 
-        channelDeadVideos = (await channels.Select(c => c.Channel).Batch(1000)
-            .BlockFunc(c => DeadVideosForExtraUpdate(c, db, log)))
-          .SelectMany().ToMultiValueDictionary(v => v.ChannelId, v => v.VideoId);
+      if (parts.ShouldRunAny(VidExtra, Caption)) {
+        using var db = await Sf.OpenConnection(log);
+
+        if (parts.ShouldRun(VidExtra)) {
+          var forChromeUpdate = await ChannelBatches().BlockFunc(c => VideosForChromeUpdate(c, db, log));
+          channelChromeVideos = forChromeUpdate.SelectMany()
+            .Randomize().Take(RCfg.ChromeUpdateMax)
+            .ToMultiValueDictionary(c => c.ChannelId, c => c.VideoId);
+
+          channelDeadVideos = (await ChannelBatches().BlockFunc(c => DeadVideosForExtraUpdate(c, db, log)))
+            .SelectMany().ToMultiValueDictionary(v => v.ChannelId, v => v.VideoId);
+        }
+
+        if (parts.ShouldRun(Caption))
+          missingCaptions = (await ChannelBatches().BlockFunc(channelBatch =>
+              db.Query<(string ChannelId, string VideoId)>("missing videos", $@"
+select channel_id, video_id
+from video_latest v
+where not exists(select * from caption c where c.video_id=v.video_id)
+  qualify row_number() over (partition by channel_id order by upload_date desc)<=20
+    and channel_id in ({channelBatch.Join(",", c => $"'{c.ChannelId}'")})
+")))
+            .SelectMany().ToMultiValueDictionary(v => v.ChannelId, v => v.VideoId);
       }
 
       var channelResults = await channels
@@ -293,7 +309,8 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
             .ForContext("Channel", c.ChannelTitle);
           try {
             await using var conn = new Defer<ILoggedConnection<IDbConnection>>(async () => await Sf.OpenConnection(cLog));
-            await UpdateAllInChannel(plan, parts, channelChromeVideos.TryGet(c.ChannelId), channelDeadVideos.TryGet(c.ChannelId), cLog);
+            await UpdateAllInChannel(plan, parts,
+              channelChromeVideos.TryGet(c.ChannelId), channelDeadVideos.TryGet(c.ChannelId), missingCaptions.TryGet(c.ChannelId), cLog);
             cLog.Information("Collect - {Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
               c.ChannelTitle, sw.Elapsed.HumanizeShort(), i + 1, channels.Count);
             return (c, Success: true);
@@ -319,6 +336,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
     async Task UpdateAllInChannel(ChannelUpdatePlan plan, CollectPart[] parts, IReadOnlyCollection<string> videosForChromeUpdate,
       IReadOnlyCollection<string> deadVideosForExtraUpdate,
+      IReadOnlyCollection<string> missingCaptions,
       ILogger log) {
       var c = plan.Channel;
 
@@ -343,7 +361,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       var forChromeUpdate = new HashSet<string>();
       var vids = new List<VideoItem>();
       var discoverVids = new List<VideoItem>();
-      if (parts.ShouldRunAny(VidStats, VidRecs) || discover && parts.ShouldRun(DiscoverPart)) {
+      if (parts.ShouldRunAny(VidStats, VidRecs, Caption) || discover && parts.ShouldRun(DiscoverPart)) {
         var md = await Store.Videos.LatestFile(c.ChannelId);
         var lastUpload = md?.Ts?.ParseFileSafeTimestamp();
         log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions. Last video stage {LastUpload}",
@@ -378,7 +396,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
       if (parts.ShouldRun(Caption)) {
         var forCaptionSave = discover ? discoverVids : vids;
-        await SaveNewCaptions(c, forCaptionSave, log);
+        await SaveCaptions(c, forCaptionSave, missingCaptions, log);
       }
     }
 
@@ -422,25 +440,25 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       }
     }
 
-    static readonly int MaxConsecutiveCaptionsMissing = 10;
+    static readonly int MaxConsecutiveCaptionsMissing = 5;
 
     /// <summary>Saves captions for all new videos from the vids list</summary>
-    async Task SaveNewCaptions(ChannelStored2 channel, IEnumerable<VideoItem> vids, ILogger log) {
-      var lastUpload =
+    async Task SaveCaptions(ChannelStored2 channel, IEnumerable<VideoItem> vids, IReadOnlyCollection<string> missingCaptions, ILogger log) {
+      var lastCaptionUpdate =
         (await Store.Captions.LatestFile(channel.ChannelId))?.Ts.ParseFileSafeTimestamp(); // last video upload in this channel partition we have captions for
 
       var consecutiveCaptionMissing = 0;
 
-      async Task<VideoCaptionStored2> GetCaption(VideoItem v) {
+      async Task<VideoCaptionStored2> GetCaption(string videoId) {
         if (consecutiveCaptionMissing >= MaxConsecutiveCaptionsMissing) return null;
-        var videoLog = log.ForContext("VideoId", v.Id);
+        var videoLog = log.ForContext("VideoId", videoId);
         ClosedCaptionTrack track;
         try {
-          var captions = await Scraper.GetCaptions(v.Id, log);
+          var captions = await Scraper.GetCaptionTracks(videoId, log);
           var enInfo = captions.FirstOrDefault(t => t.Language.Code == "en");
           if (enInfo == null) {
-            if (Interlocked.Increment(ref consecutiveCaptionMissing) == MaxConsecutiveCaptionsMissing)
-              log.Debug("SaveCaptions - too many consecutive videos are missing captions. Assuming it won't have any.");
+            if (Interlocked.Increment(ref consecutiveCaptionMissing) >= MaxConsecutiveCaptionsMissing)
+              videoLog.Debug("SaveCaptions - too many consecutive videos are missing captions. Assuming it won't have any.");
             return null;
           }
           track = await Scraper.GetClosedCaptionTrackAsync(enInfo, videoLog);
@@ -448,28 +466,30 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
         }
         catch (Exception ex) {
           ex.ThrowIfUnrecoverable();
-          log.Warning(ex, "Unable to get captions for {VideoID}: {Error}", v.Id, ex.Message);
+          videoLog.Warning(ex, "Unable to get captions for {VideoID}: {Error}", videoId, ex.Message);
           return null;
         }
-
         return new VideoCaptionStored2 {
           ChannelId = channel.ChannelId,
-          VideoId = v.Id,
-          UploadDate = v.UploadDate,
+          VideoId = videoId,
           Updated = DateTime.Now,
           Info = track.Info,
           Captions = track.Captions
         };
       }
 
-      var captionsToStore =
-        (await vids.Where(v => lastUpload == null || v.UploadDate > lastUpload)
-          .BlockFunc(GetCaption, RCfg.CaptionParallel)).NotNull().ToList();
+      var newCaptions = vids.Where(v => lastCaptionUpdate == null || v.UploadDate > lastCaptionUpdate).Select(v => v.Id).ToArray();
 
-      if (captionsToStore.Any())
-        await Store.Captions.Append(captionsToStore, log);
+      var toUpdate = newCaptions.Concat(missingCaptions).Distinct().ToArray();
 
-      log.Information("Collect - {Channel} - Saved {Captions} captions", channel.ChannelTitle, captionsToStore.Count);
+      log.Debug("Collect - {Channel} - about to load {New} new and {Missing} missing captions",
+        channel.ChannelTitle, newCaptions.Length, missingCaptions.Count);
+
+      var toStore = (await toUpdate.BlockFunc(GetCaption, RCfg.CaptionParallel)).NotNull().ToArray();
+      if (toStore.Any())
+        await Store.Captions.Append(toStore, log);
+      log.Information("Collect - {Channel} - Saved {Captions} captions: {CaptionList}", channel.ChannelTitle, toStore.Length,
+        toStore.Select(c => c.VideoId).ToArray());
     }
 
     /// <summary>Saves recs for all of the given vids</summary>

@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
 using Humanizer.Bytes;
 using Mutuo.Etl.Blob;
-using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions.Serialization;
@@ -23,7 +21,7 @@ namespace YtReader.Store {
     public string     Sql  { get; set; }
     public ByteSize   Size { get; set; }
   }
-  
+
   public class YtIndexResults {
     readonly SnowflakeConnectionProvider Sf;
     readonly BlobIndex                   BlobIndex;
@@ -32,56 +30,57 @@ namespace YtReader.Store {
       Sf = sf;
       BlobIndex = new BlobIndex(stores.Store(DataStoreType.Results));
     }
-    
+
     public async Task Run(IReadOnlyCollection<string> include, ILogger log, CancellationToken cancel = default) {
       var toRun = new IndexExpression[] {
-        () => TopVideos(20_000),
-        () => TopChannelVideos(50),
-        () => ChannelStatsByPeriod(),
-        () => ChannelStatsById(),
-        () => VideosRemoved(),
-        () => NarrativeChannels(),
-        () => NarrativeVideos(),
-      }
-        .Select(e => new { Expression = e, Name = ((MethodCallExpression) e.Body).Method.Name.Underscore()})
+          () => TopVideos(20_000),
+          () => TopChannelVideos(50),
+          () => ChannelStatsByPeriod(),
+          () => ChannelStatsById(),
+          () => VideoRemoved(),
+          () => VideoRemovedCaption(),
+          () => NarrativeChannels(),
+          () => NarrativeVideos(),
+        }
+        .Select(e => new {Expression = e, Name = ((MethodCallExpression) e.Body).Method.Name.Underscore()})
         .Where(t => include == null || include.Contains(t.Name));
-      
+
       var (res, indexDuration) = await toRun.BlockFunc(async t => {
         var cfg = t.Expression.Compile().Invoke();
         var work = await IndexWork(log, t.Name, cfg.Cols, cfg.Sql, cfg.Size);
         return await BlobIndex.SaveIndexedJsonl(work, log, cancel);
       }, parallel: 4, cancel: cancel).WithDuration();
-      
+
       log.Information("Completed writing indexes files {Indexes} in {Duration}. Starting commit.",
         res.Select(i => i.IndexFilesPath), indexDuration.HumanizeShort());
-      
+
       if (cancel.IsCancellationRequested) return;
-      
+
       await res.BlockAction(r => BlobIndex.CommitIndexJson(r, log), parallel: 10, cancel: cancel);
       log.Information("Committed indexes {Indexes}", res.Select(i => i.IndexPath));
     }
 
     public static string IndexVersion = "v2";
 
-    WorkCfg Work(IndexCol[] cols, string sql, ByteSize? size = default) => 
-      new WorkCfg { Cols = cols, Sql = sql, Size = size ?? 200.Kilobytes()};
-      
+    WorkCfg Work(IndexCol[] cols, string sql, ByteSize? size = default) =>
+      new WorkCfg {Cols = cols, Sql = sql, Size = size ?? 200.Kilobytes()};
+
     async Task<BlobIndexWork> IndexWork(ILogger log, string name, IndexCol[] cols, string sql, ByteSize size, Action<JObject> onProcessed = null) {
       using var con = await Sf.OpenConnection(log);
 
       async IAsyncEnumerable<JObject> GetRows() {
         var reader = await con.ExecuteReader(name, sql);
-        while (await reader.ReadAsync()) 
+        while (await reader.ReadAsync())
           yield return reader.ToSnowflakeJObject().ToCamelCase();
       }
-      
+
       var path = StringPath.Relative("index", name, IndexVersion);
       return new BlobIndexWork(path, cols, GetRows(), size, onProcessed);
     }
 
     #region Channels & Videos
 
-    static readonly IndexCol[] PeriodCols    = new[] {"period"}.Select(c => Col(c, writeDistinct: true)).ToArray();
+    static readonly IndexCol[] PeriodCols = new[] {"period"}.Select(c => Col(c, writeDistinct: true)).ToArray();
 
     static IndexCol Col(string dbName, bool inIndex = true, bool writeDistinct = false) => new IndexCol {
       Name = dbName.ToCamelCase(),
@@ -92,7 +91,7 @@ namespace YtReader.Store {
 
     /// <summary>Top videos for all channels for a given time period</summary>
     WorkCfg TopVideos(int topPerPeriod) => Work(PeriodCols, TopVideoResSql(rank: topPerPeriod, PeriodCols));
-    
+
     /// <summary>Top videos from a channel & time period</summary>
     WorkCfg TopChannelVideos(int topPerChannel) {
       var cols = new[] {Col("channel_id")}.Concat(PeriodCols).ToArray();
@@ -123,10 +122,10 @@ order by {indexColString}, rank";
     /// <summary>Aggregate stats for a channel at a given time period</summary>
     WorkCfg ChannelStatsByPeriod() => Work(PeriodCols, ChannelStatsSql(PeriodCols), 100.Kilobytes());
 
-    static readonly IndexCol[] ByChannelCols        = {Col("channel_id")};
+    static readonly IndexCol[] ByChannelCols = {Col("channel_id")};
 
     /// <summary>Aggregate stats for a channel given a channel</summary>
-    WorkCfg ChannelStatsById() =>  Work(ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes());
+    WorkCfg ChannelStatsById() => Work(ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes());
 
     static string ChannelStatsSql(IndexCol[] orderCols) =>
       $@"with by_channel as (
@@ -143,37 +142,26 @@ select t.*
 from by_channel t
        left join ttube_refresh_stats r on r.channel_id=t.channel_id and concat(r.period_type, '|', r.period_value)=t.period
 order by {orderCols.DbNames().Join(",")}";
-    
-    WorkCfg VideosRemoved() =>
+
+    WorkCfg VideoRemoved() =>
       Work(
-        new[] {Col("last_seen"), Col("error_type", inIndex: false, writeDistinct: true)},
-        @"with
-  video_errors as (
-  select e.video_id
-       , e.channel_id
-       , e.channel_title
-       , e.video_title
-       , e.error_type
-       , e.copyright_holder
-       , l.updated last_seen
-       , timediff(seconds, '0'::time, l.duration) duration_secs
-       , l.views video_views
-       , e.updated as error_updated
-  from video_extra e
-         inner join video_latest l on l.video_id=e.video_id
-         inner join channel_accepted c on e.channel_id=c.channel_id
-  where error_type is not null
-    and error_type not in ('Restricted','Not available in USA','Paywall','Device','Unknown')
-)
-select * from video_errors
-order by video_views desc", 100.Kilobytes());
-    
+        new[] {Col("last_seen"), Col("error_type", inIndex: false, writeDistinct: true)}, @"
+select e.*
+     , exists(select c.video_id from caption c where e.video_id=c.video_id) has_captions
+from video_error e
+order by last_seen", 100.Kilobytes());
+
+    WorkCfg VideoRemovedCaption() => Work(new[] {Col("video_id")}, @"
+select e.video_id, c.caption, c.offset_seconds from video_error e
+inner join caption c on e.video_id = c.video_id
+order by video_id, offset_seconds", 100.Kilobytes());
+
     #endregion
 
     #region Narrative
 
     static readonly IndexCol[] NarrativeChannelsCols = {Col("narrative", writeDistinct: true)};
-    
+
     WorkCfg NarrativeChannels() =>
       Work(NarrativeChannelsCols, $@"
 with by_channel as (
@@ -194,11 +182,11 @@ s as (
            left join channel_latest cl on n.channel_id=cl.channel_id
 )
 select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}");
-    
+
     static readonly IndexCol[] NarrativeVideoCols = {Col("narrative", writeDistinct: true), Col("upload_date")};
 
     WorkCfg NarrativeVideos() => Work(
-    NarrativeVideoCols, $@"
+      NarrativeVideoCols, $@"
 with s as (
   select n.narrative
        , n.video_id

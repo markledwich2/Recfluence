@@ -49,6 +49,15 @@ namespace Tests {
     }
 
     [Test]
+    public static async Task Captions() {
+      using var ctx = await TextCtx();
+      var scraper = ctx.Scope.Resolve<WebScraper>();
+      var tracks = await scraper.GetCaptionTracks("yu_C_K3TuyY", ctx.Log);
+      var en = tracks.First(t => t.Language.Code == "en");
+      var captions = await scraper.GetClosedCaptionTrackAsync(en, ctx.Log);
+    }
+
+    [Test]
     public static async Task WatchPageParsing() {
       using var x = await TextCtx();
       var docs = Setup.SolutionDir.Combine("Tests", "WatchPageHtml")
