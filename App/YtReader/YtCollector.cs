@@ -282,7 +282,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
             .Randomize().Take(RCfg.ChromeUpdateMax)
             .ToMultiValueDictionary(c => c.ChannelId, c => c.VideoId);
 
-          channelDeadVideos = (await ChannelBatches().BlockFunc(c => DeadVideosForExtraUpdate(c, db, log)))
+          channelDeadVideos = (await ChannelBatches().BlockFunc(c => MissingVideosForExtraUpdate(c, db, log)))
             .SelectMany().ToMultiValueDictionary(v => v.ChannelId, v => v.VideoId);
         }
 
@@ -537,7 +537,7 @@ where not exists(select * from caption c where c.video_id=v.video_id)
           Updated = updated
         }) ?? new RecStored2[] { }).ToArray();
 
-    async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> DeadVideosForExtraUpdate(IReadOnlyCollection<ChannelStored2> channels,
+    async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingVideosForExtraUpdate(IReadOnlyCollection<ChannelStored2> channels,
       ILoggedConnection<IDbConnection> db,
       ILogger log) {
       var ids = await db.Query<(string ChannelId, string VideoId)>("missing videos", $@"
@@ -573,7 +573,7 @@ with chans as (
   union all
   select channel_id, video_id, 'copyright'
   from video_extra e
-  where (error like '%copyright%' or sub_error like '%copyright%')
+  where (error like '%copyright%' or sub_error like '%copyright%' or sub_error = 'This video contains content from ')
     and copyright_holder is null
     and e.channel_id is not null
     and exists(select * from chans c where c.channel_id=e.channel_id)
