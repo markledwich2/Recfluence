@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.Azure.Storage.Blob;
 using Serilog;
-using SysExtensions;
+using SysExtensions.Collections;
 using SysExtensions.Text;
 using YtReader.Db;
 using YtReader.Store;
@@ -41,14 +43,14 @@ namespace YtReader {
 
     /// <summary>Creates an empty environment for a branch</summary>
     /// <returns></returns>
-    public async Task Create(BranchState state, ILogger log) {
+    public async Task Create(BranchState state, string[] channels, string[] dbPaths, ILogger log) {
       if (VersionInfo.Version.Prerelease.NullOrEmpty()) throw new InvalidOperationException("can't create environment, it needs to be a pre-release");
       await Task.WhenAll(
-        CreateContainer(state, log),
+        CreateContainer(state, channels, dbPaths, log),
         WhCreator.CreateOrReplace(state, log));
     }
 
-    async Task CreateContainer(BranchState state, ILogger log) {
+    async Task CreateContainer(BranchState state, string[] channels, string[] dbPaths, ILogger log) {
       var branchContainer = StorageCfg.Container(VersionInfo.Version);
       var containerExists = await branchContainer.ExistsAsync();
       if (containerExists) log.Information("container {Container} exists, leaving as is", branchContainer.Uri);
@@ -59,11 +61,22 @@ namespace YtReader {
       }
 
       var db = StorageCfg.DbPath;
-      var paths = state switch {
-        Clone => new[] {db, StorageCfg.ImportPath},
-        CloneBasic => new[] {StorageCfg.ImportPath, $"{db}/channels", $"{db}/channel_reviews", $"{db}/videos", $"{db}/video_extra"},
-        _ => null
-      };
+      var channelIndexedPaths = new[] {"channel_reviews", "videos" , "captions" }.Where(p => dbPaths == null || dbPaths.Contains(p));
+      var basicDbPaths = new[] {"channels", "video_extra", "channel_reviews"}.Where(p => dbPaths == null || dbPaths.Contains(p));
+      List<string> paths;
+      switch (state) {
+        case Clone:
+          paths = new List<string> { db, StorageCfg.ImportPath };
+          break;
+        case CloneBasic:
+          paths = new List<string> { StorageCfg.ImportPath };
+          paths.AddRange(basicDbPaths.Select(p => $"{db}/{p}"));
+          paths.AddRange(channelIndexedPaths.Select(p => channels == null ? new[] {$"{db}/{p}"} : channels.Select(c => $"{db}/{p}/{c}")).SelectMany());
+          break;
+        default:
+          paths = null;
+          break;
+      }
       if (paths == null) return;
 
       var prodContainer = StorageCfg.Container(VersionInfo.ProdVersion);

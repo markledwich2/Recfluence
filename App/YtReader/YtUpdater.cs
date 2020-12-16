@@ -19,6 +19,7 @@ namespace YtReader {
     public bool                               FullLoad               { get; set; }
     public string[]                           Actions                { get; set; }
     public string[]                           Tables                 { get; set; }
+    public string[]                           StageTables            { get; set; }
     public string[]                           Results                { get; set; }
     public string[]                           Channels               { get; set; }
     public bool                               DisableChannelDiscover { get; set; }
@@ -103,7 +104,7 @@ namespace YtReader {
 
       var actionMethods = TaskGraph.FromMethods(
         (l, c) => Collect(options.Channels, options.Parts, l, c),
-        (l, c) => Stage(fullLoad, options.Tables, l),
+        (l, c) => Stage(fullLoad, options.StageTables, l),
         (l, c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),
         (l, c) => Index(options.Indexes, l, c),

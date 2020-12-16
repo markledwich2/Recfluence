@@ -162,13 +162,19 @@ namespace YtCli {
     [CommandOption('m', Description = "the mode to copy the database Fresh|Clone|CloneBasic")]
     public BranchState Mode { get; set; }
 
+    [CommandOption('c', Description = "| separated list of staged channels to copy")]
+    public string Channels { get; set; }
+    
+    [CommandOption('p', Description = "| separated list of staging db paths to copy")]
+    public string StagePaths { get; set; }
+
     public CreateEnvCmd(BranchEnvCreator creator, ILogger log) {
       Creator = creator;
       Log = log;
     }
 
     public async ValueTask ExecuteAsync(IConsole console) =>
-      await Creator.Create(Mode, Log);
+      await Creator.Create(Mode, Channels.UnJoin('|'), StagePaths.UnJoin('|'), Log);
   }
 
   [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]
@@ -185,6 +191,9 @@ namespace YtCli {
 
     [CommandOption('t', Description = "| delimited list of tables to restrict updates to")]
     public string Tables { get; set; }
+    
+    [CommandOption('s', Description = "| delimited list of staging tables to restrict updates to")]
+    public string StageTables { get; set; }
 
     [CommandOption('r', Description = "| delimited list of query names to restrict results to")]
     public string Results { get; set; }
@@ -233,6 +242,7 @@ namespace YtCli {
         Channels = Channels?.UnJoin('|'),
         Parts = Parts?.UnJoin('|').Select(p => p.ParseEnum<CollectPart>()).ToArray(),
         Tables = Tables?.UnJoin('|'),
+        StageTables = StageTables?.UnJoin('|'),
         Results = Results?.UnJoin('|'),
         Indexes = Indexes?.UnJoin('|'),
         FullLoad = FullLoad,

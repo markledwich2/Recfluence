@@ -210,10 +210,10 @@ namespace YtReader.Store {
   }
 
   public class VideoCaptionStored2 : WithUpdatedItem {
-    public string                             ChannelId  { get; set; }
-    public string                             VideoId    { get; set; }
-    public ClosedCaptionTrackInfo             Info       { get; set; }
-    public IReadOnlyCollection<ClosedCaption> Captions   { get; set; } = new List<ClosedCaption>();
+    public string                             ChannelId { get; set; }
+    public string                             VideoId   { get; set; }
+    public ClosedCaptionTrackInfo             Info      { get; set; }
+    public IReadOnlyCollection<ClosedCaption> Captions  { get; set; } = new List<ClosedCaption>();
   }
 
   public class VideoExtraStored2 : VideoStored2 {

@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Update" type="DotNetProject" factoryName=".NET Project">
-    <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/netcoreapp3.1/ytnetworks.dll" />
-    <option name="PROGRAM_PARAMETERS" value="update -a Search -f" />
+    <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/netcoreapp3.1/recfluence.dll" />
+    <option name="PROGRAM_PARAMETERS" value="update -a Collect|Stage|Dataform -c UC9k-yiEpRHMNVOnOi_aQK8w -p Caption -s caption_stage -t CAPTION" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/netcoreapp3.1" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <option name="USE_EXTERNAL_CONSOLE" value="0" />

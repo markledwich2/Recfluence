@@ -288,11 +288,11 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
         if (parts.ShouldRun(Caption))
           missingCaptions = (await ChannelBatches().BlockFunc(channelBatch =>
-              db.Query<(string ChannelId, string VideoId)>("missing videos", $@"
+              db.Query<(string ChannelId, string VideoId)>("missing captions", $@"
 select channel_id, video_id
 from video_latest v
-where not exists(select * from caption c where c.video_id=v.video_id)
-  qualify row_number() over (partition by channel_id order by upload_date desc)<=20
+where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
+  qualify row_number() over (partition by channel_id order by upload_date desc)<=400
     and channel_id in ({channelBatch.Join(",", c => $"'{c.ChannelId}'")})
 ")))
             .SelectMany().ToMultiValueDictionary(v => v.ChannelId, v => v.VideoId);
@@ -446,23 +446,21 @@ where not exists(select * from caption c where c.video_id=v.video_id)
     async Task SaveCaptions(ChannelStored2 channel, IEnumerable<VideoItem> vids, IReadOnlyCollection<string> missingCaptions, ILogger log) {
       var lastCaptionUpdate =
         (await Store.Captions.LatestFile(channel.ChannelId))?.Ts.ParseFileSafeTimestamp(); // last video upload in this channel partition we have captions for
-
-      var consecutiveCaptionMissing = 0;
-
+      
       async Task<VideoCaptionStored2> GetCaption(string videoId) {
-        if (consecutiveCaptionMissing >= MaxConsecutiveCaptionsMissing) return null;
         var videoLog = log.ForContext("VideoId", videoId);
         ClosedCaptionTrack track;
         try {
           var captions = await Scraper.GetCaptionTracks(videoId, log);
           var enInfo = captions.FirstOrDefault(t => t.Language.Code == "en");
           if (enInfo == null) {
-            if (Interlocked.Increment(ref consecutiveCaptionMissing) >= MaxConsecutiveCaptionsMissing)
-              videoLog.Debug("SaveCaptions - too many consecutive videos are missing captions. Assuming it won't have any.");
-            return null;
+            return new VideoCaptionStored2 {
+              ChannelId = channel.ChannelId,
+              VideoId = videoId,
+              Updated = DateTime.Now
+            };
           }
           track = await Scraper.GetClosedCaptionTrackAsync(enInfo, videoLog);
-          consecutiveCaptionMissing = 0;
         }
         catch (Exception ex) {
           ex.ThrowIfUnrecoverable();
