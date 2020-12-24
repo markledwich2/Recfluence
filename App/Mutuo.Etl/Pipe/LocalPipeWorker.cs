@@ -7,6 +7,7 @@ using Medallion.Shell;
 using Semver;
 using Serilog;
 using SysExtensions.Collections;
+using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Pipe {
@@ -47,6 +48,7 @@ namespace Mutuo.Etl.Pipe {
         .Concat("--rm", "-i", fullImageName)
         .Concat(args)
         .ToArray<object>();
+      log?.Debug($"LocalPipeWorker - launching docker: docker {dockerArgs.Join(" ", o => o.ToString())}");
       var cmd = Command.Run("docker", dockerArgs, o => o.CancellationToken(cancel)).RedirectTo(Console.Out);
       var res = await cmd.Task;
       if (!res.Success) throw new InvalidOperationException($"Container {groupName} failed ({res.ExitCode}): {res.StandardError}");

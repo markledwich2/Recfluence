@@ -34,7 +34,7 @@ namespace Mutuo.Etl.Pipe {
     [Required] public string TennantId { get; set; }
   }
 
-  public class ContainerCfg {
+  public record ContainerCfg {
     public string Registry  { get; set; }
     public string ImageName { get; set; }
     //public string     BaseTag           { get; set; }

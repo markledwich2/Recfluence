@@ -43,20 +43,20 @@ namespace YtReader {
         fullLoad ? " --full-refresh " : null,
         includeDeps ? "--include-deps" : null,
         tables?.Any() == true ? $"--actions {tables.Join(" ", t => t.ToUpperInvariant())}" : "--tags standard"
-      }.NotNull().Join(" ");
+      }.NotNull().ToArray();
 
       var env = new (string name, string value)[] {
         ("SNOWFLAKE_JSON", sfCfg.ToJson()),
         ("REPO", "https://github.com/markledwich2/YouTubeNetworks_Dataform.git"),
         ("BRANCH", "master"),
-        ("DATAFORM_RUN_ARGS", args),
+        ("DATAFORM_RUN_ARGS", args.Join(" ")),
         ("SEQ", SeqCfg.SeqUrl.ToString())
       };
 
       log.Information("Dataform - launching container to update {Db}. dataform {Args}", sfCfg.Db, args);
       const string containerName = "dataform";
       var fullName = Cfg.Container.FullContainerImageName("latest");
-      var dur = await Containers.RunContainer(containerName, fullName, env, new string[] { }, containerName, log, cancel).WithDuration();
+      var dur = await Containers.RunContainer(containerName, fullName, env, args, containerName, log, cancel).WithDuration();
       log.Information("Dataform - container completed in {Duration}", dur.HumanizeShort());
     }
   }
