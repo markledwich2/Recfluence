@@ -26,8 +26,7 @@ namespace Mutuo.Etl.Pipe {
       CancellationToken cancel = default) {
       IContainerLauncher launcher = Cfg.Location switch {
         PipeRunLocation.Container => Ctx.Scope.Resolve<AzureContainers>(),
-        PipeRunLocation.LocalContainer => Ctx.Scope.Resolve<LocalPipeWorker>(),
-        _ => throw new NotImplementedException()
+        _ =>  Ctx.Scope.Resolve<LocalPipeWorker>()
       };
       await launcher.RunContainer(containerName, fullImageName, envVars, args, groupName, log, cancel);
     }

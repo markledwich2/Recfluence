@@ -20,11 +20,9 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
-using YtReader.Db;
 using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
-using Mutuo.Etl.Blob;
 using SysExtensions.Collections;
 
 namespace YtCli {

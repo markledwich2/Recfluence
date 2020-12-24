@@ -10,15 +10,12 @@
   "author": "Mark Ledwich",
   "license": "MIT",
   "dependencies": {
-    "@dataform/cli": "^1.15.3",
-    "@types/lodash": "^4.14.164",
-    "@types/yargs": "^15.0.9",
     "bunyan": "^1.8.14",
     "bunyan-debug-stream": "^2.0.0",
     "bunyan-seq": "^0.4.0",
     "dateformat": "^3.0.3",
     "dotenv": "^8.2.0",
-    "humanize-duration": "^3.24.0",
+    "humanize-duration": "^3.25.0",
     "lodash": "^4.17.20",
     "promisify-child-process": "^4.1.1",
     "strip-ansi": "^6.0.0",
@@ -27,6 +24,8 @@
     "yargs": "^15.4.1"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.166",
+    "@types/yargs": "^15.0.12",
     "@types/bunyan": "^1.8.6",
     "@types/bunyan-seq": "^0.2.2",
     "@types/dateformat": "^3.0.1",

@@ -42,7 +42,7 @@ namespace YtReader {
       var args = new[] {
         fullLoad ? " --full-refresh " : null,
         includeDeps ? "--include-deps" : null,
-        tables?.Any() == true ? $"--actions {tables.Join(" ", t => t.ToUpperInvariant())}" : "--tags standard"
+        tables?.Any() == true ? $"{tables.Join(" ", t => $"--actions {t.ToUpperInvariant()}")}" : "--tags standard"
       }.NotNull().ToArray();
 
       var env = new (string name, string value)[] {
@@ -56,7 +56,7 @@ namespace YtReader {
       log.Information("Dataform - launching container to update {Db}. dataform {Args}", sfCfg.Db, args);
       const string containerName = "dataform";
       var fullName = Cfg.Container.FullContainerImageName("latest");
-      var dur = await Containers.RunContainer(containerName, fullName, env, args, containerName, log, cancel).WithDuration();
+      var dur = await Containers.RunContainer(containerName, fullName, env, new string[] {}, containerName, log, cancel).WithDuration();
       log.Information("Dataform - container completed in {Duration}", dur.HumanizeShort());
     }
   }
