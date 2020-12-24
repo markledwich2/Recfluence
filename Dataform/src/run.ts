@@ -56,7 +56,7 @@ if (!repo) throw new Error('no dataform repo provided env:REPO')
 const branch = process.env.BRANCH ?? 'master'
 
 var log = bunyan.createLogger(logCfg).child({repo, db:sfCfg.db})
-log.info('recfluence dataform container started');
+log.info('dataform container started');
 
 export const delay = (ms: number) => new Promise(_ => setTimeout(_, ms));
 

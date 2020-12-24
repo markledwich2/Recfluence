@@ -10,17 +10,17 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class PipeAppCfg {
-    [Required] public PipeAppStorageCfg Store         { get; set; } = new PipeAppStorageCfg();
-    [Required] public PipeAzureCfg      Azure         { get; set; } = new PipeAzureCfg();
+    [Required] public PipeAppStorageCfg Store         { get; set; } = new ();
+    [Required] public PipeAzureCfg      Azure         { get; set; } = new ();
     [Required] public PipeRunLocation   Location      { get; set; } = PipeRunLocation.Local;
     [Required] public int               LocalParallel { get; set; } = 2;
-    [Required] public PipeRunCfg        Default       { get; set; } = new PipeRunCfg();
+    [Required] public PipeRunCfg        Default       { get; set; } = new ();
     public            NamedPipeRunCfg[] Pipes         { get; set; } = { };
   }
 
   public class PipeAzureCfg {
     public            string              SubscriptionId   { get; set; }
-    [Required] public ServicePrincipalCfg ServicePrincipal { get; set; } = new ServicePrincipalCfg();
+    [Required] public ServicePrincipalCfg ServicePrincipal { get; set; } = new ();
     public            string              ResourceGroup    { get; set; }
 
     /// <summary>The default parallelism when working with azure</summary>
@@ -67,6 +67,6 @@ namespace Mutuo.Etl.Pipe {
 
     public bool ReturnOnStart { get; set; }
 
-    [Required] public ContainerCfg Container { get; set; } = new ContainerCfg();
+    [Required] public ContainerCfg Container { get; set; } = new ();
   }
 }

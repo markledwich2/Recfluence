@@ -411,6 +411,7 @@ namespace YtReader.YtWebsite {
 
     public async Task<Rec[]> GetRecs2(ILogger log, HtmlDocument html, string videoId) {
       var jInit = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialData");
+      if (jInit == null) return null;
       var resultsSel = "$.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results";
       var jResults = (JArray) jInit.SelectToken(resultsSel) ?? throw new InvalidOperationException($"can't find {resultsSel}");
       var recs = jResults
@@ -434,7 +435,7 @@ namespace YtReader.YtWebsite {
       return recs;
     }
 
-    static readonly Regex ClientObjectsRe = new Regex(@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?})\s*;",
+    static readonly Regex ClientObjectsRe = new (@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?(?<!\${GDPR)})\s*;",
       RegexOptions.Compiled | RegexOptions.Singleline);
 
     public async Task<JObject> GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, string videoId, string name) {

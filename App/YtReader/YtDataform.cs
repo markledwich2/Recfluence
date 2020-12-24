@@ -14,7 +14,7 @@ using YtReader.Db;
 namespace YtReader {
   public class DataformCfg {
     [Required]
-    public ContainerCfg Container { get; set; } = new ContainerCfg {
+    public ContainerCfg Container { get; set; } = new() {
       Cores = 2,
       Mem = 3,
       ImageName = "dataform",
@@ -23,25 +23,25 @@ namespace YtReader {
   }
 
   public class YtDataform {
-    readonly AzureContainers Containers;
+    readonly ContainerLauncher Containers;
     readonly DataformCfg     Cfg;
     readonly SnowflakeCfg    SfCfg;
     readonly SeqCfg          SeqCfg;
 
-    public YtDataform(AzureContainers containers, DataformCfg cfg, SnowflakeCfg sfCfg, SeqCfg seqCfg) {
+    public YtDataform(ContainerLauncher containers, DataformCfg cfg, SnowflakeCfg sfCfg, SeqCfg seqCfg) {
       Containers = containers;
       Cfg = cfg;
       SfCfg = sfCfg;
       SeqCfg = seqCfg;
     }
 
-    public async Task Update(ILogger log, bool fullLoad, string[] tables, CancellationToken cancel) {
+    public async Task Update(ILogger log, bool fullLoad, string[] tables, bool includeDeps, CancellationToken cancel) {
       var sfCfg = SfCfg.JsonClone();
       sfCfg.Db = sfCfg.DbName(); // serialize the environment specific db name
 
       var args = new[] {
         fullLoad ? " --full-refresh " : null,
-        "--include-deps",
+        includeDeps ? "--include-deps" : null,
         tables?.Any() == true ? $"--actions {tables.Join(" ", t => t.ToUpperInvariant())}" : "--tags standard"
       }.NotNull().Join(" ");
 
@@ -54,11 +54,9 @@ namespace YtReader {
       };
 
       log.Information("Dataform - launching container to update {Db}. dataform {Args}", sfCfg.Db, args);
-      var containerName = "dataform";
+      const string containerName = "dataform";
       var fullName = Cfg.Container.FullContainerImageName("latest");
-      var (group, dur) = await Containers.Launch(Cfg.Container, containerName, containerName, fullName,
-        env, new string[] { }, log: log, cancel: cancel).WithDuration();
-      await group.EnsureSuccess(containerName, log).WithWrappedException("Dataform - container failed");
+      var dur = await Containers.RunContainer(containerName, fullName, env, new string[] { }, containerName, log, cancel).WithDuration();
       log.Information("Dataform - container completed in {Duration}", dur.HumanizeShort());
     }
   }

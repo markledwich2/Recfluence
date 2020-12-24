@@ -259,6 +259,9 @@ namespace YtCli {
     
     [CommandOption("collect-videos", Description = @"path in the data blob container a file with newline separated video id's. e.g. import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz")]
     public string CollectVideos { get; set; }
+    
+    [CommandOption("dataform-deps", Description = "when specified, dataform will run with dependencies included", IsRequired = false)]
+    public bool DataformDeps { get; set; }
 
     public UpdateCmd(YtUpdater updater, IPipeCtx pipeCtx, ILogger log) {
       Updater = updater;
@@ -286,7 +289,8 @@ namespace YtCli {
         UserScrapeInit = UserScrapeInit,
         UserScrapeTrial = UserScrapeTrial,
         UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|'),
-        CollectVideosPath = CollectVideos
+        CollectVideosPath = CollectVideos,
+        DataformDeps = DataformDeps
       };
 
       await PipeCtx.Run((YtUpdater u) => u.Update(options, PipeArg.Inject<CancellationToken>()),

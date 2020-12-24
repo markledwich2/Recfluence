@@ -22,14 +22,16 @@ using SysExtensions.Threading;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace Mutuo.Etl.Pipe {
-  public class AzureContainers : IPipeWorkerStartable {
+  public class AzureContainers : IPipeWorkerStartable, IContainerLauncher {
     readonly SemVersion     Version;
     readonly RegistryClient RegistryClient;
+    readonly ContainerCfg   ContainerCfg;
 
-    public AzureContainers(PipeAzureCfg azureCfg, SemVersion version, RegistryClient registryClient) {
+    public AzureContainers(PipeAzureCfg azureCfg, SemVersion version, RegistryClient registryClient, ContainerCfg containerCfg) {
       AzureCfg = azureCfg;
       Version = version;
       RegistryClient = registryClient;
+      ContainerCfg = containerCfg;
       Az = new Lazy<IAzure>(azureCfg.GetAzure);
     }
 
@@ -129,6 +131,14 @@ namespace Mutuo.Etl.Pipe {
       return group.Result;
     }
 
+    public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars,
+      string[] args, string groupName = null, ILogger log = null, CancellationToken cancel = default) {
+      groupName ??= containerName;
+      var group = await Launch(ContainerCfg, groupName, containerName, fullImageName, envVars, args, returnOnStart: false, log: log, cancel: cancel);
+      var dur = await group.EnsureSuccess(containerName, log).WithWrappedException("Container failed").WithDuration();
+      log.Information("Container {Container} completed in {Duration}", groupName, dur);
+    }
+
     public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {
       var running = false;
       var loggedWaiting = Stopwatch.StartNew();
@@ -215,6 +225,7 @@ namespace Mutuo.Etl.Pipe {
 
       return createGroup;
     }
+    
   }
 
   public static class AzureContainersEx {

@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Update" type="DotNetProject" factoryName=".NET Project">
+  <configuration default="false" name="Test Chrome Scraper" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/netcoreapp3.1/recfluence.dll" />
-    <option name="PROGRAM_PARAMETERS" value="update -a Dataform -t REC|VIDEO_EXTRA" />
+    <option name="PROGRAM_PARAMETERS" value="test-chrome-scraper -v fJoAPMWk4zc" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/netcoreapp3.1" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <option name="USE_EXTERNAL_CONSOLE" value="0" />

@@ -30,7 +30,8 @@ namespace YtReader {
     public string[]                           UserScrapeAccounts     { get; set; }
     public string[]                           Indexes                { get; set; }
     public CollectPart[]                      Parts                  { get; set; }
-    public string                             CollectVideosPath          { get; set; }
+    public string                             CollectVideosPath      { get; set; }
+    public bool                               DataformDeps           { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -72,8 +73,8 @@ namespace YtReader {
       _warehouse.StageUpdate(logger, fullLoad, tables);
 
     [GraphTask(nameof(Stage))]
-    Task Dataform(bool fullLoad, string[] tables, ILogger logger, CancellationToken cancel) =>
-      YtDataform.Update(logger, fullLoad, tables, cancel);
+    Task Dataform(bool fullLoad, string[] tables, bool includeDeps, ILogger logger, CancellationToken cancel) =>
+      YtDataform.Update(logger, fullLoad, tables, includeDeps, cancel);
 
     [GraphTask(nameof(Dataform))]
     Task Search(bool fullLoad, string[] optionsSearchIndexes, (string index, string condition)[] conditions, ILogger logger, CancellationToken cancel) =>
@@ -110,7 +111,7 @@ namespace YtReader {
         (l, c) => Result(options.Results, l, c),
         (l, c) => Index(options.Indexes, l, c),
         (l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
-        (l, c) => Dataform(fullLoad, options.Tables, l, c),
+        (l, c) => Dataform(fullLoad, options.Tables, options.DataformDeps, l, c),
         (l,c) => Backup(l)  
       );
 

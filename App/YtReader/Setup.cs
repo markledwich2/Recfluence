@@ -243,6 +243,7 @@ namespace YtReader {
       b.Register(_ => new RegistryClient(containerCfg.Registry, containerCfg.RegistryCreds));
       b.RegisterType<BranchEnvCreator>().SingleInstance();
       b.RegisterType<YtDataform>().SingleInstance();
+      b.RegisterType<ContainerLauncher>().SingleInstance();
       b.RegisterType<AzureContainers>().SingleInstance();
       b.RegisterType<LocalPipeWorker>().SingleInstance();
       b.RegisterType<UserScrape>();

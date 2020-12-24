@@ -81,12 +81,10 @@ namespace YtReader {
     readonly WebScraper                  Scraper;
     readonly ChromeScraper               ChromeScraper;
     readonly YtStore                     DbStore;
-    readonly AzureBlobFileStore          RootStore;
 
     public YtCollector(YtStores stores, AppCfg cfg, SnowflakeConnectionProvider sf, IPipeCtx pipeCtx, WebScraper webScraper, ChromeScraper chromeScraper,
       YtClient api, ILogger log) {
       DbStore = new YtStore(stores.Store(DataStoreType.Db), log);
-      RootStore = stores.Store(DataStoreType.Root);
       Cfg = cfg;
       Sf = sf;
       PipeCtx = pipeCtx;
@@ -99,11 +97,26 @@ namespace YtReader {
 
     [Pipe]
     public async Task Collect(ILogger log, string[] limitChannels = null, CollectPart[] parts = null,
-      string collectVideoPath = null, CancellationToken cancel = default) {
-      if (collectVideoPath.HasValue()) {
+      StringPath collectVideoPath = null, CancellationToken cancel = default) {
+      if (collectVideoPath != null) {
         log.Information("Collecting video list from {Path}", collectVideoPath);
-        var collectVideoResults = await ReadVideoIds(await RootStore.Load(collectVideoPath, log)).ToListAsync();
-        var (res, dur) = await collectVideoResults
+        IReadOnlyCollection<string> videoIds;
+        using (var db = await Sf.OpenConnection(log))
+          videoIds = await db.Query<string>("missing video's", @$"
+with raw_vids as (
+  select $1::string video_id
+  from @public.yt_data/{collectVideoPath} (file_format => tsv)
+)
+   , missing_or_old as (
+  select v.video_id
+  from raw_vids v
+         left join video_extra e on v.video_id=e.video_id
+  where not exists(select * from video_extra e where e.video_id = e.video_id and current_date() - e.updated::date < 3)
+     or not exists(select * from rec r where r.from_video_id = v.video_id and current_date() - r.updated::date < 3)
+)
+select video_id from missing_or_old
+");
+        var (res, dur) = await videoIds
           .Process(PipeCtx, b => ProcessVideos(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
           .WithDuration();
         log.Information("Collect - {Pipe} Complete - {Total} videos updated in {Duration}",
@@ -444,8 +457,6 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
         await SaveCaptions(plan, forCaptionSave, missingCaptions, log);
       }
     }
-    
-
 
     static async Task SaveVids(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, JsonlStore<VideoStored2> vidStore, ILogger log) {
       var updated = DateTime.UtcNow;
@@ -481,6 +492,7 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
     /// <summary>Saves captions for all new videos from the vids list</summary>
     async Task SaveCaptions(ChannelUpdatePlan plan, IEnumerable<VideoItem> vids, IReadOnlyCollection<string> missingCaptions, ILogger log) {
       var channel = plan.Channel;
+
       async Task<VideoCaptionStored2> GetCaption(string videoId) {
         var videoLog = log.ForContext("VideoId", videoId);
         ClosedCaptionTrack track;
@@ -658,7 +670,7 @@ from videos_to_update",
       plan.LastRecUpdate == null ||
       DateTime.UtcNow - plan.LastRecUpdate > 8.Days() ||
       plan.Channel.ChannelId.GetHashCode().Abs() % cycleDays == (DateTime.Today - DateTime.UnixEpoch).TotalDays.RoundToInt() % cycleDays;
-    
+
     /// <summary>Returns a list of videos that should have recommendations updated.</summary>
     IReadOnlyCollection<string> VideoToUpdateRecs(ChannelUpdatePlan plan, IEnumerable<VideoItem> vids) {
       var c = plan.Channel;

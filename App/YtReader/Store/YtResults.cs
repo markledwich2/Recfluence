@@ -92,14 +92,14 @@ namespace YtReader.Store {
       var now = DateTime.Now;
       var dateRangeParams = new {from = "2019-11-01", to = now.ToString("yyyy-MM-01")};
 
-      const string classChannelsSelect = @"
+      /*const string classChannelsSelect = @"
 select c.*
      , cr.lr_human
      , cr.tags_human
      , cr.relevance_human
 from channel_latest c
        left join channel_review cr on cr.channel_id=c.channel_id
-where c.reviews_all>0";
+where c.reviews_all>0";*/
 
       const string samVidsSelect = @"select $1::string video_id
   from @public.yt_data/import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz (file_format => tsv)";

@@ -96,7 +96,7 @@ export async function run(branch: string, repo: string, sfCfg: YtSfCfg, runArgs:
     await exe('npm i', `npm i`)
 
     const dfCmd = `dataform run ${runArgs ?? ''}`
-    log.info({ cmd: dfCmd, dir: runPath }, 'dataform update %s - starting > %s', runId, dfCmd)
+    log.info({ cmd: dfCmd, dir: runPath }, 'dataform update %s (db:%s) - starting: %s', runId, sfCfg.db, dfCmd)
     const res = await exe('dataform run', dfCmd)
     const stdout = (res.stdout instanceof Buffer) ? "(buffer)" : stripAnsi(res.stdout)
     log.info({ cmd: dfCmd, dir: runPath, stdout }, 'dataform update - complete in %s', fDuration(start))
