@@ -437,7 +437,7 @@ namespace YtReader.YtWebsite {
 
     static readonly Regex ClientObjectsRe = new (@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?})\s*;",
       RegexOptions.Compiled | RegexOptions.Singleline);
-    static readonly Regex ClientObjectCleanRe = new(@"\${\w*?};", RegexOptions.Compiled);
+    static readonly Regex ClientObjectCleanRe = new(@"{\w*?};", RegexOptions.Compiled);
 
     public async Task<JObject> GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, string videoId, string name) {
       var scripts = html.QueryElements("script")
