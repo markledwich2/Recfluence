@@ -113,7 +113,7 @@ namespace Mutuo.Etl.Pipe {
       };
       await EnsureNotRunning(groupName, options, Az.Value, AzureCfg.ResourceGroup);
 
-      log.Information("Launching container group {Container} ({FullImage}), args {Args}, region {Region}",
+      log?.Information("Launching container group {Container} ({FullImage}), args {Args}, region {Region}",
         groupName, options.Image, args.Join(" "), options.Region);
       var groupDef = ContainerGroup(cfg, groupName, options);
       var group = await Create(groupDef, log);
@@ -136,7 +136,7 @@ namespace Mutuo.Etl.Pipe {
       groupName ??= containerName;
       var group = await Launch(ContainerCfg, groupName, containerName, fullImageName, envVars, args, returnOnStart: false, log: log, cancel: cancel);
       var dur = await group.EnsureSuccess(containerName, log).WithWrappedException("Container failed").WithDuration();
-      log.Information("Container {Container} completed in {Duration}", groupName, dur);
+      log?.Information("Container {Container} completed in {Duration}", groupName, dur);
     }
 
     public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {

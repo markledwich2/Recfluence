@@ -46,16 +46,16 @@ namespace Mutuo.Etl.Blob {
       // all partition landing files (will group using directories)
       var sw = Stopwatch.StartNew();
 
-      log.Debug("Optimise {Path} - reading current files", rootPath);
+      log?.Debug("Optimise {Path} - reading current files", rootPath);
       var (byDir, duration) = await ToOptimiseByDir(store, rootPath, ts).WithDuration();
-      log.Debug("Optimise {Path} - read {Files} files across {Partitions} partitions in {Duration}",
+      log?.Debug("Optimise {Path} - read {Files} files across {Partitions} partitions in {Duration}",
         rootPath, byDir.Sum(p => p.Count()), byDir.Length, duration.HumanizeShort());
 
       var optimiseRes = await byDir.BlockFunc(p => Optimise(store, p.Key, p, cfg, log), cfg.Parallel);
       var optimiseIn = optimiseRes.Sum(r => r.optimisedIn);
       var optimiseOut = optimiseRes.Sum(r => r.optimisedOut);
 
-      log.Information("Optimise {Path} - optimised {FilesIn} into {FilesOut} files in {Duration}",
+      log?.Information("Optimise {Path} - optimised {FilesIn} into {FilesOut} files in {Duration}",
         rootPath, optimiseIn, optimiseOut, sw.Elapsed.HumanizeShort());
     }
 

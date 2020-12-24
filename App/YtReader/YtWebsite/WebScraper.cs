@@ -398,9 +398,9 @@ namespace YtReader.YtWebsite {
       if (extra.Error == null) {
         var ytInitialData = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialData");
         var badgeLabels =
-          ytInitialData.SelectTokens(
+          ytInitialData?.SelectTokens(
             "contents.twoColumnWatchNextResults.results.results.contents[*].videoPrimaryInfoRenderer.badges[*].metadataBadgeRenderer.label");
-        if(badgeLabels.Any(b => b.Value<string>() == "Unlisted"))
+        if(badgeLabels?.Any(b => b.Value<string>() == "Unlisted") == true)
           extra.Error = "Unlisted";
       }
       if (extra.Error != null) return new RecsAndExtra(extra, new Rec[] { });
@@ -435,8 +435,9 @@ namespace YtReader.YtWebsite {
       return recs;
     }
 
-    static readonly Regex ClientObjectsRe = new (@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?(?<!\${GDPR)})\s*;",
+    static readonly Regex ClientObjectsRe = new (@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?})\s*;",
       RegexOptions.Compiled | RegexOptions.Singleline);
+    static readonly Regex ClientObjectCleanRe = new(@"\${\w*?};", RegexOptions.Compiled);
 
     public async Task<JObject> GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, string videoId, string name) {
       var scripts = html.QueryElements("script")
@@ -445,7 +446,8 @@ namespace YtReader.YtWebsite {
       string GroupValue(Match m, string group) => m.Groups[group].Value.HasValue() ? m.Groups[group].Value : null;
 
       var windowObjects = scripts
-        .SelectMany(t => ClientObjectsRe.Matches(t))
+        .Select(s => ClientObjectCleanRe.Replace(s, ""))
+        .SelectMany(s => ClientObjectsRe.Matches(s))
         .ToDictionary(m => GroupValue(m, "window") ?? GroupValue(m, "var"), m => m.Groups["json"].Value);
 
       var initData = windowObjects.TryGet(name);

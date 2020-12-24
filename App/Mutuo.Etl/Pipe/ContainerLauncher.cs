@@ -29,7 +29,7 @@ namespace Mutuo.Etl.Pipe {
         PipeRunLocation.LocalContainer => Ctx.Scope.Resolve<LocalPipeWorker>(),
         _ => throw new NotImplementedException()
       };
-      await launcher.RunContainer(containerName, fullImageName, envVars, args, groupName);
+      await launcher.RunContainer(containerName, fullImageName, envVars, args, groupName, log, cancel);
     }
   }
 }
