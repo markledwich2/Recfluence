@@ -20,7 +20,7 @@ namespace YtReader {
   public class WarehouseCfg {
     [Required] public string      Stage              { get; set; } = "yt_data";
     [Required] public string      Private            { get; set; } = "yt_private";
-    [Required] public OptimiseCfg Optimise           { get; set; } = new OptimiseCfg();
+    [Required] public OptimiseCfg Optimise           { get; set; } = new ();
     [Required] public int         LoadTablesParallel { get; set; } = 4;
     public            string[]    Roles              { get; set; } = {"sysadmin", "recfluence"};
     public            int         MetadataParallel   { get; set; } = 8;
@@ -90,7 +90,6 @@ namespace YtReader {
         _ => throw new InvalidOperationException($"No warehouse stage for store type {t.StoreType}")
       };
 
-
       var sql = $"copy into {table} from @{new[] {stage, path}.Concat(t.Dir.Tokens).NotNull().Join("/")}/ file_format=(type=json)";
       await db.Execute("copy into", sql);
 
@@ -109,23 +108,23 @@ namespace YtReader {
     public static string DbName(this SnowflakeCfg cfg) => cfg.DbSuffix.HasValue() ? $"{cfg.Db}_{cfg.DbSuffix}" : cfg.Db;
 
     static StageTableCfg UsTable(string name) =>
-      new StageTableCfg($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, tsCol: "updated");
+      new ($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, tsCol: "updated");
 
     public static readonly StageTableCfg[] AllTables = {
       UsTable("rec"),
       UsTable("feed"),
       UsTable("watch"),
       UsTable("ad"),
-      new StageTableCfg("channels", "channel_stage"),
-      new StageTableCfg("channel_reviews", "channel_review_stage"),
-      new StageTableCfg("videos", "video_stage"),
-      new StageTableCfg("recs", "rec_stage"),
-      new StageTableCfg("video_extra", "video_extra_stage"),
-      new StageTableCfg("searches", "search_stage"),
-      new StageTableCfg("captions", "caption_stage"),
-      new StageTableCfg("rec_exports_processed", "rec_export_stage", storeType: DataStoreType.Private),
-      new StageTableCfg(dir: null, "dbv1_video_stage", isNativeStore: false),
-      new StageTableCfg(dir: null, "dbv1_rec_stage", isNativeStore: false),
+      new("channels", "channel_stage"),
+      new("channel_reviews", "channel_review_stage"),
+      new("videos", "video_stage"),
+      new("recs", "rec_stage"),
+      new ("video_extra", "video_extra_stage"),
+      new("searches", "search_stage"),
+      new("captions", "caption_stage"),
+      new("rec_exports_processed", "rec_export_stage", storeType: DataStoreType.Private),
+      new(dir: null, "dbv1_video_stage", isNativeStore: false),
+      new(dir: null, "dbv1_rec_stage", isNativeStore: false),
     };
   }
 

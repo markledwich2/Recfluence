@@ -26,7 +26,6 @@ namespace Mutuo.Etl.Blob {
 
   /// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl</summary>
   public class JsonlStore<T> : IJsonlStore {
-    static readonly long            TargetBytes = (long) 10.Megabytes().Bytes;
     readonly        Func<T, string> GetPartition;
     readonly        Func<T, string> GetTs;
 
@@ -67,7 +66,7 @@ namespace Mutuo.Etl.Blob {
     public IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false) =>
       Store.Files(FilePath(path), allDirectories);
 
-    public readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {
+    public readonly JsonSerializerSettings JCfg = new() {
       NullValueHandling = NullValueHandling.Ignore,
       DefaultValueHandling = DefaultValueHandling.Include,
       Formatting = Formatting.None,

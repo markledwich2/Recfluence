@@ -74,10 +74,10 @@ namespace YtReader.Store {
       Log = log;
       Channels = CreateStore<ChannelStored2>("channels");
       Searches = CreateStore<UserSearchWithUpdated>("searches");
-      Videos = CreateStore<VideoStored2>("videos", v => v.ChannelId);
+      Videos = CreateStore<VideoStored2>("videos");
       VideoExtra = CreateStore<VideoExtraStored2>("video_extra");
-      Recs = CreateStore<RecStored2>("recs", r => r.FromChannelId);
-      Captions = CreateStore<VideoCaptionStored2>("captions", c => c.ChannelId);
+      Recs = CreateStore<RecStored2>("recs");
+      Captions = CreateStore<VideoCaptionStored2>("captions");
       ChannelReviews = CreateStore<UserChannelReview>("channel_reviews", r => r.Email);
     }
 

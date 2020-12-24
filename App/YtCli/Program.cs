@@ -10,6 +10,7 @@ using CliFx.Attributes;
 using CliFx.Exceptions;
 using Medallion.Shell;
 using Mutuo.Etl.AzureManagement;
+using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using Semver;
 using Serilog;
@@ -23,6 +24,8 @@ using YtReader.Db;
 using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
+using Mutuo.Etl.Blob;
+using SysExtensions.Collections;
 
 namespace YtCli {
   class Program {
@@ -73,6 +76,34 @@ namespace YtCli {
 
       if (VideoId.NullOrEmpty() && ChannelId.NullOrEmpty())
         throw new CommandException("you must provide a channel ID or video ID");
+    }
+  }
+
+
+  [Command("upgrade-partitions")]
+  public class UpgradePartitionsCmd : ICommand {
+    readonly ILogger            Log;
+    readonly WarehouseCfg        Cfg;
+    readonly AzureBlobFileStore Store;
+    
+    [CommandOption('d', Description = "| delimited list of dirs that have partitions that are to be removed")]
+    public string Dirs { get; set; }
+
+    public UpgradePartitionsCmd(YtStores stores, ILogger log, WarehouseCfg cfg) {
+      Store = stores.Store(DataStoreType.Db);
+      Log = log;
+      Cfg = cfg;
+    }
+
+    public async ValueTask ExecuteAsync(IConsole console) {
+      var includedDirs = Dirs?.UnJoin('|');
+      var dirs = new [] {"videos", "recs", "captions"}.Where(d => includedDirs== null || includedDirs.Contains(d));
+      foreach (var dir in dirs) {
+        var files = await Store.Files(dir, allDirectories:true).SelectMany()
+          .Where(f => f.Path.Tokens.Count == 3) // only optimise from within partitions
+          .ToListAsync();
+        await Store.Optimise(dir, files, Cfg.Optimise, Log);
+      }
     }
   }
 
@@ -161,9 +192,6 @@ namespace YtCli {
 
     [CommandOption('m', Description = "the mode to copy the database Fresh|Clone|CloneBasic")]
     public BranchState Mode { get; set; }
-
-    [CommandOption('c', Description = "| separated list of staged channels to copy")]
-    public string Channels { get; set; }
     
     [CommandOption('p', Description = "| separated list of staging db paths to copy")]
     public string StagePaths { get; set; }
@@ -174,7 +202,7 @@ namespace YtCli {
     }
 
     public async ValueTask ExecuteAsync(IConsole console) =>
-      await Creator.Create(Mode, Channels.UnJoin('|'), StagePaths.UnJoin('|'), Log);
+      await Creator.Create(Mode, StagePaths.UnJoin('|'), Log);
   }
 
   [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]
@@ -228,6 +256,9 @@ namespace YtCli {
 
     [CommandOption("search-index", Description = @"| separated list of indexes to update. leave empty for all indexes")]
     public string SearchIndexes { get; set; }
+    
+    [CommandOption("collect-videos", Description = @"path in the data blob container a file with newline separated video id's. e.g. import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz")]
+    public string CollectVideos { get; set; }
 
     public UpdateCmd(YtUpdater updater, IPipeCtx pipeCtx, ILogger log) {
       Updater = updater;
@@ -254,7 +285,8 @@ namespace YtCli {
         SearchIndexes = SearchIndexes?.UnJoin('|'),
         UserScrapeInit = UserScrapeInit,
         UserScrapeTrial = UserScrapeTrial,
-        UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|')
+        UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|'),
+        CollectVideosPath = CollectVideos
       };
 
       await PipeCtx.Run((YtUpdater u) => u.Update(options, PipeArg.Inject<CancellationToken>()),
@@ -278,29 +310,6 @@ namespace YtCli {
     public async ValueTask ExecuteAsync(IConsole console) {
       var res = await Scraper.GetRecsAndExtra(VideoIds.UnJoin('|'), Log);
       Log.Information("Scraping of {VideoIds} complete", VideoIds, res);
-    }
-  }
-  
-  [Command("sandbox")]
-  public class SandboxCmd : ICommand {
-    readonly SnowflakeConnectionProvider Sf;
-    readonly ILogger                     Log;
-
-    public SandboxCmd(SnowflakeConnectionProvider sf, ILogger log) {
-      Sf = sf;
-      Log = log;
-    }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      using var conn = await Sf.OpenConnection(Log);
-      //await conn.SetSessionParams((SfParam.ClientTimestampTypeMapping, "TIMESTAMP_NTZ"));
-      var res = await conn.Query<DbVideo2>("test", "select video_id, channel_id, updated from video_latest where video_id = '7eRR7j1OCOs'");
-    }
-
-    public class DbVideo2 {
-      public string VIDEO_ID   { get; set; }
-      public string CHANNEL_ID { get; set; }
-      public DateTime UPDATED    { get; set; }
     }
   }
 

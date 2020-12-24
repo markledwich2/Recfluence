@@ -115,7 +115,7 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
       log.Information("Search - completed indexing {Docs} docs to {Alias} in {Duration}", docs, alias, dur.HumanizeShort());
     }
 
-    static EsVideo MapVideo(dynamic v) => new EsVideo {
+    static EsVideo MapVideo(dynamic v) => new() {
       channel_id = v.CHANNEL_ID,
       channel_title = v.CHANNEL_TITLE,
       description = v.DESCRIPTION,
@@ -133,7 +133,7 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
       duration_secs = v.DURATION_SECS
     };
 
-    static EsChannel MapChannel(dynamic c) => new EsChannel {
+    static EsChannel MapChannel(dynamic c) => new() {
       channel_id = c.CHANNEL_ID,
       channel_title = c.CHANNEL_TITLE,
       age = c.AGE,
@@ -161,7 +161,7 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
       updated = c.UPDATED,
     };
 
-    static EsCaption MapCaption(DbEsCaption c) => new EsCaption {
+    static EsCaption MapCaption(DbEsCaption c) => new() {
       caption_id = c.caption_id,
       caption = c.caption,
       channel_id = c.caption_id,

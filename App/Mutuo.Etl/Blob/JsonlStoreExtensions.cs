@@ -13,7 +13,7 @@ using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Blob {
   public class OptimiseCfg {
-    public long TargetBytes { get; set; } = (long) 10.Megabytes().Bytes;
+    public long TargetBytes { get; set; } = (long) 200.Megabytes().Bytes;
     public int  Parallel    { get; set; } = 8;
   }
 
@@ -60,12 +60,12 @@ namespace Mutuo.Etl.Blob {
     }
 
     /// <summary>Join ts (timestamp) contiguous files together until they are > MaxBytes</summary>
-    static async Task<(long optimisedIn, long optimisedOut)> Optimise(ISimpleFileStore store, StringPath partitionPath, IEnumerable<StoreFileMd> files,
+    public static async Task<(long optimisedIn, long optimisedOut)> Optimise(this ISimpleFileStore store, StringPath destPath, IEnumerable<StoreFileMd> files,
       OptimiseCfg cfg, ILogger log) {
       var toProcess = files.OrderBy(f => f.Ts).ToQueue();
 
       log.Debug("Optimise {Path} - Processing {Files} files in partition {Partition}",
-        partitionPath, toProcess.Count, partitionPath);
+        destPath, toProcess.Count, destPath);
 
       var currentBatch = new List<StoreFileMd>();
       var optimisePlan = new List<StoreFileMd[]>();
@@ -98,15 +98,15 @@ namespace Mutuo.Etl.Blob {
       }
 
       if (optimisePlan.None()) {
-        log.Debug("Optimise {Path} - already optimal", partitionPath);
+        log.Debug("Optimise {Path} - already optimal", destPath);
       }
       else {
-        log.Debug("Optimise {Path} - staring to execute optimisation plan", partitionPath);
+        log.Debug("Optimise {Path} - staring to execute optimisation plan", destPath);
         await optimisePlan.Select((b, i) => (b, i)).BlockAction(async b => {
           var (batch, i) = b;
-          var optimiseRes = await JoinFiles(store, batch, partitionPath, cfg.Parallel, log).WithDuration();
+          var optimiseRes = await JoinFiles(store, batch, destPath, cfg.Parallel, log).WithDuration();
           log.Debug("Optimise {Path} - optimised file {OptimisedFile} from {FilesIn} in {Duration}. batch {Batch}/{Total}",
-            partitionPath, optimiseRes.Result, batch.Length, optimiseRes.Duration.HumanizeShort(), i, optimisePlan.Count);
+            destPath, optimiseRes.Result, batch.Length, optimiseRes.Duration.HumanizeShort(), i, optimisePlan.Count);
         }, cfg.Parallel);
       }
       return (optimisePlan.Sum(p => p.Length), optimisePlan.Count);

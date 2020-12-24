@@ -43,14 +43,14 @@ namespace YtReader {
 
     /// <summary>Creates an empty environment for a branch</summary>
     /// <returns></returns>
-    public async Task Create(BranchState state, string[] channels, string[] dbPaths, ILogger log) {
+    public async Task Create(BranchState state, string[] dbPaths, ILogger log) {
       if (VersionInfo.Version.Prerelease.NullOrEmpty()) throw new InvalidOperationException("can't create environment, it needs to be a pre-release");
       await Task.WhenAll(
-        CreateContainer(state, channels, dbPaths, log),
+        CreateContainer(state, dbPaths, log),
         WhCreator.CreateOrReplace(state, log));
     }
 
-    async Task CreateContainer(BranchState state, string[] channels, string[] dbPaths, ILogger log) {
+    async Task CreateContainer(BranchState state, string[] dbPaths, ILogger log) {
       var branchContainer = StorageCfg.Container(VersionInfo.Version);
       var containerExists = await branchContainer.ExistsAsync();
       if (containerExists) log.Information("container {Container} exists, leaving as is", branchContainer.Uri);
@@ -61,8 +61,7 @@ namespace YtReader {
       }
 
       var db = StorageCfg.DbPath;
-      var channelIndexedPaths = new[] {"channel_reviews", "videos" , "captions" }.Where(p => dbPaths == null || dbPaths.Contains(p));
-      var basicDbPaths = new[] {"channels", "video_extra", "channel_reviews"}.Where(p => dbPaths == null || dbPaths.Contains(p));
+      var basicDbPaths = new[] {"channels", "video_extra", "channel_reviews", "videos" , "captions" }.Where(p => dbPaths == null || dbPaths.Contains(p));
       List<string> paths;
       switch (state) {
         case Clone:
@@ -71,7 +70,6 @@ namespace YtReader {
         case CloneBasic:
           paths = new List<string> { StorageCfg.ImportPath };
           paths.AddRange(basicDbPaths.Select(p => $"{db}/{p}"));
-          paths.AddRange(channelIndexedPaths.Select(p => channels == null ? new[] {$"{db}/{p}"} : channels.Select(c => $"{db}/{p}/{c}")).SelectMany());
           break;
         default:
           paths = null;

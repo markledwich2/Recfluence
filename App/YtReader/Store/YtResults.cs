@@ -6,7 +6,6 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
@@ -74,7 +73,6 @@ namespace YtReader.Store {
   }
 
   public class YtResults {
-    readonly HttpClient                  Http = new HttpClient();
     readonly SnowflakeConnectionProvider Sf;
     readonly ResultsCfg                  ResCfg;
     readonly ISimpleFileStore            Store;
@@ -103,6 +101,9 @@ from channel_latest c
        left join channel_review cr on cr.channel_id=c.channel_id
 where c.reviews_all>0";
 
+      const string samVidsSelect = @"select $1::string video_id
+  from @public.yt_data/import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz (file_format => tsv)";
+      
       var queries = new[] {
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip: true),
@@ -132,8 +133,26 @@ from channel_accepted order by channel_views desc",
           // userscrape data
           new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_tag = UserScrapeCfg.SeedsPerTag}),
           new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos = UserScrapeCfg.Tests}),
+          
+          new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
+            parameters: new {from_date = "2020-11-03", to_date = "2020-11-10"}),
+          
+          
+          new ResQuery("sam_vid", @$"
+with sam_vids_raw as ({samVidsSelect})
+select e.*
+from video_extra e
+inner join sam_vids_raw r on e.video_id = r.video_id
+order by updated desc nulls last", fileType:ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+          
+          new ResQuery("sam_vid_recs", @$"
+with sam_vids_raw as ({samVidsSelect})
+select from_channel_id, from_channel_title, from_video_id, from_video_title, to_channel_id, to_channel_title, to_video_id, to_video_title, rank, updated
+from rec r
+inner join sam_vids_raw s on r.from_video_id = s.video_id
+order by updated desc nulls last", fileType:ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel)
 
-          new ResQuery("class_channels", classChannelsSelect, fileType: ResFilType.Json),
+          /*new ResQuery("class_channels", classChannelsSelect, fileType: ResFilType.Json),
 
           new ResQuery("class_snippets", $@"with reviewed as ({classChannelsSelect})
   , video_snippets as (
@@ -184,10 +203,9 @@ from (
          qualify row_number() over (partition by c.channel_id order by random())<=100
      )
 group by channel_id",
-            fileType: ResFilType.Json),
+            fileType: ResFilType.Json),*/
 
-          new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
-            parameters: new {from_date = "2020-11-03", to_date = "2020-11-10"})
+
 
           /*new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),
           new ResQuery("icc_lr", desc: "channel classifications in a format used to calculate how consistent reviewers are when deciding left/right/center"),
@@ -306,15 +324,9 @@ group by channel_id",
 
     public static async Task WriteJsonGz(this IDataReader reader, StreamWriter stream, JsonSource jsonSource, JsonCasingStrategy naming) {
       while (reader.Read()) {
-        var j = new JObject();
-        if (jsonSource == JsonSource.FirstColumn)
-          j = JObject.Parse(reader.GetString(0));
-        else
-          j = ToSnowflakeJObject(reader);
-
+        var j = jsonSource == JsonSource.FirstColumn ? JObject.Parse(reader.GetString(0)) : ToSnowflakeJObject(reader);
         if (naming == JsonCasingStrategy.Camel)
           j = j.ToCamelCase();
-
         await stream.WriteLineAsync(j.ToString(Formatting.None));
       }
     }

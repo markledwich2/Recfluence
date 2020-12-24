@@ -30,6 +30,7 @@ namespace YtReader {
     public string[]                           UserScrapeAccounts     { get; set; }
     public string[]                           Indexes                { get; set; }
     public CollectPart[]                      Parts                  { get; set; }
+    public string                             CollectVideosPath          { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -63,8 +64,8 @@ namespace YtReader {
       _index = index;
     }
 
-    Task Collect(string[] channels, CollectPart[] parts, ILogger logger, CancellationToken cancel) =>
-      _collector.Collect(logger, channels, parts, cancel);
+    Task Collect(string[] channels, CollectPart[] parts, string collectVideoPath, ILogger logger, CancellationToken cancel) =>
+      _collector.Collect(logger, channels, parts, collectVideoPath, cancel);
 
     [GraphTask(nameof(Collect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
@@ -103,7 +104,7 @@ namespace YtReader {
       var fullLoad = options.FullLoad;
 
       var actionMethods = TaskGraph.FromMethods(
-        (l, c) => Collect(options.Channels, options.Parts, l, c),
+        (l, c) => Collect(options.Channels, options.Parts, options.CollectVideosPath, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),
         (l, c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),
