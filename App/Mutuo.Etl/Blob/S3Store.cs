@@ -47,6 +47,7 @@ namespace Mutuo.Etl.Blob {
 
     public Task Save(StringPath path, Stream contents, ILogger log = null) => throw new NotImplementedException();
     public Task<Stream> Load(StringPath path, ILogger log = null) => throw new NotImplementedException();
+    public Task LoadToFile(StringPath path, FPath file, ILogger log = null) => throw new NotImplementedException();
 
     public IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) =>
       throw new NotImplementedException();

@@ -51,12 +51,17 @@ namespace Mutuo.Etl.Blob {
       try {
         var mem = new MemoryStream();
         await blob.DownloadToStreamAsync(mem);
-        mem.Seek(0, SeekOrigin.Begin);
+        mem.Seek(offset: 0, SeekOrigin.Begin);
         return mem;
       }
       catch (Exception ex) {
         throw new InvalidOperationException($"Unable to load blob {blob.Uri}", ex);
       }
+    }
+
+    public async Task LoadToFile(StringPath path, FPath file, ILogger log = null) {
+      var blob = BlobRef(path);
+      await blob.DownloadToFileAsync(file.FullPath, FileMode.CreateNew).WithWrappedException($"Unable to load blob {blob.Uri}");
     }
 
     public async Task Save(StringPath path, FPath file, ILogger log = null) {

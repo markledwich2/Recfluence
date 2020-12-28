@@ -15,6 +15,7 @@ namespace Mutuo.Etl.Blob {
     Task Save(StringPath path, FPath file, ILogger log = null);
     Task Save(StringPath path, Stream contents, ILogger log = null);
     Task<Stream> Load(StringPath path, ILogger log = null);
+    Task LoadToFile(StringPath path, FPath file, ILogger log = null);
     IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null);
     Task<bool> Delete(StringPath path, ILogger log = null);
     Task<Stream> OpenForWrite(StringPath path, ILogger log = null);

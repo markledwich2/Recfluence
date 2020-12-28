@@ -413,7 +413,11 @@ namespace YtReader.YtWebsite {
       var jInit = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialData");
       if (jInit == null) return null;
       var resultsSel = "$.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results";
-      var jResults = (JArray) jInit.SelectToken(resultsSel) ?? throw new InvalidOperationException($"can't find {resultsSel}");
+      var jResults = (JArray) jInit.SelectToken(resultsSel);
+      if (jResults == null) {
+        log.Warning("WebScraper - Unable to find recs for {VideoId}", videoId);
+        return new Rec[] { };
+      }
       var recs = jResults
         .OfType<JObject>()
         .Select(j => j.SelectToken("compactAutoplayRenderer.contents[0].compactVideoRenderer") ?? j.SelectToken("compactVideoRenderer"))

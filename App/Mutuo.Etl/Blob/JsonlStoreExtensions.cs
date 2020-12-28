@@ -8,6 +8,7 @@ using Humanizer;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
+using SysExtensions.IO;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
@@ -114,32 +115,39 @@ namespace Mutuo.Etl.Blob {
 
     static async Task<StringPath> JoinFiles(ISimpleFileStore store, IReadOnlyCollection<StoreFileMd> toOptimise, StringPath destPath, int parallel,
       ILogger log) {
-      var optimisedFile = FilePath(destPath, toOptimise.Last().Ts);
-      using (var joinedStream = new MemoryStream()) {
-        using (var zipWriter = new GZipStream(joinedStream, CompressionLevel.Optimal, true)) {
-          var inStreams = await toOptimise.BlockFunc(async s => {
-            var inStream = await store.Load(s.Path, log).WithDuration();
-            log.Debug("Optimise {Path} - loaded file {SourceFile} to be optimised in {Duration}",
-              destPath, s.Path, inStream.Duration.HumanizeShort());
-            return inStream.Result;
-          }, parallel);
-          foreach (var s in inStreams) {
-            using var zr = new GZipStream(s, CompressionMode.Decompress, false);
-            await zr.CopyToAsync(zipWriter);
-          }
+      var optimisedFileName = FilePath(destPath, toOptimise.Last().Ts);
+      var localTmpDir = $"JoinFiles/{ShortGuid.Create(8)}".AsPath().InAppData("Mutuo.Etl");
+      localTmpDir.EnsureDirectoryExists();
+
+      var inFiles = await toOptimise.BlockFunc(async s => {
+        var inPath = localTmpDir.Combine($"{ShortGuid.Create(6)}.{s.Path.Name}"); // flatten dir structure locally. ensure unique with GUID
+        var dur = await store.LoadToFile(s.Path, inPath, log).WithDuration();
+        log.Debug("Optimise {Path} - loaded file {SourceFile} to be optimised in {Duration}", destPath, s.Path, dur.HumanizeShort());
+        return inPath;
+      }, parallel);
+      
+      var outFile = localTmpDir.Combine($"out.{optimisedFileName.Name}");
+      
+      using (var fileStream = outFile.Open(FileMode.Create)) {
+        using var zipWriter = new GZipStream(fileStream, CompressionLevel.Optimal, leaveOpen: false);
+        foreach (var s in inFiles) {
+          using var zr = new GZipStream(s.Open(FileMode.Open), CompressionMode.Decompress, leaveOpen: false);
+          await zr.CopyToAsync(zipWriter);
         }
-        joinedStream.Seek(0, SeekOrigin.Begin);
-        await store.Save(optimisedFile, joinedStream);
       }
+      
+      log.Debug("Optimise {Path} - joined {SourceFiles} source files. About to upload", destPath, inFiles.Count);
+      await store.Save(optimisedFileName, outFile);
+      log.Debug("Optimise {Path} - saved optimised file {OptimisedFile}", destPath, optimisedFileName);
 
       // when in-place, this is dirty if we fail now. There is no transaction capability in cloud storage, so downstream process must handle duplicates
       // successfully staged files, delete from land. Incremental using TS will work without delete, but it's more efficient to delete process landed files.
       await toOptimise.BlockAction(f => store.Delete(f.Path), parallel)
         .WithWrappedException(e => "Failed to delete optimised files. Duplicate records need to be handled downstream");
-      log.Debug("Optimise {Path} - deleted {Files} that were optimised into {OptimisedFile}",
-        destPath, toOptimise.Count, optimisedFile);
-
-      return optimisedFile;
+      log.Debug("Optimise {Path} - deleted {Files} that were optimised into {OptimisedFile}", destPath, toOptimise.Count, optimisedFileName);
+      
+      localTmpDir.Delete(recursive:true); // delete local tmp files
+      return optimisedFileName;
     }
 
     static async Task<IGrouping<string, StoreFileMd>[]> ToOptimiseByDir(ISimpleFileStore store, StringPath landPath, string ts) =>

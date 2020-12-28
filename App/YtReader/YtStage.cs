@@ -119,7 +119,7 @@ namespace YtReader {
       new("channel_reviews", "channel_review_stage"),
       new("videos", "video_stage"),
       new("recs", "rec_stage"),
-      new ("video_extra", "video_extra_stage"),
+      new("video_extra", "video_extra_stage"),
       new("searches", "search_stage"),
       new("captions", "caption_stage"),
       new("rec_exports_processed", "rec_export_stage", storeType: DataStoreType.Private),

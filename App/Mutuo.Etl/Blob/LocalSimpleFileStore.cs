@@ -36,6 +36,8 @@ namespace Mutuo.Etl.Blob {
       return Task.FromResult(s);
     }
 
+    public Task LoadToFile(StringPath path, FPath file, ILogger log = null) => throw new NotImplementedException();
+
 #pragma warning disable 1998
     public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) {
 #pragma warning restore 1998
