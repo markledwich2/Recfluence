@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -14,8 +15,9 @@ using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Blob {
   public class OptimiseCfg {
-    public long TargetBytes { get; set; } = (long) 200.Megabytes().Bytes;
-    public int  Parallel    { get; set; } = 8;
+    public long TargetBytes     { get; set; } = (long) 200.Megabytes().Bytes;
+    public int  ParallelFiles   { get; set; } = 4;
+    public int  ParallelBatches { get; set; } = 3;
   }
 
   public static class JsonlStoreExtensions {
@@ -52,7 +54,7 @@ namespace Mutuo.Etl.Blob {
       log?.Debug("Optimise {Path} - read {Files} files across {Partitions} partitions in {Duration}",
         rootPath, byDir.Sum(p => p.Count()), byDir.Length, duration.HumanizeShort());
 
-      var optimiseRes = await byDir.BlockFunc(p => Optimise(store, p.Key, p, cfg, log), cfg.Parallel);
+      var optimiseRes = await byDir.BlockFunc(p => Optimise(store, p.Key, p, cfg, log), cfg.ParallelFiles);
       var optimiseIn = optimiseRes.Sum(r => r.optimisedIn);
       var optimiseOut = optimiseRes.Sum(r => r.optimisedOut);
 
@@ -105,10 +107,10 @@ namespace Mutuo.Etl.Blob {
         log.Debug("Optimise {Path} - staring to execute optimisation plan", destPath);
         await optimisePlan.Select((b, i) => (b, i)).BlockAction(async b => {
           var (batch, i) = b;
-          var optimiseRes = await JoinFiles(store, batch, destPath, cfg.Parallel, log).WithDuration();
+          var optimiseRes = await JoinFiles(store, batch, destPath, cfg.ParallelFiles, log).WithDuration();
           log.Debug("Optimise {Path} - optimised file {OptimisedFile} from {FilesIn} in {Duration}. batch {Batch}/{Total}",
             destPath, optimiseRes.Result, batch.Length, optimiseRes.Duration.HumanizeShort(), i, optimisePlan.Count);
-        }, cfg.Parallel);
+        }, cfg.ParallelBatches);
       }
       return (optimisePlan.Sum(p => p.Length), optimisePlan.Count);
     }
@@ -116,13 +118,13 @@ namespace Mutuo.Etl.Blob {
     static async Task<StringPath> JoinFiles(ISimpleFileStore store, IReadOnlyCollection<StoreFileMd> toOptimise, StringPath destPath, int parallel,
       ILogger log) {
       var optimisedFileName = FilePath(destPath, toOptimise.Last().Ts);
-      var localTmpDir = $"JoinFiles/{ShortGuid.Create(8)}".AsPath().InAppData("Mutuo.Etl");
+      var localTmpDir = Path.GetTempPath().AsPath().Combine("Mutuo.Etl", "JoinFiles", ShortGuid.Create(8));
       
       localTmpDir.EnsureDirectoryExists();
 
       var inFiles = await toOptimise.BlockFunc(async s => {
         var inPath = localTmpDir.Combine($"{ShortGuid.Create(6)}.{s.Path.Name}"); // flatten dir structure locally. ensure unique with GUID
-        log.Debug("Optimise {Path} - about to load file {SourceFile} to {LocalTempFile}", destPath, s.Path, inPath);
+        log.Debug("Optimise {Path} - about to load file {SourceFile} to {LocalTempFile}", destPath, s.Path, inPath.FullPath);
         var dur = await store.LoadToFile(s.Path, inPath, log).WithDuration();
         log.Debug("Optimise {Path} - loaded file {SourceFile} to be optimised in {Duration}", destPath, s.Path, dur.HumanizeShort());
         return inPath;
