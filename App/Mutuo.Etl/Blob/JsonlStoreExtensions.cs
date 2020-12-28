@@ -93,7 +93,7 @@ namespace Mutuo.Etl.Blob {
       }
 
       void PlanCurrentBatch() {
-        if (currentBatch.Count > 1) // only plan a batch if there is more than one file in it
+        if (currentBatch.Count > 1) // only plan a batch if there is more than one file Vin it
           optimisePlan.Add(currentBatch.ToArray());
         currentBatch.Clear();
       }
@@ -117,10 +117,12 @@ namespace Mutuo.Etl.Blob {
       ILogger log) {
       var optimisedFileName = FilePath(destPath, toOptimise.Last().Ts);
       var localTmpDir = $"JoinFiles/{ShortGuid.Create(8)}".AsPath().InAppData("Mutuo.Etl");
+      
       localTmpDir.EnsureDirectoryExists();
 
       var inFiles = await toOptimise.BlockFunc(async s => {
         var inPath = localTmpDir.Combine($"{ShortGuid.Create(6)}.{s.Path.Name}"); // flatten dir structure locally. ensure unique with GUID
+        log.Debug("Optimise {Path} - about to load file {SourceFile} to {LocalTempFile}", destPath, s.Path, inPath);
         var dur = await store.LoadToFile(s.Path, inPath, log).WithDuration();
         log.Debug("Optimise {Path} - loaded file {SourceFile} to be optimised in {Duration}", destPath, s.Path, dur.HumanizeShort());
         return inPath;

@@ -115,9 +115,8 @@ namespace YtReader {
       var versionProvider = new VersionInfoProvider(rootLogger, cfgRoot);
       var version = await versionProvider.Version();
 
-      var envLower = cfgRoot.Env.ToLowerInvariant();
       var secretStore = new AzureBlobFileStore(cfgRoot.AppStoreCs, CfgContainer, Logger.None);
-      var secretNames = cfgRoot.IsProd() ? new[] {envLower} : new[] {"dev", version.Version.Prerelease};
+      var secretNames = cfgRoot.IsProd() ? new[] {"prod"} : new[] {"dev", version.Version.Prerelease};
       var secrets = new List<string>();
       foreach (var name in secretNames) {
         var fileName = $"{name}.appcfg.json";

@@ -27,20 +27,21 @@
             "webRoot": "${workspaceFolder}"
         },
         {
-            "name": "Launch YtCli collect",
+            "name": "Debug recfluence update",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build YtCli",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "./bin/Debug/netcoreapp2.1/ytnetworks.dll",
+            "program": "./bin/Debug/netcoreapp3.1/recfluence.dll",
             "args": [
-                "collect",
-                "-p",
-                "1"
+                "update",
+                "-a",
+                "Stage",
+                "-f",
+                "-s",
+                "video_stage"
             ],
-            "cwd": "${workspaceFolder}/App/YtCli/",
-            // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
-            "console": "internalConsole",
+            "cwd": "${workspaceFolder}/App/YtCli/",  "console": "internalConsole",
             "stopAtEntry": false,
             "internalConsoleOptions": "openOnSessionStart"
         },

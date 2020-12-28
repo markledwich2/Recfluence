@@ -44,11 +44,11 @@ namespace SysExtensions.Build {
           return (SemVersion.Parse(gitVersion.SemVer), gitVersion);
         }
         catch (Exception ex) {
-          throw new InvalidOperationException($"Unable to parse result from gitversion: {outputLines.Join(" ")}", ex);
+          log?.Error($"Unable to parse result from gitversion: {outputLines.Join(" ")}", ex);
         }
       }
       var assemblyVersion = RuntimeSemVer(typeToDetectVersion);
-      log.Debug("{Noun} - Using assembly version: {Version}", nameof(GitVersionInfo), assemblyVersion);
+      log?.Debug("{Noun} - Using assembly version: {Version}", nameof(GitVersionInfo), assemblyVersion);
       return (assemblyVersion, null);
     }
 
