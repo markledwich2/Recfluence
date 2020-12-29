@@ -136,9 +136,8 @@ from channel_accepted order by channel_views desc",
           
           new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
             parameters: new {from_date = "2020-11-03", to_date = "2020-11-10"}),
-          
-          
-          new ResQuery("sam_vid", @$"
+
+          /*new ResQuery("sam_vid", @$"
 with sam_vids_raw as ({samVidsSelect})
 select e.*
 from video_extra e
@@ -150,7 +149,7 @@ with sam_vids_raw as ({samVidsSelect})
 select from_channel_id, from_channel_title, from_video_id, from_video_title, to_channel_id, to_channel_title, to_video_id, to_video_title, rank, updated
 from rec r
 inner join sam_vids_raw s on r.from_video_id = s.video_id
-order by updated desc nulls last", fileType:ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel)
+order by updated desc nulls last", fileType:ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel)*/
 
           /*new ResQuery("class_channels", classChannelsSelect, fileType: ResFilType.Json),
 
