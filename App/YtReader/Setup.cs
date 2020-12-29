@@ -176,7 +176,7 @@ namespace YtReader {
       new DataAnnotationsValidator().TryValidateObjectRecursive(cfgObject).results;
 
     public static PipeAppCtx PipeAppCtxEmptyScope(RootCfg root, AppCfg appCfg, SemVersion version) =>
-      new PipeAppCtx(new ContainerBuilder().Build().BeginLifetimeScope(), typeof(YtCollector)) {
+      new(new ContainerBuilder().Build().BeginLifetimeScope(), typeof(YtCollector)) {
         EnvironmentVariables = PipeEnv(root, appCfg, version)
       };
 

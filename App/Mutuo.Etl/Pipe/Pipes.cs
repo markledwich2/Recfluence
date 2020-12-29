@@ -257,7 +257,6 @@ namespace Mutuo.Etl.Pipe {
 
     static async Task SaveInArg(this IPipeCtx ctx, PipeArg[] args, PipeRunId id, ILogger log) {
       var path = $"{id.InArgPath()}.json";
-
       await ctx.Store.Save(path, args.ToJsonStream(ArgJCfg), log);
     }
 

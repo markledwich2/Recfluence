@@ -25,8 +25,8 @@ namespace SysExtensions.Serialization {
       var settings = new JsonSerializerSettings {
         NullValueHandling = NullValueHandling.Ignore, Formatting = formatting, DefaultValueHandling = DefaultValueHandling.Ignore
       };
-      settings.Converters.AddRange(new StringEnumConverter(new CamelCaseNamingStrategy(false, false), false));
-      settings.ContractResolver = new CoreSerializeContractResolver {NamingStrategy = new CamelCaseNamingStrategy(false, false)};
+      settings.Converters.AddRange(new StringEnumConverter(new CamelCaseNamingStrategy(processDictionaryKeys: false, overrideSpecifiedNames: false), allowIntegerValues: false));
+      settings.ContractResolver = new CoreSerializeContractResolver {NamingStrategy = new CamelCaseNamingStrategy(processDictionaryKeys: false, overrideSpecifiedNames: false)};
       return settings;
     }
 

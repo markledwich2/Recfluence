@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -18,6 +17,11 @@ namespace Mutuo.Etl.Blob {
     public long TargetBytes     { get; set; } = (long) 200.Megabytes().Bytes;
     public int  ParallelFiles   { get; set; } = 4;
     public int  ParallelBatches { get; set; } = 3;
+  }
+
+  public record OptimiseBatch {
+    public StoreFileMd[]     Files { get; set; }
+    public StringPath Dest  { get; set; }
   }
 
   public static class JsonlStoreExtensions {
@@ -62,9 +66,19 @@ namespace Mutuo.Etl.Blob {
         rootPath, optimiseIn, optimiseOut, sw.Elapsed.HumanizeShort());
     }
 
-    /// <summary>Join ts (timestamp) contiguous files together until they are > MaxBytes</summary>
-    public static async Task<(long optimisedIn, long optimisedOut)> Optimise(this ISimpleFileStore store, StringPath destPath, IEnumerable<StoreFileMd> files,
-      OptimiseCfg cfg, ILogger log) {
+    /// <summary>Process new files in land into stage. Note on the different modes: - LandAndStage: Immutable operation, load
+    ///   data downstream from the stage directory - Default: Mutates the files in the same directory. Downstream operations:
+    ///   don't run while processing, and fully reload after this is complete</summary>
+    /// <returns>stats about the optimisation, and all new files (optimised or not) based on the timestamp</returns>
+    public static async Task<IReadOnlyCollection<OptimiseBatch>> OptimisePlan(this ISimpleFileStore store, OptimiseCfg cfg, StringPath rootPath, string ts = null, ILogger log = null) {
+      log?.Debug("Optimise {Path} - reading current files", rootPath);
+      var (byDir, duration) = await ToOptimiseByDir(store, rootPath, ts).WithDuration();
+      log?.Debug("Optimise {Path} - read {Files} files across {Partitions} partitions in {Duration}",
+        rootPath, byDir.Sum(p => p.Count()), byDir.Length, duration.HumanizeShort());
+      return byDir.SelectMany(p => OptimisePlan(p.Key, p, cfg, log)).ToArray();
+    }
+
+    public static IReadOnlyCollection<OptimiseBatch> OptimisePlan(StringPath destPath, IEnumerable<StoreFileMd> files, OptimiseCfg cfg, ILogger log) {
       var toProcess = files.OrderBy(f => f.Ts).ToQueue();
 
       log.Debug("Optimise {Path} - Processing {Files} files in partition {Partition}",
@@ -73,7 +87,7 @@ namespace Mutuo.Etl.Blob {
       var currentBatch = new List<StoreFileMd>();
       var optimisePlan = new List<StoreFileMd[]>();
 
-      if (toProcess.None()) return (0, 0);
+      if (toProcess.None()) return default;
 
       while (toProcess.Any()) {
         var file = toProcess.Dequeue();
@@ -100,38 +114,47 @@ namespace Mutuo.Etl.Blob {
         currentBatch.Clear();
       }
 
-      if (optimisePlan.None()) {
+      return optimisePlan.Select(p => new OptimiseBatch { Dest = destPath, Files = p}).ToArray();
+    }
+
+    /// <summary>Join ts (timestamp) contiguous files together until they are > MaxBytes</summary>
+    public static async Task<(long optimisedIn, long optimisedOut)> Optimise(this ISimpleFileStore store, StringPath destPath, IEnumerable<StoreFileMd> files,
+      OptimiseCfg cfg, ILogger log) {
+      var plan = OptimisePlan(destPath, files, cfg, log);
+      if (plan.None()) {
         log.Debug("Optimise {Path} - already optimal", destPath);
       }
       else {
-        log.Debug("Optimise {Path} - staring to execute optimisation plan", destPath);
-        await optimisePlan.Select((b, i) => (b, i)).BlockAction(async b => {
-          var (batch, i) = b;
-          var optimiseRes = await JoinFiles(store, batch, destPath, cfg.ParallelFiles, log).WithDuration();
-          log.Debug("Optimise {Path} - optimised file {OptimisedFile} from {FilesIn} in {Duration}. batch {Batch}/{Total}",
-            destPath, optimiseRes.Result, batch.Length, optimiseRes.Duration.HumanizeShort(), i, optimisePlan.Count);
-        }, cfg.ParallelBatches);
+        log.Debug("Optimise {Path} - starting to execute optimisation plan", destPath);
+        await Optimise(store, cfg, plan, log);
       }
-      return (optimisePlan.Sum(p => p.Length), optimisePlan.Count);
+      return (plan.Sum(p => p.Files.Length), plan.Count);
     }
+
+    public static async Task Optimise(this ISimpleFileStore store, OptimiseCfg cfg, IReadOnlyCollection<OptimiseBatch> plan, ILogger log) =>
+      await plan.Select((b, i) => (b, i)).BlockAction(async b => {
+        var (batch, i) = b;
+        var optimiseRes = await JoinFiles(store, batch.Files, batch.Dest, cfg.ParallelFiles, log).WithDuration();
+        log.Debug("Optimise {Path} - optimised file {OptimisedFile} from {FilesIn} in {Duration}. batch {Batch}/{Total}",
+          batch.Dest, optimiseRes.Result, batch.Files.Length, optimiseRes.Duration.HumanizeShort(), i, plan.Count);
+      }, cfg.ParallelBatches);
 
     static async Task<StringPath> JoinFiles(ISimpleFileStore store, IReadOnlyCollection<StoreFileMd> toOptimise, StringPath destPath, int parallel,
       ILogger log) {
       var optimisedFileName = FilePath(destPath, toOptimise.Last().Ts);
       var localTmpDir = Path.GetTempPath().AsPath().Combine("Mutuo.Etl", "JoinFiles", ShortGuid.Create(8));
-      
+
       localTmpDir.EnsureDirectoryExists();
 
       var inFiles = await toOptimise.BlockFunc(async s => {
         var inPath = localTmpDir.Combine($"{ShortGuid.Create(6)}.{s.Path.Name}"); // flatten dir structure locally. ensure unique with GUID
-        log.Debug("Optimise {Path} - about to load file {SourceFile} to {LocalTempFile}", destPath, s.Path, inPath.FullPath);
         var dur = await store.LoadToFile(s.Path, inPath, log).WithDuration();
-        log.Debug("Optimise {Path} - loaded file {SourceFile} to be optimised in {Duration}", destPath, s.Path, dur.HumanizeShort());
+        log.Debug("Optimise {Path} - loaded file {SourceFile} for optimisation in {Duration}", destPath, s.Path, dur.HumanizeShort());
         return inPath;
       }, parallel);
-      
+
       var outFile = localTmpDir.Combine($"out.{optimisedFileName.Name}");
-      
+
       using (var fileStream = outFile.Open(FileMode.Create)) {
         using var zipWriter = new GZipStream(fileStream, CompressionLevel.Optimal, leaveOpen: false);
         foreach (var s in inFiles) {
@@ -139,7 +162,7 @@ namespace Mutuo.Etl.Blob {
           await zr.CopyToAsync(zipWriter);
         }
       }
-      
+
       log.Debug("Optimise {Path} - joined {SourceFiles} source files. About to upload", destPath, inFiles.Count);
       await store.Save(optimisedFileName, outFile);
       log.Debug("Optimise {Path} - saved optimised file {OptimisedFile}", destPath, optimisedFileName);
@@ -149,8 +172,8 @@ namespace Mutuo.Etl.Blob {
       await toOptimise.BlockAction(f => store.Delete(f.Path), parallel)
         .WithWrappedException(e => "Failed to delete optimised files. Duplicate records need to be handled downstream");
       log.Debug("Optimise {Path} - deleted {Files} that were optimised into {OptimisedFile}", destPath, toOptimise.Count, optimisedFileName);
-      
-      localTmpDir.Delete(recursive:true); // delete local tmp files
+
+      localTmpDir.Delete(recursive: true); // delete local tmp files
       return optimisedFileName;
     }
 

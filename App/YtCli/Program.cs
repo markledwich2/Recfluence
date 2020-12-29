@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -80,27 +81,41 @@ namespace YtCli {
 
   [Command("upgrade-partitions")]
   public class UpgradePartitionsCmd : ICommand {
-    readonly ILogger            Log;
-    readonly WarehouseCfg        Cfg;
-    readonly AzureBlobFileStore Store;
+    readonly YtStores     Stores;
+    readonly         ILogger      Log;
+    readonly         WarehouseCfg Cfg;
+    readonly         YtStage      Stage;
+    readonly         IPipeCtx     Ctx;
     
     [CommandOption('d', Description = "| delimited list of dirs that have partitions that are to be removed")]
     public string Dirs { get; set; }
 
-    public UpgradePartitionsCmd(YtStores stores, ILogger log, WarehouseCfg cfg) {
-      Store = stores.Store(DataStoreType.Db);
+    public UpgradePartitionsCmd(YtStores stores, ILogger log, WarehouseCfg cfg, YtStage stage, IPipeCtx ctx) {
+      Stores = stores;
       Log = log;
       Cfg = cfg;
+      Stage = stage;
+      Ctx = ctx;
     }
 
     public async ValueTask ExecuteAsync(IConsole console) {
       var includedDirs = Dirs?.UnJoin('|');
       var dirs = new [] {"videos", "recs", "captions"}.Where(d => includedDirs== null || includedDirs.Contains(d));
+      var store = Stores.Store(DataStoreType.Db);
       foreach (var dir in dirs) {
-        var files = await Store.Files(dir, allDirectories:true).SelectMany()
+        var files = await store.Files(dir, allDirectories:true).SelectMany()
           .Where(f => f.Path.Tokens.Count == 3) // only optimise from within partitions
           .ToListAsync();
-        await Store.Optimise(dir, files, Cfg.Optimise, Log);
+
+        var plan = JsonlStoreExtensions.OptimisePlan(dir, files, Cfg.Optimise, Log);
+        
+        if (plan.Count < 10) // if the plan is small, run locally, otherwise on many machines
+          await store.Optimise(Cfg.Optimise, plan, Log);
+        else
+          await plan.Process(Ctx, 
+            b => Stage.ProcessOptimisePlan(b, store.BasePath, PipeArg.Inject<ILogger>()),
+            new() { MaxParallel = 12, MinWorkItems = 1 },
+            log:Log, cancel:console.GetCancellationToken());
       }
     }
   }
@@ -318,26 +333,33 @@ namespace YtCli {
   [Command("build-container")]
   public class BuildContainerCmd : ICommand {
     readonly SemVersion   Version;
-    readonly ContainerCfg ContainerCfg;
+    readonly ContainerCfg Cfg;
     readonly ILogger      Log;
     [CommandOption('p', Description = "Publish to registry, otherwise a local build only")]
     public bool PublishToRegistry { get; set; }
 
-    public BuildContainerCmd(SemVersion version, ContainerCfg containerCfg, ILogger log) {
+    public BuildContainerCmd(SemVersion version, ContainerCfg cfg, ILogger log) {
       Version = version;
-      ContainerCfg = containerCfg;
+      Cfg = cfg;
       Log = log;
     }
 
     static async Task<Command> RunShell(Shell shell, ILogger log, string cmd, params object[] args) {
+      var process = await StartShell(shell, log, cmd, args);
+      return await EnsureComplete(cmd, process);
+    }
+
+    static async Task<Command> EnsureComplete(string cmd, Command process) {
+      var res = await process.Task;
+      if (res.Success) return process;
+      await Console.Error.WriteLineAsync($"command failed with exit code {res.ExitCode}: {res.StandardError}");
+      throw new CommandException($"command ({cmd}) failed");
+    }
+
+    static async Task<Command> StartShell(Shell shell, ILogger log, string cmd, params object[] args) {
       log.Information($"Running command: {cmd} {args.Select(a => a.ToString()).Join(" ")}");
       var process = shell.Run(cmd, args);
       await process.StandardOutput.PipeToAsync(Console.Out);
-      var res = await process.Task;
-      if (!res.Success) {
-        await Console.Error.WriteLineAsync($"command failed with exit code {res.ExitCode}: {res.StandardError}");
-        throw new CommandException($"command ({cmd}) failed");
-      }
       return process;
     }
 
@@ -346,21 +368,25 @@ namespace YtCli {
       var slnName = "Recfluence.sln";
       var sln = FPath.Current.ParentWithFile(slnName, true);
       if (sln == null) throw new CommandException($"Can't find {slnName} file to organize build");
-      var image = $"{ContainerCfg.Registry}/{ContainerCfg.ImageName}";
-      var tagVersion = $"{image}:{Version}";
-      var tagLatest = $"{image}:latest";
+      var image = $"{Cfg.Registry}/{Cfg.ImageName}";
+
+      var tagVersions = new List<string> {Version.ToString()};
+      if(Version.Prerelease.NullOrEmpty())
+        tagVersions.Add("latest");
 
       Log.Information("Building & publishing container {Image}", image);
 
       var appDir = sln.FullPath;
       var shell = new Shell(o => o.WorkingDirectory(appDir));
-      await RunShell(shell, Log, "docker", "build", "-t", tagVersion, "-t", tagLatest,
-        "--build-arg", $"SEMVER={Version}",
-        "--build-arg", $"ASSEMBLY_SEMVER={Version.MajorMinorPatch()}",
-        ".");
+      List<object> args = new() {"build"};
+      args.AddRange(tagVersions.SelectMany(t =>new []{"-t", $"{image}:{t}"}));
+      args.AddRange("--build-arg", $"SEMVER={Version}", "--build-arg", $"ASSEMBLY_SEMVER={Version.MajorMinorPatch()}", ".");
+      await RunShell(shell, Log, "docker", args.ToArray());
 
-      if (PublishToRegistry)
-        await RunShell(shell, Log, "docker", "push", image);
+      if (PublishToRegistry) {
+        foreach (var t in tagVersions)
+          await RunShell(shell, Log, "docker", "push", $"{image}:{t}");
+      }
 
       Log.Information("Completed building docker image {Image} in {Duration}", image, sw.Elapsed.HumanizeShort());
     }

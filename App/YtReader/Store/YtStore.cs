@@ -32,6 +32,8 @@ namespace YtReader.Store {
       Version = version;
       Log = log;
     }
+    
+    public AzureBlobFileStore Store(StringPath path) => new(Cfg.DataStorageCs, path, Log);
 
     public AzureBlobFileStore Store(DataStoreType type) => type switch {
       DataStoreType.Backup => Version.Prerelease.HasValue() ? null : new AzureBlobFileStore(Cfg.BackupCs, Cfg.BackupRootPath, Log),

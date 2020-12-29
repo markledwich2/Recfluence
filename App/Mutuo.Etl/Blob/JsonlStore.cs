@@ -98,7 +98,9 @@ namespace Mutuo.Etl.Blob {
     }
   }
 
-  public class StoreFileMd {
+  public record StoreFileMd {
+    public StoreFileMd() { }
+
     public StoreFileMd(StringPath path, string ts, DateTime modified, long bytes, string version = null) {
       Path = path;
       Ts = ts;
@@ -107,11 +109,11 @@ namespace Mutuo.Etl.Blob {
       Version = version;
     }
 
-    public StringPath Path     { get; }
-    public string     Ts       { get; }
-    public DateTime   Modified { get; }
-    public string     Version  { get; }
-    public long       Bytes    { get; }
+    public StringPath Path     { get; set; }
+    public string     Ts       { get; set; }
+    public DateTime   Modified { get; set; }
+    public string     Version  { get; set; }
+    public long       Bytes    { get; set; }
 
     public static StoreFileMd FromFileItem(FileListItem file) {
       var tokens = file.Path.Name.Split(".");

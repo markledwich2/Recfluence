@@ -1,13 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
 using Humanizer.Bytes;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
+using Mutuo.Etl.Pipe;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
@@ -15,6 +18,7 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 using YtReader.Store;
+using static Mutuo.Etl.Pipe.PipeArg;
 
 namespace YtReader {
   public class WarehouseCfg {
@@ -32,12 +36,14 @@ namespace YtReader {
     readonly StorageCfg                  StorageCfg;
     readonly SnowflakeConnectionProvider Conn;
     readonly WarehouseCfg                Cfg;
+    readonly IPipeCtx                    PipeCtx;
 
-    public YtStage(YtStores stores, StorageCfg storageCfg, SnowflakeConnectionProvider conn, WarehouseCfg cfg) {
+    public YtStage(YtStores stores, StorageCfg storageCfg, SnowflakeConnectionProvider conn, WarehouseCfg cfg, IPipeCtx pipeCtx) {
       Stores = stores;
       StorageCfg = storageCfg;
       Conn = conn;
       Cfg = cfg;
+      PipeCtx = pipeCtx;
     }
 
     public async Task StageUpdate(ILogger log, bool fullLoad = false, string[] tableNames = null) {
@@ -72,10 +78,26 @@ namespace YtReader {
         table, rows, size.Humanize("#.#"), dur.HumanizeShort());
     }
 
-    async Task FullLoad(ILoggedConnection<IDbConnection> db, string table, StageTableCfg t) {
+    [Pipe]
+    public async Task<bool> ProcessOptimisePlan(IReadOnlyCollection<OptimiseBatch> plan, string path, ILogger log) {
+      var runId = ShortGuid.Create(4);
+      log = log.ForContext("RunId", runId);
+      log.Information("YtStage - starting optimisation plan ({RunId}) first path '{Dest}' out of {TotalBatches}", runId, plan.First().Dest, plan.Count);
+      var store = Stores.Store(path);
+      await store.Optimise(Cfg.Optimise, plan, log);
+      return true;
+    }
+
+    async Task FullLoad(ILoggedConnection<IDbConnection> db, string table, StageTableCfg t, CancellationToken cancel = default) {
       var store = Store(t);
-      if (t.IsNativeStore)
-        await store.Optimise(Cfg.Optimise, t.Dir, null, db.Log); // optimise all files when performing a full load
+      if (t.IsNativeStore) {
+        var plan = await store.OptimisePlan(Cfg.Optimise, t.Dir, ts: null, db.Log);
+        if (plan.Count < 10) // if the plan is small, run locally, otherwise on many machines
+          await store.Optimise(Cfg.Optimise, plan, db.Log);
+        else
+          await plan.Process(PipeCtx, b => ProcessOptimisePlan(b, Stores.StoragePath(t.StoreType), Inject<ILogger>())
+            , new() { MaxParallel = 8, MinWorkItems = 1 }, db.Log, cancel);
+      }
       await db.Execute("truncate table", $"truncate table {table}"); // no transaction, stage tables aren't reported on so don't need to be available
       var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();
       db.Log.Information("StageUpdate - {Table} full load of {Rows} rows ({Size}) took {Duration}",
