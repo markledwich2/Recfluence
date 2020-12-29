@@ -17,6 +17,7 @@ using Semver;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Build;
+using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
@@ -24,7 +25,6 @@ using YtReader;
 using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
-using SysExtensions.Collections;
 
 namespace YtCli {
   class Program {
@@ -78,15 +78,14 @@ namespace YtCli {
     }
   }
 
-
   [Command("upgrade-partitions")]
   public class UpgradePartitionsCmd : ICommand {
     readonly YtStores     Stores;
-    readonly         ILogger      Log;
-    readonly         WarehouseCfg Cfg;
-    readonly         YtStage      Stage;
-    readonly         IPipeCtx     Ctx;
-    
+    readonly ILogger      Log;
+    readonly WarehouseCfg Cfg;
+    readonly YtStage      Stage;
+    readonly IPipeCtx     Ctx;
+
     [CommandOption('d', Description = "| delimited list of dirs that have partitions that are to be removed")]
     public string Dirs { get; set; }
 
@@ -100,22 +99,23 @@ namespace YtCli {
 
     public async ValueTask ExecuteAsync(IConsole console) {
       var includedDirs = Dirs?.UnJoin('|');
-      var dirs = new [] {"videos", "recs", "captions"}.Where(d => includedDirs== null || includedDirs.Contains(d));
+      var dirs = new[] {"videos", "recs", "captions"}.Where(d => includedDirs == null || includedDirs.Contains(d));
       var store = Stores.Store(DataStoreType.Db);
       foreach (var dir in dirs) {
-        var files = await store.Files(dir, allDirectories:true).SelectMany()
+        Log.Information("upgrade-partitions - {Dir} started", dir);
+        var files = await store.Files(dir, allDirectories: true).SelectMany()
           .Where(f => f.Path.Tokens.Count == 3) // only optimise from within partitions
           .ToListAsync();
 
         var plan = JsonlStoreExtensions.OptimisePlan(dir, files, Cfg.Optimise, Log);
-        
+
         if (plan.Count < 10) // if the plan is small, run locally, otherwise on many machines
           await store.Optimise(Cfg.Optimise, plan, Log);
         else
-          await plan.Process(Ctx, 
+          await plan.Process(Ctx,
             b => Stage.ProcessOptimisePlan(b, store.BasePath, PipeArg.Inject<ILogger>()),
-            new() { MaxParallel = 12, MinWorkItems = 1 },
-            log:Log, cancel:console.GetCancellationToken());
+            new() {MaxParallel = 12, MinWorkItems = 1},
+            log: Log, cancel: console.GetCancellationToken());
       }
     }
   }
@@ -205,7 +205,7 @@ namespace YtCli {
 
     [CommandOption('m', Description = "the mode to copy the database Fresh|Clone|CloneBasic")]
     public BranchState Mode { get; set; }
-    
+
     [CommandOption('p', Description = "| separated list of staging db paths to copy")]
     public string StagePaths { get; set; }
 
@@ -232,13 +232,13 @@ namespace YtCli {
 
     [CommandOption('t', Description = "| delimited list of tables to restrict updates to")]
     public string Tables { get; set; }
-    
+
     [CommandOption('s', Description = "| delimited list of staging tables to restrict updates to")]
     public string StageTables { get; set; }
 
     [CommandOption('r', Description = "| delimited list of query names to restrict results to")]
     public string Results { get; set; }
-    
+
     [CommandOption('i', Description = "| delimited list of indexes to limit indexing to")]
     public string Indexes { get; set; }
 
@@ -247,7 +247,7 @@ namespace YtCli {
 
     [CommandOption('c', Description = "| delimited list of channels to collect")]
     public string Channels { get; set; }
-    
+
     [CommandOption("collect-parts", shortName: 'p', Description = "optional '|' separated list of parts to run")]
     public string Parts { get; set; }
 
@@ -269,10 +269,11 @@ namespace YtCli {
 
     [CommandOption("search-index", Description = @"| separated list of indexes to update. leave empty for all indexes")]
     public string SearchIndexes { get; set; }
-    
-    [CommandOption("collect-videos", Description = @"path in the data blob container a file with newline separated video id's. e.g. import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz")]
+
+    [CommandOption("collect-videos",
+      Description = @"path in the data blob container a file with newline separated video id's. e.g. import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz")]
     public string CollectVideos { get; set; }
-    
+
     [CommandOption("dataform-deps", Description = "when specified, dataform will run with dependencies included", IsRequired = false)]
     public bool DataformDeps { get; set; }
 
@@ -310,7 +311,7 @@ namespace YtCli {
         new PipeRunOptions {Location = Location, Exclusive = true}, Log, console.GetCancellationToken());
     }
   }
-  
+
   [Command("test-chrome-scraper")]
   public class TestChromeScraperCmd : ICommand {
     readonly ChromeScraper Scraper;
@@ -371,7 +372,7 @@ namespace YtCli {
       var image = $"{Cfg.Registry}/{Cfg.ImageName}";
 
       var tagVersions = new List<string> {Version.ToString()};
-      if(Version.Prerelease.NullOrEmpty())
+      if (Version.Prerelease.NullOrEmpty())
         tagVersions.Add("latest");
 
       Log.Information("Building & publishing container {Image}", image);
@@ -379,14 +380,13 @@ namespace YtCli {
       var appDir = sln.FullPath;
       var shell = new Shell(o => o.WorkingDirectory(appDir));
       List<object> args = new() {"build"};
-      args.AddRange(tagVersions.SelectMany(t =>new []{"-t", $"{image}:{t}"}));
+      args.AddRange(tagVersions.SelectMany(t => new[] {"-t", $"{image}:{t}"}));
       args.AddRange("--build-arg", $"SEMVER={Version}", "--build-arg", $"ASSEMBLY_SEMVER={Version.MajorMinorPatch()}", ".");
       await RunShell(shell, Log, "docker", args.ToArray());
 
-      if (PublishToRegistry) {
+      if (PublishToRegistry)
         foreach (var t in tagVersions)
           await RunShell(shell, Log, "docker", "push", $"{image}:{t}");
-      }
 
       Log.Information("Completed building docker image {Image} in {Duration}", image, sw.Elapsed.HumanizeShort());
     }

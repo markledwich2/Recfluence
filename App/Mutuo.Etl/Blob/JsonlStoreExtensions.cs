@@ -87,7 +87,7 @@ namespace Mutuo.Etl.Blob {
       var currentBatch = new List<StoreFileMd>();
       var optimisePlan = new List<StoreFileMd[]>();
 
-      if (toProcess.None()) return default;
+      if (toProcess.None()) return new OptimiseBatch[]{};
 
       while (toProcess.Any()) {
         var file = toProcess.Dequeue();
