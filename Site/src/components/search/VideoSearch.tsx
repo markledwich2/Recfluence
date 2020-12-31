@@ -143,7 +143,7 @@ interface SortValue { field: string, sort: 'asc' | 'desc' }
 
 const sortOptions: Dictionary<string> = {
   'Relevance': '_score',
-  'Views': 'views',
+  //'Views': 'views',
   'Uploaded': 'upload_date'
 }
 
@@ -192,7 +192,7 @@ export const VideoSearch = ({ esCfg }: CProps<{ esCfg: EsCfg }>) => {
 
                   return <ReactiveList
                     componentId="result"
-                    react={{ and: ['q', 'views', 'sort', 'tags', 'channel', 'upload', 'part'] }}
+                    react={{ and: ['q', 'sort', 'tags', 'channel', 'upload', 'part'] }}
                     infiniteScroll
                     scrollTarget="results"
                     size={50}
@@ -284,7 +284,7 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
         }}
       />
 
-      <SingleRange
+      {/* <SingleRange
         componentId="views"
         title="Views" filterLabel="Views"
         dataField="views"
@@ -298,7 +298,7 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
         ]}
         showRadio={false}
         URLParams
-      />
+      /> */}
 
       <MultiDataList componentId='part' title='Part' filterLabel='Part'
         dataField={'part'}
@@ -330,7 +330,7 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
       showCheckbox={false}
       showCount showMissing
       showSearch={false}
-      react={{ and: ['q', 'views', 'upload', 'part'] }}
+      react={{ and: ['q', 'upload', 'part'] }}
       style={FilteredListStyle}
       defaultQuery={_ => ({
         aggs: {
@@ -367,7 +367,7 @@ const FiltersPaneComponent = ({ setSort, sort, style }: { setSort: React.Dispatc
       showCheckbox={false}
       showCount
       showSearch={true}
-      react={{ and: ['q', 'views', 'tags', 'upload', 'part'] }}
+      react={{ and: ['q', 'tags', 'upload', 'part'] }}
       style={FilteredListStyle}
       defaultQuery={_ => ({
         aggs: {

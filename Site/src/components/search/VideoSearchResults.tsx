@@ -244,7 +244,6 @@ export const VideoSearchResult = (p: { caption: CaptionSearchResult, searchWords
         <div style={{ display: "flex", justifyContent: "space-between", padding: '0.4em 0' }}>
           <DetailsRow>
             <b>{c.channel_title}</b>
-            <span><b>{compactInteger(c.views)}</b> views</span>
             <span>{dateFormat(c.upload_date)}</span>
           </DetailsRow>
           <div><ChannelTags channel={cd} /></div>

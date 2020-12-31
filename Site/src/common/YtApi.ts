@@ -175,7 +175,6 @@ interface EsCaptionVideoCommon {
   keywords: string
   upload_date: Date
   updated: string
-  views: number
   ideology: string
   lr: string
   country: string
@@ -192,6 +191,7 @@ export interface EsCaption extends EsCaptionVideoCommon {
 }
 
 export interface EsVideo extends EsCaptionVideoCommon {
+  views: number
   description: string
   likes: number
   dislikes: number
