@@ -49,7 +49,7 @@ namespace YtReader.Search {
       string[] Conditions(IndexType index) => conditions?.Where(c => c.index == index.BaseName()).Select(c => c.condition).ToArray() ?? new string[] { };
       bool ShouldRun(IndexType index) => indexes == null || indexes.Any(i => string.Equals(i, index.BaseName(), StringComparison.OrdinalIgnoreCase));
 
-      async Task Sync<TDb, TEs>(IndexType type, string sql, Func<TDb, TEs> map, params string[] extraConditions)
+      async Task Sync<TDb, TEs>(IndexType type, string sql, Func<TDb, TEs> map, string incrementalCondition = null, params string[] extraConditions)
         where TDb : class where TEs : class, IHasUpdated {
         TEs Map(TDb o) {
           try {
@@ -62,26 +62,27 @@ namespace YtReader.Search {
         }
 
         if (ShouldRun(type))
-          await CoreSync<TDb, TEs>(log, sql, fullLoad, Map, Conditions(type).Concat(extraConditions).ToArray(), cancel);
+          await CoreSync<TDb, TEs>(log, sql, fullLoad, Map, Conditions(type).Concat(extraConditions).ToArray(), incrementalCondition, cancel);
       }
 
-      await Sync<dynamic, EsChannel>(Channel, @"select * from channel_latest", MapChannel, "source='recfluence'");
+      await Sync<dynamic, EsChannel>(Channel, @"select * from channel_latest", MapChannel, incrementalCondition: null, "source='recfluence'");
 
-      await Sync(ChannelTitle, "select channel_id, channel_title, description, updated from channel_latest",
-        (EsChannelTitle c) => c);
+      await Sync(ChannelTitle, "select channel_id, channel_title, description, updated from channel_latest", (EsChannelTitle c) => c);
 
       await Sync<dynamic, EsVideo>(Video, @"select l.*, c.lr, c.tags, timediff(seconds, '0'::time, duration) as duration_secs
 from video_latest l
-inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
+inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo,
+        // update any new videos, or update once per week distributed randomly
+        "updated_first > :max_updated or (updated > :max_updated and abs(hash(video_id)) % 7 = dayofweek(current_date))");
 
       await Sync(Caption, "select * from caption_es", (DbEsCaption c) => MapCaption(c));
     }
 
-    async Task CoreSync<TDb, TEs>(ILogger log, string selectSql, bool fullLoad, Func<TDb, TEs> map, string[] conditions = null,
+    async Task CoreSync<TDb, TEs>(ILogger log, string selectSql, bool fullLoad, Func<TDb, TEs> map, string[] conditions = null, string incrementalCondition = null,
       CancellationToken cancel = default)
       where TEs : class, IHasUpdated where TDb : class {
       var lastUpdate = await Es.MaxDateField<TEs>(m => m.Field(p => p.updated));
-      var sql = CreateSql(selectSql, fullLoad, lastUpdate, conditions);
+      var sql = CreateSql(selectSql, fullLoad, lastUpdate, conditions, incrementalCondition);
 
       var alias = Es.GetIndexFor<TEs>() ?? throw new InvalidOperationException("The ElasticClient must have default indexes created for types used");
       var existingIndex = (await Es.GetIndicesPointingToAliasAsync(alias)).FirstOrDefault();
@@ -173,8 +174,7 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
       updated = c.updated,
       upload_date = c.upload_date,
       video_id = c.video_id,
-      video_title = c.video_title,
-      views = c.views,
+      video_title = c.video_title
     };
 
     async Task<ILoggedConnection<SnowflakeDbConnection>> OpenConnection(ILogger log) {
@@ -184,13 +184,14 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo);
         (SfParam.Timezone, "GMT"));
       return conn;
     }
-
-    (string sql, object param) CreateSql(string selectSql, bool fullLoad, DateTime? lastUpdate, string[] conditions = null) {
+    
+    (string sql, object param) CreateSql(string selectSql, bool fullLoad, DateTime? lastUpdate
+      , string[] conditions = null, string incrementalCondition = null) {
       conditions ??= new string[] { };
 
       var param = lastUpdate == null || fullLoad ? null : new {max_updated = lastUpdate};
       if (param?.max_updated != null)
-        conditions = conditions.Concat("updated > :max_updated").ToArray();
+        conditions = conditions.Concat(incrementalCondition ?? "updated > :max_updated").ToArray();
       var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
       var sql = $@"with q as ({selectSql})
 select * from q{sqlWhere}
