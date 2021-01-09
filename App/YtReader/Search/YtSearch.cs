@@ -98,7 +98,7 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo,
 
       using var conn = await OpenConnection(log);
       var rows = Query<TDb>(sql, conn).Select(map);
-      var (docs, dur) = await BatchToEs(newIndex ?? existingIndex, log, rows, EsExtensions.EsPolicy(log), cancel).WithDuration();
+      var (docs, dur) = await BatchToEs(newIndex ?? existingIndex, log, rows, EsExtensions.EsPolicy(log, Cfg.Retries), cancel).WithDuration();
       if (newIndex != null) {
         if (existingIndex != null) {
           (await Es.Indices.BulkAliasAsync(b =>
@@ -234,13 +234,13 @@ order by updated"; // always order by updated so that if sync fails, we can resu
         new BasicAuthenticationCredentials(cfg.Creds.Name, cfg.Creds.Secret))
       .DefaultIndex(defaultIndex));
 
-    public static AsyncRetryPolicy<BulkResponse> EsPolicy(ILogger log) => Policy
+    public static AsyncRetryPolicy<BulkResponse> EsPolicy(ILogger log, int retries) => Policy
       .HandleResult<BulkResponse>(r =>
         r.ItemsWithErrors.Any(i => i.Status == 429) || r.ServerError?.Status == 429 || r.OriginalException is OperationCanceledException)
-      .RetryAsync(retryCount: 3, async (r, i) => {
+      .RetryAsync(retryCount: retries, async (r, i) => {
         var delay = i.ExponentialBackoff(5.Seconds());
         log?.Information("Retryable error indexing captions: Retrying in {Duration}, attempt {Attempt}/{Total}",
-          delay, i, 3);
+          delay, i, retries);
         await Task.Delay(delay);
       });
 

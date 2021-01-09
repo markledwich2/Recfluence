@@ -28,7 +28,7 @@ namespace YtReader.Store {
 
     public YtIndexResults(YtStores stores, SnowflakeConnectionProvider sf) {
       Sf = sf;
-      BlobIndex = new BlobIndex(stores.Store(DataStoreType.Results));
+      BlobIndex = new(stores.Store(DataStoreType.Results));
     }
 
     public async Task Run(IReadOnlyCollection<string> include, ILogger log, CancellationToken cancel = default) {
@@ -41,6 +41,7 @@ namespace YtReader.Store {
           () => VideoRemovedCaption(),
           () => NarrativeChannels(),
           () => NarrativeVideos(),
+          () => UsRecs()
         }
         .Select(e => new {Expression = e, Name = ((MethodCallExpression) e.Body).Method.Name.Underscore()})
         .Where(t => include == null || include.Contains(t.Name));
@@ -63,7 +64,7 @@ namespace YtReader.Store {
     public static string IndexVersion = "v2";
 
     WorkCfg Work(IndexCol[] cols, string sql, ByteSize? size = default) =>
-      new WorkCfg {Cols = cols, Sql = sql, Size = size ?? 200.Kilobytes()};
+      new() {Cols = cols, Sql = sql, Size = size ?? 200.Kilobytes()};
 
     async Task<BlobIndexWork> IndexWork(ILogger log, string name, IndexCol[] cols, string sql, ByteSize size, Action<JObject> onProcessed = null) {
       using var con = await Sf.OpenConnection(log);
@@ -75,7 +76,7 @@ namespace YtReader.Store {
       }
 
       var path = StringPath.Relative("index", name, IndexVersion);
-      return new BlobIndexWork(path, cols, GetRows(), size, onProcessed);
+      return new(path, cols, GetRows(), size, onProcessed);
     }
 
     #region Channels & Videos
@@ -206,6 +207,60 @@ with s as (
 select *
 from s
 order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc");
+
+    #endregion
+
+    #region Recs
+
+    static readonly IndexCol[] UsRecCols = {Col("label", writeDistinct: true), Col("from_video_id", writeDistinct:true)};
+
+    WorkCfg UsRecs() => Work(UsRecCols, @$"
+with video_date_accounts as (
+  select from_video_id, updated::date day
+  from us_rec
+  group by 1, 2
+  having count(distinct account)>=16
+)
+   , full_account_recs as (
+  select r.account
+       , r.updated::date day
+       , m.label
+       , r.from_video_id
+       , r.to_video_id
+       , r.from_channel_id
+       , r.from_channel_title
+       , r.from_video_title
+       , fc.logo_url from_channel_logo
+       , r.to_video_title
+       , r.to_channel_id
+       , r.to_channel_title
+       , tc.logo_url to_channel_logo
+  from us_rec r
+         left join us_test_manual m on m.video_id=r.from_video_id
+         left join channel_latest tc on r.to_channel_id=tc.channel_id
+        left join channel_latest fc on r.from_channel_id=fc.channel_id
+  where exists(select * from video_date_accounts d where d.from_video_id=r.from_video_id and d.day=r.updated::date)
+)
+   , sets as (
+  select from_video_id
+       , to_video_id
+       , day
+       , label
+       , array_agg(distinct account) accounts
+       , any_value(from_channel_id) from_channel_id
+       , any_value(from_channel_title) from_channel_title
+       , any_value(from_video_title) from_video_title
+       , any_value(from_channel_logo) from_channel_logo
+       , any_value(to_video_title) to_video_title
+       , any_value(to_channel_id) to_channel_id
+       , any_value(to_channel_title) to_channel_title
+       , any_value(to_channel_logo) to_channel_logo
+  from full_account_recs r
+  group by 1, 2, 3, 4
+)
+select *
+from sets
+order by {UsRecCols.DbNames().Join(",")}", 100.Kilobytes());
 
     #endregion
   }
