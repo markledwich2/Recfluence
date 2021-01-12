@@ -110,9 +110,9 @@ namespace YtReader {
         (l, c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),
         (l, c) => Index(options.Indexes, l, c),
-        (l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
+        //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
         (l, c) => Dataform(fullLoad, options.Tables, options.DataformDeps, l, c),
-        (l,c) => Backup(l)  
+        (l,c) => Backup(l)
       );
 
       var actions = options.Actions;
