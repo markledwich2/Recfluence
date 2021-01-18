@@ -101,8 +101,8 @@ from channel_latest c
        left join channel_review cr on cr.channel_id=c.channel_id
 where c.reviews_all>0";*/
 
-      const string samVidsSelect = @"select $1::string video_id
-  from @public.yt_data/import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz (file_format => tsv)";
+      /*const string samVidsSelect = @"select $1::string video_id
+  from @public.yt_data/import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz (file_format => tsv)";*/
       
       var queries = new[] {
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",

@@ -41,7 +41,8 @@ namespace YtReader.Store {
           () => VideoRemovedCaption(),
           () => NarrativeChannels(),
           () => NarrativeVideos(),
-          () => UsRecs()
+          () => UsRecs(),
+          () => UsWatch()
         }
         .Select(e => new {Expression = e, Name = ((MethodCallExpression) e.Body).Method.Name.Underscore()})
         .Where(t => include == null || include.Contains(t.Name));
@@ -212,12 +213,17 @@ order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc");
 
     #region Recs
 
-    static readonly IndexCol[] UsRecCols = {Col("label", writeDistinct: true), Col("from_video_id", writeDistinct:true)};
+    static readonly IndexCol[] UsRecCols = {Col("label", writeDistinct: true), Col("from_video_id", writeDistinct: true)};
 
     WorkCfg UsRecs() => Work(UsRecCols, @$"
 with video_date_accounts as (
-  select from_video_id, updated::date day
-  from us_rec
+  select from_video_id, day
+  from (
+         select from_video_id, updated::date day, account
+         from us_rec
+         group by 1, 2, 3
+         having max(rank)>5 -- at least 5 videos per account
+       )
   group by 1, 2
   having count(distinct account)>=16
 )
@@ -230,16 +236,12 @@ with video_date_accounts as (
        , r.from_channel_id
        , r.from_channel_title
        , r.from_video_title
-       , fc.logo_url from_channel_logo
        , r.to_video_title
        , r.to_channel_id
        , r.to_channel_title
-       , tc.logo_url to_channel_logo
   from us_rec r
          left join us_test_manual m on m.video_id=r.from_video_id
-         left join channel_latest tc on r.to_channel_id=tc.channel_id
-        left join channel_latest fc on r.from_channel_id=fc.channel_id
-  where exists(select * from video_date_accounts d where d.from_video_id=r.from_video_id and d.day=r.updated::date)
+  where account <> 'Black' and exists(select * from video_date_accounts d where d.from_video_id=r.from_video_id and d.day=r.updated::date)
 )
    , sets as (
   select from_video_id
@@ -250,17 +252,28 @@ with video_date_accounts as (
        , any_value(from_channel_id) from_channel_id
        , any_value(from_channel_title) from_channel_title
        , any_value(from_video_title) from_video_title
-       , any_value(from_channel_logo) from_channel_logo
        , any_value(to_video_title) to_video_title
        , any_value(to_channel_id) to_channel_id
        , any_value(to_channel_title) to_channel_title
-       , any_value(to_channel_logo) to_channel_logo
   from full_account_recs r
   group by 1, 2, 3, 4
 )
 select *
 from sets
 order by {UsRecCols.DbNames().Join(",")}", 100.Kilobytes());
+
+    WorkCfg UsWatch() => Work(new[] {Col("updated"), Col("account", inIndex:false, writeDistinct:true)}, @"
+  select w.account
+       , w.updated
+       , w.video_id
+       , vl.video_title
+       , vl.channel_id
+      , vl.channel_title
+  from us_watch w
+         left join video_latest vl on w.video_id=vl.video_id
+  where account<>'Black'
+  order by updated
+", 50.Kilobytes());
 
     #endregion
   }
