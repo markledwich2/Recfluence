@@ -137,7 +137,6 @@ from channel_accepted order by channel_views desc",
           new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
             parameters: new {from_date = "2020-11-03", to_date = "2020-11-10"}),
           
-          
           new ResQuery("us_rec_stats", @"
 with r1 as (
   select r.account
@@ -185,6 +184,31 @@ where v.month>=(select min(trunc(updated, 'month')) from us_rec)
 group by month
 order by month
 ", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+          
+          new ResQuery("us_feed_stats", @"with r1 as (
+  select r.account
+       , trunc(r.updated, 'month') month
+       , c.tags to_tags
+       , UUID_STRING() rec_id
+  from us_feed r
+         left join video_latest v on v.video_id=r.video_id
+         left join channel_latest c on v.channel_id=c.channel_id
+)
+   , r2 as (
+  select account
+       , month
+       , tt.value::string to_tag
+       , count(*) over (partition by rec_id) rec_duplicates
+  from r1 as r
+     , table ( flatten(to_tags, outer => true) ) tt
+)
+   , g as (
+  select account, month, to_tag, count(*) recs, sum(1/rec_duplicates) recs_portion
+  from r2
+  group by 1, 2, 3
+)
+select *
+from g", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
           
           /*new ResQuery("sam_vid", @$"
 with sam_vids_raw as ({samVidsSelect})
