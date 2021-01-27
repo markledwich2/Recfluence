@@ -36,6 +36,17 @@
         <calculation class='tableau' formula='200' />
         <range max='1000' min='1' />
       </column>
+      <column alias='Simon Parkes' caption='ChannelIds' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;UCgzqRRDGThOlH4EHaqSXXPA&quot;'>
+        <calculation class='tableau' formula='&quot;UCgzqRRDGThOlH4EHaqSXXPA&quot;' />
+        <aliases>
+          <alias key='&quot;UC0v7VUtxrPnQWPgZx-WSzgw&quot;' value='Santa Surfing Beach Broadcast' />
+          <alias key='&quot;UCgzqRRDGThOlH4EHaqSXXPA&quot;' value='Simon Parkes' />
+        </aliases>
+        <members>
+          <member alias='Simon Parkes' value='&quot;UCgzqRRDGThOlH4EHaqSXXPA&quot;' />
+          <member alias='Santa Surfing Beach Broadcast' value='&quot;UC0v7VUtxrPnQWPgZx-WSzgw&quot;' />
+        </members>
+      </column>
     </datasource>
     <datasource caption='Channel Recs (2)' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 8)' version='18.1'>
       <connection class='federated'>
@@ -1291,466 +1302,6 @@
           <object caption='Migrated Data' id='Migrated Data'>
             <properties context=''>
               <relation connection='snowflake.03rgzb11cg68jj1cnegvb0eqneob (copy)' name='ICC_TAGS' table='[PUBLIC].[ICC_TAGS]' type='table' />
-            </properties>
-          </object>
-        </objects>
-      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
-    </datasource>
-    <datasource caption='Channel Recs' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 3)' version='18.1'>
-      <connection class='federated'>
-        <named-connections>
-          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 3)'>
-            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' />
-          </named-connection>
-        </named-connections>
-        <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 3)' name='CHANNEL_RECS' table='[PUBLIC].[CHANNEL_RECS]' type='table' />
-        <_.fcp.ObjectModelEncapsulateLegacy.true...relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 3)' name='CHANNEL_RECS' table='[PUBLIC].[CHANNEL_RECS]' type='table' />
-      </connection>
-      <aliases enabled='yes' />
-      <column caption='Same Channel' datatype='boolean' name='[Calculation_950541058610667523]' role='dimension' type='nominal'>
-        <calculation class='tableau' formula='[FROM_CHANNEL_TITLE] = [TO_CHANNEL_TITLE]' />
-      </column>
-      <column caption='Net Recommend Flow' datatype='real' name='[Calculation_950541058817146886]' role='measure' type='quantitative'>
-        <calculation class='tableau' formula='SUM([RELEVANT_IMPRESSIONS_DAILY]) - SUM([IN_RELEVANT_IMPRESSIONS_DAILY])' />
-      </column>
-      <column caption='Impression Out/In Ratio' datatype='real' default-format='n#,##0.0;-#,##0.0' name='[Calculation_950541058854338567]' role='measure' type='quantitative'>
-        <calculation class='tableau' formula='sum([RELEVANT_IMPRESSIONS])/sum([IN_RELEVANT_IMPRESSIONS])' />
-      </column>
-      <column caption='Significant Flow' datatype='string' name='[Calculation_950541058866085896]' role='measure' type='nominal'>
-        <calculation class='tableau' formula='IIF([Calculation_950541058817146886] &lt; -10 or [Calculation_950541058817146886] &gt; 10, &apos;Significant Flow&apos;, &apos;Insignificant Flow&apos;)' />
-      </column>
-      <column datatype='string' hidden='true' name='[FROM_CHANNEL_ID]' role='dimension' type='nominal' />
-      <column caption='From Channel' datatype='string' name='[FROM_CHANNEL_TITLE]' role='dimension' type='nominal' />
-      <column caption='From Group' datatype='string' name='[FROM_IDEOLOGY]' role='dimension' type='nominal' />
-      <column caption='Net impressions received from' datatype='string' name='[From Group (copy)]' role='dimension' type='nominal'>
-        <calculation class='tableau' formula='[FROM_IDEOLOGY]' />
-      </column>
-      <column caption='Impressions' datatype='real' name='[IMPRESSIONS]' role='measure' type='quantitative' />
-      <column datatype='integer' hidden='true' name='[MAX_DAY_RANGE]' role='measure' type='quantitative' />
-      <column caption='Net Impressions' datatype='real' hidden='true' name='[NET_IMPRESSIONS]' role='measure' type='quantitative' />
-      <column caption='Channels' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
-        <calculation class='tableau' formula='1' />
-      </column>
-      <column datatype='integer' hidden='true' name='[RANK]' role='measure' type='quantitative' />
-      <column datatype='string' hidden='true' name='[TO_CHANNEL_ID]' role='dimension' type='nominal' />
-      <column caption='To Channel' datatype='string' name='[TO_CHANNEL_TITLE]' role='dimension' type='nominal' />
-      <column caption='To Group' datatype='string' name='[TO_IDEOLOGY]' role='dimension' type='nominal' />
-      <_.fcp.ObjectModelTableType.true...column caption='Migrated Data' datatype='table' name='[__tableau_internal_object_id__].[Migrated Data]' role='measure' type='quantitative' />
-      <column-instance column='[FROM_IDEOLOGY]' derivation='None' name='[none:FROM_IDEOLOGY:nk]' pivot='key' type='nominal' />
-      <column-instance column='[TO_IDEOLOGY]' derivation='None' name='[none:TO_IDEOLOGY:nk]' pivot='key' type='nominal' />
-      <group caption='Action (From Group,To Group)' hidden='true' name='[Action (From Group,To Group)]' name-style='unqualified' user:auto-column='sheet_link'>
-        <groupfilter function='crossjoin'>
-          <groupfilter function='level-members' level='[FROM_IDEOLOGY]' />
-          <groupfilter function='level-members' level='[TO_IDEOLOGY]' />
-        </groupfilter>
-      </group>
-      <group caption='Action (Ideology)' hidden='true' name='[Action (Ideology)]' name-style='unqualified' user:auto-column='sheet_link'>
-        <groupfilter function='crossjoin'>
-          <groupfilter function='level-members' level='[IDEOLOGY]' />
-        </groupfilter>
-      </group>
-      <group caption='Action (Net impressions received from,To Group)' hidden='true' name='[Action (Net impressions received from,To Group)]' name-style='unqualified' user:auto-column='sheet_link'>
-        <groupfilter function='crossjoin'>
-          <groupfilter function='level-members' level='[From Group (copy)]' />
-          <groupfilter function='level-members' level='[TO_IDEOLOGY]' />
-        </groupfilter>
-      </group>
-      <group caption='Action (To Channel Title,To Ideology)' hidden='true' name='[Action (To Channel Title,To Ideology)]' name-style='unqualified' user:auto-column='sheet_link'>
-        <groupfilter function='crossjoin'>
-          <groupfilter function='level-members' level='[TO_CHANNEL_TITLE]' />
-          <groupfilter function='level-members' level='[TO_IDEOLOGY]' />
-        </groupfilter>
-      </group>
-      <extract _.fcp.ObjectModelExtractV2.true...object-id='Migrated Data' count='-1' enabled='false' units='records'>
-        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks/.Data/Basics copy 1.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='11/27/2019 11:48:59 PM' username='tableau_internal_user'>
-          <_.fcp.ObjectModelEncapsulateLegacy.false...relation name='Extract' table='[Extract].[Extract]' type='table' />
-          <_.fcp.ObjectModelEncapsulateLegacy.true...relation name='Extract' table='[Extract].[Extract]' type='table' />
-          <refresh>
-            <refresh-event add-from-file-path='Channel Recs' increment-value='%null%' refresh-type='create' rows-inserted='76015' timestamp-start='2019-11-27 23:48:59.410' />
-          </refresh>
-          <metadata-records>
-            <metadata-record class='column'>
-              <remote-name>IMPRESSIONS</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[IMPRESSIONS]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>IMPRESSIONS</remote-alias>
-              <ordinal>0</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>72110</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>REC_VIEW_PORTION</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[REC_VIEW_PORTION]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>REC_VIEW_PORTION</remote-alias>
-              <ordinal>1</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>72110</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>RECS</remote-name>
-              <remote-type>20</remote-type>
-              <local-name>[RECS]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>RECS</remote-alias>
-              <ordinal>2</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>integer</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>1143</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>REC_VIEW_CHANNEL_PERCENT</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[REC_VIEW_CHANNEL_PERCENT]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>REC_VIEW_CHANNEL_PERCENT</remote-alias>
-              <ordinal>3</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>72110</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>IMPRESSIONS_PER_TO_VIEW</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[IMPRESSIONS_PER_TO_VIEW]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>IMPRESSIONS_PER_TO_VIEW</remote-alias>
-              <ordinal>4</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>65407</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>RELEVANT_IMPRESSIONS</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[RELEVANT_IMPRESSIONS]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>RELEVANT_IMPRESSIONS</remote-alias>
-              <ordinal>5</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>72110</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>FROM_CHANNEL_TITLE</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[FROM_CHANNEL_TITLE]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>FROM_CHANNEL_TITLE</remote-alias>
-              <ordinal>6</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>2346</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TO_CHANNEL_TITLE</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[TO_CHANNEL_TITLE]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TO_CHANNEL_TITLE</remote-alias>
-              <ordinal>7</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>1293</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>FROM_MEDIA</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[FROM_MEDIA]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>FROM_MEDIA</remote-alias>
-              <ordinal>8</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>3</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TO_MEDIA</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[TO_MEDIA]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TO_MEDIA</remote-alias>
-              <ordinal>9</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>4</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>FROM_IDEOLOGY</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[FROM_IDEOLOGY]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>FROM_IDEOLOGY</remote-alias>
-              <ordinal>10</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>13</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TO_IDEOLOGY</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[TO_IDEOLOGY]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TO_IDEOLOGY</remote-alias>
-              <ordinal>11</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>14</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>FROM_MANOEL</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[FROM_MANOEL]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>FROM_MANOEL</remote-alias>
-              <ordinal>12</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>5</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TO_MANOEL</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[TO_MANOEL]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TO_MANOEL</remote-alias>
-              <ordinal>13</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>5</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>FROM_AIN</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[FROM_AIN]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>FROM_AIN</remote-alias>
-              <ordinal>14</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>2</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TO_AIN</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[TO_AIN]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TO_AIN</remote-alias>
-              <ordinal>15</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>2</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>RELEVANT_IMPRESSIONS_DAILY</remote-name>
-              <remote-type>5</remote-type>
-              <local-name>[RELEVANT_IMPRESSIONS_DAILY]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>RELEVANT_IMPRESSIONS_DAILY</remote-alias>
-              <ordinal>16</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>real</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>72110</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>FROM_RANK</remote-name>
-              <remote-type>20</remote-type>
-              <local-name>[FROM_RANK]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>FROM_RANK</remote-alias>
-              <ordinal>17</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>integer</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>399</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TO_RANK</remote-name>
-              <remote-type>20</remote-type>
-              <local-name>[TO_RANK]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TO_RANK</remote-alias>
-              <ordinal>18</ordinal>
-              <family>CHANNEL_RECS</family>
-              <local-type>integer</local-type>
-              <aggregation>Sum</aggregation>
-              <approx-count>1551</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-          </metadata-records>
-        </connection>
-      </extract>
-      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-structure='true' />
-      <style>
-        <style-rule element='mark'>
-          <encoding attr='color' field='[none:FROM_IDEOLOGY:nk]' type='palette'>
-            <map to='#333333'>
-              <bucket>&quot;Unclasified&quot;</bucket>
-            </map>
-            <map to='#3887be'>
-              <bucket>&quot;Partisan Left&quot;</bucket>
-            </map>
-            <map to='#41afa5'>
-              <bucket>&quot;Religious Conservative&quot;</bucket>
-            </map>
-            <map to='#4e79a7'>
-              <bucket>%null%</bucket>
-            </map>
-            <map to='#6ec9e0'>
-              <bucket>&quot;Socialist&quot;</bucket>
-            </map>
-            <map to='#8a8acb'>
-              <bucket>&quot;Anti-SJW&quot;</bucket>
-            </map>
-            <map to='#a0cbe8'>
-              <bucket>&quot;Alt-light&quot;</bucket>
-            </map>
-            <map to='#aa557f'>
-              <bucket>&quot;Center/Left MSM&quot;</bucket>
-            </map>
-            <map to='#b7b7b7'>
-              <bucket>&quot;Libertarian&quot;</bucket>
-            </map>
-            <map to='#c68143'>
-              <bucket>&quot;White Identitarian&quot;</bucket>
-            </map>
-            <map to='#e0393e'>
-              <bucket>&quot;Partisan Right&quot;</bucket>
-            </map>
-            <map to='#e15759'>
-              <bucket>&quot;Social Justice&quot;</bucket>
-            </map>
-            <map to='#e55e5e'>
-              <bucket>&quot;Provocative Anti-SJW&quot;</bucket>
-            </map>
-            <map to='#ed6498'>
-              <bucket>&quot;MRA&quot;</bucket>
-            </map>
-            <map to='#ff9d9a'>
-              <bucket>&quot;Unclassified&quot;</bucket>
-            </map>
-            <map to='#ffbe7d'>
-              <bucket>&quot;Anti-theist&quot;</bucket>
-            </map>
-            <map to='#ffc168'>
-              <bucket>&quot;Conspiracy&quot;</bucket>
-            </map>
-          </encoding>
-          <encoding attr='color' field='[none:TO_IDEOLOGY:nk]' type='palette'>
-            <map to='#333333'>
-              <bucket>&quot;Unclasified&quot;</bucket>
-            </map>
-            <map to='#3887be'>
-              <bucket>&quot;Partisan Left&quot;</bucket>
-            </map>
-            <map to='#41afa5'>
-              <bucket>&quot;Religious Conservative&quot;</bucket>
-            </map>
-            <map to='#4e79a7'>
-              <bucket>%null%</bucket>
-            </map>
-            <map to='#6ec9e0'>
-              <bucket>&quot;Socialist&quot;</bucket>
-            </map>
-            <map to='#79706e'>
-              <bucket>&quot;Unclassified&quot;</bucket>
-            </map>
-            <map to='#86bcb6'>
-              <bucket>&quot;Social Justice&quot;</bucket>
-            </map>
-            <map to='#8a8acb'>
-              <bucket>&quot;Anti-SJW&quot;</bucket>
-            </map>
-            <map to='#a0cbe8'>
-              <bucket>&quot;Alt-light&quot;</bucket>
-            </map>
-            <map to='#aa557f'>
-              <bucket>&quot;Center/Left MSM&quot;</bucket>
-            </map>
-            <map to='#b7b7b7'>
-              <bucket>&quot;Libertarian&quot;</bucket>
-            </map>
-            <map to='#c68143'>
-              <bucket>&quot;White Identitarian&quot;</bucket>
-            </map>
-            <map to='#e0393e'>
-              <bucket>&quot;Partisan Right&quot;</bucket>
-            </map>
-            <map to='#e55e5e'>
-              <bucket>&quot;Provocative Anti-SJW&quot;</bucket>
-            </map>
-            <map to='#ed6498'>
-              <bucket>&quot;MRA&quot;</bucket>
-            </map>
-            <map to='#ffbe7d'>
-              <bucket>&quot;Anti-theist&quot;</bucket>
-            </map>
-            <map to='#ffc168'>
-              <bucket>&quot;Conspiracy&quot;</bucket>
-            </map>
-          </encoding>
-        </style-rule>
-      </style>
-      <semantic-values>
-        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
-      </semantic-values>
-      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
-        <objects>
-          <object caption='Migrated Data' id='Migrated Data'>
-            <properties context=''>
-              <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 3)' name='CHANNEL_RECS' table='[PUBLIC].[CHANNEL_RECS]' type='table' />
-            </properties>
-            <properties context='extract'>
-              <relation name='Extract' table='[Extract].[Extract]' type='table' />
             </properties>
           </object>
         </objects>
@@ -4735,500 +4286,6 @@
           <object caption='Migrated Data' id='Migrated Data'>
             <properties context=''>
               <relation connection='snowflake.1w388ev0hweg1p10h1i0j1ro7cmk' name='REC_EXPORT_VS_ESTIMATE' table='[PUBLIC].[REC_EXPORT_VS_ESTIMATE]' type='table' />
-            </properties>
-            <properties context='extract'>
-              <relation name='Extract' table='[Extract].[Extract]' type='table' />
-            </properties>
-          </object>
-        </objects>
-      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
-    </datasource>
-    <datasource caption='Video Stats Daily' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)' version='18.1'>
-      <connection class='federated'>
-        <named-connections>
-          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 5)'>
-            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='mutuo.snowflakecomputing.com' service='sysadmin' username='mledwich' warehouse='YT' />
-          </named-connection>
-        </named-connections>
-        <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 5)' name='VIDEO_STATS_DAILY' table='[PUBLIC].[VIDEO_STATS_DAILY]' type='table' />
-        <_.fcp.ObjectModelEncapsulateLegacy.true...relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 5)' name='VIDEO_STATS_DAILY' table='[PUBLIC].[VIDEO_STATS_DAILY]' type='table' />
-        <metadata-records>
-          <metadata-record class='column'>
-            <remote-name>CHANNEL_ID</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[CHANNEL_ID]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>CHANNEL_ID</remote-alias>
-            <ordinal>1</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>VIDEO_ID</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[VIDEO_ID]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>VIDEO_ID</remote-alias>
-            <ordinal>2</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>VIDEO_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[VIDEO_TITLE]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>VIDEO_TITLE</remote-alias>
-            <ordinal>3</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>DATE</remote-name>
-            <remote-type>7</remote-type>
-            <local-name>[DATE]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>DATE</remote-alias>
-            <ordinal>4</ordinal>
-            <local-type>date</local-type>
-            <aggregation>Year</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_DATE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_DATE&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>VIEWS</remote-name>
-            <remote-type>5</remote-type>
-            <local-name>[VIEWS]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>VIEWS</remote-alias>
-            <ordinal>5</ordinal>
-            <local-type>real</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>15</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>TOTAL_VIEWS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[TOTAL_VIEWS]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>TOTAL_VIEWS</remote-alias>
-            <ordinal>6</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>RANGE_AGE</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[RANGE_AGE]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>RANGE_AGE</remote-alias>
-            <ordinal>7</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>UPDATED</remote-name>
-            <remote-type>7</remote-type>
-            <local-name>[UPDATED]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>UPDATED</remote-alias>
-            <ordinal>8</ordinal>
-            <local-type>datetime</local-type>
-            <aggregation>Year</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>DAYS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[DAYS]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>DAYS</remote-alias>
-            <ordinal>9</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>DELTA_VIEWS</remote-name>
-            <remote-type>131</remote-type>
-            <local-name>[DELTA_VIEWS]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>DELTA_VIEWS</remote-alias>
-            <ordinal>10</ordinal>
-            <local-type>integer</local-type>
-            <aggregation>Sum</aggregation>
-            <precision>38</precision>
-            <scale>0</scale>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>CHANNEL_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[CHANNEL_TITLE]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>CHANNEL_TITLE</remote-alias>
-            <ordinal>11</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>MAIN_CHANNEL_ID</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[MAIN_CHANNEL_ID]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>MAIN_CHANNEL_ID</remote-alias>
-            <ordinal>12</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>MAIN_CHANNEL_TITLE</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[MAIN_CHANNEL_TITLE]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>MAIN_CHANNEL_TITLE</remote-alias>
-            <ordinal>13</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>16777216</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>IDEOLOGY</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[IDEOLOGY]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>IDEOLOGY</remote-alias>
-            <ordinal>14</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>22</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>MEDIA</remote-name>
-            <remote-type>129</remote-type>
-            <local-name>[MEDIA]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>MEDIA</remote-alias>
-            <ordinal>15</ordinal>
-            <local-type>string</local-type>
-            <aggregation>Count</aggregation>
-            <width>18</width>
-            <contains-null>true</contains-null>
-            <collation flag='0' name='binary' />
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
-              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>UPLOAD_DATE</remote-name>
-            <remote-type>7</remote-type>
-            <local-name>[UPLOAD_DATE]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>UPLOAD_DATE</remote-alias>
-            <ordinal>16</ordinal>
-            <local-type>datetime</local-type>
-            <aggregation>Year</aggregation>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-          <metadata-record class='column'>
-            <remote-name>DURATION</remote-name>
-            <remote-type>134</remote-type>
-            <local-name>[DURATION]</local-name>
-            <parent-name>[VIDEO_STATS_DAILY]</parent-name>
-            <remote-alias>DURATION</remote-alias>
-            <ordinal>17</ordinal>
-            <local-type>datetime</local-type>
-            <aggregation>Hour</aggregation>
-            <precision>9</precision>
-            <contains-null>true</contains-null>
-            <attributes>
-              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIME&quot;</attribute>
-              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIME&quot;</attribute>
-            </attributes>
-            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
-          </metadata-record>
-        </metadata-records>
-      </connection>
-      <aliases enabled='yes' />
-      <column caption='Channel Id' datatype='string' hidden='true' name='[CHANNEL_ID]' role='dimension' type='nominal' />
-      <column caption='Channel' datatype='string' name='[CHANNEL_TITLE]' role='dimension' type='nominal' />
-      <column caption='% of all views' datatype='real' name='[Calculation_1337006206485577731]' role='measure' type='quantitative'>
-        <calculation class='tableau' formula='SUM([VIEWS_DECAY]) / SUM({EXCLUDE [DATE], [Calculation_1337006206485819396]: SUM([VIEWS_DECAY])})' />
-      </column>
-      <column aggregation='Sum' caption='Age (days)' datatype='integer' name='[Calculation_1337006206485819396]' role='dimension' type='quantitative'>
-        <calculation class='tableau' formula='MAX(0, DATEDIFF(&apos;day&apos;, [UPLOAD_DATE], [DATE]))' />
-      </column>
-      <column caption='Videos Uploaded' datatype='integer' name='[Calculation_1565000938356346880]' role='measure' type='quantitative'>
-        <calculation class='tableau' formula='COUNTD(iif([Calculation_1337006206485819396] = 0, [VIDEO_ID], NULL))' />
-      </column>
-      <column caption='Videos' datatype='integer' name='[Calculation_1572319284908851200]' role='measure' type='quantitative'>
-        <calculation class='tableau' formula='countd([VIDEO_ID])' />
-      </column>
-      <column caption='Channels' datatype='integer' name='[Calculation_341147736475684864]' role='measure' type='quantitative'>
-        <calculation class='tableau' formula='COUNTD([CHANNEL_ID])' />
-      </column>
-      <column caption='Date' datatype='date' name='[DATE]' role='dimension' type='ordinal' />
-      <column aggregation='Hour' caption='Duration' datatype='datetime' name='[DURATION]' role='dimension' type='ordinal' />
-      <column caption='Ideology' datatype='string' name='[IDEOLOGY]' role='dimension' type='nominal' />
-      <column caption='Main Channel Id' datatype='string' name='[MAIN_CHANNEL_ID]' role='dimension' type='nominal' />
-      <column caption='Main Channel Title' datatype='string' name='[MAIN_CHANNEL_TITLE]' role='dimension' type='nominal' />
-      <column caption='Media' datatype='string' name='[MEDIA]' role='dimension' type='nominal' />
-      <column caption='Recs' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
-        <calculation class='tableau' formula='1' />
-      </column>
-      <column caption='Upload Date' datatype='date' datatype-customized='true' name='[UPLOAD_DATE]' role='dimension' type='ordinal' />
-      <column caption='Video Id' datatype='string' name='[VIDEO_ID]' role='dimension' type='nominal' />
-      <column caption='Video Title' datatype='string' name='[VIDEO_TITLE]' role='dimension' type='nominal' />
-      <column caption='Views (Decay)' datatype='real' name='[VIEWS_DECAY]' role='measure' type='quantitative' />
-      <column caption='Views (even)' datatype='real' name='[VIEWS_EVEN]' role='measure' type='quantitative' />
-      <_.fcp.ObjectModelTableType.true...column caption='Migrated Data' datatype='table' name='[__tableau_internal_object_id__].[Migrated Data]' role='measure' type='quantitative' />
-      <group caption='Action (To Channel Title)' hidden='true' name='[Action (To Channel Title)]' name-style='unqualified' user:auto-column='sheet_link'>
-        <groupfilter function='crossjoin'>
-          <groupfilter function='level-members' level='[TO_CHANNEL_TITLE]' />
-        </groupfilter>
-      </group>
-      <extract _.fcp.ObjectModelExtractV2.true...object-id='Migrated Data' count='-1' enabled='false' units='records'>
-        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks/.Data/Recs copy 1.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='11/23/2019 05:08:57 AM' username='tableau_internal_user'>
-          <_.fcp.ObjectModelEncapsulateLegacy.false...relation name='Extract' table='[Extract].[Extract]' type='table' />
-          <_.fcp.ObjectModelEncapsulateLegacy.true...relation name='Extract' table='[Extract].[Extract]' type='table' />
-          <refresh>
-            <refresh-event add-from-file-path='Recs' increment-value='%null%' refresh-type='create' rows-inserted='10087283' timestamp-start='2019-11-23 05:08:57.571' />
-          </refresh>
-          <metadata-records>
-            <metadata-record class='column'>
-              <remote-name>FROM_CHANNEL_ID</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[FROM_CHANNEL_ID]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>FROM_CHANNEL_ID</remote-alias>
-              <ordinal>0</ordinal>
-              <family>REC</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>938</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>FROM_VIDEO_ID</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[FROM_VIDEO_ID]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>FROM_VIDEO_ID</remote-alias>
-              <ordinal>1</ordinal>
-              <family>REC</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>1334932</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>FROM_VIDEO_TITLE</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[FROM_VIDEO_TITLE]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>FROM_VIDEO_TITLE</remote-alias>
-              <ordinal>2</ordinal>
-              <family>REC</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>1317363</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TO_CHANNEL_TITLE</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[TO_CHANNEL_TITLE]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TO_CHANNEL_TITLE</remote-alias>
-              <ordinal>3</ordinal>
-              <family>REC</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>52853</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TO_VIDEO_ID</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[TO_VIDEO_ID]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TO_VIDEO_ID</remote-alias>
-              <ordinal>4</ordinal>
-              <family>REC</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>455192</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>TO_VIDEO_TITLE</remote-name>
-              <remote-type>129</remote-type>
-              <local-name>[TO_VIDEO_TITLE]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>TO_VIDEO_TITLE</remote-alias>
-              <ordinal>5</ordinal>
-              <family>REC</family>
-              <local-type>string</local-type>
-              <aggregation>Count</aggregation>
-              <approx-count>454885</approx-count>
-              <contains-null>true</contains-null>
-              <collation flag='0' name='binary' />
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>UPDATED</remote-name>
-              <remote-type>135</remote-type>
-              <local-name>[UPDATED]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>UPDATED</remote-alias>
-              <ordinal>6</ordinal>
-              <family>REC</family>
-              <local-type>datetime</local-type>
-              <aggregation>Year</aggregation>
-              <approx-count>62386</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-            <metadata-record class='column'>
-              <remote-name>UPDATED_DAY</remote-name>
-              <remote-type>135</remote-type>
-              <local-name>[UPDATED_DAY]</local-name>
-              <parent-name>[Extract]</parent-name>
-              <remote-alias>UPDATED_DAY</remote-alias>
-              <ordinal>7</ordinal>
-              <family>REC</family>
-              <local-type>datetime</local-type>
-              <aggregation>Year</aggregation>
-              <approx-count>16</approx-count>
-              <contains-null>true</contains-null>
-            </metadata-record>
-          </metadata-records>
-        </connection>
-      </extract>
-      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-structure='true' />
-      <semantic-values>
-        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
-      </semantic-values>
-      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
-        <objects>
-          <object caption='Migrated Data' id='Migrated Data'>
-            <properties context=''>
-              <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 5)' name='VIDEO_STATS_DAILY' table='[PUBLIC].[VIDEO_STATS_DAILY]' type='table' />
             </properties>
             <properties context='extract'>
               <relation name='Extract' table='[Extract].[Extract]' type='table' />
@@ -22343,6 +21400,315 @@
         </objects>
       </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
     </datasource>
+    <datasource caption='Video Stats Daily' inline='true' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='mutuo.snowflakecomputing.com' name='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 5)'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='ql98184.west-us-2.azure.snowflakecomputing.com' service='' username='mledwich' warehouse='YT' />
+          </named-connection>
+        </named-connections>
+        <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 5)' name='Custom SQL Query' type='text'><![CDATA[select v.*, channel_title from video_stats_daily v
+left join channel_latest cl on v.channel_id = cl.channel_id
+where v.channel_id in (<[Parameters].[Parameter 1]>)]]></_.fcp.ObjectModelEncapsulateLegacy.false...relation>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 5)' name='Custom SQL Query' type='text'><![CDATA[select v.*, channel_title from video_stats_daily v
+left join channel_latest cl on v.channel_id = cl.channel_id
+where v.channel_id in (<[Parameters].[Parameter 1]>)]]></_.fcp.ObjectModelEncapsulateLegacy.true...relation>
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>VIDEO_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[VIDEO_ID]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>VIDEO_ID</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_ID]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_ID</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>DATE</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[DATE]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>DATE</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>date</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_DATE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_DATE&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>VIEWS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[VIEWS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>VIEWS</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>UPDATED</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[UPDATED]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>UPDATED</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>datetime</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>WATCH_HOURS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[WATCH_HOURS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>WATCH_HOURS</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_TITLE]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>CHANNEL_TITLE</remote-alias>
+            <ordinal>7</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[Migrated Data]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='Channel Id' datatype='string' hidden='true' name='[CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='Channel' datatype='string' name='[CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='Videos' datatype='integer' name='[Calculation_1572319284908851200]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='countd([VIDEO_ID])' />
+      </column>
+      <column caption='Channels' datatype='integer' name='[Calculation_341147736475684864]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='COUNTD([CHANNEL_ID])' />
+      </column>
+      <column caption='Date' datatype='date' name='[DATE]' role='dimension' type='ordinal' />
+      <column caption='Recs' datatype='integer' name='[Number of Records]' role='measure' type='quantitative' user:auto-column='numrec'>
+        <calculation class='tableau' formula='1' />
+      </column>
+      <column caption='Video Id' datatype='string' name='[VIDEO_ID]' role='dimension' type='nominal' />
+      <column datatype='real' default-format='*#,,.#M' name='[VIEWS]' role='measure' type='quantitative' />
+      <_.fcp.ObjectModelTableType.true...column caption='VIDEO_STATS_DAILY' datatype='table' name='[__tableau_internal_object_id__].[Migrated Data]' role='measure' type='quantitative' />
+      <group caption='Action (To Channel Title)' hidden='true' name='[Action (To Channel Title)]' name-style='unqualified' user:auto-column='sheet_link'>
+        <groupfilter function='crossjoin'>
+          <groupfilter function='level-members' level='[TO_CHANNEL_TITLE]' />
+        </groupfilter>
+      </group>
+      <extract _.fcp.ObjectModelExtractV2.true...object-id='Migrated Data' count='-1' enabled='false' units='records'>
+        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Repos/YouTubeNetworks/.Data/Recs copy 1.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='11/23/2019 05:08:57 AM' username='tableau_internal_user'>
+          <_.fcp.ObjectModelEncapsulateLegacy.false...relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <_.fcp.ObjectModelEncapsulateLegacy.true...relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <refresh>
+            <refresh-event add-from-file-path='Recs' increment-value='%null%' refresh-type='create' rows-inserted='10087283' timestamp-start='2019-11-23 05:08:57.571' />
+          </refresh>
+          <metadata-records>
+            <metadata-record class='column'>
+              <remote-name>FROM_CHANNEL_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_CHANNEL_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_CHANNEL_ID</remote-alias>
+              <ordinal>0</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>938</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>FROM_VIDEO_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_VIDEO_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_VIDEO_ID</remote-alias>
+              <ordinal>1</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>1334932</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>FROM_VIDEO_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[FROM_VIDEO_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>FROM_VIDEO_TITLE</remote-alias>
+              <ordinal>2</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>1317363</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_CHANNEL_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_CHANNEL_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_CHANNEL_TITLE</remote-alias>
+              <ordinal>3</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>52853</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_VIDEO_ID</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_VIDEO_ID]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_VIDEO_ID</remote-alias>
+              <ordinal>4</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>455192</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>TO_VIDEO_TITLE</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[TO_VIDEO_TITLE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>TO_VIDEO_TITLE</remote-alias>
+              <ordinal>5</ordinal>
+              <family>REC</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>454885</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>UPDATED</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[UPDATED]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>UPDATED</remote-alias>
+              <ordinal>6</ordinal>
+              <family>REC</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>62386</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>UPDATED_DAY</remote-name>
+              <remote-type>135</remote-type>
+              <local-name>[UPDATED_DAY]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>UPDATED_DAY</remote-alias>
+              <ordinal>7</ordinal>
+              <family>REC</family>
+              <local-type>datetime</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>16</approx-count>
+              <contains-null>true</contains-null>
+            </metadata-record>
+          </metadata-records>
+        </connection>
+      </extract>
+      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-structure='true' />
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+      <datasource-dependencies datasource='Parameters'>
+        <column alias='Simon Parkes' caption='ChannelIds' datatype='string' name='[Parameter 1]' param-domain-type='list' role='measure' type='nominal' value='&quot;UCgzqRRDGThOlH4EHaqSXXPA&quot;'>
+          <calculation class='tableau' formula='&quot;UCgzqRRDGThOlH4EHaqSXXPA&quot;' />
+          <aliases>
+            <alias key='&quot;UC0v7VUtxrPnQWPgZx-WSzgw&quot;' value='Santa Surfing Beach Broadcast' />
+            <alias key='&quot;UCgzqRRDGThOlH4EHaqSXXPA&quot;' value='Simon Parkes' />
+          </aliases>
+        </column>
+      </datasource-dependencies>
+      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+        <objects>
+          <object caption='VIDEO_STATS_DAILY' id='Migrated Data'>
+            <properties context=''>
+              <relation connection='snowflake.1anke8d0e4ccaq18a48j81trnlxp (copy 5)' name='Custom SQL Query' type='text'><![CDATA[select v.*, channel_title from video_stats_daily v
+left join channel_latest cl on v.channel_id = cl.channel_id
+where v.channel_id in (<[Parameters].[Parameter 1]>)]]></relation>
+            </properties>
+            <properties context='extract'>
+              <relation name='Extract' table='[Extract].[Extract]' type='table' />
+            </properties>
+          </object>
+        </objects>
+      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    </datasource>
   </datasources>
   <datasource-relationships>
     <datasource-dependencies datasource='federated.054ch7e151fzl919b68x41913519'>
@@ -23067,6 +22433,102 @@
       </table>
       <simple-id uuid='{6917ABF4-2A41-4F07-9194-69A35F494A79}' />
     </worksheet>
+    <worksheet name='Sheet 9'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='Video Stats Daily' name='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)' />
+          </datasources>
+          <datasource-dependencies datasource='federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)'>
+            <column caption='Channel' datatype='string' name='[CHANNEL_TITLE]' role='dimension' type='nominal' />
+            <column caption='Date' datatype='date' name='[DATE]' role='dimension' type='ordinal' />
+            <column datatype='real' default-format='*#,,.#M' name='[VIEWS]' role='measure' type='quantitative' />
+            <column-instance column='[CHANNEL_TITLE]' derivation='None' name='[none:CHANNEL_TITLE:nk]' pivot='key' type='nominal' />
+            <column-instance column='[VIEWS]' derivation='Sum' name='[sum:VIEWS:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[DATE]' derivation='Day-Trunc' name='[tdy:DATE:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='quantitative' column='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[tdy:DATE:qk]' included-values='in-range'>
+            <min>#2020-10-08 00:00:00#</min>
+            <max>#2021-01-15 00:00:00#</max>
+          </filter>
+          <slices>
+            <column>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[tdy:DATE:qk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='axis'>
+            <format attr='display' class='0' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[sum:VIEWS:qk]' scope='rows' value='false' />
+            <format attr='tick-color' value='#00000000' />
+            <format attr='title' class='0' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[tdy:DATE:qk]' scope='cols' value='' />
+          </style-rule>
+          <style-rule element='header'>
+            <format attr='border-width' data-class='total' value='0' />
+            <format attr='border-style' data-class='total' value='none' />
+          </style-rule>
+          <style-rule element='label'>
+            <format attr='text-format' field='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[sum:VIEWS:qk]' value='*#,,.#M' />
+          </style-rule>
+          <style-rule element='pane'>
+            <format attr='border-width' data-class='total' value='0' />
+            <format attr='border-style' data-class='total' value='none' />
+          </style-rule>
+          <style-rule element='dropline'>
+            <format attr='stroke-size' value='0' />
+            <format attr='line-visibility' value='off' />
+          </style-rule>
+          <style-rule element='refline'>
+            <format attr='stroke-size' value='0' />
+            <format attr='line-visibility' value='off' />
+          </style-rule>
+          <style-rule element='gridline'>
+            <format attr='stroke-size' scope='rows' value='0' />
+            <format attr='line-visibility' scope='rows' value='off' />
+          </style-rule>
+          <style-rule element='zeroline'>
+            <format attr='stroke-size' value='0' />
+            <format attr='line-visibility' value='off' />
+          </style-rule>
+          <style-rule element='table-div'>
+            <format attr='stroke-size' scope='rows' value='0' />
+            <format attr='line-visibility' scope='rows' value='off' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Bar' />
+            <mark-sizing custom-mark-size-in-axis-units='1.0' mark-alignment='mark-alignment-left' mark-sizing-setting='marks-scaling-on' use-custom-mark-size='false' />
+            <style>
+              <style-rule element='datalabel'>
+                <format attr='color-mode' value='auto' />
+                <format attr='font-weight' value='bold' />
+                <format attr='font-size' value='12' />
+              </style-rule>
+              <style-rule element='mark'>
+                <format attr='size' value='0' />
+                <format attr='mark-labels-mode' value='range' />
+                <format attr='mark-labels-range-min' value='false' />
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-range-field' value='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[sum:VIEWS:qk]' />
+                <format attr='mark-color' value='#69aaa5' />
+                <format attr='has-stroke' value='true' />
+                <format attr='stroke-color' value='#ffffff' />
+              </style-rule>
+              <style-rule element='trendline'>
+                <format attr='stroke-size' value='0' />
+                <format attr='line-visibility' value='off' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows>([federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[none:CHANNEL_TITLE:nk] * [federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[sum:VIEWS:qk])</rows>
+        <cols>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[tdy:DATE:qk]</cols>
+      </table>
+      <simple-id uuid='{05172D5D-FA06-4376-AE17-E4E171FE2C2E}' />
+    </worksheet>
     <worksheet name='TV Advantage'>
       <layout-options export-legend-location='bottom' export-no-caption='true' export-scale-mode-auto='false'>
         <title>
@@ -23304,8 +22766,8 @@
         <devicelayout auto-generated='true' name='Phone'>
           <size maxheight='850' minheight='850' sizing-mode='vscroll' />
           <zones>
-            <zone _.fcp.SetMembershipControl.false...type='layout-basic' _.fcp.SetMembershipControl.true...type-v2='layout-basic' h='100000' id='37' w='100000' x='0' y='0'>
-              <zone _.fcp.SetMembershipControl.false...type='layout-flow' _.fcp.SetMembershipControl.true...type-v2='layout-flow' h='84000' id='36' param='vert' w='84000' x='8000' y='8000'>
+            <zone _.fcp.SetMembershipControl.false...type='layout-basic' _.fcp.SetMembershipControl.true...type-v2='layout-basic' h='100000' id='39' w='100000' x='0' y='0'>
+              <zone _.fcp.SetMembershipControl.false...type='layout-flow' _.fcp.SetMembershipControl.true...type-v2='layout-flow' h='84000' id='38' param='vert' w='84000' x='8000' y='8000'>
                 <zone _.fcp.SetMembershipControl.false...type='filter' _.fcp.SetMembershipControl.true...type-v2='filter' h='3786' id='8' mode='checkdropdown' name='Rec Export' param='[federated.0kbwoxn1itda8j19mulrd0ht4861].[none:FROM_DATE:ok]' w='38278' x='11722' y='404'>
                   <zone-style>
                     <format attr='border-color' value='#000000' />
@@ -23374,7 +22836,7 @@
       <simple-id uuid='{650F1FFF-CF68-49D9-A3EF-CCE93C83D684}' />
     </dashboard>
   </dashboards>
-  <windows pres-mode='true' saved-dpi-scale-factor='1.25' source-height='2'>
+  <windows saved-dpi-scale-factor='1.5' source-height='67'>
     <window class='worksheet' name='Reviewer Agreement'>
       <cards>
         <edge name='left'>
@@ -23543,7 +23005,7 @@
       </cards>
       <simple-id uuid='{F9F0CD4D-0C89-4BBE-AA4C-68D776661A4C}' />
     </window>
-    <window class='worksheet' maximized='true' name='Rec Dataset'>
+    <window class='worksheet' name='Rec Dataset'>
       <cards>
         <edge name='left'>
           <strip size='160'>
@@ -23590,19 +23052,19 @@
       <cards>
         <edge name='left'>
           <strip size='160'>
-            <card size='20' type='pages' />
-            <card size='103' type='filters' />
-            <card size='185' type='marks' />
+            <card size='13' type='pages' />
+            <card size='68' type='filters' />
+            <card size='123' type='marks' />
           </strip>
         </edge>
         <edge name='top'>
-          <strip size='2147483647'>
+          <strip size='32'>
             <card type='columns' />
           </strip>
-          <strip size='2147483647'>
+          <strip size='32'>
             <card type='rows' />
           </strip>
-          <strip size='2147483647'>
+          <strip size='32'>
             <card type='title' />
           </strip>
         </edge>
@@ -23623,6 +23085,43 @@
         </highlight>
       </viewpoint>
       <simple-id uuid='{E2FC6A43-800C-485D-B514-F0FAD8E393E7}' />
+    </window>
+    <window class='worksheet' maximized='true' name='Sheet 9'>
+      <cards>
+        <edge name='left'>
+          <strip size='133'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='25'>
+            <card type='title' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='133'>
+            <card param='[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[tdy:DATE:qk]' show-domain='false' show-null-ctrls='false' type='filter' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='entire-view' />
+        <highlight>
+          <color-one-way>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[none:CHANNEL_TITLE:nk]</field>
+            <field>[federated.1ickkp80mdi8fx14z9gti1p1c6t9 (copy 5)].[yr:DATE:ok]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{C75F4DF1-ED89-4C78-BC4F-DD2AFE9F7A04}' />
     </window>
   </windows>
   <thumbnails>
@@ -24343,6 +23842,29 @@
       3B7ByGPn4EhNsKRWYgCK65v0ez0ca0JMjigM6Q8nnJ+eft0TfMWm9gRLyiUUYTEf//MH1nbe
       MZuzcCcRz+VH8hmL5ZVF+qOYYDJiOHA5/9V32KAiTFLpfwAL9VVF4OvszAAAAABJRU5ErkJg
       gg==
+    </thumbnail>
+    <thumbnail height='192' name='Sheet 9' width='192'>
+      iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAABYlAAAWJQFJUiTw
+      AAAEB0lEQVR4nO3YzW9UVRzH4d+dvlD7khJAK6CADdQ2cePGhf++xo0ajQSGIqKoBKVQS8vA
+      dGbuXBduKOyw0JDv8+zOzcnJucn95Nycpuu6riBU76Q3ACdJAEQTANEEQDQBEE0ARHsjAbRt
+      W4PB4E0sDcfKCUA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEE
+      QDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDR
+      BEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA
+      0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQT
+      ANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBE
+      EwDRBEA0ARBNAEQTANGOBNB107qz3a9+f7vG00nt7R2c1L7grZh9cdAe/FX73Up9vnmxuq6t
+      0XhUv/1yuw5H45r25qrpzdbGlQu1/fPdWlw9Uysz09o5eFpz84u1fvmjk3oHeG1HToCZlfP1
+      4eKovv/2u3o+GdfOzm4dPB/V1Ssf1GG7UJPDQd3evl3rn27VweOHtbuzWxevXqtn+3sntX/4
+      X44EMBkO6sngsGaatkaT7r+HzQsTmqr3z6xW/+bNejbpaqaaaprmpUnw7mi6ruuOe9G2bWs4
+      HNbS0tJxLw3Hyi0Q0QRAtJeuQUf1zVdf142ffqxHT56/MrmdPKl+/4+3tjl402aPDqe1sHy6
+      trYu1/Vb92t/YVJ7g3FtfXKurt/drSuXTlfXTetW/1atnVutP3f+qaWl1arRQY2nTV1ev1YL
+      cw4V3h2vfK07D+7X9p37tblxofYHo3r698MajIa1fPZ8nV1drl9v/FDzp9fq3r3fa35mph4/
+      flSnTs3XeDSs4WhyEu8Ar6338nD92kZtbW3WXDOtSdvV4spKzc0v1Orye9U0s/XZF1/WZO9B
+      Xfz4UrXTrtbW1qrX61WvqsZjAfBucQ1KND/sRBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEE
+      QDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDR
+      BEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA
+      0QRANAEQTQBEEwDRBEA0ARBNAEQTANEEQDQBEE0ARBMA0QRANAEQTQBEEwDRBEA0ARBNAEQT
+      ANEEQDQBEO1fNuvIaCZttQAAAAAASUVORK5CYII=
     </thumbnail>
   </thumbnails>
 </workbook>
