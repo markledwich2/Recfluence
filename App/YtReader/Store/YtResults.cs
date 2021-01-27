@@ -137,6 +137,55 @@ from channel_accepted order by channel_views desc",
           new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
             parameters: new {from_date = "2020-11-03", to_date = "2020-11-10"}),
           
+          
+          new ResQuery("us_rec_stats", @"
+with r1 as (
+  select r.account
+       , trunc(r.updated, 'month') month
+       , tc.tags to_tags
+       , fc.tags from_tags
+       , UUID_STRING() rec_id
+  from us_rec r
+         left join channel_latest tc on r.to_channel_id=tc.channel_id
+         left join channel_latest fc on r.from_channel_id=fc.channel_id
+)
+   , r2 as (
+  select account
+       , month
+       , ft.value::string from_tag
+       , tt.value::string to_tag
+       , count(*) over (partition by rec_id) rec_duplicates
+  from r1 as r
+     , table ( flatten(from_tags, outer => true) ) ft
+     , table ( flatten(to_tags, outer => true) ) tt
+)
+   , g as (
+  select account, month, from_tag, to_tag, count(*) recs, sum(1/rec_duplicates) recs_portion
+  from r2
+  group by 1, 2, 3, 4
+)
+select *
+from g;
+", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+          
+          new ResQuery("us_rec_tag", @"
+ select t.value::string tag, month, sum(views) views
+ from video_stats_monthly v
+        left join channel_latest c on v.channel_id=c.channel_id
+    , table ( flatten(c.tags) ) t
+ where v.month>=(select min(trunc(updated, 'month')) from us_rec)
+ group by tag, month
+order by tag, month
+", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+          
+          new ResQuery("us_rec_month", @"
+select month, sum(views) as views
+from video_stats_monthly v
+where v.month>=(select min(trunc(updated, 'month')) from us_rec)
+group by month
+order by month
+", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+          
           /*new ResQuery("sam_vid", @$"
 with sam_vids_raw as ({samVidsSelect})
 select e.*

@@ -42,7 +42,8 @@ namespace YtReader.Store {
           () => NarrativeChannels(),
           () => NarrativeVideos(),
           () => UsRecs(),
-          () => UsWatch()
+          () => UsWatch(),
+          () => UsFeed()
         }
         .Select(e => new {Expression = e, Name = ((MethodCallExpression) e.Body).Method.Name.Underscore()})
         .Where(t => include == null || include.Contains(t.Name));
@@ -213,19 +214,22 @@ order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc");
 
     #region Recs
 
-    static readonly IndexCol[] UsRecCols = {Col("label", writeDistinct: true), Col("from_video_id", writeDistinct: true)};
+    static readonly IndexCol[] UsRecCols = {
+      Col("label", writeDistinct: true), 
+      Col("from_channel_id", writeDistinct: true)
+    };
 
     WorkCfg UsRecs() => Work(UsRecCols, @$"
 with video_date_accounts as (
-  select from_video_id, day
+  select from_video_id, day, count(distinct account) accounts_total
   from (
          select from_video_id, updated::date day, account
          from us_rec
          group by 1, 2, 3
-         having max(rank)>5 -- at least 5 videos per account
+         having max(rank)>5 -- at least x videos per account
        )
   group by 1, 2
-  having count(distinct account)>=16
+  having accounts_total>=12 -- at least x accounts watched the same vid
 )
    , full_account_recs as (
   select r.account
@@ -239,9 +243,11 @@ with video_date_accounts as (
        , r.to_video_title
        , r.to_channel_id
        , r.to_channel_title
+       , d.accounts_total
   from us_rec r
          left join us_test_manual m on m.video_id=r.from_video_id
-  where account <> 'Black' and exists(select * from video_date_accounts d where d.from_video_id=r.from_video_id and d.day=r.updated::date)
+         inner join video_date_accounts d on d.from_video_id=r.from_video_id and d.day=r.updated::date
+  where account<>'Black'
 )
    , sets as (
   select from_video_id
@@ -250,7 +256,6 @@ with video_date_accounts as (
        , label
        , array_agg(distinct account) accounts
        , any_value(from_channel_id) from_channel_id
-       , any_value(from_channel_title) from_channel_title
        , any_value(from_video_title) from_video_title
        , any_value(to_video_title) to_video_title
        , any_value(to_channel_id) to_channel_id
@@ -260,20 +265,36 @@ with video_date_accounts as (
 )
 select *
 from sets
-order by {UsRecCols.DbNames().Join(",")}", 100.Kilobytes());
+order by {UsRecCols.DbNames().Join(",")}", 200.Kilobytes());
+    
+    static readonly IndexCol[] VideoSeenCols = {Col("part"), Col("account", writeDistinct: true)};
 
-    WorkCfg UsWatch() => Work(new[] {Col("updated"), Col("account", inIndex:false, writeDistinct:true)}, @"
+    static string GetVideoSeen(string table, bool titleInSeen = false) {
+      return $@"
+with s1 as (
   select w.account
-       , w.updated
        , w.video_id
-       , vl.video_title
-       , vl.channel_id
-      , vl.channel_title
-  from us_watch w
+       --, any_value(w.video_title) as video_title
+       , any_value({(titleInSeen ? "w" : "vl")}.video_title) as video_title
+       , any_value(vl.channel_id) as channel_id
+       , any_value(vl.channel_title) as channel_title
+       , min(w.updated) first_seen
+       , max(w.updated) last_seen
+       , count(*) as seen_total
+  from {table} w
          left join video_latest vl on w.video_id=vl.video_id
   where account<>'Black'
-  order by updated
-", 50.Kilobytes());
+  group by 1, 2
+)
+select *
+     , iff(row_number() over (partition by account order by seen_total desc)<100, 'featured', null) part
+      , percent_rank() over (partition by account order by seen_total) percentile
+from s1
+order by {VideoSeenCols.DbNames().Join(",")}, percentile desc";
+    }
+
+    WorkCfg UsWatch() => Work(VideoSeenCols, GetVideoSeen("us_watch"), 100.Kilobytes());
+    WorkCfg UsFeed() => Work(VideoSeenCols, GetVideoSeen("us_feed", titleInSeen:true), 100.Kilobytes());
 
     #endregion
   }

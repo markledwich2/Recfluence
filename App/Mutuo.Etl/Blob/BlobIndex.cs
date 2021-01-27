@@ -61,7 +61,7 @@ namespace Mutuo.Etl.Blob {
     /// <summary>Indexes into blob storage the given data. Reader needs to be ordered by the index columns.</summary>
     public async Task<BlobIndexResult> SaveIndexedJsonl(BlobIndexWork work, ILogger log, CancellationToken cancel = default) {
       var indexPath = work.Path.Add("index");
-      var (oldIndex, _) = await Store.Get<BlobIndexMeta>(indexPath).Try(new BlobIndexMeta());
+      var (oldIndex, _) = await Store.Get<BlobIndexMeta>(indexPath).Try(new ());
       oldIndex.RunIds ??= new RunId[] { };
       var runId = DateTime.UtcNow.FileSafeTimestamp();
 
@@ -108,7 +108,7 @@ namespace Mutuo.Etl.Blob {
 
       var indexFilesPath = work.Path.Add(runId);
       log.Information("Completed saving index files in {Index}. Not committed yet.", indexFilesPath);
-      return new BlobIndexResult(index, indexPath, indexFilesPath, toDelete.Select(d => d.Path).ToArray());
+      return new (index, indexPath, indexFilesPath, toDelete.Select(d => d.Path).ToArray());
     }
 
     public async Task CommitIndexJson(BlobIndexResult indexWork, ILogger log) {
