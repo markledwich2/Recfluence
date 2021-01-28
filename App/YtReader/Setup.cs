@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Builder;
+using Flurl.Http;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Management.Fluent;
@@ -15,7 +16,6 @@ using Mutuo.Etl.Blob;
 using Mutuo.Etl.DockerRegistry;
 using Mutuo.Etl.Pipe;
 using Nest;
-using Newtonsoft.Json.Linq;
 using Semver;
 using Serilog;
 using Serilog.Core;
@@ -25,13 +25,16 @@ using SysExtensions;
 using SysExtensions.Configuration;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
+using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using YtReader.BitChute;
 using YtReader.Db;
 using YtReader.Search;
 using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
+using static Serilog.Events.LogEventLevel;
 
 namespace YtReader {
   public static class Setup {
@@ -44,7 +47,7 @@ namespace YtReader {
 
     public static Logger CreateLogger(string env, string app, VersionInfo version, AppCfg cfg = null) {
       var c = new LoggerConfiguration()
-        .WriteTo.Console(LogEventLevel.Information);
+        .WriteTo.Console(Information);
 
       if (cfg?.AppInsightsKey != null)
         c.WriteTo.ApplicationInsights(new TelemetryConfiguration(cfg.AppInsightsKey), TelemetryConverter.Traces, cfg.LogLevel);
@@ -53,8 +56,15 @@ namespace YtReader {
         c = c.ConfigureSeq(cfg);
 
       var log = c.YtEnrich(env, app, version.Version)
-        .MinimumLevel.ControlledBy(new LoggingLevelSwitch(cfg?.LogLevel ?? LogEventLevel.Debug))
+        .MinimumLevel.ControlledBy(new (cfg?.LogLevel ?? Debug))
         .CreateLogger();
+
+      FlurlHttp.Configure(settings => {
+        settings.OnError = e => log.Warning(e.Exception, "Furl error: {Error}", e.ToString());
+        settings.AfterCall = e => {
+          log.Debug("Furl: {Request}", e.HttpRequestMessage);
+        };
+      });
 
       Log.Logger = log;
       return log;
@@ -79,11 +89,11 @@ namespace YtReader {
 
     public static Logger CreateTestLogger() =>
       new LoggerConfiguration()
-        .WriteTo.Seq("http://localhost:5341", LogEventLevel.Debug).MinimumLevel.Debug()
+        .WriteTo.Seq("http://localhost:5341", Debug).MinimumLevel.Debug()
         .WriteTo.Console().MinimumLevel.Debug()
         .CreateLogger();
 
-    public static ILogger ConsoleLogger(LogEventLevel level = LogEventLevel.Information) =>
+    public static ILogger ConsoleLogger(LogEventLevel level = Information) =>
       new LoggerConfiguration()
         .WriteTo.Console(level).CreateLogger();
 
@@ -159,14 +169,14 @@ namespace YtReader {
       appCfg.Elastic.IndexPrefix = EsIndex.IndexPrefix(version);
 
       // override pipe cfg with equivalent global cfg
-      appCfg.Pipe.Store = new PipeAppStorageCfg {
+      appCfg.Pipe.Store = new() {
         Cs = appCfg.Storage.DataStorageCs,
         Path = appCfg.Storage.PipePath
       };
 
       // by default, backup to the app/root storage location
       appCfg.Storage.BackupCs ??= cfgRoot.AppStoreCs;
-      
+
       // merge default properties from the pipe config
       appCfg.Dataform.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.Dataform.Container);
       appCfg.UserScrape.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.UserScrape.Container);
@@ -249,6 +259,7 @@ namespace YtReader {
       b.RegisterType<YtSync>().SingleInstance();
       b.RegisterType<YtConvertWatchTimeFiles>().SingleInstance();
       b.RegisterType<YtIndexResults>().SingleInstance();
+      b.RegisterType<BcWeb>().SingleInstance();
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>().SingleInstance();

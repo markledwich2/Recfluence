@@ -19,20 +19,20 @@ using SysExtensions.Text;
 
 namespace SysExtensions.Net {
   public static class HttpClientExtensions {
-    public static HttpRequestMessage Post(this Uri uri) => new HttpRequestMessage(HttpMethod.Post, uri.ToString());
-    public static HttpRequestMessage Get(this Uri uri) => new HttpRequestMessage(HttpMethod.Get, uri.ToString());
-    public static HttpRequestMessage Put(this Uri uri) => new HttpRequestMessage(HttpMethod.Put, uri.ToString());
-    public static HttpRequestMessage Delete(this Uri uri) => new HttpRequestMessage(HttpMethod.Delete, uri.ToString());
-    public static HttpRequestMessage Post(this UriBuilder uri) => new HttpRequestMessage(HttpMethod.Post, uri.ToString());
-    public static HttpRequestMessage Get(this UriBuilder uri) => new HttpRequestMessage(HttpMethod.Get, uri.ToString());
-    public static HttpRequestMessage Put(this UriBuilder uri) => new HttpRequestMessage(HttpMethod.Put, uri.ToString());
-    public static HttpRequestMessage Delete(this UriBuilder uri) => new HttpRequestMessage(HttpMethod.Delete, uri.ToString());
-    public static HttpRequestMessage Request(this UriBuilder uri, HttpMethod method) => new HttpRequestMessage(method, uri.ToString());
+    public static HttpRequestMessage Post(this Uri uri) => new(HttpMethod.Post, uri.ToString());
+    public static HttpRequestMessage Get(this Uri uri) => new(HttpMethod.Get, uri.ToString());
+    public static HttpRequestMessage Put(this Uri uri) => new(HttpMethod.Put, uri.ToString());
+    public static HttpRequestMessage Delete(this Uri uri) => new(HttpMethod.Delete, uri.ToString());
+    public static HttpRequestMessage Post(this UriBuilder uri) => new(HttpMethod.Post, uri.ToString());
+    public static HttpRequestMessage Get(this UriBuilder uri) => new(HttpMethod.Get, uri.ToString());
+    public static HttpRequestMessage Put(this UriBuilder uri) => new(HttpMethod.Put, uri.ToString());
+    public static HttpRequestMessage Delete(this UriBuilder uri) => new(HttpMethod.Delete, uri.ToString());
+    public static HttpRequestMessage Request(this UriBuilder uri, HttpMethod method) => new(method, uri.ToString());
 
     public static HttpClient AcceptJson(this HttpClient client) => client.Accept("application/json");
 
     public static HttpClient Accept(this HttpClient client, string mediaType) {
-      client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(mediaType));
+      client.DefaultRequestHeaders.Accept.Add(new(mediaType));
       return client;
     }
 
@@ -44,7 +44,7 @@ namespace SysExtensions.Net {
     public static HttpRequestMessage AcceptJson(this HttpRequestMessage request) => request.Accept("application/json");
 
     public static HttpRequestMessage Accept(this HttpRequestMessage request, string mediaType) {
-      request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(mediaType));
+      request.Headers.Accept.Add(new(mediaType));
       return request;
     }
 
@@ -59,16 +59,16 @@ namespace SysExtensions.Net {
     }
 
     static AuthenticationHeaderValue Authorization(NameSecret credentials) =>
-      new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{credentials.Name}:{credentials.Secret}")));
+      new("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{credentials.Name}:{credentials.Secret}")));
 
     public static HttpRequestMessage Auth(this HttpRequestMessage request, string scheme, string value) {
-      request.Headers.Authorization = new AuthenticationHeaderValue(scheme, value);
+      request.Headers.Authorization = new(scheme, value);
       return request;
     }
 
     public static HttpClient BaseUrl(this HttpClient client, Uri baseUrl) {
       if (!baseUrl.OriginalString.EndsWith("/"))
-        baseUrl = new Uri(baseUrl.OriginalString + "/");
+        baseUrl = new(baseUrl.OriginalString + "/");
       client.BaseAddress = baseUrl;
       return client;
     }
@@ -172,7 +172,7 @@ namespace SysExtensions.Net {
       var stream = await response.Content.ReadAsStreamAsync();
       if (response.Content.Headers.ContentEncoding.Contains("gzip"))
         stream = new GZipStream(stream, CompressionMode.Decompress);
-      return new StreamReader(stream);
+      return new(stream);
     }
 
     /// <summary>Reads the content as Json (and unzip if required)</summary>

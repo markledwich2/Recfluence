@@ -111,18 +111,20 @@ namespace SysExtensions.Text {
 
     public static int ParseInt(this string s) => int.Parse(s);
 
-    public static long ParseLong(this string s) {
-      const NumberStyles styles = NumberStyles.AllowThousands;
-      var format = NumberFormatInfo.InvariantInfo;
-      return long.Parse(s, styles, format);
-    }
-
+    public static long ParseLong(this string s, NumberStyles styles = NumberStyles.Any) => long.Parse(s, styles, NumberFormatInfo.InvariantInfo);
+    public static ulong ParseULong(this string s, NumberStyles styles = NumberStyles.Any) => ulong.Parse(s, styles, NumberFormatInfo.InvariantInfo);
+    public static ulong? TryParseULong(this string s, NumberStyles styles = NumberStyles.Any) => 
+      ulong.TryParse(s, styles, NumberFormatInfo.InvariantInfo, out var l) ? l : null;
+    
     public static DateTime ParseExact(this string date, string pattern, IFormatProvider format = default, DateTimeStyles style = default) =>
       DateTime.ParseExact(date, pattern, format, style);
 
     public static DateTime ParseDate(this string s, IFormatProvider format = default, DateTimeStyles style = default) => DateTime.Parse(s, format, style);
 
     public static decimal ParseDecimal(this string s) => decimal.Parse(s, NumberFormatInfo.InvariantInfo);
+    
+    public static double? TryParseDouble(this string s, NumberStyles style = NumberStyles.Any) => 
+      double.TryParse(s, style, NumberFormatInfo.InvariantInfo, out var d) ? d : null;
 
     public static DateTimeOffset ParseDateTimeOffset(this string s, string format) =>
       DateTimeOffset.ParseExact(s, format, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);
@@ -147,5 +149,7 @@ namespace SysExtensions.Text {
       if (s.Contains("_") || s.All(char.IsUpper)) s = s.ToLowerInvariant();
       return s.Camelize();
     }
+    
+    public static Match Match(this string input, Regex re) => re.Match(input);
   }
 }

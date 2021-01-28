@@ -231,9 +231,9 @@ namespace YtReader.YtWebsite {
       var author = playlistJson.SelectToken("author")?.Value<string>() ?? ""; // system playlists have no author
       var title = playlistJson.SelectToken("title").Value<string>();
       var description = playlistJson.SelectToken("description")?.Value<string>() ?? "";
-      var viewCount = playlistJson.SelectToken("views")?.Value<long>() ?? 0; // system playlists have no views
-      var likeCount = playlistJson.SelectToken("likes")?.Value<long>() ?? 0; // system playlists have no likes
-      var dislikeCount = playlistJson.SelectToken("dislikes")?.Value<long>() ?? 0; // system playlists have no dislikes
+      var viewCount = playlistJson.SelectToken("views")?.Value<ulong>() ?? 0; // system playlists have no views
+      var likeCount = playlistJson.SelectToken("likes")?.Value<ulong>() ?? 0; // system playlists have no likes
+      var dislikeCount = playlistJson.SelectToken("dislikes")?.Value<ulong>() ?? 0; // system playlists have no dislikes
       var statistics = new Statistics(viewCount, likeCount, dislikeCount);
 
       return new Playlist(playlistId, author, title, description, statistics, PlaylistVideos(playlistId, playlistJson, log));
@@ -254,9 +254,9 @@ namespace YtReader.YtWebsite {
           var videoTitle = St("title").Value<string>();
           var videoDescription = St("description").Value<string>();
           var videoDuration = TimeSpan.FromSeconds(St("length_seconds").Value<double>());
-          var videoViewCount = St("views").Value<string>().StripNonDigit().ParseLong();
-          var videoLikeCount = St("likes").Value<long>();
-          var videoDislikeCount = St("dislikes").Value<long>();
+          var videoViewCount = St("views").Value<string>().StripNonDigit().ParseULong();
+          var videoLikeCount = St("likes").Value<ulong>();
+          var videoDislikeCount = St("dislikes").Value<ulong>();
           var videoAddedDate = St("added").Value<string>().ParseExact("M/d/yy");
           var videoKeywordsJoined = St("keywords").Value<string>();
           var videoKeywords = Regex.Matches(videoKeywordsJoined, "\"[^\"]+\"|\\S+")
@@ -512,7 +512,7 @@ namespace YtReader.YtWebsite {
       var videoDuration = TimeSpan.FromSeconds(VideoValue<double>("lengthSeconds"));
       var videoKeywords = responseJson.SelectToken("videoDetails.keywords").NotNull().Values<string>().ToArray();
       var videoDescription = VideoValue<string>("shortDescription");
-      var videoViewCount = VideoValue<long>("viewCount"); // some videos have no views
+      var videoViewCount = VideoValue<ulong>("viewCount"); // some videos have no views
       var channelId = VideoValue<string>("channelId");
       var channelTitle = VideoValue<string>("author");
 
@@ -520,10 +520,10 @@ namespace YtReader.YtWebsite {
 
       var videoLikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-like-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
-      var videoLikeCount = !videoLikeCountRaw.IsNullOrWhiteSpace() ? videoLikeCountRaw.ParseLong() : 0;
+      var videoLikeCount = !videoLikeCountRaw.IsNullOrWhiteSpace() ? videoLikeCountRaw.ParseULong() : 0;
       var videoDislikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-dislike-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
-      var videoDislikeCount = !videoDislikeCountRaw.IsNullOrWhiteSpace() ? videoDislikeCountRaw.ParseLong() : 0;
+      var videoDislikeCount = !videoDislikeCountRaw.IsNullOrWhiteSpace() ? videoDislikeCountRaw.ParseULong() : 0;
 
       var statistics = new Statistics(videoViewCount, videoLikeCount, videoDislikeCount);
       return new VideoItem(videoId, videoAuthor, videoUploadDate, addedDate: default, videoTitle, videoDescription,

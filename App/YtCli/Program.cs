@@ -20,8 +20,11 @@ using SysExtensions.Build;
 using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
+using SysExtensions.Threading;
 using YtReader;
+using YtReader.BitChute;
 using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
@@ -308,7 +311,7 @@ namespace YtCli {
       };
 
       await PipeCtx.Run((YtUpdater u) => u.Update(options, PipeArg.Inject<CancellationToken>()),
-        new PipeRunOptions {Location = Location, Exclusive = true}, Log, console.GetCancellationToken());
+        new() {Location = Location, Exclusive = true}, Log, console.GetCancellationToken());
     }
   }
 
@@ -389,6 +392,25 @@ namespace YtCli {
           await RunShell(shell, Log, "docker", "push", $"{image}:{t}");
 
       Log.Information("Completed building docker image {Image} in {Duration}", image, sw.Elapsed.HumanizeShort());
+    }
+  }
+
+  [Command("bitchute")]
+  public class BitchuteCmd : ICommand {
+    readonly BcWeb   Web;
+    readonly ILogger Log;
+
+    [CommandOption('c')]
+    public string Channel { get; set; }
+
+    public BitchuteCmd(BcWeb web, ILogger log) {
+      Web = web;
+      Log = log;
+    }
+
+    public async ValueTask ExecuteAsync(IConsole console) {
+      var chan = await Web.ChannelAndVideos(Channel, Log);
+      var vids = await chan.videos.FirstAsync();
     }
   }
 }

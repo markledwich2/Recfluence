@@ -32,7 +32,7 @@ namespace YtReader.Store {
       Version = version;
       Log = log;
     }
-    
+
     public AzureBlobFileStore Store(StringPath path) => new(Cfg.DataStorageCs, path, Log);
 
     public AzureBlobFileStore Store(DataStoreType type) => type switch {
@@ -119,7 +119,7 @@ namespace YtReader.Store {
     public static bool Accepted(this ChannelReviewStatus s) => s.In(ChannelReviewStatus.ManualAccepted, ChannelReviewStatus.AlgoAccepted);
   }
 
-  public class ChannelStored2 : WithUpdatedItem {
+  public record ChannelStored2 : WithUpdatedItem {
     public string                ChannelId          { get; set; }
     public string                ChannelTitle       { get; set; }
     public string                MainChannelId      { get; set; }
@@ -134,15 +134,17 @@ namespace YtReader.Store {
     public string                DefaultLanguage    { get; set; }
     public string                Keywords           { get; set; }
     public ChannelSubscription[] Subscriptions      { get; set; }
+    public ulong?                Videos             { get; set; }
+    
+    public string ProfileId   { get; set; }
+    public string ProfileName { get; set; }
 
     public ChannelStatus Status { get; set; }
 
-    public IReadOnlyCollection<string>            HardTags     { get; set; }
-    public IReadOnlyCollection<string>            SoftTags     { get; set; }
-    public IReadOnlyCollection<UserChannelReview> UserChannels { get; set; }
+    public string    StatusMessage  { get; set; }
+    public DateTime  LastFullUpdate { get; set; }
+    public DateTime? Created        { get; set; }
 
-    public string   StatusMessage  { get; set; }
-    public DateTime LastFullUpdate { get; set; }
     public override string ToString() => ChannelTitle ?? ChannelId;
   }
 
@@ -162,7 +164,13 @@ namespace YtReader.Store {
     public string Email     { get; set; }
   }
 
-  public class VideoStored2 : WithUpdatedItem {
+  public enum Platform {
+    YouTube,
+    BitChute
+  }
+
+  public record VideoStored2 : WithUpdatedItem {
+    public Platform              Platform     { get; set; }
     public string                VideoId      { get; set; }
     public string                Title        { get; set; }
     public string                ChannelId    { get; set; }
@@ -173,6 +181,7 @@ namespace YtReader.Store {
     public TimeSpan?             Duration     { get; set; }
     public IReadOnlyList<string> Keywords     { get; set; } = new List<string>();
     public Statistics            Statistics   { get; set; }
+    public string                Thumb        { get; set; }
     public override string ToString() => $"{Title}";
   }
 
@@ -211,14 +220,14 @@ namespace YtReader.Store {
     public override string ToString() => $"{FromVideoTitle} -> {ToVideoTitle}";
   }
 
-  public class VideoCaptionStored2 : WithUpdatedItem {
+  public record VideoCaptionStored2 : WithUpdatedItem {
     public string                             ChannelId { get; set; }
     public string                             VideoId   { get; set; }
     public ClosedCaptionTrackInfo             Info      { get; set; }
     public IReadOnlyCollection<ClosedCaption> Captions  { get; set; } = new List<ClosedCaption>();
   }
 
-  public class VideoExtraStored2 : VideoStored2 {
+  public record VideoExtraStored2 : VideoStored2 {
     public bool?                 HasAd        { get; set; }
     public string                Error        { get; set; }
     public string                SubError     { get; set; }
@@ -233,11 +242,11 @@ namespace YtReader.Store {
     DateTime Updated { get; }
   }
 
-  public abstract class WithUpdatedItem : IHasUpdated {
+  public abstract record WithUpdatedItem : IHasUpdated {
     public DateTime Updated { get; set; }
   }
 
-  public class UserSearchWithUpdated : WithUpdatedItem {
+  public record UserSearchWithUpdated : WithUpdatedItem {
     public string Origin { get; set; }
     /// <summary>Email of the user performing the search</summary>
     public string Email { get;        set; }
