@@ -7,6 +7,7 @@ using Mutuo.Etl.Pipe;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
+using YtReader.BitChute;
 using YtReader.Search;
 using YtReader.Store;
 
@@ -32,6 +33,7 @@ namespace YtReader {
     public CollectPart[]                      Parts                  { get; set; }
     public string                             CollectVideosPath      { get; set; }
     public bool                               DataformDeps           { get; set; }
+    public BcCollectPart[]                      BcParts                { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -49,9 +51,11 @@ namespace YtReader {
     readonly string         _updated;
     readonly UserScrape     _userScrape;
     readonly YtIndexResults _index;
+    readonly BcCollect               _bcCollect;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, YtStage warehouse, YtSearch search,
-      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtIndexResults index) {
+      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtIndexResults index, BcCollect bcCollect) {
+      _bcCollect = bcCollect;
       Cfg = cfg;
       _updated = Guid.NewGuid().ToShortString(6);
       Log = log.ForContext("UpdateId", _updated);
@@ -67,8 +71,11 @@ namespace YtReader {
 
     Task Collect(string[] channels, CollectPart[] parts, string collectVideoPath, ILogger logger, CancellationToken cancel) =>
       _collector.Collect(logger, channels, parts, collectVideoPath, cancel);
+    
+    Task BcCollect(string[] channels, BcCollectPart[] parts, ILogger logger, CancellationToken cancel) =>
+      _bcCollect.Collect(channels, parts, logger, cancel);
 
-    [GraphTask(nameof(Collect))]
+    [GraphTask(nameof(Collect), nameof(BcCollect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
       _warehouse.StageUpdate(logger, fullLoad, tables);
 
@@ -88,7 +95,7 @@ namespace YtReader {
     Task Index(string[] tables, ILogger logger, CancellationToken cancel) =>
       _index.Run(tables, logger, cancel);
 
-    [GraphTask(nameof(Collect))]
+    [GraphTask(nameof(Stage))]
     Task Backup(ILogger logger) =>
       _backup.Backup(logger);
 
@@ -98,7 +105,7 @@ namespace YtReader {
 
     [Pipe]
     public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
-      options ??= new UpdateOptions();
+      options ??= new ();
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
 
@@ -106,6 +113,7 @@ namespace YtReader {
 
       var actionMethods = TaskGraph.FromMethods(
         (l, c) => Collect(options.Channels, options.Parts, options.CollectVideosPath, l, c),
+        (l, c) => BcCollect(options.Channels, options.BcParts, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),
         (l, c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),
@@ -139,5 +147,10 @@ namespace YtReader {
       else
         Log.Information("Update {RunId} - completed in {Duration}: {TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res.Join("\n"));
     }
+  }
+  
+  public static class YtUpdaterEx {
+    public static bool ShouldRunAny<T>(this T[] parts, params T[] toRun)  where T : Enum => parts == null || toRun.Any(parts.Contains);
+    public static bool ShouldRun<T>(this T[] parts, T part) where T : Enum => parts == null || parts.Contains(part);
   }
 }

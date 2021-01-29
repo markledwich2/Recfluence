@@ -66,7 +66,7 @@ namespace Mutuo.Etl.AzureManagement {
     }
 
     async Task DelContainerGroups(IAzure azure, ILogger log) {
-      var (allGroups, listEx) = await Def.New(() => azure.ContainerGroups.ListAsync()).Try();
+      var (allGroups, listEx) = await Def.F(() => azure.ContainerGroups.ListAsync()).Try();
       if (listEx != null) log.Warning(listEx, "AzureCleaner - error deleting container groups: {Error}`", listEx.Message);
       var toDelete = allGroups.NotNull().Where(g => g.IsExpired() && g.State().IsCompletedState()).ToArray();
       if (toDelete.Any())

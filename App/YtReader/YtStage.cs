@@ -144,6 +144,8 @@ namespace YtReader {
       new("video_extra", "video_extra_stage"),
       new("searches", "search_stage"),
       new("captions", "caption_stage"),
+      new("bc_videos", "bc_video_stage"),
+      new("bc_channels", "bc_channel_stage"),
       new("rec_exports_processed", "rec_export_stage", storeType: DataStoreType.Private),
       new(dir: null, "dbv1_video_stage", isNativeStore: false),
       new(dir: null, "dbv1_rec_stage", isNativeStore: false),

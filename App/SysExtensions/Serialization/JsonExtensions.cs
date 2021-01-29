@@ -19,7 +19,7 @@ namespace SysExtensions.Serialization {
   public static class JsonExtensions {
     public static JsonSerializer DefaultSerializer => JsonSerializer.Create(DefaultSettings());
 
-    public static JsonLoadSettings DefaultLoadSettings => new JsonLoadSettings();
+    public static JsonLoadSettings DefaultLoadSettings => new();
 
     public static JsonSerializerSettings DefaultSettings(Formatting formatting = Formatting.Indented) {
       var settings = new JsonSerializerSettings {

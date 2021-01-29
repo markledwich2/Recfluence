@@ -9,7 +9,7 @@ using SysExtensions.Collections;
 namespace SysExtensions.Threading {
   public static class Def {
     /// <summary>Create a func with type inference</summary>
-    public static Func<T> New<T>(this Func<T> func) => func;
+    public static Func<T> F<T>(Func<T> func) => func;
   }
 
   public static class TaskExtensions {
@@ -99,5 +99,7 @@ namespace SysExtensions.Threading {
       timeoutCancellationTokenSource.Cancel();
       return (true, await task);
     }
+
+    public static async Task<TR> Then<T, TR>(this Task<T> task, Func<Task<T>, Task<TR>> then) => await task.ContinueWith(then).Unwrap();
   }
 }

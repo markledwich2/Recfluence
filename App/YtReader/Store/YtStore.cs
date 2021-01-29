@@ -81,9 +81,11 @@ namespace YtReader.Store {
       Recs = CreateStore<RecStored2>("recs");
       Captions = CreateStore<VideoCaptionStored2>("captions");
       ChannelReviews = CreateStore<UserChannelReview>("channel_reviews", r => r.Email);
+      BcChannels = CreateStore<ChannelStored2>("bc_channels");
+      BvVideos = CreateStore<VideoStored2>("bc_videos");
     }
 
-    public ISimpleFileStore Store { get; }
+    public ISimpleFileStore         Store    { get; }
 
     public JsonlStore<ChannelStored2>        Channels   { get; }
     public JsonlStore<UserSearchWithUpdated> Searches   { get; }
@@ -94,10 +96,13 @@ namespace YtReader.Store {
 
     public JsonlStore<UserChannelReview> ChannelReviews { get; }
 
-    public IJsonlStore[] AllStores => new IJsonlStore[] {Channels, Searches, Videos, VideoExtra, Recs, Captions};
+    public JsonlStore<ChannelStored2> BcChannels { get; }
+    public JsonlStore<VideoStored2>   BvVideos   { get; set; }
+
+    public IJsonlStore[]              AllStores  => new IJsonlStore[] {Channels, Searches, Videos, VideoExtra, Recs, Captions};
 
     JsonlStore<T> CreateStore<T>(string name, Func<T, string> getPartition = null) where T : IHasUpdated =>
-      new JsonlStore<T>(Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);
+      new (Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);
   }
 
   public enum ChannelStatus {

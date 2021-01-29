@@ -226,43 +226,45 @@ namespace YtReader {
       b.Register(_ => cfg.Search).SingleInstance();
       b.Register(_ => cfg.SyncDb).SingleInstance();
       b.Register(_ => cfg.AppDb).SingleInstance();
+      b.Register(_ => cfg.BitChute).SingleInstance();
 
-      b.RegisterType<SnowflakeConnectionProvider>().SingleInstance();
-      b.Register(_ => cfg.Pipe.Azure.GetAzure()).SingleInstance();
+      b.RegisterType<SnowflakeConnectionProvider>();
+      b.Register(_ => cfg.Pipe.Azure.GetAzure());
 
-      b.RegisterType<YtStores>().SingleInstance();
+      b.RegisterType<YtStores>();
       foreach (var storeType in EnumExtensions.Values<DataStoreType>())
-        b.Register(_ => _.Resolve<YtStores>().Store(storeType)).Keyed<ISimpleFileStore>(storeType).SingleInstance();
+        b.Register(_ => _.Resolve<YtStores>().Store(storeType)).Keyed<ISimpleFileStore>(storeType);
 
       b.RegisterType<YtClient>();
-      b.Register(_ => new ElasticClient(cfg.Elastic.ElasticConnectionSettings())).SingleInstance();
-      b.RegisterType<YtStore>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
-      b.RegisterType<YtResults>().WithKeyedParam(DataStoreType.Results, Typ.Of<ISimpleFileStore>()).SingleInstance();
-      b.RegisterType<StoreUpgrader>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
-      b.RegisterType<YtStage>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>()).SingleInstance();
-      b.RegisterType<WebScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>()).SingleInstance();
-      b.RegisterType<ChromeScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>()).SingleInstance();
+      b.Register(_ => new ElasticClient(cfg.Elastic.ElasticConnectionSettings()));
+      b.RegisterType<YtStore>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<YtResults>().WithKeyedParam(DataStoreType.Results, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<StoreUpgrader>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<YtStage>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<WebScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<ChromeScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
 
-      b.RegisterType<YtSearch>().SingleInstance();
-      b.RegisterType<YtCollector>().SingleInstance();
-      b.RegisterType<WarehouseCreator>().SingleInstance();
-      b.RegisterType<YtBackup>().SingleInstance();
-      b.RegisterType<AzureCleaner>().SingleInstance();
+      b.RegisterType<YtSearch>();
+      b.RegisterType<YtCollector>();
+      b.RegisterType<WarehouseCreator>();
+      b.RegisterType<YtBackup>();
+      b.RegisterType<AzureCleaner>();
       b.RegisterType<YtUpdater>(); // new instance so it can have a unique runId in its contructor
       b.Register(_ => new RegistryClient(containerCfg.Registry, containerCfg.RegistryCreds));
-      b.RegisterType<BranchEnvCreator>().SingleInstance();
-      b.RegisterType<YtDataform>().SingleInstance();
-      b.RegisterType<ContainerLauncher>().SingleInstance();
-      b.RegisterType<AzureContainers>().SingleInstance();
-      b.RegisterType<LocalPipeWorker>().SingleInstance();
+      b.RegisterType<BranchEnvCreator>();
+      b.RegisterType<YtDataform>();
+      b.RegisterType<ContainerLauncher>();
+      b.RegisterType<AzureContainers>();
+      b.RegisterType<LocalPipeWorker>();
       b.RegisterType<UserScrape>();
-      b.RegisterType<YtSync>().SingleInstance();
-      b.RegisterType<YtConvertWatchTimeFiles>().SingleInstance();
-      b.RegisterType<YtIndexResults>().SingleInstance();
-      b.RegisterType<BcWeb>().SingleInstance();
-
+      b.RegisterType<YtSync>();
+      b.RegisterType<YtConvertWatchTimeFiles>();
+      b.RegisterType<YtIndexResults>();
+      b.RegisterType<BcWeb>();
+      b.RegisterType<BcCollect>();
+      
       b.Register(_ => pipeAppCtx);
-      b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>().SingleInstance();
+      b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();
 
       return b;
     }
@@ -272,8 +274,8 @@ namespace YtReader {
         this IRegistrationBuilder<TLimit, TReflectionActivatorData, TStyle> registration, TKey key, Of<TParam> param)
       where TReflectionActivatorData : ReflectionActivatorData where TKey : Enum =>
       registration.WithParameter(
-        (pi, ctx) => pi.ParameterType == typeof(TParam),
-        (pi, ctx) => ctx.ResolveKeyed<TParam>(key));
+        (pi, _) => pi.ParameterType == typeof(TParam),
+        (_, ctx) => ctx.ResolveKeyed<TParam>(key));
 
     public static Task<IContainerGroup> SeqGroup(this IAzure azure, SeqCfg seqCfg, PipeAzureCfg azureCfg) =>
       azure.ContainerGroups.GetByResourceGroupAsync(azureCfg.ResourceGroup, seqCfg.ContainerGroupName);

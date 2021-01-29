@@ -97,7 +97,7 @@ namespace SysExtensions.IO {
     public static SystemIO.FileInfo FileInfo(this FPath path) => new SystemIO.FileInfo(path.FullPath);
 
     public static FPath LocalAssemblyPath(this Type type)
-      => new Uri(type.GetTypeInfo().Assembly.CodeBase).LocalPath.AsPath();
+      => new Uri(type.GetTypeInfo().Assembly.Location).LocalPath.AsPath();
 
     static FPath Directories(this FPath p, string searchPattern) => p.Directories(searchPattern, false);
   }

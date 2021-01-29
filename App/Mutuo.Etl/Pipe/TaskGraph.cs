@@ -62,7 +62,7 @@ namespace Mutuo.Etl.Pipe {
     public TaskGraph(IEnumerable<GraphTask> jobs) => _graph = CreateGraph(jobs.ToArray());
 
     public static TaskGraph FromMethods(params Expression<Func<ILogger, CancellationToken, Task>>[] methods) =>
-      new TaskGraph(methods.Select(t => GraphTask(t)).ToArray());
+      new(methods.Select(t => GraphTask(t)).ToArray());
 
     public static GraphTask GraphTask(Expression<Func<ILogger, CancellationToken, Task>> expression, params string[] dependsOn) {
       var runTask = expression.Compile();
@@ -70,7 +70,7 @@ namespace Mutuo.Etl.Pipe {
       var attribute = m.Method.GetCustomAttribute<GraphTaskAttribute>();
       if (attribute != null)
         dependsOn = dependsOn.Concat(attribute.Deps).ToArray();
-      return new GraphTask(attribute?.Name ?? m.Method.Name, dependsOn, runTask);
+      return new(attribute?.Name ?? m.Method.Name, dependsOn, runTask);
     }
 
     public bool AllComplete => _graph.Nodes.All(v => v.Status.IsComplete());
@@ -94,7 +94,7 @@ namespace Mutuo.Etl.Pipe {
     public IEnumerable<GraphTask> DependenciesDeep(GraphTask node) => _graph.DependenciesDeep(node);
 
     DependencyGraph<GraphTask> CreateGraph(GraphTask[] jobs) =>
-      new DependencyGraph<GraphTask>(jobs, n => n.DependsOn, j => j.Name);
+      new(jobs, n => n.DependsOn, j => j.Name);
 
     static bool HasIncompleteDependencies(DependencyGraph<GraphTask> graph, GraphTask job) =>
       graph.Dependencies(job).Any(j => j.Status.IsIncomplete());
@@ -125,7 +125,7 @@ namespace Mutuo.Etl.Pipe {
         var sw = Stopwatch.StartNew();
 
         GraphTaskResult Result(Exception ex = null) =>
-          new GraphTaskResult {
+          new() {
             Name = task.Name,
             FinalStatus = task.Status,
             Duration = sw.Elapsed,
@@ -155,7 +155,7 @@ namespace Mutuo.Etl.Pipe {
       }
 
       var block = new TransformBlock<GraphTask, GraphTaskResult>(RunTask,
-        new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel});
+        new() {MaxDegreeOfParallelism = parallel});
       var newTaskSignal = new AsyncManualResetEvent(true);
 
       async Task Producer() {

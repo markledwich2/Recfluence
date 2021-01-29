@@ -40,26 +40,29 @@ namespace YtReader {
     public            string          AppInsightsKey        { get; set; }
     public            int             DefaultParallel       { get; set; } = 8;
     public            LogEventLevel   LogLevel              { get; set; } = LogEventLevel.Debug;
-    [Required] public BranchEnvCfg    Env                   { get; set; } = new BranchEnvCfg();
-    [Required] public YtCollectCfg    Collect               { get; set; } = new YtCollectCfg();
-    [Required] public StorageCfg      Storage               { get; set; } = new StorageCfg();
-    [Required] public YtApiCfg        YtApi                 { get; set; } = new YtApiCfg();
-    [Required] public HashSet<string> LimitedToSeedChannels { get; set; } = new HashSet<string>();
-    [Required] public SeqCfg          Seq                   { get; set; } = new SeqCfg();
-    [Required] public ProxyCfg        Proxy                 { get; set; } = new ProxyCfg();
-    [Required] public SnowflakeCfg    Snowflake             { get; set; } = new SnowflakeCfg();
-    [Required] public WarehouseCfg    Warehouse             { get; set; } = new WarehouseCfg();
-    [Required] public SqlServerCfg    AppDb                 { get; set; } = new SqlServerCfg();
-    [Required] public ResultsCfg      Results               { get; set; } = new ResultsCfg();
-    [Required] public PipeAppCfg      Pipe                  { get; set; } = new PipeAppCfg();
-    [Required] public DataformCfg     Dataform              { get; set; } = new DataformCfg();
+    [Required] public BranchEnvCfg    Env                   { get; set; } = new();
+    [Required] public YtCollectCfg    Collect               { get; set; } = new();
+    [Required] public StorageCfg      Storage               { get; set; } = new();
+    [Required] public YtApiCfg        YtApi                 { get; set; } = new();
+    [Required] public HashSet<string> LimitedToSeedChannels { get; set; } = new();
+    [Required] public SeqCfg          Seq                   { get; set; } = new();
+    [Required] public ProxyCfg        Proxy                 { get; set; } = new();
+    [Required] public SnowflakeCfg    Snowflake             { get; set; } = new();
+    [Required] public WarehouseCfg    Warehouse             { get; set; } = new();
+    [Required] public SqlServerCfg    AppDb                 { get; set; } = new();
+    [Required] public ResultsCfg      Results               { get; set; } = new();
+    [Required] public PipeAppCfg      Pipe                  { get; set; } = new();
+    [Required] public DataformCfg     Dataform              { get; set; } = new();
     [Required] public ElasticCfg      Elastic               { get; set; }
-    [Required] public SyncDbCfg       SyncDb                { get; set; } = new SyncDbCfg();
-    [Required] public AzureCleanerCfg Cleaner               { get; set; } = new AzureCleanerCfg();
-    [Required] public YtUpdaterCfg    Updater               { get; set; } = new YtUpdaterCfg();
-    [Required] public UserScrapeCfg   UserScrape            { get; set; } = new UserScrapeCfg();
-    [Required] public SearchCfg       Search                { get; set; } = new SearchCfg();
+    [Required] public SyncDbCfg       SyncDb                { get; set; } = new();
+    [Required] public AzureCleanerCfg Cleaner               { get; set; } = new();
+    [Required] public YtUpdaterCfg    Updater               { get; set; } = new();
+    [Required] public UserScrapeCfg   UserScrape            { get; set; } = new();
+    [Required] public SearchCfg       Search                { get; set; } = new();
+    [Required] public BitChuteCfg     BitChute                { get; set; } = new();
   }
+
+  public record BitChuteCfg(int CollectParallel = 8);
 
   public class YtApiCfg {
     [Required] public ICollection<string> Keys { get; set; } = new List<string>();

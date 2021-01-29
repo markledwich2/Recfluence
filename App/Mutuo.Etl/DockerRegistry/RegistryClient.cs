@@ -77,7 +77,7 @@ namespace Mutuo.Etl.DockerRegistry {
   }
 
   public static class RegistryClientHelper {
-    public static DateTime TagCreated(this Manifest manifest) => manifest.History.FirstOrDefault()
+    public static DateTime? TagCreated(this Manifest manifest) => manifest.History.FirstOrDefault()?
       .V1Compatibility.ParseJObject().PropertyValue<DateTime>("created");
   }
 }

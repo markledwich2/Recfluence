@@ -84,7 +84,7 @@ namespace YtReader {
 
     public YtCollector(YtStores stores, AppCfg cfg, SnowflakeConnectionProvider sf, IPipeCtx pipeCtx, WebScraper webScraper, ChromeScraper chromeScraper,
       YtClient api, ILogger log) {
-      DbStore = new YtStore(stores.Store(DataStoreType.Db), log);
+      DbStore = new (stores.Store(DataStoreType.Db), log);
       Cfg = cfg;
       Sf = sf;
       PipeCtx = pipeCtx;
@@ -706,10 +706,5 @@ from videos_to_update",
       public ProcessChannelResult[] Channels { get; set; }
       public TimeSpan               Duration { get; set; }
     }
-  }
-
-  public static class YtCollectExtensions {
-    public static bool ShouldRunAny(this CollectPart[] parts, params CollectPart[] toRun) => parts == null || toRun.Any(parts.Contains);
-    public static bool ShouldRun(this CollectPart[] parts, CollectPart part) => parts == null || parts.Contains(part);
   }
 }
