@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Update" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.dll" />
-    <option name="PROGRAM_PARAMETERS" value="update -a BcCollect|Stage  -s bc_video_stage|bc_channel_stage" />
+    <option name="PROGRAM_PARAMETERS" value="update -a BcCollect|Stage  -s bc_video_stage|bc_channel_stage -p Channel" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>

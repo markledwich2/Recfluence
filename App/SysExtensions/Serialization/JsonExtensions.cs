@@ -77,7 +77,7 @@ namespace SysExtensions.Serialization {
     // Relies entirely on the Newtonsoft.Json merging feature</summary>
     public static T JsonMerge<T>(this T target, T newValues, JsonSerializerSettings settings = null) {
       var aJ = target.ToJObject(settings);
-      aJ.Merge(newValues.ToJObject(settings), new JsonMergeSettings {MergeNullValueHandling = MergeNullValueHandling.Ignore});
+      aJ.Merge(newValues.ToJObject(settings), new() {MergeNullValueHandling = MergeNullValueHandling.Ignore});
       return aJ.ToObject<T>(settings);
     }
 

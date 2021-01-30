@@ -86,7 +86,7 @@ namespace YtReader.Store {
     }
 
     public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null, CancellationToken cancel = default) {
-      using var db = await Sf.OpenConnection(log);
+      using var db = await Sf.Open(log);
       queryNames ??= new string[] { };
 
       var now = DateTime.Now;

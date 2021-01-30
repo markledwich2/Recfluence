@@ -53,7 +53,7 @@ namespace YtReader {
       var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table, StringComparer.OrdinalIgnoreCase) == true).ToArray();
       await tables.BlockAction(async t => {
         var table = t.Table;
-        using var db = await Conn.OpenConnection(log);
+        using var db = await Conn.Open(log);
         await db.Execute("create table", $"create table if not exists {table} (v Variant)");
 
         if (t.Dir != null) {

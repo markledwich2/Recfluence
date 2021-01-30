@@ -54,7 +54,7 @@ inner join channel_latest cl on d.channel_id = cl.channel_id"
         var tableLog = log.ForContext("Table", t.Name);
 
         tableLog.Information("Table Sync {Table} - started", t.Name);
-        using var sourceConn = await Snowflake.OpenConnection(log);
+        using var sourceConn = await Snowflake.Open(log);
         using var destConn = await SqlServerCfg.OpenConnection(tableLog);
         var sync = new DbSync(
           new SnowflakeSourceDb(sourceConn.Conn, Snowflake.Cfg.Schema, WhCfg.Stage, WhCfg.FileMb.Megabytes(), tableLog),

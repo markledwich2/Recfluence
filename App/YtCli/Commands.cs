@@ -227,7 +227,7 @@ namespace YtCli {
     [CommandOption('c', Description = "| delimited list of channels to collect")]
     public string Channels { get; set; }
 
-    [CommandOption("collect-parts", shortName: 'p', Description = "optional '|' separated list of parts to run")]
+    [CommandOption("collect-parts", shortName: 'p', Description = "optional '|' separated list of collect parts to run")]
     public string Parts { get; set; }
 
     [CommandOption("us-init", Description = "Run userscrape in init mode (additional seed videos)")]
@@ -267,7 +267,8 @@ namespace YtCli {
       var options = new UpdateOptions {
         Actions = Actions?.UnJoin('|'),
         Channels = Channels?.UnJoin('|'),
-        Parts = Parts?.UnJoin('|').Select(p => p.ParseEnum<CollectPart>()).ToArray(),
+        Parts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<CollectPart>(out _)).Select(p => p.ParseEnum<CollectPart>()).ToArray(),
+        BcParts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<BcCollectPart>(out _)).Select(p => p.ParseEnum<BcCollectPart>()).ToArray(),
         Tables = Tables?.UnJoin('|'),
         StageTables = StageTables?.UnJoin('|'),
         Results = Results?.UnJoin('|'),

@@ -65,7 +65,7 @@ namespace YtReader {
   }
 
   public record ChannelUpdatePlan {
-    public ChannelStored2    Channel           { get; set; }
+    public Channel    Channel           { get; set; }
     public UpdateChannelType Update            { get; set; }
     public DateTime?         VideosFrom        { get; set; }
     public DateTime?         LastVideoUpdate   { get; set; }
@@ -101,7 +101,7 @@ namespace YtReader {
       if (collectVideoPath != null) {
         log.Information("Collecting video list from {Path}", collectVideoPath);
         IReadOnlyCollection<string> videoIds;
-        using (var db = await Sf.OpenConnection(log))
+        using (var db = await Sf.Open(log))
           videoIds = await db.Query<string>("missing video's", @$"
 with raw_vids as (
   select $1::string video_id
@@ -174,7 +174,7 @@ select video_id from missing_or_old
       var noExplicit = explicitChannels.None();
 
       IKeyedCollection<string, ChannelUpdatePlan> existingChannels;
-      using (var db = await Sf.OpenConnection(log)) {
+      using (var db = await Sf.Open(log)) {
         // retrieve previous channel state to update with new classification (algos and human) and stats form the API
         existingChannels = (await db.Query<(string j, long? daysBack, DateTime? lastVideoUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate)>(
             "channels - previous", $@"
@@ -201,7 +201,7 @@ from review_filtered r
        left join channel_latest l on v:ChannelId=l.channel_id
 "))
           .Select(r => new ChannelUpdatePlan {
-            Channel = r.j.ToObject<ChannelStored2>(DbStore.Channels.JCfg),
+            Channel = r.j.ToObject<Channel>(DbStore.Channels.JCfg),
             VideosFrom = r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : (DateTime?) null,
             LastVideoUpdate = r.lastVideoUpdate,
             LastCaptionUpdate = r.lastCaptionUpdate,
@@ -212,7 +212,7 @@ from review_filtered r
         if (parts.ShouldRun(DiscoverPart)) {
           if (limitChannels != null) // discover channels specified in limit if they aren't in our dataset
             toDiscover.AddRange(limitChannels.Where(c => !existingChannels.ContainsKey(c))
-              .Select(c => new ChannelUpdatePlan {Channel = new ChannelStored2 {ChannelId = c}, Update = Discover}));
+              .Select(c => new ChannelUpdatePlan {Channel = new Channel {ChannelId = c}, Update = Discover}));
           toDiscover.AddRange(await ChannelsToDiscover(db, log));
         }
       }
@@ -227,7 +227,7 @@ from review_filtered r
         .Select(c => c with { Update = fullUpdate.Contains(c.Channel.ChannelId) ? Full : Standard })
         .Concat(toDiscover).ToArray();
 
-      if (!parts.ShouldRun(Channel)) return channels;
+      if (!parts.ShouldRun(CollectPart.Channel)) return channels;
 
       var (updatedChannels, duration) = await channels.Where(c => c.Update != None)
         .BlockFunc(async c => await UpdateChannelDetail(c, log), Cfg.DefaultParallel, cancel: cancel)
@@ -310,7 +310,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
       var toDiscover = toAdd
         .Select(c => new ChannelUpdatePlan {
-          Channel = new ChannelStored2 {
+          Channel = new Channel {
             ChannelId = c.channel_id,
             ChannelTitle = c.channel_title
           },
@@ -324,7 +324,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
     [Pipe]
     public async Task<ProcessChannelResults> ProcessChannels(IReadOnlyCollection<ChannelUpdatePlan> channels,
       CollectPart[] parts, ILogger log = null, CancellationToken cancel = default) {
-      IEnumerable<IReadOnlyCollection<ChannelStored2>> ChannelBatches() => channels.Select(c => c.Channel).Batch(1000);
+      IEnumerable<IReadOnlyCollection<Channel>> ChannelBatches() => channels.Select(c => c.Channel).Batch(1000);
 
       log ??= Logger.None;
       var workSw = Stopwatch.StartNew();
@@ -335,7 +335,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       var missingCaptions = new MultiValueDictionary<string, string>();
 
       if (parts.ShouldRunAny(VidExtra, Caption)) {
-        using var db = await Sf.OpenConnection(log);
+        using var db = await Sf.Open(log);
 
         if (parts.ShouldRun(VidExtra)) {
           var forChromeUpdate = await ChannelBatches().BlockFunc(c => VideosForChromeUpdate(c, db, log));
@@ -369,7 +369,7 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
             .ForContext("ChannelId", c.ChannelId)
             .ForContext("Channel", c.ChannelTitle);
           try {
-            await using var conn = new Defer<ILoggedConnection<IDbConnection>>(async () => await Sf.OpenConnection(cLog));
+            await using var conn = new Defer<ILoggedConnection<IDbConnection>>(async () => await Sf.Open(cLog));
             await UpdateAllInChannel(plan, parts,
               channelChromeVideos.TryGet(c.ChannelId), channelDeadVideos.TryGet(c.ChannelId), missingCaptions.TryGet(c.ChannelId), cLog);
             cLog.Information("Collect - {Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
@@ -458,7 +458,7 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
       }
     }
 
-    static async Task SaveVids(ChannelStored2 c, IReadOnlyCollection<VideoItem> vids, JsonlStore<VideoStored2> vidStore, ILogger log) {
+    static async Task SaveVids(Channel c, IReadOnlyCollection<VideoItem> vids, JsonlStore<VideoStored2> vidStore, ILogger log) {
       var updated = DateTime.UtcNow;
       var vidsStored = vids.Select(v => new VideoStored2 {
         VideoId = v.Id,
@@ -480,7 +480,7 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
       log.Information("Collect - {Channel} - Recorded {VideoCount} videos", c.ChannelTitle, vids.Count);
     }
 
-    async IAsyncEnumerable<VideoItem> ChannelVidItems(ChannelStored2 c, DateTime uploadFrom, ILogger log) {
+    async IAsyncEnumerable<VideoItem> ChannelVidItems(Channel c, DateTime uploadFrom, ILogger log) {
       await foreach (var vids in Scraper.GetChannelUploadsAsync(c.ChannelId, log)) {
         foreach (var v in vids)
           yield return v;
@@ -536,7 +536,7 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
     }
 
     /// <summary>Saves recs for all of the given vids</summary>
-    async Task SaveRecsAndExtra(ChannelStored2 c, CollectPart[] parts, HashSet<string> forChromeUpdate, IReadOnlyCollection<string> forWebUpdate, ILogger log) {
+    async Task SaveRecsAndExtra(Channel c, CollectPart[] parts, HashSet<string> forChromeUpdate, IReadOnlyCollection<string> forWebUpdate, ILogger log) {
       var chromeExtra = await ChromeScraper.GetRecsAndExtra(forChromeUpdate, log);
       var webExtra = await Scraper.GetRecsAndExtra(forWebUpdate, log, c?.ChannelId, c?.ChannelTitle);
       var allExtra = chromeExtra.Concat(webExtra).ToArray();
@@ -580,7 +580,7 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
           Updated = updated
         }) ?? new RecStored2[] { }).ToArray();
 
-    async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingVideosForExtraUpdate(IReadOnlyCollection<ChannelStored2> channels,
+    async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingVideosForExtraUpdate(IReadOnlyCollection<Channel> channels,
       ILoggedConnection<IDbConnection> db,
       ILogger log) {
       var ids = await db.Query<(string ChannelId, string VideoId)>("missing videos", $@"
@@ -629,7 +629,7 @@ from missing_and_fixes
 
     /// <summary>Find videos that we should update to collect comments (chrome update). We do this once x days after a video is
     ///   uploaded.</summary>
-    async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> VideosForChromeUpdate(IReadOnlyCollection<ChannelStored2> channels,
+    async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> VideosForChromeUpdate(IReadOnlyCollection<Channel> channels,
       ILoggedConnection<IDbConnection> db,
       ILogger log) {
       var ids = await db.Query<(string ChannelId, string VideoId)>("videos sans-comments",

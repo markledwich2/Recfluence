@@ -60,9 +60,9 @@ namespace YtReader {
         .CreateLogger();
 
       FlurlHttp.Configure(settings => {
-        settings.OnError = e => log.Warning(e.Exception, "Furl error: {Error}", e.ToString());
+        settings.OnError = e => log.Debug(e.Exception, "Furl error: {Error}", e.ToString());
         settings.AfterCall = e => {
-          log.Debug("Furl: {Request}", e.HttpRequestMessage);
+          log.Verbose("Furl: {Request}", e.HttpRequestMessage);
         };
       });
 

@@ -75,6 +75,8 @@ namespace Mutuo.Etl.Blob {
       }
     };
 
+    public Task Append(T item, ILogger log = null) => Append(item.InArray(), log);
+
     public async Task Append(IReadOnlyCollection<T> items, ILogger log = null) {
       log ??= Log;
       if (items.None()) return;

@@ -17,11 +17,11 @@ namespace Mutuo.Etl.Db {
   public interface ILoggedConnection<out TC> : IDisposable where TC : IDbConnection  {
     TC      Conn { get; }
     ILogger Log  { get; }
-    Task<long> Execute(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
+    Task<long> Execute(string desc, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
     /// <summary>Like the dapper Query function. use when you need to stream the rows non-greedily</summary>
     IEnumerable<T> QueryBlocking<T>(string operation, string sql,
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = false);
-    Task<IReadOnlyCollection<T>> Query<T>(string operation, string sql,
+    Task<IReadOnlyCollection<T>> Query<T>(string desc, string sql,
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
     /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
     /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>
@@ -46,8 +46,8 @@ namespace Mutuo.Etl.Db {
       if (CloseConnection) Conn?.Dispose();
     }
 
-    public async Task<long> Execute(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
-      await ExecWithLog(() => Conn.ExecuteAsync(sql, param, transaction, commandTimeout: timeout?.TotalSeconds.RoundToInt()), sql, operation, param);
+    public async Task<long> Execute(string desc, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
+      await ExecWithLog(() => Conn.ExecuteAsync(sql, param, transaction, commandTimeout: timeout?.TotalSeconds.RoundToInt()), sql, desc, param);
 
     /// <summary>Like the dapper Query function. use when you need to stream the rows non-greedily</summary>
     public IEnumerable<T> QueryBlocking<T>(string operation, string sql,
@@ -55,9 +55,9 @@ namespace Mutuo.Etl.Db {
       ExecWithLog(() => Conn.Query<T>(sql, param, transaction,
         commandTimeout: timeout?.TotalSeconds.RoundToInt(), buffered: buffered), sql, operation, param);
 
-    public async Task<IReadOnlyCollection<T>> Query<T>(string operation, string sql,
+    public async Task<IReadOnlyCollection<T>> Query<T>(string desc, string sql,
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
-      (await ExecWithLog(() => Conn.QueryAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation, param))
+      (await ExecWithLog(() => Conn.QueryAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, desc, param))
       .ToArray(); // make greedy load explicit load because that is what dapper does under the covers for async anyway.
 
     /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>

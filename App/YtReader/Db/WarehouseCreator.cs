@@ -44,7 +44,7 @@ namespace YtReader.Db {
       });
       var stageUrl = $"azure://{container.Uri.Host}{container.Uri.AbsolutePath}";
 
-      using var conn = await Sf.OpenConnection(log, "", ""); // connection sans db & schema. If you specify ones that doesn't exist, all queries hang.
+      using var conn = await Sf.Open(log, "", ""); // connection sans db & schema. If you specify ones that doesn't exist, all queries hang.
 
       var db = Sf.Cfg.DbName();
       IEnumerable<Script> scripts;

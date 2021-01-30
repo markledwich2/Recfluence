@@ -69,7 +69,7 @@ namespace YtReader.Store {
       new() {Cols = cols, Sql = sql, Size = size ?? 200.Kilobytes()};
 
     async Task<BlobIndexWork> IndexWork(ILogger log, string name, IndexCol[] cols, string sql, ByteSize size, Action<JObject> onProcessed = null) {
-      using var con = await Sf.OpenConnection(log);
+      using var con = await Sf.Open(log);
 
       async IAsyncEnumerable<JObject> GetRows() {
         var reader = await con.ExecuteReader(name, sql);

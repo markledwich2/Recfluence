@@ -74,20 +74,20 @@ namespace YtReader.Store {
     public YtStore(ISimpleFileStore store, ILogger log) {
       Store = store;
       Log = log;
-      Channels = CreateStore<ChannelStored2>("channels");
+      Channels = CreateStore<Channel>("channels");
       Searches = CreateStore<UserSearchWithUpdated>("searches");
       Videos = CreateStore<VideoStored2>("videos");
       VideoExtra = CreateStore<VideoExtraStored2>("video_extra");
       Recs = CreateStore<RecStored2>("recs");
       Captions = CreateStore<VideoCaptionStored2>("captions");
       ChannelReviews = CreateStore<UserChannelReview>("channel_reviews", r => r.Email);
-      BcChannels = CreateStore<ChannelStored2>("bc_channels");
+      BcChannels = CreateStore<Channel>("bc_channels");
       BvVideos = CreateStore<VideoStored2>("bc_videos");
     }
 
-    public ISimpleFileStore         Store    { get; }
+    public ISimpleFileStore Store { get; }
 
-    public JsonlStore<ChannelStored2>        Channels   { get; }
+    public JsonlStore<Channel>        Channels   { get; }
     public JsonlStore<UserSearchWithUpdated> Searches   { get; }
     public JsonlStore<VideoStored2>          Videos     { get; }
     public JsonlStore<VideoExtraStored2>     VideoExtra { get; }
@@ -96,41 +96,39 @@ namespace YtReader.Store {
 
     public JsonlStore<UserChannelReview> ChannelReviews { get; }
 
-    public JsonlStore<ChannelStored2> BcChannels { get; }
+    public JsonlStore<Channel> BcChannels { get; }
     public JsonlStore<VideoStored2>   BvVideos   { get; set; }
 
-    public IJsonlStore[]              AllStores  => new IJsonlStore[] {Channels, Searches, Videos, VideoExtra, Recs, Captions};
+    public IJsonlStore[] AllStores => new IJsonlStore[] {Channels, Searches, Videos, VideoExtra, Recs, Captions};
 
     JsonlStore<T> CreateStore<T>(string name, Func<T, string> getPartition = null) where T : IHasUpdated =>
-      new (Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);
+      new(Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);
   }
 
   public enum ChannelStatus {
     None,
     Alive,
-    Dead
+    Dead,
+    NotFound
   }
 
-  public enum ChannelReviewStatus {
-    None,
-    Pending,
-    ManualAccepted,
-    ManualRejected,
-    AlgoAccepted,
-    AlgoRejected
+  public enum ChannelSourceType {
+    YouTubeChannel,
+    Manual
   }
 
-  public static class ChannelReviewStatusEx {
-    public static bool Accepted(this ChannelReviewStatus s) => s.In(ChannelReviewStatus.ManualAccepted, ChannelReviewStatus.AlgoAccepted);
-  }
+  public record ChannelSource(ChannelSourceType Type, string SourceId = null, string DestId = null);
 
-  public record ChannelStored2 : WithUpdatedItem {
+  public record Channel : WithUpdatedItem {
+    public Channel() { }
+    public Channel(string channelId) => ChannelId = channelId;
+
     public string                ChannelId          { get; set; }
     public string                ChannelTitle       { get; set; }
+    public string                ChannelName        { get; set; }
     public string                MainChannelId      { get; set; }
     public string                Description        { get; set; }
     public string                LogoUrl            { get; set; }
-    public double?               Relevance          { get; set; }
     public string                LR                 { get; set; }
     public ulong?                Subs               { get; set; }
     public ulong?                ChannelViews       { get; set; }
@@ -139,8 +137,11 @@ namespace YtReader.Store {
     public string                DefaultLanguage    { get; set; }
     public string                Keywords           { get; set; }
     public ChannelSubscription[] Subscriptions      { get; set; }
-    public ulong?                Videos             { get; set; }
-    
+
+    public ChannelSource Source { get; set; }
+
+    public Platform Platform { get; set; }
+
     public string ProfileId   { get; set; }
     public string ProfileName { get; set; }
 

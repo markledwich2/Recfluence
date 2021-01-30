@@ -1,17 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
-using SysExtensions.Reflection;
+using SysExtensions.Serialization;
+using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 using YtReader.Store;
 using static YtReader.BitChute.BcCollectPart;
-using static YtReader.BitChute.BcLinkType;
 
 namespace YtReader.BitChute {
   public enum BcLinkType {
@@ -38,55 +37,68 @@ namespace YtReader.BitChute {
       Cfg = cfg;
     }
 
-    public async Task Collect(string[] channels, BcCollectPart[] parts, ILogger log, CancellationToken cancel) {
-      var channelsToUpdate = new HashSet<string>();
-      
-      // TODO get channels from the DB
-      
-      if(channels != null) channelsToUpdate.AddRange(channels);
-      if (channels == null && parts.ShouldRun(DiscoverChannels)) {
-        // TODO: check that these do not exist in the DB
-        var qDesc = await GetQDescription(log);
-        var links = qDesc.SelectMany(d => ChanLink.Matches(d.description).Select(m => new {
-          LinkType = m.Groups["type"].Value.TryParseEnum<BcLinkType>(out var t) ? t : (BcLinkType?) null,
-          LinkId = m.Groups["id"].Value,
-          ChannelId = d.channelId,
-        }));
-        channelsToUpdate.AddRange(links.Where(l => l.LinkType == BcLinkType.Channel).Select(l => l.LinkId));
+    public async Task Collect(string[] explicitChannels, BcCollectPart[] parts, ILogger log, CancellationToken cancel) {
+      var toUpdate = new KeyedCollection<string, Channel>(s => s.ChannelId);
+
+      // add to update if it doesn't exist
+      void ToUpdate(string desc, IReadOnlyCollection<Channel> channels) {
+        toUpdate.AddRange(channels.NotNull().Where(c => !toUpdate.ContainsKey(c.ChannelId)));
+        log.Debug("BcCollect loaded {Channel} ({Desc}) channels for update", channels.Count, desc);
       }
 
-      await channelsToUpdate.Take(100).BlockAction(async c => {
-        var ((chan, getVideos), ex) = await Def.F(() => Web.ChannelAndVideos(c, log)).Try();
+      {
+        using var db = await Sf.Open(log);
+        var existing = await db.Query<string>(@"get channels", @$"
+select v
+from bc_channel_stage
+{(explicitChannels?.Any() == true ? $"where v:ChannelId in ({explicitChannels.Join(",", c => $"'{c}'")})" : "")}
+qualify row_number() over (partition by v:ChannelId order by v:Update::timestamp_ntz desc) = 1
+");
+
+        ToUpdate("existing", existing.Select(e => e.ToObject<Channel>()).ToArray());
+        ToUpdate("explicit", explicitChannels.NotNull().Select(c => new Channel(c) {Source = new(ChannelSourceType.Manual, DestId: c)}).ToArray());
+
+        if (parts.ShouldRun(DiscoverChannels)) {
+          var discovered = await db.Query<(string idOrName, string sourceId)>("bitchute links", @"
+with existing as (
+  select v:ChannelId::string channel_id, v:Source::object source
+  from bc_channel_stage qualify row_number() over (partition by v:ChannelId order by v:Updated::timestamp_ntz desc) = 1
+)
+
+  select l.dest_channel_id
+       , l.source_channel_id
+  from bc_links l
+         left join channel_latest yt_chan on l.source_channel_id=yt_chan.channel_id
+          left join existing e on e.source:Type = 'YouTubeChannel' and e.source:DestId = l.dest_channel_id
+  where l.type ='channel'
+    and e.channel_id is null -- don't discover existing channels with the same id/name
+    and array_contains('QAnon'::variant, yt_chan.tags)
+");
+
+          ToUpdate("discovered", discovered.Select(l => new Channel(l.idOrName)
+            {Source = new(ChannelSourceType.YouTubeChannel, l.sourceId, l.idOrName)}).ToArray());
+        }
+      }
+
+      await toUpdate.WithIndex().BlockAction(async item => {
+        var(c,i) = item;
+        var ((freshChan, getVideos), ex) = await Def.F(() => Web.ChannelAndVideos(c.ChannelId, log)).Try();
         if (ex != null) {
           log.Warning(ex, "Unable to load channel {c}: {Message}", c, ex.Message);
-          return;
+          freshChan = new(c.ChannelId) {Status = ChannelStatus.NotFound};
         }
 
-        await Db.BcChannels.Append(chan.InArray());
-        log.Information("BcCollect - saved {Channel}: {@Channel}", chan.ChannelTitle, chan);
+        var chan = c.JsonMerge(freshChan); // keep existing values like Source, but replace whatever comes from the web update
 
-        var videos = await getVideos.SelectManyList();
-        await Db.BvVideos.Append(videos);
-        log.Information("BcCollect - saved {Videos} videos for {Channel}", videos.Count, chan.ChannelTitle);
-      }, Cfg.CollectParallel, cancel:cancel); //Cfg.DefaultParallel
+        await Db.BcChannels.Append(chan, log);
+        log.Information("BcCollect - saved {Channel} {Num}/{Total}", chan.ChannelTitle, i+1, toUpdate.Count);
+
+        if (parts.ShouldRun(Video) && getVideos != null) {
+          var videos = await getVideos.SelectManyList();
+          await Db.BvVideos.Append(videos);
+          log.Information("BcCollect - saved {Videos} videos for {Channel}", videos.Count, freshChan.ChannelTitle);
+        }
+      }, Cfg.CollectParallel, cancel: cancel); //Cfg.DefaultParallel
     }
-
-    async Task<(string description, string channelId)[]> GetQDescription(ILogger log) {
-      using var db = await Sf.OpenConnection(log);
-      return (await db.Query<(string description, string channelId)>("", @"
-with q as (
-  select v.description, v.channel_id
-  from video_latest v
-left join channel_latest c on v.channel_id = c.channel_id
-where array_contains('QAnon'::variant, tags) and v.description like '%bitchute.com%'
-)
-select * from q
-union all
-select description, channel_id from channel_latest
-where array_contains('QAnon'::variant, tags) and description like '%bitchute.com%'
-")).ToArray();
-    }
-
-    static readonly Regex ChanLink = new(@"bitchute\.com\/((?<type>channel|video|accounts)\/)?(?<id>[^\/\s]*)\/");
   }
 }

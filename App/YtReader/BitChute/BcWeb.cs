@@ -42,8 +42,10 @@ namespace YtReader.BitChute {
       FlurlClients = new(new(), new(proxy.Proxies.FirstOrDefault()?.CreateHttpClient()));
     }
 
-    public async Task<(ChannelStored2 channel, IAsyncEnumerable<VideoStored2[]> videos)> ChannelAndVideos(string idOrName, ILogger log) {
+    public async Task<(Channel channel, IAsyncEnumerable<VideoStored2[]> videos)> ChannelAndVideos(string idOrName, ILogger log) {
       var chanDoc = await Open(b => b.OpenAsync(Url.AppendPathSegment($"channel/{idOrName}")), log);
+      if (chanDoc.StatusCode == HttpStatusCode.NotFound) 
+        return (new(null) {Status = ChannelStatus.NotFound}, null);
       chanDoc.StatusCode.EnsureSuccess();
       var csrf = chanDoc.CsrfToken();
       Task<T> Post<T>(string path, object data = null) => 
@@ -83,7 +85,7 @@ namespace YtReader.BitChute {
       })
       : AngleCfg);
 
-    /// <summary>Executes the given function with retries and proxy fallback</summary>
+    /// <summary>Executes the given function with retries and proxy fallback. Returns documnet in non-transient error states</summary>
     async Task<IDocument> Open(Func<IBrowsingContext, Task<IDocument>> getDoc, ILogger log) {
       var browser = GetBrowser();
       var retryTransient = Policy.HandleResult<IDocument>(d => {
@@ -91,43 +93,57 @@ namespace YtReader.BitChute {
         log.Debug($"BcWeb angle transient error '{(int) d.StatusCode}'");
         return true;
       }).RetryWithBackoff("BcWeb angle open", 5, d => d.StatusCode.ToString(), log);
+      
 
       var (doc, ex) = await F(() => retryTransient.ExecuteAsync(() => getDoc(browser))).Try();
-      if (doc != null) return doc;
-      UseProxyOrThrow(ex);
-      return await retryTransient.ExecuteAsync(() => getDoc(browser));
+      if (doc?.StatusCode.IsTransient() == false) return doc; // if there was a non-transient error, return the doc in that state 
+      UseProxyOrThrow(ex, (int?)doc?.StatusCode); // if we are already using the proxy, throw the error
+      doc = await retryTransient.ExecuteAsync(() => getDoc(browser));
+      doc.StatusCode.EnsureSuccess();
+      return doc;
     }
 
-
-    /// <summary>Posts to Bitchute and retries and proxy fallback</summary>
+    /// <summary>Posts to Bitchute and retries and proxy fallback. Always ensure successful results</summary>
     public async Task<IFlurlResponse> FurlAsync(IFlurlRequest request, Func<IFlurlRequest, Task<IFlurlResponse>> getResponse, ILogger log = null) {
       Task<IFlurlResponse> GetRes() => getResponse(request.WithClient(UseProxy ? FlurlClients.Proxy : FlurlClients.Direct).AllowAnyHttpStatus());
       
       var retry = Policy.HandleResult<IFlurlResponse>(d => IsTransient(d.StatusCode))
-        .RetryWithBackoff("BcWeb furl transient error", 5, d => d.StatusCode.ToString(), log);
+        .RetryWithBackoff("BcWeb flurl transient error", 5, d => d.StatusCode.ToString(), log);
       var (res, ex) = await F(() => retry.ExecuteAsync(GetRes)).Try();
-      if (res != null) return res;
-      UseProxyOrThrow(ex);
-      return await retry.ExecuteAsync(GetRes);
+      if (res != null && IsSuccess(res.StatusCode)) return res;
+      UseProxyOrThrow(ex, res?.StatusCode);
+      res = await retry.ExecuteAsync(GetRes);
+      EnsureSuccess(res.StatusCode);
+      return res;
     }
 
-    void UseProxyOrThrow(Exception ex) {
-      if (UseProxy) throw ex;
+    void UseProxyOrThrow(Exception ex, int? statusCode) {
+      if (statusCode != null && !IsTransient(statusCode.Value))
+        EnsureSuccess(statusCode.Value); // throw for non-transient errors
+
+      if (UseProxy) { // throw if there is an error and we are allready using proxy
+        if(ex != null) throw ex;
+        if(statusCode != null) EnsureSuccess(statusCode.Value);
+      }
+      
       UseProxy = true;
     }
 
-    static ChannelStored2 ParseChannel(IDocument doc, string idOrName) {
+    static Channel ParseChannel(IDocument doc, string idOrName) {
       IElement Qs(string s) => doc.Body.QuerySelector(s);
 
       var profileA = doc.QuerySelector<IHtmlAnchorElement>(".channel-banner .details .name > a");
+      var id = doc.QuerySelector<IHtmlLinkElement>("link#canonical")?.Href.AsUri().LocalPath.LastInPath() ?? idOrName;
       return new() {
-        ChannelId = doc.QuerySelector<IHtmlLinkElement>("link#canonical")?.Href.AsUri().LocalPath.LastInPath() ?? idOrName,
+        ChannelId = id,
+        ChannelName = id != idOrName ? idOrName : null,
         ChannelTitle = Qs("#channel-title")?.TextContent,
+        Description = Qs("#channel-description").InnerHtml,
         ProfileId = profileA?.Href.LastInPath(),
         ProfileName = profileA?.TextContent,
-        Videos = Qs(".channel-about-details svg.fa-video + span")?.TextContent.ParseBcNumber(),
         Created = Qs(".channel-about-details > p:first-child")?.TextContent.ParseCreated(),
         LogoUrl = doc.QuerySelector<IHtmlImageElement>("img[alt=\"Channel Image\"]")?.Dataset["src"],
+        Platform = Platform.BitChute,
         Updated = DateTime.UtcNow
       };
     }
