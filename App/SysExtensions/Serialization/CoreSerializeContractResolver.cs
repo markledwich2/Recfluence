@@ -13,6 +13,12 @@ namespace SysExtensions.Serialization {
     protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization) {
       var prop = base.CreateProperty(member, memberSerialization);
       if (memberSerialization != MemberSerialization.OptOut) return prop;
+
+      // classes with no default constructors should serialize as per normal
+      var emptyConstructor = member.DeclaringType?.GetConstructor(Type.EmptyTypes);
+      if (emptyConstructor != null) return prop;
+
+      // by default only writable properties should be serialized
       if (!prop.Writable && !prop.PropertyType.IsCollection()
                          && member.GetCustomAttribute<JsonPropertyAttribute>(true) == null)
         return null;

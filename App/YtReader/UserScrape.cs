@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Storage.Blobs;
+using Azure.Storage.Sas;
 using CliFx.Exceptions;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json;
@@ -22,7 +22,7 @@ using YtReader.Store;
 
 namespace YtReader {
   public class UserScrapeCfg {
-    public ContainerCfg Container { get; set; } = new ContainerCfg {
+    public ContainerCfg Container { get; set; } = new() {
       Cores = 1,
       Mem = 6,
       ImageName = "userscrape",
@@ -51,22 +51,19 @@ namespace YtReader {
     }
 
     public async Task Run(ILogger log, bool init, string trial, string[] limitAccounts, CancellationToken cancel) {
-      var storage = CloudStorageAccount.Parse(RootCfg.AppStoreCs);
-      var client = new CloudBlobClient(storage.BlobEndpoint, storage.Credentials);
-      var container = client.GetContainerReference(Setup.CfgContainer);
+      // var storage = CloudStorageAccount.Parse(RootCfg.AppStoreCs);
+      var client = new BlobServiceClient(RootCfg.AppStoreCs);
+      var container = client.GetBlobContainerClient(Setup.CfgContainer);
 
-      async Task<CloudBlob> CfgBlob() {
-        var branchBlob = Version.Prerelease.HasValue() ? container.GetBlobReference($"userscrape-{Version.Prerelease}.json") : null;
-        var standardBlob = container.GetBlobReference("userscrape.json");
+      async Task<BlobClient> CfgBlob() {
+        var branchBlob = Version.Prerelease.HasValue() ? container.GetBlobClient($"userscrape-{Version.Prerelease}.json") : null;
+        var standardBlob = container.GetBlobClient("userscrape.json");
         return branchBlob != null && await branchBlob.ExistsAsync() ? branchBlob : standardBlob;
       }
 
       // use branch env cfg if it exists
       var cfgBlob = await CfgBlob();
-      var sas = cfgBlob.GetSharedAccessSignature(new SharedAccessBlobPolicy {
-        SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddDays(2),
-        Permissions = SharedAccessBlobPermissions.Read
-      });
+      var sas = cfgBlob.GenerateSasUri(new(BlobContainerSasPermissions.Read, DateTimeOffset.UtcNow.AddDays(2)));
       var usCfg = (await cfgBlob.LoadAsText()).ParseJObject();
       var cfgAccounts = usCfg.SelectTokens("$.users[*]")
         .Select(t => t.Value<string>("tag")).ToArray();
@@ -105,7 +102,7 @@ namespace YtReader {
     async Task RunTrial(CancellationToken cancel, string trial, (string name, string value)[] env, string[] args,
       IReadOnlyCollection<string> accounts, ILogger log) {
       var fullName = Cfg.Container.FullContainerImageName("latest");
-      
+
       var trialLog = log.ForContext("Trail", trial);
       await Policy.Handle<CommandException>().RetryAsync(Cfg.Retries,
           (e, i) => trialLog.Warning(e, "UserScrape - trial {Trial} failed (attempt {Attempt}/{Attempts}): Error: {Error}",
@@ -130,8 +127,6 @@ namespace YtReader {
         }, cancel);
     }
 
-    const int RetryErrorCode = 13;
-
     class IncompleteTrial {
       public string   trial_id { get; set; }
       public string[] accounts { get; set; }
@@ -140,17 +135,17 @@ namespace YtReader {
     public async Task UpgradeIncompleteTrials(ILogger log) {
       var inCfg = await Store.List("userscrape/run/cfg", allDirectories: true, log).SelectMany()
         .Where(f => f.Path.Extensions.Last() == "json" && f.Modified > new DateTimeOffset(new DateTime(2020, 9, 17), TimeSpan.Zero))
-                      .SelectAwait(async f => await Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip: false))
-                      .ToListAsync();
-      
+        .SelectAwait(async f => await Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip: false))
+        .ToListAsync();
+
       await inCfg.BlockAction(async cfg => {
-          var name = $"userscrape/run/incomplete_trial/{cfg.trial_id}.json";
-          var stream = cfg.ToJsonStream(
-            new JsonSerializerSettings { Formatting = Formatting.None }, 
-            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: false)); // python library balks at BOM encoding by default
-          await Store.Save(name, stream);
-          log.Information("upgraded incomplete trial to {File}", name);
-        });
+        var name = $"userscrape/run/incomplete_trial/{cfg.trial_id}.json";
+        var stream = cfg.ToJsonStream(
+          new() {Formatting = Formatting.None},
+          new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: false)); // python library balks at BOM encoding by default
+        await Store.Save(name, stream);
+        log.Information("upgraded incomplete trial to {File}", name);
+      });
     }
   }
 }

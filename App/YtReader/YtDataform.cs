@@ -56,7 +56,7 @@ namespace YtReader {
       log.Information("Dataform - launching container to update {Db}. dataform {Args}", sfCfg.Db, args);
       const string containerName = "dataform";
       var fullName = Cfg.Container.FullContainerImageName("latest");
-      var dur = await Containers.RunContainer(containerName, fullName, env, new string[] {}, containerName, log, cancel).WithDuration();
+      var dur = await Containers.RunContainer(containerName, fullName, env, log:log, cancel:cancel).WithDuration();
       log.Information("Dataform - container completed in {Duration}", dur.HumanizeShort());
     }
   }

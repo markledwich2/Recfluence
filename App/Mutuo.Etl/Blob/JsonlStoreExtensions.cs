@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -20,8 +21,8 @@ namespace Mutuo.Etl.Blob {
   }
 
   public record OptimiseBatch {
-    public StoreFileMd[]     Files { get; set; }
-    public StringPath Dest  { get; set; }
+    public StoreFileMd[] Files { get; set; }
+    public StringPath    Dest  { get; set; }
   }
 
   public static class JsonlStoreExtensions {
@@ -70,7 +71,8 @@ namespace Mutuo.Etl.Blob {
     ///   data downstream from the stage directory - Default: Mutates the files in the same directory. Downstream operations:
     ///   don't run while processing, and fully reload after this is complete</summary>
     /// <returns>stats about the optimisation, and all new files (optimised or not) based on the timestamp</returns>
-    public static async Task<IReadOnlyCollection<OptimiseBatch>> OptimisePlan(this ISimpleFileStore store, OptimiseCfg cfg, StringPath rootPath, string ts = null, ILogger log = null) {
+    public static async Task<IReadOnlyCollection<OptimiseBatch>> OptimisePlan(this ISimpleFileStore store, OptimiseCfg cfg, StringPath rootPath,
+      string ts = null, ILogger log = null) {
       log?.Debug("Optimise {Path} - reading current files", rootPath);
       var (byDir, duration) = await ToOptimiseByDir(store, rootPath, ts).WithDuration();
       log?.Debug("Optimise {Path} - read {Files} files across {Partitions} partitions in {Duration}",
@@ -87,7 +89,7 @@ namespace Mutuo.Etl.Blob {
       var currentBatch = new List<StoreFileMd>();
       var optimisePlan = new List<StoreFileMd[]>();
 
-      if (toProcess.None()) return new OptimiseBatch[]{};
+      if (toProcess.None()) return new OptimiseBatch[] { };
 
       while (toProcess.Any()) {
         var file = toProcess.Dequeue();
@@ -105,7 +107,8 @@ namespace Mutuo.Etl.Blob {
         var bytes = currentBatch.Sum(f => f.Bytes);
         var nextBytes = bytes + file.Bytes;
         var nextIsFurther = nextBytes - cfg.TargetBytes > cfg.TargetBytes - bytes;
-        return (nextBytes, nextIsFurther);
+        if (!nextBytes.HasValue) throw new InvalidOperationException($"Optimisation requires the file bytes are know. Missing on file {file.Path}");
+        return (nextBytes.Value, nextIsFurther);
       }
 
       void PlanCurrentBatch() {
@@ -114,7 +117,7 @@ namespace Mutuo.Etl.Blob {
         currentBatch.Clear();
       }
 
-      return optimisePlan.Select(p => new OptimiseBatch { Dest = destPath, Files = p}).ToArray();
+      return optimisePlan.Select(p => new OptimiseBatch {Dest = destPath, Files = p}).ToArray();
     }
 
     /// <summary>Join ts (timestamp) contiguous files together until they are > MaxBytes</summary>

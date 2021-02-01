@@ -13,15 +13,15 @@ using YtReader.Store;
 
 namespace YtReader {
   public class YtBackup {
-    readonly YtStores Stores;
+    readonly BlobStores Stores;
 
-    public YtBackup(YtStores stores) => Stores = stores;
+    public YtBackup(BlobStores stores) => Stores = stores;
 
     public async Task Backup(ILogger log) {
       var destPath = StringPath.Relative("db2", DateTime.UtcNow.FileSafeTimestamp());
       log.Information("Backup {Path} - started", destPath);
 
-      var source = Stores.Store(DataStoreType.Db);
+      var source = Stores.Store(DataStoreType.DbStage);
       var dest = Stores.Store(DataStoreType.Backup);
 
 
@@ -29,9 +29,11 @@ namespace YtReader {
         log.Information("not running backup. Normal for pre-release");
         return;
       }
-      var sourceBlob = source.DirectoryRef();
-      var destBlob = dest.DirectoryRef(destPath);
 
+      var sourceContainer = source.LegacyContainer();
+      var desContainer = dest.LegacyContainer();
+      var sourceBlob = sourceContainer.GetDirectoryReference(source.BasePathSansContainer);
+      var destBlob = desContainer.GetDirectoryReference(dest.BasePathSansContainer.Add(destPath));
       await CopyBlobs(destPath, sourceBlob, destBlob, log);
     }
 
@@ -49,7 +51,7 @@ namespace YtReader {
       };
 
       var (res, dur) = await TransferManager.CopyDirectoryAsync(sourceBlob, destBlob,
-        CopyMethod.ServiceSideSyncCopy, new CopyDirectoryOptions {Recursive = true},
+        CopyMethod.ServiceSideSyncCopy, new() {Recursive = true},
         context, CancellationToken.None).WithDuration();
 
       if (res.NumberOfFilesFailed > 0)

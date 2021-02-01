@@ -28,11 +28,9 @@ namespace Mutuo.Etl.Pipe {
           .ToArray<object>();
         var cmd = Command.Run("docker", args, o => o.CancellationToken(cancel)).RedirectTo(Console.Out);
         var res = await cmd.Task;
-        var md = res.Success
-          ? new PipeRunMetadata {
-            Id = id
-          }
-          : new PipeRunMetadata {
+        PipeRunMetadata md = res.Success
+          ? new() { Id = id }
+          : new() {
             Id = id,
             ErrorMessage = await cmd.StandardError.ReadToEndAsync()
           };
@@ -40,15 +38,17 @@ namespace Mutuo.Etl.Pipe {
         return md;
       });
 
-    public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars, string[] args,
+    public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars, string[] args = null, string exe = null,
       string groupName = null, ILogger log = null, CancellationToken cancel = default) {
       groupName ??= containerName;
       var dockerArgs = new[] {"run"}
         .Concat(envVars.SelectMany(e => new[] {"--env", $"{e.name}={e.value}"}))
         .Concat("--rm", "-i", fullImageName)
+        .Concat(exe)
         .Concat(args)
+        .NotNull()
         .ToArray<object>();
-      log?.Debug($"LocalPipeWorker - launching docker: docker {dockerArgs.Join(" ", o => o.ToString())}");
+      log?.Debug($"LocalPipeWorker - launching docker: docker {exe ?? ""} {dockerArgs.Join(" ", o => o.ToString())}");
       var cmd = Command.Run("docker", dockerArgs, o => o.CancellationToken(cancel)).RedirectTo(Console.Out);
       var res = await cmd.Task;
       if (!res.Success) throw new InvalidOperationException($"Container {groupName} failed ({res.ExitCode}): {res.StandardError}");

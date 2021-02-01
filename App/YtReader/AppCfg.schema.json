@@ -11,6 +11,14 @@
         }
       }
     },
+    "BitChuteCfg": {
+      "type": "object",
+      "properties": {
+        "collectParallel": {
+          "type": "integer"
+        }
+      }
+    },
     "BranchEnvCfg": {
       "type": "object",
       "properties": {
@@ -96,7 +104,10 @@
         "targetBytes": {
           "type": "integer"
         },
-        "parallel": {
+        "parallelFiles": {
+          "type": "integer"
+        },
+        "parallelBatches": {
           "type": "integer"
         }
       }
@@ -225,6 +236,9 @@
     "SearchCfg": {
       "type": "object",
       "properties": {
+        "retries": {
+          "type": "integer"
+        },
         "batchSize": {
           "type": "integer"
         },
@@ -256,24 +270,6 @@
         },
         "tennantId": {
           "type": "string"
-        }
-      }
-    },
-    "SheetsCfg": {
-      "type": "object",
-      "properties": {
-        "credJson": {},
-        "mainChannelSheetId": {
-          "type": "string"
-        },
-        "userSheets": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/UserSheetCfg"
-          }
-        },
-        "parallel": {
-          "type": "integer"
         }
       }
     },
@@ -317,6 +313,9 @@
         },
         "defaultSchema": {
           "type": "string"
+        },
+        "minPoolSize": {
+          "type": "integer"
         }
       }
     },
@@ -326,114 +325,22 @@
         "container": {
           "type": "string"
         },
+        "premiumDataStorageCs": {
+          "type": "string"
+        },
         "dataStorageCs": {
-          "type": "string"
-        },
-        "dbPath": {
-          "type": "string"
-        },
-        "resultsPath": {
-          "type": "string"
-        },
-        "privatePath": {
-          "type": "string"
-        },
-        "pipePath": {
-          "type": "string"
-        },
-        "logsPath": {
           "type": "string"
         },
         "backupCs": {
           "type": "string"
-        },
-        "backupRootPath": {
-          "type": "string"
-        },
-        "importPath": {
-          "type": "string"
-        }
-      }
-    },
-    "SyncColCfg": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "ts": {
-          "type": "boolean"
-        },
-        "id": {
-          "type": "boolean"
-        },
-        "typeOverride": {
-          "type": "string"
-        },
-        "null": {
-          "type": "boolean"
-        },
-        "index": {
-          "type": "boolean"
-        },
-        "fullText": {
-          "type": "boolean"
         }
       }
     },
     "SyncDbCfg": {
       "type": "object",
       "properties": {
-        "tables": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SyncTableCfg"
-          }
-        },
-        "defaultTsCol": {
-          "type": "string"
-        },
         "parallel": {
           "type": "integer"
-        }
-      }
-    },
-    "SyncTableCfg": {
-      "type": "object",
-      "properties": {
-        "syncType": {
-          "type": "string",
-          "enum": [
-            "Incremental",
-            "Full"
-          ]
-        },
-        "name": {
-          "type": "string"
-        },
-        "cols": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SyncColCfg"
-          }
-        },
-        "selectedCols": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "manualSchema": {
-          "type": "boolean"
-        },
-        "filter": {
-          "type": "string"
-        },
-        "colStore": {
-          "type": "boolean"
-        },
-        "fullTextCatalog": {
-          "type": "string"
         }
       }
     },
@@ -451,17 +358,9 @@
         },
         "tests": {
           "type": "integer"
-        }
-      }
-    },
-    "UserSheetCfg": {
-      "type": "object",
-      "properties": {
-        "sheetId": {
-          "type": "string"
         },
-        "email": {
-          "type": "string"
+        "retries": {
+          "type": "integer"
         }
       }
     },
@@ -469,6 +368,9 @@
       "type": "object",
       "properties": {
         "stage": {
+          "type": "string"
+        },
+        "private": {
           "type": "string"
         },
         "optimise": {
@@ -484,6 +386,9 @@
           }
         },
         "metadataParallel": {
+          "type": "integer"
+        },
+        "fileMb": {
           "type": "integer"
         }
       }
@@ -502,15 +407,14 @@
     "YtCollectCfg": {
       "type": "object",
       "properties": {
-        "from": {
-          "type": "string",
-          "format": "date-time"
-        },
         "to": {
           "type": "string",
           "format": "date-time"
         },
-        "refreshVideosWithin": {
+        "refreshVideosWithinDaily": {
+          "type": "string"
+        },
+        "refreshVideosWithinNew": {
           "type": "string"
         },
         "refreshRecsWithin": {
@@ -521,9 +425,6 @@
         },
         "refreshRecsMax": {
           "type": "integer"
-        },
-        "refreshAllAfter": {
-          "type": "string"
         },
         "alwaysUseProxy": {
           "type": "boolean"
@@ -549,7 +450,19 @@
         "webParallel": {
           "type": "integer"
         },
+        "captionParallel": {
+          "type": "integer"
+        },
         "chromeAttempts": {
+          "type": "integer"
+        },
+        "chromeUpdateMax": {
+          "type": "integer"
+        },
+        "minChannelSubs": {
+          "type": "integer"
+        },
+        "minChannelViews": {
           "type": "integer"
         }
       }
@@ -603,9 +516,6 @@
     "seq": {
       "$ref": "#/definitions/SeqCfg"
     },
-    "sheets": {
-      "$ref": "#/definitions/SheetsCfg"
-    },
     "proxy": {
       "$ref": "#/definitions/ProxyCfg"
     },
@@ -644,6 +554,9 @@
     },
     "search": {
       "$ref": "#/definitions/SearchCfg"
+    },
+    "bitChute": {
+      "$ref": "#/definitions/BitChuteCfg"
     }
   }
 }

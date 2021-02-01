@@ -65,7 +65,7 @@ namespace YtReader {
   }
 
   public record ChannelUpdatePlan {
-    public Channel    Channel           { get; set; }
+    public Channel           Channel           { get; set; }
     public UpdateChannelType Update            { get; set; }
     public DateTime?         VideosFrom        { get; set; }
     public DateTime?         LastVideoUpdate   { get; set; }
@@ -82,9 +82,9 @@ namespace YtReader {
     readonly ChromeScraper               ChromeScraper;
     readonly YtStore                     DbStore;
 
-    public YtCollector(YtStores stores, AppCfg cfg, SnowflakeConnectionProvider sf, IPipeCtx pipeCtx, WebScraper webScraper, ChromeScraper chromeScraper,
+    public YtCollector(BlobStores stores, AppCfg cfg, SnowflakeConnectionProvider sf, IPipeCtx pipeCtx, WebScraper webScraper, ChromeScraper chromeScraper,
       YtClient api, ILogger log) {
-      DbStore = new (stores.Store(DataStoreType.Db), log);
+      DbStore = new(stores.Store(DataStoreType.DbStage), log);
       Cfg = cfg;
       Sf = sf;
       PipeCtx = pipeCtx;
@@ -224,7 +224,7 @@ from review_filtered r
         .Select(c => c.Channel.ChannelId).ToHashSet();
 
       var channels = existingChannels
-        .Select(c => c with { Update = fullUpdate.Contains(c.Channel.ChannelId) ? Full : Standard })
+        .Select(c => c with {Update = fullUpdate.Contains(c.Channel.ChannelId) ? Full : Standard})
         .Concat(toDiscover).ToArray();
 
       if (!parts.ShouldRun(CollectPart.Channel)) return channels;
@@ -252,7 +252,8 @@ from review_filtered r
       var full = plan.Update == Full;
       var c = channel.JsonClone();
       try {
-        c.Updated = DateTime.Now;
+        c.Platform = Platform.YouTube;
+        c.Updated = DateTime.UtcNow;
         var d = await Api.ChannelData(c.ChannelId, full); // to save quota - full update only when missing features channels
         if (d != null) {
           c.ChannelTitle = d.Title;
@@ -277,7 +278,7 @@ from review_filtered r
       catch (Exception ex) {
         channelLog.Error(ex, "Collect - {Channel} - Error when updating details for channel : {Error}", c.ChannelTitle, ex.Message);
       }
-      return plan with { Channel = c };
+      return plan with {Channel = c};
     }
 
     async Task<ChannelUpdatePlan[]> ChannelsToDiscover(ILoggedConnection<IDbConnection> db, ILogger log) {

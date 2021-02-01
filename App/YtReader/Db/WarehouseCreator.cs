@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Azure.Storage.Blob;
 using Newtonsoft.Json;
 using Serilog;
 using SysExtensions;
@@ -12,6 +11,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
+using static Azure.Storage.Sas.BlobContainerSasPermissions;
 using static YtReader.Db.ScriptMode;
 using static YtReader.BranchState;
 
@@ -22,13 +22,16 @@ namespace YtReader.Db {
     readonly BranchEnvCfg                EnvCfg;
     readonly VersionInfo                 Version;
     readonly SnowflakeConnectionProvider Sf;
+    readonly BlobStores                  Stores;
 
-    public WarehouseCreator(WarehouseCfg whCfg, StorageCfg storageCfg, BranchEnvCfg envCfg, VersionInfo version, SnowflakeConnectionProvider sf) {
+    public WarehouseCreator(WarehouseCfg whCfg, StorageCfg storageCfg, BranchEnvCfg envCfg, VersionInfo version, SnowflakeConnectionProvider sf,
+      BlobStores stores) {
       WhCfg = whCfg;
       StorageCfg = storageCfg;
       EnvCfg = envCfg;
       Version = version;
       Sf = sf;
+      Stores = stores;
     }
 
     static readonly JsonSerializerSettings JCfg = JsonExtensions.DefaultSettings(Formatting.None);
@@ -37,12 +40,11 @@ namespace YtReader.Db {
       var sw = Stopwatch.StartNew();
 
       var schema = Sf.Cfg.Schema;
-      var container = StorageCfg.Container(Version.Version);
-      var sas = container.GetSharedAccessSignature(new SharedAccessBlobPolicy {
-        SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddYears(100),
-        Permissions = SharedAccessBlobPermissions.List | SharedAccessBlobPermissions.Read
-      });
-      var stageUrl = $"azure://{container.Uri.Host}{container.Uri.AbsolutePath}";
+      var store = Stores.Store(DataStoreType.DbStage);
+      var container = store.Container;
+      var sasUri = container.GenerateSasUri(List | Read, DateTimeOffset.UtcNow.AddYears(100));
+      var stageUrl = $"azure://{sasUri.Host}{sasUri.AbsolutePath}";
+      var sasToken = $"?{sasUri.Query}";
 
       using var conn = await Sf.Open(log, "", ""); // connection sans db & schema. If you specify ones that doesn't exist, all queries hang.
 
@@ -52,7 +54,7 @@ namespace YtReader.Db {
         Expires = DateTime.UtcNow.AddDays(2),
         Email = EnvCfg.Email
       }.ToJson(JCfg);
-      if (state.In(Clone, CloneBasic, CloneDb))
+      if (state.In(Clone, CloneDb))
         scripts = new[] {
             new Script("db copy", @$"create or replace database {db} clone {Sf.Cfg.Db} comment='{dbComment}'")
           }
@@ -76,7 +78,7 @@ namespace YtReader.Db {
 
       scripts = scripts
         .Concat(new Script("stage",
-          $"create or replace stage {db}.{schema}.yt_data url='{stageUrl}' credentials=(azure_sas_token='{sas}') file_format=(type=json compression=gzip)",
+          $"create or replace stage {db}.{schema}.yt_data url='{sasUri}' credentials=(azure_sas_token='{sasToken}') file_format=(type=json compression=gzip)",
           $"create or replace file format {db}.{schema}.tsv type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('')",
           $"create or replace file format {db}.{schema}.tsv_header type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('') skip_header=1 field_optionally_enclosed_by ='\"'"
         ));

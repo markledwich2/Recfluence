@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Data;
-using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -9,7 +8,6 @@ using Humanizer;
 using Humanizer.Bytes;
 using Mutuo.Etl.Blob;
 using Serilog;
-using Snowflake.Data.Client;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Text;
@@ -133,8 +131,9 @@ namespace Mutuo.Etl.Db {
         await toLoad.BlockAction(f => Store.Delete(f.Path, log), parallel: 8);
       }
 
-      log.Information("Sync {Table} - copied {Files} files ({Size})", tableCfg.Name, loadedFiles.Count, loadedFiles.Sum(f => f.Bytes).Bytes().Humanize("#,#"));
-      return loadedFiles.Sum(f => f.Bytes).Bytes();
+      log.Information("Sync {Table} - copied {Files} files ({Size})", tableCfg.Name, loadedFiles.Count,
+        loadedFiles.Sum(f => f.Bytes ?? 0).Bytes().Humanize("#,#"));
+      return loadedFiles.Sum(f => f.Bytes ?? 0).Bytes();
     }
 
     async Task CreateTmpTable(TableId tmpTable, TableSchema querySchema) {
@@ -171,7 +170,7 @@ namespace Mutuo.Etl.Db {
 
   public interface ICommonDb {
     public ILoggedConnection<IDbConnection> Conn          { get; }
-    public string                          DefaultSchema { get; }
+    public string                           DefaultSchema { get; }
     string Sql(string name);
   }
 

@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Azure.Storage;
-using Microsoft.Azure.Storage.Blob;
 using Mutuo.Etl.Blob;
 using Semver;
 using Serilog;
@@ -9,59 +7,68 @@ using SysExtensions;
 using SysExtensions.Text;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
+using static YtReader.Store.DataStoreType;
+using static YtReader.Store.StoreTier;
 
 namespace YtReader.Store {
   public enum DataStoreType {
     Pipe,
-    Db,
+    /// <summary>Place where data is stored mirroring the warehouse staging tables. Cold tier.</summary>
+    DbStage,
+    /// <summary>Where data lands while performing operations. Optimised into DB and discarded. Premium tier.</summary>
+    //DbLand,
+    /// <summary>Results for the website and data sharing. Premium tier</summary>
     Results,
+    /// <summary>Data which is not meant to be shared publicly</summary>
     Private,
     Backup,
     Logs,
-    Root
+    Root,
+    RootStandard
+  }
+
+  public enum StoreTier {
+    Standard,
+    Premium,
+    Backup
   }
 
   /// <summary>Access to any of the stores</summary>
-  public class YtStores {
+  public class BlobStores {
     readonly StorageCfg Cfg;
     readonly SemVersion Version;
     readonly ILogger    Log;
 
-    public YtStores(StorageCfg cfg, SemVersion version, ILogger log) {
+    public BlobStores(StorageCfg cfg, SemVersion version, ILogger log) {
       Cfg = cfg;
       Version = version;
       Log = log;
     }
 
-    public AzureBlobFileStore Store(StringPath path) => new(Cfg.DataStorageCs, path, Log);
+    public AzureBlobFileStore Store(StringPath path = null, StoreTier tier = Premium, SemVersion version = null) {
+      var p = new StringPath(Cfg.RootPath(version ?? Version));
+      if (path != null) p = p.Add(path);
+      var store = new AzureBlobFileStore(tier switch {
+        StoreTier.Backup => Cfg.BackupCs,
+        Premium => Cfg.PremiumDataStorageCs,
+        _ => Cfg.DataStorageCs
+      }, p, Log);
+      return store;
+    }
 
     public AzureBlobFileStore Store(DataStoreType type) => type switch {
-      DataStoreType.Backup => Version.Prerelease.HasValue() ? null : new AzureBlobFileStore(Cfg.BackupCs, Cfg.BackupRootPath, Log),
-      _ => new AzureBlobFileStore(Cfg.DataStorageCs, StoragePath(type), Log)
+      DataStoreType.Backup => Store("pipe", StoreTier.Backup),
+      Results => Store("results"),
+      Pipe => Store("pipe"),
+      DbStage => Store("db2"),
+      Private => Store("private"),
+      Logs => Store("logs"),
+      Root => Store(tier: Premium),
+      _ => throw new NotImplementedException($"No store for type '{type}'")
     };
-
-    public StringPath StoragePath(DataStoreType type) {
-      var root = Cfg.RootPath(Version);
-      if (type == DataStoreType.Root) return root;
-      return root + "/" + type switch {
-        DataStoreType.Pipe => Cfg.PipePath,
-        DataStoreType.Db => Cfg.DbPath,
-        DataStoreType.Private => Cfg.PrivatePath,
-        DataStoreType.Results => Cfg.ResultsPath,
-        DataStoreType.Logs => Cfg.LogsPath,
-        _ => throw new NotImplementedException($"StoryType {type} not supported")
-      };
-    }
   }
 
   public static class StoreEx {
-    public static CloudBlobContainer Container(this StorageCfg cfg, SemVersion version) {
-      var storage = CloudStorageAccount.Parse(cfg.DataStorageCs);
-      var client = new CloudBlobClient(storage.BlobEndpoint, storage.Credentials);
-      var container = client.GetContainerReference(cfg.RootPath(version.Prerelease));
-      return container;
-    }
-
     public static string RootPath(this StorageCfg cfg, SemVersion version) => cfg.RootPath(version.Prerelease);
     public static string RootPath(this StorageCfg cfg, string prefix) => prefix.HasValue() ? $"{cfg.Container}-{prefix}" : cfg.Container;
   }
@@ -81,25 +88,17 @@ namespace YtReader.Store {
       Recs = CreateStore<RecStored2>("recs");
       Captions = CreateStore<VideoCaptionStored2>("captions");
       ChannelReviews = CreateStore<UserChannelReview>("channel_reviews", r => r.Email);
-      BcChannels = CreateStore<Channel>("bc_channels");
-      BvVideos = CreateStore<VideoStored2>("bc_videos");
     }
 
     public ISimpleFileStore Store { get; }
 
-    public JsonlStore<Channel>        Channels   { get; }
-    public JsonlStore<UserSearchWithUpdated> Searches   { get; }
-    public JsonlStore<VideoStored2>          Videos     { get; }
-    public JsonlStore<VideoExtraStored2>     VideoExtra { get; }
-    public JsonlStore<RecStored2>            Recs       { get; }
-    public JsonlStore<VideoCaptionStored2>   Captions   { get; }
-
-    public JsonlStore<UserChannelReview> ChannelReviews { get; }
-
-    public JsonlStore<Channel> BcChannels { get; }
-    public JsonlStore<VideoStored2>   BvVideos   { get; set; }
-
-    public IJsonlStore[] AllStores => new IJsonlStore[] {Channels, Searches, Videos, VideoExtra, Recs, Captions};
+    public JsonlStore<Channel>               Channels       { get; }
+    public JsonlStore<UserSearchWithUpdated> Searches       { get; }
+    public JsonlStore<VideoStored2>          Videos         { get; }
+    public JsonlStore<VideoExtraStored2>     VideoExtra     { get; }
+    public JsonlStore<RecStored2>            Recs           { get; }
+    public JsonlStore<VideoCaptionStored2>   Captions       { get; }
+    public JsonlStore<UserChannelReview>     ChannelReviews { get; }
 
     JsonlStore<T> CreateStore<T>(string name, Func<T, string> getPartition = null) where T : IHasUpdated =>
       new(Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);
@@ -113,17 +112,28 @@ namespace YtReader.Store {
   }
 
   public enum ChannelSourceType {
-    YouTubeChannel,
+    YouTubeChannelLink,
     Manual
   }
 
-  public record ChannelSource(ChannelSourceType Type, string SourceId = null, string DestId = null);
+  public record DiscoverSource(ChannelSourceType Type, string SourceId = null, string DestId = null);
 
   public record Channel : WithUpdatedItem {
     public Channel() { }
-    public Channel(string channelId) => ChannelId = channelId;
 
-    public string                ChannelId          { get; set; }
+    public Channel(Platform platform, string sourceId) {
+      Platform = platform;
+      ChannelId = platform.FullId(sourceId);
+      SourceId = sourceId;
+    }
+
+    /// <summary>Unique id across all paltforms. For YouTube this is the vanilla PlatformId, for other platforms this is the
+    ///   <Platform>|<PlatformId></summary>
+    public string ChannelId { get; set; }
+
+    /// <summary>The id in the original platform. Might not be unique across platforms</summary>
+    public string SourceId { get; set; }
+
     public string                ChannelTitle       { get; set; }
     public string                ChannelName        { get; set; }
     public string                MainChannelId      { get; set; }
@@ -138,7 +148,7 @@ namespace YtReader.Store {
     public string                Keywords           { get; set; }
     public ChannelSubscription[] Subscriptions      { get; set; }
 
-    public ChannelSource Source { get; set; }
+    public DiscoverSource DiscoverSource { get; set; }
 
     public Platform Platform { get; set; }
 
@@ -175,9 +185,25 @@ namespace YtReader.Store {
     BitChute
   }
 
+  public static class PlatformEx {
+    public static string FullId(this Platform p, string id) => p switch {
+      Platform.YouTube => id,
+      _ => id == null ? null : $"{p}|{id}"
+    };
+  }
+
   public record VideoStored2 : WithUpdatedItem {
+    public VideoStored2() { }
+
+    public VideoStored2(Platform platform, string sourceId) {
+      Platform = platform;
+      VideoId = platform.FullId(sourceId);
+      SourceId = sourceId;
+    }
+
     public Platform              Platform     { get; set; }
     public string                VideoId      { get; set; }
+    public string                SourceId     { get; set; }
     public string                Title        { get; set; }
     public string                ChannelId    { get; set; }
     public string                ChannelTitle { get; set; }
@@ -194,7 +220,7 @@ namespace YtReader.Store {
   public class VideoThumbnail {
     public static VideoThumbnail FromVideoId(string videoId) {
       var t = new ThumbnailSet(videoId);
-      return new VideoThumbnail {
+      return new() {
         LowResUrl = t.LowResUrl,
         StandardResUrl = t.StandardResUrl,
         HighResUrl = t.HighResUrl,
@@ -234,6 +260,9 @@ namespace YtReader.Store {
   }
 
   public record VideoExtraStored2 : VideoStored2 {
+    public VideoExtraStored2() { }
+    public VideoExtraStored2(Platform platform, string sourceId) : base(platform, sourceId) { }
+
     public bool?                 HasAd        { get; set; }
     public string                Error        { get; set; }
     public string                SubError     { get; set; }

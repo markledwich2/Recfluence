@@ -26,7 +26,7 @@ namespace YtReader.Store {
     readonly SnowflakeConnectionProvider Sf;
     readonly BlobIndex                   BlobIndex;
 
-    public YtIndexResults(YtStores stores, SnowflakeConnectionProvider sf) {
+    public YtIndexResults(BlobStores stores, SnowflakeConnectionProvider sf) {
       Sf = sf;
       BlobIndex = new(stores.Store(DataStoreType.Results));
     }
@@ -215,7 +215,7 @@ order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc");
     #region Recs
 
     static readonly IndexCol[] UsRecCols = {
-      Col("label", writeDistinct: true), 
+      Col("label", writeDistinct: true),
       Col("from_channel_id", writeDistinct: true)
     };
 
@@ -266,11 +266,11 @@ with video_date_accounts as (
 select *
 from sets
 order by {UsRecCols.DbNames().Join(",")}", 200.Kilobytes());
-    
+
     static readonly IndexCol[] VideoSeenCols = {Col("part"), Col("account", writeDistinct: true)};
 
-    static string GetVideoSeen(string table, bool titleInSeen = false) {
-      return $@"
+    static string GetVideoSeen(string table, bool titleInSeen = false) =>
+      $@"
 with s1 as (
   select w.account
        , w.video_id
@@ -291,10 +291,9 @@ select *
       , percent_rank() over (partition by account order by seen_total) percentile
 from s1
 order by {VideoSeenCols.DbNames().Join(",")}, percentile desc";
-    }
 
     WorkCfg UsWatch() => Work(VideoSeenCols, GetVideoSeen("us_watch"), 100.Kilobytes());
-    WorkCfg UsFeed() => Work(VideoSeenCols, GetVideoSeen("us_feed", titleInSeen:true), 100.Kilobytes());
+    WorkCfg UsFeed() => Work(VideoSeenCols, GetVideoSeen("us_feed", titleInSeen: true), 100.Kilobytes());
 
     #endregion
   }

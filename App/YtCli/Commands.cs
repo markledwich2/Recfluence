@@ -59,16 +59,16 @@ namespace YtCli {
 
   [Command("upgrade-partitions")]
   public class UpgradePartitionsCmd : ICommand {
-    readonly YtStores     Stores;
+    readonly BlobStores   Stores;
     readonly ILogger      Log;
     readonly WarehouseCfg Cfg;
-    readonly YtStage      Stage;
+    readonly Stage        Stage;
     readonly IPipeCtx     Ctx;
 
     [CommandOption('d', Description = "| delimited list of dirs that have partitions that are to be removed")]
     public string Dirs { get; set; }
 
-    public UpgradePartitionsCmd(YtStores stores, ILogger log, WarehouseCfg cfg, YtStage stage, IPipeCtx ctx) {
+    public UpgradePartitionsCmd(BlobStores stores, ILogger log, WarehouseCfg cfg, Stage stage, IPipeCtx ctx) {
       Stores = stores;
       Log = log;
       Cfg = cfg;
@@ -79,7 +79,7 @@ namespace YtCli {
     public async ValueTask ExecuteAsync(IConsole console) {
       var includedDirs = Dirs?.UnJoin('|');
       var dirs = new[] {"videos", "recs", "captions"}.Where(d => includedDirs == null || includedDirs.Contains(d));
-      var store = Stores.Store(DataStoreType.Db);
+      var store = Stores.Store(DataStoreType.DbStage);
       foreach (var dir in dirs) {
         Log.Information("upgrade-partitions - {Dir} started", dir);
         var files = await store.Files(dir, allDirectories: true).SelectMany()
@@ -92,7 +92,7 @@ namespace YtCli {
           await store.Optimise(Cfg.Optimise, plan, Log);
         else
           await plan.Process(Ctx,
-            b => Stage.ProcessOptimisePlan(b, store.BasePath, PipeArg.Inject<ILogger>()),
+            b => Stage.ProcessOptimisePlan(b, store, PipeArg.Inject<ILogger>()),
             new() {MaxParallel = 12, MinWorkItems = 1},
             log: Log, cancel: console.GetCancellationToken());
       }
@@ -117,7 +117,7 @@ namespace YtCli {
 
   [Command("stage", Description = "creates/updates the staging data in snowflake from blob storage")]
   public class StageCmd : ICommand {
-    readonly YtStage Stage;
+    readonly Stage   Stage;
     readonly ILogger Log;
     [CommandOption('t', Description = "| delimited list of tables to restrict warehouse update to")]
     public string Tables { get; set; }
@@ -125,7 +125,7 @@ namespace YtCli {
     [CommandOption('f', Description = "if true, will clear and load data")]
     public bool FullLoad { get; set; }
 
-    public StageCmd(YtStage stage, ILogger log) {
+    public StageCmd(Stage stage, ILogger log) {
       Stage = stage;
       Log = log;
     }
@@ -135,11 +135,11 @@ namespace YtCli {
 
   [Command("traffic", Description = "Process source traffic data for comparison")]
   public class TrafficCmd : ICommand {
-    readonly YtStores   Stores;
+    readonly BlobStores Stores;
     readonly WebScraper Scraper;
     readonly ILogger    Log;
 
-    public TrafficCmd(YtStores stores, WebScraper scraper, ILogger log) {
+    public TrafficCmd(BlobStores stores, WebScraper scraper, ILogger log) {
       Stores = stores;
       Scraper = scraper;
       Log = log;
@@ -364,11 +364,31 @@ namespace YtCli {
       args.AddRange("--build-arg", $"SEMVER={Version}", "--build-arg", $"ASSEMBLY_SEMVER={Version.MajorMinorPatch()}", ".");
       await RunShell(shell, Log, "docker", args.ToArray());
 
+
       if (PublishToRegistry)
         foreach (var t in tagVersions)
           await RunShell(shell, Log, "docker", "push", $"{image}:{t}");
 
       Log.Information("Completed building docker image {Image} in {Duration}", image, sw.Elapsed.HumanizeShort());
+    }
+  }
+
+  [Command("parler-load")]
+  public record ParlerLoad(Parler Parler, AzureContainers Az, ContainerCfg ContainerCfg, PipeAppCtx Ctx, SemVersion Version, CliEntry Cli,
+    ILogger Log) : ICommand {
+    
+    [CommandOption('z', IsRequired = false)]
+    public bool RunOnContainer { get;              set; }
+    
+    [CommandOption('s')] public string Sets { get; set; }
+
+    public async ValueTask ExecuteAsync(IConsole console) {
+      Log.Information("Starting commend: {Command}", "parler-load");
+      if (RunOnContainer)
+        await Az.RunContainer("parler", ContainerCfg.FullContainerImageName(Version.PipeTag()), Ctx.EnvironmentVariables,
+          Cli.Args?.Where(a => a != "-z").ToArray(), "./recfluence", log: Log, cancel: console.GetCancellationToken());
+      else
+        await Parler.Load(Sets?.UnJoin('|'));
     }
   }
 }

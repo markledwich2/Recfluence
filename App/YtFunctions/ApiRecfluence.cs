@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Autofac;
@@ -16,13 +13,11 @@ using Microsoft.Extensions.Primitives;
 using Mutuo.Etl.Blob;
 using Nest;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
-using YtReader.Db;
 using YtReader.Search;
 using YtReader.Store;
 
@@ -45,7 +40,7 @@ namespace YtFunctions {
         if (video == null) return new(HttpStatusCode.NotFound) {Content = new StringContent($"video `{videoId}` not found")};
         var channelRes = await es.GetAsync<EsChannel>(video.channel_id);
         var channel = channelRes.Source;
-        if (channel == null) return new HttpResponseMessage(HttpStatusCode.NotFound) {Content = new StringContent($"channel `{video.channel_id}` not found")};
+        if (channel == null) return new(HttpStatusCode.NotFound) {Content = new StringContent($"channel `{video.channel_id}` not found")};
         return new {video, channel}.JsonResponse(JCfg);
       });
 
@@ -98,7 +93,7 @@ namespace YtFunctions {
         // if we have lots of small files, clean them up
         var files = await store.ChannelReviews.Files(review.Email).SelectManyList();
         var optimiseCfg = c.Resolve<WarehouseCfg>().Optimise;
-        if (files.Count(f => f.Bytes.Bytes() < (optimiseCfg.TargetBytes * 0.9).Bytes()) > 10)
+        if (files.Count(f => f.Bytes?.Bytes() < (optimiseCfg.TargetBytes * 0.9).Bytes()) > 10)
           await store.ChannelReviews.Optimise(optimiseCfg, review.Email, log: log);
 
         return new HttpResponseMessage(HttpStatusCode.OK);

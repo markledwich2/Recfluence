@@ -43,31 +43,31 @@ namespace YtReader.BitChute {
     }
 
     public async Task<(Channel channel, IAsyncEnumerable<VideoStored2[]> videos)> ChannelAndVideos(string idOrName, ILogger log) {
-      var chanDoc = await Open(b => b.OpenAsync(Url.AppendPathSegment($"channel/{idOrName}")), log);
+      var chanDoc = await Open(Url.AppendPathSegment($"channel/{idOrName}"), (b, url) => b.OpenAsync(url), log);
       if (chanDoc.StatusCode == HttpStatusCode.NotFound) 
-        return (new(null) {Status = ChannelStatus.NotFound}, null);
+        return (new(Platform.BitChute, idOrName) {Status = ChannelStatus.NotFound}, null);
       chanDoc.StatusCode.EnsureSuccess();
       var csrf = chanDoc.CsrfToken();
       Task<T> Post<T>(string path, object data = null) => 
         FurlAsync(Url.AppendPathSegment(path).WithBcHeaders(chanDoc, csrf), r => r.BcPost(csrf, data)).Then(r => r.ReceiveJson<T>());
       
       var chan = ParseChannel(chanDoc, idOrName);
-      var (subscriberCount, aboutViewCount) = await Post<CountResponse>($"channel/{chan.ChannelId}/counts/");
+      var (subscriberCount, aboutViewCount) = await Post<CountResponse>($"channel/{chan.SourceId}/counts/");
       chan = chan with {
         Subs = subscriberCount,
         ChannelViews = aboutViewCount.ParseBcNumber()
       };
 
       async IAsyncEnumerable<VideoStored2[]> Videos() {
-        var chanVids = GetVideos(chanDoc);
+        var chanVids = GetVideos(chanDoc, chan, log);
         yield return chanVids;
 
         var offset = chanVids.Length;
         while (true) {
-          var (html, success) = await Post<ExtendResponse>($"channel/{chan.ChannelId}/extend/", new {offset});
+          var (html, success) = await Post<ExtendResponse>($"channel/{chan.SourceId}/extend/", new {offset});
           if (!success) break;
           var extendDoc = await GetBrowser().OpenAsync(req => req.Content(html));
-          var videos = GetVideos(extendDoc);
+          var videos = GetVideos(extendDoc, chan, log);
           if (videos.Length <= 0) break;
           offset += videos.Length;
           yield return videos;
@@ -86,19 +86,18 @@ namespace YtReader.BitChute {
       : AngleCfg);
 
     /// <summary>Executes the given function with retries and proxy fallback. Returns documnet in non-transient error states</summary>
-    async Task<IDocument> Open(Func<IBrowsingContext, Task<IDocument>> getDoc, ILogger log) {
+    async Task<IDocument> Open(Url url, Func<IBrowsingContext, Url, Task<IDocument>> getDoc, ILogger log) {
       var browser = GetBrowser();
       var retryTransient = Policy.HandleResult<IDocument>(d => {
         if (!d.StatusCode.IsTransient()) return false;
         log.Debug($"BcWeb angle transient error '{(int) d.StatusCode}'");
         return true;
       }).RetryWithBackoff("BcWeb angle open", 5, d => d.StatusCode.ToString(), log);
-      
 
-      var (doc, ex) = await F(() => retryTransient.ExecuteAsync(() => getDoc(browser))).Try();
+      var (doc, ex) = await F(() => retryTransient.ExecuteAsync(() => getDoc(browser, url))).Try();
       if (doc?.StatusCode.IsTransient() == false) return doc; // if there was a non-transient error, return the doc in that state 
-      UseProxyOrThrow(ex, (int?)doc?.StatusCode); // if we are already using the proxy, throw the error
-      doc = await retryTransient.ExecuteAsync(() => getDoc(browser));
+      UseProxyOrThrow(ex, url, (int?)doc?.StatusCode); // if we are already using the proxy, throw the error
+      doc = await retryTransient.ExecuteAsync(() => getDoc(browser, url));
       doc.StatusCode.EnsureSuccess();
       return doc;
     }
@@ -111,19 +110,19 @@ namespace YtReader.BitChute {
         .RetryWithBackoff("BcWeb flurl transient error", 5, d => d.StatusCode.ToString(), log);
       var (res, ex) = await F(() => retry.ExecuteAsync(GetRes)).Try();
       if (res != null && IsSuccess(res.StatusCode)) return res;
-      UseProxyOrThrow(ex, res?.StatusCode);
+      UseProxyOrThrow(ex, request.Url, res?.StatusCode);
       res = await retry.ExecuteAsync(GetRes);
-      EnsureSuccess(res.StatusCode);
+      EnsureSuccess(res.StatusCode, request.Url.ToString());
       return res;
     }
 
-    void UseProxyOrThrow(Exception ex, int? statusCode) {
+    void UseProxyOrThrow(Exception ex, string url, int? statusCode) {
       if (statusCode != null && !IsTransient(statusCode.Value))
-        EnsureSuccess(statusCode.Value); // throw for non-transient errors
+        EnsureSuccess(statusCode.Value, url); // throw for non-transient errors
 
       if (UseProxy) { // throw if there is an error and we are allready using proxy
         if(ex != null) throw ex;
-        if(statusCode != null) EnsureSuccess(statusCode.Value);
+        if(statusCode != null) EnsureSuccess(statusCode.Value, url);
       }
       
       UseProxy = true;
@@ -134,21 +133,24 @@ namespace YtReader.BitChute {
 
       var profileA = doc.QuerySelector<IHtmlAnchorElement>(".channel-banner .details .name > a");
       var id = doc.QuerySelector<IHtmlLinkElement>("link#canonical")?.Href.AsUri().LocalPath.LastInPath() ?? idOrName;
-      return new() {
-        ChannelId = id,
+      return new(Platform.BitChute, id) {
         ChannelName = id != idOrName ? idOrName : null,
         ChannelTitle = Qs("#channel-title")?.TextContent,
-        Description = Qs("#channel-description").InnerHtml,
+        Description = Qs("#channel-description")?.InnerHtml,
         ProfileId = profileA?.Href.LastInPath(),
         ProfileName = profileA?.TextContent,
         Created = Qs(".channel-about-details > p:first-child")?.TextContent.ParseCreated(),
         LogoUrl = doc.QuerySelector<IHtmlImageElement>("img[alt=\"Channel Image\"]")?.Dataset["src"],
-        Platform = Platform.BitChute,
         Updated = DateTime.UtcNow
       };
     }
 
-    static VideoStored2[] GetVideos(IDocument doc) => doc.Body.QuerySelectorAll(".channel-videos-container").Select(Video).ToArray();
+    static VideoStored2[] GetVideos(IDocument doc, Channel c, ILogger log) {
+      var videos = doc.Body.QuerySelectorAll(".channel-videos-container")
+        .Select(e => Video(e) with {ChannelId = c.ChannelId, ChannelTitle = c.ChannelTitle}).ToArray();
+      log.Debug("BcWeb loaded {Videos} for {Channel}", videos.Length, c.ChannelTitle);
+      return videos;
+    }
 
     static VideoStored2 Video(IElement c) {
       IElement Qs(string s) => c.QuerySelector(s);
@@ -156,7 +158,7 @@ namespace YtReader.BitChute {
       var videoA = c.QuerySelector<IHtmlAnchorElement>(".channel-videos-title .spa");
       return new() {
         Platform = Platform.BitChute,
-        VideoId = videoA?.Href.LastInPath(),
+        VideoId = Platform.BitChute.FullId(videoA?.Href.LastInPath()),
         Title = videoA?.Text,
         UploadDate = c.QuerySelectorAll(".channel-videos-details.text-right")
           .Select(s => s.TextContent.Trim().TryParseDateExact("MMM dd, yyyy"))

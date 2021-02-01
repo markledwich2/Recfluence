@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Humanizer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Serilog;
@@ -26,8 +25,8 @@ namespace Mutuo.Etl.Blob {
 
   /// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl</summary>
   public class JsonlStore<T> : IJsonlStore {
-    readonly        Func<T, string> GetPartition;
-    readonly        Func<T, string> GetTs;
+    readonly Func<T, string> GetPartition;
+    readonly Func<T, string> GetTs;
 
     readonly ILogger          Log;
     readonly int              Parallel;
@@ -103,7 +102,7 @@ namespace Mutuo.Etl.Blob {
   public record StoreFileMd {
     public StoreFileMd() { }
 
-    public StoreFileMd(StringPath path, string ts, DateTime modified, long bytes, string version = null) {
+    public StoreFileMd(StringPath path, string ts, DateTime modified, long? bytes, string version = null) {
       Path = path;
       Ts = ts;
       Modified = modified;
@@ -115,13 +114,13 @@ namespace Mutuo.Etl.Blob {
     public string     Ts       { get; set; }
     public DateTime   Modified { get; set; }
     public string     Version  { get; set; }
-    public long       Bytes    { get; set; }
+    public long?      Bytes    { get; set; }
 
     public static StoreFileMd FromFileItem(FileListItem file) {
       var tokens = file.Path.Name.Split(".");
       var ts = tokens.FirstOrDefault();
       var version = tokens.Length >= 4 ? tokens[1] : null;
-      return new StoreFileMd(file.Path, ts, file.Modified?.UtcDateTime ?? DateTime.MinValue, file.Bytes, version);
+      return new(file.Path, ts, file.Modified?.UtcDateTime ?? DateTime.MinValue, file.Bytes, version);
     }
 
     public static string GetTs(StringPath path) => path.Name.Split(".").FirstOrDefault();

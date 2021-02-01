@@ -24,23 +24,21 @@ namespace YtReader {
   public class WarehouseCfg {
     [Required] public string      Stage              { get; set; } = "yt_data";
     [Required] public string      Private            { get; set; } = "yt_private";
-    [Required] public OptimiseCfg Optimise           { get; set; } = new ();
+    [Required] public OptimiseCfg Optimise           { get; set; } = new();
     [Required] public int         LoadTablesParallel { get; set; } = 4;
     public            string[]    Roles              { get; set; } = {"sysadmin", "recfluence"};
     public            int         MetadataParallel   { get; set; } = 8;
     public            int         FileMb             { get; set; } = 80;
   }
 
-  public class YtStage {
-    readonly YtStores                    Stores;
-    readonly StorageCfg                  StorageCfg;
+  public class Stage {
+    readonly BlobStores                  Stores;
     readonly SnowflakeConnectionProvider Conn;
     readonly WarehouseCfg                Cfg;
     readonly IPipeCtx                    PipeCtx;
 
-    public YtStage(YtStores stores, StorageCfg storageCfg, SnowflakeConnectionProvider conn, WarehouseCfg cfg, IPipeCtx pipeCtx) {
+    public Stage(BlobStores stores, SnowflakeConnectionProvider conn, WarehouseCfg cfg, IPipeCtx pipeCtx) {
       Stores = stores;
-      StorageCfg = storageCfg;
       Conn = conn;
       Cfg = cfg;
       PipeCtx = pipeCtx;
@@ -79,11 +77,10 @@ namespace YtReader {
     }
 
     [Pipe]
-    public async Task<bool> ProcessOptimisePlan(IReadOnlyCollection<OptimiseBatch> plan, string path, ILogger log) {
+    public async Task<bool> ProcessOptimisePlan(IReadOnlyCollection<OptimiseBatch> plan, AzureBlobFileStore store, ILogger log) {
       var runId = ShortGuid.Create(4);
       log = log.ForContext("RunId", runId);
       log.Information("YtStage - starting optimisation plan ({RunId}) first path '{Dest}' out of {TotalBatches}", runId, plan.First().Dest, plan.Count);
-      var store = Stores.Store(path);
       await store.Optimise(Cfg.Optimise, plan, log);
       return true;
     }
@@ -95,8 +92,8 @@ namespace YtReader {
         if (plan.Count < 10) // if the plan is small, run locally, otherwise on many machines
           await store.Optimise(Cfg.Optimise, plan, db.Log);
         else
-          await plan.Process(PipeCtx, b => ProcessOptimisePlan(b, Stores.StoragePath(t.StoreType), Inject<ILogger>())
-            , new() { MaxParallel = 8, MinWorkItems = 1 }, db.Log, cancel);
+          await plan.Process(PipeCtx, b => ProcessOptimisePlan(b, Stores.Store(t.StoreType), Inject<ILogger>())
+            , new() {MaxParallel = 8, MinWorkItems = 1}, db.Log, cancel);
       }
       await db.Execute("truncate table", $"truncate table {table}"); // no transaction, stage tables aren't reported on so don't need to be available
       var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();
@@ -106,13 +103,15 @@ namespace YtReader {
 
     async Task<(string[] files, long rows, ByteSize size)> CopyInto(ILoggedConnection<IDbConnection> db, string table, StageTableCfg t) {
       var startTime = await db.ExecuteScalar<string>("current time", "select current_timestamp()::string");
-      var (stage, path) = t.StoreType switch {
-        DataStoreType.Db => (Cfg.Stage, StorageCfg.DbPath),
-        DataStoreType.Private => (Cfg.Private, null),
+
+      var (stage, store) = t.StoreType switch {
+        DataStoreType.DbStage => (Cfg.Stage, Stores.Store(t.StoreType)),
+        DataStoreType.Private => (Cfg.Private, Stores.Store(t.StoreType)),
         _ => throw new InvalidOperationException($"No warehouse stage for store type {t.StoreType}")
       };
 
-      var sql = $"copy into {table} from @{new[] {stage, path}.Concat(t.Dir.Tokens).NotNull().Join("/")}/ file_format=(type=json)";
+      var sql =
+        $"copy into {table} from @{new string[] {stage, store.BasePathSansContainer}.Concat(t.Dir.Tokens).NotNull().Join("/")}/ file_format=(type=json)";
       await db.Execute("copy into", sql);
 
       // sf should return this info form copy_into (its in their UI, but not in .net or jdbc drivers)
@@ -130,7 +129,7 @@ namespace YtReader {
     public static string DbName(this SnowflakeCfg cfg) => cfg.DbSuffix.HasValue() ? $"{cfg.Db}_{cfg.DbSuffix}" : cfg.Db;
 
     static StageTableCfg UsTable(string name) =>
-      new ($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, tsCol: "updated");
+      new($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, tsCol: "updated");
 
     public static readonly StageTableCfg[] AllTables = {
       UsTable("rec"),
@@ -153,7 +152,7 @@ namespace YtReader {
   }
 
   public class StageTableCfg {
-    public StageTableCfg(string dir, string table, bool isNativeStore = true, string tsCol = null, DataStoreType storeType = DataStoreType.Db) {
+    public StageTableCfg(string dir, string table, bool isNativeStore = true, string tsCol = null, DataStoreType storeType = DataStoreType.DbStage) {
       Dir = dir;
       Table = table;
       IsNativeStore = isNativeStore;

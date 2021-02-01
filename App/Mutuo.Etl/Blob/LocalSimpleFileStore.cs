@@ -46,11 +46,7 @@ namespace Mutuo.Etl.Blob {
       yield return res;
     }
 
-    FileListItem AsListItem(FPath f) =>
-      new FileListItem {
-        Modified = f.LastWriteTime(),
-        Path = new StringPath(f.FullPath).RelativePath(new StringPath(Dir.FullPath))
-      };
+    FileListItem AsListItem(FPath f) => new(new StringPath(f.FullPath).RelativePath(new(Dir.FullPath)), f.LastWriteTime());
 
     public Task<bool> Delete(StringPath path, ILogger log = null) {
       var p = Path(path);

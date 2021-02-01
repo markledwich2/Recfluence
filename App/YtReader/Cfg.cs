@@ -5,10 +5,8 @@ using System.Linq;
 using Humanizer;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
-using Newtonsoft.Json.Linq;
 using Serilog.Events;
 using SysExtensions.Collections;
-using SysExtensions.Configuration;
 using SysExtensions.Security;
 using SysExtensions.Text;
 using YtReader.Db;
@@ -59,7 +57,7 @@ namespace YtReader {
     [Required] public YtUpdaterCfg    Updater               { get; set; } = new();
     [Required] public UserScrapeCfg   UserScrape            { get; set; } = new();
     [Required] public SearchCfg       Search                { get; set; } = new();
-    [Required] public BitChuteCfg     BitChute                { get; set; } = new();
+    [Required] public BitChuteCfg     BitChute              { get; set; } = new();
   }
 
   public record BitChuteCfg(int CollectParallel = 8);
@@ -85,8 +83,8 @@ namespace YtReader {
 
   public class ResultsCfg {
     [Required] public string FileQueryUri { get; set; } = "https://raw.githubusercontent.com/markledwich2/YouTubeNetworks_Dataform/master";
-    
-    [Required] public int    Parallel     { get; set; } = 4;
+
+    [Required] public int Parallel { get; set; } = 4;
   }
 
   public class ProxyCfg {
@@ -106,14 +104,14 @@ namespace YtReader {
 
     public bool IsDirect() => Url.NullOrEmpty();
   }
-  
+
   public class YtCollectCfg {
-    public DateTime? To   { get; set; }
+    public DateTime? To { get; set; }
 
     /// <summary>How old a video before we stop collecting video stats. This is cheap, due to video stats being returned in a
     ///   video's playlist</summary>
     public TimeSpan RefreshVideosWithinDaily { get; set; } = 360.Days();
-    public TimeSpan RefreshVideosWithinNew { get; set; } = (360*10).Days();
+    public TimeSpan RefreshVideosWithinNew { get;   set; } = (360 * 10).Days();
 
     /// <summary>How old a video before we stop collecting recs this is fairly expensive so we keep it within</summary>
     public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
@@ -154,18 +152,11 @@ namespace YtReader {
   }
 
   public class StorageCfg {
-    [Required] public string Container     { get; set; } = "data";
-    [Required] public string DataStorageCs { get; set; }
-    [Required] public string DbPath        { get; set; } = "db2";
-    [Required] public string ResultsPath   { get; set; } = "results";
-    [Required] public string PrivatePath   { get; set; } = "private";
-    [Required] public string PipePath      { get; set; } = "pipe";
-    [Required] public string LogsPath      { get; set; } = "logs";
-    [Required] public string SyncPath      { get; set; } = "sync";
+    [Required] public string Container            { get; set; } = "data";
+    [Required] public string PremiumDataStorageCs { get; set; }
+    [Required] public string DataStorageCs        { get; set; }
 
-    [Required] public string BackupCs       { get; set; }
-    [Required] public string BackupRootPath { get; set; }
-    [Required] public string ImportPath     { get; set; } = "import";
+    [Required] public string BackupCs { get; set; }
   }
 
   public class SeqCfg {

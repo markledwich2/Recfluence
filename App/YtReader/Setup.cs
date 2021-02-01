@@ -25,7 +25,6 @@ using SysExtensions;
 using SysExtensions.Configuration;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
-using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader.BitChute;
@@ -61,9 +60,7 @@ namespace YtReader {
 
       FlurlHttp.Configure(settings => {
         settings.OnError = e => log.Debug(e.Exception, "Furl error: {Error}", e.ToString());
-        settings.AfterCall = e => {
-          log.Verbose("Furl: {Request}", e.HttpRequestMessage);
-        };
+        settings.AfterCall = e => { log.Verbose("Furl: {Request}", e.HttpRequestMessage); };
       });
 
       Log.Logger = log;
@@ -171,7 +168,7 @@ namespace YtReader {
       // override pipe cfg with equivalent global cfg
       appCfg.Pipe.Store = new() {
         Cs = appCfg.Storage.DataStorageCs,
-        Path = appCfg.Storage.PipePath
+        Path = "pipe"
       };
 
       // by default, backup to the app/root storage location
@@ -190,23 +187,24 @@ namespace YtReader {
         EnvironmentVariables = PipeEnv(root, appCfg, version)
       };
 
-    public static ILifetimeScope MainScope(RootCfg rootCfg, AppCfg cfg, PipeAppCtx pipeAppCtx, VersionInfo version, ILogger log) {
-      var scope = new ContainerBuilder().ConfigureScope(rootCfg, cfg, pipeAppCtx, version, log)
+    public static ILifetimeScope MainScope(RootCfg rootCfg, AppCfg cfg, PipeAppCtx pipeAppCtx, VersionInfo version, ILogger log, string[] args = null) {
+      var scope = new ContainerBuilder().ConfigureScope(rootCfg, cfg, pipeAppCtx, version, log, args)
         .Build().BeginLifetimeScope();
       pipeAppCtx.Scope = scope;
       return scope;
     }
-
+    
     public static ContainerBuilder ConfigureScope(this ContainerBuilder b, RootCfg rootCfg, AppCfg cfg, PipeAppCtx pipeAppCtx, VersionInfo version,
-      ILogger log) {
+      ILogger log, string[] args) {
       var containerCfg = cfg.Pipe.Default.Container;
 
       b.Register(_ => version);
       b.Register(_ => version.Version);
       b.Register(_ => log);
+      b.Register(_ => new CliEntry(args));
       b.Register(_ => cfg).SingleInstance();
       b.Register(_ => rootCfg).SingleInstance();
-      b.Register(_ => containerCfg).SingleInstance();
+      b.Register(_ => containerCfg);
       b.Register(_ => cfg.Pipe).SingleInstance();
       b.Register(_ => cfg.Pipe.Azure).SingleInstance();
       b.Register(_ => cfg.Elastic).SingleInstance();
@@ -231,16 +229,16 @@ namespace YtReader {
       b.RegisterType<SnowflakeConnectionProvider>();
       b.Register(_ => cfg.Pipe.Azure.GetAzure());
 
-      b.RegisterType<YtStores>();
+      b.RegisterType<BlobStores>();
       foreach (var storeType in EnumExtensions.Values<DataStoreType>())
-        b.Register(_ => _.Resolve<YtStores>().Store(storeType)).Keyed<ISimpleFileStore>(storeType);
+        b.Register(_ => _.Resolve<BlobStores>().Store(storeType)).Keyed<ISimpleFileStore>(storeType);
 
       b.RegisterType<YtClient>();
       b.Register(_ => new ElasticClient(cfg.Elastic.ElasticConnectionSettings()));
-      b.RegisterType<YtStore>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<YtStore>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
       b.RegisterType<YtResults>().WithKeyedParam(DataStoreType.Results, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<StoreUpgrader>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<YtStage>().WithKeyedParam(DataStoreType.Db, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<StoreUpgrader>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<Stage>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
       b.RegisterType<WebScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
       b.RegisterType<ChromeScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
 
@@ -257,12 +255,12 @@ namespace YtReader {
       b.RegisterType<AzureContainers>();
       b.RegisterType<LocalPipeWorker>();
       b.RegisterType<UserScrape>();
-      b.RegisterType<YtSync>();
       b.RegisterType<YtConvertWatchTimeFiles>();
       b.RegisterType<YtIndexResults>();
       b.RegisterType<BcWeb>();
       b.RegisterType<BcCollect>();
-      
+      b.RegisterType<Parler>();
+
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();
 
@@ -285,4 +283,6 @@ namespace YtReader {
 
     public static bool IsProd(this RootCfg root) => root.Env?.ToLowerInvariant() == "prod";
   }
+
+  public record CliEntry(string[] Args);
 }

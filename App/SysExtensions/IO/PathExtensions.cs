@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using SysExtensions.Fluent.IO;
+using SysExtensions.Text;
 using SystemIO = System.IO;
 
 namespace SysExtensions.IO {
@@ -88,7 +90,7 @@ namespace SysExtensions.IO {
     public static FPath InAppData(this FPath relativePath, string appName) {
       if (relativePath.IsRooted)
         throw new InvalidOperationException("The given path must be relative");
-      
+
       return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData).AsPath().Combine(appName).Combine(relativePath);
     }
 
@@ -100,5 +102,9 @@ namespace SysExtensions.IO {
       => new Uri(type.GetTypeInfo().Assembly.Location).LocalPath.AsPath();
 
     static FPath Directories(this FPath p, string searchPattern) => p.Directories(searchPattern, false);
+
+    public static void ExtractZip(this FPath zipFile, FPath dir) => ZipFile.ExtractToDirectory(zipFile.FullPath, dir.FullPath);
+
+    public static StringPath ToStringPath(this FPath path) => path.IsRooted ? StringPath.Absolute(path.Tokens) : StringPath.Relative(path.Tokens);
   }
 }
