@@ -486,7 +486,7 @@ namespace YtReader.YtWebsite {
       public string   channelId        { get; set; }
       public string   author           { get; set; }
       public string   title            { get; set; }
-      public long     viewCount        { get; set; }
+      public ulong     viewCount        { get; set; }
       public int      lengthSeconds    { get; set; }
       public string   thumbnail        { get; set; }
       public bool?    isLiveContent    { get; set; }
@@ -494,8 +494,8 @@ namespace YtReader.YtWebsite {
     }
 
     class LikesDislikes {
-      public int? likes    { get; set; }
-      public int? dislikes { get; set; }
+      public ulong? likes    { get; set; }
+      public ulong? dislikes { get; set; }
     }
 
     class CompactVideoRenderer {

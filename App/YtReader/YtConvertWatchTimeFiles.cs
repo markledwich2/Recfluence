@@ -9,15 +9,12 @@ using Serilog;
 using SysExtensions.Serialization;
 using SysExtensions.Threading;
 using YtReader.Store;
-using SysExtensions.Text;
 
 namespace YtReader {
   public class YtConvertWatchTimeFiles {
     readonly ISimpleFileStore Store;
-    
-    public YtConvertWatchTimeFiles(YtStores stores) {
-      Store = stores.Store(DataStoreType.Root);
-    }
+
+    public YtConvertWatchTimeFiles(BlobStores stores) => Store = stores.Store(DataStoreType.Root);
 
     public async Task Convert(ILogger log) {
       var files = (await Store.List("import/watch_time").SelectManyList()).Where(f => f.Path.ExtensionsString == "csv");

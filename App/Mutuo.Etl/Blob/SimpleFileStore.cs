@@ -18,19 +18,18 @@ namespace Mutuo.Etl.Blob {
     Task LoadToFile(StringPath path, FPath file, ILogger log = null);
     IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null);
     Task<bool> Delete(StringPath path, ILogger log = null);
-    Task<Stream> OpenForWrite(StringPath path, ILogger log = null);
     Task<FileListItem> Info(StringPath path);
     public Uri Url(StringPath path);
   }
 
   public static class SimpleStoreExtensions {
     public static StringPath AddJsonExtention(this StringPath path, bool zip = true) =>
-      new StringPath(path + (zip ? ".json.gz" : ".json"));
+      new(path + (zip ? ".json.gz" : ".json"));
 
     public static async Task<T> GetOrCreate<T>(this ISimpleFileStore store, StringPath path, Func<T> create = null) where T : class, new() {
       var o = await store.Get<T>(path);
       if (o == null) {
-        o = create == null ? new T() : create();
+        o = create == null ? new() : create();
         await store.Set(path, o);
       }
       return o;
@@ -45,11 +44,11 @@ namespace Mutuo.Etl.Blob {
 
     /// <summary>Serializes item into the object store</summary>
     /// <param name="path">The path to the object (no extensions)</param>
-    public static async Task Set<T>(this ISimpleFileStore store, StringPath path, T item, bool zip = true, ILogger log = default, 
+    public static async Task Set<T>(this ISimpleFileStore store, StringPath path, T item, bool zip = true, ILogger log = default,
       JsonSerializerSettings jCfg = default) {
       await using var memStream = new MemoryStream();
 
-      var serializer =  jCfg != null ? JsonSerializer.Create(jCfg) : JsonExtensions.DefaultSerializer;
+      var serializer = jCfg != null ? JsonSerializer.Create(jCfg) : JsonExtensions.DefaultSerializer;
       if (zip)
         await using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true)) {
           await using var tw = new StreamWriter(zipWriter, Encoding.UTF8);

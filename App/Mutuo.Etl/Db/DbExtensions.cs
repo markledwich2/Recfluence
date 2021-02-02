@@ -19,6 +19,7 @@ namespace Mutuo.Etl.Db {
 
     public static TableSchema Schema(this IDataReader reader) {
       var schemaTable = reader.GetSchemaTable();
+      if (schemaTable == null) return null;
       var colNames = schemaTable.Columns.OfType<DataColumn>().Select(c => c.ColumnName).ToHashSet();
       var cols = schemaTable.Rows.Cast<DataRow>().Select(r => {
         var col = new ColumnSchema();
@@ -28,7 +29,7 @@ namespace Mutuo.Etl.Db {
         return col;
       });
 
-      return new TableSchema {
+      return new() {
         Columns = cols.ToArray()
       };
     }

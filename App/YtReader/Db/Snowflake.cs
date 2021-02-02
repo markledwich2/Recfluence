@@ -26,7 +26,7 @@ namespace YtReader.Db {
 
     public SnowflakeConnectionProvider(SnowflakeCfg cfg) => Cfg = cfg;
 
-    public async Task<ILoggedConnection<SnowflakeDbConnection>> OpenConnection(ILogger log, string db = null, string schema = null, string role = null) {
+    public async Task<ILoggedConnection<SnowflakeDbConnection>> Open(ILogger log, string db = null, string schema = null, string role = null) {
       var conn = Cfg.Connection(db, schema, role);
       await conn.OpenAsync();
       return conn.AsLogged(log);

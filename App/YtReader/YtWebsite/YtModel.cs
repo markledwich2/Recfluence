@@ -63,16 +63,16 @@ namespace YtReader.YtWebsite {
   /// <summary>User activity statistics.</summary>
   public class Statistics {
     /// <summary>View count.</summary>
-    public long ViewCount { get; set; }
+    public ulong? ViewCount { get; set; }
 
     /// <summary>Like count.</summary>
-    public long? LikeCount { get; set; }
+    public ulong? LikeCount { get; set; }
 
     /// <summary>Dislike count.</summary>
-    public long? DislikeCount { get; set; }
+    public ulong? DislikeCount { get; set; }
     
     /// <summary>Initializes an instance of <see cref="Statistics" />.</summary>
-    public Statistics(long viewCount, long? likeCount, long? dislikeCount) {
+    public Statistics(ulong? viewCount, ulong? likeCount = null, ulong? dislikeCount = null) {
       ViewCount = viewCount;
       LikeCount = likeCount;
       DislikeCount = dislikeCount;

@@ -19,6 +19,8 @@ using IMSLogger = Microsoft.Extensions.Logging.ILogger;
 
 #pragma warning disable 618
 
+// ML 29 Jan 2021: Azure Functions does' work with .NEt5, but support is imminent, in the meantime if function need to be update, this must be done from a branch with .net 4 and deployed manually.
+
 namespace YtFunctions {
   public class ApiBackend {
     readonly Defer<FuncCtx, ExecutionContext> Ctx;

@@ -35,21 +35,8 @@ namespace YtReader.YtWebsite {
       Proxy = proxy;
       CollectCfg = collectCfg;
       LogStore = logStore;
-      Clients = new ResourceCycle<HttpClient, ProxyConnectionCfg>(proxy.DirectAndProxies(), p => Task.FromResult(CreateHttpClient(p)));
+      Clients = new(proxy.DirectAndProxies(), p => Task.FromResult(p.CreateHttpClient()));
     }
-
-    HttpClient CreateHttpClient(ProxyConnectionCfg proxy) =>
-      new HttpClient(new HttpClientHandler {
-        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-        UseCookies = false,
-        Proxy = proxy.Url == null
-          ? null
-          : new WebProxy(proxy.Url, BypassOnLocal: true, new string[] { },
-            proxy.Creds != null ? new NetworkCredential(proxy.Creds.Name, proxy.Creds.Secret) : null),
-        UseProxy = proxy.Url != null,
-      }) {
-        Timeout = Proxy.TimeoutSeconds.Seconds()
-      };
 
     async Task<HttpResponseMessage> GetHttp(string url, string desc, ILogger log) {
       log.Debug("WebScraper -  {Desc} {Url}", desc, url);
@@ -231,12 +218,12 @@ namespace YtReader.YtWebsite {
       var author = playlistJson.SelectToken("author")?.Value<string>() ?? ""; // system playlists have no author
       var title = playlistJson.SelectToken("title").Value<string>();
       var description = playlistJson.SelectToken("description")?.Value<string>() ?? "";
-      var viewCount = playlistJson.SelectToken("views")?.Value<long>() ?? 0; // system playlists have no views
-      var likeCount = playlistJson.SelectToken("likes")?.Value<long>() ?? 0; // system playlists have no likes
-      var dislikeCount = playlistJson.SelectToken("dislikes")?.Value<long>() ?? 0; // system playlists have no dislikes
+      var viewCount = playlistJson.SelectToken("views")?.Value<ulong>() ?? 0; // system playlists have no views
+      var likeCount = playlistJson.SelectToken("likes")?.Value<ulong>() ?? 0; // system playlists have no likes
+      var dislikeCount = playlistJson.SelectToken("dislikes")?.Value<ulong>() ?? 0; // system playlists have no dislikes
       var statistics = new Statistics(viewCount, likeCount, dislikeCount);
 
-      return new Playlist(playlistId, author, title, description, statistics, PlaylistVideos(playlistId, playlistJson, log));
+      return new(playlistId, author, title, description, statistics, PlaylistVideos(playlistId, playlistJson, log));
     }
 
     async IAsyncEnumerable<IReadOnlyCollection<VideoItem>> PlaylistVideos(string playlistId, JToken playlistJson, ILogger log) {
@@ -254,9 +241,9 @@ namespace YtReader.YtWebsite {
           var videoTitle = St("title").Value<string>();
           var videoDescription = St("description").Value<string>();
           var videoDuration = TimeSpan.FromSeconds(St("length_seconds").Value<double>());
-          var videoViewCount = St("views").Value<string>().StripNonDigit().ParseLong();
-          var videoLikeCount = St("likes").Value<long>();
-          var videoDislikeCount = St("dislikes").Value<long>();
+          var videoViewCount = St("views").Value<string>().StripNonDigit().ParseULong();
+          var videoLikeCount = St("likes").Value<ulong>();
+          var videoDislikeCount = St("dislikes").Value<ulong>();
           var videoAddedDate = St("added").Value<string>().ParseExact("M/d/yy");
           var videoKeywordsJoined = St("keywords").Value<string>();
           var videoKeywords = Regex.Matches(videoKeywordsJoined, "\"[^\"]+\"|\\S+")
@@ -290,7 +277,7 @@ namespace YtReader.YtWebsite {
     Task<HtmlDocument> GetChannelPageHtmlAsync(string channelId, ILogger log) =>
       GetHtml($"https://www.youtube.com/channel/{channelId}?hl=en", "channel page", log);
 
-    static readonly Regex SubRegex = new Regex("(?'num'\\d+\\.?\\d*)(?'unit'[BMK]?)", RegexOptions.Compiled);
+    static readonly Regex SubRegex = new("(?'num'\\d+\\.?\\d*)(?'unit'[BMK]?)", RegexOptions.Compiled);
 
     public async Task<ChannelExtended> GetChannelAsync(string channelId, ILogger log) {
       if (!ValidateChannelId(channelId))
@@ -301,7 +288,7 @@ namespace YtReader.YtWebsite {
 
       var alertMessage = channelPageHtml.QueryElements("div.yt-alert-message").FirstOrDefault()?.GetInnerText();
       if (alertMessage.HasValue())
-        return new ChannelExtended {Id = channelId, StatusMessage = alertMessage};
+        return new() {Id = channelId, StatusMessage = alertMessage};
 
       // Extract info
       var channelTitle = channelPageHtml.QueryElements("meta[property=\"og:title\"]")
@@ -312,7 +299,7 @@ namespace YtReader.YtWebsite {
 
       var subDesc = channelPageHtml.QueryElements("span.yt-subscription-button-subscriber-count-branded-horizontal.subscribed").FirstOrDefault()
         ?.GetInnerText();
-      return new ChannelExtended {
+      return new() {
         Id = channelId,
         Title = channelTitle,
         LogoUrl = channelLogoUrl,
@@ -400,13 +387,13 @@ namespace YtReader.YtWebsite {
         var badgeLabels =
           ytInitialData?.SelectTokens(
             "contents.twoColumnWatchNextResults.results.results.contents[*].videoPrimaryInfoRenderer.badges[*].metadataBadgeRenderer.label");
-        if(badgeLabels?.Any(b => b.Value<string>() == "Unlisted") == true)
+        if (badgeLabels?.Any(b => b.Value<string>() == "Unlisted") == true)
           extra.Error = "Unlisted";
       }
-      if (extra.Error != null) return new RecsAndExtra(extra, new Rec[] { });
+      if (extra.Error != null) return new(extra, new Rec[] { });
 
       var recs = await GetRecs2(log, html, videoId);
-      return new RecsAndExtra(extra, recs);
+      return new(extra, recs);
     }
 
     public async Task<Rec[]> GetRecs2(ILogger log, HtmlDocument html, string videoId) {
@@ -439,7 +426,7 @@ namespace YtReader.YtWebsite {
       return recs;
     }
 
-    static readonly Regex ClientObjectsRe = new (@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?})\s*;",
+    static readonly Regex ClientObjectsRe = new(@"(window\[""(?<window>\w+)""\]|var\s+(?<var>\w+))\s*=\s*(?<json>{.*?})\s*;",
       RegexOptions.Compiled | RegexOptions.Singleline);
     static readonly Regex ClientObjectCleanRe = new(@"{\w*?};", RegexOptions.Compiled);
 
@@ -481,7 +468,7 @@ namespace YtReader.YtWebsite {
       var captions = GetCaptionTracks(playerResponseJson);
       return captions;
     }
-    
+
     public async Task<VideoItem> GetVideo(string videoId, ILogger log) {
       if (!ValidateVideoId(videoId))
         throw new ArgumentException($"Invalid YouTube video ID [{videoId}].", nameof(videoId));
@@ -512,7 +499,7 @@ namespace YtReader.YtWebsite {
       var videoDuration = TimeSpan.FromSeconds(VideoValue<double>("lengthSeconds"));
       var videoKeywords = responseJson.SelectToken("videoDetails.keywords").NotNull().Values<string>().ToArray();
       var videoDescription = VideoValue<string>("shortDescription");
-      var videoViewCount = VideoValue<long>("viewCount"); // some videos have no views
+      var videoViewCount = VideoValue<ulong>("viewCount"); // some videos have no views
       var channelId = VideoValue<string>("channelId");
       var channelTitle = VideoValue<string>("author");
 
@@ -520,13 +507,13 @@ namespace YtReader.YtWebsite {
 
       var videoLikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-like-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
-      var videoLikeCount = !videoLikeCountRaw.IsNullOrWhiteSpace() ? videoLikeCountRaw.ParseLong() : 0;
+      var videoLikeCount = !videoLikeCountRaw.IsNullOrWhiteSpace() ? videoLikeCountRaw.ParseULong() : 0;
       var videoDislikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-dislike-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
-      var videoDislikeCount = !videoDislikeCountRaw.IsNullOrWhiteSpace() ? videoDislikeCountRaw.ParseLong() : 0;
+      var videoDislikeCount = !videoDislikeCountRaw.IsNullOrWhiteSpace() ? videoDislikeCountRaw.ParseULong() : 0;
 
       var statistics = new Statistics(videoViewCount, videoLikeCount, videoDislikeCount);
-      return new VideoItem(videoId, videoAuthor, videoUploadDate, addedDate: default, videoTitle, videoDescription,
+      return new(videoId, videoAuthor, videoUploadDate, addedDate: default, videoTitle, videoDescription,
         videoDuration, videoKeywords, statistics, channelId, channelTitle);
     }
 
@@ -610,7 +597,7 @@ namespace YtReader.YtWebsite {
         let duration = (double?) captionXml.Attribute("d")
         select new ClosedCaption(text, offset?.Milliseconds(), duration?.Milliseconds());
 
-      return new ClosedCaptionTrack(info, captions.ToList());
+      return new(info, captions.ToList());
     }
 
     async Task<XElement> GetClosedCaptionTrackXmlAsync(string url, ILogger log) {

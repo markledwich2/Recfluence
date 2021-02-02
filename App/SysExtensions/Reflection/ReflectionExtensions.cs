@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -120,5 +122,20 @@ namespace SysExtensions.Reflection {
       dynamic task = loadInStateMethod.Invoke(null, args);
       return (TOut) await task;
     }
+
+    public static object MergeDynamics(object a, object b) {
+      var result = new ExpandoObject();
+      var d = (IDictionary<string, object>) result;
+      foreach (var pair in GetKeyValueMap(a).Concat(GetKeyValueMap(b)))
+        d[pair.Key] = pair.Value;
+      return result;
+    }
+
+    static IDictionary<string, object> GetKeyValueMap(object values) =>
+      values switch {
+        null => new Dictionary<string, object>(),
+        IDictionary<string, object> d => d,
+        _ => TypeDescriptor.GetProperties(values).Cast<PropertyDescriptor>().ToDictionary(p => p.Name, p => p.GetValue(values))
+      };
   }
 }

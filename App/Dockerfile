@@ -2,7 +2,7 @@ ARG SEMVER
 ARG ASSEMBLY_SEMVER
 
 # generic runtime image with chrome
-FROM mcr.microsoft.com/dotnet/core/runtime:latest as run
+FROM mcr.microsoft.com/dotnet/runtime:5.0 as run
 
 # Install latest chrome dev package
 # Note: this installs the necessary libs to make the bundled version of Chromium that Puppeteer
@@ -18,7 +18,7 @@ RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key
 ENV PUPPETEER_EXECUTABLE_PATH "/usr/bin/google-chrome-stable"
 
 #build the YtCli project
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build-env
 
 # restore all csproj frst and docker wil cache this layer nicely
 COPY */*.csproj ./

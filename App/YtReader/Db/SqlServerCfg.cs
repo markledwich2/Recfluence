@@ -18,7 +18,7 @@ namespace YtReader.Db {
 
   public static class MsSqlEx {
     public static async Task<ILoggedConnection<SqlConnection>> OpenConnection(this SqlServerCfg cfg, ILogger log) {
-      var policy = Policy.Handle<SqlException>(e => e.Number == 40143).RetryWithBackoff("connecting to sql server", 3, log);
+      var policy = Policy.Handle<SqlException>(e => e.Number == 40143).RetryBackoff("connecting to sql server", 3, log);
       var conn = cfg.Connection();
       await policy.ExecuteAsync(() => conn.OpenAsync());
       return conn.AsLogged(log);

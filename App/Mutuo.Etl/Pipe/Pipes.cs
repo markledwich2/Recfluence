@@ -80,7 +80,7 @@ namespace Mutuo.Etl.Pipe {
 
     static async Task<(PipeRunMetadata Metadata, TOut OutState)> RunRootPipe<TOut>(this IPipeCtx ctx, string pipeName, PipeArg[] args,
       PipeRunOptions options = null, ILogger log = null, CancellationToken cancel = default) {
-      options ??= new PipeRunOptions();
+      options ??= new();
       log ??= Logger.None;
 
       var runId = PipeRunId.FromName(pipeName);
@@ -253,7 +253,7 @@ namespace Mutuo.Etl.Pipe {
       await ctx.Store.Set(id.OutStatePath(), state, log: log);
 
     static readonly JsonSerializerSettings ArgJCfg = JsonExtensions.DefaultSettings()
-      .ShallowWith(new JsonSerializerSettings {TypeNameHandling = TypeNameHandling.All});
+      .ShallowWith(new() {TypeNameHandling = TypeNameHandling.All});
 
     static async Task SaveInArg(this IPipeCtx ctx, PipeArg[] args, PipeRunId id, ILogger log) {
       var path = $"{id.InArgPath()}.json";
@@ -280,7 +280,7 @@ namespace Mutuo.Etl.Pipe {
       if (pipeCfg == null) return cfg.Default;
 
       var cfgJson = cfg.Default.ToJObject();
-      cfgJson.Merge(pipeCfg.ToJObject(), new JsonMergeSettings {MergeNullValueHandling = MergeNullValueHandling.Ignore});
+      cfgJson.Merge(pipeCfg.ToJObject(), new() {MergeNullValueHandling = MergeNullValueHandling.Ignore});
       var mergedCfg = cfgJson.ToObject<PipeRunCfg>();
       return mergedCfg;
     }
@@ -296,14 +296,14 @@ namespace Mutuo.Etl.Pipe {
       var res = methodCall.Arguments.Select((a, i) => {
         var name = byPosition[i]?.Name;
         var arg = a switch {
-          ConstantExpression c => new PipeArg(name, ArgMode.SerializableValue, c.Value),
+          ConstantExpression c => new(name, ArgMode.SerializableValue, c.Value),
           MethodCallExpression m => IsArgInject(m)
             ? new PipeArg(name, ArgMode.Inject)
             : throw new NotImplementedException("resolving args through methods unsupported"),
-          MemberExpression m => new PipeArg(name, ArgMode.SerializableValue, m.GetValue()),
+          MemberExpression m => new(name, ArgMode.SerializableValue, m.GetValue()),
           // Parameter's are the left side of the lambda (myParam) => myParam.doThing()
-          ParameterExpression p => p.Type.IsEnumerable() ? new PipeArg(name, ArgMode.InRows) : new PipeArg(name, ArgMode.Inject),
-          UnaryExpression u when u.Operand is MemberExpression m => new PipeArg(name, ArgMode.SerializableValue, GetValue(m)),
+          ParameterExpression p => p.Type.IsEnumerable() ? new(name, ArgMode.InRows) : new PipeArg(name, ArgMode.Inject),
+          UnaryExpression u when u.Operand is MemberExpression m => new(name, ArgMode.SerializableValue, GetValue(m)),
           _ => throw new NotImplementedException($"resolving args through expression {a} not supported")
         };
         return arg;

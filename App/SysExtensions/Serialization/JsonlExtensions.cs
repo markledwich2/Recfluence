@@ -51,7 +51,7 @@ namespace SysExtensions.Serialization {
       }
     }
 
-    public static JsonSerializerSettings DefaultSettingsForJs() => new JsonSerializerSettings {
+    public static JsonSerializerSettings DefaultSettingsForJs() => new() {
       NullValueHandling = NullValueHandling.Ignore,
       DefaultValueHandling = DefaultValueHandling.Include,
       Formatting = Formatting.None,

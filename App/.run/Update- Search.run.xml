@@ -1,6 +1,6 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Update- Search" type="DotNetProject" factoryName=".NET Project">
-    <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/netcoreapp3.1/ytnetworks.dll" />
+    <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/netcoreapp3.1/recfluence.dll" />
     <option name="PROGRAM_PARAMETERS" value="index -l Container" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/netcoreapp3.1" />
     <option name="PASS_PARENT_ENVS" value="1" />

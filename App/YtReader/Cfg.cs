@@ -5,10 +5,8 @@ using System.Linq;
 using Humanizer;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
-using Newtonsoft.Json.Linq;
 using Serilog.Events;
 using SysExtensions.Collections;
-using SysExtensions.Configuration;
 using SysExtensions.Security;
 using SysExtensions.Text;
 using YtReader.Db;
@@ -40,26 +38,29 @@ namespace YtReader {
     public            string          AppInsightsKey        { get; set; }
     public            int             DefaultParallel       { get; set; } = 8;
     public            LogEventLevel   LogLevel              { get; set; } = LogEventLevel.Debug;
-    [Required] public BranchEnvCfg    Env                   { get; set; } = new BranchEnvCfg();
-    [Required] public YtCollectCfg    Collect               { get; set; } = new YtCollectCfg();
-    [Required] public StorageCfg      Storage               { get; set; } = new StorageCfg();
-    [Required] public YtApiCfg        YtApi                 { get; set; } = new YtApiCfg();
-    [Required] public HashSet<string> LimitedToSeedChannels { get; set; } = new HashSet<string>();
-    [Required] public SeqCfg          Seq                   { get; set; } = new SeqCfg();
-    [Required] public ProxyCfg        Proxy                 { get; set; } = new ProxyCfg();
-    [Required] public SnowflakeCfg    Snowflake             { get; set; } = new SnowflakeCfg();
-    [Required] public WarehouseCfg    Warehouse             { get; set; } = new WarehouseCfg();
-    [Required] public SqlServerCfg    AppDb                 { get; set; } = new SqlServerCfg();
-    [Required] public ResultsCfg      Results               { get; set; } = new ResultsCfg();
-    [Required] public PipeAppCfg      Pipe                  { get; set; } = new PipeAppCfg();
-    [Required] public DataformCfg     Dataform              { get; set; } = new DataformCfg();
+    [Required] public BranchEnvCfg    Env                   { get; set; } = new();
+    [Required] public YtCollectCfg    Collect               { get; set; } = new();
+    [Required] public StorageCfg      Storage               { get; set; } = new();
+    [Required] public YtApiCfg        YtApi                 { get; set; } = new();
+    [Required] public HashSet<string> LimitedToSeedChannels { get; set; } = new();
+    [Required] public SeqCfg          Seq                   { get; set; } = new();
+    [Required] public ProxyCfg        Proxy                 { get; set; } = new();
+    [Required] public SnowflakeCfg    Snowflake             { get; set; } = new();
+    [Required] public WarehouseCfg    Warehouse             { get; set; } = new();
+    [Required] public SqlServerCfg    AppDb                 { get; set; } = new();
+    [Required] public ResultsCfg      Results               { get; set; } = new();
+    [Required] public PipeAppCfg      Pipe                  { get; set; } = new();
+    [Required] public DataformCfg     Dataform              { get; set; } = new();
     [Required] public ElasticCfg      Elastic               { get; set; }
-    [Required] public SyncDbCfg       SyncDb                { get; set; } = new SyncDbCfg();
-    [Required] public AzureCleanerCfg Cleaner               { get; set; } = new AzureCleanerCfg();
-    [Required] public YtUpdaterCfg    Updater               { get; set; } = new YtUpdaterCfg();
-    [Required] public UserScrapeCfg   UserScrape            { get; set; } = new UserScrapeCfg();
-    [Required] public SearchCfg       Search                { get; set; } = new SearchCfg();
+    [Required] public SyncDbCfg       SyncDb                { get; set; } = new();
+    [Required] public AzureCleanerCfg Cleaner               { get; set; } = new();
+    [Required] public YtUpdaterCfg    Updater               { get; set; } = new();
+    [Required] public UserScrapeCfg   UserScrape            { get; set; } = new();
+    [Required] public SearchCfg       Search                { get; set; } = new();
+    [Required] public BitChuteCfg     BitChute              { get; set; } = new();
   }
+
+  public record BitChuteCfg(int CollectParallel = 8);
 
   public class YtApiCfg {
     [Required] public ICollection<string> Keys { get; set; } = new List<string>();
@@ -82,8 +83,8 @@ namespace YtReader {
 
   public class ResultsCfg {
     [Required] public string FileQueryUri { get; set; } = "https://raw.githubusercontent.com/markledwich2/YouTubeNetworks_Dataform/master";
-    
-    [Required] public int    Parallel     { get; set; } = 4;
+
+    [Required] public int Parallel { get; set; } = 4;
   }
 
   public class ProxyCfg {
@@ -103,14 +104,14 @@ namespace YtReader {
 
     public bool IsDirect() => Url.NullOrEmpty();
   }
-  
+
   public class YtCollectCfg {
-    public DateTime? To   { get; set; }
+    public DateTime? To { get; set; }
 
     /// <summary>How old a video before we stop collecting video stats. This is cheap, due to video stats being returned in a
     ///   video's playlist</summary>
     public TimeSpan RefreshVideosWithinDaily { get; set; } = 360.Days();
-    public TimeSpan RefreshVideosWithinNew { get; set; } = (360*10).Days();
+    public TimeSpan RefreshVideosWithinNew { get;   set; } = (360 * 10).Days();
 
     /// <summary>How old a video before we stop collecting recs this is fairly expensive so we keep it within</summary>
     public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
@@ -151,18 +152,11 @@ namespace YtReader {
   }
 
   public class StorageCfg {
-    [Required] public string Container     { get; set; } = "data";
-    [Required] public string DataStorageCs { get; set; }
-    [Required] public string DbPath        { get; set; } = "db2";
-    [Required] public string ResultsPath   { get; set; } = "results";
-    [Required] public string PrivatePath   { get; set; } = "private";
-    [Required] public string PipePath      { get; set; } = "pipe";
-    [Required] public string LogsPath      { get; set; } = "logs";
-    [Required] public string SyncPath      { get; set; } = "sync";
+    [Required] public string Container            { get; set; } = "data";
+    [Required] public string PremiumDataStorageCs { get; set; }
+    [Required] public string DataStorageCs        { get; set; }
 
-    [Required] public string BackupCs       { get; set; }
-    [Required] public string BackupRootPath { get; set; }
-    [Required] public string ImportPath     { get; set; } = "import";
+    [Required] public string BackupCs { get; set; }
   }
 
   public class SeqCfg {

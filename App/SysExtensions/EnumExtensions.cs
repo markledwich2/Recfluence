@@ -11,11 +11,10 @@ using SysExtensions.Reflection;
 
 namespace SysExtensions {
   public static class EnumExtensions {
-    static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, Enum>> StringToEnumCache =
-      new ConcurrentDictionary<Type, ConcurrentDictionary<string, Enum>>();
+    static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, Enum>> StringToEnumCache = new ();
 
     static readonly ConcurrentDictionary<Type, ConcurrentDictionary<Enum, string>> EnumExplicitNameCache =
-      new ConcurrentDictionary<Type, ConcurrentDictionary<Enum, string>>();
+      new();
 
     public static string EnumExplicitName<T>(this T value) where T : IConvertible {
       var fieldInfo = value.GetType().GetTypeInfo().GetField(value.ToString(CultureInfo.InvariantCulture));
@@ -25,7 +24,7 @@ namespace SysExtensions {
 
     public static string EnumExplicitName(Enum value) {
       var t = value.GetType();
-      var s = EnumExplicitNameCache.GetOrAdd(t, k => new ConcurrentDictionary<Enum, string>())
+      var s = EnumExplicitNameCache.GetOrAdd(t, _ => new())
         .GetOrAdd(value, k => EnumMemberAttribute(value, t)?.Value);
       return s;
     }
@@ -41,12 +40,8 @@ namespace SysExtensions {
     public static string EnumString<T>(this T value) where T : Enum => EnumString(value as Enum);
 
     public static bool TryParseEnum<T>(this string s, out T value) where T : Enum {
-      var enumValue = ParseEnum<T>(s);
-      if (enumValue == null)
-        value = default;
-      else
-        value = enumValue;
-
+      var enumValue = ParseEnum<T>(s, ensureFound:false);
+      value = enumValue ?? default;
       return enumValue != null;
     }
 
@@ -59,7 +54,7 @@ namespace SysExtensions {
       defaultEnumString ??= e => e.ToString();
 
       Enum enumValue;
-      var enumCache = StringToEnumCache.GetOrAdd(t, k => new ConcurrentDictionary<string, Enum>(StringComparer.OrdinalIgnoreCase));
+      var enumCache = StringToEnumCache.GetOrAdd(t, _ => new (StringComparer.OrdinalIgnoreCase));
       var found = enumCache.TryGetValue(s, out enumValue);
 
       // initialize if missing (not just if first cache miss) because there may be different defaultEnumString() functions depending on the context (e.g. serialization settings)

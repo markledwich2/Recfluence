@@ -42,7 +42,7 @@ namespace SysExtensions.Threading {
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallelism, EnsureOrdered = false};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
       var last = new TransformBlock<TLastR, R>(transform, options);
-      withFunc.last.LinkTo(last, new DataflowLinkOptions {PropagateCompletion = true});
+      withFunc.last.LinkTo(last, new() {PropagateCompletion = true});
       return (withFunc.source, withFunc.first, last);
     }
 
@@ -144,7 +144,7 @@ namespace SysExtensions.Threading {
     static TransformBlock<T, R> GetBlock<T, R>(Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) {
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
-      return new TransformBlock<T, R>(func, options);
+      return new(func, options);
     }
 
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
@@ -179,7 +179,7 @@ namespace SysExtensions.Threading {
 
         var elapsed = swProgress.Elapsed;
         if (elapsed > progressPeriod) {
-          progressUpdate?.Invoke(new BulkProgressInfo(newResults.Count, result.Count, elapsed));
+          progressUpdate?.Invoke(new(newResults.Count, result.Count, elapsed));
           swProgress.Restart();
           newResults.Clear();
         }

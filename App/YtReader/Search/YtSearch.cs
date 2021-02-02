@@ -178,7 +178,7 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo,
     };
 
     async Task<ILoggedConnection<SnowflakeDbConnection>> OpenConnection(ILogger log) {
-      var conn = await Db.OpenConnection(log);
+      var conn = await Db.Open(log);
       await conn.SetSessionParams(
         (SfParam.ClientPrefetchThreads, 2),
         (SfParam.Timezone, "GMT"));

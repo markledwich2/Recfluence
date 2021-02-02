@@ -7,8 +7,12 @@ using Serilog;
 namespace Mutuo.Etl.Pipe {
   public interface IContainerLauncher {
     /// <summary>Runs the given container untill completion</summary>
-    Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars,
-      string[] args, string groupName = null, ILogger log = null, CancellationToken cancel = default);
+    Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars, 
+      string[] args = null,
+      string exe = null,
+      string groupName = null,
+      ILogger log = null,
+      CancellationToken cancel = default);
   }
 
   public class ContainerLauncher : IContainerLauncher {
@@ -20,7 +24,9 @@ namespace Mutuo.Etl.Pipe {
       Ctx = ctx;
     }
 
-    public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars, string[] args,
+    public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars, 
+      string[] args = null,
+      string exe = null,
       string groupName = null,
       ILogger log = null,
       CancellationToken cancel = default) {
@@ -28,7 +34,7 @@ namespace Mutuo.Etl.Pipe {
         PipeRunLocation.Container => Ctx.Scope.Resolve<AzureContainers>(),
         _ =>  Ctx.Scope.Resolve<LocalPipeWorker>()
       };
-      await launcher.RunContainer(containerName, fullImageName, envVars, args, groupName, log, cancel);
+      await launcher.RunContainer(containerName, fullImageName, envVars, args, exe, groupName, log, cancel);
     }
   }
 }

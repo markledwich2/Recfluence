@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Autofac;
@@ -16,13 +13,11 @@ using Microsoft.Extensions.Primitives;
 using Mutuo.Etl.Blob;
 using Nest;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
-using YtReader.Db;
 using YtReader.Search;
 using YtReader.Store;
 
@@ -30,7 +25,7 @@ namespace YtFunctions {
   public class ApiRecfluence {
     /// <summary>Use the Json.net defaults because we want to keep original name casings so that we aren't re-casing the db in
     ///   different formats</summary>
-    static readonly JsonSerializerSettings JCfg = new JsonSerializerSettings {Formatting = Formatting.None};
+    static readonly JsonSerializerSettings JCfg = new() {Formatting = Formatting.None};
     readonly Defer<FuncCtx, ExecutionContext> Ctx;
 
     public ApiRecfluence(Defer<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
@@ -42,10 +37,10 @@ namespace YtFunctions {
         var es = c.Scope.Resolve<ElasticClient>();
         var videoRes = await es.GetAsync<EsVideo>(videoId);
         var video = videoRes?.Source;
-        if (video == null) return new HttpResponseMessage(HttpStatusCode.NotFound) {Content = new StringContent($"video `{videoId}` not found")};
+        if (video == null) return new(HttpStatusCode.NotFound) {Content = new StringContent($"video `{videoId}` not found")};
         var channelRes = await es.GetAsync<EsChannel>(video.channel_id);
         var channel = channelRes.Source;
-        if (channel == null) return new HttpResponseMessage(HttpStatusCode.NotFound) {Content = new StringContent($"channel `{video.channel_id}` not found")};
+        if (channel == null) return new(HttpStatusCode.NotFound) {Content = new StringContent($"channel `{video.channel_id}` not found")};
         return new {video, channel}.JsonResponse(JCfg);
       });
 
@@ -89,7 +84,7 @@ namespace YtFunctions {
       await Ctx.Run(exec, async c => {
         var review = req.Body.ToObject<UserChannelReview>(JsSerializer);
         if (review.Email.NullOrEmpty())
-          return new HttpResponseMessage(HttpStatusCode.BadRequest) {Content = new StringContent("email must be provided")};
+          return new(HttpStatusCode.BadRequest) {Content = new StringContent("email must be provided")};
         review.Updated = DateTime.UtcNow;
         var log = c.Resolve<ILogger>();
         var store = c.Scope.Resolve<YtStore>();
@@ -98,7 +93,7 @@ namespace YtFunctions {
         // if we have lots of small files, clean them up
         var files = await store.ChannelReviews.Files(review.Email).SelectManyList();
         var optimiseCfg = c.Resolve<WarehouseCfg>().Optimise;
-        if (files.Count(f => f.Bytes.Bytes() < (optimiseCfg.TargetBytes * 0.9).Bytes()) > 10)
+        if (files.Count(f => f.Bytes?.Bytes() < (optimiseCfg.TargetBytes * 0.9).Bytes()) > 10)
           await store.ChannelReviews.Optimise(optimiseCfg, review.Email, log: log);
 
         return new HttpResponseMessage(HttpStatusCode.OK);
@@ -115,7 +110,7 @@ namespace YtFunctions {
         var json = reviews.SerializeToJToken(JsonlExtensions.DefaultSettingsForJs())
           .ToCamelCaseJToken().ToString(Formatting.None);
 
-        return new HttpResponseMessage(HttpStatusCode.OK) {
+        return new(HttpStatusCode.OK) {
           Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
       });
@@ -123,7 +118,7 @@ namespace YtFunctions {
     static (string email, HttpResponseMessage response) EmailOrResponse(HttpRequest req) {
       var email = req.Query["email"];
       if (email == StringValues.Empty)
-        return (null, new HttpResponseMessage(HttpStatusCode.Unauthorized) {Content = new StringContent("email must be provided")});
+        return (null, new(HttpStatusCode.Unauthorized) {Content = new StringContent("email must be provided")});
       return (email, null);
     }
   }
@@ -134,12 +129,12 @@ namespace YtFunctions {
 
   public static class HttpResponseEx {
     public static HttpResponseMessage ErrorResponse(this object o, JsonSerializerSettings settings = null) =>
-      new HttpResponseMessage(HttpStatusCode.OK) {
+      new(HttpStatusCode.OK) {
         Content = new StringContent(o.ToJson(settings), Encoding.UTF8, "application/json")
       };
 
     public static HttpResponseMessage JsonResponse(this object o, JsonSerializerSettings settings = null) =>
-      new HttpResponseMessage(HttpStatusCode.OK) {
+      new(HttpStatusCode.OK) {
         Content = new StringContent(o.ToJson(settings), Encoding.UTF8, "application/json")
       };
   }

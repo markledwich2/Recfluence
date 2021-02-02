@@ -12,7 +12,15 @@ az container create --name update-manual --image ytnetworks.azurecr.io/recfluenc
     --registry-username ytnetworks  --registry-password $registryPass \
     --restart-policy Never
 
-az container delete --name update-manual
+az container delete --name parler
+
+
+#parler 
+az container create --name parler --image ytnetworks.azurecr.io/recfluence:0.5.8-ml --cpu 2 --memory 4 \
+    --command-line "parler-load" \
+    --environment-variables env=dev appStoreCs=$cs branchEnv=ml \
+    --registry-username ytnetworks  --registry-password $registryPass \
+    --restart-policy Never
 
 # userscrape
 
@@ -25,8 +33,3 @@ az container create --name userscrape-manual3 --image ytnetworks.azurecr.io/user
     --restart-policy Never
 
 
-#dataform
-
-az 
-
-{ "host":"ql98184.west-us-2.azure.snowflakecomputing.com", "warehouse":"yt", "db": "yt", "schema":"public", "creds":"recfluence:", "role":"recfluence" }
