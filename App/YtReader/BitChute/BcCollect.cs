@@ -50,11 +50,15 @@ namespace YtReader.BitChute {
       {
         using var db = await Sf.Open(log);
         var existing = await db.Query<string>(@"get channels", @$"
-select v
-from channel_stage
-{(explicitChannels?.Any() == true ? $"where ChannelId in ({explicitChannels.Join(",", c => $"'{Platform.BitChute.FullId(c)}'")})" : "")}
-where v:Platform = 'BitChute'
-qualify row_number() over (partition by v:ChannelId order by v:Update::timestamp_ntz desc) = 1
+with s as (
+  select v
+  from channel_stage
+  where v:Platform = 'BitChute'
+  {(explicitChannels?.Any() == true ? $"and v:ChannelId in ({explicitChannels.Join(",", c => $"'{Platform.BitChute.FullId(c)}'")})" : "")}
+    qualify row_number() over (partition by v:ChannelId order by v:Updated::timestamp_ntz desc)=1
+)
+select v from s
+where v:SourceId is not null and v:Status <> 'NotFound'
 ");
 
         ToUpdate("existing", existing.Select(e => e.ToObject<Channel>(Db.Channels.JCfg)).ToArray());
