@@ -45,7 +45,7 @@ namespace YtReader.BitChute {
     public async Task<(Channel channel, IAsyncEnumerable<VideoStored2[]> videos)> ChannelAndVideos(string idOrName, ILogger log) {
       var chanDoc = await Open(Url.AppendPathSegment($"channel/{idOrName}"), (b, url) => b.OpenAsync(url), log);
       if (chanDoc.StatusCode == HttpStatusCode.NotFound) 
-        return (new(Platform.BitChute, idOrName) {Status = ChannelStatus.NotFound}, null);
+        return (new(Platform.BitChute, idOrName) {Status = ChannelStatus.NotFound, Updated = DateTime.UtcNow}, null);
       chanDoc.StatusCode.EnsureSuccess();
       var csrf = chanDoc.CsrfToken();
       Task<T> Post<T>(string path, object data = null) => 
