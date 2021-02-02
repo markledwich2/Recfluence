@@ -260,6 +260,7 @@ namespace YtReader {
       b.RegisterType<BcWeb>();
       b.RegisterType<BcCollect>();
       b.RegisterType<Parler>();
+      b.RegisterType<YtContainerRunner>();
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();
