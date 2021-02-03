@@ -8,6 +8,7 @@ using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
 using YtReader.BitChute;
+using YtReader.Rumble;
 using YtReader.Search;
 using YtReader.Store;
 
@@ -33,7 +34,7 @@ namespace YtReader {
     public CollectPart[]                      Parts                  { get; set; }
     public string                             CollectVideosPath      { get; set; }
     public bool                               DataformDeps           { get; set; }
-    public BcCollectPart[]                    BcParts                { get; set; }
+    public StandardCollectPart[]              StandardParts          { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -52,9 +53,12 @@ namespace YtReader {
     readonly UserScrape     _userScrape;
     readonly YtIndexResults _index;
     readonly BcCollect      _bcCollect;
+    readonly RumbleCollect  _rumbleCollect;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, Stage warehouse, YtSearch search,
-      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtIndexResults index, BcCollect bcCollect) {
+      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtIndexResults index, BcCollect bcCollect,
+      RumbleCollect rumbleCollect) {
+      _rumbleCollect = rumbleCollect;
       _bcCollect = bcCollect;
       Cfg = cfg;
       _updated = Guid.NewGuid().ToShortString(6);
@@ -72,8 +76,11 @@ namespace YtReader {
     Task Collect(string[] channels, CollectPart[] parts, string collectVideoPath, ILogger logger, CancellationToken cancel) =>
       _collector.Collect(logger, channels, parts, collectVideoPath, cancel);
 
-    Task BcCollect(string[] channels, BcCollectPart[] parts, ILogger logger, CancellationToken cancel) =>
+    Task BcCollect(string[] channels, StandardCollectPart[] parts, ILogger logger, CancellationToken cancel) =>
       _bcCollect.Collect(channels, parts, logger, cancel);
+
+    Task RumbleCollect(string[] channels, StandardCollectPart[] parts, ILogger logger, CancellationToken cancel) =>
+      _rumbleCollect.Collect(channels, parts, logger, cancel);
 
     [GraphTask(nameof(Collect), nameof(BcCollect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
@@ -113,7 +120,8 @@ namespace YtReader {
 
       var actionMethods = TaskGraph.FromMethods(
         (l, c) => Collect(options.Channels, options.Parts, options.CollectVideosPath, l, c),
-        (l, c) => BcCollect(options.Channels, options.BcParts, l, c),
+        (l, c) => BcCollect(options.Channels, options.StandardParts, l, c),
+        (l, c) => RumbleCollect(options.Channels, options.StandardParts, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),
         (l, c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),

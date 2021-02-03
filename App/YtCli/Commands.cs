@@ -265,7 +265,7 @@ namespace YtCli {
           Actions = Actions?.UnJoin('|'),
           Channels = Channels?.UnJoin('|'),
           Parts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<CollectPart>(out _)).Select(p => p.ParseEnum<CollectPart>()).ToArray(),
-          BcParts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<BcCollectPart>(out _)).Select(p => p.ParseEnum<BcCollectPart>()).ToArray(),
+          StandardParts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<StandardCollectPart>(out _)).Select(p => p.ParseEnum<StandardCollectPart>()).ToArray(),
           Tables = Tables?.UnJoin('|'),
           StageTables = StageTables?.UnJoin('|'),
           Results = Results?.UnJoin('|'),

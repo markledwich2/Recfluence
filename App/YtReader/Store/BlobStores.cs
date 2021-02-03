@@ -121,10 +121,10 @@ namespace YtReader.Store {
   public record Channel : WithUpdatedItem {
     public Channel() { }
 
-    public Channel(Platform platform, string sourceId) {
+    public Channel(Platform platform, string channelId) {
       Platform = platform;
-      ChannelId = platform.FullId(sourceId);
-      SourceId = sourceId;
+      ChannelId = channelId;
+      SourceId = channelId;
     }
 
     /// <summary>Unique id across all paltforms. For YouTube this is the vanilla PlatformId, for other platforms this is the
@@ -182,7 +182,8 @@ namespace YtReader.Store {
 
   public enum Platform {
     YouTube,
-    BitChute
+    BitChute,
+    Rumble
   }
 
   public static class PlatformEx {
@@ -214,6 +215,7 @@ namespace YtReader.Store {
     public IReadOnlyList<string> Keywords     { get; set; } = new List<string>();
     public Statistics            Statistics   { get; set; }
     public string                Thumb        { get; set; }
+    public decimal?              Earned       { get; set; }
     public override string ToString() => $"{Title}";
   }
 

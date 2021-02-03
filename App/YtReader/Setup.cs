@@ -29,6 +29,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader.BitChute;
 using YtReader.Db;
+using YtReader.Rumble;
 using YtReader.Search;
 using YtReader.Store;
 using YtReader.YtApi;
@@ -225,6 +226,7 @@ namespace YtReader {
       b.Register(_ => cfg.SyncDb).SingleInstance();
       b.Register(_ => cfg.AppDb).SingleInstance();
       b.Register(_ => cfg.BitChute).SingleInstance();
+      b.Register(_ => cfg.Rumble).SingleInstance();
 
       b.RegisterType<SnowflakeConnectionProvider>();
       b.Register(_ => cfg.Pipe.Azure.GetAzure());
@@ -261,6 +263,9 @@ namespace YtReader {
       b.RegisterType<BcCollect>();
       b.RegisterType<Parler>();
       b.RegisterType<YtContainerRunner>();
+      b.RegisterType<RumbleWeb>();
+      b.RegisterType<RumbleCollect>();
+      
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();

@@ -36,11 +36,12 @@ namespace YtFunctions {
 
     [FunctionName("Version")]
     public Task<IActionResult> Version([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]
-      HttpRequest req, ExecutionContext exec) => Ctx.Run(exec, c => {
+      HttpRequest req, ExecutionContext exec) => Ctx.Run(exec, async c => {
+      var discoverVersion = await GitVersionInfo.DiscoverVersion(typeof(YtCollector));
       var versionText = @$"Version: 
 Runtime ${GitVersionInfo.RuntimeSemVer(typeof(YtCollector))}
-Discovered ${GitVersionInfo.DiscoverVersion(typeof(YtCollector))}";
-      return Task.FromResult((IActionResult) new OkObjectResult(versionText));
+Discovered ${discoverVersion}";
+      return (IActionResult) new OkObjectResult(versionText);
     });
 
     [FunctionName("Update_Timer")]

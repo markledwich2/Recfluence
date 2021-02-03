@@ -36,7 +36,7 @@ namespace SysExtensions.Collections {
         }
     }
 
-    public static bool HasItems<T>(this ICollection<T> list) => list != null && list.Count > 0;
+    public static bool HasItems<T>(this IReadOnlyCollection<T> list) => list != null && list.Count > 0;
 
     public static void Init<T>(this ICollection<T> list, params T[] items) {
       list.Clear();

@@ -21,6 +21,16 @@ namespace Mutuo.Etl.Blob {
     Task<StoreFileMd> LatestFile(StringPath path = null);
 
     IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false);
+    
+    
+    public static readonly JsonSerializerSettings JCfg = new() {
+      NullValueHandling = NullValueHandling.Ignore,
+      DefaultValueHandling = DefaultValueHandling.Include,
+      Formatting = Formatting.None,
+      Converters = {
+        new StringEnumConverter()
+      }
+    };
   }
 
   /// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl</summary>
@@ -65,14 +75,7 @@ namespace Mutuo.Etl.Blob {
     public IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false) =>
       Store.Files(FilePath(path), allDirectories);
 
-    public readonly JsonSerializerSettings JCfg = new() {
-      NullValueHandling = NullValueHandling.Ignore,
-      DefaultValueHandling = DefaultValueHandling.Include,
-      Formatting = Formatting.None,
-      Converters = {
-        new StringEnumConverter()
-      }
-    };
+
 
     public Task Append(T item, ILogger log = null) => Append(item.InArray(), log);
 
@@ -82,7 +85,7 @@ namespace Mutuo.Etl.Blob {
       await items.GroupBy(Partition).BlockAction(async g => {
         var ts = g.Max(GetTs);
         var path = JsonlStoreExtensions.FilePath(FilePath(g.Key), ts, Version);
-        using var memStream = await g.ToJsonlGzStream(JCfg);
+        using var memStream = await g.ToJsonlGzStream(IJsonlStore.JCfg);
         await Store.Save(path, memStream, log).WithDuration();
       }, Parallel);
     }
@@ -95,7 +98,7 @@ namespace Mutuo.Etl.Blob {
 
     async Task<IReadOnlyCollection<T>> LoadJsonl(StringPath path) {
       await using var stream = await Store.Load(path);
-      return stream.LoadJsonlGz<T>(JCfg);
+      return stream.LoadJsonlGz<T>(IJsonlStore.JCfg);
     }
   }
 

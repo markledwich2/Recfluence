@@ -201,7 +201,7 @@ from review_filtered r
        left join channel_latest l on v:ChannelId=l.channel_id
 "))
           .Select(r => new ChannelUpdatePlan {
-            Channel = r.j.ToObject<Channel>(DbStore.Channels.JCfg),
+            Channel = r.j.ToObject<Channel>(IJsonlStore.JCfg),
             VideosFrom = r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : (DateTime?) null,
             LastVideoUpdate = r.lastVideoUpdate,
             LastCaptionUpdate = r.lastCaptionUpdate,

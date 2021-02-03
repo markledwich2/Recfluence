@@ -13,5 +13,6 @@ namespace SysExtensions {
     public static DateTime Epoc { get; } = new DateTime(1970, 1, 1);
     
     public static TimeSpan? TryParseTimeSpan(this string s) => TimeSpan.TryParse(s, CultureInfo.InvariantCulture, out var d) ? d : null;
+    public static TimeSpan? TryParseTimeSpanExact(this string s, params string[] formats) => TimeSpan.TryParseExact(s, formats, CultureInfo.InvariantCulture, out var d) ? d : null;
   }
 }

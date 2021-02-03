@@ -131,16 +131,16 @@ namespace YtReader.BitChute {
     static Channel ParseChannel(IDocument doc, string idOrName) {
       IElement Qs(string s) => doc.Body.QuerySelector(s);
 
-      var profileA = doc.QuerySelector<IHtmlAnchorElement>(".channel-banner .details .name > a");
-      var id = doc.QuerySelector<IHtmlLinkElement>("link#canonical")?.Href.AsUri().LocalPath.LastInPath() ?? idOrName;
-      return new(Platform.BitChute, id) {
+      var profileA = doc.Qs<IHtmlAnchorElement>(".channel-banner .details .name > a");
+      var id = doc.Qs<IHtmlLinkElement>("link#canonical")?.Href.AsUri().LocalPath.LastInPath() ?? idOrName;
+      return BcCollect.NewChan(id) with {
         ChannelName = id != idOrName ? idOrName : null,
         ChannelTitle = Qs("#channel-title")?.TextContent,
         Description = Qs("#channel-description")?.InnerHtml,
         ProfileId = profileA?.Href.LastInPath(),
         ProfileName = profileA?.TextContent,
         Created = Qs(".channel-about-details > p:first-child")?.TextContent.ParseCreated(),
-        LogoUrl = doc.QuerySelector<IHtmlImageElement>("img[alt=\"Channel Image\"]")?.Dataset["src"],
+        LogoUrl = doc.Qs<IHtmlImageElement>("img[alt=\"Channel Image\"]")?.Dataset["src"],
         Updated = DateTime.UtcNow
       };
     }
@@ -155,18 +155,20 @@ namespace YtReader.BitChute {
     static VideoStored2 Video(IElement c) {
       IElement Qs(string s) => c.QuerySelector(s);
 
-      var videoA = c.QuerySelector<IHtmlAnchorElement>(".channel-videos-title .spa");
+      var videoA = c.Qs<IHtmlAnchorElement>(".channel-videos-title .spa");
+      var videoId = videoA?.Href.LastInPath();
       return new() {
         Platform = Platform.BitChute,
-        VideoId = Platform.BitChute.FullId(videoA?.Href.LastInPath()),
+        VideoId = Platform.BitChute.FullId(videoId),
+        SourceId = videoId,
         Title = videoA?.Text,
         UploadDate = c.QuerySelectorAll(".channel-videos-details.text-right")
           .Select(s => s.TextContent.Trim().TryParseDateExact("MMM dd, yyyy"))
           .NotNull().FirstOrDefault(),
         Description = Qs(".channel-videos-text")?.InnerHtml,
         Duration = Qs(".video-duration")?.TextContent.TryParseTimeSpan(),
-        Statistics = new(Qs(".video-views")?.TextContent.Trim().ParseBcNumber()),
-        Thumb = c.QuerySelector<IHtmlImageElement>("img[alt=\"video image\"]")?.Dataset["src"],
+        Statistics = new(Qs(".video-views")?.TextContent.Trim().TryParseNumberWithUnits()?.RoundToULong()),
+        Thumb = c.Qs<IHtmlImageElement>("img[alt=\"video image\"]")?.Dataset["src"],
         Updated = DateTime.UtcNow
       };
     }

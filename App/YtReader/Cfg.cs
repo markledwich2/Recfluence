@@ -58,7 +58,10 @@ namespace YtReader {
     [Required] public UserScrapeCfg   UserScrape            { get; set; } = new();
     [Required] public SearchCfg       Search                { get; set; } = new();
     [Required] public BitChuteCfg     BitChute              { get; set; } = new();
+    [Required] public RumbleCfg       Rumble              { get; set; } = new();
   }
+  
+  public record RumbleCfg(int CollectParallel = 8);
 
   public record BitChuteCfg(int CollectParallel = 8);
 

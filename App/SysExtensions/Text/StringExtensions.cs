@@ -125,6 +125,9 @@ namespace SysExtensions.Text {
     
     public static double? TryParseDouble(this string s, NumberStyles style = NumberStyles.Any) => 
       double.TryParse(s, style, NumberFormatInfo.InvariantInfo, out var d) ? d : null;
+    
+    public static decimal? TryParseDecimal(this string s, NumberStyles style = NumberStyles.Any) => 
+      decimal.TryParse(s, style, NumberFormatInfo.InvariantInfo, out var d) ? d : null;
 
     public static DateTimeOffset ParseDateTimeOffset(this string s, string format) =>
       DateTimeOffset.ParseExact(s, format, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal);

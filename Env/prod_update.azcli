@@ -7,20 +7,13 @@ cs=`az storage account show-connection-string --name ytapp --output tsv`
 
 # update
 az container create --name update-manual --image ytnetworks.azurecr.io/recfluence:latest --cpu 2 --memory 4 \
-    --command-line "./recfluence update -a Dataform" \
+    --command-line "./recfluence update" \
     --environment-variables env=prod appStoreCs=$cs \
     --registry-username ytnetworks  --registry-password $registryPass \
     --restart-policy Never
 
-az container delete --name parler
+az container delete --name update-manual
 
-
-#parler 
-az container create --name parler --image ytnetworks.azurecr.io/recfluence:0.5.8-ml --cpu 2 --memory 4 \
-    --command-line "parler-load" \
-    --environment-variables env=dev appStoreCs=$cs branchEnv=ml \
-    --registry-username ytnetworks  --registry-password $registryPass \
-    --restart-policy Never
 
 # userscrape
 
@@ -33,3 +26,13 @@ az container create --name userscrape-manual3 --image ytnetworks.azurecr.io/user
     --restart-policy Never
 
 
+
+# scheduling update. Decided against because it's new and can't wor out how to run/send parameters
+az acr task create \
+  --name recfluence \
+  --registry ytnetworks \
+  --schedule "0 0 * * *" \
+  --context /dev/null \
+  --cmd "ytnetworks.azurecr.io/userscrape:latest ./recfluence update -a Search"
+az acr task run -r ytnetworks -n recfluence
+az acr task delete -r ytnetworks -n recfluence
