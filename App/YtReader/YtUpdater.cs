@@ -82,7 +82,7 @@ namespace YtReader {
     Task RumbleCollect(string[] channels, StandardCollectPart[] parts, ILogger logger, CancellationToken cancel) =>
       _rumbleCollect.Collect(channels, parts, logger, cancel);
 
-    [GraphTask(nameof(Collect), nameof(BcCollect))]
+    [GraphTask(nameof(Collect), nameof(BcCollect), nameof(RumbleCollect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
       _warehouse.StageUpdate(logger, fullLoad, tables);
 
