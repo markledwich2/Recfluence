@@ -77,6 +77,8 @@ namespace YtReader.YtWebsite {
       LikeCount = likeCount;
       DislikeCount = dislikeCount;
     }
+
+    public override string ToString() => $"{ViewCount} Views";
   }
 
   /// <summary>Set of thumbnails for a video.</summary>

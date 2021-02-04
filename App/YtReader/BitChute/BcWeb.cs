@@ -55,7 +55,7 @@ namespace YtReader.BitChute {
       var (subscriberCount, aboutViewCount) = await Post<CountResponse>($"channel/{chan.SourceId}/counts/");
       chan = chan with {
         Subs = subscriberCount,
-        ChannelViews = aboutViewCount.ParseBcNumber()
+        ChannelViews = aboutViewCount.TryParseNumberWithUnits()?.RoundToULong()
       };
 
       async IAsyncEnumerable<VideoStored2[]> Videos() {
@@ -202,22 +202,7 @@ namespace YtReader.BitChute {
     }
 
     public static string LastInPath(this string path) => path?.Split('/').LastOrDefault(t => !t.Trim().NullOrEmpty());
-
-    static readonly Regex ViewsRe = new(@"(?<num>\d+\.?\d*)\s?(?<unit>[KMB]?)", Compiled | IgnoreCase);
-
-    public static ulong? ParseBcNumber(this string s) {
-      var m = ViewsRe.Match(s);
-      if (!m.Success) return null;
-      var num = m.Groups["num"].Value.TryParseDouble() ?? 0;
-      var unitNum = m.Groups["unit"].Value.ToLowerInvariant() switch {
-        "b" => num.Billions(),
-        "m" => num.Millions(),
-        "k" => num.Thousands(),
-        _ => num
-      };
-      return (ulong) Math.Round(unitNum);
-    }
-
+    
     static readonly Regex CreatedRe = new(@"(?<num>\d+)\s(?<unit>day|week|month|year)[s]?", Compiled | IgnoreCase);
 
     public static DateTime? ParseCreated(this string s) {

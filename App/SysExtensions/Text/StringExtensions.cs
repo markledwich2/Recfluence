@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Humanizer;
 using SysExtensions.Collections;
+using static System.Text.RegularExpressions.RegexOptions;
 
 namespace SysExtensions.Text {
   public static class StringExtensions {
@@ -154,5 +155,21 @@ namespace SysExtensions.Text {
     }
     
     public static Match Match(this string input, Regex re) => re.Match(input);
+
+    static readonly Regex HumanNumber = new(@"(?<num>\d+\.?\d*)\s?(?<unit>[KMB]?)", Compiled | IgnoreCase);
+    
+    public static double? TryParseNumberWithUnits(this string text) {
+      var m = HumanNumber.Match(text);
+      if (!m.Success) return null;
+      var num = m.Groups["num"].Value.TryParseDouble();
+      if (!num.HasValue) return null;
+      var unitNum = m.Groups["unit"].Value.ToLowerInvariant() switch {
+        "b" => num * 1_000_000_000,
+        "m" => num * 1_000_000,
+        "k" => num * 1_000,
+        _ => num
+      };
+      return unitNum;
+    }
   }
 }

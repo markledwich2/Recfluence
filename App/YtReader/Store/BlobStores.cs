@@ -112,7 +112,8 @@ namespace YtReader.Store {
   }
 
   public enum ChannelSourceType {
-    YouTubeChannelLink,
+    [Obsolete] YouTubeChannelLink,
+    ChannelLink,
     Manual
   }
 
@@ -139,7 +140,6 @@ namespace YtReader.Store {
     public string                MainChannelId      { get; set; }
     public string                Description        { get; set; }
     public string                LogoUrl            { get; set; }
-    public string                LR                 { get; set; }
     public ulong?                Subs               { get; set; }
     public ulong?                ChannelViews       { get; set; }
     public string                Country            { get; set; }

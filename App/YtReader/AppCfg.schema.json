@@ -233,6 +233,14 @@
         }
       }
     },
+    "RumbleCfg": {
+      "type": "object",
+      "properties": {
+        "collectParallel": {
+          "type": "integer"
+        }
+      }
+    },
     "SearchCfg": {
       "type": "object",
       "properties": {
@@ -557,6 +565,9 @@
     },
     "bitChute": {
       "$ref": "#/definitions/BitChuteCfg"
+    },
+    "rumble": {
+      "$ref": "#/definitions/RumbleCfg"
     }
   }
 }

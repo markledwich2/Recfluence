@@ -99,12 +99,12 @@ with
         var chan = c.JsonMerge(freshChan); // keep existing values like DiscoverSource, but replace whatever comes from the web update
 
         await Db.Channels.Append(chan, log);
-        log.Information("BcCollect - saved {Channel} {Num}/{Total}", chan.ChannelTitle, i + 1, toUpdate.Count);
+        log.Information("BcCollect - saved {Channel} {Num}/{Total}", chan.ToString(), i + 1, toUpdate.Count);
 
         if (parts.ShouldRun(Video) && getVideos != null) {
           var videos = await getVideos.SelectManyList();
           await Db.Videos.Append(videos);
-          log.Information("BcCollect - saved {Videos} videos for {Channel}", videos.Count, freshChan.ChannelTitle);
+          log.Information("BcCollect - saved {Videos} videos for {Channel}", videos.Count, chan.ToString());
         }
       }, Cfg.CollectParallel, cancel: cancel); //Cfg.DefaultParallel
     }
