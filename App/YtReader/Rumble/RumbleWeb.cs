@@ -71,7 +71,7 @@ namespace YtReader.Rumble {
         Title = e.QuerySelector(".video-item--title")?.TextContent,
         Thumb = e.Qs<IHtmlImageElement>("img.video-item--img")?.Source,
         Statistics = new(Data("views")?.ParseULong()),
-        UploadDate = Data("time")?.ParseDate(style: DateTimeStyles.AssumeUniversal),
+        UploadDate = e.Qs<IHtmlTimeElement>(".video-item--time")?.DateTime.ParseDate(style: DateTimeStyles.AssumeUniversal),
         Duration = Data("duration")?.TryParseTimeSpanExact(@"h\:m\:s", @"m\:s"),
         Earned = Data("earned")?.TryParseDecimal()
       };

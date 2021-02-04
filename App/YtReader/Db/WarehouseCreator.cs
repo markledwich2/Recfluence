@@ -44,7 +44,7 @@ namespace YtReader.Db {
       var container = store.Container;
       var sasUri = container.GenerateSasUri(List | Read, DateTimeOffset.UtcNow.AddYears(100));
       var stageUrl = $"azure://{sasUri.Host}{sasUri.AbsolutePath}";
-      var sasToken = $"?{sasUri.Query}";
+      var sasToken = sasUri.Query;
 
       using var conn = await Sf.Open(log, "", ""); // connection sans db & schema. If you specify ones that doesn't exist, all queries hang.
 
@@ -78,7 +78,7 @@ namespace YtReader.Db {
 
       scripts = scripts
         .Concat(new Script("stage",
-          $"create or replace stage {db}.{schema}.yt_data url='{sasUri}' credentials=(azure_sas_token='{sasToken}') file_format=(type=json compression=gzip)",
+          $"create or replace stage {db}.{schema}.yt_data url='{stageUrl}' credentials=(azure_sas_token='{sasToken}') file_format=(type=json compression=gzip)",
           $"create or replace file format {db}.{schema}.tsv type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('')",
           $"create or replace file format {db}.{schema}.tsv_header type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('') skip_header=1 field_optionally_enclosed_by ='\"'"
         ));
