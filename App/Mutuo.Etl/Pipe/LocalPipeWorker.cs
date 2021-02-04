@@ -29,7 +29,7 @@ namespace Mutuo.Etl.Pipe {
         var cmd = Command.Run("docker", args, o => o.CancellationToken(cancel)).RedirectTo(Console.Out);
         var res = await cmd.Task;
         PipeRunMetadata md = res.Success
-          ? new() { Id = id }
+          ? new() {Id = id}
           : new() {
             Id = id,
             ErrorMessage = await cmd.StandardError.ReadToEndAsync()
@@ -38,7 +38,8 @@ namespace Mutuo.Etl.Pipe {
         return md;
       });
 
-    public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars, string[] args = null, string exe = null,
+    public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars, string[] args = null,
+      bool returnOnStart = false, string exe = null,
       string groupName = null, ILogger log = null, CancellationToken cancel = default) {
       groupName ??= containerName;
       var dockerArgs = new[] {"run"}

@@ -132,11 +132,14 @@ namespace Mutuo.Etl.Pipe {
     }
 
     public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars,
-      string[] args = null, string exe = null,  string groupName = null, ILogger log = null, CancellationToken cancel = default) {
+      string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ILogger log = null, CancellationToken cancel = default) {
       groupName ??= containerName;
-      var group = await Launch(ContainerCfg with { Exe = exe }, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(), returnOnStart: false, log: log, cancel: cancel);
-      var dur = await group.EnsureSuccess(containerName, log).WithWrappedException("Container failed").WithDuration();
-      log?.Information("Container {Container} completed in {Duration}", groupName, dur);
+
+      var sw = Stopwatch.StartNew();
+      var group = await Launch(ContainerCfg with {Exe = exe}, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
+        returnOnStart, log: log, cancel: cancel);
+      await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
+      log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());
     }
 
     public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {
@@ -228,11 +231,11 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public static class AzureContainersEx {
-    public static async Task EnsureSuccess(this IContainerGroup group, string containerName, ILogger log) {
-      if (!group.State().In(ContainerState.Succeeded)) {
+    public static async Task EnsureSuccess(this IContainerGroup group, string containerName, ILogger log, ContainerState[] allowedStates = null) {
+      if (!group.State().In(allowedStates.NotNull().Concat(ContainerState.Succeeded).Distinct().ToArray())) {
         var content = await group.GetLogContentAsync(containerName);
         var exitCode = group.Containers[containerName].InstanceView?.CurrentState.ExitCode;
-        Log.Warning("Container {Container} did not succeed State ({State}), ExitCode ({ErrorCode}), Logs: {Logs}",
+        Log.Warning("Container {Container} not in a successful state ({State}), ExitCode ({ErrorCode}), Logs: {Logs}",
           group.Name, group.State, exitCode, content);
         throw new CommandException($"Container {group.Name} did not succeed ({group.State}), exit code ({exitCode}). Logs: {content}", exitCode: exitCode ?? 0);
       }

@@ -258,7 +258,7 @@ namespace YtCli {
     public async ValueTask ExecuteAsync(IConsole console) {
       if (RunOnContainer) {
         var image = ContainerTag.HasValue() ? ContainerCfg.FullContainerImageName(ContainerTag) : null;
-        await ContainerRunner.Run("update", image, console.GetCancellationToken());
+        await ContainerRunner.Run("update", image, console.GetCancellationToken(), returnOnStart: true);
       } else {
         console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
         var options = new UpdateOptions {
@@ -368,26 +368,4 @@ namespace YtCli {
       Log.Information("Completed building docker image {Image} in {Duration}", image, sw.Elapsed.HumanizeShort());
     }
   }
-
-  [Command("run-container")]
-  public record ParlerLoad(Parler Parler, AzureContainers Az, ContainerCfg ContainerCfg, PipeAppCtx Ctx, SemVersion Version, CliEntry Cli,
-    ILogger Log) : ICommand {
-    
-    [CommandOption('z', IsRequired = false)]
-    public bool RunOnContainer { get;              set; }
-    
-    [CommandOption('s')] public string Sets { get; set; }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      Log.Information("Starting commend: {Command}", "parler-load");
-      if (RunOnContainer)
-        await Az.RunContainer("parler", ContainerCfg.FullContainerImageName(Version.PipeTag()), Ctx.EnvironmentVariables,
-          Cli.Args?.Where(a => a != "-z").ToArray(), "./recfluence", log: Log, cancel: console.GetCancellationToken());
-      else
-        await Parler.Load(Sets?.UnJoin('|'));
-    }
-  }
-
-
-
 }
