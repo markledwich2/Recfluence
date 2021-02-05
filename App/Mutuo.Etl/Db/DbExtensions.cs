@@ -15,7 +15,7 @@ namespace Mutuo.Etl.Db {
       typeof(SqlBulkCopy).GetField("_rowsCopied", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance));
     public static string SquareBrackets(this string name) => $"[{name}]";
     public static string DoubleQuote(this string s) => $"\"{s.Replace("\"", "\"\"")}\"";
-    public static string SingleQuote(this string s) => $"'{s.Replace("'", "''")}'";
+    public static string SingleQuote(this string s, char escape = '\'') => $"'{s.Replace("'", $"{escape}'")}'";
 
     public static TableSchema Schema(this IDataReader reader) {
       var schemaTable = reader.GetSchemaTable();

@@ -73,8 +73,10 @@ namespace SysExtensions.Serialization {
     public static JObject ToJObject(this object o, JsonSerializerSettings settings = null)
       => (JObject) SerializeToJToken(o, settings);
 
-    /// <summary>Returns a new instance of T with targets values overriden by newValues non-null values
-    // Relies entirely on the Newtonsoft.Json merging feature</summary>
+    /// <summary>
+    /// Returns a new instance of T with targets values overriden by newValues non-null values
+    /// Relies entirely on the Newtonsoft.Json merging feature
+    /// </summary>
     public static T JsonMerge<T>(this T target, T newValues, JsonSerializerSettings settings = null) {
       var aJ = target.ToJObject(settings);
       aJ.Merge(newValues.ToJObject(settings), new() {MergeNullValueHandling = MergeNullValueHandling.Ignore});

@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Builder;
@@ -13,9 +16,11 @@ using Microsoft.Azure.Management.Fluent;
 using Microsoft.Extensions.Configuration;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Blob;
+using Mutuo.Etl.Db;
 using Mutuo.Etl.DockerRegistry;
 using Mutuo.Etl.Pipe;
 using Nest;
+using Newtonsoft.Json.Linq;
 using Semver;
 using Serilog;
 using Serilog.Core;
@@ -27,6 +32,7 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using SysExtensions.Threading;
 using YtReader.BitChute;
 using YtReader.Db;
 using YtReader.Rumble;
@@ -125,29 +131,33 @@ namespace YtReader {
 
       var secretStore = new AzureBlobFileStore(cfgRoot.AppStoreCs, CfgContainer, Logger.None);
       var secretNames = cfgRoot.IsProd() ? new[] {"prod"} : new[] {"dev", version.Version.Prerelease};
-      var secrets = new List<string>();
+      var secrets = new List<JObject>();
       foreach (var name in secretNames) {
         var fileName = $"{name}.appcfg.json";
         if (await secretStore.Info(fileName) == null) continue;
-        secrets.Add((await secretStore.Load(fileName)).AsString());
+        secrets.Add((await secretStore.Load(fileName)).AsString().ParseJObject());
       }
 
       if (secrets == null) throw new InvalidOperationException("can't find secrets cfg file");
 
-      var cfg = new ConfigurationBuilder()
-        .SetBasePath(basePath)
-        .AddJsonFile("default.appcfg.json")
-        .AddJsonFile($"{cfgRoot.Env}.appcfg.json", true);
-
-      foreach (var s in secrets) cfg.AddJsonStream(s.AsStream());
-
-      var builtCfg = cfg.AddJsonFile("local.appcfg.json", true)
-        .AddEnvironmentVariables()
-        .Build();
-
-      var appCfg = builtCfg.Get<AppCfg>();
-
-      PostLoadConfiguration(appCfg, cfgRoot, secrets.ToArray(), version.Version);
+      var appJson = new JObject();
+      var mergeSettings = new JsonMergeSettings {MergeNullValueHandling = MergeNullValueHandling.Ignore};
+      void MergeAppJson(string path) {
+        var p = (basePath ?? ".").AsPath().Combine(path);
+        if (!p.Exists) return;
+        var newCfg = p.Read().ParseJObject();
+        appJson.Merge(newCfg, mergeSettings);
+      }
+      
+      MergeAppJson("default.appcfg.json");
+      MergeAppJson($"{cfgRoot.Env}.appcfg.json");
+      foreach (var j in secrets)
+        appJson.Merge(j, mergeSettings);
+      MergeAppJson("local.appcfg.json");
+      appJson = appJson.JsonMerge(GetEnvironmentSettings<AppCfg>());
+      var appCfg = appJson.ToObject<AppCfg>(JsonExtensions.DefaultSerializer);
+      
+      PostLoadConfiguration(appCfg, cfgRoot, version.Version);
 
       var validation = Validate(appCfg);
       if (validation.Any()) {
@@ -162,7 +172,26 @@ namespace YtReader {
       return (appCfg, cfgRoot, version);
     }
 
-    static void PostLoadConfiguration(AppCfg appCfg, RootCfg cfgRoot, string[] secrets, SemVersion version) {
+    static JObject GetEnvironmentSettings<T>() where T: class {
+      var props = typeof(T).GetProperties().Select(p => p.Name).ToHashSet(StringComparer.InvariantCultureIgnoreCase);
+      var j = new JObject();
+      foreach (DictionaryEntry e in Environment.GetEnvironmentVariables()) {
+        var p = e.Key.ToString().ToCamelCase();
+        if(!props.Contains(p)) continue;
+        var s = e.Value?.ToString()?.Trim() ?? "null";
+        JToken t;
+        try {
+          t = JToken.Parse(s);
+        }
+        catch (Exception) {
+          t = JToken.Parse(s.Replace(@"\", @"\\").SingleQuote('\\'));
+        }
+        j[p] = t;
+      }
+      return j;
+    }
+
+    static void PostLoadConfiguration(AppCfg appCfg, RootCfg cfgRoot, SemVersion version) {
       appCfg.Snowflake.DbSuffix ??= version.Prerelease;
       appCfg.Elastic.IndexPrefix = EsIndex.IndexPrefix(version);
 
@@ -213,7 +242,7 @@ namespace YtReader {
       b.Register(_ => cfg.Warehouse).SingleInstance();
       b.Register(_ => cfg.Storage).SingleInstance();
       b.Register(_ => cfg.Cleaner).SingleInstance();
-      b.Register(_ => cfg.Env).SingleInstance();
+      b.Register(_ => cfg.EnvCfg).SingleInstance();
       b.Register(_ => cfg.Updater).SingleInstance();
       b.Register(_ => cfg.Results).SingleInstance();
       b.Register(_ => cfg.Dataform).SingleInstance();
@@ -227,7 +256,8 @@ namespace YtReader {
       b.Register(_ => cfg.AppDb).SingleInstance();
       b.Register(_ => cfg.BitChute).SingleInstance();
       b.Register(_ => cfg.Rumble).SingleInstance();
-
+      b.Register(_ => cfg.Google).SingleInstance();
+      
       b.RegisterType<SnowflakeConnectionProvider>();
       b.Register(_ => cfg.Pipe.Azure.GetAzure());
 

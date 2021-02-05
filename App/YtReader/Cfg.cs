@@ -5,8 +5,10 @@ using System.Linq;
 using Humanizer;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Pipe;
+using Newtonsoft.Json.Linq;
 using Serilog.Events;
 using SysExtensions.Collections;
+using SysExtensions.Configuration;
 using SysExtensions.Security;
 using SysExtensions.Text;
 using YtReader.Db;
@@ -38,7 +40,7 @@ namespace YtReader {
     public            string          AppInsightsKey        { get; set; }
     public            int             DefaultParallel       { get; set; } = 8;
     public            LogEventLevel   LogLevel              { get; set; } = LogEventLevel.Debug;
-    [Required] public BranchEnvCfg    Env                   { get; set; } = new();
+    [Required] public BranchEnvCfg    EnvCfg                { get; set; } = new();
     [Required] public YtCollectCfg    Collect               { get; set; } = new();
     [Required] public StorageCfg      Storage               { get; set; } = new();
     [Required] public YtApiCfg        YtApi                 { get; set; } = new();
@@ -58,9 +60,15 @@ namespace YtReader {
     [Required] public UserScrapeCfg   UserScrape            { get; set; } = new();
     [Required] public SearchCfg       Search                { get; set; } = new();
     [Required] public BitChuteCfg     BitChute              { get; set; } = new();
-    [Required] public RumbleCfg       Rumble              { get; set; } = new();
+    [Required] public RumbleCfg       Rumble                { get; set; } = new();
+    [Required] public GoogleCfg       Google                { get; set; } = new();
   }
-  
+
+  public class GoogleCfg {
+    [SkipRecursiveValidation] public JObject Creds { get; set; }
+    public                           string  Test  { get; set; }
+  }
+
   public record RumbleCfg(int CollectParallel = 8);
 
   public record BitChuteCfg(int CollectParallel = 8);
@@ -86,7 +94,6 @@ namespace YtReader {
 
   public class ResultsCfg {
     [Required] public string FileQueryUri { get; set; } = "https://raw.githubusercontent.com/markledwich2/YouTubeNetworks_Dataform/master";
-
     [Required] public int Parallel { get; set; } = 4;
   }
 

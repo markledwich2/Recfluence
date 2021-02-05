@@ -368,4 +368,22 @@ namespace YtCli {
       Log.Information("Completed building docker image {Image} in {Duration}", image, sw.Elapsed.HumanizeShort());
     }
   }
+  
+  [Command("parler")]
+  public record ParlerCmd(ILogger Log, Parler Parler, YtContainerRunner ContainerRunner) : IContainerCommand {
+    [CommandOption(IContainerCommand.ContainerOption)]
+    public bool RunOnContainer { get; set; }
+
+    [CommandOption('f')]
+    public string Folder { get; set; }
+    
+    public async ValueTask ExecuteAsync(IConsole console) {
+      if (RunOnContainer) {
+        await ContainerRunner.Run("parler", returnOnStart: true);
+        return;
+      }
+      await Parler.LoadFromGoogleDrive(Folder, "posts", Log);
+      Log.Information("Completed load parler data");
+    }
+  }
 }

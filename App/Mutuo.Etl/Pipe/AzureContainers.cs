@@ -53,7 +53,7 @@ namespace Mutuo.Etl.Pipe {
       var res = await ids.BlockFunc(async runId => {
         var runCfg = runId.PipeCfg(ctx.PipeCfg); // id is for the sub-pipe, ctx is for the root
 
-        var tag = await FindPipeTag(runCfg.Container.ImageName);
+        var tag = await FindImageTag(runCfg.Container.ImageName);
         var fullImageName = runCfg.Container.FullContainerImageName(tag);
         var pipeLog = log.ForContext("Image", fullImageName).ForContext("Pipe", runId.Name);
 
@@ -184,7 +184,7 @@ namespace Mutuo.Etl.Pipe {
       }
     }
 
-    async Task<string> FindPipeTag(string imageName) {
+    public async Task<string> FindImageTag(string imageName) {
       var findTags = Version.Prerelease.HasValue() ? new[] {Version.PipeTag(), Version.MajorMinorPatch()} : new[] {Version.MajorMinorPatch()};
       var existingTags = (await RegistryClient.TagList(imageName)).Tags.ToHashSet();
       var tag = findTags.Select(t => existingTags.Contains(t) ? t : null).NotNull().FirstOrDefault()

@@ -111,6 +111,8 @@ namespace SysExtensions.Text {
     public static string StripNonDigit(this string s) => Regex.Replace(s, "\\D", "");
 
     public static int ParseInt(this string s) => int.Parse(s);
+    public static int? TryParseInt(this string s, NumberStyles styles = NumberStyles.Any) => 
+      int.TryParse(s, styles, NumberFormatInfo.InvariantInfo, out var l) ? l : null;
 
     public static long ParseLong(this string s, NumberStyles styles = NumberStyles.Any) => long.Parse(s, styles, NumberFormatInfo.InvariantInfo);
     public static ulong ParseULong(this string s, NumberStyles styles = NumberStyles.Any) => ulong.Parse(s, styles, NumberFormatInfo.InvariantInfo);
