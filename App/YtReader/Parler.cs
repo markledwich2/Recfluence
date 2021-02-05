@@ -55,29 +55,34 @@ namespace YtReader {
       var files = await list.ExecuteAsync();
       Dir.EnsureDirectoryExists();
       
-      async Task<FPath> Download(File f) {
-        var file = Dir.Combine(f.Name.Replace("Copy of ", "").Trim());
-        if (file.Exists) return file;
-        
-        using var sw = file.Open(CreateNew);
+      async Task<FPath> Download(File f, FPath localFile) {
+        if (localFile.Exists) return localFile;
+        using var sw = localFile.Open(CreateNew);
         var progress = await service.Files.Get(f.Id).DownloadAsync(sw);
-        while (progress.Status.In(DownloadStatus.NotStarted, DownloadStatus.Downloading)) {
+        while (progress.Status.In(DownloadStatus.NotStarted, DownloadStatus.Downloading))
           await 1.Seconds().Delay();
+        if (progress.Status == DownloadStatus.Completed) return localFile;
+        if (progress.Exception != null) {
+          log.Error(progress.Exception, "error when downloading file: {Message}", progress.Exception.Message);
+          return null;
         }
-        return file;
+        log.Error("download did not complete {File}");
+        return null;
       }
       
-      async Task<FPath> Upload(FPath f) {
-        var blobPath = $"parler/{folderName}/{f.FileNameWithoutExtension}.jsonl.gz";
-        if (!await Db.Exists(blobPath))
-          await Db.Save(blobPath, f, Log);
-        return f;
-      }
-
       await files.Files.WithIndex().BlockAction(async f => {
-        var localFile = await Upload(await Download(f.item));
+        var localFile = Dir.Combine(f.item.Name.Trim().Split(".").First().Replace("Copy of ", "") + ".jsonl.gz");
+        var blobPath = $"parler/{folderName}/{localFile.FileName}";
+        if (await Db.Exists(blobPath)) {
+          log.Information("Skipping existing blob {File}", blobPath);
+          return;
+        }
+        var downloadedFile = await Download(f.item, localFile);
+        if (downloadedFile != null)
+          await Db.Save(blobPath, downloadedFile, Log);
         log.Information("Moved {File} {Num}/{Total}", localFile.FileName, f.index+1, files.Files.Count);
-      }, 4);
+        localFile.Delete();
+      }, 2);
       Log.Information("parler - completed loading {Name}", folderName);
     }
     

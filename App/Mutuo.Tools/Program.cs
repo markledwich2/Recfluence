@@ -1,6 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Autofac;
 using CliFx;
+using Medallion.Shell;
 using Serilog;
 using Serilog.Events;
 
@@ -19,6 +21,7 @@ namespace Mutuo.Tools {
         .UseTypeActivator(t => scope.Resolve(t))
         .UseTitle("Mutuo Tools")
         .Build();
+
       return await app.RunAsync(args);
     }
   }
