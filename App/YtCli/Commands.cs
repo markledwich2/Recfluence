@@ -355,6 +355,8 @@ namespace YtCli {
 
       var appDir = sln.FullPath;
       var shell = new Shell(o => o.WorkingDirectory(appDir));
+
+      shell.Run("docker", "login", "--username", Cfg.RegistryCreds.Name, "--password", Cfg.RegistryCreds.Secret, Cfg.Registry);
       List<object> args = new() {"build"};
       args.AddRange(tagVersions.SelectMany(t => new[] {"-t", $"{image}:{t}"}));
       args.AddRange("--build-arg", $"SEMVER={Version}", "--build-arg", $"ASSEMBLY_SEMVER={Version.MajorMinorPatch()}", ".");

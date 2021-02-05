@@ -63,7 +63,7 @@ namespace YtReader {
           await 1.Seconds().Delay();
         if (progress.Status == DownloadStatus.Completed) return localFile;
         if (progress.Exception != null) {
-          log.Error(progress.Exception, "error when downloading file: {Message}", progress.Exception.Message);
+          log.Error(progress.Exception, "error when downloading file {File}: {Message}", f.Name, progress.Exception.Message);
           return null;
         }
         log.Error("download did not complete {File}");
