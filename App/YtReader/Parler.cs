@@ -53,6 +53,7 @@ namespace YtReader {
       list.Q = $"'{folderId}' in parents";
       list.PageSize = 1000;
       var files = await list.ExecuteAsync();
+      Dir.EnsureDirectoryExists();
       
       async Task<FPath> Download(File f) {
         var file = Dir.Combine(f.Name.Replace("Copy of ", "").Trim());
