@@ -52,6 +52,9 @@ namespace YtReader.BitChute {
         FurlAsync(Url.AppendPathSegment(path).WithBcHeaders(chanDoc, csrf), r => r.BcPost(csrf, data)).Then(r => r.ReceiveJson<T>());
       
       var chan = ParseChannel(chanDoc, idOrName);
+      if (chan.Status != ChannelStatus.Alive)
+        return (chan, null);
+      
       var (subscriberCount, aboutViewCount) = await Post<CountResponse>($"channel/{chan.SourceId}/counts/");
       chan = chan with {
         Subs = subscriberCount,
@@ -61,7 +64,6 @@ namespace YtReader.BitChute {
       async IAsyncEnumerable<VideoStored2[]> Videos() {
         var chanVids = GetVideos(chanDoc, chan, log);
         yield return chanVids;
-
         var offset = chanVids.Length;
         while (true) {
           var (html, success) = await Post<ExtendResponse>($"channel/{chan.SourceId}/extend/", new {offset});
@@ -73,7 +75,6 @@ namespace YtReader.BitChute {
           yield return videos;
         }
       }
-
       return (chan, videos: Videos());
     }
 
@@ -133,7 +134,9 @@ namespace YtReader.BitChute {
 
       var profileA = doc.Qs<IHtmlAnchorElement>(".channel-banner .details .name > a");
       var id = doc.Qs<IHtmlLinkElement>("link#canonical")?.Href.AsUri().LocalPath.LastInPath() ?? idOrName;
-      return BcCollect.NewChan(id) with {
+      var title = doc.QuerySelector(".page-title")?.TextContent;
+      var status = title?.ToLowerInvariant() == "blocked content" ? ChannelStatus.Blocked : ChannelStatus.Alive;
+      var chan = BcCollect.NewChan(id) with {
         ChannelName = id != idOrName ? idOrName : null,
         ChannelTitle = Qs("#channel-title")?.TextContent,
         Description = Qs("#channel-description")?.InnerHtml,
@@ -141,14 +144,17 @@ namespace YtReader.BitChute {
         ProfileName = profileA?.TextContent,
         Created = Qs(".channel-about-details > p:first-child")?.TextContent.ParseCreated(),
         LogoUrl = doc.Qs<IHtmlImageElement>("img[alt=\"Channel Image\"]")?.Dataset["src"],
+        Status = status,
+        StatusMessage = status == ChannelStatus.Blocked ? doc.QuerySelector("#main-content #page-detail p")?.TextContent : null ,
         Updated = DateTime.UtcNow
       };
+      return chan;
     }
 
     static VideoStored2[] GetVideos(IDocument doc, Channel c, ILogger log) {
       var videos = doc.Body.QuerySelectorAll(".channel-videos-container")
         .Select(e => Video(e) with {ChannelId = c.ChannelId, ChannelTitle = c.ChannelTitle}).ToArray();
-      log.Debug("BcWeb loaded {Videos} for {Channel}", videos.Length, c.ChannelTitle);
+      log.Debug("BcWeb - {Channel}: loaded {Videos} videos", videos.Length, c.ChannelTitle);
       return videos;
     }
 

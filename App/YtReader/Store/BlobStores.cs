@@ -108,7 +108,8 @@ namespace YtReader.Store {
     None,
     Alive,
     Dead,
-    NotFound
+    NotFound,
+    Blocked
   }
 
   public enum ChannelSourceType {

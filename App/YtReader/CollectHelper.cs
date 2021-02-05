@@ -15,8 +15,22 @@ namespace YtReader {
     DiscoverChannels,
     Video
   }
-  
+
+  public record DiscoverChannelLink(string LinkId, string ChannelIdFrom);
+
   public static class CollectHelper {
+    public static async Task<IReadOnlyCollection<DiscoverChannelLink>> DiscoverNewChannelLinks(this ILoggedConnection<SnowflakeDbConnection> db,
+      Platform platform) {
+      var res = await db.Query<DiscoverChannelLink>("discover new channels", $@"
+select link_id LinkId, channel_id_from ChannelIdFrom
+from channel_link
+where platform_to = '{platform}' and channel_id_to is null
+group by 1,2
+qualify row_number() over (partition by link_id order by sum(links) desc)=1
+");
+      return res;
+    }
+
     public static async Task<IReadOnlyCollection<Channel>> ExistingChannels(this ILoggedConnection<SnowflakeDbConnection> db, Platform platform,
       IReadOnlyCollection<string> explicitIds = null) {
       var existing = await db.Query<string>(@"get channels", @$"

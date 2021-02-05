@@ -20,7 +20,6 @@ namespace YtReader.Rumble {
     static readonly IConfiguration AngleCfg     = Configuration.Default.WithDefaultLoader();
 
     public async Task<(Channel Channel, IAsyncEnumerable<VideoStored2[]> Videos)> ChannelAndVideos(string urlOrId, ILogger log) {
-
       var chanUrl = Url.IsValid(urlOrId) ? urlOrId.AsUrl() : RumbleDotCom.AppendPathSegments("c", urlOrId);
       var bc = BrowsingContext.New(AngleCfg);
       var doc = await bc.OpenAsync(chanUrl);
@@ -35,7 +34,8 @@ namespace YtReader.Rumble {
         ChannelId = chanId,
         ChannelTitle = doc.Title,
         Subs = doc.QuerySelector(".subscribe-button-count")?.TextContent.TryParseNumberWithUnits()?.RoundToULong(),
-        LogoUrl = doc.Qs<IHtmlImageElement>(".listing-header--thumb")?.Source
+        LogoUrl = doc.Qs<IHtmlImageElement>(".listing-header--thumb")?.Source,
+        Status = ChannelStatus.Alive
       };
 
       async IAsyncEnumerable<VideoStored2[]> Videos() {

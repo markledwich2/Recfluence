@@ -12,16 +12,13 @@ using YtReader.Store;
 using static YtReader.StandardCollectPart;
 
 namespace YtReader.BitChute {
-  public enum BcLinkType {
-    Video,
-    Channel
-  }
-
   public class BcCollect {
     readonly SnowflakeConnectionProvider Sf;
     readonly BcWeb                       Web;
     readonly BitChuteCfg                 Cfg;
     readonly YtStore                     Db;
+
+    const Platform P = Platform.BitChute;
 
     public BcCollect(BlobStores stores, SnowflakeConnectionProvider sf, BcWeb web, BitChuteCfg cfg, ILogger log) {
       Db = new(stores.Store(DataStoreType.DbStage), log);
@@ -31,8 +28,8 @@ namespace YtReader.BitChute {
     }
 
     public static Channel NewChan(string sourceId) => new() {
-      Platform = Platform.BitChute,
-      ChannelId = Platform.BitChute.FullId(sourceId),
+      Platform = P,
+      ChannelId = P.FullId(sourceId),
       SourceId = sourceId
     };
 
@@ -42,49 +39,20 @@ namespace YtReader.BitChute {
       // add to update if it doesn't exist
       void ToUpdate(string desc, IReadOnlyCollection<Channel> channels) {
         toUpdate.AddRange(channels.NotNull().Where(c => !toUpdate.ContainsKey(c.ChannelId)));
-        log.Debug("BcCollect planned {Channel} ({Desc}) channels for update", channels.Count, desc);
+        log.Information("BcCollect - planned {Channels} ({Desc}) channels for update", channels.Count, desc);
       }
 
       {
         using var db = await Sf.Open(log);
-        var existing = await db.ExistingChannels(Platform.BitChute, explicitChannels?.Select(n => Platform.BitChute.FullId(n)).ToArray());
+        var existing = await db.ExistingChannels(P, explicitChannels?.Select(n => P.FullId(n)).ToArray());
 
         ToUpdate("existing", existing);
         ToUpdate("explicit", explicitChannels.NotNull().Select(c => NewChan(c) with {DiscoverSource = new(ChannelSourceType.Manual, DestId: c)}).ToArray());
 
         if (parts.ShouldRun(DiscoverChannels) && explicitChannels?.Any() != true) {
-          var discovered = await db.Query<(string idOrName, string sourceId)>("bitchute links", @"
-with
-  -- get all existing bitchute channels. we store attempts (even failed ones) in the discover_id part
-  existing as (
-    select coalesce(discover_source:DestId::string, source_Id) discover_id
-         , discover_source:type::string discover_type
-            , c.channel_id
-          from channel_latest c
-          where platform='BitChute' and discover_id is not null
-            )
-          -- find bc channels from links
-            , bc_links as (
-            select l.channel_id from_channel_id
-            , regexmatch(description,
-            'bitchute.com/(?:(?<type>channel|video|profile|search|hashtag|accounts/\\w|accounts)/(?<id>[\\w_-]*)/|(?:(?<name>[\\w_-]*))/\\s)',
-            'i') parts
-            , count(*) references
-
-            from links l
-          where domain='bitchute.com' and parts:type = 'channel'
-          group by from_channel_id, parts
-          qualify row_number() over (partition by parts:id order by references desc)=1
-            )
-          select parts:id::string discover_channel_id, from_channel_id
-          from bc_links l
-            left join channel_latest c on l.from_channel_id=c.channel_id
-          left join existing e on e.discover_id=parts:id
-            where e.discover_id is null -- don't discover existing channels with the same id/name
-");
-
+          var discovered = await db.DiscoverNewChannelLinks(P);;
           ToUpdate("discovered",
-            discovered.Select(l => NewChan(l.idOrName) with {DiscoverSource = new(ChannelSourceType.ChannelLink, l.sourceId, l.idOrName)}).ToArray());
+            discovered.Select(l => NewChan(l.LinkId) with {DiscoverSource = new(ChannelSourceType.ChannelLink, l.ChannelIdFrom, l.LinkId)}).ToArray());
         }
       }
 
@@ -102,7 +70,11 @@ with
         log.Information("BcCollect - saved {Channel} {Num}/{Total}", chan.ToString(), i + 1, toUpdate.Count);
 
         if (parts.ShouldRun(Video) && getVideos != null) {
-          var videos = await getVideos.SelectManyList();
+          var (videos, vEx) = await getVideos.SelectManyList().Try();
+          if (vEx != null) {
+            log.Warning(vEx, "Unable to load videos for channel {Channel}: {Message}", chan.ToString(), vEx.Message);
+            return;
+          }
           await Db.Videos.Append(videos);
           log.Information("BcCollect - saved {Videos} videos for {Channel}", videos.Count, chan.ToString());
         }
