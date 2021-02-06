@@ -152,11 +152,13 @@ order by {orderCols.DbNames().Join(",")}";
 select e.*
      , exists(select c.video_id from caption c where e.video_id=c.video_id) has_captions
 from video_error e
+where platform = 'YouTube'
 order by last_seen", 100.Kilobytes());
 
     WorkCfg VideoRemovedCaption() => Work(new[] {Col("video_id")}, @"
 select e.video_id, c.caption, c.offset_seconds from video_error e
 inner join caption c on e.video_id = c.video_id
+where platform = 'YouTube'
 order by video_id, offset_seconds", 100.Kilobytes());
 
     #endregion

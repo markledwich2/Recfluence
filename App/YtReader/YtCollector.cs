@@ -181,7 +181,7 @@ select video_id from missing_or_old
 with review_filtered as (
   select channel_id, channel_title
   from channel_review
-  where meets_review_criteria
+  where meets_review_criteria and platform = 'YouTube'
   {(noExplicit ? "" : $"and channel_id in ({SqlList(explicitChannels)})")}--only explicit channel when provided
 )
    , stage_latest as (
