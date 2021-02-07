@@ -199,7 +199,9 @@ namespace YtReader.Store {
   }
 
   public enum VideoStatus {
-    NotFound
+    NotFound,
+    Removed,
+    Restricted
   }
 
   public record VideoStored2 : WithUpdatedItem {
@@ -211,41 +213,23 @@ namespace YtReader.Store {
     /// <summary>Id native to the originating platform, doesn't need to be gloablly unique.</summary>
     public string SourceId { get; set; }
 
-    public string                Title        { get; set; }
-    public string                ChannelId    { get; set; }
-    public string                ChannelTitle { get; set; }
-    
-    /// <summary>
-    /// The date the video was uploaded. This is the primary record for this. AddedDate is a fallback with YouTube
-    /// </summary>
-    public DateTime?             UploadDate   { get; set; }
-    public DateTime?             AddedDate    { get; set; }
-    public string                Description  { get; set; }
-    public TimeSpan?             Duration     { get; set; }
-    public IReadOnlyList<string> Keywords     { get; set; } = new List<string>();
-    public Statistics            Statistics   { get; set; }
-    public string                Thumb        { get; set; }
-    public decimal?              Earned       { get; set; }
-    public VideoStatus?          Status       { get; set; }
+    public string Title           { get; set; }
+    public string ChannelId       { get; set; }
+    public string ChannelSourceId { get; set; }
+    public string ChannelTitle    { get; set; }
+
+    /// <summary>The date the video was uploaded. This is the primary record for this. AddedDate is a fallback with YouTube</summary>
+    public DateTime? UploadDate { get;              set; }
+    public DateTime?             AddedDate   { get; set; }
+    public string                Description { get; set; }
+    public TimeSpan?             Duration    { get; set; }
+    public IReadOnlyList<string> Keywords    { get; set; }
+    public Statistics            Statistics  { get; set; }
+    public string                Thumb       { get; set; }
+    public decimal?              Earned      { get; set; }
+    public VideoStatus?          Status      { get; set; }
 
     public override string ToString() => $"{Title}";
-  }
-
-  public class VideoThumbnail {
-    public static VideoThumbnail FromVideoId(string videoId) {
-      var t = new ThumbnailSet(videoId);
-      return new() {
-        LowResUrl = t.LowResUrl,
-        StandardResUrl = t.StandardResUrl,
-        HighResUrl = t.HighResUrl,
-        MaxResUrl = t.MaxResUrl
-      };
-    }
-
-    public string LowResUrl      { get; set; }
-    public string HighResUrl     { get; set; }
-    public string MaxResUrl      { get; set; }
-    public string StandardResUrl { get; set; }
   }
 
   public class VideoCommentStored2 {

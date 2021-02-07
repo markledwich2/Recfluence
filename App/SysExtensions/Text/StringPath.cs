@@ -11,7 +11,7 @@ namespace SysExtensions.Text {
   public class StringPath : IStringConvertable {
     protected const string UpToken = "..";
 
-    public static StringPath Emtpy = new StringPath();
+    public static StringPath Emtpy = new();
 
     public StringPath() : this(new string[] { }) { }
 
@@ -31,7 +31,7 @@ namespace SysExtensions.Text {
     public bool IsEmpty    => Tokens.Count == 0;
 
     public StringPath Parent => Tokens.Count <= 1
-      ? new StringPath {IsAbsolute = IsAbsolute}
+      ? new() {IsAbsolute = IsAbsolute}
       : new StringPath(Tokens.Take(Tokens.Count - 1)) {IsAbsolute = IsAbsolute};
 
     public string Name => Tokens.LastOrDefault();
@@ -78,17 +78,17 @@ namespace SysExtensions.Text {
     public StringPath WithoutExtension() => Parent.Add(NameSansExtension);
 
     public StringPath ToAbsolute() => IsAbsolute ? this : Absolute(Tokens);
-    public static StringPath Absolute(IEnumerable<string> tokens) => new StringPath(tokens) {IsAbsolute = true};
-    public static StringPath Absolute(params string[] tokens) => new StringPath(tokens) {IsAbsolute = true};
+    public static StringPath Absolute(IEnumerable<string> tokens) => new(tokens) {IsAbsolute = true};
+    public static StringPath Absolute(params string[] tokens) => new(tokens) {IsAbsolute = true};
 
     public StringPath Clone() => FromString(StringValue);
 
-    public StringPath Add(IEnumerable<string> path) => new StringPath(Tokens.Concat(path.NotNull())) {IsAbsolute = IsAbsolute};
+    public StringPath Add(IEnumerable<string> path) => new(Tokens.Concat(path.NotNull())) {IsAbsolute = IsAbsolute};
     public StringPath Add(StringPath path) => Add(path.Tokens);
     public StringPath Add(string token) => Add(token.InArray());
     public StringPath Add(params string[] path) => Add((IEnumerable<string>) path);
-    public StringPath WithoutTailSeparator() => HasTailSeparator ? new StringPath(Tokens.Take(Tokens.Count - 1)) : this;
-    public StringPath WithTailSeparator() => HasTailSeparator ? this : new StringPath(Tokens.Concat(""));
+    public StringPath WithoutTailSeparator() => HasTailSeparator ? new(Tokens.Take(Tokens.Count - 1)) : this;
+    public StringPath WithTailSeparator() => HasTailSeparator ? this : new(Tokens.Concat(""));
 
     public override bool Equals(object obj) => obj?.ToString() == ToString();
 
@@ -100,7 +100,7 @@ namespace SysExtensions.Text {
 
     public static bool operator !=(StringPath a, StringPath b) => !(a == b);
 
-    public static StringPath FromString(string path) => new StringPath {StringValue = path};
+    public static StringPath FromString(string path) => new() {StringValue = path};
 
     /// <summary>If the path is relative. Then uses the full path context to convert to a full path</summary>
     public StringPath FullPath(StringPath fullPathContext) {
@@ -125,7 +125,7 @@ namespace SysExtensions.Text {
     public static implicit operator string(StringPath s) => s?.StringValue;
     public static implicit operator StringPath(string s) => s == null ? null : new StringPath(s);
 
-    public static StringPath Relative(params string[] tokens) => new StringPath(tokens) {IsAbsolute = false};
+    public static StringPath Relative(params string[] tokens) => new(tokens) {IsAbsolute = false};
 
     /// <summary>Returns a relative path from the given path if one exists, otherwise returns a copy of this. Both paths must
     ///   be absolute</summary>
@@ -138,7 +138,7 @@ namespace SysExtensions.Text {
 
       var upTokens = from.Tokens.Skip(commonRoot.Count).Select(t => UpToken);
       var downTokens = Tokens.Skip(commonRoot.Count).Select(t => t);
-      return new StringPath(upTokens.Concat(downTokens));
+      return new(upTokens.Concat(downTokens));
     }
   }
 }

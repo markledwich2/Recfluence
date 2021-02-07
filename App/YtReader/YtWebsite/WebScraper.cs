@@ -599,11 +599,21 @@ namespace YtReader.YtWebsite {
 
       return new(info, captions.ToList());
     }
+    
+    // filters control characters but allows only properly-formed surrogate sequences
+    static readonly Regex InvalidXml = new (
+      @"(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFEFF\uFFFE\uFFFF]",
+      RegexOptions.Compiled);
+
+    /// <summary>
+    /// removes any unusual unicode characters that can't be encoded into XML
+    /// </summary>
+    public static string RemoveInvalidXmlChars(string text) => text == null ? null : InvalidXml.Replace(text, "");
 
     async Task<XElement> GetClosedCaptionTrackXmlAsync(string url, ILogger log) {
       var raw = await GetHttp(url, "caption", log);
-      using var s = await raw.Content.ReadAsStreamAsync();
-      var xml = await XElement.LoadAsync(s, LoadOptions.PreserveWhitespace, CancellationToken.None);
+      var text = RemoveInvalidXmlChars(await raw.Content.ReadAsStringAsync());
+      var xml = XElement.Parse(text, LoadOptions.PreserveWhitespace);
       return xml.StripNamespaces();
     }
 

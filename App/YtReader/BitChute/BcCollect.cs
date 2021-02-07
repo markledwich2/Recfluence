@@ -6,6 +6,7 @@ using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
+using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 using YtReader.Store;
@@ -29,16 +30,17 @@ namespace YtReader.BitChute {
       Cfg = cfg;
     }
 
-    public static Channel NewChan(string sourceId) => new() {
+    public static Channel ChanFromSource(string sourceId, DiscoverSource source = null) => new() {
       Platform = P,
       ChannelId = P.FullId(sourceId),
-      SourceId = sourceId
+      SourceId = sourceId,
+      DiscoverSource = source
     };
 
     public async Task Collect(string[] explicitChannels, StandardCollectPart[] parts, ILogger log, CancellationToken cancel) {
       var toUpdate = new KeyedCollection<string, Channel>(s => s.ChannelId);
       var allExisting = new KeyedCollection<string, Channel>(s => s.ChannelId);
-      //var videosToCrawl = new List<DiscoverSource>();
+      var videosToCrawl = new List<DiscoverSource>();
 
       // add to update if it doesn't exist
       void ToUpdate(string desc, IReadOnlyCollection<Channel> channels) {
@@ -50,29 +52,47 @@ namespace YtReader.BitChute {
         using var db = await Sf.Open(log);
         allExisting.AddRange(await db.ExistingChannels(P));
 
-        // ad existing channels limit to explicit
-        ToUpdate("existing", allExisting.Where(c => c.ForUpdate(explicitChannels)).ToArray());
+        if(parts.ShouldRun(ExistingChannel)) // ad existing channels limit to explicit
+          ToUpdate("existing", allExisting.Where(c => c.ForUpdate(explicitChannels)).ToArray());
 
         // add explicit channel, no need to lookup existing, because that will already be in the list
-        ToUpdate("explicit", explicitChannels.NotNull().Select(c => NewChan(c) with {DiscoverSource = new(Manual, c)}).ToArray());
+        ToUpdate("explicit", explicitChannels.NotNull().Select(c => ChanFromSource(c, new(Manual, c))).ToArray());
 
-        if (parts.ShouldRun(DiscoverChannels) && explicitChannels?.Any() != true) {
+        if (parts.ShouldRunAny(DiscoverChannels, DiscoverChannelsViaVideos) && explicitChannels?.Any() != true) {
           var discovered = await db.DiscoverChannelsAndVideos(P);
-          ToUpdate("discovered",
-            discovered.Where(d => d.LinkType == LinkType.Channel)
-              .Select(selector: l => NewChan(l.LinkId) with {DiscoverSource = l.ToDiscoverSource()}).ToArray());
+          
+          if (parts.ShouldRun(DiscoverChannels))
+            ToUpdate("discovered", discovered.Where(d => d.LinkType == LinkType.Channel)
+                .Select(selector: l => ChanFromSource(l.LinkId) with {DiscoverSource = l.ToDiscoverSource()}).ToArray());
 
-          /*videosToCrawl.AddRange(discovered.Where(d => d.LinkType == LinkType.Video)
-            .Select(l => new DiscoverSource(ChannelSourceType.VideoLink, l.LinkId, l.FromPlatform)));
-          log.Information("BcCollect - planned {Videos} ({Desc}) channels for crawl", videosToCrawl.Count);*/
+          if (parts.ShouldRun(DiscoverChannelsViaVideos)) {
+            videosToCrawl.AddRange(discovered.Where(d => d.LinkType == LinkType.Video)
+              .Select(l => new DiscoverSource(VideoLink, l.LinkId, l.FromPlatform)).Take(50));
+            log.Information("BcCollect - planned {Videos} videos for crawl", videosToCrawl.Count);
+          }
         }
       }
 
-      /*var crawledChannels = await videosToCrawl.WithIndex().BlockTrans(async item => {
-        var (v, i) = item;
-        var video = await Web.Video(v.LinkId)
-        
-      }).ToListAsync();*/
+      var crawledVideos = await videosToCrawl.BlockTrans(async (discover, i) => {
+        var video = await Web.Video(discover.LinkId, log)
+          .WithSwallow(e => log.Error(e, "BcCollect - error crawling video {Video}: {Error}", discover.LinkId, e.Message));
+        log.Debug("BcCollect - crawled video {VideoId} {Vid}/{Total}", video?.VideoId, i, videosToCrawl.Count);
+        return (discover, video);
+      }, Cfg.CollectParallel).ToListAsync();
+
+      await Db.Videos.Append(crawledVideos.Select(r => r.video).NotNull().ToArray());
+      log.Information("BcCollect video crawl - saved {Videos} videos", crawledVideos.Count);
+
+      var crawledChannels = crawledVideos.Where(v => v.video?.ChannelId.HasValue() == true)
+        .Select(v => new Channel {
+          ChannelId = v.video.ChannelId,
+          SourceId = v.video.ChannelSourceId,
+          ChannelTitle = v.video.ChannelTitle,
+          DiscoverSource = v.discover,
+          Platform = P
+      }).Distinct().ToArray();
+      
+      ToUpdate("channels from crawl", crawledChannels);
 
       await toUpdate.WithIndex().BlockAction(async item => {
         var (c, i) = item;

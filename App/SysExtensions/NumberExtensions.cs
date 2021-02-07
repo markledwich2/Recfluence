@@ -10,5 +10,6 @@ namespace SysExtensions {
     public static double Pow(this int x, int y) => Math.Pow(x, y);
     public static IEnumerable<int> RangeTo(this int from, int to) => Enumerable.Range(from, to);
     public static int Abs(this int num) => Math.Abs(num);
+    public static bool Between(this int num, int from, int to) => num >= from && num <= to;
   }
 }

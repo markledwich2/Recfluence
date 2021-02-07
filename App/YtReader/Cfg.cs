@@ -69,9 +69,9 @@ namespace YtReader {
     public                           string  Test  { get; set; }
   }
 
-  public record RumbleCfg(int CollectParallel = 8);
+  public record RumbleCfg(int CollectParallel = 24);
 
-  public record BitChuteCfg(int CollectParallel = 8);
+  public record BitChuteCfg(int CollectParallel = 24);
 
   public class YtApiCfg {
     [Required] public ICollection<string> Keys { get; set; } = new List<string>();

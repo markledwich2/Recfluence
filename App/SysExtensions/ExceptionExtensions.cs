@@ -43,6 +43,25 @@ namespace SysExtensions {
       }
     }
     
+    public static async ValueTask<T> WithSwallow<T>(this ValueTask<T> task, Action<Exception> onError) {
+      try {
+        return await task;
+      }
+      catch (Exception ex) {
+        onError(ex);
+        return default;
+      }
+    }
+    
+    public static async Task<T> WithSwallow<T>(this Task<T> task, Action<Exception> onError) {
+      try {
+        return await task;
+      }
+      catch (Exception ex) {
+        onError(ex);
+        return default;
+      }
+    }
     
     public static async Task<(T, Exception)> Try<T>(this Task<T> task, T defaultValue = default) {
       try {

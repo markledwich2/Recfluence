@@ -12,8 +12,9 @@ using YtReader.Store;
 
 namespace YtReader {
   public enum StandardCollectPart {
-    Channel,
+    ExistingChannel,
     DiscoverChannels,
+    DiscoverChannelsViaVideos,
     Video
   }
 

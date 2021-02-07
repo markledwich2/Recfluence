@@ -20,6 +20,7 @@ using SysExtensions.Net;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
+using static System.StringComparison;
 using static System.Text.RegularExpressions.RegexOptions;
 using static SysExtensions.Net.HttpExtensions;
 using static SysExtensions.Reflection.ReflectionExtensions;
@@ -43,17 +44,18 @@ namespace YtReader.BitChute {
       FlurlClients = new(new(), new(proxy.Proxies.FirstOrDefault()?.CreateHttpClient()));
     }
 
-    public async Task<(Channel channel, IAsyncEnumerable<VideoStored2[]> videos)> ChannelAndVideos(string idOrName, ILogger log) {
-      var chanDoc = await Open(Url.AppendPathSegment($"channel/{idOrName}"), (b, url) => b.OpenAsync(url), log);
+    public async Task<(Channel channel, IAsyncEnumerable<VideoStored2[]> videos)> ChannelAndVideos(string sourceId, ILogger log) {
+      var chanDoc = await Open(Url.AppendPathSegment($"channel/{sourceId}"), (b, url) => b.OpenAsync(url), log);
+
       if (chanDoc.StatusCode == HttpStatusCode.NotFound)
-        return (new(Platform.BitChute, idOrName) {Status = ChannelStatus.NotFound, Updated = DateTime.UtcNow}, null);
+        return (BcCollect.ChanFromSource(sourceId) with {Status = ChannelStatus.NotFound, Updated = DateTime.UtcNow}, null);
       chanDoc.StatusCode.EnsureSuccess();
       var csrf = chanDoc.CsrfToken();
 
       Task<T> Post<T>(string path, object data = null) =>
         FurlAsync(Url.AppendPathSegment(path).WithBcHeaders(chanDoc, csrf), r => r.BcPost(csrf, data)).Then(r => r.ReceiveJson<T>());
 
-      var chan = ParseChannel(chanDoc, idOrName);
+      var chan = ParseChannel(chanDoc, sourceId);
       if (chan.Status != ChannelStatus.Alive)
         return (chan, null);
 
@@ -81,11 +83,12 @@ namespace YtReader.BitChute {
       return (chan, videos: Videos());
     }
 
-    static readonly Regex JProp = new(@"""(?<prop>[\w]*)""\s*:\s*(?:(?:""(?<string>(?:\\""|[^\""])*)"")|(?<num>[\d\.]+))", Compiled);
+    //static readonly Regex JProp = new(@"""(?<prop>[\w]*)""\s*:\s*(?:(?:""(?<string>(?:\\""|[^\""])*)"")|(?<num>[\d\.]+))", Compiled);
+    static readonly Regex RDate = new(@"(?<time>\d{2}:\d{2}) UTC on (?<month>\w*)\s+(?<day>\d+)\w*\, (?<year>\d*)", Compiled);
 
-    public async Task<VideoStored2> Video(string sourceId, ILogger log) {
+    public async Task<VideoExtraStored2> Video(string sourceId, ILogger log) {
       var doc = await Open(Url.AppendPathSegment($"video/{sourceId}/"), (b, url) => b.OpenAsync(url), log);
-      var vid = new VideoStored2 {
+      var vid = new VideoExtraStored2 {
         Platform = Platform.BitChute,
         SourceId = sourceId,
         VideoId = Platform.BitChute.FullId(sourceId),
@@ -97,26 +100,52 @@ namespace YtReader.BitChute {
       doc.StatusCode.EnsureSuccess();
 
       var chanA = doc.Qs<IHtmlAnchorElement>(".channel-banner .details .name > a.spa");
-      var jProps = doc.QuerySelectorAll("body script").SelectMany(s => JProp.Matches(s.TextContent)
-          .Select(m => new {Prop = m.Groups["prop"].Value, Value = m.Groups["string"].Success ? m.Groups["string"].Value : m.Groups["num"].Value}))
-        .ToKeyedCollection(m => m.Prop);
-
+      var dateMatch = doc.QuerySelector(".video-publish-date")?.TextContent?.Match(RDate);
+      string G(string group) => dateMatch?.Groups[group].Value;
+      var dateString = $"{G("year")}-{G("month")}-{G("day")} {G("time")}";
+      var created = dateString.TryParseDateExact("yyyy-MMMM-d HH:mm", DateTimeStyles.AssumeUniversal);
+      
       ulong? GetStat(string selector) => doc.QuerySelector(selector)?.TextContent?.TryParseNumberWithUnits()?.RoundToULong();
+      var videoPs= doc.QuerySelectorAll("#video-watch p, #page-detail p");
 
-      return vid with {
-        Title = doc.Title,
+      var title = doc.QuerySelector("h1.page-title")?.TextContent;
+      
+      // its a bit soft to tell if there is an error. if we can't find the channel, and there isn't much text content, then assume it is.
+     
+      
+      string error = null;
+      VideoStatus? status = null;
+      if(chanA == null) {
+        // restircted example https://www.bitchute.com/video/AFIyaKIYgI6P/
+        if (title?.Contains("RESTRICTED", OrdinalIgnoreCase) == true) {  
+          error = title;
+          status = VideoStatus.Restricted;
+        }
+        else if (videoPs.Length.Between(1, 3)) {
+          // blocked example https://www.bitchute.com/video/memlIDAzcSQq/
+          error = videoPs.First().TextContent;
+          status = error?.Contains("blocked") == true ? VideoStatus.Removed : null;
+        }
+      }
+      
+      vid = vid with {
+        Title = title ?? doc.Title,
         Thumb = doc.Qs<IHtmlMetaElement>("meta[name=\"twitter:image:src\"]")?.Content,
         Statistics = new(
-          viewCount: GetStat(".video-view-count"),
+          viewCount: GetStat("#video-view-count"),
           likeCount: GetStat("#video-like-count"),
           dislikeCount: GetStat("#video-dislike-count")
         ),
         ChannelTitle = chanA?.TextContent,
-        ChannelId = chanA?.Href?.LastInPath(),
-        UploadDate = jProps["pubDate"]?.Value.TryParseDate(style: DateTimeStyles.AdjustToUniversal),
+        ChannelId = Platform.BitChute.FullId(chanA?.Href?.LastInPath()),
+        ChannelSourceId = chanA?.Href?.LastInPath(),
+        UploadDate = created,
         Description = doc.QuerySelector("#video-description .full")?.InnerHtml,
-        Duration = jProps["duration"]?.Value.TryParseInt(NumberStyles.Integer)?.Seconds(),
+        Keywords = doc.QuerySelectorAll<IHtmlAnchorElement>("#video-hashtags ul li a.spa").Select(a => a.Href?.LastInPath()).NotNull().ToArray(),
+        Error = error,
+        Status = status
       };
+      return vid;
     }
 
     IBrowsingContext GetBrowser() => BrowsingContext.New(UseProxy && Proxy.Proxies.Any()
@@ -177,7 +206,7 @@ namespace YtReader.BitChute {
       var id = doc.Qs<IHtmlLinkElement>("link#canonical")?.Href.AsUri().LocalPath.LastInPath() ?? idOrName;
       var title = doc.QuerySelector(".page-title")?.TextContent;
       var status = title?.ToLowerInvariant() == "blocked content" ? ChannelStatus.Blocked : ChannelStatus.Alive;
-      var chan = BcCollect.NewChan(id) with {
+      var chan = BcCollect.ChanFromSource(id) with {
         ChannelName = id != idOrName ? idOrName : null,
         ChannelTitle = Qs("#channel-title")?.TextContent,
         Description = Qs("#channel-description")?.InnerHtml,

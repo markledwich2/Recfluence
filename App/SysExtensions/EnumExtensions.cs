@@ -40,9 +40,9 @@ namespace SysExtensions {
     public static string EnumString<T>(this T value) where T : Enum => EnumString(value as Enum);
 
     public static bool TryParseEnum<T>(this string s, out T value) where T : Enum {
-      var enumValue = ParseEnum<T>(s, ensureFound:false);
-      value = enumValue ?? default;
-      return enumValue != null;
+      var (found, enumValue) = InnerParseEnum(s, typeof(T));
+      value = found ? (T)enumValue : default;
+      return found;
     }
 
     public static T ParseEnum<T>(this string s, bool ensureFound = true, Type t = null, Func<Enum, string> defaultEnumString = null) where T : Enum {
@@ -51,22 +51,23 @@ namespace SysExtensions {
     }
 
     public static object ParseEnum(this string s, Type t, bool ensureFound = true, Func<Enum, string> defaultEnumString = null) {
-      defaultEnumString ??= e => e.ToString();
+      var (found, enumValue) = InnerParseEnum(s, t, defaultEnumString);
+      if (ensureFound && !found) throw new InvalidCastException($"Unable to cast ({s}) to {t.Name}");
+      return enumValue ?? (Enum) t.DefaultForType();
+    }
 
-      Enum enumValue;
-      var enumCache = StringToEnumCache.GetOrAdd(t, _ => new (StringComparer.OrdinalIgnoreCase));
-      var found = enumCache.TryGetValue(s, out enumValue);
+    static (bool found, Enum value) InnerParseEnum(string s, Type t, Func<Enum, string> defaultEnumString = null) {
+      defaultEnumString ??= e => e.ToString();
+      var enumCache = StringToEnumCache.GetOrAdd(t, _ => new(StringComparer.OrdinalIgnoreCase));
+      var found = enumCache.TryGetValue(s, out var enumValue);
 
       // initialize if missing (not just if first cache miss) because there may be different defaultEnumString() functions depending on the context (e.g. serialization settings)
-      if (!found) {
-        foreach (var e in Enum.GetValues(t).Cast<Enum>())
-          enumCache.GetOrAdd(e.EnumExplicitName() ?? defaultEnumString(e), key => e);
-        found = enumCache.TryGetValue(s, out enumValue);
-      }
-
-      if (ensureFound && !found) throw new InvalidCastException($"Unable to cast ({s}) to {t.Name}");
-      if (enumValue == null) enumValue = (Enum) t.DefaultForType(); // enumCache.TryGetValue will set to null instead of the default enum value when not found
-      return enumValue;
+      if (found) return (true, enumValue);
+      
+      foreach (var e in Enum.GetValues(t).Cast<Enum>())
+        enumCache.GetOrAdd(e.EnumExplicitName() ?? defaultEnumString(e), key => e);
+      found = enumCache.TryGetValue(s, out enumValue);
+      return (found, enumValue);
     }
 
     public static IEnumerable<T> Values<T>() where T : IConvertible => Enum.GetValues(typeof(T)).Cast<T>();

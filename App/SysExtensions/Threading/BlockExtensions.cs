@@ -13,6 +13,7 @@ using SysExtensions.Collections;
 using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+// ReSharper disable InconsistentNaming
 
 namespace SysExtensions.Threading {
   public static class BlockExtensions {
@@ -106,9 +107,9 @@ namespace SysExtensions.Threading {
     }
 
     public static async IAsyncEnumerable<R> BlockTrans<T, R>(this IEnumerable<T> source,
-      Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
+      Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
-      var produceTask = ProduceAsync(source, block);
+      var produceTask = ProduceAsync(source.WithIndex(), block);
       while (true) {
         if(produceTask.IsFaulted) {
           block.Complete();
@@ -119,6 +120,10 @@ namespace SysExtensions.Threading {
       }
       await Task.WhenAll(produceTask, block.Completion);
     }
+
+    public static IAsyncEnumerable<R> BlockTrans<T, R>(this IEnumerable<T> source,
+      Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) =>
+      BlockTrans(source, (o, _) => func(o), parallel, capacity, cancel);
 
     public static async IAsyncEnumerable<R> BlockTrans<T, R>(this IAsyncEnumerable<T> source,
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
@@ -145,6 +150,13 @@ namespace SysExtensions.Threading {
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
       return new(func, options);
+    }
+    
+    static TransformBlock<(T, int), R> GetBlock<T, R>(Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) {
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
+      if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
+      var indexTupleFunc = new Func<(T, int), Task<R>>(t => func(t.Item1, t.Item2));
+      return new(indexTupleFunc, options);
     }
 
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
