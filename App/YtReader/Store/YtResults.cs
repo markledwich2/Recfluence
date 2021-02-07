@@ -112,7 +112,10 @@ where c.reviews_all>0";*/
   , arrayExclude(tags, array_construct('MissingLinkMedia', 'OrganizedReligion', 'Educational')) tags
   , lr, logo_url, channel_views, subs, reviews_human, 
   substr(description, 0, 301) description, public_reviewer_notes, public_creator_notes
-from channel_accepted order by channel_views desc",
+from channel_accepted 
+where platform = 'YouTube'
+order by channel_views desc
+",
             fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
 
           new FileQuery("vis_category_recs", "sql/vis_category_recs.sql",

@@ -29,18 +29,18 @@ namespace YtReader.Rumble {
         using var db = await Sf.Open(log);
         
         var existing = await db.ExistingChannels(P, explicitChannels);
-        ToUpdate("existing", existing);
+        ToUpdate("existing", existing.Where(c => c.ForUpdate(explicitChannels)).ToArray());
         ToUpdate("explicit",
-          explicitChannels.NotNull().Select(c => new Channel(P, c) {DiscoverSource = new(ChannelSourceType.Manual, DestId: c)}).ToArray());
+          explicitChannels.NotNull().Select(c => new Channel(P, c) {DiscoverSource = new(ChannelSourceType.Manual, c)}).ToArray());
 
         if (parts.ShouldRun(DiscoverChannels) && explicitChannels?.Any() != true) {
-          var discovered = await db.DiscoverNewChannelLinks(P);
+          var discovered = await db.DiscoverChannelsAndVideos(P);
 
           string ChannelUrl(string id) => RumbleWeb.RumbleDotCom.AppendPathSegments("c", id);
-
+          
           ToUpdate("discovered",
-            discovered.Select(l => new Channel(P, ChannelUrl(l.LinkId))
-              {DiscoverSource = new(ChannelSourceType.ChannelLink, l.ChannelIdFrom, l.LinkId)}).ToArray());
+            discovered.Where(d => d.LinkType == LinkType.Channel)
+              .Select(l => new Channel(P, ChannelUrl(l.LinkId)) {DiscoverSource = l.ToDiscoverSource()}).ToArray());
         }
       }
 

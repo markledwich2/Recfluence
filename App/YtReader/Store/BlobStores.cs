@@ -114,11 +114,14 @@ namespace YtReader.Store {
 
   public enum ChannelSourceType {
     [Obsolete] YouTubeChannelLink,
+    /// <summary>Link to a channel</summary>
     ChannelLink,
+    /// <summary>Link to a video</summary>
+    VideoLink,
     Manual
   }
 
-  public record DiscoverSource(ChannelSourceType Type, string SourceId = null, string DestId = null);
+  public record DiscoverSource(ChannelSourceType? Type, string LinkId = null, Platform? FromPlatform = null);
 
   public record Channel : WithUpdatedItem {
     public Channel() { }
@@ -184,7 +187,8 @@ namespace YtReader.Store {
   public enum Platform {
     YouTube,
     BitChute,
-    Rumble
+    Rumble,
+    Parler
   }
 
   public static class PlatformEx {
@@ -194,21 +198,26 @@ namespace YtReader.Store {
     };
   }
 
+  public enum VideoStatus {
+    NotFound
+  }
+
   public record VideoStored2 : WithUpdatedItem {
-    public VideoStored2() { }
+    public Platform Platform { get; set; }
 
-    public VideoStored2(Platform platform, string sourceId) {
-      Platform = platform;
-      VideoId = platform.FullId(sourceId);
-      SourceId = sourceId;
-    }
+    /// <summary>Globally unique id for the video. Using a canonical url is best</summary>
+    public string VideoId { get; set; }
 
-    public Platform              Platform     { get; set; }
-    public string                VideoId      { get; set; }
-    public string                SourceId     { get; set; }
+    /// <summary>Id native to the originating platform, doesn't need to be gloablly unique.</summary>
+    public string SourceId { get; set; }
+
     public string                Title        { get; set; }
     public string                ChannelId    { get; set; }
     public string                ChannelTitle { get; set; }
+    
+    /// <summary>
+    /// The date the video was uploaded. This is the primary record for this. AddedDate is a fallback with YouTube
+    /// </summary>
     public DateTime?             UploadDate   { get; set; }
     public DateTime?             AddedDate    { get; set; }
     public string                Description  { get; set; }
@@ -217,6 +226,8 @@ namespace YtReader.Store {
     public Statistics            Statistics   { get; set; }
     public string                Thumb        { get; set; }
     public decimal?              Earned       { get; set; }
+    public VideoStatus?          Status       { get; set; }
+
     public override string ToString() => $"{Title}";
   }
 
@@ -263,9 +274,6 @@ namespace YtReader.Store {
   }
 
   public record VideoExtraStored2 : VideoStored2 {
-    public VideoExtraStored2() { }
-    public VideoExtraStored2(Platform platform, string sourceId) : base(platform, sourceId) { }
-
     public bool?                 HasAd        { get; set; }
     public string                Error        { get; set; }
     public string                SubError     { get; set; }

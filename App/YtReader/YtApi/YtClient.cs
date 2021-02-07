@@ -11,6 +11,7 @@ using Google.Apis.YouTube.v3.Data;
 using Humanizer;
 using Polly;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Text;
@@ -19,8 +20,8 @@ namespace YtReader.YtApi {
   public class YtClient {
     public YtClient(YtApiCfg cfg, ILogger log) {
       Log = log;
-      YtService = new YouTubeService();
-      AvailableKeys = new ConcurrentDictionary<string, string>(cfg.Keys.Select(k => new KeyValuePair<string, string>(k, value: null)));
+      YtService = new();
+      AvailableKeys = new(cfg.Keys.Select(k => new KeyValuePair<string, string>(k, value: null)));
       Start = DateTime.UtcNow;
     }
 
@@ -71,7 +72,7 @@ namespace YtReader.YtApi {
         Language = v.Snippet.DefaultLanguage,
         PublishedAt = v.Snippet.PublishedAt?.ParseDate() ?? DateTime.MinValue,
         CategoryId = v.Snippet.CategoryId,
-        Stats = new VideoStats {
+        Stats = new() {
           Views = v.Statistics?.ViewCount,
           Likes = v.Statistics?.LikeCount,
           Dislikes = v.Statistics?.DislikeCount,
@@ -126,7 +127,7 @@ namespace YtReader.YtApi {
       var vids = new List<RecommendedVideoListItem>();
       var rank = 1;
       foreach (var item in response.Items) {
-        vids.Add(new RecommendedVideoListItem {
+        vids.Add(new() {
           VideoId = item.Id.VideoId,
           VideoTitle = item.Snippet.Title,
           ChannelId = item.Snippet.ChannelId,
@@ -197,7 +198,7 @@ namespace YtReader.YtApi {
         Description = c.Snippet.Description,
         Country = c.Snippet.Country,
         Thumbnails = c.Snippet.Thumbnails,
-        Stats = new ChannelStats {
+        Stats = new() {
           ViewCount = c.Statistics.ViewCount,
           SubCount = c.Statistics.SubscriberCount,
           Updated = DateTime.UtcNow
@@ -250,7 +251,7 @@ namespace YtReader.YtApi {
     public ICollection<string> Topics { get; } = new List<string>();
     public ICollection<string> Tags   { get; } = new List<string>();
 
-    public VideoStats Stats { get; set; } = new VideoStats();
+    public VideoStats Stats { get; set; } = new();
 
     public override string ToString() => $"{ChannelTitle} {VideoTitle}";
   }

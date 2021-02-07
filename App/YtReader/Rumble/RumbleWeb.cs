@@ -63,11 +63,12 @@ namespace YtReader.Rumble {
       string Data(string name) => e.Qs<IHtmlSpanElement>($".video-item--{name}")?.Dataset["value"];
 
       var video = new VideoStored2 {
+        VideoId = url?.ToString(),
+        SourceId = url?.PathSegments.LastOrDefault(),
         Updated = DateTime.UtcNow,
         Platform = Platform.Rumble,
         ChannelId = chan.ChannelId,
         ChannelTitle = chan.ChannelTitle,
-        VideoId = url?.ToString(),
         Title = e.QuerySelector(".video-item--title")?.TextContent,
         Thumb = e.Qs<IHtmlImageElement>("img.video-item--img")?.Source,
         Statistics = new(Data("views")?.ParseULong()),

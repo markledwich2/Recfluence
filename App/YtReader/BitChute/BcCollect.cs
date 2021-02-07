@@ -10,6 +10,8 @@ using SysExtensions.Threading;
 using YtReader.Db;
 using YtReader.Store;
 using static YtReader.StandardCollectPart;
+using static YtReader.Store.ChannelSourceType;
+using static YtReader.Store.ChannelStatus;
 
 namespace YtReader.BitChute {
   public class BcCollect {
@@ -35,6 +37,8 @@ namespace YtReader.BitChute {
 
     public async Task Collect(string[] explicitChannels, StandardCollectPart[] parts, ILogger log, CancellationToken cancel) {
       var toUpdate = new KeyedCollection<string, Channel>(s => s.ChannelId);
+      var allExisting = new KeyedCollection<string, Channel>(s => s.ChannelId);
+      //var videosToCrawl = new List<DiscoverSource>();
 
       // add to update if it doesn't exist
       void ToUpdate(string desc, IReadOnlyCollection<Channel> channels) {
@@ -44,24 +48,38 @@ namespace YtReader.BitChute {
 
       {
         using var db = await Sf.Open(log);
-        var existing = await db.ExistingChannels(P, explicitChannels?.Select(n => P.FullId(n)).ToArray());
+        allExisting.AddRange(await db.ExistingChannels(P));
 
-        ToUpdate("existing", existing);
-        ToUpdate("explicit", explicitChannels.NotNull().Select(c => NewChan(c) with {DiscoverSource = new(ChannelSourceType.Manual, DestId: c)}).ToArray());
+        // ad existing channels limit to explicit
+        ToUpdate("existing", allExisting.Where(c => c.ForUpdate(explicitChannels)).ToArray());
+
+        // add explicit channel, no need to lookup existing, because that will already be in the list
+        ToUpdate("explicit", explicitChannels.NotNull().Select(c => NewChan(c) with {DiscoverSource = new(Manual, c)}).ToArray());
 
         if (parts.ShouldRun(DiscoverChannels) && explicitChannels?.Any() != true) {
-          var discovered = await db.DiscoverNewChannelLinks(P);;
+          var discovered = await db.DiscoverChannelsAndVideos(P);
           ToUpdate("discovered",
-            discovered.Select(l => NewChan(l.LinkId) with {DiscoverSource = new(ChannelSourceType.ChannelLink, l.ChannelIdFrom, l.LinkId)}).ToArray());
+            discovered.Where(d => d.LinkType == LinkType.Channel)
+              .Select(selector: l => NewChan(l.LinkId) with {DiscoverSource = l.ToDiscoverSource()}).ToArray());
+
+          /*videosToCrawl.AddRange(discovered.Where(d => d.LinkType == LinkType.Video)
+            .Select(l => new DiscoverSource(ChannelSourceType.VideoLink, l.LinkId, l.FromPlatform)));
+          log.Information("BcCollect - planned {Videos} ({Desc}) channels for crawl", videosToCrawl.Count);*/
         }
       }
+
+      /*var crawledChannels = await videosToCrawl.WithIndex().BlockTrans(async item => {
+        var (v, i) = item;
+        var video = await Web.Video(v.LinkId)
+        
+      }).ToListAsync();*/
 
       await toUpdate.WithIndex().BlockAction(async item => {
         var (c, i) = item;
         var ((freshChan, getVideos), ex) = await Def.F(() => Web.ChannelAndVideos(c.SourceId, log)).Try();
         if (ex != null) {
           log.Warning(ex, "Unable to load channel {c}: {Message}", c, ex.Message);
-          freshChan = new() {Status = ChannelStatus.NotFound};
+          freshChan = new() {Status = NotFound};
         }
 
         var chan = c.JsonMerge(freshChan); // keep existing values like DiscoverSource, but replace whatever comes from the web update

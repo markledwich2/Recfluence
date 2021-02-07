@@ -122,8 +122,6 @@ namespace SysExtensions.Text {
     public static DateTime ParseExact(this string date, string pattern, IFormatProvider format = default, DateTimeStyles style = default) =>
       DateTime.ParseExact(date, pattern, format, style);
 
-    public static DateTime ParseDate(this string s, IFormatProvider format = default, DateTimeStyles style = default) => DateTime.Parse(s, format, style);
-
     public static decimal ParseDecimal(this string s) => decimal.Parse(s, NumberFormatInfo.InvariantInfo);
     
     public static double? TryParseDouble(this string s, NumberStyles style = NumberStyles.Any) => 
