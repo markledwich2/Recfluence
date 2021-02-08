@@ -41,7 +41,7 @@ namespace YtFunctions {
     public AppCfg         Cfg     { get; }
     public ILifetimeScope Scope   { get; }
 
-    public FuncCtx WithLog(ILogger log) => new FuncCtx(log, PipeCtx, Root, Cfg, Scope);
+    public FuncCtx WithLog(ILogger log) => new(log, PipeCtx, Root, Cfg, Scope);
 
     public T Resolve<T>() => Scope.Resolve<T>();
 
@@ -51,7 +51,7 @@ namespace YtFunctions {
       var log = Logger(root, app, version.Version);
       var appCtx = Setup.PipeAppCtxEmptyScope(root, app, version.Version);
       var scope = Setup.MainScope(root, app, appCtx, version, log);
-      return new FuncCtx(scope.Resolve<ILogger>(), appCtx, root, app, scope);
+      return new(scope.Resolve<ILogger>(), appCtx, root, app, scope);
     }
 
     static ILogger Logger(RootCfg root, AppCfg cfg, SemVersion version) {

@@ -42,7 +42,29 @@ namespace SysExtensions {
         throw new InvalidOperationException(msg, ex);
       }
     }
-    
+
+    /// <summary>Allows you to log exception without changing behaviour. It re-throws the exception</summary>
+    public static async ValueTask WithOnError(this ValueTask task, Action<Exception> onError) {
+      try {
+        await task;
+      }
+      catch (Exception ex) {
+        onError(ex);
+        throw;
+      }
+    }
+
+    /// <summary>Allows you to log exception without changing behaviour. It re-throws the exception</summary>
+    public static async ValueTask<T> WithOnError<T>(this ValueTask<T> task, Action<Exception> onError) {
+      try {
+        return await task;
+      }
+      catch (Exception ex) {
+        onError(ex);
+        throw;
+      }
+    }
+
     public static async ValueTask<T> WithSwallow<T>(this ValueTask<T> task, Action<Exception> onError) {
       try {
         return await task;
@@ -52,7 +74,7 @@ namespace SysExtensions {
         return default;
       }
     }
-    
+
     public static async Task<T> WithSwallow<T>(this Task<T> task, Action<Exception> onError) {
       try {
         return await task;
@@ -62,7 +84,7 @@ namespace SysExtensions {
         return default;
       }
     }
-    
+
     public static async Task<(T, Exception)> Try<T>(this Task<T> task, T defaultValue = default) {
       try {
         return (await task, default);
@@ -71,7 +93,7 @@ namespace SysExtensions {
         return (defaultValue, ex);
       }
     }
-    
+
     public static async Task<(T, Exception)> Try<T>(this Func<Task<T>> task, T defaultValue = default) {
       try {
         return (await task(), default);

@@ -65,12 +65,9 @@ namespace YtReader.Rumble {
 
     /// <summary>Path is the path from rumble.com to the channel (e.g. c/funnychannel or user/viraluser) Rumble video's can be
     ///   on users or channel pages. We treat users and channels the same. Channel URL's are paths to</summary>
-    /// <param name="path"></param>
-    /// <returns></returns>
-    static Url ChannelUrl(Url chanUrl) => chanUrl == null ? null : RumbleDotCom.AppendPathSegments(chanUrl.PathSegments);
+    static Url ChannelUrl(string path) => path == null ? null : RumbleDotCom.AppendPathSegments(path);
 
-    static Url ChannelUrl(string path) => RumbleDotCom.AppendPathSegments(path);
-    static Url VideoUrl(string path) => RumbleDotCom.AppendPathSegments(path);
+    static Url VideoUrl(string path) => path == null ? null : RumbleDotCom.AppendPathSegments(path);
 
     static readonly Regex ViewsRe     = new(@"(?<views>\d+) Views", RegexOptions.Compiled);
     static readonly Regex EarnedRe    = new(@"\$(?<earned>[\d.\d]+) earned", RegexOptions.Compiled);

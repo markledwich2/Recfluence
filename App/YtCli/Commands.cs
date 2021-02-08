@@ -196,8 +196,8 @@ namespace YtCli {
   }
 
   [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]
-  public record UpdateCmd(YtUpdater Updater, IPipeCtx PipeCtx, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log) : ICommand,
-    IContainerCommand {
+  public record UpdateCmd(YtUpdater Updater, IPipeCtx PipeCtx, YtContainerRunner ContainerRunner, AzureContainers Az, ContainerCfg ContainerCfg, ILogger Log) 
+    : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
     [CommandOption('a', Description = "| delimited list of action to run (empty for all)")]
     public string Actions { get; set; }
 
@@ -251,43 +251,34 @@ namespace YtCli {
     [CommandOption("dataform-deps", Description = "when specified, dataform will run with dependencies included", IsRequired = false)]
     public bool DataformDeps { get; set; }
 
-    [CommandOption(IContainerCommand.ContainerOption, IsRequired = false)]
-    public bool RunOnContainer { get; set; }
+    protected override string GroupName => "update";
 
-    [CommandOption("container-tag")] public string ContainerTag { get; set; }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      if (RunOnContainer) {
-        var image = ContainerTag.HasValue() ? ContainerCfg.FullContainerImageName(ContainerTag) : null;
-        await ContainerRunner.Run("update", image, console.GetCancellationToken(), returnOnStart: true);
-      }
-      else {
-        console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
-        var options = new UpdateOptions {
-          Actions = Actions?.UnJoin('|'),
-          Channels = Channels?.UnJoin('|'),
-          Videos = Videos?.UnJoin('|'),
-          Parts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<CollectPart>(out _)).Select(p => p.ParseEnum<CollectPart>()).ToArray(),
-          StandardParts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<StandardCollectPart>(out _)).Select(p => p.ParseEnum<StandardCollectPart>()).ToArray(),
-          Tables = Tables?.UnJoin('|'),
-          StageTables = StageTables?.UnJoin('|'),
-          Results = Results?.UnJoin('|'),
-          Indexes = Indexes?.UnJoin('|'),
-          FullLoad = FullLoad,
-          DisableChannelDiscover = DisableChannelDiscover,
-          SearchConditions = SearchConditions?.UnJoin('|').Select(t => {
-            var (index, condition, _) = t.UnJoin(':');
-            return (index, condition);
-          }).ToArray(),
-          SearchIndexes = SearchIndexes?.UnJoin('|'),
-          UserScrapeInit = UserScrapeInit,
-          UserScrapeTrial = UserScrapeTrial,
-          UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|'),
-          CollectVideosPath = CollectVideos,
-          DataformDeps = DataformDeps
-        };
-        await Updater.Update(options, console.GetCancellationToken());
-      }
+    protected override async ValueTask ExecuteLocal(IConsole console) {
+      console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
+      var options = new UpdateOptions {
+        Actions = Actions?.UnJoin('|'),
+        Channels = Channels?.UnJoin('|'),
+        Videos = Videos?.UnJoin('|'),
+        Parts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<CollectPart>(out _)).Select(p => p.ParseEnum<CollectPart>()).ToArray(),
+        StandardParts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<StandardCollectPart>(out _)).Select(p => p.ParseEnum<StandardCollectPart>()).ToArray(),
+        Tables = Tables?.UnJoin('|'),
+        StageTables = StageTables?.UnJoin('|'),
+        Results = Results?.UnJoin('|'),
+        Indexes = Indexes?.UnJoin('|'),
+        FullLoad = FullLoad,
+        DisableChannelDiscover = DisableChannelDiscover,
+        SearchConditions = SearchConditions?.UnJoin('|').Select(t => {
+          var (index, condition, _) = t.UnJoin(':');
+          return (index, condition);
+        }).ToArray(),
+        SearchIndexes = SearchIndexes?.UnJoin('|'),
+        UserScrapeInit = UserScrapeInit,
+        UserScrapeTrial = UserScrapeTrial,
+        UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|'),
+        CollectVideosPath = CollectVideos,
+        DataformDeps = DataformDeps
+      };
+      await Updater.Update(options, console.GetCancellationToken());
     }
   }
 
@@ -375,17 +366,13 @@ namespace YtCli {
   }
 
   [Command("parler")]
-  public record ParlerCmd(ILogger Log, Parler Parler, YtContainerRunner ContainerRunner) : IContainerCommand {
-    [CommandOption(IContainerCommand.ContainerOption)]
-    public bool RunOnContainer { get; set; }
+  public record ParlerCmd(ILogger Log, Parler Parler, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg) 
+    : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
 
     [CommandOption('f')] public string Folder { get; set; }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      if (RunOnContainer) {
-        await ContainerRunner.Run("parler", returnOnStart: true);
-        return;
-      }
+    
+    protected override string GroupName => "parler";
+    protected override async ValueTask ExecuteLocal(IConsole console) {
       await Parler.LoadFromGoogleDrive(Folder, "posts", Log);
       Log.Information("Completed load parler data");
     }
