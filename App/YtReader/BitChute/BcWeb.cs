@@ -32,23 +32,31 @@ using Url = Flurl.Url;
 namespace YtReader.BitChute {
   record FlurlClients(FlurlClient Direct, FlurlClient Proxy);
 
-  public class BcWeb {
+  public class BcWeb : IScraper {
     readonly        ProxyCfg       Proxy;
+    readonly        BitChuteCfg    Cfg;
     static readonly string         Url      = "https://www.bitchute.com";
     static readonly IConfiguration AngleCfg = Configuration.Default.WithDefaultLoader().WithDefaultCookies();
     bool                           UseProxy;
     readonly FlurlClients          FlurlClients;
 
-    public BcWeb(ProxyCfg proxy) {
+    public BcWeb(ProxyCfg proxy, BitChuteCfg cfg) {
       Proxy = proxy;
+      Cfg = cfg;
       FlurlClients = new(new(), new(proxy.Proxies.FirstOrDefault()?.CreateHttpClient()));
     }
 
-    public async Task<(Channel channel, IAsyncEnumerable<VideoStored2[]> videos)> ChannelAndVideos(string sourceId, ILogger log) {
+    public Platform Platform        => Platform.BitChute;
+    public int      CollectParallel => Cfg.CollectParallel;
+
+    static string FullId(string sourceId) => Platform.BitChute.FullId(sourceId);
+    public string SourceToFullId(string sourceId, LinkType type) => FullId(sourceId);
+
+    public async Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log) {
       var chanDoc = await Open(Url.AppendPathSegment($"channel/{sourceId}"), (b, url) => b.OpenAsync(url), log);
 
       if (chanDoc.StatusCode == HttpStatusCode.NotFound)
-        return (BcCollect.ChanFromSource(sourceId) with {Status = ChannelStatus.NotFound, Updated = DateTime.UtcNow}, null);
+        return (this.NewChan(sourceId) with {Status = ChannelStatus.NotFound, Updated = DateTime.UtcNow}, null);
       chanDoc.StatusCode.EnsureSuccess();
       var csrf = chanDoc.CsrfToken();
 
@@ -65,7 +73,7 @@ namespace YtReader.BitChute {
         ChannelViews = aboutViewCount.TryParseNumberWithUnits()?.RoundToULong()
       };
 
-      async IAsyncEnumerable<VideoStored2[]> Videos() {
+      async IAsyncEnumerable<Video[]> Videos() {
         var chanVids = GetChanVids(chanDoc, chan, log);
         yield return chanVids;
         var offset = chanVids.Length;
@@ -80,20 +88,15 @@ namespace YtReader.BitChute {
         }
       }
 
-      return (chan, videos: Videos());
+      return (Channel: chan, Videos: Videos());
     }
 
     //static readonly Regex JProp = new(@"""(?<prop>[\w]*)""\s*:\s*(?:(?:""(?<string>(?:\\""|[^\""])*)"")|(?<num>[\d\.]+))", Compiled);
     static readonly Regex RDate = new(@"(?<time>\d{2}:\d{2}) UTC on (?<month>\w*)\s+(?<day>\d+)\w*\, (?<year>\d*)", Compiled);
 
-    public async Task<VideoExtraStored2> Video(string sourceId, ILogger log) {
+    public async Task<VideoExtra> Video(string sourceId, ILogger log) {
       var doc = await Open(Url.AppendPathSegment($"video/{sourceId}/"), (b, url) => b.OpenAsync(url), log);
-      var vid = new VideoExtraStored2 {
-        Platform = Platform.BitChute,
-        SourceId = sourceId,
-        VideoId = Platform.BitChute.FullId(sourceId),
-        Updated = DateTime.UtcNow,
-      };
+      var vid = this.NewVidExtra(sourceId);
 
       if (doc.StatusCode == HttpStatusCode.NotFound)
         return vid with {Status = VideoStatus.NotFound};
@@ -104,20 +107,18 @@ namespace YtReader.BitChute {
       string G(string group) => dateMatch?.Groups[group].Value;
       var dateString = $"{G("year")}-{G("month")}-{G("day")} {G("time")}";
       var created = dateString.TryParseDateExact("yyyy-MMMM-d HH:mm", DateTimeStyles.AssumeUniversal);
-      
+
       ulong? GetStat(string selector) => doc.QuerySelector(selector)?.TextContent?.TryParseNumberWithUnits()?.RoundToULong();
-      var videoPs= doc.QuerySelectorAll("#video-watch p, #page-detail p");
+      var videoPs = doc.QuerySelectorAll("#video-watch p, #page-detail p");
 
       var title = doc.QuerySelector("h1.page-title")?.TextContent;
-      
+
       // its a bit soft to tell if there is an error. if we can't find the channel, and there isn't much text content, then assume it is.
-     
-      
       string error = null;
       VideoStatus? status = null;
-      if(chanA == null) {
+      if (chanA == null) {
         // restircted example https://www.bitchute.com/video/AFIyaKIYgI6P/
-        if (title?.Contains("RESTRICTED", OrdinalIgnoreCase) == true) {  
+        if (title?.Contains("RESTRICTED", OrdinalIgnoreCase) == true) {
           error = title;
           status = VideoStatus.Restricted;
         }
@@ -127,7 +128,7 @@ namespace YtReader.BitChute {
           status = error?.Contains("blocked") == true ? VideoStatus.Removed : null;
         }
       }
-      
+
       vid = vid with {
         Title = title ?? doc.Title,
         Thumb = doc.Qs<IHtmlMetaElement>("meta[name=\"twitter:image:src\"]")?.Content,
@@ -137,7 +138,7 @@ namespace YtReader.BitChute {
           dislikeCount: GetStat("#video-dislike-count")
         ),
         ChannelTitle = chanA?.TextContent,
-        ChannelId = Platform.BitChute.FullId(chanA?.Href?.LastInPath()),
+        ChannelId = FullId(chanA?.Href?.LastInPath()),
         ChannelSourceId = chanA?.Href?.LastInPath(),
         UploadDate = created,
         Description = doc.QuerySelector("#video-description .full")?.InnerHtml,
@@ -199,14 +200,14 @@ namespace YtReader.BitChute {
       UseProxy = true;
     }
 
-    static Channel ParseChannel(IDocument doc, string idOrName) {
+    Channel ParseChannel(IDocument doc, string idOrName) {
       IElement Qs(string s) => doc.Body.QuerySelector(s);
 
       var profileA = doc.Qs<IHtmlAnchorElement>(".channel-banner .details .name > a");
       var id = doc.Qs<IHtmlLinkElement>("link#canonical")?.Href.AsUri().LocalPath.LastInPath() ?? idOrName;
       var title = doc.QuerySelector(".page-title")?.TextContent;
       var status = title?.ToLowerInvariant() == "blocked content" ? ChannelStatus.Blocked : ChannelStatus.Alive;
-      var chan = BcCollect.ChanFromSource(id) with {
+      var chan = this.NewChan(id) with {
         ChannelName = id != idOrName ? idOrName : null,
         ChannelTitle = Qs("#channel-title")?.TextContent,
         Description = Qs("#channel-description")?.InnerHtml,
@@ -221,14 +222,14 @@ namespace YtReader.BitChute {
       return chan;
     }
 
-    static VideoStored2[] GetChanVids(IDocument doc, Channel c, ILogger log) {
+    static Video[] GetChanVids(IDocument doc, Channel c, ILogger log) {
       var videos = doc.Body.QuerySelectorAll(".channel-videos-container")
         .Select(e => ParseChanVid(e) with {ChannelId = c.ChannelId, ChannelTitle = c.ChannelTitle}).ToArray();
       log.Debug("BcWeb - {Channel}: loaded {Videos} videos", videos.Length, c.ChannelTitle);
       return videos;
     }
 
-    static VideoStored2 ParseChanVid(IElement c) {
+    static Video ParseChanVid(IElement c) {
       IElement Qs(string s) => c.QuerySelector(s);
 
       var videoA = c.Qs<IHtmlAnchorElement>(".channel-videos-title .spa");
@@ -274,8 +275,6 @@ namespace YtReader.BitChute {
       cc.SetCookies(domain, document.Cookie);
       return cc.GetCookies(domain).FirstOrDefault(c => c.Name == name);
     }
-
-    public static string LastInPath(this string path) => path?.Split('/').LastOrDefault(t => !t.Trim().NullOrEmpty());
 
     static readonly Regex CreatedRe = new(@"(?<num>\d+)\s(?<unit>day|week|month|year)[s]?", Compiled | IgnoreCase);
 

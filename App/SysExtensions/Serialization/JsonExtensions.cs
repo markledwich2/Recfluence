@@ -25,8 +25,10 @@ namespace SysExtensions.Serialization {
       var settings = new JsonSerializerSettings {
         NullValueHandling = NullValueHandling.Ignore, Formatting = formatting, DefaultValueHandling = DefaultValueHandling.Ignore
       };
-      settings.Converters.AddRange(new StringEnumConverter(new CamelCaseNamingStrategy(processDictionaryKeys: false, overrideSpecifiedNames: false), allowIntegerValues: false));
-      settings.ContractResolver = new CoreSerializeContractResolver {NamingStrategy = new CamelCaseNamingStrategy(processDictionaryKeys: false, overrideSpecifiedNames: false)};
+      settings.Converters.AddRange(new StringEnumConverter(new CamelCaseNamingStrategy(processDictionaryKeys: false, overrideSpecifiedNames: false),
+        allowIntegerValues: false));
+      settings.ContractResolver = new CoreSerializeContractResolver
+        {NamingStrategy = new CamelCaseNamingStrategy(processDictionaryKeys: false, overrideSpecifiedNames: false)};
       return settings;
     }
 
@@ -73,13 +75,12 @@ namespace SysExtensions.Serialization {
     public static JObject ToJObject(this object o, JsonSerializerSettings settings = null)
       => (JObject) SerializeToJToken(o, settings);
 
-    /// <summary>
-    /// Returns a new instance of T with targets values overriden by newValues non-null values
-    /// Relies entirely on the Newtonsoft.Json merging feature
-    /// </summary>
-    public static T JsonMerge<T>(this T target, T newValues, JsonSerializerSettings settings = null) {
+    /// <summary>Returns a new instance of T with targets values overriden by newValues non-null values Relies entirely on the
+    ///   Newtonsoft.Json merging feature</summary>
+    public static T JsonMerge<T>(this T target, T newValues, JsonMergeSettings mergeSettings = null, JsonSerializerSettings settings = null) {
       var aJ = target.ToJObject(settings);
-      aJ.Merge(newValues.ToJObject(settings), new() {MergeNullValueHandling = MergeNullValueHandling.Ignore});
+      mergeSettings ??= new() {MergeNullValueHandling = MergeNullValueHandling.Ignore};
+      aJ.Merge(newValues.ToJObject(settings), mergeSettings);
       return aJ.ToObject<T>(settings);
     }
 
@@ -91,7 +92,7 @@ namespace SysExtensions.Serialization {
     public static Stream ToJsonStream<T>(this T o, JsonSerializerSettings settings = null, Encoding encoding = null) {
       settings ??= _defaultSettings;
       var ms = new MemoryStream();
-      using (var sw = new StreamWriter(ms, leaveOpen: true, encoding:encoding ?? Encoding.UTF8))
+      using (var sw = new StreamWriter(ms, leaveOpen: true, encoding: encoding ?? Encoding.UTF8))
       using (var jw = new JsonTextWriter(sw))
         settings.Serializer().Serialize(jw, o);
       ms.Seek(0, SeekOrigin.Begin);

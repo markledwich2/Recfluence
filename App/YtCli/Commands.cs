@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
@@ -20,7 +19,6 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
-using YtReader.BitChute;
 using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
@@ -198,7 +196,8 @@ namespace YtCli {
   }
 
   [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]
-  public record UpdateCmd(YtUpdater Updater, IPipeCtx PipeCtx, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log) : ICommand, IContainerCommand {
+  public record UpdateCmd(YtUpdater Updater, IPipeCtx PipeCtx, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log) : ICommand,
+    IContainerCommand {
     [CommandOption('a', Description = "| delimited list of action to run (empty for all)")]
     public string Actions { get; set; }
 
@@ -217,8 +216,11 @@ namespace YtCli {
     [CommandOption('i', Description = "| delimited list of indexes to limit indexing to")]
     public string Indexes { get; set; }
 
-    [CommandOption('c', Description = "| delimited list of channels to collect")]
+    [CommandOption('c', Description = "| delimited list of channels (source id's) to collect")]
     public string Channels { get; set; }
+
+    [CommandOption('v', Description = "| delimited list of videos (source id's)")]
+    public string Videos { get; set; }
 
     [CommandOption("collect-parts", shortName: 'p', Description = "optional '|' separated list of collect parts to run")]
     public string Parts { get; set; }
@@ -248,22 +250,23 @@ namespace YtCli {
 
     [CommandOption("dataform-deps", Description = "when specified, dataform will run with dependencies included", IsRequired = false)]
     public bool DataformDeps { get; set; }
-    
+
     [CommandOption(IContainerCommand.ContainerOption, IsRequired = false)]
     public bool RunOnContainer { get; set; }
-    
-    [CommandOption("container-tag")]
-    public string ContainerTag {get;set;}
+
+    [CommandOption("container-tag")] public string ContainerTag { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) {
       if (RunOnContainer) {
         var image = ContainerTag.HasValue() ? ContainerCfg.FullContainerImageName(ContainerTag) : null;
         await ContainerRunner.Run("update", image, console.GetCancellationToken(), returnOnStart: true);
-      } else {
+      }
+      else {
         console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
         var options = new UpdateOptions {
           Actions = Actions?.UnJoin('|'),
           Channels = Channels?.UnJoin('|'),
+          Videos = Videos?.UnJoin('|'),
           Parts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<CollectPart>(out _)).Select(p => p.ParseEnum<CollectPart>()).ToArray(),
           StandardParts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<StandardCollectPart>(out _)).Select(p => p.ParseEnum<StandardCollectPart>()).ToArray(),
           Tables = Tables?.UnJoin('|'),
@@ -370,15 +373,14 @@ namespace YtCli {
       Log.Information("Completed building docker image {Image} in {Duration}", image, sw.Elapsed.HumanizeShort());
     }
   }
-  
+
   [Command("parler")]
   public record ParlerCmd(ILogger Log, Parler Parler, YtContainerRunner ContainerRunner) : IContainerCommand {
     [CommandOption(IContainerCommand.ContainerOption)]
     public bool RunOnContainer { get; set; }
 
-    [CommandOption('f')]
-    public string Folder { get; set; }
-    
+    [CommandOption('f')] public string Folder { get; set; }
+
     public async ValueTask ExecuteAsync(IConsole console) {
       if (RunOnContainer) {
         await ContainerRunner.Run("parler", returnOnStart: true);

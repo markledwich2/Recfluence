@@ -2,44 +2,52 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using Flurl;
+using Newtonsoft.Json.Linq;
 using Serilog;
-using SysExtensions.Net;
 using SysExtensions;
+using SysExtensions.Net;
 using SysExtensions.Text;
 using YtReader.Store;
 using Url = Flurl.Url;
 
 namespace YtReader.Rumble {
-  public record RumbleWeb {
-    public const string RumbleDotCom = "https://rumble.com/";
+  public record RumbleWeb(RumbleCfg Cfg) : IScraper {
+    public const    string         RumbleDotCom = "https://rumble.com/";
     static readonly IConfiguration AngleCfg     = Configuration.Default.WithDefaultLoader();
 
-    public async Task<(Channel Channel, IAsyncEnumerable<VideoStored2[]> Videos)> ChannelAndVideos(string urlOrId, ILogger log) {
-      var chanUrl = Url.IsValid(urlOrId) ? urlOrId.AsUrl() : RumbleDotCom.AppendPathSegments("c", urlOrId);
+    public async Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log) {
       var bc = BrowsingContext.New(AngleCfg);
-      var doc = await bc.OpenAsync(chanUrl);
+      var doc = await bc.OpenAsync(ChannelUrl(sourceId));
       doc.StatusCode.EnsureSuccess();
 
-      var chanId = doc.Qs<IHtmlLinkElement>("link[rel=canonical]")?.Href;
-      var sourceId = chanId.AsUrl().PathSegments.LastOrDefault();
-      var chan = new Channel {
-        Updated = DateTime.Now,
-        Platform = Platform.Rumble,
-        SourceId = sourceId,
-        ChannelId = chanId,
+      var chanUrl = doc.Qs<IHtmlLinkElement>("link[rel=canonical]")?.Href.AsUrl();
+      string[] altIds = null;
+      if (chanUrl != null) {
+        // use the canonical link to fix up ones where have a url that redirects. e.g.c/c-346475 redirects to c/RedpillProject, so we use c/RedpillProject
+        var canonicalId = chanUrl.Path.TrimPath();
+        if (sourceId != canonicalId) {
+          altIds = new[] {sourceId};
+          sourceId = canonicalId;
+        }
+      }
+
+      var chan = this.NewChan(sourceId) with {
+        SourceIdAlts = altIds,
         ChannelTitle = doc.Title,
         Subs = doc.QuerySelector(".subscribe-button-count")?.TextContent.TryParseNumberWithUnits()?.RoundToULong(),
         LogoUrl = doc.Qs<IHtmlImageElement>(".listing-header--thumb")?.Source,
         Status = ChannelStatus.Alive
       };
 
-      async IAsyncEnumerable<VideoStored2[]> Videos() {
-        VideoStored2[] ParseVideos(IDocument d) => d.QuerySelectorAll(".video-listing-entry").Select(e => ParseVideo(e, chan)).ToArray();
+      async IAsyncEnumerable<Video[]> Videos() {
+        Video[] ParseVideos(IDocument d) => d.QuerySelectorAll(".video-listing-entry").Select(e => ParseVideo(e, chan)).ToArray();
         string NextUrl(IDocument d) => d.Qs<IHtmlLinkElement>("link[rel=next]")?.Href;
 
         yield return ParseVideos(doc);
@@ -55,18 +63,75 @@ namespace YtReader.Rumble {
       return (Channel: chan, Videos: Videos());
     }
 
-    VideoStored2 ParseVideo(IElement e, Channel chan) {
+    /// <summary>Path is the path from rumble.com to the channel (e.g. c/funnychannel or user/viraluser) Rumble video's can be
+    ///   on users or channel pages. We treat users and channels the same. Channel URL's are paths to</summary>
+    /// <param name="path"></param>
+    /// <returns></returns>
+    static Url ChannelUrl(Url chanUrl) => chanUrl == null ? null : RumbleDotCom.AppendPathSegments(chanUrl.PathSegments);
+
+    static Url ChannelUrl(string path) => RumbleDotCom.AppendPathSegments(path);
+    static Url VideoUrl(string path) => RumbleDotCom.AppendPathSegments(path);
+
+    static readonly Regex ViewsRe     = new(@"(?<views>\d+) Views", RegexOptions.Compiled);
+    static readonly Regex EarnedRe    = new(@"\$(?<earned>[\d.\d]+) earned", RegexOptions.Compiled);
+    static readonly Regex PublishedRe = new(@"Published[\s]*(?<date>.*)", RegexOptions.Compiled);
+
+    public async Task<VideoExtra> Video(string sourceId, ILogger log) {
+      var bc = BrowsingContext.New(AngleCfg);
+      var doc = await bc.OpenAsync(VideoUrl(sourceId));
+      var vid = this.NewVidExtra(sourceId);
+      if (doc.StatusCode == HttpStatusCode.NotFound)
+        return vid with {Status = VideoStatus.NotFound};
+      doc.StatusCode.EnsureSuccess();
+
+      string MetaProp(string prop) => MetaProps(prop).FirstOrDefault();
+      IEnumerable<string> MetaProps(string prop) => doc.QuerySelectorAll<IHtmlMetaElement>($"meta[property=\"og:{prop}\"]").Select(e => e.Content);
+
+      var mediaByDiv = doc.Qs<IHtmlDivElement>("div.media-by");
+      var chanA = doc.Qs<IHtmlAnchorElement>(".media-by--a[rel=author]");
+      var chanUrl = chanA?.Href.AsUrl();
+      var channelSourceId = chanUrl?.Path.TrimPath();
+      var ldJson = doc.QuerySelectorAll<IHtmlScriptElement>("script[type=\"application/ld+json\"]").SelectMany(e => JArray.Parse(e.Text).Children<JObject>());
+      var durationText = ldJson.FirstOrDefault(j => j.Value<string>("@type") == "VideoObject")?["duration"]?.Value<string>();
+      var duration = durationText?.TryParseTimeSpanExact(@"\P\Thh\Hmm\Mss\S");
+      var contentDiv = doc.QuerySelector(".content.media-description");
+      contentDiv?.QuerySelector("span.breadcrumbs").Remove(); // clean up description
+
+      var publishedText = mediaByDiv?.QuerySelector(".media-heading-published")?.TextContent?.Trim();
+      vid = vid with {
+        Title = MetaProp("title")?.Trim(),
+        ChannelId = ChannelUrl(channelSourceId),
+        ChannelSourceId = channelSourceId,
+        ChannelTitle = chanA?.QuerySelector(".media-heading-name")?.TextContent.Trim(),
+        UploadDate = publishedText?.Match(PublishedRe).Groups["date"].Value.TryParseDateExact("MMMM d, yyyy", DateTimeStyles.AssumeUniversal),
+        Statistics = new(mediaByDiv?.QuerySelectorAll(".media-heading-info")
+          .Select(s => s.TextContent.Match(ViewsRe)).FirstOrDefault(m => m.Success)?.Groups["views"].Value.TryParseULong()),
+        Thumb = MetaProp("image"),
+        Keywords = MetaProp("tag")?.Split(" ").ToArray() ?? MetaProps("video:tag").ToArray(),
+        Description = doc.QuerySelector(".content.media-description")?.TextContent.Trim(),
+        Earned = mediaByDiv?.QuerySelector(".media-earnings")?.TextContent.Match(EarnedRe)?.Groups["earned"].Value.NullIfEmpty()?.ParseDecimal(),
+        Duration = duration
+      };
+      return vid;
+    }
+
+    public string SourceToFullId(string sourceId, LinkType type) => type switch {
+      LinkType.Channel => ChannelUrl(sourceId),
+      LinkType.Video => VideoUrl(sourceId),
+      _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+    };
+
+    public          int      CollectParallel => Cfg.CollectParallel;
+    public          Platform Platform        => Platform.Rumble;
+    static readonly Regex    VideoIdRe = new(@"(?<id>v\w{5})-.*");
+
+    Video ParseVideo(IElement e, Channel chan) {
       var url = e.Qs<IHtmlAnchorElement>(".video-item--a")?.Href?.AsUrl();
-      if (url?.IsRelative == true)
-        url = RumbleDotCom.AppendPathSegment(url.Path);
+      var sourceId = url?.Path.Match(VideoIdRe).Groups["id"].Value.NullIfEmpty();
 
       string Data(string name) => e.Qs<IHtmlSpanElement>($".video-item--{name}")?.Dataset["value"];
 
-      var video = new VideoStored2 {
-        VideoId = url?.ToString(),
-        SourceId = url?.PathSegments.LastOrDefault(),
-        Updated = DateTime.UtcNow,
-        Platform = Platform.Rumble,
+      var video = this.NewVid(sourceId) with {
         ChannelId = chan.ChannelId,
         ChannelTitle = chan.ChannelTitle,
         Title = e.QuerySelector(".video-item--title")?.TextContent,

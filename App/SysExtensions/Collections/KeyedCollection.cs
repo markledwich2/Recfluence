@@ -9,10 +9,13 @@ using System.Threading.Tasks;
 using SysExtensions.Serialization;
 
 namespace SysExtensions.Collections {
-  public interface IKeyedCollection<K, V> : ICollection<V> {
+  public interface IReadonlyKeyedCollection<K, V> : IReadOnlyCollection<V> {
     V this[K key] { get; }
     bool ContainsKey(K key);
     K GetKey(V item);
+  }
+
+  public interface IKeyedCollection<K, V> : ICollection<V>, IReadonlyKeyedCollection<K, V> {
     void SetKey(V item, K value);
     V GetOrAdd(K k, Func<V> create);
     Task<V> GetOrAdd(K k, Func<Task<V>> create);
@@ -29,9 +32,9 @@ namespace SysExtensions.Collections {
     public KeyedCollection(Expression<Func<V, K>> getKeyExpression, IEqualityComparer<K> comparer = null, bool theadSafe = false) {
       _getKeyExpression = getKeyExpression;
       if (theadSafe)
-        _dic = comparer == null ? new ConcurrentDictionary<K, V>() : new ConcurrentDictionary<K, V>(comparer);
+        _dic = comparer == null ? new() : new ConcurrentDictionary<K, V>(comparer);
       else
-        _dic = comparer == null ? new Dictionary<K, V>() : new Dictionary<K, V>(comparer);
+        _dic = comparer == null ? new() : new Dictionary<K, V>(comparer);
       //_dic = comparer == null ? new Dictionary<K, V>() : new Dictionary<K, V>(comparer);
     }
 
@@ -108,7 +111,7 @@ namespace SysExtensions.Collections {
     readonly Func<V, K>                 _getKey;
 
     public MultiValueKeyedCollection(Func<V, K> getKey, IEqualityComparer<K> comparer = null) {
-      _dic = comparer == null ? new MultiValueDictionary<K, V>() : new MultiValueDictionary<K, V>(comparer);
+      _dic = comparer == null ? new() : new MultiValueDictionary<K, V>(comparer);
       _getKey = getKey;
     }
 

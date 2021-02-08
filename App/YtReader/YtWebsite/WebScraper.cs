@@ -6,7 +6,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Humanizer;
@@ -344,7 +343,7 @@ namespace YtReader.YtWebsite {
       var infoDic = await GetVideoInfoDicAsync(videoId, log);
       var videoItem = GetVideo(videoId, infoDic, watchPage);
 
-      var extra = new VideoExtraStored2 {
+      var extra = new VideoExtra {
         VideoId = videoId,
         Updated = DateTime.UtcNow,
         // some videos are listed under a channels playlist, but when you click on the vidoe, its channel is under enother (e.g. _iYT8eg1F8s)
@@ -599,15 +598,13 @@ namespace YtReader.YtWebsite {
 
       return new(info, captions.ToList());
     }
-    
+
     // filters control characters but allows only properly-formed surrogate sequences
-    static readonly Regex InvalidXml = new (
+    static readonly Regex InvalidXml = new(
       @"(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFEFF\uFFFE\uFFFF]",
       RegexOptions.Compiled);
 
-    /// <summary>
-    /// removes any unusual unicode characters that can't be encoded into XML
-    /// </summary>
+    /// <summary>removes any unusual unicode characters that can't be encoded into XML</summary>
     public static string RemoveInvalidXmlChars(string text) => text == null ? null : InvalidXml.Replace(text, "");
 
     async Task<XElement> GetClosedCaptionTrackXmlAsync(string url, ILogger log) {
@@ -647,12 +644,12 @@ namespace YtReader.YtWebsite {
   }
 
   public class RecsAndExtra {
-    public RecsAndExtra(VideoExtraStored2 extra, Rec[] recs) {
+    public RecsAndExtra(VideoExtra extra, Rec[] recs) {
       Extra = extra;
       Recs = recs;
     }
 
-    public VideoExtraStored2 Extra { get; set; }
-    public Rec[]             Recs  { get; set; }
+    public VideoExtra Extra { get; set; }
+    public Rec[]      Recs  { get; set; }
   }
 }

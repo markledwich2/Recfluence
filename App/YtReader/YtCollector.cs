@@ -459,9 +459,9 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
       }
     }
 
-    static async Task SaveVids(Channel c, IReadOnlyCollection<VideoItem> vids, JsonlStore<VideoStored2> vidStore, ILogger log) {
+    static async Task SaveVids(Channel c, IReadOnlyCollection<VideoItem> vids, JsonlStore<Video> vidStore, ILogger log) {
       var updated = DateTime.UtcNow;
-      var vidsStored = vids.Select(v => new VideoStored2 {
+      var vidsStored = vids.Select(v => new Video {
         VideoId = v.Id,
         Title = v.Title,
         Description = v.Description,

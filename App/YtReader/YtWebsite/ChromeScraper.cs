@@ -28,16 +28,16 @@ namespace YtReader.YtWebsite {
       ProxyCfg = proxyCfg;
       CollectCfg = collectCfg;
       LogStore = logStore;
-      ExecutablePath = new AsyncLazy<string>(async () => {
+      ExecutablePath = new(async () => {
         var revisionInfo = await new BrowserFetcher().DownloadAsync(802497); //revision needs to be recent to be able to use optional chaining
         return revisionInfo.ExecutablePath;
       });
     }
 
     async Task<Browser> CreateBrowser(ILogger log, ProxyConnectionCfg proxy) {
-      var browser = await Puppeteer.LaunchAsync(new LaunchOptions {
+      var browser = await Puppeteer.LaunchAsync(new() {
         Headless = CollectCfg.Headless,
-        DefaultViewport = new ViewPortOptions {Width = 1024, Height = 1200},
+        DefaultViewport = new() {Width = 1024, Height = 1200},
         ExecutablePath = await ExecutablePath,
         Args = new[] {
           "--disable-dev-shm-usage", "--no-sandbox",
@@ -130,7 +130,7 @@ namespace YtReader.YtWebsite {
 
     #region Request handling
 
-    static readonly Regex AbortPathRe = new Regex("\\.(woff2|png|ico)$", RegexOptions.Compiled);
+    static readonly Regex AbortPathRe = new("\\.(woff2|png|ico)$", RegexOptions.Compiled);
 
     static bool AbortRequest(Request req) {
       if (req.ResourceType.In(ResourceType.Image, ResourceType.Media, ResourceType.Font, ResourceType.TextTrack, ResourceType.Ping, ResourceType.Manifest))
@@ -188,7 +188,7 @@ namespace YtReader.YtWebsite {
         return (default, response);
 
       var (video, error) = await VideoDetails(page, videoId);
-      video ??= new VideoExtraStored2 {VideoId = videoId};
+      video ??= new() {VideoId = videoId};
 
       // keep this in sync with UserScrape/crawler.py get_video_unavailable()
       var reason = await page.EvaluateFunctionAsync<VideoReason>(@"() => { 
@@ -206,13 +206,13 @@ namespace YtReader.YtWebsite {
 ");
       video.Error = error ?? reason?.reason;
       video.SubError = reason?.subReason;
-      if(video.Error.HasValue()) return (new RecsAndExtra(video, default), default);
-      
+      if (video.Error.HasValue()) return (new(video, default), default);
+
       await ScrollDown(page, maxScroll: null, videoId, log);
       (video.Ad, video.HasAd) = await GetAd(page);
       var recs = await GetRecs(page, error.HasValue(), log);
       (video.Comments, video.CommentsMsg, video.CommentCount) = await GetComments(page, video, log);
-      return (new RecsAndExtra(video, recs), default);
+      return (new(video, recs), default);
     }
 
     static async Task ScrollDown(Page page, int? maxScroll, string videoId, ILogger log) {
@@ -275,7 +275,7 @@ namespace YtReader.YtWebsite {
       }
     }
 
-    async Task<(VideoCommentStored2[] comments, string msg, long? count)> GetComments(Page page, VideoExtraStored2 video, ILogger log) {
+    async Task<(VideoCommentStored2[] comments, string msg, long? count)> GetComments(Page page, VideoExtra video, ILogger log) {
       try {
         await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}");
       }
@@ -383,7 +383,7 @@ namespace YtReader.YtWebsite {
 
     async Task WaitForSelector(Page page, string selector, TimeSpan timeout, ILogger log) {
       try {
-        await page.WaitForSelectorAsync(selector, new WaitForSelectorOptions {Timeout = (int) timeout.TotalMilliseconds});
+        await page.WaitForSelectorAsync(selector, new() {Timeout = (int) timeout.TotalMilliseconds});
       }
       catch (WaitTaskTimeoutException e) {
         log.Warning(e, "Waiting for '{Selector}' timed out on {Page}", selector, page.Uri().PathAndQuery);
@@ -419,7 +419,7 @@ namespace YtReader.YtWebsite {
 
     const string VideoErrorUpcoming = "upcoming";
 
-    async Task<(VideoExtraStored2, string error)> VideoDetails(Page page, string videoId) {
+    async Task<(VideoExtra, string error)> VideoDetails(Page page, string videoId) {
       var details = await page.EvaluateFunctionAsync<VideDetails>(@"() => {
      var v = ytInitialPlayerResponse?.videoDetails || document.querySelector('ytd-app')?.__data?.data?.playerResponse?.videoDetails
      if(!v) return null
@@ -463,7 +463,7 @@ namespace YtReader.YtWebsite {
     })
 .reduce((acc, cur) => ({ ...acc, ...cur }), {})");
 
-      var video = new VideoExtraStored2 {
+      var video = new VideoExtra {
         VideoId = videoId,
         Description = details.shortDescription,
         Duration = details.lengthSeconds.Seconds(),
@@ -472,7 +472,7 @@ namespace YtReader.YtWebsite {
         ChannelId = details.channelId,
         ChannelTitle = details.author,
         UploadDate = detailsScript.uploadDate,
-        Statistics = new Statistics(details.viewCount, likeDislike.likes, likeDislike.dislikes),
+        Statistics = new(details.viewCount, likeDislike.likes, likeDislike.dislikes),
         Updated = DateTime.UtcNow,
         Source = ScrapeSource.Chrome
       };
@@ -486,7 +486,7 @@ namespace YtReader.YtWebsite {
       public string   channelId        { get; set; }
       public string   author           { get; set; }
       public string   title            { get; set; }
-      public ulong     viewCount        { get; set; }
+      public ulong    viewCount        { get; set; }
       public int      lengthSeconds    { get; set; }
       public string   thumbnail        { get; set; }
       public bool?    isLiveContent    { get; set; }
@@ -548,7 +548,7 @@ namespace YtReader.YtWebsite {
   }
 
   public static class PageEx {
-    public static Uri Uri(this Page page) => new Uri(page.Url);
-    public static Credentials AsCreds(this NameSecret secret) => new Credentials {Username = secret.Name, Password = secret.Secret};
+    public static Uri Uri(this Page page) => new(page.Url);
+    public static Credentials AsCreds(this NameSecret secret) => new() {Username = secret.Name, Password = secret.Secret};
   }
 }

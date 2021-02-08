@@ -42,6 +42,7 @@ namespace SysExtensions.Text {
     }
 
     public static bool NullOrEmpty(this string value) => string.IsNullOrEmpty(value);
+    public static string NullIfEmpty(this string value) => string.IsNullOrEmpty(value) ? null : value;
 
     public static string[] UnJoin(this string input, char separator, char escapeCharacter = '\\') {
       var res = new List<string>();
@@ -111,23 +112,25 @@ namespace SysExtensions.Text {
     public static string StripNonDigit(this string s) => Regex.Replace(s, "\\D", "");
 
     public static int ParseInt(this string s) => int.Parse(s);
-    public static int? TryParseInt(this string s, NumberStyles styles = NumberStyles.Any) => 
+
+    public static int? TryParseInt(this string s, NumberStyles styles = NumberStyles.Any) =>
       int.TryParse(s, styles, NumberFormatInfo.InvariantInfo, out var l) ? l : null;
 
     public static long ParseLong(this string s, NumberStyles styles = NumberStyles.Any) => long.Parse(s, styles, NumberFormatInfo.InvariantInfo);
     public static ulong ParseULong(this string s, NumberStyles styles = NumberStyles.Any) => ulong.Parse(s, styles, NumberFormatInfo.InvariantInfo);
-    public static ulong? TryParseULong(this string s, NumberStyles styles = NumberStyles.Any) => 
+
+    public static ulong? TryParseULong(this string s, NumberStyles styles = NumberStyles.Any) =>
       ulong.TryParse(s, styles, NumberFormatInfo.InvariantInfo, out var l) ? l : null;
-    
+
     public static DateTime ParseExact(this string date, string pattern, IFormatProvider format = default, DateTimeStyles style = default) =>
       DateTime.ParseExact(date, pattern, format, style);
 
     public static decimal ParseDecimal(this string s) => decimal.Parse(s, NumberFormatInfo.InvariantInfo);
-    
-    public static double? TryParseDouble(this string s, NumberStyles style = NumberStyles.Any) => 
+
+    public static double? TryParseDouble(this string s, NumberStyles style = NumberStyles.Any) =>
       double.TryParse(s, style, NumberFormatInfo.InvariantInfo, out var d) ? d : null;
-    
-    public static decimal? TryParseDecimal(this string s, NumberStyles style = NumberStyles.Any) => 
+
+    public static decimal? TryParseDecimal(this string s, NumberStyles style = NumberStyles.Any) =>
       decimal.TryParse(s, style, NumberFormatInfo.InvariantInfo, out var d) ? d : null;
 
     public static DateTimeOffset ParseDateTimeOffset(this string s, string format) =>
@@ -153,11 +156,11 @@ namespace SysExtensions.Text {
       if (s.Contains("_") || s.All(char.IsUpper)) s = s.ToLowerInvariant();
       return s.Camelize();
     }
-    
+
     public static Match Match(this string input, Regex re) => re.Match(input);
 
     static readonly Regex HumanNumber = new(@"(?<num>\d+\.?\d*)\s?(?<unit>[KMB]?)", Compiled | IgnoreCase);
-    
+
     public static double? TryParseNumberWithUnits(this string text) {
       var m = HumanNumber.Match(text);
       if (!m.Success) return null;

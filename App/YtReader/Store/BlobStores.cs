@@ -83,8 +83,8 @@ namespace YtReader.Store {
       Log = log;
       Channels = CreateStore<Channel>("channels");
       Searches = CreateStore<UserSearchWithUpdated>("searches");
-      Videos = CreateStore<VideoStored2>("videos");
-      VideoExtra = CreateStore<VideoExtraStored2>("video_extra");
+      Videos = CreateStore<Video>("videos");
+      VideoExtra = CreateStore<VideoExtra>("video_extra");
       Recs = CreateStore<RecStored2>("recs");
       Captions = CreateStore<VideoCaptionStored2>("captions");
       ChannelReviews = CreateStore<UserChannelReview>("channel_reviews", r => r.Email);
@@ -94,8 +94,8 @@ namespace YtReader.Store {
 
     public JsonlStore<Channel>               Channels       { get; }
     public JsonlStore<UserSearchWithUpdated> Searches       { get; }
-    public JsonlStore<VideoStored2>          Videos         { get; }
-    public JsonlStore<VideoExtraStored2>     VideoExtra     { get; }
+    public JsonlStore<Video>                 Videos         { get; }
+    public JsonlStore<VideoExtra>            VideoExtra     { get; }
     public JsonlStore<RecStored2>            Recs           { get; }
     public JsonlStore<VideoCaptionStored2>   Captions       { get; }
     public JsonlStore<UserChannelReview>     ChannelReviews { get; }
@@ -126,10 +126,10 @@ namespace YtReader.Store {
   public record Channel : WithUpdatedItem {
     public Channel() { }
 
-    public Channel(Platform platform, string channelId) {
+    public Channel(Platform platform, string channelId, string sourceId = null) {
       Platform = platform;
       ChannelId = channelId;
-      SourceId = channelId;
+      SourceId = sourceId ?? channelId;
     }
 
     /// <summary>Unique id across all paltforms. For YouTube this is the vanilla PlatformId, for other platforms this is the
@@ -138,6 +138,8 @@ namespace YtReader.Store {
 
     /// <summary>The id in the original platform. Might not be unique across platforms</summary>
     public string SourceId { get; set; }
+
+    public string[] SourceIdAlts { get; set; }
 
     public string                ChannelTitle       { get; set; }
     public string                ChannelName        { get; set; }
@@ -162,7 +164,7 @@ namespace YtReader.Store {
     public ChannelStatus Status { get; set; }
 
     public string    StatusMessage  { get; set; }
-    public DateTime  LastFullUpdate { get; set; }
+    public DateTime? LastFullUpdate { get; set; }
     public DateTime? Created        { get; set; }
 
     public override string ToString() => ChannelTitle ?? ChannelId;
@@ -204,7 +206,15 @@ namespace YtReader.Store {
     Restricted
   }
 
-  public record VideoStored2 : WithUpdatedItem {
+  public record Video : WithUpdatedItem {
+    public Video() { }
+
+    public Video(Platform platform, string id, string sourceId) {
+      Platform = platform;
+      VideoId = id;
+      SourceId = sourceId;
+    }
+
     public Platform Platform { get; set; }
 
     /// <summary>Globally unique id for the video. Using a canonical url is best</summary>
@@ -232,6 +242,20 @@ namespace YtReader.Store {
     public override string ToString() => $"{Title}";
   }
 
+  public record VideoExtra : Video {
+    public VideoExtra() { }
+    public VideoExtra(Platform platform, string id, string sourceId) : base(platform, id, sourceId) { }
+
+    public bool?                 HasAd        { get; set; }
+    public string                Error        { get; set; }
+    public string                SubError     { get; set; }
+    public VideoCommentStored2[] Comments     { get; set; }
+    public string                Ad           { get; set; }
+    public string                CommentsMsg  { get; set; }
+    public ScrapeSource          Source       { get; set; }
+    public long?                 CommentCount { get; set; }
+  }
+
   public class VideoCommentStored2 {
     public string    ChannelId       { get; set; }
     public string    VideoId         { get; set; }
@@ -255,17 +279,6 @@ namespace YtReader.Store {
     public string                             VideoId   { get; set; }
     public ClosedCaptionTrackInfo             Info      { get; set; }
     public IReadOnlyCollection<ClosedCaption> Captions  { get; set; } = new List<ClosedCaption>();
-  }
-
-  public record VideoExtraStored2 : VideoStored2 {
-    public bool?                 HasAd        { get; set; }
-    public string                Error        { get; set; }
-    public string                SubError     { get; set; }
-    public VideoCommentStored2[] Comments     { get; set; }
-    public string                Ad           { get; set; }
-    public string                CommentsMsg  { get; set; }
-    public ScrapeSource          Source       { get; set; }
-    public long?                 CommentCount { get; set; }
   }
 
   public interface IHasUpdated {

@@ -13,20 +13,24 @@ using SysExtensions.Collections;
 using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+
 // ReSharper disable InconsistentNaming
 
 namespace SysExtensions.Threading {
   public static class BlockExtensions {
-    public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallel = 1, int? capacity = null,
+    public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, int, Task> action, int parallel = 1, int? capacity = null,
       CancellationToken cancel = default) {
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
-
-      var block = new ActionBlock<T>(action, options);
-      var produced = await ProduceAsync(source, block);
+      var blocAction = new Func<(T, int), Task>(i => action(i.Item1, i.Item2));
+      var block = new ActionBlock<(T, int)>(blocAction, options);
+      var produced = await ProduceAsync(source.WithIndex(), block);
       await block.Completion;
       return produced;
     }
+
+    public static Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallel = 1, int? capacity = null,
+      CancellationToken cancel = default) => source.BlockAction((o, _) => action(o), parallel, capacity, cancel);
 
     /// <summary>Uses the type context of an enumerable to make a block, but does not touch it.</summary>
     public static (IEnumerable<T> source, IPropagatorBlock<T, R> first, IPropagatorBlock<T, R> last) BlockFuncWith<T, R>
@@ -111,7 +115,7 @@ namespace SysExtensions.Threading {
       var block = GetBlock(func, parallel, capacity, cancel);
       var produceTask = ProduceAsync(source.WithIndex(), block);
       while (true) {
-        if(produceTask.IsFaulted) {
+        if (produceTask.IsFaulted) {
           block.Complete();
           break;
         }
@@ -130,7 +134,7 @@ namespace SysExtensions.Threading {
       var block = GetBlock(func, parallel, capacity, cancel);
       var produceTask = ProduceAsync(source, block, cancel);
       while (true) {
-        if(produceTask.IsFaulted) {
+        if (produceTask.IsFaulted) {
           block.Complete();
           break;
         }
@@ -151,7 +155,7 @@ namespace SysExtensions.Threading {
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
       return new(func, options);
     }
-    
+
     static TransformBlock<(T, int), R> GetBlock<T, R>(Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) {
       var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;

@@ -35,6 +35,7 @@ namespace YtReader {
     public string                             CollectVideosPath      { get; set; }
     public bool                               DataformDeps           { get; set; }
     public StandardCollectPart[]              StandardParts          { get; set; }
+    public string[]                           Videos                 { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -76,11 +77,11 @@ namespace YtReader {
     Task Collect(string[] channels, CollectPart[] parts, string collectVideoPath, ILogger logger, CancellationToken cancel) =>
       _collector.Collect(logger, channels, parts, collectVideoPath, cancel);
 
-    Task BcCollect(string[] channels, StandardCollectPart[] parts, ILogger logger, CancellationToken cancel) =>
-      _bcCollect.Collect(channels, parts, logger, cancel);
+    Task BcCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
+      _bcCollect.Collect(options, logger, cancel);
 
-    Task RumbleCollect(string[] channels, StandardCollectPart[] parts, ILogger logger, CancellationToken cancel) =>
-      _rumbleCollect.Collect(channels, parts, logger, cancel);
+    Task RumbleCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
+      _rumbleCollect.Collect(options, logger, cancel);
 
     [GraphTask(nameof(Collect), nameof(BcCollect), nameof(RumbleCollect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
@@ -118,10 +119,12 @@ namespace YtReader {
 
       var fullLoad = options.FullLoad;
 
+      var collectOptions = new SimpleCollectOptions {Parts = options.StandardParts, ExplicitChannels = options.Channels, ExplicitVideos = options.Videos};
+
       var actionMethods = TaskGraph.FromMethods(
         (l, c) => Collect(options.Channels, options.Parts, options.CollectVideosPath, l, c),
-        (l, c) => BcCollect(options.Channels, options.StandardParts, l, c),
-        (l, c) => RumbleCollect(options.Channels, options.StandardParts, l, c),
+        (l, c) => BcCollect(collectOptions, l, c),
+        (l, c) => RumbleCollect(collectOptions, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),
         (l, c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),

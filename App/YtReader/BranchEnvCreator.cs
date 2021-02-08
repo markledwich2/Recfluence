@@ -47,7 +47,7 @@ namespace YtReader {
         WhCreator.CreateOrReplace(state, log));
     }
 
-    Task CreateContainers(BranchState state, string[] paths, ILogger log) =>
+    Task<long> CreateContainers(BranchState state, string[] paths, ILogger log) =>
       new[] {Premium, Standard}.BlockAction(async tier => {
         var s = Stores.Store(tier: tier);
         var c = s.Container;
