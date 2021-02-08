@@ -126,7 +126,7 @@ namespace SysExtensions.Threading {
     }
 
     public static IAsyncEnumerable<R> BlockTrans<T, R>(this IEnumerable<T> source,
-      Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) =>
+      Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
       BlockTrans(source, (o, _) => func(o), parallel, capacity, cancel);
 
     public static async IAsyncEnumerable<R> BlockTrans<T, R>(this IAsyncEnumerable<T> source,

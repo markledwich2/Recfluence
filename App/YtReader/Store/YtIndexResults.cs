@@ -51,6 +51,7 @@ namespace YtReader.Store {
       var (res, indexDuration) = await toRun.BlockFunc(async t => {
         var cfg = t.Expression.Compile().Invoke();
         var work = await IndexWork(log, t.Name, cfg.Cols, cfg.Sql, cfg.Size);
+        
         return await BlobIndex.SaveIndexedJsonl(work, log, cancel);
       }, parallel: 4, cancel: cancel).WithDuration();
 
@@ -71,8 +72,8 @@ namespace YtReader.Store {
     async Task<BlobIndexWork> IndexWork(ILogger log, string name, IndexCol[] cols, string sql, ByteSize size, Action<JObject> onProcessed = null) {
       using var con = await Sf.Open(log);
 
+      var reader = await con.ExecuteReader(name, sql);
       async IAsyncEnumerable<JObject> GetRows() {
-        var reader = await con.ExecuteReader(name, sql);
         while (await reader.ReadAsync())
           yield return reader.ToSnowflakeJObject().ToCamelCase();
       }
