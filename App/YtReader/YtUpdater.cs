@@ -36,6 +36,7 @@ namespace YtReader {
     public bool                               DataformDeps           { get; set; }
     public StandardCollectPart[]              StandardParts          { get; set; }
     public string[]                           Videos                 { get; set; }
+    public SearchMode                         SearchMode             { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -92,8 +93,8 @@ namespace YtReader {
       YtDataform.Update(logger, fullLoad, tables, includeDeps, cancel);
 
     [GraphTask(nameof(Dataform))]
-    Task Search(bool fullLoad, string[] optionsSearchIndexes, (string index, string condition)[] conditions, ILogger logger, CancellationToken cancel) =>
-      _search.SyncToElastic(logger, fullLoad, indexes: optionsSearchIndexes, conditions, cancel: cancel);
+    Task Search(SearchMode mode, string[] optionsSearchIndexes, (string index, string condition)[] conditions, ILogger logger, CancellationToken cancel) =>
+      _search.SyncToElastic(logger, mode, indexes: optionsSearchIndexes, conditions, cancel: cancel);
 
     [GraphTask(nameof(Dataform))]
     Task Result(string[] results, ILogger logger, CancellationToken cancel) =>
@@ -126,7 +127,7 @@ namespace YtReader {
         (l, c) => BcCollect(collectOptions, l, c),
         (l, c) => RumbleCollect(collectOptions, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),
-        (l, c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
+        (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),
         (l, c) => Index(options.Indexes, l, c),
         //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),

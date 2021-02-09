@@ -185,7 +185,8 @@ export const channelCustomOption = ({ innerRef, innerProps, isDisabled, data, is
     <FlexRow style={{ alignItems: 'center' }}>
       {c ? <>
         <ChannelLogo channelId={c.channelId} thumb={c.logoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
-        <b>{c.channelTitle}</b>
+        <b>{c.channelTitle}</b><i>{c.platform}</i><b>{c.channelViews} views</b>
+
       </>
         : <b style={{ padding: '0.5em' }}>{data.label}</b>}
 

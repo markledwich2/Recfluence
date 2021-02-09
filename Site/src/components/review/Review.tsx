@@ -120,7 +120,7 @@ export const ReviewControl = () => {
     reviewsParam = reviewsParam ?? reviews
     const newPending = _(lists[listName]).filter(c => channelIsPending(c, reviewsParam)).value()
     // take one at random to try and avoid too many double up reviews from different people
-    const c = _(newPending).shuffle().head()
+    const c = _(newPending).head()
     setReview(newReview(c))
     setPending(newPending)
   }
@@ -144,7 +144,7 @@ export const ReviewControl = () => {
   const saveNonPoliticalReview = ({ review, channel }: ChannelReview, isEditing: boolean) =>
     saveReview({ review: { ...review, relevance: 0 }, channel }, isEditing)
 
-  const listNameOptions: Option[] = _.keys(reviewLists).map(k => ({ value: k, label: k }))
+  const listNameOptions: Option[] = _(reviewLists).keys().map(k => ({ value: k, label: k })).orderBy(o => o.label).value()
   const pendingOptions: ChannelOption[] = pending?.map(p => ({ value: p.channelId, label: p.channelTitle, channel: p }))
 
   // fetch some channels for review & list existing

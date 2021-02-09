@@ -94,7 +94,8 @@ export async function saveSearch(search: UserSearch): Promise<void> {
 }
 
 export async function reviewChannelLists(): Promise<Dictionary<BasicChannel[]>> {
-  const list = await getJsonl<BasicChannel & { list: string }>(resultsUrl.addPath('channel_review_lists.jsonl.gz').url, { headers: { cache: "no-store" } })
+  const list = await getJsonl<BasicChannel & { list: string }>(resultsUrl.addPath('channel_review_lists.jsonl.gz').url,
+    { headers: { pragma: "no-cache", 'cache-control': 'no-cache' } })
   return _(list).groupBy(l => l.list).value()
 }
 
@@ -138,9 +139,12 @@ export interface ChannelReview {
 export interface BasicChannel extends ChannelTitle {
   logoUrl?: string
   channelViews?: number
+  channelVideoViews?: number
   reviewStatus?: string
   reviewsAll?: number
   reviewsAlgo?: number
+  url?: string
+  platform?: string
 }
 
 export interface UserSearch {

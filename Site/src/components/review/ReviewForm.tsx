@@ -12,6 +12,7 @@ import ReactTooltip from 'react-tooltip'
 import ReactMarkdown from 'react-markdown'
 import Async, { makeAsyncSelect } from 'react-select/async'
 import { EsContext } from '../SearchContext'
+import { formatNumber } from 'humanize-plus'
 
 const Md = styled(ReactMarkdown)`
   max-width:30em;
@@ -81,7 +82,6 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
 
   const updateReviewProp = (p: keyof Review, v: any) => onChange({ ...review, review: { ...r, [p]: v } })
 
-  //const { channelOptions, channelDic } = createChannelOptions(channels)
 
   return <>{c && r && (<>
     <FlexRow>
@@ -92,12 +92,14 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
         <div>
           <h2>{c?.channelTitle ?? "No channel to review"}</h2>
           <p>{c.channelId}</p>
+          <p>{c.channelViews > c.channelVideoViews ? `${formatNumber(c.channelViews)} channel views`
+            : `${formatNumber(c.channelVideoViews)} video views`}</p>
         </div>
         <FlexRow space='2em'>
-          <div><a href={channelUrl(c.channelId)} target="_new">YouTube Channel</a></div>
+          <div><a href={c.url} target="_cp">Channel Page</a></div>
           <div><a href={`/search?channel=%5B"${c.channelTitle}"%5D&part=%5B"Title"%5D`} target="_new">Recfluence Search</a></div>
         </FlexRow>
-        <span>{c.description}</span>
+        <span dangerouslySetInnerHTML={{ __html: c.description }} />
       </FlexCol>
     </FlexRow>
   </>)

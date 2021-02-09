@@ -19,6 +19,7 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
+using YtReader.Search;
 using YtReader.Store;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
@@ -244,6 +245,9 @@ namespace YtCli {
     [CommandOption("search-index", Description = @"| separated list of indexes to update. leave empty for all indexes")]
     public string SearchIndexes { get; set; }
 
+    [CommandOption("search-mode")]
+    public SearchMode SearchMode { get; set; }
+
     [CommandOption("collect-videos",
       Description = @"path in the data blob container a file with newline separated video id's. e.g. import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz")]
     public string CollectVideos { get; set; }
@@ -276,7 +280,8 @@ namespace YtCli {
         UserScrapeTrial = UserScrapeTrial,
         UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|'),
         CollectVideosPath = CollectVideos,
-        DataformDeps = DataformDeps
+        DataformDeps = DataformDeps,
+        SearchMode = SearchMode
       };
       await Updater.Update(options, console.GetCancellationToken());
     }
