@@ -1,0 +1,1545 @@
+<?xml version='1.0' encoding='utf-8' ?>
+
+<!-- build 20204.21.0114.0916                               -->
+<workbook original-version='18.1' source-build='2020.4.1 (20204.21.0114.0916)' source-platform='win' version='18.1' xml:base='https://10ay.online.tableau.com' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <document-format-change-manifest>
+    <ISO8601DefaultCalendarPref />
+    <_.fcp.MarkAnimation.true...MarkAnimation />
+    <_.fcp.ObjectModelEncapsulateLegacy.true...ObjectModelEncapsulateLegacy />
+    <_.fcp.ObjectModelTableType.true...ObjectModelTableType />
+    <_.fcp.SchemaViewerObjectModel.true...SchemaViewerObjectModel />
+    <SheetIdentifierTracking />
+    <SortTagCleanup />
+    <WindowsPersistSimpleIdentifiers />
+  </document-format-change-manifest>
+  <repository-location id='QAnon' path='/t/ledwich/workbooks' revision='1.0' site='ledwich' />
+  <preferences>
+    <preference name='ui.encoding.shelf.height' value='24' />
+    <preference name='ui.shelf.height' value='26' />
+  </preferences>
+  <datasources>
+    <datasource caption='Video Stats Daily by Tag' inline='true' name='sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg' version='18.1'>
+      <repository-location id='VideoStatsDailybyTag' path='/t/ledwich/datasources' revision='1.0' site='ledwich' />
+      <connection channel='https' class='sqlproxy' dbname='VideoStatsDailybyTag' directory='/dataserver' port='443' server='10ay.online.tableau.com' username='' workgroup-auth-mode='prompt'>
+        <_.fcp.ObjectModelEncapsulateLegacy.false...relation name='sqlproxy' table='[sqlproxy]' type='table' />
+        <_.fcp.ObjectModelEncapsulateLegacy.true...relation name='sqlproxy' table='[sqlproxy]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>DATE</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[DATE]</local-name>
+            <parent-name>[sqlproxy]</parent-name>
+            <remote-alias>DATE</remote-alias>
+            <ordinal>2</ordinal>
+            <layered>true</layered>
+            <family>Custom SQL Query</family>
+            <local-type>date</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='integer' name='field-type'>1</attribute>
+              <attribute datatype='integer' name='role'>0</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>LR</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[LR]</local-name>
+            <parent-name>[sqlproxy]</parent-name>
+            <remote-alias>LR</remote-alias>
+            <ordinal>7</ordinal>
+            <layered>true</layered>
+            <family>Custom SQL Query</family>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='integer' name='field-type'>2</attribute>
+              <attribute datatype='integer' name='role'>0</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>PLATFORM</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[PLATFORM]</local-name>
+            <parent-name>[sqlproxy]</parent-name>
+            <remote-alias>PLATFORM</remote-alias>
+            <ordinal>5</ordinal>
+            <layered>true</layered>
+            <caption>Platform</caption>
+            <family>Custom SQL Query</family>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='integer' name='field-type'>2</attribute>
+              <attribute datatype='integer' name='role'>0</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>STATUS_MSG</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[STATUS_MSG]</local-name>
+            <parent-name>[sqlproxy]</parent-name>
+            <remote-alias>STATUS_MSG</remote-alias>
+            <ordinal>6</ordinal>
+            <layered>true</layered>
+            <caption>Status Msg</caption>
+            <family>Custom SQL Query</family>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='integer' name='field-type'>2</attribute>
+              <attribute datatype='integer' name='role'>0</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TAG</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TAG]</local-name>
+            <parent-name>[sqlproxy]</parent-name>
+            <remote-alias>TAG</remote-alias>
+            <ordinal>4</ordinal>
+            <layered>true</layered>
+            <family>Custom SQL Query</family>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='integer' name='field-type'>2</attribute>
+              <attribute datatype='integer' name='role'>0</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='measure'>
+            <remote-name>VIEWS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[VIEWS]</local-name>
+            <parent-name>[sqlproxy]</parent-name>
+            <remote-alias>VIEWS</remote-alias>
+            <ordinal>1</ordinal>
+            <layered>true</layered>
+            <family>Custom SQL Query</family>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='integer' name='field-type'>0</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='measure'>
+            <remote-name>WATCH_HOURS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[WATCH_HOURS]</local-name>
+            <parent-name>[sqlproxy]</parent-name>
+            <remote-alias>WATCH_HOURS</remote-alias>
+            <ordinal>3</ordinal>
+            <layered>true</layered>
+            <family>Custom SQL Query</family>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='integer' name='field-type'>0</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='capability'>
+            <remote-name />
+            <remote-type>0</remote-type>
+            <parent-name>[sqlproxy]</parent-name>
+            <remote-alias />
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='boolean' name='CAP_64BIT_CALCULATIONS'>true</attribute>
+              <attribute datatype='boolean' name='CAP_CREATE_TEMP_TABLES'>true</attribute>
+              <attribute datatype='boolean' name='CAP_QUERY_BLENDING_ALWAYS_USE_LOCAL_MAPPING_TABLES'>false</attribute>
+              <attribute datatype='boolean' name='CAP_QUERY_BLENDING_PREFER_LOCAL_MAPPING_TABLES'>true</attribute>
+              <attribute datatype='boolean' name='CAP_QUERY_BLENDING_REMOTE_MAPPING_TABLES'>true</attribute>
+              <attribute datatype='boolean' name='CAP_QUERY_IGNORE_HINT_CHECK_NOT_NULL'>true</attribute>
+              <attribute datatype='boolean' name='CAP_QUERY_SORT_BY'>true</attribute>
+              <attribute datatype='boolean' name='CAP_QUERY_SUBQUERIES'>true</attribute>
+              <attribute datatype='boolean' name='CAP_QUERY_SUBQUERY_QUERY_CONTEXT'>true</attribute>
+              <attribute datatype='boolean' name='CAP_QUERY_SUPPORTS_LODJOINS'>true</attribute>
+              <attribute datatype='boolean' name='CAP_QUERY_TOP_N'>true</attribute>
+              <attribute datatype='boolean' name='CAP_QUERY_USE_QUERY_FUSION'>true</attribute>
+              <attribute datatype='boolean' name='CAP_SUPPORTS_SPLIT_FROM_LEFT'>true</attribute>
+              <attribute datatype='boolean' name='CAP_SUPPORTS_SPLIT_FROM_RIGHT'>true</attribute>
+              <attribute datatype='integer' name='charset'>0</attribute>
+              <attribute datatype='string' name='collation'>&quot;binary&quot;</attribute>
+              <attribute datatype='string' name='datasource'>&quot;<![CDATA[<?xml version='1.0' encoding='utf-8' ?>
+
+<datasource :source-version='18.1' formatted-name='federated.1580u04182t859131tdmf0irs43c' inline='true' version='18.1' xml:base='https://10ay.online.tableau.com' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <document-format-change-manifest>
+    <_.fcp.ObjectModelEncapsulateLegacy.true...ObjectModelEncapsulateLegacy />
+    <_.fcp.ObjectModelTableType.true...ObjectModelTableType />
+    <_.fcp.SchemaViewerObjectModel.true...SchemaViewerObjectModel />
+  </document-format-change-manifest>
+  <repository-location id='VideoStatsDailybyTag' path='/t/ledwich/datasources' revision='1.0' site='ledwich' />
+  <connection channel='https' class='sqlproxy' dbname='VideoStatsDailybyTag' directory='/dataserver' port='443' server='10ay.online.tableau.com'>
+    <_.fcp.ObjectModelEncapsulateLegacy.false...relation name='sqlproxy' table='[sqlproxy]' type='table' />
+    <_.fcp.ObjectModelEncapsulateLegacy.true...relation name='sqlproxy' table='[sqlproxy]' type='table' />
+    <cols>
+      <map key='[DATE]' value='[sqlproxy].[DATE]' />
+      <map key='[LR]' value='[sqlproxy].[LR]' />
+      <map key='[PLATFORM]' value='[sqlproxy].[PLATFORM]' />
+      <map key='[STATUS_MSG]' value='[sqlproxy].[STATUS_MSG]' />
+      <map key='[TAG]' value='[sqlproxy].[TAG]' />
+      <map key='[VIEWS]' value='[sqlproxy].[VIEWS]' />
+      <map key='[WATCH_HOURS]' value='[sqlproxy].[WATCH_HOURS]' />
+    </cols>
+  </connection>
+  <aliases enabled='yes' />
+  <column aggregation='Count' caption='Platform' datatype='string' default-type='nominal' name='[PLATFORM]' pivot='key' role='dimension' type='nominal' user-datatype='string' visual-totals='Default' />
+  <column aggregation='Count' caption='Status Msg' datatype='string' default-type='nominal' name='[STATUS_MSG]' pivot='key' role='dimension' type='nominal' user-datatype='string' visual-totals='Default' />
+  <_.fcp.ObjectModelTableType.true...column aggregation='Count' caption='Video Stats Daily by Tag' datatype='table' default-type='quantitative' name='[__tableau_internal_object_id__].[CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602]' pivot='key' role='measure' type='quantitative' user-datatype='table' visual-totals='Default' />
+  <column-instance column='[PLATFORM]' derivation='None' name='[none:PLATFORM:nk]' pivot='key' type='nominal' />
+  <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-structure='true' />
+  <style>
+    <style-rule element='mark'>
+      <encoding attr='color' field='[none:PLATFORM:nk]' type='palette'>
+        <map to='\#4e79a7'>
+          <bucket>&quot;BitChute&quot;</bucket>
+        </map>
+        <map to='\#f28e2b'>
+          <bucket>&quot;YouTube&quot;</bucket>
+        </map>
+      </encoding>
+    </style-rule>
+  </style>
+  <semantic-values>
+    <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+  </semantic-values>
+  <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    <objects>
+      <object caption='Video Stats Daily by Tag' id='CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602'>
+        <properties context=''>
+          <relation name='sqlproxy' table='[sqlproxy]' type='table' />
+        </properties>
+      </object>
+    </objects>
+  </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+</datasource>
+]]>&quot;</attribute>
+              <attribute datatype='string' name='dialect-definition'>&quot;<![CDATA[<dialect-definition>
+  <primary-dialect class='snowflake' version='0.0.0'>
+  </primary-dialect>
+  <overlay-dialect-set>
+    <overlay-dialect class='vizengine' version='0.1.0'>
+    </overlay-dialect>
+  </overlay-dialect-set>
+</dialect-definition>
+]]>&quot;</attribute>
+              <attribute datatype='boolean' name='extract-active'>false</attribute>
+              <attribute datatype='boolean' name='fast-get-server-time'>true</attribute>
+            </attributes>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <overridable-settings>
+        <date-options fiscal-year-start='january' start-of-week='sunday' />
+        <default-date-format />
+        <default-calendar-type>Gregorian</default-calendar-type>
+      </overridable-settings>
+      <aliases enabled='yes' />
+      <column aggregation='Year' datatype='date' default-type='ordinal' layered='true' name='[DATE]' pivot='key' role='dimension' type='ordinal' user-datatype='date' visual-totals='Default' />
+      <column aggregation='Count' datatype='string' default-type='nominal' layered='true' name='[LR]' pivot='key' role='dimension' type='nominal' user-datatype='string' visual-totals='Default' />
+      <column aggregation='Count' caption='Platform' datatype='string' default-type='nominal' layered='true' name='[PLATFORM]' pivot='key' role='dimension' type='nominal' user-datatype='string' visual-totals='Default' />
+      <column aggregation='Count' caption='Status Msg' datatype='string' default-type='nominal' layered='true' name='[STATUS_MSG]' pivot='key' role='dimension' type='nominal' user-datatype='string' visual-totals='Default' />
+      <column aggregation='Count' datatype='string' default-type='nominal' layered='true' name='[TAG]' pivot='key' role='dimension' type='nominal' user-datatype='string' visual-totals='Default' />
+      <column aggregation='Sum' datatype='real' default-type='quantitative' layered='true' name='[VIEWS]' pivot='key' role='measure' type='quantitative' user-datatype='real' visual-totals='Default' />
+      <column aggregation='Sum' datatype='real' default-type='quantitative' layered='true' name='[WATCH_HOURS]' pivot='key' role='measure' type='quantitative' user-datatype='real' visual-totals='Default' />
+      <_.fcp.ObjectModelTableType.true...column aggregation='Count' caption='Video Stats Daily by Tag' datatype='table' default-type='quantitative' layered='true' name='[__tableau_internal_object_id__].[CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602]' pivot='key' role='measure' type='quantitative' user-datatype='table' visual-totals='Default' />
+      <column-instance column='[PLATFORM]' derivation='None' name='[none:PLATFORM:nk]' pivot='key' type='nominal' />
+      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-structure='true' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[none:PLATFORM:nk]' type='palette'>
+            <map to='#4e79a7'>
+              <bucket>&quot;BitChute&quot;</bucket>
+            </map>
+            <map to='#e15759'>
+              <bucket>&quot;Rumble&quot;</bucket>
+            </map>
+            <map to='#f28e2b'>
+              <bucket>&quot;YouTube&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+        <objects>
+          <object caption='Video Stats Daily by Tag' id='CHANNEL_STATS_MONTHLY_4C270B10BA6841ED926768DF3C2BC602'>
+            <properties context=''>
+              <relation name='sqlproxy' table='[sqlproxy]' type='table' />
+            </properties>
+          </object>
+        </objects>
+      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    </datasource>
+    <datasource caption='CHANNEL_LATEST (PUBLIC)' inline='true' name='federated.1tn9ngz0mi9luj12c3w8y1r1xj6c' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='ql98184.west-us-2.azure.snowflakecomputing.com' name='snowflake.0lvm8lz1d0i3j51cbm3t50esumg2'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='ql98184.west-us-2.azure.snowflakecomputing.com' service='' username='tableau' warehouse='YT' />
+          </named-connection>
+        </named-connections>
+        <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.0lvm8lz1d0i3j51cbm3t50esumg2' name='CHANNEL_LATEST' table='[PUBLIC].[CHANNEL_LATEST]' type='table' />
+        <_.fcp.ObjectModelEncapsulateLegacy.true...relation connection='snowflake.0lvm8lz1d0i3j51cbm3t50esumg2' name='CHANNEL_LATEST' table='[PUBLIC].[CHANNEL_LATEST]' type='table' />
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_ID]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>CHANNEL_ID</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>PLATFORM</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[PLATFORM]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>PLATFORM</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>SOURCE_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[SOURCE_ID]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>SOURCE_ID</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[CHANNEL_TITLE]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>CHANNEL_TITLE</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>MAIN_CHANNEL_ID</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[MAIN_CHANNEL_ID]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>MAIN_CHANNEL_ID</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>LOGO_URL</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[LOGO_URL]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>LOGO_URL</remote-alias>
+            <ordinal>6</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>SUBS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[SUBS]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>SUBS</remote-alias>
+            <ordinal>7</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[CHANNEL_VIEWS]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>CHANNEL_VIEWS</remote-alias>
+            <ordinal>8</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>COUNTRY</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[COUNTRY]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>COUNTRY</remote-alias>
+            <ordinal>9</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>UPDATED</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[UPDATED]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>UPDATED</remote-alias>
+            <ordinal>10</ordinal>
+            <local-type>datetime</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>STATUS_MSG</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[STATUS_MSG]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>STATUS_MSG</remote-alias>
+            <ordinal>11</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>SUBSCRIPTIONS</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[SUBSCRIPTIONS]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>SUBSCRIPTIONS</remote-alias>
+            <ordinal>12</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>KEYWORDS</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[KEYWORDS]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>KEYWORDS</remote-alias>
+            <ordinal>13</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>DEFAULT_LANGAUGE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[DEFAULT_LANGAUGE]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>DEFAULT_LANGAUGE</remote-alias>
+            <ordinal>14</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FEATURED_CHANNELS</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[FEATURED_CHANNELS]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>FEATURED_CHANNELS</remote-alias>
+            <ordinal>15</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>DESCRIPTION</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[DESCRIPTION]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>DESCRIPTION</remote-alias>
+            <ordinal>16</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>DISCOVER_SOURCE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[DISCOVER_SOURCE]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>DISCOVER_SOURCE</remote-alias>
+            <ordinal>17</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>SOURCE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[SOURCE]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>SOURCE</remote-alias>
+            <ordinal>18</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>10</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_VIDEO_VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[CHANNEL_VIDEO_VIEWS]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>CHANNEL_VIDEO_VIEWS</remote-alias>
+            <ordinal>19</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>FROM_DATE</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[FROM_DATE]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>FROM_DATE</remote-alias>
+            <ordinal>20</ordinal>
+            <local-type>datetime</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TO_DATE</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[TO_DATE]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>TO_DATE</remote-alias>
+            <ordinal>21</ordinal>
+            <local-type>datetime</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>DAY_RANGE</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[DAY_RANGE]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>DAY_RANGE</remote-alias>
+            <ordinal>22</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>9</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS</remote-alias>
+            <ordinal>23</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>6</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>AVG_MINUTES</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[AVG_MINUTES]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>AVG_MINUTES</remote-alias>
+            <ordinal>24</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>27</precision>
+            <scale>6</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT</remote-alias>
+            <ordinal>25</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>38</precision>
+            <scale>6</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>MAIN_CHANNEL_TITLE</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[MAIN_CHANNEL_TITLE]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>MAIN_CHANNEL_TITLE</remote-alias>
+            <ordinal>26</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>TAGS</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[TAGS]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>TAGS</remote-alias>
+            <ordinal>27</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>LR</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[LR]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>LR</remote-alias>
+            <ordinal>28</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>RELEVANCE</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[RELEVANCE]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>RELEVANCE</remote-alias>
+            <ordinal>29</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>PUBLIC_REVIEWER_NOTES</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[PUBLIC_REVIEWER_NOTES]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>PUBLIC_REVIEWER_NOTES</remote-alias>
+            <ordinal>30</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>PUBLIC_CREATOR_NOTES</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[PUBLIC_CREATOR_NOTES]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>PUBLIC_CREATOR_NOTES</remote-alias>
+            <ordinal>31</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>REVIEWS_ALL</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[REVIEWS_ALL]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>REVIEWS_ALL</remote-alias>
+            <ordinal>32</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>18</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>REVIEWS_ALGO</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[REVIEWS_ALGO]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>REVIEWS_ALGO</remote-alias>
+            <ordinal>33</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>13</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>REVIEWS_HUMAN</remote-name>
+            <remote-type>131</remote-type>
+            <local-name>[REVIEWS_HUMAN]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>REVIEWS_HUMAN</remote-alias>
+            <ordinal>34</ordinal>
+            <local-type>integer</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>19</precision>
+            <scale>0</scale>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DECIMAL&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_NUMERIC&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>IDEOLOGY</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[IDEOLOGY]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>IDEOLOGY</remote-alias>
+            <ordinal>35</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>22</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>MEDIA</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[MEDIA]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>MEDIA</remote-alias>
+            <ordinal>36</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>18</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>MEETS_SUB_CRITERIA</remote-name>
+            <remote-type>11</remote-type>
+            <local-name>[MEETS_SUB_CRITERIA]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>MEETS_SUB_CRITERIA</remote-alias>
+            <ordinal>37</ordinal>
+            <local-type>boolean</local-type>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_BIT&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_BIT&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>MEETS_REVIEW_CRITERIA</remote-name>
+            <remote-type>11</remote-type>
+            <local-name>[MEETS_REVIEW_CRITERIA]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>MEETS_REVIEW_CRITERIA</remote-alias>
+            <ordinal>38</ordinal>
+            <local-type>boolean</local-type>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_BIT&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_BIT&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>DEATH_RECORDED</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[DEATH_RECORDED]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>DEATH_RECORDED</remote-alias>
+            <ordinal>39</ordinal>
+            <local-type>datetime</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_TIMESTAMP&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_TIMESTAMP&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>HOMA_CATEGORY_PROPOSED</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[HOMA_CATEGORY_PROPOSED]</local-name>
+            <parent-name>[CHANNEL_LATEST]</parent-name>
+            <remote-alias>HOMA_CATEGORY_PROPOSED</remote-alias>
+            <ordinal>40</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='Avg Minutes' datatype='real' name='[AVG_MINUTES]' role='measure' type='quantitative' />
+      <column caption='Channel Id' datatype='string' name='[CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='Channel Lifetime Daily Views' datatype='real' name='[CHANNEL_LIFETIME_DAILY_VIEWS]' role='measure' type='quantitative' />
+      <column caption='Channel Lifetime Daily Views Relevant' datatype='real' name='[CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT]' role='measure' type='quantitative' />
+      <column caption='Channel Title' datatype='string' name='[CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='Channel Video Views' datatype='integer' name='[CHANNEL_VIDEO_VIEWS]' role='measure' type='quantitative' />
+      <column caption='Channel Views' datatype='integer' name='[CHANNEL_VIEWS]' role='measure' type='quantitative' />
+      <column caption='Country' datatype='string' name='[COUNTRY]' role='dimension' semantic-role='[Country].[ISO3166_2]' type='nominal' />
+      <column caption='Day Range' datatype='integer' name='[DAY_RANGE]' role='dimension' type='quantitative' />
+      <column caption='Death Recorded' datatype='datetime' name='[DEATH_RECORDED]' role='dimension' type='ordinal' />
+      <column caption='Default Langauge' datatype='string' name='[DEFAULT_LANGAUGE]' role='dimension' type='nominal' />
+      <column caption='Description' datatype='string' name='[DESCRIPTION]' role='dimension' type='nominal' />
+      <column caption='Discover Source' datatype='string' name='[DISCOVER_SOURCE]' role='dimension' type='nominal' />
+      <column caption='Featured Channels' datatype='string' name='[FEATURED_CHANNELS]' role='dimension' type='nominal' />
+      <column caption='From Date' datatype='datetime' name='[FROM_DATE]' role='dimension' type='ordinal' />
+      <column caption='Homa Category Proposed' datatype='string' name='[HOMA_CATEGORY_PROPOSED]' role='dimension' type='nominal' />
+      <column caption='Ideology' datatype='string' name='[IDEOLOGY]' role='dimension' type='nominal' />
+      <column caption='Keywords' datatype='string' name='[KEYWORDS]' role='dimension' type='nominal' />
+      <column caption='Logo Url' datatype='string' name='[LOGO_URL]' role='dimension' type='nominal' />
+      <column caption='Main Channel Id' datatype='string' name='[MAIN_CHANNEL_ID]' role='dimension' type='nominal' />
+      <column caption='Main Channel Title' datatype='string' name='[MAIN_CHANNEL_TITLE]' role='dimension' type='nominal' />
+      <column caption='Media' datatype='string' name='[MEDIA]' role='dimension' type='nominal' />
+      <column caption='Meets Review Criteria' datatype='boolean' name='[MEETS_REVIEW_CRITERIA]' role='dimension' type='nominal' />
+      <column caption='Meets Sub Criteria' datatype='boolean' name='[MEETS_SUB_CRITERIA]' role='dimension' type='nominal' />
+      <column caption='Platform' datatype='string' name='[PLATFORM]' role='dimension' type='nominal' />
+      <column caption='Public Creator Notes' datatype='string' name='[PUBLIC_CREATOR_NOTES]' role='dimension' type='nominal' />
+      <column caption='Public Reviewer Notes' datatype='string' name='[PUBLIC_REVIEWER_NOTES]' role='dimension' type='nominal' />
+      <column caption='Relevance' datatype='real' name='[RELEVANCE]' role='measure' type='quantitative' />
+      <column caption='Reviews Algo' datatype='integer' name='[REVIEWS_ALGO]' role='measure' type='quantitative' />
+      <column caption='Reviews All' datatype='integer' name='[REVIEWS_ALL]' role='measure' type='quantitative' />
+      <column caption='Reviews Human' datatype='integer' name='[REVIEWS_HUMAN]' role='measure' type='quantitative' />
+      <column caption='Source' datatype='string' name='[SOURCE]' role='dimension' type='nominal' />
+      <column caption='Source Id' datatype='string' name='[SOURCE_ID]' role='dimension' type='nominal' />
+      <column caption='Status Msg' datatype='string' name='[STATUS_MSG]' role='dimension' type='nominal' />
+      <column caption='Subscriptions' datatype='string' name='[SUBSCRIPTIONS]' role='dimension' type='nominal' />
+      <column caption='Subs' datatype='integer' name='[SUBS]' role='measure' type='quantitative' />
+      <column caption='Tags' datatype='string' name='[TAGS]' role='dimension' type='nominal' />
+      <column caption='To Date' datatype='datetime' name='[TO_DATE]' role='dimension' type='ordinal' />
+      <column caption='Updated' datatype='datetime' name='[UPDATED]' role='dimension' type='ordinal' />
+      <_.fcp.ObjectModelTableType.true...column caption='CHANNEL_LATEST' datatype='table' name='[__tableau_internal_object_id__].[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]' role='measure' type='quantitative' />
+      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-structure='true' />
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+        <objects>
+          <object caption='CHANNEL_LATEST' id='CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99'>
+            <properties context=''>
+              <relation connection='snowflake.0lvm8lz1d0i3j51cbm3t50esumg2' name='CHANNEL_LATEST' table='[PUBLIC].[CHANNEL_LATEST]' type='table' />
+            </properties>
+          </object>
+        </objects>
+      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Channels'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='CHANNEL_LATEST (PUBLIC)' name='federated.1tn9ngz0mi9luj12c3w8y1r1xj6c' />
+          </datasources>
+          <datasource-dependencies datasource='federated.1tn9ngz0mi9luj12c3w8y1r1xj6c'>
+            <column caption='Meets Review Criteria' datatype='boolean' name='[MEETS_REVIEW_CRITERIA]' role='dimension' type='nominal' />
+            <column caption='Meets Sub Criteria' datatype='boolean' name='[MEETS_SUB_CRITERIA]' role='dimension' type='nominal' />
+            <column caption='Platform' datatype='string' name='[PLATFORM]' role='dimension' type='nominal' />
+            <_.fcp.ObjectModelTableType.false...column caption='CHANNEL_LATEST' datatype='integer' name='[__tableau_internal_object_id__].[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]' role='measure' type='quantitative' />
+            <column caption='Subs' datatype='integer' name='[SUBS]' role='measure' type='quantitative' />
+            <_.fcp.ObjectModelTableType.true...column caption='CHANNEL_LATEST' datatype='table' name='[__tableau_internal_object_id__].[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]' role='measure' type='quantitative' />
+            <column-instance column='[__tableau_internal_object_id__].[CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99]' derivation='Count' name='[__tableau_internal_object_id__].[cnt:CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[MEETS_REVIEW_CRITERIA]' derivation='None' name='[none:MEETS_REVIEW_CRITERIA:nk]' pivot='key' type='nominal' />
+            <column-instance column='[MEETS_SUB_CRITERIA]' derivation='None' name='[none:MEETS_SUB_CRITERIA:nk]' pivot='key' type='nominal' />
+            <column-instance column='[PLATFORM]' derivation='None' name='[none:PLATFORM:nk]' pivot='key' type='nominal' />
+            <column-instance column='[SUBS]' derivation='Sum' name='[sum:SUBS:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[:Measure Names]'>
+            <groupfilter function='union' user:op='manual'>
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[__tableau_internal_object_id__].[cnt:CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99:qk]&quot;' />
+              <groupfilter function='member' level='[:Measure Names]' member='&quot;[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[sum:SUBS:qk]&quot;' />
+            </groupfilter>
+          </filter>
+          <slices>
+            <column>[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[:Measure Names]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='header'>
+            <format attr='width' field='[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[none:MEETS_REVIEW_CRITERIA:nk]' value='204' />
+            <format attr='width' field='[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[none:MEETS_SUB_CRITERIA:nk]' value='144' />
+            <format attr='width' field='[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[none:PLATFORM:nk]' value='120' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Automatic' />
+            <encodings>
+              <text column='[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[Multiple Values]' />
+            </encodings>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-show' value='true' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows>([federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[none:PLATFORM:nk] / ([federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[none:MEETS_SUB_CRITERIA:nk] / [federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[none:MEETS_REVIEW_CRITERIA:nk]))</rows>
+        <cols>[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[:Measure Names]</cols>
+      </table>
+      <simple-id uuid='{9B3B6DB1-596F-4E3B-B1BC-F906BA4361AC}' />
+    </worksheet>
+    <worksheet name='Views'>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='Video Stats Daily by Tag' name='sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg' />
+          </datasources>
+          <datasource-dependencies datasource='sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg'>
+            <column aggregation='Year' datatype='date' default-type='ordinal' layered='true' name='[DATE]' pivot='key' role='dimension' type='ordinal' user-datatype='date' visual-totals='Default' />
+            <column aggregation='Count' caption='Platform' datatype='string' default-type='nominal' layered='true' name='[PLATFORM]' pivot='key' role='dimension' type='nominal' user-datatype='string' visual-totals='Default' />
+            <column aggregation='Count' datatype='string' default-type='nominal' layered='true' name='[TAG]' pivot='key' role='dimension' type='nominal' user-datatype='string' visual-totals='Default' />
+            <column aggregation='Sum' datatype='real' default-type='quantitative' layered='true' name='[VIEWS]' pivot='key' role='measure' type='quantitative' user-datatype='real' visual-totals='Default' />
+            <column-instance column='[PLATFORM]' derivation='None' name='[none:PLATFORM:nk]' pivot='key' type='nominal' />
+            <column-instance column='[TAG]' derivation='None' name='[none:TAG:nk]' pivot='key' type='nominal' />
+            <column-instance column='[VIEWS]' derivation='Sum' name='[sum:VIEWS:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[DATE]' derivation='Day-Trunc' name='[tdy:DATE:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <manual-sort column='[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[none:PLATFORM:nk]' direction='ASC'>
+            <dictionary>
+              <bucket>&quot;YouTube&quot;</bucket>
+              <bucket>&quot;Rumble&quot;</bucket>
+              <bucket>&quot;BitChute&quot;</bucket>
+            </dictionary>
+          </manual-sort>
+          <filter class='categorical' column='[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[none:TAG:nk]'>
+            <groupfilter function='member' level='[none:TAG:nk]' member='&quot;QAnon&quot;' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='quantitative' column='[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[tdy:DATE:qk]' included-values='in-range'>
+            <min>#2020-03-12 00:00:00#</min>
+            <max>#2021-02-08 00:00:00#</max>
+          </filter>
+          <slices>
+            <column>[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[none:TAG:nk]</column>
+            <column>[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[tdy:DATE:qk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style />
+        <panes>
+          <pane selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Bar' />
+            <mark-sizing custom-mark-size-in-axis-units='1.0' mark-alignment='mark-alignment-left' mark-sizing-setting='marks-scaling-on' use-custom-mark-size='false' />
+            <encodings>
+              <color column='[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[none:PLATFORM:nk]' />
+            </encodings>
+            <style>
+              <style-rule element='mark'>
+                <format attr='has-stroke' value='false' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows>[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[sum:VIEWS:qk]</rows>
+        <cols>[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[tdy:DATE:qk]</cols>
+      </table>
+      <simple-id uuid='{036F1EB6-D1B5-40B4-9E56-0915344035D0}' />
+    </worksheet>
+  </worksheets>
+  <windows saved-dpi-scale-factor='1.5' source-height='63'>
+    <window class='worksheet' maximized='true' name='Views'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='30'>
+            <card type='title' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card param='[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[tdy:DATE:qk]' show-domain='false' show-null-ctrls='false' type='filter' />
+            <card param='[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[none:TAG:nk]' type='filter' />
+            <card pane-specification-id='0' param='[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[none:PLATFORM:nk]' type='color' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <highlight>
+          <color-one-way>
+            <field>[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[none:PLATFORM:nk]</field>
+            <field>[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[yr:DATE:ok]</field>
+            <field>[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[yr:MONTH:ok]</field>
+            <field>[sqlproxy.1sx6m1915f3loy0zoj8cj1r7jazg].[yr:TO_DATE:ok]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{88FE8DB7-AEAA-443E-B9AF-218B9EF1E109}' />
+    </window>
+    <window class='worksheet' name='Channels'>
+      <cards>
+        <edge name='left'>
+          <strip size='133'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+            <card type='measures' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='25'>
+            <card type='title' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <highlight>
+          <color-one-way>
+            <field>[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[__tableau_internal_object_id__].[cnt:CHANNEL_LATEST_7C81A346D8F04163AEF4AC4E9BD1BA99:qk]</field>
+            <field>[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[none:MEETS_REVIEW_CRITERIA:nk]</field>
+            <field>[federated.1tn9ngz0mi9luj12c3w8y1r1xj6c].[none:MEETS_SUB_CRITERIA:nk]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{D88D8E2E-DEA3-4491-B1FD-AD5452FC1A26}' />
+    </window>
+  </windows>
+  <thumbnails>
+    <thumbnail height='192' name='Channels' width='192'>
+      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
+    </thumbnail>
+    <thumbnail height='192' name='Views' width='192'>
+      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
+      RU5ErkJggg==
+    </thumbnail>
+  </thumbnails>
+</workbook>
