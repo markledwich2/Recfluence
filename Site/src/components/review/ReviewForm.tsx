@@ -13,6 +13,7 @@ import ReactMarkdown from 'react-markdown'
 import Async, { makeAsyncSelect } from 'react-select/async'
 import { EsContext } from '../SearchContext'
 import { formatNumber } from 'humanize-plus'
+import { renderToString } from 'react-dom/server'
 
 const Md = styled(ReactMarkdown)`
   max-width:30em;
@@ -55,7 +56,7 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
   onSaveNonPolitical: (r: ChannelReview) => Promise<void>,
   onChange: (r: ChannelReview) => void,
   onCancel?: () => void,
-  onSkip?: () => void,
+  onSkip?: (r: ChannelReview) => void,
   reviewValid: (r: Review) => boolean,
 }) => {
 
@@ -92,6 +93,7 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
         <div>
           <h2>{c?.channelTitle ?? "No channel to review"}</h2>
           <p>{c.channelId}</p>
+          <i>{c.platform}</i>
           <p>{c.channelViews > c.channelVideoViews ? `${formatNumber(c.channelViews)} channel views`
             : `${formatNumber(c.channelVideoViews)} video views`}</p>
         </div>
@@ -174,7 +176,7 @@ export const ReviewForm = ({ review, onSave, onSaveNonPolitical, onChange, onCan
             e.preventDefault()
             onSaveNonPolitical(review)
           }} data-tip='nonPolitical' />
-          {onSkip && <button onClick={onSkip} type='button'>Skip</button>}
+          {onSkip && <button onClick={() => onSkip(review)} type='button'>Skip</button>}
           {onCancel && <button onClick={onCancel} type='button'>Cancel</button>}
         </div>
 

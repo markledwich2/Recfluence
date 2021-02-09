@@ -47,6 +47,7 @@ export const ReviewControl = () => {
   const [reviewListName, setReviewListName] = useState<string>('auto')
   const [pending, setPending] = useState<BasicChannel[]>()
   const [editing, setEditing] = useState<ChannelReview>(null)
+  const [skipped, setSkipped] = useState<string[]>([])
 
   const { addToast } = useToasts()
 
@@ -100,7 +101,8 @@ export const ReviewControl = () => {
     }, keyOption, [editing, review])
   })
 
-  const channelIsPending = (c: ChannelTitle, reviews: ChannelReview[]) => reviews && !reviews.find(r => r.review.channelId == c.channelId)
+  const channelIsPending = (c: ChannelTitle, reviews: ChannelReview[], newSkipped: string[] = skipped) =>
+    reviews && !reviews.find(r => r.review.channelId == c.channelId) && !newSkipped.includes(c.channelId)
 
   const init = async (email: string) => {
     const reviewListsTask = reviewChannelLists()
@@ -110,17 +112,19 @@ export const ReviewControl = () => {
     const channelReviews = reviews.map(r => ({ review: r, channel: channels[r.channelId], mainChannel: channels[r.mainChannelId] }))
     const reviewLists = await reviewListsTask
     setReviewsLists(reviewLists)
-    updateReviewAndPending(reviewListName, reviewLists, channelReviews)
+    updateReviewAndPending({ listName: reviewListName, lists: reviewLists, reviews: channelReviews })
     setReviews(channelReviews)
   }
 
-  const updateReviewAndPending = (listName?: string, lists?: _.Dictionary<ChannelTitle[]>, reviewsParam?: ChannelReview[]) => {
-    listName = listName ?? reviewListName
-    lists = lists ?? reviewLists
-    reviewsParam = reviewsParam ?? reviews
-    const newPending = _(lists[listName]).filter(c => channelIsPending(c, reviewsParam)).value()
-    // take one at random to try and avoid too many double up reviews from different people
+  const updateReviewAndPending = (cfg?: { listName?: string, lists?: _.Dictionary<ChannelTitle[]>, reviews?: ChannelReview[], skip?: string[] }) => {
+    const listName = cfg?.listName ?? reviewListName
+    const lists = cfg?.lists ?? reviewLists
+    const reviewsParam = cfg?.reviews ?? reviews
+    const newSkipped = cfg.skip ? skipped.concat(cfg.skip) : skipped
+    const newPending = _(lists[listName]).filter(c => channelIsPending(c, reviewsParam, newSkipped)).value()
     const c = _(newPending).head()
+    if (newSkipped != skipped)
+      setSkipped(newSkipped)
     setReview(newReview(c))
     setPending(newPending)
   }
@@ -136,7 +140,7 @@ export const ReviewControl = () => {
     if (!res.ok) return
     const newReviews = reviews.filter(r => r.review.channelId != review.review.channelId).concat(review)
     setReviews(newReviews)
-    if (!isEditing) updateReviewAndPending(reviewListName, reviewLists, newReviews)
+    if (!isEditing) updateReviewAndPending({ reviews: newReviews })
     else setEditing(null)
     return review
   }
@@ -158,8 +162,9 @@ export const ReviewControl = () => {
           <Select
             value={listNameOptions.find(o => o.value == reviewListName)}
             onChange={(o: Option) => {
-              setReviewListName(o.value)
-              updateReviewAndPending(o.value)
+              const listName = o.value
+              setReviewListName(listName)
+              updateReviewAndPending({ listName })
             }}
             options={listNameOptions}
             styles={selectStyle} theme={selectTheme}
@@ -197,7 +202,9 @@ export const ReviewControl = () => {
             review={review}
             onChange={r => setReview(r)}
             onSave={async r => { await saveReview(r, false) }}
-            onSkip={() => updateReviewAndPending()}
+            onSkip={r => {
+              updateReviewAndPending({ skip: [r.channel.channelId] })
+            }}
             onSaveNonPolitical={async r => { await saveNonPoliticalReview(r, false) }}
             reviewValid={reviewValid}
           />
