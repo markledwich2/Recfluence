@@ -42,6 +42,28 @@ namespace SysExtensions {
         throw new InvalidOperationException(msg, ex);
       }
     }
+    
+    /// <summary>Allows you to log exception without changing behaviour. It re-throws the exception</summary>
+    public static async Task WithOnError(this Task task, Action<Exception> onError) {
+      try {
+        await task;
+      }
+      catch (Exception ex) {
+        onError(ex);
+        throw;
+      }
+    }
+
+    /// <summary>Allows you to log exception without changing behaviour. It re-throws the exception</summary>
+    public static async Task<T> WithOnError<T>(this Task<T> task, Action<Exception> onError) {
+      try {
+        return await task;
+      }
+      catch (Exception ex) {
+        onError(ex);
+        throw;
+      }
+    }
 
     /// <summary>Allows you to log exception without changing behaviour. It re-throws the exception</summary>
     public static async ValueTask WithOnError(this ValueTask task, Action<Exception> onError) {

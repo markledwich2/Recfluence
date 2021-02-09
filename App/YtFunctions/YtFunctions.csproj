@@ -1,22 +1,28 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <AzureFunctionsVersion>v3</AzureFunctionsVersion>
-    <LangVersion>9</LangVersion>
+    <LangVersion>preview</LangVersion>
+    <OutputType>Exe</OutputType>
+    <_FunctionsSkipCleanOutput>true</_FunctionsSkipCleanOutput>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Autofac.Extensions.DependencyInjection.AzureFunctions" Version="6.0.0.53" />
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.16.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.5" />
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.11" />
-    <PackageReference Include="Seq.Api" Version="2020.1.0" />
-    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0" />
-    <PackageReference Include="Serilog.Sinks.ILogger" Version="1.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.5"/>
+    <PackageReference Include="Seq.Api" Version="2020.1.0"/>
+    <PackageReference Include="Serilog.Sinks.ILogger" Version="1.0.3"/>
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Http" Version="3.0.12"/>
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="4.0.3"/>
+    <PackageReference Include="Microsoft.Azure.WebJobs.Script.ExtensionsMetadataGenerator" Version="1.2.1"/>
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.0.0-preview3" OutputItemType="Analyzer"/>
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.0.0-preview3"/>
+    <PackageReference Include="System.Net.NameResolution" Version="4.3.0"/>
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions" Version="4.0.1"/>
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.1.0"/>
+    <PackageReference Include="Serilog.AspNetCore" Version="3.4.0"/>
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="local.settings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -24,8 +30,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
-    <ProjectReference Include="..\YtReader\YtReader.csproj" />
+    <ProjectReference Include="..\SysExtensions\SysExtensions.csproj"/>
+    <ProjectReference Include="..\YtReader\YtReader.csproj"/>
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\YtCli\default.appcfg.json">

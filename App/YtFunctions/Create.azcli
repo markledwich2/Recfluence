@@ -1,0 +1,7 @@
+
+az login
+az configure --defaults location=westus2 group=ytnetworks
+az storage account create --name recfluencefunc2 --sku Standard_LRS
+az functionapp create --consumption-plan-location westus2 --runtime dotnet --functions-version 3 --name recfluece2 --storage-account recfluencefunc2
+cd ./bin/Release/net5.0/publish
+func azure functionapp publish recfluece2

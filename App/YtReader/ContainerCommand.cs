@@ -13,9 +13,9 @@ using static YtReader.ContainerCommand.Options;
 
 namespace YtReader {
   public record YtContainerRunner(AzureContainers Az, ContainerCfg ContainerCfg, PipeAppCtx Ctx, CliEntry Cli, ILogger Log) {
-    public async Task Run(string groupName, string fullImageName = null, CancellationToken cancel = default, bool returnOnStart = false) =>
+    public async Task Run(string groupName, string fullImageName = null, CancellationToken cancel = default, bool returnOnStart = false, string[] args = null) =>
       await Az.RunContainer(groupName, fullImageName ?? ContainerCfg.FullContainerImageName(await Az.FindImageTag(ContainerCfg.ImageName)),
-        Ctx.EnvironmentVariables, LocalArgs(), returnOnStart, "./recfluence", log: Log, cancel: cancel);
+        Ctx.EnvironmentVariables, args ?? LocalArgs(), returnOnStart, "./recfluence", log: Log, cancel: cancel);
 
     string[] LocalArgs() {
       bool ShouldStrip(string arg, string prev) => AllArgs.Contains(arg) || AllFlags.Contains(arg) || 

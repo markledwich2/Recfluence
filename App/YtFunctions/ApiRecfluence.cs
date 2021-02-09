@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
-using Autofac;
 using Humanizer;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Extensions.Primitives;
 using Mutuo.Etl.Blob;
 using Nest;
 using Newtonsoft.Json;
@@ -20,36 +16,33 @@ using SysExtensions.Threading;
 using YtReader;
 using YtReader.Search;
 using YtReader.Store;
+using static System.Net.HttpStatusCode;
+using static YtFunctions.HttpResponseEx;
 
 namespace YtFunctions {
-  public class ApiRecfluence {
+  public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, ElasticClient Es) {
     /// <summary>Use the Json.net defaults because we want to keep original name casings so that we aren't re-casing the db in
     ///   different formats</summary>
-    static readonly JsonSerializerSettings JCfg = new() {Formatting = Formatting.None};
-    readonly Defer<FuncCtx, ExecutionContext> Ctx;
-
-    public ApiRecfluence(Defer<FuncCtx, ExecutionContext> ctx) => Ctx = ctx;
+    static readonly JsonSerializerSettings JPlain = new() { Formatting = Formatting.None };
+    static readonly JsonSerializerSettings JDefault = JsonlExtensions.DefaultSettingsForJs();
 
     [FunctionName("video")]
-    public async Task<HttpResponseMessage> Video([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "video/{videoId}")]
-      HttpRequest req, string videoId, ExecutionContext exec) =>
-      await Ctx.Run(exec, async c => {
-        var es = c.Scope.Resolve<ElasticClient>();
-        var videoRes = await es.GetAsync<EsVideo>(videoId);
+    public Task<HttpResponseData> Video([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "video/{videoId}")]
+      HttpRequestData req) => R(async () => {
+        var videoId = req.Params["videoId"];
+        var videoRes = await Es.GetAsync<EsVideo>(videoId);
         var video = videoRes?.Source;
-        if (video == null) return new(HttpStatusCode.NotFound) {Content = new StringContent($"video `{videoId}` not found")};
-        var channelRes = await es.GetAsync<EsChannel>(video.channel_id);
+        if (video == null) return new(NotFound, $"video `{videoId}` not found");
+        var channelRes = await Es.GetAsync<EsChannel>(video.channel_id);
         var channel = channelRes.Source;
-        if (channel == null) return new(HttpStatusCode.NotFound) {Content = new StringContent($"channel `{video.channel_id}` not found")};
-        return new {video, channel}.JsonResponse(JCfg);
+        return channel == null ? new(NotFound, $"channel `{video.channel_id}` not found") : new { video, channel }.JsonResponse(JPlain);
       });
 
     [FunctionName("captions")]
-    public async Task<HttpResponseMessage> Captions([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "captions/{videoId}")]
-      HttpRequest req, string videoId, ExecutionContext exec) =>
-      await Ctx.Run(exec, async c => {
-        var es = c.Scope.Resolve<ElasticClient>();
-        var res = await es.SearchAsync<EsCaption>(s => s
+    public Task<HttpResponseData> Captions([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "captions/{videoId}")]
+      HttpRequestData req) => R(async () => {
+        var videoId = req.Params["videoId"];
+        var res = await Es.SearchAsync<EsCaption>(s => s
           .Source(sf => sf.Includes(i => i.Fields(
             f => f.caption_id,
             f => f.video_id,
@@ -62,80 +55,48 @@ namespace YtFunctions {
         );
 
         var captions = res.Hits.Select(h => h.Source).ToArray();
-        return captions.JsonResponse(JCfg);
+        return captions.JsonResponse(JPlain);
       });
 
     [FunctionName("search")]
-    public async Task<HttpResponseMessage> LogSearch([HttpTrigger(AuthorizationLevel.Anonymous, "put")]
-      HttpRequest req, ExecutionContext exec) =>
-      await Ctx.Run(exec, async c => {
+    public Task<HttpResponseData> LogSearch([HttpTrigger(AuthorizationLevel.Anonymous, "put")]
+      HttpRequestData req) => R(async () => {
         // get user query, filters etc.. from query string
         var search = req.Body.ToObject<UserSearchWithUpdated>();
-        var store = c.Scope.Resolve<YtStore>();
-        await store.Searches.Append(new[] {search});
-        return new HttpResponseMessage(HttpStatusCode.OK);
+        await Store.Searches.Append(new[] { search });
+        return new(OK);
       });
 
-    static readonly JsonSerializerSettings JsSerializer = JsonlExtensions.DefaultSettingsForJs();
-
     [FunctionName("channel_review")]
-    public async Task<HttpResponseMessage> ChannelReview([HttpTrigger(AuthorizationLevel.Anonymous, "put")]
-      HttpRequest req, ExecutionContext exec) =>
-      await Ctx.Run(exec, async c => {
-        var review = req.Body.ToObject<UserChannelReview>(JsSerializer);
+    public Task<HttpResponseData> ChannelReview([HttpTrigger(AuthorizationLevel.Anonymous, "put")]
+      HttpRequestData req) => R(async () => {
+        var review = req.Body.ToObject<UserChannelReview>(JDefault);
         if (review.Email.NullOrEmpty())
-          return new(HttpStatusCode.BadRequest) {Content = new StringContent("email must be provided")};
+          return new(BadRequest, "email must be provided");
         review.Updated = DateTime.UtcNow;
-        var log = c.Resolve<ILogger>();
-        var store = c.Scope.Resolve<YtStore>();
-        await store.ChannelReviews.Append(new[] {review}, log);
-
+        await Store.ChannelReviews.Append(new[] { review }, Log);
         // if we have lots of small files, clean them up
-        var files = await store.ChannelReviews.Files(review.Email).SelectManyList();
-        var optimiseCfg = c.Resolve<WarehouseCfg>().Optimise;
+        var files = await Store.ChannelReviews.Files(review.Email).SelectManyList();
+        var optimiseCfg = Wh.Optimise;
         if (files.Count(f => f.Bytes?.Bytes() < (optimiseCfg.TargetBytes * 0.9).Bytes()) > 10)
-          await store.ChannelReviews.Optimise(optimiseCfg, review.Email, log: log);
-
-        return new HttpResponseMessage(HttpStatusCode.OK);
+          await Store.ChannelReviews.Optimise(optimiseCfg, review.Email, log: Log);
+        return new(OK);
       });
 
     [FunctionName("channels_reviewed")]
-    public async Task<HttpResponseMessage> ChannelsReviewed([HttpTrigger(AuthorizationLevel.Anonymous, "get")]
-      HttpRequest req, ExecutionContext exec) =>
-      await Ctx.Run(exec, async ctx => {
+    public Task<HttpResponseData> ChannelsReviewed([HttpTrigger(AuthorizationLevel.Anonymous, "get")]
+      HttpRequestData req) => R(async () => {
         var (email, response) = EmailOrResponse(req);
         if (response != null) return response;
-        var store = ctx.Scope.Resolve<YtStore>();
-        var reviews = await store.ChannelReviews.Items(email).SelectManyList();
+
+        var reviews = await Store.ChannelReviews.Items(email).SelectManyList();
         var json = reviews.SerializeToJToken(JsonlExtensions.DefaultSettingsForJs())
           .ToCamelCaseJToken().ToString(Formatting.None);
 
-        return new(HttpStatusCode.OK) {
-          Content = new StringContent(json, Encoding.UTF8, "application/json")
-        };
+        return new HttpResponseData(OK, json).WithJsonContentHeaders();
       });
 
-    static (string email, HttpResponseMessage response) EmailOrResponse(HttpRequest req) {
-      var email = req.Query["email"];
-      if (email == StringValues.Empty)
-        return (null, new(HttpStatusCode.Unauthorized) {Content = new StringContent("email must be provided")});
-      return (email, null);
-    }
-  }
-
-  public class DataResult {
-    public string JsonlUrl { get; set; }
-  }
-
-  public static class HttpResponseEx {
-    public static HttpResponseMessage ErrorResponse(this object o, JsonSerializerSettings settings = null) =>
-      new(HttpStatusCode.OK) {
-        Content = new StringContent(o.ToJson(settings), Encoding.UTF8, "application/json")
-      };
-
-    public static HttpResponseMessage JsonResponse(this object o, JsonSerializerSettings settings = null) =>
-      new(HttpStatusCode.OK) {
-        Content = new StringContent(o.ToJson(settings), Encoding.UTF8, "application/json")
-      };
+    static (string email, HttpResponseData response) EmailOrResponse(HttpRequestData req) => req.Query.TryGetValue("email", out var email)
+      ? (email, null) : (null, new(Unauthorized, "email must be provided"));
   }
 }

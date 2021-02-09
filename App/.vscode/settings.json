@@ -1,6 +1,6 @@
 {
     "docker.defaultRegistryPath": "ytnetworks.azurecr.io",
-    "azureFunctions.deploySubpath": "YtFunctions/bin/Release/netcoreapp3.1/publish",
+    "azureFunctions.deploySubpath": "YtFunctions/bin/Release/net5.0/publish",
     "azureFunctions.projectLanguage": "C#",
     "azureFunctions.projectRuntime": "~3",
     "debug.internalConsoleOptions": "neverOpen",
