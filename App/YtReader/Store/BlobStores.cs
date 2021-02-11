@@ -143,7 +143,6 @@ namespace YtReader.Store {
 
     public string                ChannelTitle       { get; set; }
     public string                ChannelName        { get; set; }
-    public string                MainChannelId      { get; set; }
     public string                Description        { get; set; }
     public string                LogoUrl            { get; set; }
     public ulong?                Subs               { get; set; }

@@ -69,7 +69,7 @@ namespace YtReader.Rumble {
 
     static Url VideoUrl(string path) => path == null ? null : RumbleDotCom.AppendPathSegments(path);
 
-    static readonly Regex ViewsRe     = new(@"(?<views>\d+) Views", RegexOptions.Compiled);
+    static readonly Regex ViewsRe     = new(@"(?<views>[\d,]+) Views", RegexOptions.Compiled);
     static readonly Regex EarnedRe    = new(@"\$(?<earned>[\d.\d]+) earned", RegexOptions.Compiled);
     static readonly Regex PublishedRe = new(@"Published[\s]*(?<date>.*)", RegexOptions.Compiled);
 
@@ -93,6 +93,8 @@ namespace YtReader.Rumble {
       var duration = durationText?.TryParseTimeSpanExact(@"\P\Thh\Hmm\Mss\S");
       var contentDiv = doc.QuerySelector(".content.media-description");
       contentDiv?.QuerySelector("span.breadcrumbs").Remove(); // clean up description
+      var viewsText = mediaByDiv?.QuerySelectorAll(".media-heading-info")
+        .Select(s => s.TextContent.Match(ViewsRe)).FirstOrDefault(m => m.Success)?.Groups["views"].Value;
 
       var publishedText = mediaByDiv?.QuerySelector(".media-heading-published")?.TextContent?.Trim();
       vid = vid with {
@@ -101,8 +103,7 @@ namespace YtReader.Rumble {
         ChannelSourceId = channelSourceId,
         ChannelTitle = chanA?.QuerySelector(".media-heading-name")?.TextContent.Trim(),
         UploadDate = publishedText?.Match(PublishedRe).Groups["date"].Value.TryParseDateExact("MMMM d, yyyy", DateTimeStyles.AssumeUniversal),
-        Statistics = new(mediaByDiv?.QuerySelectorAll(".media-heading-info")
-          .Select(s => s.TextContent.Match(ViewsRe)).FirstOrDefault(m => m.Success)?.Groups["views"].Value.TryParseULong()),
+        Statistics = new(viewsText.TryParseULong()),
         Thumb = MetaProp("image"),
         Keywords = MetaProp("tag")?.Split(" ").ToArray() ?? MetaProps("video:tag").ToArray(),
         Description = doc.QuerySelector(".content.media-description")?.TextContent.Trim(),
