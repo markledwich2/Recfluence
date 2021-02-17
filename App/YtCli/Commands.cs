@@ -135,10 +135,10 @@ namespace YtCli {
   [Command("traffic", Description = "Process source traffic data for comparison")]
   public class TrafficCmd : ICommand {
     readonly BlobStores Stores;
-    readonly WebScraper Scraper;
+    readonly YtWeb      Scraper;
     readonly ILogger    Log;
 
-    public TrafficCmd(BlobStores stores, WebScraper scraper, ILogger log) {
+    public TrafficCmd(BlobStores stores, YtWeb scraper, ILogger log) {
       Stores = stores;
       Scraper = scraper;
       Log = log;
@@ -197,7 +197,7 @@ namespace YtCli {
   }
 
   [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]
-  public record UpdateCmd(YtUpdater Updater, IPipeCtx PipeCtx, YtContainerRunner ContainerRunner, AzureContainers Az, ContainerCfg ContainerCfg, ILogger Log) 
+  public record UpdateCmd(YtUpdater Updater, IPipeCtx PipeCtx, YtContainerRunner ContainerRunner, AzureContainers Az, ContainerCfg ContainerCfg, ILogger Log)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
     [CommandOption('a', Description = "| delimited list of action to run (empty for all)")]
     public string Actions { get; set; }
@@ -245,8 +245,7 @@ namespace YtCli {
     [CommandOption("search-index", Description = @"| separated list of indexes to update. leave empty for all indexes")]
     public string SearchIndexes { get; set; }
 
-    [CommandOption("search-mode")]
-    public SearchMode SearchMode { get; set; }
+    [CommandOption("search-mode")] public SearchMode SearchMode { get; set; }
 
     [CommandOption("collect-videos",
       Description = @"path in the data blob container a file with newline separated video id's. e.g. import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz")]
@@ -371,12 +370,12 @@ namespace YtCli {
   }
 
   [Command("parler")]
-  public record ParlerCmd(ILogger Log, Parler Parler, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg) 
+  public record ParlerCmd(ILogger Log, Parler Parler, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
-
     [CommandOption('f')] public string Folder { get; set; }
-    
+
     protected override string GroupName => "parler";
+
     protected override async ValueTask ExecuteLocal(IConsole console) {
       await Parler.LoadFromGoogleDrive(Folder, "posts", Log);
       Log.Information("Completed load parler data");

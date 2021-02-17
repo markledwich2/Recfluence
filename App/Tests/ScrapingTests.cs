@@ -31,7 +31,7 @@ namespace Tests {
     [Test]
     public static async Task WebRecsAndExtra() {
       using var ctx = await TextCtx();
-      var ws = ctx.Scope.Resolve<WebScraper>();
+      var ws = ctx.Scope.Resolve<YtWeb>();
       var extra = await ws.GetRecsAndExtra(new[] {
         "JPiiySjShng", //nbc suspected parsing problem
         //"OijWK4Y6puI", //unlisted
@@ -51,7 +51,7 @@ namespace Tests {
     [Test]
     public static async Task Captions() {
       using var ctx = await TextCtx();
-      var scraper = ctx.Scope.Resolve<WebScraper>();
+      var scraper = ctx.Scope.Resolve<YtWeb>();
       var tracks = await scraper.GetCaptionTracks("yu_C_K3TuyY", ctx.Log);
       var en = tracks.First(t => t.Language.Code == "en");
       var captions = await scraper.GetClosedCaptionTrackAsync(en, ctx.Log);
@@ -64,7 +64,7 @@ namespace Tests {
         .Files("*.html")
         .Select(f => Html.ParseDocument(f.OpenText().ReadToEnd()));
 
-      var scrape = x.Resolve<WebScraper>();
+      var scrape = x.Resolve<YtWeb>();
 
       var clientObjects = docs.Select(d => scrape.GetRecs2(x.Log, d, "(fake video id)")).ToList();
     }
@@ -72,8 +72,8 @@ namespace Tests {
     [Test]
     public static async Task ChannelVideos() {
       using var x = await TextCtx();
-      var ws = x.Scope.Resolve<WebScraper>();
-      var res = await ws.GetChannelUploadsAsync("UCl49yaTf95CnN_w-Y3yY5fg", x.Log).ToListAsync();
+      var ws = x.Scope.Resolve<YtWeb>();
+      var res = await ws.ChannelVideos("UCrWmonkmTk5NbvmVnc7f70w", x.Log).ToListAsync();
     }
 
     [Test]

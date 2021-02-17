@@ -57,7 +57,7 @@ namespace YtReader.BitChute {
 
       if (chanDoc.StatusCode == HttpStatusCode.NotFound)
         return (this.NewChan(sourceId) with {Status = ChannelStatus.NotFound, Updated = DateTime.UtcNow}, null);
-      chanDoc.StatusCode.EnsureSuccess();
+      chanDoc.EnsureSuccess();
       var csrf = chanDoc.CsrfToken();
 
       Task<T> Post<T>(string path, object data = null) =>
@@ -100,7 +100,7 @@ namespace YtReader.BitChute {
 
       if (doc.StatusCode == HttpStatusCode.NotFound)
         return vid with {Status = VideoStatus.NotFound};
-      doc.StatusCode.EnsureSuccess();
+      doc.EnsureSuccess();
 
       var chanA = doc.Qs<IHtmlAnchorElement>(".channel-banner .details .name > a.spa");
       var dateMatch = doc.QuerySelector(".video-publish-date")?.TextContent?.Match(RDate);
@@ -166,11 +166,11 @@ namespace YtReader.BitChute {
         return true;
       }).RetryWithBackoff("BcWeb angle open", 5, d => d.StatusCode.ToString(), log);
 
-      var (doc, ex) = await F(() => retryTransient.ExecuteAsync(() => getDoc(browser, url))).Try();
+      var (doc, ex) = await Fun(() => retryTransient.ExecuteAsync(() => getDoc(browser, url))).Try();
       if (doc?.StatusCode.IsTransient() == false) return doc; // if there was a non-transient error, return the doc in that state 
       UseProxyOrThrow(ex, url, (int?) doc?.StatusCode); // if we are already using the proxy, throw the error
       doc = await retryTransient.ExecuteAsync(() => getDoc(browser, url));
-      doc.StatusCode.EnsureSuccess();
+      doc.EnsureSuccess();
       return doc;
     }
 
@@ -180,7 +180,7 @@ namespace YtReader.BitChute {
 
       var retry = Policy.HandleResult<IFlurlResponse>(d => IsTransient(d.StatusCode))
         .RetryWithBackoff("BcWeb flurl transient error", 5, d => d.StatusCode.ToString(), log);
-      var (res, ex) = await F(() => retry.ExecuteAsync(GetRes)).Try();
+      var (res, ex) = await Fun(() => retry.ExecuteAsync(GetRes)).Try();
       if (res != null && IsSuccess(res.StatusCode)) return res;
       UseProxyOrThrow(ex, request.Url, res?.StatusCode);
       res = await retry.ExecuteAsync(GetRes);

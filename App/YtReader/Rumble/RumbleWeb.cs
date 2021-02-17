@@ -12,7 +12,6 @@ using Flurl;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions;
-using SysExtensions.Net;
 using SysExtensions.Text;
 using YtReader.Store;
 using Url = Flurl.Url;
@@ -25,7 +24,7 @@ namespace YtReader.Rumble {
     public async Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log) {
       var bc = BrowsingContext.New(AngleCfg);
       var doc = await bc.OpenAsync(ChannelUrl(sourceId));
-      doc.StatusCode.EnsureSuccess();
+      doc.EnsureSuccess();
 
       var chanUrl = doc.Qs<IHtmlLinkElement>("link[rel=canonical]")?.Href.AsUrl();
       string[] altIds = null;
@@ -54,7 +53,7 @@ namespace YtReader.Rumble {
         var next = NextUrl(doc);
         while (next.HasValue()) {
           var page = await bc.OpenAsync(next);
-          page.StatusCode.EnsureSuccess();
+          page.EnsureSuccess();
           yield return ParseVideos(page);
           next = NextUrl(page);
         }
@@ -79,7 +78,7 @@ namespace YtReader.Rumble {
       var vid = this.NewVidExtra(sourceId);
       if (doc.StatusCode == HttpStatusCode.NotFound)
         return vid with {Status = VideoStatus.NotFound};
-      doc.StatusCode.EnsureSuccess();
+      doc.EnsureSuccess();
 
       string MetaProp(string prop) => MetaProps(prop).FirstOrDefault();
       IEnumerable<string> MetaProps(string prop) => doc.QuerySelectorAll<IHtmlMetaElement>($"meta[property=\"og:{prop}\"]").Select(e => e.Content);

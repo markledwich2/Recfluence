@@ -94,7 +94,7 @@ namespace YtReader.Store {
 
       /*const string classChannelsSelect = @"
 select c.*
-     , cr.lr_human
+     , cr.lr_humanWe
      , cr.tags_human
      , cr.relevance_human
 from channel_latest c
@@ -103,7 +103,7 @@ where c.reviews_all>0";*/
 
       /*const string samVidsSelect = @"select $1::string video_id
   from @public.yt_data/import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz (file_format => tsv)";*/
-      
+
       var queries = new[] {
           new FileQuery("vis_channel_stats", "sql/vis_channel_stats.sql",
             "data combined from classifications + information (from the YouTube API)", dateRangeParams, inSharedZip: true),
@@ -136,10 +136,10 @@ order by channel_views desc
           // userscrape data
           new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_tag = UserScrapeCfg.SeedsPerTag}),
           new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos = UserScrapeCfg.Tests}),
-          
+
           new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
             parameters: new {from_date = "2020-11-03", to_date = "2020-11-10"}),
-          
+
           new ResQuery("us_rec_stats", @"
 with r1 as (
   select r.account
@@ -169,7 +169,7 @@ with r1 as (
 select *
 from g;
 ", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
-          
+
           new ResQuery("us_rec_tag", @"
  select t.value::string tag, month, sum(views) views
  from video_stats_monthly v
@@ -179,7 +179,7 @@ from g;
  group by tag, month
 order by tag, month
 ", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
-          
+
           new ResQuery("us_rec_month", @"
 select month, sum(views) as views
 from video_stats_monthly v
@@ -187,7 +187,7 @@ where v.month>=(select min(trunc(updated, 'month')) from us_rec)
 group by month
 order by month
 ", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
-          
+
           new ResQuery("us_feed_stats", @"with r1 as (
   select r.account
        , trunc(r.updated, 'month') month
@@ -212,7 +212,7 @@ order by month
 )
 select *
 from g", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
-          
+
           /*new ResQuery("sam_vid", @$"
 with sam_vids_raw as ({samVidsSelect})
 select e.*
@@ -279,7 +279,6 @@ from (
      )
 group by channel_id",
             fileType: ResFilType.Json),*/
-
 
 
           /*new ResQuery("icc_tags", desc: "channel classifications in a format used to calculate how consistent reviewers are when tagging"),

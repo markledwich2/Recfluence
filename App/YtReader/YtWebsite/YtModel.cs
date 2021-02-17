@@ -4,60 +4,38 @@ using System.Collections.Generic;
 // all of this only minor midifications to https://github.com/Tyrrrz/YoutubeExplode
 
 namespace YtReader.YtWebsite {
-  public class VideoItem {
+  public record YtVideoItem {
     /// <summary>ID of this video.</summary>
-    public string Id { get; }
-
-    /// <summary>Author of this video.</summary>
-    public string Author { get; }
+    public string Id { get; init; }
 
     /// <summary>Upload date of this video.</summary>
-    public DateTime UploadDate { get; }
-    
-    
-    /// <summary>
-    /// This is the same as upload date. But sometimes there are discrepancies and added is more reliable
-    /// </summary>
-    public DateTime? AddedDate { get; }
+    public DateTime? UploadDate { get; init; }
 
     /// <summary>Title of this video.</summary>
-    public string Title { get; }
-
-    /// <summary>Description of this video.</summary>
-    public string Description { get; }
-
-    /// <summary>Thumbnails of this video.</summary>
-    public ThumbnailSet Thumbnails { get; }
+    public string Title { get; init; }
 
     /// <summary>Duration of this video.</summary>
-    public TimeSpan Duration { get; }
-
-    /// <summary>Search keywords of this video.</summary>
-    public IReadOnlyList<string> Keywords { get; }
+    public TimeSpan Duration { get; init; }
 
     /// <summary>Statistics of this video.</summary>
-    public Statistics Statistics { get; }
+    public Statistics Statistics { get; init; }
+  }
 
-    public string ChannelId    { get; }
-    public string ChannelTitle { get; }
+  public record YtVideo : YtVideoItem {
+    /// <summary>Author of this video.</summary>
+    public string Author { get; init; }
 
-    /// <summary>Initializes an instance of <see cref="Video" />.</summary>
-    public VideoItem(string id, string author, DateTime uploadDate, DateTime? addedDate, string title, string description, TimeSpan duration, IReadOnlyList<string> keywords, Statistics statistics, string channelId, string channelTitle) {
-      Id = id;
-      Author = author;
-      UploadDate = uploadDate;
-      AddedDate = addedDate;
-      Title = title;
-      Description = description;
-      Duration = duration;
-      Keywords = keywords;
-      Statistics = statistics;
-      ChannelId = channelId;
-      ChannelTitle = channelTitle;
-    }
+    /// <summary>This is the same as upload date. But sometimes there are discrepancies and added is more reliable</summary>
+    public DateTime? AddedDate { get; init; }
 
-    /// <inheritdoc />
-    public override string ToString() => Title;
+    /// <summary>Description of this video.</summary>
+    public string Description { get; init; }
+
+    /// <summary>Search keywords of this video.</summary>
+    public IReadOnlyList<string> Keywords { get; init; }
+
+    public string ChannelId    { get; init; }
+    public string ChannelTitle { get; init; }
   }
 
   /// <summary>User activity statistics.</summary>
@@ -70,7 +48,7 @@ namespace YtReader.YtWebsite {
 
     /// <summary>Dislike count.</summary>
     public ulong? DislikeCount { get; set; }
-    
+
     /// <summary>Initializes an instance of <see cref="Statistics" />.</summary>
     public Statistics(ulong? viewCount, ulong? likeCount = null, ulong? dislikeCount = null) {
       ViewCount = viewCount;
@@ -79,131 +57,6 @@ namespace YtReader.YtWebsite {
     }
 
     public override string ToString() => $"{ViewCount} Views";
-  }
-
-  /// <summary>Set of thumbnails for a video.</summary>
-  public class ThumbnailSet {
-    readonly string _videoId;
-
-    /// <summary>Low resolution thumbnail URL.</summary>
-    public string LowResUrl => $"https://img.youtube.com/vi/{_videoId}/default.jpg";
-
-    /// <summary>Medium resolution thumbnail URL.</summary>
-    public string MediumResUrl => $"https://img.youtube.com/vi/{_videoId}/mqdefault.jpg";
-
-    /// <summary>High resolution thumbnail URL.</summary>
-    public string HighResUrl => $"https://img.youtube.com/vi/{_videoId}/hqdefault.jpg";
-
-    /// <summary>Standard resolution thumbnail URL. Not always available.</summary>
-    public string StandardResUrl => $"https://img.youtube.com/vi/{_videoId}/sddefault.jpg";
-
-    /// <summary>Max resolution thumbnail URL. Not always available.</summary>
-    public string MaxResUrl => $"https://img.youtube.com/vi/{_videoId}/maxresdefault.jpg";
-
-    /// <summary>Initializes an instance of <see cref="ThumbnailSet" />.</summary>
-    public ThumbnailSet(string videoId) => _videoId = videoId;
-  }
-
-  public partial class Playlist {
-    /// <summary>ID of this playlist.</summary>
-    public string Id { get; }
-
-    /// <summary>Type of this playlist.</summary>
-    public PlaylistType Type { get; }
-
-    /// <summary>Author of this playlist.</summary>
-    public string Author { get; }
-
-    /// <summary>Title of this playlist.</summary>
-    public string Title { get; }
-
-    /// <summary>Description of this playlist.</summary>
-    public string Description { get; }
-
-    /// <summary>Statistics of this playlist.</summary>
-    public Statistics Statistics { get; }
-
-    /// <summary>Collection of videos contained in this playlist.</summary>
-    public IAsyncEnumerable<IReadOnlyCollection<VideoItem>> Videos { get; }
-
-    /// <summary>Initializes an instance of <see cref="Playlist" />.</summary>
-    public Playlist(string id, string author, string title, string description, Statistics statistics,
-      IAsyncEnumerable<IReadOnlyCollection<VideoItem>> videos) {
-      Id = id;
-      Type = GetPlaylistType(id);
-      Author = author;
-      Title = title;
-      Description = description;
-      Statistics = statistics;
-      Videos = videos;
-    }
-
-    /// <inheritdoc />
-    public override string ToString() => Title;
-  }
-
-  public partial class Playlist {
-    /// <summary>Get playlist type by ID.</summary>
-    protected static PlaylistType GetPlaylistType(string id) {
-      if (id.StartsWith("PL", StringComparison.Ordinal))
-        return PlaylistType.Normal;
-
-      if (id.StartsWith("RD", StringComparison.Ordinal))
-        return PlaylistType.VideoMix;
-
-      if (id.StartsWith("UL", StringComparison.Ordinal))
-        return PlaylistType.ChannelVideoMix;
-
-      if (id.StartsWith("UU", StringComparison.Ordinal))
-        return PlaylistType.ChannelVideos;
-
-      if (id.StartsWith("PU", StringComparison.Ordinal))
-        return PlaylistType.PopularChannelVideos;
-
-      if (id.StartsWith("OL", StringComparison.Ordinal))
-        return PlaylistType.MusicAlbum;
-
-      if (id.StartsWith("LL", StringComparison.Ordinal))
-        return PlaylistType.LikedVideos;
-
-      if (id.StartsWith("FL", StringComparison.Ordinal))
-        return PlaylistType.Favorites;
-
-      if (id.StartsWith("WL", StringComparison.Ordinal))
-        return PlaylistType.WatchLater;
-
-      throw new ArgumentOutOfRangeException(nameof(id), $"Unexpected playlist ID [{id}].");
-    }
-  }
-
-  /// <summary>Playlist type.</summary>
-  public enum PlaylistType {
-    /// <summary>Regular playlist created by a user.</summary>
-    Normal,
-
-    /// <summary>Mix playlist generated to group similar videos.</summary>
-    VideoMix,
-
-    /// <summary>Mix playlist generated to group similar videos uploaded by the same channel.</summary>
-    ChannelVideoMix,
-
-    /// <summary>Playlist generated from channel uploads.</summary>
-    ChannelVideos,
-
-    /// <summary>Playlist generated from popular channel uploads.</summary>
-    PopularChannelVideos,
-
-    /// <summary>Playlist generated from automated music videos.</summary>
-    MusicAlbum,
-
-    /// <summary>System playlist for videos liked by a user.</summary>
-    LikedVideos,
-
-    /// <summary>System playlist for videos favorited by a user.</summary>
-    Favorites,
-
-    /// <summary>System playlist for videos user added to watch later.</summary>
-    WatchLater
   }
 
   /// <summary>Text that gets displayed at specific time during video playback, as part of a

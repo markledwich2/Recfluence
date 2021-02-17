@@ -2,10 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Globalization;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Builder;
@@ -32,7 +30,6 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
-using SysExtensions.Threading;
 using YtReader.BitChute;
 using YtReader.Db;
 using YtReader.Rumble;
@@ -62,17 +59,21 @@ namespace YtReader {
         c = c.ConfigureSeq(cfg);
 
       var log = c.YtEnrich(env, app, version.Version)
-        .MinimumLevel.ControlledBy(new (cfg?.LogLevel ?? Debug))
+        .MinimumLevel.ControlledBy(new(cfg?.LogLevel ?? Debug))
         .CreateLogger();
 
-      FlurlHttp.Configure(settings => {
-        settings.OnError = e => log.Debug(e.Exception, "Furl error: {Error}", e.ToString());
-        settings.AfterCall = e => { log.Verbose("Furl: {Request}", e.HttpRequestMessage); };
-      });
+      ConfigureFlurlLogging(log);
 
       Log.Logger = log;
       return log;
     }
+
+    static void ConfigureFlurlLogging(Logger log) =>
+      FlurlHttp.Configure(settings => {
+        settings.BeforeCall = e => { log.Verbose("Furl: {Request} BeforeCall", e.ToString()); };
+        settings.OnError = e => log.Debug(e.Exception, "Furl error: {Error}", e.ToString());
+        settings.AfterCall = e => { log.Verbose("Furl: {Request} AfterCall", e.HttpRequestMessage); };
+      });
 
     public static LoggerConfiguration YtEnrich(this LoggerConfiguration logCfg, string env, string app, SemVersion version) {
       var container = AzureContainers.GetContainerEnv();
@@ -91,11 +92,14 @@ namespace YtReader {
       return resCfg;
     }
 
-    public static Logger CreateTestLogger() =>
-      new LoggerConfiguration()
+    public static Logger CreateTestLogger() {
+      var log = new LoggerConfiguration()
         .WriteTo.Seq("http://localhost:5341", Debug).MinimumLevel.Debug()
         .WriteTo.Console().MinimumLevel.Debug()
         .CreateLogger();
+      ConfigureFlurlLogging(log);
+      return log;
+    }
 
     public static ILogger ConsoleLogger(LogEventLevel level = Information) =>
       new LoggerConfiguration()
@@ -142,13 +146,14 @@ namespace YtReader {
 
       var appJson = new JObject();
       var mergeSettings = new JsonMergeSettings {MergeNullValueHandling = MergeNullValueHandling.Ignore};
+
       void MergeAppJson(string path) {
         var p = (basePath ?? ".").AsPath().Combine(path);
         if (!p.Exists) return;
         var newCfg = p.Read().ParseJObject();
         appJson.Merge(newCfg, mergeSettings);
       }
-      
+
       MergeAppJson("default.appcfg.json");
       MergeAppJson($"{cfgRoot.Env}.appcfg.json");
       foreach (var j in secrets)
@@ -156,7 +161,7 @@ namespace YtReader {
       MergeAppJson("local.appcfg.json");
       appJson = appJson.JsonMerge(GetEnvironmentSettings<AppCfg>());
       var appCfg = appJson.ToObject<AppCfg>(JsonExtensions.DefaultSerializer);
-      
+
       PostLoadConfiguration(appCfg, cfgRoot, version.Version);
 
       var validation = Validate(appCfg);
@@ -172,12 +177,12 @@ namespace YtReader {
       return (appCfg, cfgRoot, version);
     }
 
-    static JObject GetEnvironmentSettings<T>() where T: class {
+    static JObject GetEnvironmentSettings<T>() where T : class {
       var props = typeof(T).GetProperties().Select(p => p.Name).ToHashSet(StringComparer.InvariantCultureIgnoreCase);
       var j = new JObject();
       foreach (DictionaryEntry e in Environment.GetEnvironmentVariables()) {
         var p = e.Key.ToString().ToCamelCase();
-        if(!props.Contains(p)) continue;
+        if (!props.Contains(p)) continue;
         var s = e.Value?.ToString()?.Trim() ?? "null";
         JToken t;
         try {
@@ -223,7 +228,7 @@ namespace YtReader {
       pipeAppCtx.Scope = scope;
       return scope;
     }
-    
+
     public static ContainerBuilder ConfigureScope(this ContainerBuilder b, RootCfg rootCfg, AppCfg cfg, PipeAppCtx pipeAppCtx, VersionInfo version,
       ILogger log, string[] args) {
       var containerCfg = cfg.Pipe.Default.Container;
@@ -257,7 +262,7 @@ namespace YtReader {
       b.Register(_ => cfg.BitChute).SingleInstance();
       b.Register(_ => cfg.Rumble).SingleInstance();
       b.Register(_ => cfg.Google).SingleInstance();
-      
+
       b.RegisterType<SnowflakeConnectionProvider>();
       b.Register(_ => cfg.Pipe.Azure.GetAzure());
 
@@ -271,7 +276,7 @@ namespace YtReader {
       b.RegisterType<YtResults>().WithKeyedParam(DataStoreType.Results, Typ.Of<ISimpleFileStore>());
       b.RegisterType<StoreUpgrader>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
       b.RegisterType<Stage>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<WebScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
+      b.RegisterType<YtWeb>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
       b.RegisterType<ChromeScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
 
       b.RegisterType<YtSearch>();
@@ -295,7 +300,7 @@ namespace YtReader {
       b.RegisterType<YtContainerRunner>();
       b.RegisterType<RumbleWeb>();
       b.RegisterType<RumbleCollect>();
-      
+
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();

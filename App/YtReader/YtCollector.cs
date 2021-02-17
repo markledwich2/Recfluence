@@ -2,13 +2,9 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using CsvHelper;
 using Humanizer;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.Blob;
@@ -29,7 +25,6 @@ using YtReader.YtWebsite;
 using static Mutuo.Etl.Pipe.PipeArg;
 using static YtReader.UpdateChannelType;
 using static YtReader.CollectPart;
-using VideoItem = YtReader.YtWebsite.VideoItem;
 
 namespace YtReader {
   public static class RefreshHelper {
@@ -39,7 +34,7 @@ namespace YtReader {
 
   public static class YtCollectorRegion {
     static readonly Region[] Regions = {Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral};
-    static readonly TRandom  Rand    = new TRandom();
+    static readonly TRandom  Rand    = new();
 
     public static Region RandomUsRegion() => Rand.Choice(Regions);
   }
@@ -78,17 +73,17 @@ namespace YtReader {
     readonly AppCfg                      Cfg;
     readonly SnowflakeConnectionProvider Sf;
     readonly IPipeCtx                    PipeCtx;
-    readonly WebScraper                  Scraper;
+    readonly YtWeb                       Scraper;
     readonly ChromeScraper               ChromeScraper;
     readonly YtStore                     DbStore;
 
-    public YtCollector(BlobStores stores, AppCfg cfg, SnowflakeConnectionProvider sf, IPipeCtx pipeCtx, WebScraper webScraper, ChromeScraper chromeScraper,
+    public YtCollector(BlobStores stores, AppCfg cfg, SnowflakeConnectionProvider sf, IPipeCtx pipeCtx, YtWeb ytWeb, ChromeScraper chromeScraper,
       YtClient api, ILogger log) {
       DbStore = new(stores.Store(DataStoreType.DbStage), log);
       Cfg = cfg;
       Sf = sf;
       PipeCtx = pipeCtx;
-      Scraper = webScraper;
+      Scraper = ytWeb;
       ChromeScraper = chromeScraper;
       Api = api;
     }
@@ -144,18 +139,10 @@ select video_id from missing_or_old
       const int batchSize = 1000;
       await videoIds.Batch(batchSize).Select((b, i) => (vids: b, i)).BlockAction(async b => {
         var (vids, i) = b;
-        await SaveRecsAndExtra(c: null, new[] {VidExtra, VidRecs}, new HashSet<string>(), vids, log);
+        await SaveRecsAndExtra(c: null, new[] {VidExtra, VidRecs}, new(), vids, log);
         log.Information("Collect - Saved extra and recs {Batch}/{TotalBatches} ", i + 1, videoIds.Count / batchSize);
       }, parallel: Cfg.Collect.ParallelChannels, cancel: cancel);
       return true;
-    }
-
-    static async IAsyncEnumerable<string> ReadVideoIds(Stream stream) {
-      using var zr = new GZipStream(stream, CompressionMode.Decompress);
-      using var tr = new StreamReader(zr);
-      using var csv = new CsvReader(tr, CultureInfo.InvariantCulture);
-      while (await csv.ReadAsync())
-        yield return csv.GetField(0);
     }
 
     static string SqlList<T>(IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
@@ -212,7 +199,7 @@ from review_filtered r
         if (parts.ShouldRun(DiscoverPart)) {
           if (limitChannels != null) // discover channels specified in limit if they aren't in our dataset
             toDiscover.AddRange(limitChannels.Where(c => !existingChannels.ContainsKey(c))
-              .Select(c => new ChannelUpdatePlan {Channel = new Channel {ChannelId = c}, Update = Discover}));
+              .Select(c => new ChannelUpdatePlan {Channel = new() {ChannelId = c}, Update = Discover}));
           toDiscover.AddRange(await ChannelsToDiscover(db, log));
         }
       }
@@ -311,7 +298,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
       var toDiscover = toAdd
         .Select(c => new ChannelUpdatePlan {
-          Channel = new Channel {
+          Channel = new() {
             ChannelId = c.channel_id,
             ChannelTitle = c.channel_title
           },
@@ -421,8 +408,8 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
 
       var discover = plan.Update == Discover; // no need to check this against parts, that is done when planning the update
       var forChromeUpdate = new HashSet<string>();
-      var vids = new List<VideoItem>();
-      var discoverVids = new List<VideoItem>();
+      var vids = new List<YtVideoItem>();
+      var discoverVids = new List<YtVideoItem>();
       if (parts.ShouldRunAny(VidStats, VidRecs, Caption) || discover && parts.ShouldRun(DiscoverPart)) {
         log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions", c.ChannelTitle);
 
@@ -435,7 +422,7 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
         discoverVids = discover ? vids.OrderBy(v => v.Statistics.ViewCount).Take(RCfg.DiscoverChannelVids).ToList() : null;
         forChromeUpdate = (discover
             ? discoverVids.Select(v => v.Id) // when discovering channels update all using chrome
-            : videosForChromeUpdate ?? new string[] { }
+            : videosForChromeUpdate ?? Array.Empty<string>()
           ).ToHashSet();
       }
 
@@ -459,20 +446,16 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
       }
     }
 
-    static async Task SaveVids(Channel c, IReadOnlyCollection<VideoItem> vids, JsonlStore<Video> vidStore, ILogger log) {
-      var updated = DateTime.UtcNow;
+    static async Task SaveVids(Channel c, IReadOnlyCollection<YtVideoItem> vids, JsonlStore<Video> vidStore, ILogger log) {
       var vidsStored = vids.Select(v => new Video {
         VideoId = v.Id,
         Title = v.Title,
-        Description = v.Description,
         Duration = v.Duration,
-        Keywords = v.Keywords.ToList(),
         Statistics = v.Statistics,
         ChannelId = c.ChannelId,
         ChannelTitle = c.ChannelTitle,
         UploadDate = v.UploadDate,
-        AddedDate = v.AddedDate,
-        Updated = updated
+        Updated = DateTime.UtcNow
       }).ToList();
 
       if (vidsStored.Count > 0)
@@ -481,17 +464,20 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
       log.Information("Collect - {Channel} - Recorded {VideoCount} videos", c.ChannelTitle, vids.Count);
     }
 
-    async IAsyncEnumerable<VideoItem> ChannelVidItems(Channel c, DateTime uploadFrom, ILogger log) {
-      await foreach (var vids in Scraper.GetChannelUploadsAsync(c.ChannelId, log)) {
+    async IAsyncEnumerable<YtVideoItem> ChannelVidItems(Channel c, DateTime uploadFrom, ILogger log) {
+      long vidCount = 0;
+      await foreach (var vids in Scraper.ChannelVideos(c.ChannelId, log)) {
+        vidCount += vids.Count;
+        log.Debug("YtCollect - read {Videos} videos for channel {Channel}", vidCount, c.ChannelTitle);
         foreach (var v in vids)
           yield return v;
-        if (vids.Any(v => v.AddedDate < uploadFrom))
+        if (vids.Any(v => v.UploadDate < uploadFrom))
           yield break; // return all vids on a page because its free. But stop once we have a page with something older than uploadFrom
       }
     }
 
     /// <summary>Saves captions for all new videos from the vids list</summary>
-    async Task SaveCaptions(ChannelUpdatePlan plan, IEnumerable<VideoItem> vids, IReadOnlyCollection<string> missingCaptions, ILogger log) {
+    async Task SaveCaptions(ChannelUpdatePlan plan, List<YtVideoItem> vids, IReadOnlyCollection<string> missingCaptions, ILogger log) {
       var channel = plan.Channel;
 
       async Task<VideoCaptionStored2> GetCaption(string videoId) {
@@ -501,7 +487,7 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
           var captions = await Scraper.GetCaptionTracks(videoId, log);
           var enInfo = captions.FirstOrDefault(t => t.Language.Code == "en");
           if (enInfo == null)
-            return new VideoCaptionStored2 {
+            return new() {
               ChannelId = channel.ChannelId,
               VideoId = videoId,
               Updated = DateTime.Now
@@ -513,7 +499,7 @@ where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
           videoLog.Warning(ex, "Unable to get captions for {VideoID}: {Error}", videoId, ex.Message);
           return null;
         }
-        return new VideoCaptionStored2 {
+        return new() {
           ChannelId = channel.ChannelId,
           VideoId = videoId,
           Updated = DateTime.Now,
@@ -673,18 +659,18 @@ from videos_to_update",
       plan.Channel.ChannelId.GetHashCode().Abs() % cycleDays == (DateTime.Today - DateTime.UnixEpoch).TotalDays.RoundToInt() % cycleDays;
 
     /// <summary>Returns a list of videos that should have recommendations updated.</summary>
-    IReadOnlyCollection<string> VideoToUpdateRecs(ChannelUpdatePlan plan, IEnumerable<VideoItem> vids) {
+    IReadOnlyCollection<string> VideoToUpdateRecs(ChannelUpdatePlan plan, List<YtVideoItem> vids) {
       var c = plan.Channel;
       var vidsDesc = vids.OrderByDescending(v => v.UploadDate).ToList();
       var inThisWeeksRecUpdate = ChannelInTodaysRecsUpdate(plan, cycleDays: 7);
-      var toUpdate = new List<VideoItem>();
+      var toUpdate = new List<YtVideoItem>();
       if (plan.LastRecUpdate == null) {
         Log.Debug("Collect - {Channel} - first rec update, collecting max", c.ChannelTitle);
         toUpdate.AddRange(vidsDesc.Take(RCfg.RefreshRecsMax));
       }
       else if (inThisWeeksRecUpdate) {
         Log.Debug("Collect - {Channel} - performing weekly recs update", c.ChannelTitle);
-        toUpdate.AddRange(vidsDesc.Where(v => v.UploadDate.IsYoungerThan(RCfg.RefreshRecsWithin))
+        toUpdate.AddRange(vidsDesc.Where(v => v.UploadDate?.IsYoungerThan(RCfg.RefreshRecsWithin) == true)
           .Take(RCfg.RefreshRecsMax));
         var deficit = RCfg.RefreshRecsMin - toUpdate.Count;
         if (deficit > 0)

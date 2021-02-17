@@ -158,7 +158,7 @@ namespace YtReader {
       }
 
       await ctx.ToUpdate.BlockAction(async (c, i) => {
-        var ((freshChan, getVideos), ex) = await Def.F(() => ctx.Web.ChannelAndVideos(c.SourceId, log)).Try();
+        var ((freshChan, getVideos), ex) = await Def.Fun(() => ctx.Web.ChannelAndVideos(c.SourceId, log)).Try();
         if (ex != null) {
           log.Warning(ex, "Collect {Platform} - Unable to load channel {c}: {Message}", ctx.Platform, c, ex.Message);
           return; // don't save exceptional case. Don't know if it is our problem or thiers

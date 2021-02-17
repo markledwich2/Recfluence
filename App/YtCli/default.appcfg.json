@@ -45,8 +45,8 @@
           "mem": 3,
           "cores": 2
         },
-        "maxParallel": 16,
-        "minWorkItems": 500
+        "maxParallel": 20,
+        "minWorkItems": 300
       },
       {
         "pipeName": "ProcessVideos",

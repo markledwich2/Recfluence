@@ -12,13 +12,12 @@ using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.IO;
-using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.YtWebsite;
 
 namespace YtReader {
   public static class TrafficSourceExports {
-    public static async Task Process(ISimpleFileStore store, WebScraper web, ILogger log) {
+    public static async Task Process(ISimpleFileStore store, YtWeb ytWeb, ILogger log) {
       var blobs = await store.List("rec_exports").SelectManyList();
       //blobs = blobs.Where(b => b.Path == "rec_exports/Traffic source 2019-07-01_2019-08-01 David Pakman Show.zip").ToList();
 
@@ -55,19 +54,19 @@ namespace YtReader {
         using var csvReader = new CsvReader(csvStream, CsvExtensions.DefaultConfig);
 
         var records = csvReader.GetRecords<TrafficSourceExportRow>().ToList();
-        var rows = (await records.BlockFunc(Process, 4,
+        var rows = (await records.BlockFunc(ToTrafficSourceRow, 4,
             progressUpdate: p => log.Debug("Processing traffic sources for {Path}: {Rows}/{TotalRows}", b.Path, p.Completed, records.Count)))
           .NotNull().ToList();
 
         await appendStore.Append(rows, log);
         log.Information("Completed processing traffic source exports for {Path}", b.Path);
 
-        async Task<TrafficSourceRow> Process(TrafficSourceExportRow row) {
+        async Task<TrafficSourceRow> ToTrafficSourceRow(TrafficSourceExportRow row) {
           var source = row.Source.Split(".");
           if (source.Length != 2 || source[0] != "YT_RELATED")
             return null; // total at the top or otherwise. not interested
           var videoId = source[1];
-          var fromVideo = await web.GetVideo(videoId, log);
+          var fromVideo = await ytWeb.GetVideo(videoId, log);
 
           return new TrafficSourceRow {
             ToChannelTitle = exportInfo.Channel,
@@ -93,25 +92,25 @@ namespace YtReader {
     }
   }
 
-  public class TrafficSourceRow : TrafficSourceExportRow {
-    public string   FromVideoId      { get; set; }
-    public string   FromChannelId    { get; set; }
-    public string   FromChannelTitle { get; set; }
-    public string   ToChannelTitle   { get; set; }
-    public DateTime From             { get; set; }
-    public DateTime To               { get; set; }
-    public DateTime FileUpdated      { get; set; }
+  public record TrafficSourceRow : TrafficSourceExportRow {
+    public string   FromVideoId      { get; init; }
+    public string   FromChannelId    { get; init; }
+    public string   FromChannelTitle { get; init; }
+    public string   ToChannelTitle   { get; init; }
+    public DateTime From             { get; init; }
+    public DateTime To               { get; init; }
+    public DateTime FileUpdated      { get; init; }
   }
 
-  public class TrafficSourceExportRow {
-    [Name("Traffic source")] public string Source         { get; set; }
-    [Name("Source type")]    public string SourceType     { get; set; }
-    [Name("Source title")]   public string FromVideoTitle { get; set; }
-    public                          long?  Impressions    { get; set; }
+  public record TrafficSourceExportRow {
+    [Name("Traffic source")] public string Source         { get; init; }
+    [Name("Source type")]    public string SourceType     { get; init; }
+    [Name("Source title")]   public string FromVideoTitle { get; init; }
+    public                          long?  Impressions    { get; init; }
     [Name("Impressions click-through rate (%)")]
-    public decimal? ImpressionClickThrough { get;                             set; }
-    public                                 long?     Views             { get; set; }
-    [Name("Average view duration")] public TimeSpan? AvgViewDuration   { get; set; }
-    [Name("Watch time (hours)")]    public decimal?  WatchTimeHrsTotal { get; set; }
+    public decimal? ImpressionClickThrough { get;                             init; }
+    public                                 long?     Views             { get; init; }
+    [Name("Average view duration")] public TimeSpan? AvgViewDuration   { get; init; }
+    [Name("Watch time (hours)")]    public decimal?  WatchTimeHrsTotal { get; init; }
   }
 }

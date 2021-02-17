@@ -9,7 +9,7 @@ using SysExtensions.Collections;
 namespace SysExtensions.Threading {
   public static class Def {
     /// <summary>Create a func with type inference</summary>
-    public static Func<T> F<T>(Func<T> func) => func;
+    public static Func<T> Fun<T>(Func<T> func) => func;
   }
 
   public static class TaskExtensions {
@@ -103,6 +103,11 @@ namespace SysExtensions.Threading {
     public static async Task<TR> Then<T, TR>(this Task<T> task, Func<T, Task<TR>> then) {
       var r = await task;
       return await then(r);
+    }
+
+    public static async Task<TR> Then<T, TR>(this Task<T> task, Func<T, TR> then) {
+      var r = await task;
+      return then(r);
     }
 
     public static async ValueTask<TR> Then<T, TR>(this ValueTask<T> task, Func<T, ValueTask<TR>> then) {

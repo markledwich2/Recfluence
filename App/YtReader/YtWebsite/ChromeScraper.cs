@@ -16,6 +16,7 @@ using SysExtensions.Security;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
+using static YtReader.YtWebsite.AgoUnit;
 
 namespace YtReader.YtWebsite {
   public class ChromeScraper {
@@ -307,7 +308,7 @@ namespace YtReader.YtWebsite {
         Comment = c.comment,
         ChannelId = video.ChannelId,
         VideoId = video.VideoId,
-        Created = ParseAgo(DateTime.UtcNow, c.ago)
+        Created = ParseAgo(c.ago).Date()
       }).ToArray();
 
       if (comments.HasItems())
@@ -360,7 +361,7 @@ namespace YtReader.YtWebsite {
             Rank = r.rank,
             ToVideoTitle = r.title,
             ToViews = ParseViews(r.viewText),
-            ToUploadDate = ParseAgo(DateTime.UtcNow, r.publishAgo),
+            ToUploadDate = ParseAgo(r.publishAgo).Date(),
             ForYou = ParseForYou(r.viewText),
           }).ToArray();
 
@@ -518,21 +519,22 @@ namespace YtReader.YtWebsite {
       return views;
     }
 
-    public static DateTime? ParseAgo(DateTime now, string ago) {
-      if (ago == null) return null;
+    public static (TimeSpan Dur, AgoUnit Unit) ParseAgo(string ago) {
+      if (ago == null) return default;
       var res = Regex.Match(ago, "(?<num>\\d)\\s(?<unit>minute|hour|day|week|month|year)[s]? ago");
-      if (!res.Success) return null;
+      if (!res.Success) return default;
       var num = res.Groups["num"].Value.ParseInt();
-      var date = res.Groups["unit"].Value switch {
-        "minute" => now - num.Minutes(),
-        "hour" => now - num.Hours(),
-        "day" => now - num.Days(),
-        "week" => now - num.Weeks(),
-        "month" => now.AddMonths(-num),
-        "year" => now.AddYears(-num),
+      var unit = res.Groups["unit"].Value.ParseEnum<AgoUnit>();
+      var timeSpan = unit switch {
+        Minute => num.Minutes(),
+        Hour => num.Hours(),
+        Day => num.Days(),
+        Week => num.Weeks(),
+        Month => TimeSpan.FromDays(365 / 12.0),
+        Year => TimeSpan.FromDays(365),
         _ => throw new InvalidOperationException($"unexpected ago unit {res.Groups["unit"].Value}")
       };
-      return date;
+      return (timeSpan, unit);
     }
 
     class VideoDetailsFromScript {
@@ -547,8 +549,18 @@ namespace YtReader.YtWebsite {
     }
   }
 
+  public enum AgoUnit {
+    Minute,
+    Hour,
+    Day,
+    Week,
+    Month,
+    Year
+  }
+
   public static class PageEx {
     public static Uri Uri(this Page page) => new(page.Url);
     public static Credentials AsCreds(this NameSecret secret) => new() {Username = secret.Name, Password = secret.Secret};
+    public static DateTime Date(this (TimeSpan Dur, AgoUnit Unit) ago) => ago.Dur.Before(DateTime.UtcNow);
   }
 }

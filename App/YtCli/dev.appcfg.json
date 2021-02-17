@@ -4,5 +4,8 @@
   },
   "collect": {
     "discoverChannels": 0
+  },
+  "pipe": {
+    "location": "Local"
   }
 }

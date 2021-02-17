@@ -8,84 +8,101 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Flurl;
+using Flurl.Http;
 using Humanizer;
 using LtGt;
 using Mutuo.Etl.Blob;
 using Newtonsoft.Json.Linq;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
+using static System.StringComparison;
+using static SysExtensions.Net.HttpExtensions;
+using static YtReader.YtWebsite.AgoUnit;
+
+// ReSharper disable InconsistentNaming
 
 //// a modified version of https://github.com/Tyrrrz/YoutubeExplode
 
 namespace YtReader.YtWebsite {
-  public class WebScraper {
-    const    string                                        MissingYtResourceMessage = "Received BadRequest response, which means YT resource is missing";
+  public class YtWeb {
     readonly ProxyCfg                                      Proxy;
     readonly YtCollectCfg                                  CollectCfg;
     readonly ISimpleFileStore                              LogStore;
     readonly ResourceCycle<HttpClient, ProxyConnectionCfg> Clients;
 
-    public WebScraper(ProxyCfg proxy, YtCollectCfg collectCfg, ISimpleFileStore logStore) {
+    public YtWeb(ProxyCfg proxy, YtCollectCfg collectCfg, ISimpleFileStore logStore) {
       Proxy = proxy;
       CollectCfg = collectCfg;
       LogStore = logStore;
       Clients = new(proxy.DirectAndProxies(), p => Task.FromResult(p.CreateHttpClient()));
     }
 
-    async Task<HttpResponseMessage> GetHttp(string url, string desc, ILogger log) {
-      log.Debug("WebScraper -  {Desc} {Url}", desc, url);
+    const int RequestAttempts = 3;
 
+    public Task<IFlurlResponse> Send(string desc, Url url, ILogger log, Func<IFlurlRequest, Task<IFlurlResponse>> getResponse = null) =>
+      Send(desc, url.AsRequest(), log, getResponse);
+
+    /// <summary>Send a request with error handling and proxy fallback. Allows any type of request (e.g. post with headers
+    ///   etc..)</summary>
+    public async Task<IFlurlResponse> Send(string desc, IFlurlRequest request, ILogger log, Func<IFlurlRequest, Task<IFlurlResponse>> getResponse = null) {
       var attempts = 0;
+      getResponse ??= r => r.GetAsync();
       while (true) {
         attempts++;
         var (http, proxy) = await Clients.Get();
+
+        Task<IFlurlResponse> GetRes() => getResponse(request
+          .WithClient(new FlurlClient(http))
+          .WithHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36")
+          .AllowAnyHttpStatus());
+
         try {
-          var resp = http.SendAsync(Get(url));
-          if (await Task.WhenAny(resp, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) != resp)
-            throw new TaskCanceledException($"SendAsync on {url} took to long without timing out itself");
-          var innerRes = await resp;
-          ThrowMissingResourceInvalidOpIfNeeded(innerRes);
+          var resTask = GetRes();
+          if (await Task.WhenAny(resTask, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) != resTask)
+            throw new TaskCanceledException($"SendAsync on {request.Url} took to long without timing out itself");
+          var res = await resTask;
+          if (res.StatusCode == 404)
+            EnsureSuccess(res.StatusCode, request.Url); // fail immediately for not found
           if (
-            (proxy.IsDirect() || attempts > 3) // fall back immediately for direct, 3 failures for proxies
-            && innerRes.StatusCode == HttpStatusCode.TooManyRequests) {
+            (proxy.IsDirect() || attempts > RequestAttempts) // fall back immediately for direct, 3 failures for proxies
+            && res.StatusCode == 429) {
             log.Debug("WebScraper - TooManyRequests status, falling back to next proxy");
             await Clients.NextResource(http);
             attempts = 0;
             continue;
           }
-          innerRes.EnsureSuccessStatusCode();
-          log.Debug("WebScraper - {Desc} {Url}. Proxy: {Proxy}", desc, url, proxy.Url ?? "Direct");
-          return innerRes;
+          EnsureSuccess(res.StatusCode, request.Url);
+          log.Verbose("WebScraper - {Desc} {Url}. Proxy: {Proxy}", desc, request.Url, proxy.Url ?? "Direct");
+          return res;
         }
         catch (Exception ex) {
-          log.Warning(ex, "WebScraper - error requesting {url} attempt {Attempt} : {Error} ", url, attempts, ex.Message);
-          if (ex is InvalidOperationException && ex.Message == MissingYtResourceMessage)
+          log.Warning(ex, "WebScraper - error requesting {url} attempt {Attempt} : {Error} ", request.Url, attempts, ex.Message);
+          if (ex is HttpRequestException {StatusCode: HttpStatusCode.NotFound})
             throw;
           if (!(ex is HttpRequestException || ex is TaskCanceledException)) // continue on these
             throw;
-          if (attempts > 3)
+          if (attempts > RequestAttempts)
             throw;
         }
       }
     }
 
-    static HttpRequestMessage Get(string url) =>
-      url.AsUri().Get().AddHeader("User-Agent",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36");
-
-    static void ThrowMissingResourceInvalidOpIfNeeded(HttpResponseMessage directRes) {
-      if (directRes.StatusCode == HttpStatusCode.BadRequest)
-        throw new InvalidOperationException(MissingYtResourceMessage);
-    }
-
-    async Task<HtmlDocument> GetHtml(string url, string desc, ILogger log) {
+    async Task<HtmlDocument> GetHtml(string desc, Url url, ILogger log) {
       var res = await GetHttp(url, desc, log);
       return Html.ParseDocument(await res.ContentAsString());
+    }
+
+    async Task<HttpResponseMessage> GetHttp(string url, string desc, ILogger log) {
+      log.Debug("WebScraper -  {Desc} {Url}", desc, url);
+      var res = await Send(desc, url.AsUrl(), log);
+      return res.ResponseMessage;
     }
 
     #region Public Static
@@ -96,7 +113,7 @@ namespace YtReader.YtWebsite {
         return false;
 
       // Channel IDs should start with these characters
-      if (!channelId.StartsWith("UC", StringComparison.Ordinal))
+      if (!channelId.StartsWith("UC", Ordinal))
         return false;
 
       // Channel IDs are always 24 characters
@@ -115,37 +132,6 @@ namespace YtReader.YtWebsite {
         return false;
 
       return !Regex.IsMatch(videoId, @"[^0-9a-zA-Z_\-]");
-    }
-
-    /// <summary>Verifies that the given string is syntactically a valid YouTube playlist ID.</summary>
-    public static bool ValidatePlaylistId(string playlistId) {
-      if (playlistId.IsNullOrWhiteSpace())
-        return false;
-
-      // Watch later playlist is special
-      if (playlistId == "WL")
-        return true;
-
-      // My Mix playlist is special
-      if (playlistId == "RDMM")
-        return true;
-
-      // Other playlist IDs should start with these two characters
-      if (!playlistId.StartsWith("PL", StringComparison.Ordinal) &&
-          !playlistId.StartsWith("RD", StringComparison.Ordinal) &&
-          !playlistId.StartsWith("UL", StringComparison.Ordinal) &&
-          !playlistId.StartsWith("UU", StringComparison.Ordinal) &&
-          !playlistId.StartsWith("PU", StringComparison.Ordinal) &&
-          !playlistId.StartsWith("OL", StringComparison.Ordinal) &&
-          !playlistId.StartsWith("LL", StringComparison.Ordinal) &&
-          !playlistId.StartsWith("FL", StringComparison.Ordinal))
-        return false;
-
-      // Playlist IDs vary a lot in lengths, so we will just compare with the extremes
-      if (playlistId.Length < 13 || playlistId.Length > 42)
-        return false;
-
-      return !Regex.IsMatch(playlistId, @"[^0-9a-zA-Z_\-]");
     }
 
     /// <summary>Parses video ID from a YouTube video URL.</summary>
@@ -187,86 +173,77 @@ namespace YtReader.YtWebsite {
 
     #endregion
 
-    #region Playlist with lazy iteration of pages
+    #region Channel Videos
 
-    public async IAsyncEnumerable<IReadOnlyCollection<VideoItem>> GetChannelUploadsAsync(string channelId, ILogger log) {
-      if (!ValidateChannelId(channelId))
-        throw new ArgumentException($"Invalid YouTube channel ID [{channelId}].", nameof(channelId));
+    const string YtUrl = "https://www.youtube.com";
 
-      // Generate ID for the playlist that contains all videos uploaded by this channel
-      var playlistId = "UU" + channelId.SubstringAfter("UC");
+    static readonly Regex ClientKeyRe = new(@"\""INNERTUBE_API_KEY\""\s*?:\s*?\""(?<key>\w*)\""");
 
-      // Get playlist
-      var playlist = await GetPlaylistAsync(playlistId, log);
-      await foreach (var videos in playlist.Videos) yield return videos;
-    }
+    record BpBase(BpContext context);
+    record BpContext(BpClient client);
+    record BpClient(string clientName = "WEB", string clientVersion = "2.20210210.08.00", int utcOffsetMinutes = 0);
+    record BpFirst(string browse_id, string @params) : BpBase(new BpContext(new()));
+    record BpContinue(string continuation) : BpBase(new BpContext(new()));
 
-    async Task<JToken> GetPlaylistJsonAsync(string playlistId, int index, ILogger log) {
-      using var res = await GetHttp($"https://youtube.com/list_ajax?style=json&action_get_list=1&list={playlistId}&index={index}&hl=en", "playlist", log);
-      using var jr = await res.ContentAsJsonReader();
-      var j = await JToken.LoadAsync(jr);
-      return j;
-    }
+    static readonly string[] TimeFormats = {@"m\:ss", @"mm\:ss", @"h\:mm\:ss", @"hh\:mm\:ss"};
+    static readonly Regex    ViewCountRe = new(@"(?<num>[\d,]*) view");
 
-    async Task<Playlist> GetPlaylistAsync(string playlistId, ILogger log) {
-      if (!ValidatePlaylistId(playlistId))
-        throw new ArgumentException($"Invalid YouTube playlist ID [{playlistId}].", nameof(playlistId));
+    public async IAsyncEnumerable<IReadOnlyCollection<YtVideoItem>> ChannelVideos(string channelId, ILogger log) {
+      // this endpoint gives us a key to use making subsequent requests
+      var keyTask = Send("get yt key", YtUrl.AppendPathSegment("sw.js").AsRequest(), log)
+        .Then(r => r.GetStringAsync())
+        .Then(s => s.Match(ClientKeyRe).Groups["key"].Value);
 
-      var playlistJson = await GetPlaylistJsonAsync(playlistId, 1, log);
+      // wasteful, but we need to grab the parameter we need to params for videos
+      var channelUrl = YtUrl.AppendPathSegments("channel", channelId);
+      var channelPageHtml = await GetHtml("videos page", channelUrl, log);
+      var ytInitialData = await GetClientObjectFromWatchPage(log, channelPageHtml, channelUrl, "ytInitialData");
+      var browseParams = ytInitialData.SelectToken("$..tabs[?(@.tabRenderer.title=='Videos')].tabRenderer.endpoint.browseEndpoint.params")?.Value<string>();
 
-      var author = playlistJson.SelectToken("author")?.Value<string>() ?? ""; // system playlists have no author
-      var title = playlistJson.SelectToken("title").Value<string>();
-      var description = playlistJson.SelectToken("description")?.Value<string>() ?? "";
-      var viewCount = playlistJson.SelectToken("views")?.Value<ulong>() ?? 0; // system playlists have no views
-      var likeCount = playlistJson.SelectToken("likes")?.Value<ulong>() ?? 0; // system playlists have no likes
-      var dislikeCount = playlistJson.SelectToken("dislikes")?.Value<ulong>() ?? 0; // system playlists have no dislikes
-      var statistics = new Statistics(viewCount, likeCount, dislikeCount);
+      if (browseParams == null) {
+        var ex = new InvalidOperationException("can't find browse endpoint");
+        await LogParseError("error parsing channel page", ex, channelUrl, ytInitialData.ToString(), log);
+        throw ex;
+      }
+      var key = await keyTask;
 
-      return new(playlistId, author, title, description, statistics, PlaylistVideos(playlistId, playlistJson, log));
-    }
+      string continueToken = null;
+      while (true) {
+        object token = continueToken == null ? new BpFirst(channelId, browseParams) : new BpContinue(continueToken);
 
-    async IAsyncEnumerable<IReadOnlyCollection<VideoItem>> PlaylistVideos(string playlistId, JToken playlistJson, ILogger log) {
-      var index = playlistId.StartsWith("PL", StringComparison.OrdinalIgnoreCase) ? 101 : 0;
-      var videoIds = new HashSet<string>();
-      do {
-        // Get videos
-        var newVideos = new List<VideoItem>();
-        foreach (var videoJson in playlistJson.SelectToken("video").NotNull()) {
-          JToken St(string field) => videoJson.SelectToken(field);
+        var videoJ = await Send("get videos",
+          YtUrl.AppendPathSegments("youtubei", "v1", "browse").SetQueryParam("key", key),
+          log,
+          r => r.PostJsonAsync(token)).Then(r => r.JsonObject());
 
-          var videoId = St("encrypted_id").Value<string>();
-          var videoAuthor = St("author").Value<string>();
-          var videoUploadDate = DateTime.UnixEpoch + St("time_created").Value<long>().Seconds();
-          var videoTitle = St("title").Value<string>();
-          var videoDescription = St("description").Value<string>();
-          var videoDuration = TimeSpan.FromSeconds(St("length_seconds").Value<double>());
-          var videoViewCount = St("views").Value<string>().StripNonDigit().ParseULong();
-          var videoLikeCount = St("likes").Value<ulong>();
-          var videoDislikeCount = St("dislikes").Value<ulong>();
-          var videoAddedDate = St("added").Value<string>().ParseExact("M/d/yy");
-          var videoKeywordsJoined = St("keywords").Value<string>();
-          var videoKeywords = Regex.Matches(videoKeywordsJoined, "\"[^\"]+\"|\\S+")
-            .Select(m => m.Value)
-            .Where(s => !s.IsNullOrWhiteSpace())
-            .Select(s => s.Trim('"'))
-            .ToArray();
-          var videoStatistics = new Statistics(videoViewCount, videoLikeCount, videoDislikeCount);
+        var videos = videoJ.SelectTokens("..gridVideoRenderer").Select(ParseVideo).ToList();
+        yield return videos;
+
+        continueToken = videoJ.SelectToken("..continuationCommand.token")?.Value<string>();
+        if (continueToken == null) break;
+      }
 
 
-          if (!videoIds.Add(videoId)) continue; // only add video to the list if it's not already there
-          var video = new VideoItem(videoId, videoAuthor, videoUploadDate, videoAddedDate, videoTitle, videoDescription,
-            videoDuration, videoKeywords, videoStatistics, null, null);
-          newVideos.Add(video);
-        }
+      YtVideoItem ParseVideo(JToken v) {
+        string Str(string path) => v.SelectToken(path)?.Value<string>();
+        string Txt(string path) => Str($"{path}.simpleText") ?? Str($"{path}.runs[0].text");
 
-        // If no distinct videos were added to the list - break
-        if (newVideos.Count == 0) yield break;
-        yield return newVideos;
+        var (ago, agoUnit) = ChromeScraper.ParseAgo(Txt("publishedTimeText"));
+        var viewCountText = Txt("viewCountText");
+        //No views
+        var parsedVideo = new YtVideoItem {
+          Id = Str("videoId"), Title = Txt("title"),
+          Duration = Str("..thumbnailOverlayTimeStatusRenderer.text.simpleText").TryParseTimeSpanExact(TimeFormats) ?? TimeSpan.Zero,
+          Statistics = new(viewCountText == "No views" ? 0 : viewCountText?.Match(ViewCountRe).Groups["num"].Value.TryParseULong(NumberStyles.AllowThousands)),
+          UploadDate = agoUnit.In(Minute, Hour, Day)
+            ? DateTime.UtcNow - ago
+            : null // once the unit gets to large, it's missleading to use. rely on video-extra for this as it doesn't ever change
+        };
 
-        // Advance index
-        index += 100;
-        playlistJson = await GetPlaylistJsonAsync(playlistId, index, log);
-      } while (true);
+        if (parsedVideo.Statistics.ViewCount == null)
+          log.Debug("Can't find views for {Video} in {Json}", parsedVideo.Id, v.ToString());
+        return parsedVideo;
+      }
     }
 
     #endregion
@@ -274,7 +251,7 @@ namespace YtReader.YtWebsite {
     #region Channels
 
     Task<HtmlDocument> GetChannelPageHtmlAsync(string channelId, ILogger log) =>
-      GetHtml($"https://www.youtube.com/channel/{channelId}?hl=en", "channel page", log);
+      GetHtml("channel page", $"https://www.youtube.com/channel/{channelId}?hl=en", log);
 
     static readonly Regex SubRegex = new("(?'num'\\d+\\.?\\d*)(?'unit'[BMK]?)", RegexOptions.Compiled);
 
@@ -339,7 +316,7 @@ namespace YtReader.YtWebsite {
     public async Task<RecsAndExtra> GetRecsAndExtra(ILogger log, string videoId, string channelId = null, string channelTitle = null) {
       log = log.ForContext("VideoId", videoId);
       var watchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
-      var (html, raw, url) = watchPage;
+      var (html, _, _) = watchPage;
       var infoDic = await GetVideoInfoDicAsync(videoId, log);
       var videoItem = GetVideo(videoId, infoDic, watchPage);
 
@@ -418,7 +395,7 @@ namespace YtReader.YtWebsite {
             Rank = i + 1,
             Source = ScrapeSource.Web,
             ToViews = ChromeScraper.ParseViews(viewText),
-            ToUploadDate = ChromeScraper.ParseAgo(DateTime.UtcNow, j.SelectToken("publishedTimeText.simpleText")?.Value<string>()),
+            ToUploadDate = ChromeScraper.ParseAgo(j.SelectToken("publishedTimeText.simpleText")?.Value<string>()).Dur.Before(DateTime.UtcNow),
             ForYou = ChromeScraper.ParseForYou(viewText)
           };
         }).ToArray();
@@ -429,7 +406,7 @@ namespace YtReader.YtWebsite {
       RegexOptions.Compiled | RegexOptions.Singleline);
     static readonly Regex ClientObjectCleanRe = new(@"{\w*?};", RegexOptions.Compiled);
 
-    public async Task<JObject> GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, string videoId, string name) {
+    public async Task<JObject> GetClientObjectFromWatchPage(ILogger log, HtmlDocument html, Url url, string name) {
       var scripts = html.QueryElements("script")
         .SelectMany(s => s.Children.OfType<HtmlText>()).Select(h => h.Content);
 
@@ -448,17 +425,17 @@ namespace YtReader.YtWebsite {
         return jInit;
       }
       catch (Exception ex) {
-        await LogParseError($"Unable to parse {name} json from watch page", ex, videoId, html.ToHtml(), log);
+        await LogParseError($"Unable to parse {name} json from watch page", ex, url, html.ToHtml(), log);
         return null;
       }
     }
 
-    async Task LogParseError(string msg, Exception ex, string videoId, string rawHtml, ILogger log) {
-      var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), $"{videoId}.html");
+    async Task LogParseError(string msg, Exception ex, Url url, string content, ILogger log) {
+      var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), url.Path);
       var logUrl = LogStore.Url(path);
-      await LogStore.Save(path, rawHtml.AsStream(), log);
-      log.Warning(ex, "WebScraper - {VideoId} - saved html that we could not parse '{msg}' ({Url}). error: {Error}",
-        videoId, msg, logUrl, ex?.ToString());
+      await LogStore.Save(path, content.AsStream(), log);
+      log.Warning(ex, "WebScraper - saved content that we could not parse '{Msg}' ({Url}). error: {Error}",
+        msg, logUrl, ex?.ToString());
     }
 
     public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptionTracks(string videoId, ILogger log) {
@@ -468,7 +445,7 @@ namespace YtReader.YtWebsite {
       return captions;
     }
 
-    public async Task<VideoItem> GetVideo(string videoId, ILogger log) {
+    public async Task<YtVideo> GetVideo(string videoId, ILogger log) {
       if (!ValidateVideoId(videoId))
         throw new ArgumentException($"Invalid YouTube video ID [{videoId}].", nameof(videoId));
       var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
@@ -476,7 +453,7 @@ namespace YtReader.YtWebsite {
       return GetVideo(videoId, videoInfoDic, videoWatchPage);
     }
 
-    static VideoItem GetVideo(string videoId, IReadOnlyDictionary<string, string> videoInfoDic,
+    static YtVideo GetVideo(string videoId, IReadOnlyDictionary<string, string> videoInfoDic,
       (HtmlDocument html, string raw, string url) videoWatchPage) {
       if (!videoInfoDic.ContainsKey("player_response"))
         return null;
@@ -484,36 +461,34 @@ namespace YtReader.YtWebsite {
       var responseJson = JToken.Parse(videoInfoDic["player_response"]);
       var renderer = responseJson.SelectToken("microformat.playerMicroformatRenderer");
 
-      if (string.Equals(responseJson.SelectToken("playabilityStatus.status")?.Value<string>(), "error",
-        StringComparison.OrdinalIgnoreCase))
+      if (string.Equals(responseJson.SelectToken("playabilityStatus.status")?.Value<string>(), "error", OrdinalIgnoreCase))
         return null;
 
-      T VideoValue<T>(string propName) {
+      T Val<T>(string propName) {
         var token = responseJson.SelectToken($"videoDetails.{propName}");
         return token == null ? default : token.Value<T>();
       }
 
-      var videoAuthor = VideoValue<string>("author");
-      var videoTitle = VideoValue<string>("title");
-      var videoDuration = TimeSpan.FromSeconds(VideoValue<double>("lengthSeconds"));
-      var videoKeywords = responseJson.SelectToken("videoDetails.keywords").NotNull().Values<string>().ToArray();
-      var videoDescription = VideoValue<string>("shortDescription");
-      var videoViewCount = VideoValue<ulong>("viewCount"); // some videos have no views
-      var channelId = VideoValue<string>("channelId");
-      var channelTitle = VideoValue<string>("author");
-
-      var videoUploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseExact("yyyy-MM-dd", style: DateTimeStyles.AssumeUniversal) ?? default;
-
       var videoLikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-like-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
-      var videoLikeCount = !videoLikeCountRaw.IsNullOrWhiteSpace() ? videoLikeCountRaw.ParseULong() : 0;
       var videoDislikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-dislike-button")
         .FirstOrDefault()?.GetInnerText().StripNonDigit();
-      var videoDislikeCount = !videoDislikeCountRaw.IsNullOrWhiteSpace() ? videoDislikeCountRaw.ParseULong() : 0;
 
-      var statistics = new Statistics(videoViewCount, videoLikeCount, videoDislikeCount);
-      return new(videoId, videoAuthor, videoUploadDate, addedDate: default, videoTitle, videoDescription,
-        videoDuration, videoKeywords, statistics, channelId, channelTitle);
+      return new() {
+        Id = videoId,
+        ChannelId = Val<string>("channelId"),
+        ChannelTitle = Val<string>("author"),
+        Author = Val<string>("author"),
+        UploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseExact("yyyy-MM-dd", style: DateTimeStyles.AssumeUniversal) ?? default,
+        AddedDate = default,
+        Title = Val<string>("title"),
+        Description = Val<string>("shortDescription"),
+        Duration = TimeSpan.FromSeconds(Val<double>("lengthSeconds")),
+        Keywords = responseJson.SelectToken("videoDetails.keywords").NotNull().Values<string>().ToArray(),
+        Statistics = new(Val<ulong>("viewCount"),
+          !videoLikeCountRaw.IsNullOrWhiteSpace() ? videoLikeCountRaw.ParseULong() : 0,
+          !videoDislikeCountRaw.IsNullOrWhiteSpace() ? videoDislikeCountRaw.ParseULong() : 0)
+      };
     }
 
     static IReadOnlyCollection<ClosedCaptionTrackInfo> GetCaptionTracks(JToken playerResponseJson) =>
@@ -524,7 +499,7 @@ namespace YtReader.YtWebsite {
         let language = new Language(languageCode, languageName)
         let isAutoGenerated = trackJson.SelectToken("vssId")
           .Value<string>()
-          .StartsWith("a.", StringComparison.OrdinalIgnoreCase)
+          .StartsWith("a.", OrdinalIgnoreCase)
         select new ClosedCaptionTrackInfo(url.ToString(), language, isAutoGenerated)).ToList();
 
     async Task<IReadOnlyDictionary<string, string>> GetVideoInfoDicAsync(string videoId, ILogger log) {
