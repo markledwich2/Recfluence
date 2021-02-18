@@ -37,31 +37,32 @@ namespace YtReader {
   }
 
   public class AppCfg {
-    public            string          AppInsightsKey        { get; set; }
-    public            int             DefaultParallel       { get; set; } = 8;
-    public            LogEventLevel   LogLevel              { get; set; } = LogEventLevel.Debug;
-    [Required] public BranchEnvCfg    EnvCfg                { get; set; } = new();
-    [Required] public YtCollectCfg    Collect               { get; set; } = new();
-    [Required] public StorageCfg      Storage               { get; set; } = new();
-    [Required] public YtApiCfg        YtApi                 { get; set; } = new();
-    [Required] public HashSet<string> LimitedToSeedChannels { get; set; } = new();
-    [Required] public SeqCfg          Seq                   { get; set; } = new();
-    [Required] public ProxyCfg        Proxy                 { get; set; } = new();
-    [Required] public SnowflakeCfg    Snowflake             { get; set; } = new();
-    [Required] public WarehouseCfg    Warehouse             { get; set; } = new();
-    [Required] public SqlServerCfg    AppDb                 { get; set; } = new();
-    [Required] public ResultsCfg      Results               { get; set; } = new();
-    [Required] public PipeAppCfg      Pipe                  { get; set; } = new();
-    [Required] public DataformCfg     Dataform              { get; set; } = new();
-    [Required] public ElasticCfg      Elastic               { get; set; }
-    [Required] public SyncDbCfg       SyncDb                { get; set; } = new();
-    [Required] public AzureCleanerCfg Cleaner               { get; set; } = new();
-    [Required] public YtUpdaterCfg    Updater               { get; set; } = new();
-    [Required] public UserScrapeCfg   UserScrape            { get; set; } = new();
-    [Required] public SearchCfg       Search                { get; set; } = new();
-    [Required] public BitChuteCfg     BitChute              { get; set; } = new();
-    [Required] public RumbleCfg       Rumble                { get; set; } = new();
-    [Required] public GoogleCfg       Google                { get; set; } = new();
+    public            string          AppInsightsKey         { get; set; }
+    public            int             DefaultParallel        { get; set; } = 8;
+    public            LogEventLevel   LogLevel               { get; set; } = LogEventLevel.Debug;
+    [Required] public BranchEnvCfg    EnvCfg                 { get; set; } = new();
+    [Required] public YtCollectCfg    Collect                { get; set; } = new();
+    [Required] public StorageCfg      Storage                { get; set; } = new();
+    [Required] public YtApiCfg        YtApi                  { get; set; } = new();
+    [Required] public HashSet<string> LimitedToSeedChannels  { get; set; } = new();
+    [Required] public SeqCfg          Seq                    { get; set; } = new();
+    [Required] public ProxyCfg        Proxy                  { get; set; } = new();
+    [Required] public SnowflakeCfg    Snowflake              { get; set; } = new();
+    [Required] public WarehouseCfg    Warehouse              { get; set; } = new();
+    [Required] public SqlServerCfg    AppDb                  { get; set; } = new();
+    [Required] public ResultsCfg      Results                { get; set; } = new();
+    [Required] public PipeAppCfg      Pipe                   { get; set; } = new();
+    [Required] public DataformCfg     Dataform               { get; set; } = new();
+    [Required] public ElasticCfg      Elastic                { get; set; }
+    [Required] public SyncDbCfg       SyncDb                 { get; set; } = new();
+    [Required] public AzureCleanerCfg Cleaner                { get; set; } = new();
+    [Required] public YtUpdaterCfg    Updater                { get; set; } = new();
+    [Required] public UserScrapeCfg   UserScrape             { get; set; } = new();
+    [Required] public SearchCfg       Search                 { get; set; } = new();
+    [Required] public BitChuteCfg     BitChute               { get; set; } = new();
+    [Required] public RumbleCfg       Rumble                 { get; set; } = new();
+    [Required] public GoogleCfg       Google                 { get; set; } = new();
+    
   }
 
   public class GoogleCfg {
@@ -137,7 +138,7 @@ namespace YtReader {
     public bool Headless       { get; set; } = true;
 
     /// <summary>the max number of channels to discover each collect</summary>
-    public int DiscoverChannels { get; set; } = 100;
+    public int DiscoverChannels { get; set; } = 10;
 
     /// <summary>the number of vids to populate with data when discovering new channels (i.e. preparing data to be classified)</summary>
     public int DiscoverChannelVids { get; set; } = 3;
@@ -159,6 +160,11 @@ namespace YtReader {
     ///   want to collect ones that might tip over</summary>
     public ulong MinChannelSubs { get;  set; } = 8000;
     public ulong MinChannelViews { get; set; } = 1_000_000; // some channels don't have subs, so we fallback to a minimum views for the channels. 
+    
+    /// <summary>
+    /// Number of video extra's to collect that are missing per channel. Since YT removed a nice endpoint, we need to go and backfill information from the video itself
+    /// </summary>
+    public int MissingExtraPerChannel { get; set; } = 20;
   }
 
   public class StorageCfg {

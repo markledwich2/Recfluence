@@ -33,7 +33,8 @@ namespace Tests {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<YtWeb>();
       var extra = await ws.GetRecsAndExtra(new[] {
-        "JPiiySjShng", //nbc suspected parsing problem
+        "XztR0CnVKNo", // normal
+        // "JPiiySjShng", //nbc suspected parsing problem
         //"OijWK4Y6puI", //unlisted
         //"-sc6JCu5rZk",
         //"y3oMtX8NyqY", //copyright2

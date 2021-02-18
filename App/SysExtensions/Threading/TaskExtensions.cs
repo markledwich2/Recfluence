@@ -115,6 +115,9 @@ namespace SysExtensions.Threading {
       return await then(r);
     }
 
-    public static async Task<TR> Then<T, TR>(this Task<T> task, Func<Task<T>, Task<TR>> then) => await task.ContinueWith(then).Unwrap();
+    public static async Task<TR> Then<T, TR>(this Task<T> task, Func<Task<T>, Task<TR>> then) {
+      var input = await task;
+      return await then(task);
+    }
   }
 }

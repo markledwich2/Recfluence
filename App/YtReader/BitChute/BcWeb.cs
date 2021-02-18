@@ -61,7 +61,7 @@ namespace YtReader.BitChute {
       var csrf = chanDoc.CsrfToken();
 
       Task<T> Post<T>(string path, object data = null) =>
-        FurlAsync(Url.AppendPathSegment(path).WithBcHeaders(chanDoc, csrf), r => r.BcPost(csrf, data)).Then(r => r.ReceiveJson<T>());
+        FurlAsync(Url.AppendPathSegment(path).WithBcHeaders(chanDoc, csrf), r => r.BcPost(csrf, data)).ReceiveJson<T>();
 
       var chan = ParseChannel(chanDoc, sourceId);
       if (chan.Status != ChannelStatus.Alive)

@@ -24,7 +24,6 @@ using SysExtensions.Threading;
 using YtReader.Store;
 using static System.StringComparison;
 using static SysExtensions.Net.HttpExtensions;
-using static YtReader.YtWebsite.AgoUnit;
 
 // ReSharper disable InconsistentNaming
 
@@ -235,9 +234,7 @@ namespace YtReader.YtWebsite {
           Id = Str("videoId"), Title = Txt("title"),
           Duration = Str("..thumbnailOverlayTimeStatusRenderer.text.simpleText").TryParseTimeSpanExact(TimeFormats) ?? TimeSpan.Zero,
           Statistics = new(viewCountText == "No views" ? 0 : viewCountText?.Match(ViewCountRe).Groups["num"].Value.TryParseULong(NumberStyles.AllowThousands)),
-          UploadDate = agoUnit.In(Minute, Hour, Day)
-            ? DateTime.UtcNow - ago
-            : null // once the unit gets to large, it's missleading to use. rely on video-extra for this as it doesn't ever change
+          UploadDate = DateTime.UtcNow - ago // this is very impresice. We rely on video extra for a reliable upload date
         };
 
         if (parsedVideo.Statistics.ViewCount == null)
@@ -318,7 +315,8 @@ namespace YtReader.YtWebsite {
       var watchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
       var (html, _, _) = watchPage;
       var infoDic = await GetVideoInfoDicAsync(videoId, log);
-      var videoItem = GetVideo(videoId, infoDic, watchPage);
+      var ytInitialData = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialData");
+      var videoItem = GetVideo(videoId, infoDic, watchPage, ytInitialData);
 
       var extra = new VideoExtra {
         VideoId = videoId,
@@ -359,7 +357,6 @@ namespace YtReader.YtWebsite {
           extra.Error = html.QueryElements("#unavailable-message").FirstOrDefault()?.GetInnerText();
       }
       if (extra.Error == null) {
-        var ytInitialData = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialData");
         var badgeLabels =
           ytInitialData?.SelectTokens(
             "contents.twoColumnWatchNextResults.results.results.contents[*].videoPrimaryInfoRenderer.badges[*].metadataBadgeRenderer.label");
@@ -450,11 +447,14 @@ namespace YtReader.YtWebsite {
         throw new ArgumentException($"Invalid YouTube video ID [{videoId}].", nameof(videoId));
       var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
       var videoWatchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
-      return GetVideo(videoId, videoInfoDic, videoWatchPage);
+      var ytInitialData = await GetClientObjectFromWatchPage(log, videoWatchPage.html, videoId, "ytInitialData");
+      return GetVideo(videoId, videoInfoDic, videoWatchPage, ytInitialData);
     }
 
+    static readonly Regex LikeDislikeRe = new(@"(?<num>[\d,]+)\s*(?<type>like|dislike)");
+
     static YtVideo GetVideo(string videoId, IReadOnlyDictionary<string, string> videoInfoDic,
-      (HtmlDocument html, string raw, string url) videoWatchPage) {
+      (HtmlDocument html, string raw, string url) videoWatchPage, JObject ytInitialData) {
       if (!videoInfoDic.ContainsKey("player_response"))
         return null;
 
@@ -469,25 +469,25 @@ namespace YtReader.YtWebsite {
         return token == null ? default : token.Value<T>();
       }
 
-      var videoLikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-like-button")
-        .FirstOrDefault()?.GetInnerText().StripNonDigit();
-      var videoDislikeCountRaw = videoWatchPage.html.GetElementsByClassName("like-button-renderer-dislike-button")
-        .FirstOrDefault()?.GetInnerText().StripNonDigit();
+      var likeDislikeMatches = ytInitialData.SelectTokens("$..topLevelButtons[*].toggleButtonRenderer.defaultText..label")
+        .Select(t => t.Value<string>().Match(LikeDislikeRe)).ToArray();
+      ulong? LikeDislikeVal(string type) => likeDislikeMatches.FirstOrDefault(t => t.Groups["type"].Value == type)?.Groups["num"].Value.TryParseULong();
+      var like = LikeDislikeVal("like");
+      var dislike = LikeDislikeVal("dislike");
 
       return new() {
         Id = videoId,
         ChannelId = Val<string>("channelId"),
         ChannelTitle = Val<string>("author"),
         Author = Val<string>("author"),
-        UploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseExact("yyyy-MM-dd", style: DateTimeStyles.AssumeUniversal) ?? default,
+        UploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseExact("yyyy-MM-dd", style: DateTimeStyles.AssumeUniversal).ToUniversalTime() ??
+                     default,
         AddedDate = default,
         Title = Val<string>("title"),
         Description = Val<string>("shortDescription"),
         Duration = TimeSpan.FromSeconds(Val<double>("lengthSeconds")),
         Keywords = responseJson.SelectToken("videoDetails.keywords").NotNull().Values<string>().ToArray(),
-        Statistics = new(Val<ulong>("viewCount"),
-          !videoLikeCountRaw.IsNullOrWhiteSpace() ? videoLikeCountRaw.ParseULong() : 0,
-          !videoDislikeCountRaw.IsNullOrWhiteSpace() ? videoDislikeCountRaw.ParseULong() : 0)
+        Statistics = new(Val<ulong>("viewCount"), like, dislike)
       };
     }
 
