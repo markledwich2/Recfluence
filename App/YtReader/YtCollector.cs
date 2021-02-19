@@ -315,7 +315,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       log ??= Logger.None;
       var workSw = Stopwatch.StartNew();
 
-      var results = await channels.Batch(100).BlockTrans(async planBatch => {
+      var results = await channels.Batch(RCfg.ChannelBatchSize).BlockTrans(async (planBatch, batchNo) => {
         var channelBatch = planBatch.Select(p => p.Channel).ToArray();
 
         // to save on db roundtrips we batch our plan for updates
@@ -358,8 +358,9 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
               await using var conn = new Defer<ILoggedConnection<IDbConnection>>(async () => await Sf.Open(cLog));
               await UpdateAllInChannel(plan, parts,
                 channelChromeVideos.TryGet(c.ChannelId), channelVidsForExtra.TryGet(c.ChannelId), missingCaptions.TryGet(c.ChannelId), cLog);
+              var progress = i + batchNo * RCfg.ChannelBatchSize + 1;
               cLog.Information("Collect - {Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
-                c.ChannelTitle, sw.Elapsed.HumanizeShort(), i + 1, planBatch.Count);
+                c.ChannelTitle, sw.Elapsed.HumanizeShort(), progress, channels.Count);
               return (c, Success: true);
             }
             catch (Exception ex) {
@@ -489,7 +490,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
         log.Debug("YtCollect - read {Videos} videos for channel {Channel}", vidCount, c.ChannelTitle);
         foreach (var v in vids) {
           var u = forUpdate[v.Id];
-          yield return u?.UploadDate == null ? v  : v with { UploadDate = u.UploadDate}; // not really needed. but prefer to fix innacurate dates when we can
+          yield return u?.UploadDate == null ? v : v with {UploadDate = u.UploadDate}; // not really needed. but prefer to fix innacurate dates when we can
         }
         if (vids.Any(v => v.UploadDate < uploadFrom))
           yield break; // return all vids on a page because its free. But stop once we have a page with something older than uploadFrom
@@ -589,10 +590,8 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
     record VideoForUpdate(string ChannelId, string VideoId, DateTime Updated, DateTime? UploadDate, DateTime? ExtraUpdated);
 
-    /// <summary>
-    /// Videos to help plan which to refresh extra for. 
-    /// We detect dead videos by having all non dead video's at hand since daily_update_days_back, and the date extra was last refreshed for it
-    /// </summary>
+    /// <summary>Videos to help plan which to refresh extra for. We detect dead videos by having all non dead video's at hand
+    ///   since daily_update_days_back, and the date extra was last refreshed for it</summary>
     async Task<IReadOnlyCollection<VideoForUpdate>> VideosForExtraUpdate(IReadOnlyCollection<Channel> channels,
       ILoggedConnection<IDbConnection> db,
       ILogger log) {
