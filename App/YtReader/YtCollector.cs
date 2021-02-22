@@ -430,7 +430,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       var forChromeUpdate = new HashSet<string>();
       var videoItems = new List<YtVideoItem>();
       var discoverVids = new List<YtVideoItem>();
-      if (parts.ShouldRunAny(VidStats, VidRecs, Caption, VidExtra) || discover && parts.ShouldRun(DiscoverPart)) {
+      if (parts.ShouldRunAny(VidStats, VidRecs, Caption) || discover && parts.ShouldRun(DiscoverPart)) {
         log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions", c.ChannelTitle);
 
         // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.
