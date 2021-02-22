@@ -212,7 +212,13 @@ from review_filtered r
         .Select(c => c.Channel.ChannelId).ToHashSet();
 
       var channels = existingChannels
-        .Select(c => c with {Update = fullUpdate.Contains(c.Channel.ChannelId) ? Full : Standard})
+        .Select(c => {
+          var full = fullUpdate.Contains(c.Channel.ChannelId);
+          return c with {
+            Update = full ? Full : Standard,
+            VideosFrom = full ? null : c.VideosFrom // don't limit from date when on a full update
+          };
+        })
         .Concat(toDiscover).ToArray();
 
       if (!parts.ShouldRun(CollectPart.Channel)) return channels;
@@ -412,6 +418,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       }
 
       var discover = plan.Update == Discover; // no need to check this against parts, that is done when planning the update
+      var full = plan.Update == Full;
       var forChromeUpdate = new HashSet<string>();
       var videoItems = new List<YtVideoItem>();
       var discoverVids = new List<YtVideoItem>();
@@ -419,9 +426,11 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
         log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions", c.ChannelTitle);
 
         // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.
-        var uploadedFrom = plan.VideosFrom ?? DateTime.UtcNow - RCfg.RefreshVideosWithinNew;
-        var vidsEnum = ChannelVidItems(c, uploadedFrom, videoForExtraKey, log);
-        videoItems = discover ? await vidsEnum.Take(RCfg.DiscoverChannelVids).ToListAsync() : await vidsEnum.ToListAsync();
+        var videosFrom = plan.VideosFrom ?? DateTime.UtcNow - RCfg.RefreshVideosWithinNew;
+        var videoItemsLimit = discover ? RCfg.DiscoverChannelVids : !full ? RCfg.MaxChannelDailyVideos : (int?)null;
+        var vidsEnum = ChannelVidItems(c, videosFrom, videoForExtraKey, log);
+        videoItems = videoItemsLimit.HasValue ? await vidsEnum.Take(videoItemsLimit.Value).ToListAsync() : await vidsEnum.ToListAsync();
+        
         if (parts.ShouldRun(VidStats))
           await SaveVids(c, videoItems, DbStore.Videos, log);
         discoverVids = discover ? videoItems.OrderBy(v => v.Statistics.ViewCount).Take(RCfg.DiscoverChannelVids).ToList() : null;
@@ -493,8 +502,8 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           var u = forUpdate[v.Id];
           yield return u?.UploadDate == null ? v : v with {UploadDate = u.UploadDate}; // not really needed. but prefer to fix innacurate dates when we can
         }
-        if (vids.Any(v => v.UploadDate < uploadFrom))
-          yield break; // return all vids on a page because its free. But stop once we have a page with something older than uploadFrom
+        if (vids.Any(v => v.UploadDate < uploadFrom))  // return all vids on a page because its free. But stop once we have a page with something older than uploadFrom
+          yield break;
       }
     }
 
