@@ -74,7 +74,7 @@ namespace Tests {
     public static async Task ChannelVideos() {
       using var x = await TextCtx();
       var ws = x.Scope.Resolve<YtWeb>();
-      var res = await ws.ChannelVideos("UC9k-yiEpRHMNVOnOi_aQK8w", x.Log).ToListAsync();
+      var res = await ws.ChannelVideos("UCf1iroepad-o5w2il-06Gjg", x.Log).ToListAsync();
     }
 
     [Test]

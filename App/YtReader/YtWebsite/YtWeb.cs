@@ -180,7 +180,7 @@ namespace YtReader.YtWebsite {
 
     record BpBase(BpContext context);
     record BpContext(BpClient client);
-    record BpClient(string clientName = "WEB", string clientVersion = "2.20210210.08.00", int utcOffsetMinutes = 0);
+    record BpClient(string hl = "en-US", string clientName = "WEB", string clientVersion = "2.20210210.08.00", int utcOffsetMinutes = 0);
     record BpFirst(string browse_id, string @params) : BpBase(new BpContext(new()));
     record BpContinue(string continuation) : BpBase(new BpContext(new()));
 
@@ -197,7 +197,7 @@ namespace YtReader.YtWebsite {
       var channelUrl = YtUrl.AppendPathSegments("channel", channelId);
       var channelPageHtml = await GetHtml("videos page", channelUrl, log);
       var ytInitialData = await GetClientObjectFromWatchPage(log, channelPageHtml, channelUrl, "ytInitialData");
-      var browseParams = ytInitialData.SelectToken("$..tabs[?(@.tabRenderer.title=='Videos')].tabRenderer.endpoint.browseEndpoint.params")?.Value<string>();
+      var browseParams = ytInitialData.SelectToken(@"$..tabs[?(@.tabRenderer.title == 'Videos' ||  @.tabRenderer.title == 'Video\'s')].tabRenderer.endpoint.browseEndpoint.params")?.Value<string>();
 
       if (browseParams == null) {
         var ex = new InvalidOperationException("can't find browse endpoint");
