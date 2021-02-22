@@ -56,6 +56,7 @@ namespace YtReader {
     VidExtra,
     VidRecs,
     Caption,
+    [CollectPart(Explicit = true)]
     DiscoverPart
   }
 

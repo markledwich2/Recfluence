@@ -21,10 +21,16 @@ using static YtReader.Store.ChannelSourceType;
 using ChanById = SysExtensions.Collections.IReadonlyKeyedCollection<string, YtReader.Store.Channel>;
 
 namespace YtReader {
+  [AttributeUsage(AttributeTargets.Field)]
+  public class CollectPartAttribute : Attribute {
+    /// <summary>When true, the part will only run if included explicitly</summary>
+    public bool Explicit { get; init; }
+  }
+
   public enum StandardCollectPart {
     ExistingChannel,
     Discover,
-    DiscoverFromVideo,
+    [CollectPart(Explicit = true)] DiscoverFromVideo,
     Video
   }
 

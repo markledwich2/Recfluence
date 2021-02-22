@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Mutuo.Etl.Pipe;
@@ -162,7 +163,11 @@ namespace YtReader {
   }
 
   public static class YtUpdaterEx {
-    public static bool ShouldRunAny<T>(this T[] parts, params T[] toRun) where T : Enum => parts == null || toRun.Any(parts.Contains);
-    public static bool ShouldRun<T>(this T[] parts, T part) where T : Enum => parts == null || parts.Contains(part);
+    public static bool ShouldRunAny<T>(this T[] parts, params T[] toRun) where T : struct, Enum => toRun.Any(parts.ShouldRun);
+    public static bool ShouldRun<T>(this T[] parts, T part) where T : struct, Enum {
+      var name = Enum.GetName(part) ?? part.ToString();
+      var ignore = part.GetType().GetField(name)?.GetCustomAttribute<CollectPartAttribute>()?.Explicit;
+      return ignore == true ? parts?.Contains(part) == true : parts?.Contains(part) != false;
+    }
   }
 }

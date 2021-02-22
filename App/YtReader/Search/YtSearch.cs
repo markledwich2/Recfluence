@@ -330,7 +330,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     [Keyword] public string   channel_id    { get; set; }
     public           string   video_title   { get; set; }
     public           string   channel_title { get; set; }
-    public           DateTime upload_date   { get; set; }
+    public           DateTime? upload_date   { get; set; }
     public           DateTime updated       { get; set; }
     public           long?    views         { get; set; }
     [Keyword] public string   lr            { get; set; }
