@@ -99,7 +99,7 @@ namespace YtReader.YtWebsite {
     }
 
     async Task<HttpResponseMessage> GetHttp(string url, string desc, ILogger log) {
-      log.Debug("WebScraper -  {Desc} {Url}", desc, url);
+      log.Verbose("WebScraper -  {Desc} {Url}", desc, url);
       var res = await Send(desc, url.AsUrl(), log);
       return res.ResponseMessage;
     }
@@ -197,7 +197,9 @@ namespace YtReader.YtWebsite {
       var channelUrl = YtUrl.AppendPathSegments("channel", channelId);
       var channelPageHtml = await GetHtml("videos page", channelUrl, log);
       var ytInitialData = await GetClientObjectFromWatchPage(log, channelPageHtml, channelUrl, "ytInitialData");
-      var browseParams = ytInitialData.SelectToken(@"$..tabs[?(@.tabRenderer.title == 'Videos' ||  @.tabRenderer.title == 'Video\'s')].tabRenderer.endpoint.browseEndpoint.params")?.Value<string>();
+      var browseParams = ytInitialData
+        .SelectToken(@"$..tabs[?(@.tabRenderer.title == 'Videos' ||  @.tabRenderer.title == 'Video\'s')].tabRenderer.endpoint.browseEndpoint.params")
+        ?.Value<string>();
 
       if (browseParams == null) {
         var ex = new InvalidOperationException("can't find browse endpoint");
@@ -305,35 +307,35 @@ namespace YtReader.YtWebsite {
 
     public const string RestrictedVideoError = "Restricted";
 
+    public async Task<IReadOnlyCollection<VideoExtra>> GetExtra(IReadOnlyCollection<string> videos, ILogger log,
+      string channelId = null, string channelTitle = null) =>
+      await videos.BlockTrans(async (v, i) => {
+        if (i % 100 == 0) log.Debug("YtWeb.GetExtra - {Channel} - {Videos}/{Total}", channelTitle, i, videos.Count);
+        var (extra, ex) = await GetExtra(log, v, channelId, channelTitle).Try();
+        if(ex != null)
+          log.Warning(ex, "YtWeb.GetExtra - {Channel} - Error getting extra: {Message}", channelTitle, ex.Message);
+        return extra;
+      }, CollectCfg.WebParallel).Where(e => e != null).ToListAsync();
+
+    /// <summary>Loads the video info dic to get video details. Doesn't find video errors like GetRecsAndExtra</summary>
+    public async Task<VideoExtra> GetExtra(ILogger log, string videoId, string channelId = null, string channelTitle = null) {
+      var infoDic = await GetVideoInfoDicAsync(videoId, log);
+      var videoItem = GetVideo(videoId, infoDic);
+      var extra = VideoItemToExtra(videoId, channelId, channelTitle, videoItem);
+      return extra;
+    }
+
     public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log,
       string channelId = null, string channelTitle = null) =>
       await videos.BlockFunc(async v => await GetRecsAndExtra(log, v, channelId, channelTitle), CollectCfg.WebParallel);
 
-    //ytInitialPlayerResponse.responseContext.serviceTrackingParams.filter(p => p.service == "CSI")[0].params
+    /// <summary>Loads the watch page, and the video info dic to get: recommendations and video details (including errors)</summary>
     public async Task<RecsAndExtra> GetRecsAndExtra(ILogger log, string videoId, string channelId = null, string channelTitle = null) {
       log = log.ForContext("VideoId", videoId);
       var watchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
       var (html, _, _) = watchPage;
-      var infoDic = await GetVideoInfoDicAsync(videoId, log);
       var ytInitialData = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialData");
-      var videoItem = GetVideo(videoId, infoDic, watchPage, ytInitialData);
-
-      var extra = new VideoExtra {
-        VideoId = videoId,
-        Updated = DateTime.UtcNow,
-        // some videos are listed under a channels playlist, but when you click on the vidoe, its channel is under enother (e.g. _iYT8eg1F8s)
-        // Record them as the channelId of the playlist.
-        ChannelId = channelId ?? videoItem?.ChannelId,
-        ChannelTitle = channelTitle ?? videoItem?.ChannelTitle,
-        Description = videoItem?.Description,
-        Duration = videoItem?.Duration,
-        Keywords = videoItem?.Keywords,
-        Title = videoItem?.Title,
-        UploadDate = videoItem?.UploadDate,
-        AddedDate = videoItem?.AddedDate,
-        Statistics = videoItem?.Statistics,
-        Source = ScrapeSource.Web
-      };
+      var extra = await GetExtra(log, videoId, channelId, channelTitle);
 
       var ytInitPr = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialPlayerResponse");
       if (ytInitPr != null && ytInitPr.Value<string>("status") != "OK") {
@@ -368,6 +370,24 @@ namespace YtReader.YtWebsite {
       var recs = await GetRecs2(log, html, videoId);
       return new(extra, recs);
     }
+
+    static VideoExtra VideoItemToExtra(string videoId, string channelId, string channelTitle, YtVideo videoItem) =>
+      new VideoExtra {
+        VideoId = videoId,
+        Updated = DateTime.UtcNow,
+        // some videos are listed under a channels playlist, but when you click on the vidoe, its channel is under enother (e.g. _iYT8eg1F8s)
+        // Record them as the channelId of the playlist.
+        ChannelId = channelId ?? videoItem?.ChannelId,
+        ChannelTitle = channelTitle ?? videoItem?.ChannelTitle,
+        Description = videoItem?.Description,
+        Duration = videoItem?.Duration,
+        Keywords = videoItem?.Keywords,
+        Title = videoItem?.Title,
+        UploadDate = videoItem?.UploadDate,
+        AddedDate = videoItem?.AddedDate,
+        Statistics = videoItem?.Statistics,
+        Source = ScrapeSource.Web
+      };
 
     public async Task<Rec[]> GetRecs2(ILogger log, HtmlDocument html, string videoId) {
       var jInit = await GetClientObjectFromWatchPage(log, html, videoId, "ytInitialData");
@@ -454,7 +474,7 @@ namespace YtReader.YtWebsite {
     static readonly Regex LikeDislikeRe = new(@"(?<num>[\d,]+)\s*(?<type>like|dislike)");
 
     static YtVideo GetVideo(string videoId, IReadOnlyDictionary<string, string> videoInfoDic,
-      (HtmlDocument html, string raw, string url) videoWatchPage, JObject ytInitialData) {
+      (HtmlDocument html, string raw, string url) videoWatchPage = default, JObject ytInitialData = null) {
       if (!videoInfoDic.ContainsKey("player_response"))
         return null;
 
@@ -469,9 +489,9 @@ namespace YtReader.YtWebsite {
         return token == null ? default : token.Value<T>();
       }
 
-      var likeDislikeMatches = ytInitialData.SelectTokens("$..topLevelButtons[*].toggleButtonRenderer.defaultText..label")
+      var likeDislikeMatches = ytInitialData?.SelectTokens("$..topLevelButtons[*].toggleButtonRenderer.defaultText..label")
         .Select(t => t.Value<string>().Match(LikeDislikeRe)).ToArray();
-      ulong? LikeDislikeVal(string type) => likeDislikeMatches.FirstOrDefault(t => t.Groups["type"].Value == type)?.Groups["num"].Value.TryParseULong();
+      ulong? LikeDislikeVal(string type) => likeDislikeMatches?.FirstOrDefault(t => t.Groups["type"].Value == type)?.Groups["num"].Value.TryParseULong();
       var like = LikeDislikeVal("like");
       var dislike = LikeDislikeVal("dislike");
 

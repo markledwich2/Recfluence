@@ -530,8 +530,8 @@ namespace YtReader.YtWebsite {
         Hour => num.Hours(),
         Day => num.Days(),
         Week => num.Weeks(),
-        Month => TimeSpan.FromDays(365 / 12.0),
-        Year => TimeSpan.FromDays(365),
+        Month => TimeSpan.FromDays(365 / 12.0 * num),
+        Year => TimeSpan.FromDays(365 * num),
         _ => throw new InvalidOperationException($"unexpected ago unit {res.Groups["unit"].Value}")
       };
       return (timeSpan, unit);

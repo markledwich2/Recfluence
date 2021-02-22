@@ -162,7 +162,6 @@ namespace YtReader {
 
     /// <summary>Number of video extra's to collect that are missing per channel. Since YT removed a nice endpoint, we need to
     ///   go and backfill information from the video itself</summary>
-    public int MissingExtraPerChannel { get; set; } = 20;
     public int ChannelBatchSize      { get;  set; } = 200;
     public int MaxChannelDailyVideos { get;  set; } = 10_000;
   }
