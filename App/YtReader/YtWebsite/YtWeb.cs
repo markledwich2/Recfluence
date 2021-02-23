@@ -82,7 +82,7 @@ namespace YtReader.YtWebsite {
           return res;
         }
         catch (Exception ex) {
-          log.Warning(ex, "WebScraper - error requesting {url} attempt {Attempt} : {Error} ", request.Url, attempts, ex.Message);
+          log.Debug(ex, "WebScraper - error requesting {url} attempt {Attempt} : {Error} ", request.Url, attempts, ex.Message);
           if (ex is HttpRequestException {StatusCode: HttpStatusCode.NotFound})
             throw;
           if (!(ex is HttpRequestException || ex is TaskCanceledException)) // continue on these
