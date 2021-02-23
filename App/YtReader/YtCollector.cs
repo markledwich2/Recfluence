@@ -348,7 +348,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
               .ToMultiValueDictionary(c => c.ChannelId, c => c.VideoId);
 
             // get all existing vids for channel and detect missing as we go, have delay??
-            channelVidsForExtra = await VideosForExtraUpdate(channelBatch, db, log)
+            channelVidsForExtra = await VideosForUpdate(channelBatch, db, log)
               .Then(b => b.ToMultiValueDictionary(v => v.ChannelId, v => v));
           }
 
@@ -615,10 +615,10 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
     /// <summary>Videos to help plan which to refresh extra for. We detect dead videos by having all non dead video's at hand
     ///   since daily_update_days_back, and the date extra was last refreshed for it</summary>
-    async Task<IReadOnlyCollection<VideoForUpdate>> VideosForExtraUpdate(IReadOnlyCollection<Channel> channels,
+    async Task<IReadOnlyCollection<VideoForUpdate>> VideosForUpdate(IReadOnlyCollection<Channel> channels,
       ILoggedConnection<IDbConnection> db,
       ILogger log) {
-      var ids = await db.Query<VideoForUpdate>("missing videos", $@"
+      var ids = await db.Query<VideoForUpdate>("videos for update", $@"
 with chans as (
   select channel_id
   from channel_accepted
@@ -633,8 +633,11 @@ select v.channel_id ChannelId
 from video_latest v
 join chans c on v.channel_id = c.channel_id
 join channel_collection_days_back b on b.channel_id = v.channel_id
-where v.upload_date::date >= dateadd(day, - b.daily_update_days_back, current_date()::date)
- and v.error_type is null
+where (
+      v.upload_date is null -- update extra if we are missing upload
+      or v.upload_date::date>=dateadd(day,-b.daily_update_days_back,current_date()::date) -- update according to days back calculation to efficiently refresh
+    )
+    and v.error_type is null -- removed video's updated separately
 ");
       return ids;
     }
