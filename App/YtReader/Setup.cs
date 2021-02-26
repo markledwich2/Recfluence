@@ -32,6 +32,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader.BitChute;
 using YtReader.Db;
+using YtReader.Reddit;
 using YtReader.Rumble;
 using YtReader.Search;
 using YtReader.Store;
@@ -300,7 +301,7 @@ namespace YtReader {
       b.RegisterType<YtContainerRunner>();
       b.RegisterType<RumbleWeb>();
       b.RegisterType<RumbleCollect>();
-
+      b.RegisterType<Pushshift>();
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();

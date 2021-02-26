@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Polly.Caching;
 
 namespace SysExtensions.Collections {
   public static class EnumerableExtensions {
@@ -70,10 +71,22 @@ namespace SysExtensions.Collections {
         b.Add(item);
         if (b.Count != batchSize) continue;
         yield return b;
-        b = new List<T>(batchSize);
+        b = new (batchSize);
       }
       if (b.Count > 0)
         yield return b;
+    }
+
+    public static async IAsyncEnumerable<T[]> Batch<T>(this IAsyncEnumerable<T> items, int size) {
+      var batch = new List<T>();
+      await foreach (var item in items) {
+        batch.Add(item);
+        if (batch.Count < size) continue;
+        yield return batch.ToArray();
+        batch .Clear();
+      }
+      if(batch.Count > 0)
+        yield return batch.ToArray();
     }
 
     public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> items) => items.Select((item, index) => (item, index));

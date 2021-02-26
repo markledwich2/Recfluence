@@ -34,6 +34,7 @@ namespace YtReader {
     public string[]                           Indexes                { get; set; }
     public CollectPart[]                      Parts                  { get; set; }
     public string                             CollectVideosPath      { get; set; }
+    public string                             CollectVideosView      { get; set; }
     public bool                               DataformDeps           { get; set; }
     public StandardCollectPart[]              StandardParts          { get; set; }
     public string[]                           Videos                 { get; set; }
@@ -76,8 +77,8 @@ namespace YtReader {
       _index = index;
     }
 
-    Task Collect(string[] channels, CollectPart[] parts, string collectVideoPath, ILogger logger, CancellationToken cancel) =>
-      _collector.Collect(logger, channels, parts, collectVideoPath, cancel);
+    Task Collect(UpdateOptions options, ILogger logger, CancellationToken cancel) =>
+      _collector.Collect(logger, options.Channels, options.Parts, options.CollectVideosPath, options.CollectVideosView, cancel);
 
     Task BcCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
       _bcCollect.Collect(options, logger, cancel);
@@ -124,7 +125,7 @@ namespace YtReader {
       var collectOptions = new SimpleCollectOptions {Parts = options.StandardParts, ExplicitChannels = options.Channels, ExplicitVideos = options.Videos};
 
       var actionMethods = TaskGraph.FromMethods(
-        (l, c) => Collect(options.Channels, options.Parts, options.CollectVideosPath, l, c),
+        (l, c) => Collect(options, l, c),
         (l, c) => BcCollect(collectOptions, l, c),
         (l, c) => RumbleCollect(collectOptions, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),

@@ -5,7 +5,6 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Algolia.Search" Version="6.6.0" />
     <PackageReference Include="AngleSharp" Version="1.0.0-alpha-844" />
     <PackageReference Include="AngleSharp.Io" Version="0.14.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.8.0" />

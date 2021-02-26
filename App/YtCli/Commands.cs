@@ -19,6 +19,7 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
+using YtReader.Reddit;
 using YtReader.Search;
 using YtReader.Store;
 using YtReader.YtApi;
@@ -247,9 +248,12 @@ namespace YtCli {
 
     [CommandOption("search-mode")] public SearchMode SearchMode { get; set; }
 
-    [CommandOption("collect-videos",
+    [CommandOption("collect-videos-path",
       Description = @"path in the data blob container a file with newline separated video id's. e.g. import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz")]
-    public string CollectVideos { get; set; }
+    public string CollectVideosPath { get; set; }
+    
+    [CommandOption("collect-videos-view", Description = @"name of a view in the warehouse that has a column video_id with all the video's ot be collected")]
+    public string CollectVideosView { get; set; }
 
     [CommandOption("dataform-deps", Description = "when specified, dataform will run with dependencies included", IsRequired = false)]
     public bool DataformDeps { get; set; }
@@ -278,7 +282,8 @@ namespace YtCli {
         UserScrapeInit = UserScrapeInit,
         UserScrapeTrial = UserScrapeTrial,
         UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|'),
-        CollectVideosPath = CollectVideos,
+        CollectVideosPath = CollectVideosPath,
+        CollectVideosView = CollectVideosView,
         DataformDeps = DataformDeps,
         SearchMode = SearchMode
       };
@@ -379,6 +384,14 @@ namespace YtCli {
     protected override async ValueTask ExecuteLocal(IConsole console) {
       await Parler.LoadFromGoogleDrive(Folder, "posts", Log);
       Log.Information("Completed load parler data");
+    }
+  }
+
+  [Command("pushshift")]
+  public record PushshiftCmd(ILogger Log, Pushshift Push) : ICommand {
+    public async ValueTask ExecuteAsync(IConsole console) {
+      await Push.Process(Log);
+      Log.Information("Pulling of posts from pushshift complete");
     }
   }
 }

@@ -49,21 +49,23 @@ namespace YtReader {
       log.Information("StageUpdate - started for snowflake host '{Host}', db '{Db}'", Conn.Cfg.Host, Conn.Cfg.DbName());
       var sw = Stopwatch.StartNew();
       var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table, StringComparer.OrdinalIgnoreCase) == true).ToArray();
-      await tables.BlockAction(async t => {
-        var table = t.Table;
-        using var db = await Conn.Open(log);
-        await db.Execute("create table", $"create table if not exists {table} (v Variant)");
-
-        if (t.Dir != null) {
-          log.Information("StageUpdate - {Table} ({LoadType})", table, fullLoad ? "full" : "incremental");
-          var latestTs = fullLoad ? null : await db.ExecuteScalar<DateTime?>("latest timestamp", $"select max(v:{t.TsCol}::timestamp_ntz) from {table}");
-          if (latestTs == null)
-            await FullLoad(db, table, t);
-          else
-            await Incremental(db, table, t, latestTs.Value);
-        }
-      }, Cfg.LoadTablesParallel);
+      await tables.BlockAction(async t => { await UpdateTable(t, fullLoad, log); }, Cfg.LoadTablesParallel);
       log.Information("StageUpdate - {Tables} updated in {Duration}", tables.Join("|", t => t.Table), sw.Elapsed.HumanizeShort());
+    }
+
+    public async Task UpdateTable(StageTableCfg t, bool fullLoad, ILogger log) {
+      var table = t.Table;
+      using var db = await Conn.Open(log);
+      await db.Execute("create table", $"create table if not exists {table} (v Variant)");
+
+      if (t.Dir != null) {
+        log.Information("StageUpdate - {Table} ({LoadType})", table, fullLoad ? "full" : "incremental");
+        var latestTs = fullLoad ? null : await db.ExecuteScalar<DateTime?>("latest timestamp", $"select max(v:{t.TsCol}::timestamp_ntz) from {table}");
+        if (latestTs == null)
+          await FullLoad(db, table, t);
+        else
+          await Incremental(db, table, t, latestTs.Value);
+      }
     }
 
     AzureBlobFileStore Store(StageTableCfg t) => Stores.Store(t.StoreType);

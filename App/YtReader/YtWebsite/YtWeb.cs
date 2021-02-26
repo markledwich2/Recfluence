@@ -310,10 +310,10 @@ namespace YtReader.YtWebsite {
     public async Task<IReadOnlyCollection<VideoExtra>> GetExtra(IReadOnlyCollection<string> videos, ILogger log,
       string channelId = null, string channelTitle = null) =>
       await videos.BlockTrans(async (v, i) => {
-        if (i % 100 == 0) log.Debug("YtWeb.GetExtra - {Channel} - {Videos}/{Total}", channelTitle, i, videos.Count);
+        if (i % 100 == 0) log.Debug("YtWeb.GetExtra {Channel} - {Videos}/{Total}", channelTitle ?? "", i, videos.Count);
         var (extra, ex) = await GetExtra(log, v, channelId, channelTitle).Try();
         if(ex != null)
-          log.Warning(ex, "YtWeb.GetExtra - {Channel} - Error getting extra: {Message}", channelTitle, ex.Message);
+          log.Warning(ex, "YtWeb.GetExtra {Channel} - Error getting extra: {Message}", channelTitle ?? "", ex.Message);
         return extra;
       }, CollectCfg.WebParallel).Where(e => e != null).ToListAsync();
 
