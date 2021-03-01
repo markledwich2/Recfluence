@@ -22,14 +22,14 @@ namespace YtReader {
     readonly Defer<VersionInfo> LazyVersion;
 
     public VersionInfoProvider(ILogger log, RootCfg rootCfg) =>
-      LazyVersion = new Defer<VersionInfo>(async () => {
+      LazyVersion = new(async () => {
         var (version, info) = await GitVersionInfo.DiscoverVersion(typeof(VersionInfo), log);
         var prefix = GetVersionPrefix(rootCfg, version, info);
         version = version.Change(prerelease: prefix);
-        return new VersionInfo(version, info);
+        return new(version, info);
       });
 
-    static readonly Regex NonAlphaNum = new Regex("[^a-zA-Z0-9]", RegexOptions.Compiled);
+    static readonly Regex NonAlphaNum = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
 
     public static string GetVersionPrefix(RootCfg rootCfg, SemVersion version, GitVersionInfo info = null) {
       if (rootCfg.IsProd()) return rootCfg.BranchEnv ?? "";
