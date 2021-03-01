@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Octokit;
 using Serilog;
+using Snowflake.Data.Client;
 using SysExtensions;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
@@ -403,6 +404,12 @@ group by channel_id",
           j = j.ToCamelCase();
         await stream.WriteLineAsync(j.ToString(Formatting.None));
       }
+    }
+
+    public static async IAsyncEnumerable<JObject> ReadAsJson(this ILoggedConnection<SnowflakeDbConnection> db, string operation, string select) {
+      var reader = await db.ExecuteReader(operation, select);
+      while (await reader.ReadAsync())
+        yield return reader.ToSnowflakeJObject();
     }
 
     public static JObject ToSnowflakeJObject(this IDataReader reader) {

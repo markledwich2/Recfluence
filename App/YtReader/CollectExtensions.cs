@@ -18,7 +18,7 @@ using YtReader.Store;
 using static System.Array;
 using static YtReader.StandardCollectPart;
 using static YtReader.Store.ChannelSourceType;
-using ChanById = SysExtensions.Collections.IReadonlyKeyedCollection<string, YtReader.Store.Channel>;
+using ChanById = SysExtensions.Collections.IKeyedCollection<string, YtReader.Store.Channel>;
 
 namespace YtReader {
   [AttributeUsage(AttributeTargets.Field)]

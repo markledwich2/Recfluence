@@ -9,16 +9,13 @@ using System.Threading.Tasks;
 using SysExtensions.Serialization;
 
 namespace SysExtensions.Collections {
-  public interface IReadonlyKeyedCollection<K, V> : IReadOnlyCollection<V> {
-    V this[K key] { get; }
-    bool ContainsKey(K key);
-    K GetKey(V item);
-  }
-
-  public interface IKeyedCollection<K, V> : ICollection<V>, IReadonlyKeyedCollection<K, V> {
+  public interface IKeyedCollection<K, V> : ICollection<V> {
     void SetKey(V item, K value);
     V GetOrAdd(K k, Func<V> create);
     Task<V> GetOrAdd(K k, Func<Task<V>> create);
+    V this[K key] { get; }
+    bool ContainsKey(K key);
+    K GetKey(V item);
   }
 
   /// <summary>Wraps a dictionary for items that can provide a way to key items. More clean and collection compatible usage
@@ -27,7 +24,7 @@ namespace SysExtensions.Collections {
     readonly Expression<Func<V, K>> _getKeyExpression;
     readonly IDictionary<K, V>      _dic;
 
-    public IDictionary<K, V> ToDictioniary() => _dic.ToDictionary(t => t.Key, t => t.Value);
+    public IDictionary<K, V> ToDictionary() => _dic.ToDictionary(t => t.Key, t => t.Value);
 
     public KeyedCollection(Expression<Func<V, K>> getKeyExpression, IEqualityComparer<K> comparer = null, bool theadSafe = false) {
       _getKeyExpression = getKeyExpression;

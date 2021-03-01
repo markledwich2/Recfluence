@@ -20,10 +20,8 @@ namespace SysExtensions.Threading {
   public static class BlockExtensions {
     public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, int, Task> action, int parallel = 1, int? capacity = null,
       CancellationToken cancel = default) {
-      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
-      if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
-      var blocAction = new Func<(T, int), Task>(i => action(i.Item1, i.Item2));
-      var block = new ActionBlock<(T, int)>(blocAction, options);
+      var options = ActionOptions<T>(parallel, capacity, cancel);
+      var block = new ActionBlock<(T, int)>(i => action(i.Item1, i.Item2), options);
       var produced = await ProduceAsync(source.WithIndex(), block);
       await block.Completion;
       return produced;
@@ -31,6 +29,21 @@ namespace SysExtensions.Threading {
 
     public static Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallel = 1, int? capacity = null,
       CancellationToken cancel = default) => source.BlockAction((o, _) => action(o), parallel, capacity, cancel);
+    
+    public static async Task<long> BlockAction<T>(this IAsyncEnumerable<T> source, Func<T, int, Task> action, int parallel = 1, int? capacity = null,
+      CancellationToken cancel = default) {
+      var options = ActionOptions<T>(parallel, capacity, cancel);
+      var block = new ActionBlock<(T, int)>(i => action(i.Item1, i.Item2), options);
+      var produced = await ProduceAsync(source.Select((o,i) => (o,i)), block);
+      await block.Completion;
+      return produced;
+    }
+
+    static ExecutionDataflowBlockOptions ActionOptions<T>(int parallel, int? capacity, CancellationToken cancel) {
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
+      if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
+      return options;
+    }
 
     /// <summary>Uses the type context of an enumerable to make a block, but does not touch it.</summary>
     public static (IEnumerable<T> source, IPropagatorBlock<T, R> first, IPropagatorBlock<T, R> last) BlockFuncWith<T, R>

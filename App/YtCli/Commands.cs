@@ -19,6 +19,7 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
+using YtReader.Narrative;
 using YtReader.Reddit;
 using YtReader.Search;
 using YtReader.Store;
@@ -392,6 +393,15 @@ namespace YtCli {
     public async ValueTask ExecuteAsync(IConsole console) {
       await Push.Process(Log);
       Log.Information("Pulling of posts from pushshift complete");
+    }
+  }
+  
+  
+  [Command("covid-narrative")]
+  public record CovidNarrativeCmd(ILogger Log, CovidNarrative Covid) : ICommand {
+    public async ValueTask ExecuteAsync(IConsole console) {
+      await Covid.MargeIntoAirtable(Log);
+      Log.Information("CovidNarrativeCmd - complete");
     }
   }
 }

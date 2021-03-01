@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using Polly.Caching;
 
 namespace SysExtensions.Collections {
   public static class EnumerableExtensions {
@@ -24,7 +23,9 @@ namespace SysExtensions.Collections {
     /// <summary>If items is null return an empty set, if an item is null remove it from the list</summary>
     [return: NotNull]
     public static IEnumerable<T> NotNull<T>(this IEnumerable<T> items)
-      => items?.Where(i => i != null) ?? new T[] { };
+      => items?.Where(i => i != null) ?? Array.Empty<T>();
+
+    public static IAsyncEnumerable<T> NotNull<T>(this IAsyncEnumerable<T> items) => items.Where(i => i != null);
 
     public static IEnumerable<T> Randomize<T>(this IEnumerable<T> source) {
       var rnd = new Random();
@@ -54,7 +55,7 @@ namespace SysExtensions.Collections {
       var included = new List<T>();
       var excluded = new List<T>();
       foreach (var item in items)
-        if (@where(item))
+        if (where(item))
           included.Add(item);
         else
           excluded.Add(item);
@@ -71,7 +72,7 @@ namespace SysExtensions.Collections {
         b.Add(item);
         if (b.Count != batchSize) continue;
         yield return b;
-        b = new (batchSize);
+        b = new(batchSize);
       }
       if (b.Count > 0)
         yield return b;
@@ -83,9 +84,9 @@ namespace SysExtensions.Collections {
         batch.Add(item);
         if (batch.Count < size) continue;
         yield return batch.ToArray();
-        batch .Clear();
+        batch.Clear();
       }
-      if(batch.Count > 0)
+      if (batch.Count > 0)
         yield return batch.ToArray();
     }
 

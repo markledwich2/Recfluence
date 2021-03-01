@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Builder;
@@ -28,10 +29,12 @@ using SysExtensions;
 using SysExtensions.Configuration;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
+using SysExtensions.Reflection;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader.BitChute;
 using YtReader.Db;
+using YtReader.Narrative;
 using YtReader.Reddit;
 using YtReader.Rumble;
 using YtReader.Search;
@@ -241,28 +244,14 @@ namespace YtReader {
       b.Register(_ => cfg).SingleInstance();
       b.Register(_ => rootCfg).SingleInstance();
       b.Register(_ => containerCfg);
-      b.Register(_ => cfg.Pipe).SingleInstance();
+
+      foreach (var p in cfg.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.PropertyType.IsClass && !p.PropertyType.IsEnumerable())) {
+        var v = p.GetValue(cfg);
+        if(v != null)
+          b.RegisterInstance(v).As(p.PropertyType).SingleInstance();
+      }
+
       b.Register(_ => cfg.Pipe.Azure).SingleInstance();
-      b.Register(_ => cfg.Elastic).SingleInstance();
-      b.Register(_ => cfg.Snowflake).SingleInstance();
-      b.Register(_ => cfg.Warehouse).SingleInstance();
-      b.Register(_ => cfg.Storage).SingleInstance();
-      b.Register(_ => cfg.Cleaner).SingleInstance();
-      b.Register(_ => cfg.EnvCfg).SingleInstance();
-      b.Register(_ => cfg.Updater).SingleInstance();
-      b.Register(_ => cfg.Results).SingleInstance();
-      b.Register(_ => cfg.Dataform).SingleInstance();
-      b.Register(_ => cfg.Seq).SingleInstance();
-      b.Register(_ => cfg.UserScrape).SingleInstance();
-      b.Register(_ => cfg.Proxy).SingleInstance();
-      b.Register(_ => cfg.Collect).SingleInstance();
-      b.Register(_ => cfg.YtApi).SingleInstance();
-      b.Register(_ => cfg.Search).SingleInstance();
-      b.Register(_ => cfg.SyncDb).SingleInstance();
-      b.Register(_ => cfg.AppDb).SingleInstance();
-      b.Register(_ => cfg.BitChute).SingleInstance();
-      b.Register(_ => cfg.Rumble).SingleInstance();
-      b.Register(_ => cfg.Google).SingleInstance();
 
       b.RegisterType<SnowflakeConnectionProvider>();
       b.Register(_ => cfg.Pipe.Azure.GetAzure());
@@ -302,6 +291,7 @@ namespace YtReader {
       b.RegisterType<RumbleWeb>();
       b.RegisterType<RumbleCollect>();
       b.RegisterType<Pushshift>();
+      b.RegisterType<CovidNarrative>();
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();

@@ -26,6 +26,8 @@ using static Mutuo.Etl.Pipe.PipeArg;
 using static YtReader.UpdateChannelType;
 using static YtReader.CollectPart;
 
+// ReSharper disable All
+
 namespace YtReader {
   public static class RefreshHelper {
     public static bool IsOlderThan(this DateTime updated, TimeSpan age, DateTime? now = null) => (now ?? DateTime.UtcNow) - updated > age;
@@ -112,12 +114,14 @@ namespace YtReader {
       }
     }
 
+    public record CollectFromVideoRow(string video_id, string channel_id, DateTime? extra_updated, bool caption_exists);
+
     /// <summary>Collect extra and recommendationa from an imported list of videos. Used for arbitrary lists.</summary>
     async Task CollectFromVideoPathOrView(ILogger log, StringPath collectVideoPath, string videoView, CancellationToken cancel) {
-      log.Information("Collecting video list from {Path}", collectVideoPath);
-      IReadOnlyCollection<string> videoIds;
+      log.Information("Collecting video list from {ViewOrPath}", videoView ?? collectVideoPath);
+      IReadOnlyCollection<CollectFromVideoRow> videos;
       using (var db = await Sf.Open(log))
-        videoIds = await db.Query<string>("missing video's", @$"
+        videos = await db.Query<CollectFromVideoRow>("missing video's", @$"
 with raw_vids as (
 {(videoView != null ?
             $"select * from {videoView}" :
@@ -126,35 +130,62 @@ with raw_vids as (
 )
 , missing_or_old as (
   select v.video_id
+       , e.channel_id
+       , e.updated extra_updated
+       , exists(select * from caption s where s.video_id=v.video_id) caption_exists
   from raw_vids v
          left join video_extra e on v.video_id=e.video_id
-  where e.video_id is null or current_date() - e.updated::date > 3
 )
-select video_id from missing_or_old
+select * from missing_or_old
 ");
-      var (res, dur) = await videoIds
+
+      // we only need to distribute for very large sets. Not worth the hassle right now.
+      /*var (res, dur) = await videoIds
         .Process(PipeCtx, b => ProcessVideos(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
-        .WithDuration();
-      
-      log.Information("Collect - {Pipe} Complete - {Total} videos updated in {Duration}",
-        nameof(ProcessVideos), res.Count, dur.HumanizeShort());
+        .WithDuration();*/
+
+      var (extras, dur) = await ProcessVideos(videos, log, cancel).WithDuration();
+      var channelIds = extras.Select(e => e.ChannelId).NotNull().ToHashSet();
+
+      HashSet<string> newChannels;
+      using (var db = await Sf.Open(log)) {
+        var existing = await db.Query<string>("existing channels", $"select channel_id from channel_latest where channel_id in ({SqlList(channelIds)})")
+          .Then(c => c.ToHashSet());
+        newChannels = channelIds.Where(c => !existing.Contains(c)).ToHashSet();
+      }
+
+      await PlanAndUpdateChannelStats(new[] {CollectPart.Channel}, newChannels.ToArray(), log, cancel);
+
+      log.Information("Collect - {Pipe} Complete - {Total} videos processed in {Duration}",
+        nameof(ProcessVideos), videos.Count, dur.HumanizeShort());
     }
 
-    [Pipe]
-    public async Task<bool> ProcessVideos(IReadOnlyCollection<string> videoIds, ILogger log, CancellationToken cancel) {
+    public async Task<IReadOnlyCollection<VideoExtra>> ProcessVideos(IReadOnlyCollection<CollectFromVideoRow> videos, ILogger log, CancellationToken cancel) {
       log ??= Logger.None;
       const int batchSize = 1000;
-      var channelIds = await videoIds.Batch(batchSize).Select((b, i) => (vids: b, i))
-        .BlockTrans(async b => {
-          var (vids, i) = b;
-          var (extra, _) = await SaveRecsAndExtra(c: null, new[] {VidExtra}, log, forExtra: vids.ToHashSet());
-          log.Information("Collect - Saved extra and recs {Batch}/{TotalBatches} ", i + 1, videoIds.Count / batchSize);
-          return extra.Select(e => e.ChannelId).NotNull().Distinct().ToArray();
-        }, parallel: Cfg.Collect.ParallelChannels, cancel: cancel).SelectManyList().Then(c => c.Distinct().ToArray());
 
-      await PlanAndUpdateChannelStats(new [] { CollectPart.Channel }, channelIds, log, cancel);
-      
-      return true;
+      var forExtra = videos.Where(v => v.extra_updated == null).Select(v => v.video_id).ToHashSet();
+
+      var extra = await forExtra.Batch(batchSize)
+        .BlockTrans(async (vids, i) => {
+          var (extra, _) = await SaveRecsAndExtra(c: null, new[] {VidExtra}, log, forExtra: vids.ToHashSet());
+          log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + extra.Length, forExtra.Count);
+          return extra;
+        }, parallel: Cfg.Collect.ParallelChannels, cancel: cancel).SelectManyList();
+
+      // videos that exist allready, but are missing caption
+      var forCaptionUpdate = videos.Where(v => v.channel_id != null && !v.caption_exists).ToKeyedCollection(v => v.video_id);
+      forCaptionUpdate.AddRange(extra
+        .Where(e => !forCaptionUpdate.ContainsKey(e.VideoId))
+        .Select(e => new CollectFromVideoRow(e.VideoId, e.ChannelId, null, false)));
+
+      await forCaptionUpdate.Batch(batchSize).BlockAction(async (vids, i) => {
+        var caption = await vids.BlockTrans(v => GetCaption(v.channel_id, v.video_id, log)).NotNull().ToListAsync();
+        await DbStore.Captions.Append(caption);
+        log.Information("ProcessVideos - saved {CaptionBatch}/{Total} captions", i * batchSize + caption.Count, forCaptionUpdate.Count);
+      }, cancel: cancel);
+
+      return extra;
     }
 
     static string SqlList<T>(IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
@@ -171,7 +202,6 @@ select video_id from missing_or_old
 
       var toDiscover = new List<ChannelUpdatePlan>();
       var explicitMissing = new List<ChannelUpdatePlan>();
-      var noExplicit = explicitChannels.None();
 
       IKeyedCollection<string, ChannelUpdatePlan> existingChannels;
       using (var db = await Sf.Open(log)) {
@@ -182,7 +212,7 @@ with review_filtered as (
   select channel_id, channel_title
   from channel_review
   where meets_review_criteria and platform = 'YouTube'
-  {(noExplicit ? "" : $"and channel_id in ({SqlList(explicitChannels)})")}--only explicit channel when provided
+  {(explicitChannels.None() ? "" : $"and channel_id in ({SqlList(explicitChannels)})")}--only explicit channel when provided
 )
    , stage_latest as (
   select v
@@ -208,8 +238,8 @@ from review_filtered r
             LastRecUpdate = r.lastRecUpdate
           })
           .ToKeyedCollection(r => r.Channel.ChannelId);
-        
-        
+
+
         if (limitChannels != null) // discover channels specified in limit if they aren't in our dataset
           explicitMissing.AddRange(limitChannels.Where(c => !existingChannels.ContainsKey(c))
             .Select(c => new ChannelUpdatePlan {Channel = new() {ChannelId = c}, Update = Discover}));
@@ -237,7 +267,7 @@ from review_filtered r
 
       if (!parts.ShouldRun(CollectPart.Channel)) return channels;
 
-     var (updatedChannels, duration) = await channels.Where(c => c.Update != None)
+      var (updatedChannels, duration) = await channels.Where(c => c.Update != None)
         .BlockFunc(async c => await UpdateChannelDetail(c, log), Cfg.DefaultParallel, cancel: cancel)
         .WithDuration();
       if (cancel.IsCancellationRequested) return updatedChannels;
@@ -519,51 +549,51 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           var u = forUpdate[v.Id];
           yield return u?.UploadDate == null ? v : v with {UploadDate = u.UploadDate}; // not really needed. but prefer to fix innacurate dates when we can
         }
-        if (vids.Any(v => v.UploadDate < uploadFrom)) // return all vids on a page because its free. Stop once we have a page with something older than uploadFrom
+        if (vids.Any(v => v.UploadDate < uploadFrom)
+        ) // return all vids on a page because its free. Stop once we have a page with something older than uploadFrom
           yield break;
       }
     }
 
+    async Task<VideoCaptionStored2> GetCaption(string channelId, string videoId, ILogger log) {
+      var videoLog = log.ForContext("VideoId", videoId);
+      ClosedCaptionTrack track;
+      try {
+        var captions = await Scraper.GetCaptionTracks(videoId, log);
+        var enInfo = captions.FirstOrDefault(t => t.Language.Code == "en");
+        if (enInfo == null)
+          return new() {
+            ChannelId = channelId,
+            VideoId = videoId,
+            Updated = DateTime.Now
+          };
+        track = await Scraper.GetClosedCaptionTrackAsync(enInfo, videoLog);
+      }
+      catch (Exception ex) {
+        ex.ThrowIfUnrecoverable();
+        videoLog.Warning(ex, "Unable to get captions for {VideoID}: {Error}", videoId, ex.Message);
+        return null;
+      }
+      return new() {
+        ChannelId = channelId,
+        VideoId = videoId,
+        Updated = DateTime.Now,
+        Info = track.Info,
+        Captions = track.Captions
+      };
+    }
+
     /// <summary>Saves captions for all new videos from the vids list</summary>
     async Task SaveCaptions(ChannelUpdatePlan plan, List<YtVideoItem> vids, IReadOnlyCollection<string> missingCaptions, ILogger log) {
-      var channel = plan.Channel;
-
-      async Task<VideoCaptionStored2> GetCaption(string videoId) {
-        var videoLog = log.ForContext("VideoId", videoId);
-        ClosedCaptionTrack track;
-        try {
-          var captions = await Scraper.GetCaptionTracks(videoId, log);
-          var enInfo = captions.FirstOrDefault(t => t.Language.Code == "en");
-          if (enInfo == null)
-            return new() {
-              ChannelId = channel.ChannelId,
-              VideoId = videoId,
-              Updated = DateTime.Now
-            };
-          track = await Scraper.GetClosedCaptionTrackAsync(enInfo, videoLog);
-        }
-        catch (Exception ex) {
-          ex.ThrowIfUnrecoverable();
-          videoLog.Warning(ex, "Unable to get captions for {VideoID}: {Error}", videoId, ex.Message);
-          return null;
-        }
-        return new() {
-          ChannelId = channel.ChannelId,
-          VideoId = videoId,
-          Updated = DateTime.Now,
-          Info = track.Info,
-          Captions = track.Captions
-        };
-      }
+      var channel = plan?.Channel;
 
       var newCaptions = vids.Where(v => plan.LastCaptionUpdate == null || v.UploadDate > plan.LastCaptionUpdate).Select(v => v.Id).ToArray();
-
       var toUpdate = newCaptions.Concat(missingCaptions).Distinct().ToArray();
 
       log.Debug("Collect - {Channel} - about to load {New} new and {Missing} missing captions",
         channel.ChannelTitle, newCaptions.Length, missingCaptions.Count);
 
-      var toStore = (await toUpdate.BlockFunc(GetCaption, RCfg.CaptionParallel)).NotNull().ToArray();
+      var toStore = (await toUpdate.BlockFunc(v => GetCaption(channel.ChannelId, v, log), RCfg.CaptionParallel)).NotNull().ToArray();
       if (toStore.Any())
         await DbStore.Captions.Append(toStore, log);
       log.Information("Collect - {Channel} - Saved {Captions} captions: {CaptionList}", channel.ChannelTitle, toStore.Length,
@@ -573,11 +603,10 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
     /// <summary>Saves recs for all of the given vids</summary>
     async Task<(VideoExtra[] allExtra, List<RecStored2> recs)> SaveRecsAndExtra(Channel c, CollectPart[] parts, ILogger log,
       HashSet<string> forChromeUpdate = null, HashSet<string> forRecsAndExtra = null, HashSet<string> forExtra = null) {
-
       forChromeUpdate ??= new();
       forRecsAndExtra ??= new();
       forExtra ??= new();
-      
+
       var chromeExtra = await ChromeScraper.GetRecsAndExtra(forChromeUpdate, log);
       var webRecsExtra = await Scraper.GetRecsAndExtra(forRecsAndExtra, log, c?.ChannelId, c?.ChannelTitle);
       var webExtra = await Scraper.GetExtra(forExtra, log, c?.ChannelId, c?.ChannelTitle);

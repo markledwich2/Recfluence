@@ -12,6 +12,7 @@ using SysExtensions.Configuration;
 using SysExtensions.Security;
 using SysExtensions.Text;
 using YtReader.Db;
+using YtReader.Narrative;
 
 namespace YtReader {
   public class RootCfg {
@@ -62,6 +63,8 @@ namespace YtReader {
     [Required] public BitChuteCfg     BitChute              { get; set; } = new();
     [Required] public RumbleCfg       Rumble                { get; set; } = new();
     [Required] public GoogleCfg       Google                { get; set; } = new();
+    [Required] public AirtableCfg     Airtable              { get; set; } = new();
+    [Required] public NarrativesCfg   Narratives            { get; set; } = new();
   }
 
   public class GoogleCfg {
@@ -162,8 +165,8 @@ namespace YtReader {
 
     /// <summary>Number of video extra's to collect that are missing per channel. Since YT removed a nice endpoint, we need to
     ///   go and backfill information from the video itself</summary>
-    public int ChannelBatchSize      { get;  set; } = 200;
-    public int MaxChannelDailyVideos { get;  set; } = 10_000;
+    public int ChannelBatchSize { get;      set; } = 200;
+    public int MaxChannelDailyVideos { get; set; } = 10_000;
   }
 
   public class StorageCfg {
