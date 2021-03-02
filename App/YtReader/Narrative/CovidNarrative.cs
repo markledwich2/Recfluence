@@ -26,24 +26,43 @@ namespace YtReader.Narrative {
       using var db = await Sf.Open(log);
       var batchSize = 10;
       await db.ReadAsJson("covid narrative", @"
-select video_id
-     , video_title
-     , channel_id
-     , channel_title
-     , views
-     , description
-     , subreddit
-     , arrayjoin(captions,object_construct('video_id',video_id)
+select n.video_id
+     , n.video_title
+     , n.channel_id
+     , n.channel_title
+     , n.views::number views
+     , n.description
+      , n.upload_date
+     , arrayjoin(n.captions,object_construct('video_id', n.video_id)
   ,'\n','[{offset}](https://youtube.com/watch?v={video_id}&t={offset}) {caption}') captions
-from covid_narrative_review
+, e.error_type
+, x.last_seen
+from covid_narrative_review n
+left join video_extra e on e.video_id = n.video_id 
+left join video_error x on x.video_id = n.video_id
 order by views desc
 limit 1000")
         .Select(v => v.ToCamelCase())
         .Batch(batchSize).BlockAction(async (rows, i) => {
-          var forCreate = rows.Where(r => !airRows.ContainsKey(r.Value<string>("videoId"))).Select(r => r.ToAirFields()).ToArray();
-          var res = await airTable.CreateMultipleRecords(Cfg.CovidAirtable, forCreate);
-          log.Information("CovidNarrative - created airtable records {Rows}", (i + 1) * batchSize);
-          res.EnsureSuccess();
+          var (update, create) = rows.Select(r => r.ToAirFields()).Split(r => airRows.ContainsKey(r.Value<string>("videoId")));
+
+          if (create.Any()) {
+            var res = await airTable.CreateMultipleRecords(Cfg.CovidAirtable, create.ToArray());
+            res.EnsureSuccess();
+            log.Information("CovidNarrative - created airtable records {Rows}, batch {Batch}", update.Count, i+1);
+          }
+
+          if (update.Any()) {
+            var updateFields = update.Select(u => new IdFields(airRows[u.Value<string>("videoId")].Id) {FieldsCollection = u.FieldsCollection}).ToArray();
+            var res = await airTable.UpdateMultipleRecords(Cfg.CovidAirtable, updateFields);
+            res.EnsureSuccess();
+            /*await update.BlockAction(async u => {
+              var airRow = airRows[u.Value<string>("videoId")];
+              var res = await airTable.UpdateRecord(Cfg.CovidAirtable, u, airRow.Id);
+              res.EnsureSuccess();
+            });*/
+            log.Information("CovidNarrative - updated airtable records {Rows}, batch {Batch}", update.Count, i+1);
+          }
         });
     }
   }
@@ -82,6 +101,8 @@ limit 1000")
       var fields = new Fields {FieldsCollection = dic};
       return fields;
     }
+
+    public static T Value<T>(this Fields fields, string field) => (T)fields.FieldsCollection[field];
 
     public static JObject RecordJObject(this AirtableRecord record) {
       var j = new JObject(new JProperty("id", record.Id), new JProperty("createdTime", record.CreatedTime));

@@ -144,12 +144,14 @@ with raw_vids as (
 select * from s
 ");
 
+      var forVideoProcess = videos.Where(v => v.extra_updated == null && v.video_id != null).ToArray();
+
       // process all videos
       var extras = parts.ShouldRun(VidExtra)
-        ? videos.Count > 200 ? await videos
+        ? forVideoProcess.Length > 200 ? await videos
           .Process(PipeCtx, b => ProcessVideos(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
           .Then(r => r.SelectMany(r => r.OutState))
-        : await ProcessVideos(videos, log, cancel)
+        : await ProcessVideos(forVideoProcess, log, cancel)
         : Array.Empty<VideoExtra>();
       var channelIds = extras.Select(e => e.ChannelId).Concat(videos.Select(v => v.channel_id)).NotNull().Distinct().ToArray();
 
@@ -176,7 +178,7 @@ select * from s
       log ??= Logger.None;
       const int batchSize = 1000;
 
-      var forExtra = videos.Where(v => v.extra_updated == null && v.video_id != null).Select(v => v.video_id).ToHashSet();
+      var forExtra = videos.Select(v => v.video_id).ToHashSet();
 
       var extra = await forExtra.Batch(batchSize)
         .BlockTrans(async (vids, i) => {
@@ -195,7 +197,7 @@ select * from s
         var caption = await vids.BlockTrans(v => GetCaption(v.channel_id, v.video_id, log)).NotNull().ToListAsync();
         await DbStore.Captions.Append(caption);
         log.Information("ProcessVideos - saved {CaptionBatch}/{Total} captions", i * batchSize + caption.Count, forCaptionUpdate.Count);
-      }, cancel: cancel);
+      }, Cfg.Collect.CaptionParallel, cancel: cancel);
 
       return extra.ToArray();
     }
