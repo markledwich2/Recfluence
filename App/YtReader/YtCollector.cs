@@ -142,7 +142,6 @@ with raw_vids as (
          left join video_extra e on v.video_id=e.video_id
 )
 select * from s
-limit 300
 ");
 
       // process all videos
