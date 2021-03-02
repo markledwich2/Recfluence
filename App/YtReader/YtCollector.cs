@@ -169,7 +169,7 @@ limit 300
           .WithDuration();
       }
 
-      log.Information("Collect ProcessVideos - {Pipe} Complete - {Videos} videos and {Channels) channels processed", videos.Count, channelIds.Length);
+      log.Information("YtCollect - ProcessVideos complete - {Videos} videos and {Channels) channels processed", videos.Count, channelIds.Length);
     }
 
     [Pipe]
