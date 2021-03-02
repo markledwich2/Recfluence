@@ -30,8 +30,10 @@ using static YtReader.CollectPart;
 
 namespace YtReader {
   public static class RefreshHelper {
-    public static bool IsOlderThan(this DateTime updated, TimeSpan age, DateTime? now = null) => (now ?? DateTime.UtcNow) - updated > age;
-    public static bool IsYoungerThan(this DateTime updated, TimeSpan age, DateTime? now = null) => !updated.IsOlderThan(age, now);
+    public static bool OlderThanOrNull(this DateTime? updated, TimeSpan age, DateTime? now = null) => 
+      updated == null || updated.Value.OlderThan(age, now);
+    public static bool OlderThan(this DateTime updated, TimeSpan age, DateTime? now = null) => (now ?? DateTime.UtcNow) - updated > age;
+    public static bool YoungerThan(this DateTime updated, TimeSpan age, DateTime? now = null) => !updated.OlderThan(age, now);
   }
 
   public static class YtCollectorRegion {
@@ -96,7 +98,7 @@ namespace YtReader {
     public async Task Collect(ILogger log, string[] limitChannels = null, CollectPart[] parts = null,
       StringPath collectVideoPath = null, string collectVideoView = null, CancellationToken cancel = default) {
       if (collectVideoPath != null || collectVideoView != null) {
-        await CollectFromVideoPathOrView(log, collectVideoPath, collectVideoView, parts, cancel);
+        await CollectFromVideoPathOrView(log, collectVideoPath, collectVideoView, parts, limitChannels, cancel);
       }
       else {
         var channels = await PlanAndUpdateChannelStats(parts, limitChannels, log, cancel);
@@ -117,7 +119,7 @@ namespace YtReader {
     public record DiscoverRow(string video_id, string channel_id, DateTime? extra_updated, bool caption_exists);
 
     /// <summary>Collect extra and recommendationa from an imported list of videos. Used for arbitrary lists.</summary>
-    async Task CollectFromVideoPathOrView(ILogger log, StringPath collectVideoPath, string videoView, CollectPart[] parts = null,
+    async Task CollectFromVideoPathOrView(ILogger log, StringPath collectVideoPath, string videoView, CollectPart[] parts = null, string[] limitChannels = null,
       CancellationToken cancel = default) {
       parts ??= new[] {CollectPart.Channel, VidStats, VidExtra, Caption};
 
@@ -142,8 +144,8 @@ with raw_vids as (
          left join video_extra e on v.video_id=e.video_id
 )
 select * from s
+{(limitChannels.None() ? "" : $"where channel_id in ({SqlList(limitChannels)})")}
 ");
-
       var forVideoProcess = videos.Where(v => v.extra_updated == null && v.video_id != null).ToArray();
 
       // process all videos
@@ -153,14 +155,14 @@ select * from s
           .Then(r => r.SelectMany(r => r.OutState))
         : await ProcessVideos(forVideoProcess, log, cancel)
         : Array.Empty<VideoExtra>();
-      var channelIds = extras.Select(e => e.ChannelId).Concat(videos.Select(v => v.channel_id)).NotNull().Distinct().ToArray();
 
       // then process all unique channels we don't allready have recent data for
-      if (channelIds.Any() && parts.ShouldRun(CollectPart.Channel)) {
+      var channelIds = extras.Select(e => e.ChannelId).Concat(videos.Select(v => v.channel_id)).NotNull().Distinct().ToArray();
+      if (channelIds.Any()) {
         var channels = await PlanAndUpdateChannelStats(parts, channelIds, log, cancel)
           .Then(c => c
-            .Where(c => DateTime.UtcNow - c.Channel.Updated > 7.Days()) // filter to channels we haven't updated recently
-            .Select(c => c with {Update = c.Update == Discover ? Standard : c.Update})); // recert to standard update for channels detected as discover
+            .Where(c => c.LastVideoUpdate.OlderThanOrNull(12.Hours())) // filter to channels we haven't updated video's in recently
+            .Select(c => c with {Update = c.Update == Discover ? Standard : c.Update})); // revert to standard update for channels detected as discover
 
         DateTime? fromDate = new DateTime(2020, 01, 01);
         var (result, dur) = await channels
@@ -170,16 +172,14 @@ select * from s
           .WithDuration();
       }
 
-      log.Information("YtCollect - ProcessVideos complete - {Videos} videos and {Channels) channels processed", videos.Count, channelIds.Length);
+      log.Information("YtCollect - ProcessVideos complete - {Videos} videos and {Channels} channels processed", videos.Count, channelIds.Length);
     }
 
     [Pipe]
     public async Task<VideoExtra[]> ProcessVideos(IReadOnlyCollection<DiscoverRow> videos, ILogger log, CancellationToken cancel) {
       log ??= Logger.None;
       const int batchSize = 1000;
-
       var forExtra = videos.Select(v => v.video_id).ToHashSet();
-
       var extra = await forExtra.Batch(batchSize)
         .BlockTrans(async (vids, i) => {
           var (extra, _) = await SaveRecsAndExtra(c: null, new[] {VidExtra}, log, forExtra: vids.ToHashSet());
@@ -225,8 +225,8 @@ select * from s
 with review_filtered as (
   select channel_id, channel_title
   from channel_review
-  where meets_review_criteria and platform = 'YouTube'
-  {(explicitChannels.None() ? "" : $"and channel_id in ({SqlList(explicitChannels)})")}--only explicit channel when provided
+  where platform = 'YouTube'
+  {(explicitChannels.None() ? "meets_review_criteria" : $"and channel_id in ({SqlList(explicitChannels)})")}--only explicit channel when provided
 )
    , stage_latest as (
   select v
@@ -281,7 +281,8 @@ from review_filtered r
 
       if (!parts.ShouldRun(CollectPart.Channel)) return channels;
 
-      var (updatedChannels, duration) = await channels.Where(c => c.Update != None)
+      var (updatedChannels, duration) = await channels
+        .Where(c => c.Update != None && c.Channel.Updated.Age() > RCfg.RefreshChannelDetailDebounce)
         .BlockFunc(async c => await UpdateChannelDetail(c, log), Cfg.DefaultParallel, cancel: cancel)
         .WithDuration();
       if (cancel.IsCancellationRequested) return updatedChannels;
@@ -516,7 +517,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           var suspectMissingFresh = videoForExtra
             .Where(v => v.UploadDate > oldestUpdate // newer than our oldest update
                         && !videoItemsKey.ContainsKey(v.VideoId) // missing from this run
-                        && DateTime.UtcNow - v.ExtraUpdated > 7.Days()) // haven't tried updating extra for more than 7d
+                        && v.ExtraUpdated.OlderThanOrNull(7.Days())) // haven't tried updating extra for more than 7d
             .Select(v => v.VideoId).ToArray();
           log.Debug("Collect {Channel} - Video-extra for {Videos} video's because they look  missing", c.ChannelTitle, suspectMissingFresh.Length);
           forExtraUpdate.AddRange(suspectMissingFresh);
@@ -758,7 +759,7 @@ from videos_to_update",
       }
       else if (inThisWeeksRecUpdate) {
         Log.Debug("Collect - {Channel} - performing weekly recs update", c.ChannelTitle);
-        toUpdate.AddRange(vidsDesc.Where(v => v.UploadDate?.IsYoungerThan(RCfg.RefreshRecsWithin) == true)
+        toUpdate.AddRange(vidsDesc.Where(v => v.UploadDate?.YoungerThan(RCfg.RefreshRecsWithin) == true)
           .Take(RCfg.RefreshRecsMax));
         var deficit = RCfg.RefreshRecsMin - toUpdate.Count;
         if (deficit > 0)

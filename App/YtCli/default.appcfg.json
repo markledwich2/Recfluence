@@ -45,7 +45,7 @@
           "mem": 3,
           "cores": 2
         },
-        "maxParallel": 20,
+        "maxParallel": 12,
         "minWorkItems": 300
       },
       {

@@ -24,5 +24,7 @@ namespace SysExtensions {
 
     public static DateTime Before(this TimeSpan ts, DateTime date) => date - ts;
     public static DateTime After(this TimeSpan ts, DateTime date) => date + ts;
+
+    public static TimeSpan Age(this DateTime value) => DateTime.UtcNow - value;
   }
 }

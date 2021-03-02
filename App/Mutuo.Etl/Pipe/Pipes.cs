@@ -98,6 +98,9 @@ namespace Mutuo.Etl.Pipe {
     static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> RunItemPipe<TIn, TOut>(this TIn[] items, IPipeCtx ctx,
       string pipeName, PipeArg[] args, PipeRunCfg runCfg = null, ILogger log = null, CancellationToken cancel = default) {
       log ??= Logger.None;
+
+      if (items.None()) return Array.Empty<(PipeRunMetadata Metadata, TOut OutState)>();
+      
       var pipeMethods = PipeMethods(ctx);
       var (_, method) = pipeMethods[pipeName];
       if (method == null) throw new InvalidOperationException($"Can't find pipe {pipeName}");
