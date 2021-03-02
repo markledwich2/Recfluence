@@ -44,7 +44,7 @@ namespace SysExtensions.Collections {
     public V this[K key] => _dic.TryGet(key);
 
     public void Add(V item) {
-      var key = GetKey(item); // it won't be accessible via the key. But we can still hold it in the collection
+      var key = GetKey(item) ?? throw new InvalidOperationException($"Item missing key: {item?.ToString()}"); // it won't be accessible via the key. But we can still hold it in the collection
       _dic[key] = item;
     }
 
