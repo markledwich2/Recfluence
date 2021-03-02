@@ -471,9 +471,9 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
         // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.
         var videosFrom = plan.VideosFrom ?? DateTime.UtcNow - RCfg.RefreshVideosWithinNew;
-        var videoItemsLimit = discover ? RCfg.DiscoverChannelVids : !full ? RCfg.MaxChannelDailyVideos : (int?) null;
+        var videoItemsLimit = discover ? RCfg.DiscoverChannelVids : full ? RCfg.MaxChannelFullVideos : RCfg.MaxChannelDailyVideos;
         var vidsEnum = ChannelVidItems(c, videosFrom, videoForExtraKey, log);
-        videoItems = videoItemsLimit.HasValue ? await vidsEnum.Take(videoItemsLimit.Value).ToListAsync() : await vidsEnum.ToListAsync();
+        videoItems = await vidsEnum.Take(videoItemsLimit).ToListAsync();
 
         if (parts.ShouldRun(VidStats))
           await SaveVids(c, videoItems, DbStore.Videos, log);
@@ -495,10 +495,11 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           var videoItemsKey = videoItems.ToKeyedCollection(v => v.Id);
           var oldestUpdate = videoItems.Min(v => v.UploadDate);
 
-          var suspectMissingFresh = videoForExtra.Where(v => v.UploadDate > oldestUpdate // newer than our oldest update
-                                                             && !videoItemsKey.ContainsKey(v.VideoId) // missing from this run
-                                                             && DateTime.UtcNow - v.ExtraUpdated > 7.Days() // haven't tried updating extra for more than 7d
-          ).Select(v => v.VideoId).ToArray();
+          var suspectMissingFresh = videoForExtra
+            .Where(v => v.UploadDate > oldestUpdate // newer than our oldest update
+                        && !videoItemsKey.ContainsKey(v.VideoId) // missing from this run
+                        && DateTime.UtcNow - v.ExtraUpdated > 7.Days()) // haven't tried updating extra for more than 7d
+            .Select(v => v.VideoId).ToArray();
           log.Debug("Collect {Channel} - Video-extra for {Videos} video's because they look  missing", c.ChannelTitle, suspectMissingFresh.Length);
           forRecsAndExtraUpdate.AddRange(suspectMissingFresh);
 
@@ -549,8 +550,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
           var u = forUpdate[v.Id];
           yield return u?.UploadDate == null ? v : v with {UploadDate = u.UploadDate}; // not really needed. but prefer to fix innacurate dates when we can
         }
-        if (vids.Any(v => v.UploadDate < uploadFrom)
-        ) // return all vids on a page because its free. Stop once we have a page with something older than uploadFrom
+        if (vids.Any(v => v.UploadDate < uploadFrom)) // return all vids on a page because its free. Stop on page with something older than uploadFrom
           yield break;
       }
     }
@@ -655,8 +655,9 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
     record VideoForUpdate(string ChannelId, string VideoId, DateTime Updated, DateTime? UploadDate, DateTime? ExtraUpdated);
 
-    /// <summary>Videos to help plan which to refresh extra for. We detect dead videos by having all non dead video's at hand
-    ///   since daily_update_days_back, and the date extra was last refreshed for it</summary>
+    /// <summary>Videos to help plan which to refresh extra for (we don't actualy refresh every one of these). We detect dead
+    ///   videos by having all non dead video's at hand since daily_update_days_back, and the date extra was last refreshed for
+    ///   it</summary>
     async Task<IReadOnlyCollection<VideoForUpdate>> VideosForUpdate(IReadOnlyCollection<Channel> channels,
       ILoggedConnection<IDbConnection> db,
       ILogger log) {
@@ -675,12 +676,11 @@ select v.channel_id ChannelId
 from video_latest v
 join chans c on v.channel_id = c.channel_id
 join channel_collection_days_back b on b.channel_id = v.channel_id
-where (
-      v.upload_date is null -- update extra if we are missing upload
-      or v.upload_date::date>=dateadd(day,-b.daily_update_days_back,current_date()::date) -- update according to days back calculation to efficiently refresh
-    )
-    and v.error_type is null -- removed video's updated separately
-");
+where 
+    v.upload_date is null -- update extra if we are missing upload
+    or v.error_type is null -- removed video's updated separately
+qualify row_number() over (partition by b.channel_id order by upload_date desc) <= :videosPerChannel
+", new {videosPerChannel = RCfg.MaxChannelFullVideos});
       return ids;
     }
 
