@@ -13,6 +13,7 @@ using Flurl.Http;
 using Humanizer;
 using LtGt;
 using Mutuo.Etl.Blob;
+using Nest;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions;
@@ -197,10 +198,15 @@ namespace YtReader.YtWebsite {
       var channelUrl = YtUrl.AppendPathSegments("channel", channelId);
       var channelPageHtml = await GetHtml("videos page", channelUrl, log);
       var ytInitialData = await GetClientObjectFromWatchPage(log, channelPageHtml, channelUrl, "ytInitialData");
-      var browseParams = ytInitialData
-        .SelectToken(@"$..tabs[?(@.tabRenderer.title == 'Videos' ||  @.tabRenderer.title == 'Video\'s')].tabRenderer.endpoint.browseEndpoint.params")
-        ?.Value<string>();
-
+      var endpoints = ytInitialData.SelectTokens(@"$..tabRenderer.endpoint").OfType<JObject>();
+      var browseParams = endpoints.Select(e => {
+        var cmd = e.SelectToken("commandMetadata.webCommandMetadata");
+        if (cmd == null) return null;
+        if (cmd.Value<string>("apiUrl") != "/youtubei/v1/browse" || cmd.Value<string>("url")?.EndsWith("/videos") != true)
+          return null;
+        return e.SelectToken("browseEndpoint.params")?.Value<string>();
+      }).NotNull().FirstOrDefault();
+      
       if (browseParams == null) {
         var ex = new InvalidOperationException("can't find browse endpoint");
         await LogParseError("error parsing channel page", ex, channelUrl, ytInitialData.ToString(), log);
