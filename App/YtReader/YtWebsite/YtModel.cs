@@ -25,9 +25,6 @@ namespace YtReader.YtWebsite {
     /// <summary>Author of this video.</summary>
     public string Author { get; init; }
 
-    /// <summary>This is the same as upload date. But sometimes there are discrepancies and added is more reliable</summary>
-    public DateTime? AddedDate { get; init; }
-
     /// <summary>Description of this video.</summary>
     public string Description { get; init; }
 
@@ -36,6 +33,8 @@ namespace YtReader.YtWebsite {
 
     public string ChannelId    { get; init; }
     public string ChannelTitle { get; init; }
+    public string Error        { get; set; }
+    public string SubError     { get; set; }
   }
 
   /// <summary>User activity statistics.</summary>

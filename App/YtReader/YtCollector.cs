@@ -96,7 +96,7 @@ namespace YtReader {
     public async Task Collect(ILogger log, string[] limitChannels = null, CollectPart[] parts = null,
       StringPath collectVideoPath = null, string collectVideoView = null, CancellationToken cancel = default) {
       if (collectVideoPath != null || collectVideoView != null) {
-        await CollectFromVideoPathOrView(log, collectVideoPath, collectVideoView, cancel);
+        await CollectFromVideoPathOrView(log, collectVideoPath, collectVideoView, parts, cancel);
       }
       else {
         var channels = await PlanAndUpdateChannelStats(parts, limitChannels, log, cancel);
@@ -105,7 +105,7 @@ namespace YtReader {
         var (result, dur) = await channels
           .Randomize() // randomize to even the load
           .Process(PipeCtx,
-            b => ProcessChannels(b, parts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
+            b => ProcessChannels(b, parts, Inject<ILogger>(), Inject<CancellationToken>(), null), log: log, cancel: cancel)
           .WithDuration();
 
         var allChannelResults = result.Where(r => r.OutState != null).SelectMany(r => r.OutState.Channels).ToArray();
@@ -114,57 +114,70 @@ namespace YtReader {
       }
     }
 
-    public record CollectFromVideoRow(string video_id, string channel_id, DateTime? extra_updated, bool caption_exists);
+    public record DiscoverRow(string video_id, string channel_id, DateTime? extra_updated, bool caption_exists);
 
     /// <summary>Collect extra and recommendationa from an imported list of videos. Used for arbitrary lists.</summary>
-    async Task CollectFromVideoPathOrView(ILogger log, StringPath collectVideoPath, string videoView, CancellationToken cancel) {
+    async Task CollectFromVideoPathOrView(ILogger log, StringPath collectVideoPath, string videoView, CollectPart[] parts = null,
+      CancellationToken cancel = default) {
+      parts ??= new[] {CollectPart.Channel, VidStats, VidExtra, Caption};
+
       log.Information("Collecting video list from {ViewOrPath}", videoView ?? collectVideoPath);
-      IReadOnlyCollection<CollectFromVideoRow> videos;
+
+      var sw = Stopwatch.StartNew();
+      IReadOnlyCollection<DiscoverRow> videos;
       using (var db = await Sf.Open(log))
-        videos = await db.Query<CollectFromVideoRow>("missing video's", @$"
+        videos = await db.Query<DiscoverRow>("missing video's", @$"
 with raw_vids as (
 {(videoView != null ?
-            $"select * from {videoView}" :
-            $"select $1::string video_id  from @public.yt_data/{collectVideoPath} (file_format => tsv)"
+            $"select video_id, channel_id from {videoView}" :
+            $"select $1::string video_id, $2::string channel_id  from @public.yt_data/{collectVideoPath} (file_format => tsv)"
           )}
 )
-, missing_or_old as (
+, s as (
   select v.video_id
-       , e.channel_id
+       , coalesce(v.channel_id, e.channel_id) channel_id
        , e.updated extra_updated
        , exists(select * from caption s where s.video_id=v.video_id) caption_exists
   from raw_vids v
          left join video_extra e on v.video_id=e.video_id
 )
-select * from missing_or_old
+select * from s
+limit 300
 ");
 
-      // we only need to distribute for very large sets. Not worth the hassle right now.
-      /*var (res, dur) = await videoIds
-        .Process(PipeCtx, b => ProcessVideos(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
-        .WithDuration();*/
+      // process all videos
+      var extras = parts.ShouldRun(VidExtra)
+        ? videos.Count > 200 ? await videos
+          .Process(PipeCtx, b => ProcessVideos(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
+          .Then(r => r.SelectMany(r => r.OutState))
+        : await ProcessVideos(videos, log, cancel)
+        : Array.Empty<VideoExtra>();
+      var channelIds = extras.Select(e => e.ChannelId).Concat(videos.Select(v => v.channel_id)).NotNull().Distinct().ToArray();
 
-      var (extras, dur) = await ProcessVideos(videos, log, cancel).WithDuration();
-      var channelIds = extras.Select(e => e.ChannelId).NotNull().ToHashSet();
+      // then process all unique channels we don't allready have recent data for
+      if (channelIds.Any() && parts.ShouldRun(CollectPart.Channel)) {
+        var channels = await PlanAndUpdateChannelStats(parts, channelIds, log, cancel)
+          .Then(c => c
+            .Where(c => DateTime.UtcNow - c.Channel.Updated > 7.Days()) // filter to channels we haven't updated recently
+            .Select(c => c with {Update = c.Update == Discover ? Standard : c.Update})); // recert to standard update for channels detected as discover
 
-      HashSet<string> newChannels;
-      using (var db = await Sf.Open(log)) {
-        var existing = await db.Query<string>("existing channels", $"select channel_id from channel_latest where channel_id in ({SqlList(channelIds)})")
-          .Then(c => c.ToHashSet());
-        newChannels = channelIds.Where(c => !existing.Contains(c)).ToHashSet();
+        DateTime? fromDate = new DateTime(2020, 01, 01);
+        var (result, dur) = await channels
+          .Randomize() // randomize to even the load
+          .Process(PipeCtx,
+            b => ProcessChannels(b, parts, Inject<ILogger>(), Inject<CancellationToken>(), fromDate), log: log, cancel: cancel)
+          .WithDuration();
       }
 
-      await PlanAndUpdateChannelStats(new[] {CollectPart.Channel}, newChannels.ToArray(), log, cancel);
-
-      log.Information("Collect - {Pipe} Complete - {Total} videos processed in {Duration}",
-        nameof(ProcessVideos), videos.Count, dur.HumanizeShort());
+      log.Information("Collect ProcessVideos - {Pipe} Complete - {Videos} videos and {Channels) channels processed", videos.Count, channelIds.Length);
     }
 
-    public async Task<IReadOnlyCollection<VideoExtra>> ProcessVideos(IReadOnlyCollection<CollectFromVideoRow> videos, ILogger log, CancellationToken cancel) {
+    [Pipe]
+    public async Task<VideoExtra[]> ProcessVideos(IReadOnlyCollection<DiscoverRow> videos, ILogger log, CancellationToken cancel) {
       log ??= Logger.None;
       const int batchSize = 1000;
 
-      var forExtra = videos.Where(v => v.extra_updated == null).Select(v => v.video_id).ToHashSet();
+      var forExtra = videos.Where(v => v.extra_updated == null && v.video_id != null).Select(v => v.video_id).ToHashSet();
 
       var extra = await forExtra.Batch(batchSize)
         .BlockTrans(async (vids, i) => {
@@ -174,10 +187,10 @@ select * from missing_or_old
         }, parallel: Cfg.Collect.ParallelChannels, cancel: cancel).SelectManyList();
 
       // videos that exist allready, but are missing caption
-      var forCaptionUpdate = videos.Where(v => v.channel_id != null && !v.caption_exists).ToKeyedCollection(v => v.video_id);
+      var forCaptionUpdate = videos.Where(v => v.channel_id != null && !v.caption_exists && v.video_id != null).ToKeyedCollection(v => v.video_id);
       forCaptionUpdate.AddRange(extra
         .Where(e => !forCaptionUpdate.ContainsKey(e.VideoId))
-        .Select(e => new CollectFromVideoRow(e.VideoId, e.ChannelId, null, false)));
+        .Select(e => new DiscoverRow(e.VideoId, e.ChannelId, null, false)));
 
       await forCaptionUpdate.Batch(batchSize).BlockAction(async (vids, i) => {
         var caption = await vids.BlockTrans(v => GetCaption(v.channel_id, v.video_id, log)).NotNull().ToListAsync();
@@ -185,7 +198,7 @@ select * from missing_or_old
         log.Information("ProcessVideos - saved {CaptionBatch}/{Total} captions", i * batchSize + caption.Count, forCaptionUpdate.Count);
       }, cancel: cancel);
 
-      return extra;
+      return extra.ToArray();
     }
 
     static string SqlList<T>(IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
@@ -362,7 +375,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
 
     [Pipe]
     public async Task<ProcessChannelResults> ProcessChannels(IReadOnlyCollection<ChannelUpdatePlan> channels,
-      CollectPart[] parts, ILogger log = null, CancellationToken cancel = default) {
+      CollectPart[] parts, ILogger log = null, CancellationToken cancel = default, DateTime? videoFromExplicit = null) {
       log ??= Logger.None;
       var workSw = Stopwatch.StartNew();
 
@@ -407,8 +420,8 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
               .ForContext("Channel", c.ChannelTitle);
             try {
               await using var conn = new Defer<ILoggedConnection<IDbConnection>>(async () => await Sf.Open(cLog));
-              await UpdateAllInChannel(plan, parts,
-                channelChromeVideos.TryGet(c.ChannelId), channelVidsForExtra.TryGet(c.ChannelId), missingCaptions.TryGet(c.ChannelId), cLog);
+              await UpdateAllInChannel(plan, parts, cLog, channelChromeVideos.TryGet(c.ChannelId), channelVidsForExtra.TryGet(c.ChannelId),
+                missingCaptions.TryGet(c.ChannelId), videoFromExplicit);
               var progress = i + batchNo * RCfg.ChannelBatchSize + 1;
               cLog.Information("Collect - {Channel} - Completed videos/recs/captions in {Duration}. Progress: channel {Count}/{BatchTotal}",
                 c.ChannelTitle, sw.Elapsed.HumanizeShort(), progress, channels.Count);
@@ -436,10 +449,14 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       return res;
     }
 
-    async Task UpdateAllInChannel(ChannelUpdatePlan plan, CollectPart[] parts, IReadOnlyCollection<string> videosForChromeUpdate,
-      IReadOnlyCollection<VideoForUpdate> videoForExtra,
-      IReadOnlyCollection<string> missingCaptions,
-      ILogger log) {
+    async Task UpdateAllInChannel(ChannelUpdatePlan plan, CollectPart[] parts,
+      ILogger log, IReadOnlyCollection<string> videosForChromeUpdate = null,
+      IReadOnlyCollection<VideoForUpdate> videoForExtra = null,
+      IReadOnlyCollection<string> missingCaptions = null, DateTime? videosFromExplicit = null) {
+      videosForChromeUpdate ??= Array.Empty<string>();
+      videoForExtra ??= Array.Empty<VideoForUpdate>();
+      missingCaptions ??= Array.Empty<string>();
+
       var c = plan.Channel;
 
       var videoForExtraKey = videoForExtra.ToKeyedCollection(v => v.VideoId);
@@ -470,7 +487,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
         log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions", c.ChannelTitle);
 
         // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.
-        var videosFrom = plan.VideosFrom ?? DateTime.UtcNow - RCfg.RefreshVideosWithinNew;
+        var videosFrom = videosFromExplicit ?? plan.VideosFrom ?? DateTime.UtcNow - RCfg.RefreshVideosWithinNew;
         var videoItemsLimit = discover ? RCfg.DiscoverChannelVids : full ? RCfg.MaxChannelFullVideos : RCfg.MaxChannelDailyVideos;
         var vidsEnum = ChannelVidItems(c, videosFrom, videoForExtraKey, log);
         videoItems = await vidsEnum.Take(videoItemsLimit).ToListAsync();
@@ -501,7 +518,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
                         && DateTime.UtcNow - v.ExtraUpdated > 7.Days()) // haven't tried updating extra for more than 7d
             .Select(v => v.VideoId).ToArray();
           log.Debug("Collect {Channel} - Video-extra for {Videos} video's because they look  missing", c.ChannelTitle, suspectMissingFresh.Length);
-          forRecsAndExtraUpdate.AddRange(suspectMissingFresh);
+          forExtraUpdate.AddRange(suspectMissingFresh);
 
           // add videos that we just refreshed but don't have any extra yet. limit per run to not slow down a particular update too much
           var missingExtra = videoItems

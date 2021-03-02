@@ -383,7 +383,7 @@ namespace YtReader.YtWebsite {
     }
 
     static VideoExtra VideoItemToExtra(string videoId, string channelId, string channelTitle, YtVideo videoItem) =>
-      new VideoExtra {
+      new() {
         VideoId = videoId,
         Updated = DateTime.UtcNow,
         // some videos are listed under a channels playlist, but when you click on the vidoe, its channel is under enother (e.g. _iYT8eg1F8s)
@@ -395,9 +395,11 @@ namespace YtReader.YtWebsite {
         Keywords = videoItem?.Keywords,
         Title = videoItem?.Title,
         UploadDate = videoItem?.UploadDate,
-        AddedDate = videoItem?.AddedDate,
         Statistics = videoItem?.Statistics,
-        Source = ScrapeSource.Web
+        Source = ScrapeSource.Web,
+        Platform = Platform.YouTube,
+        Error = videoItem?.Error,
+        SubError = videoItem?.SubError
       };
 
     public async Task<Rec[]> GetRecs2(ILogger log, HtmlDocument html, string videoId) {
@@ -492,9 +494,18 @@ namespace YtReader.YtWebsite {
       var responseJson = JToken.Parse(videoInfoDic["player_response"]);
       var renderer = responseJson.SelectToken("microformat.playerMicroformatRenderer");
 
-      if (string.Equals(responseJson.SelectToken("playabilityStatus.status")?.Value<string>(), "error", OrdinalIgnoreCase))
-        return null;
+      var video = new YtVideo {
+        Id = videoId
+      };
 
+      var playability = responseJson["playabilityStatus"];
+      if (playability?.Value<string>("status").ToLowerInvariant() == "error") {
+        return video with {
+          Error = playability.Value<string>("reason"), 
+          SubError = playability.SelectToken("errorScreen.playerErrorMessageRenderer.subreason.simpleText")?.Value<string>()
+        };
+      }
+        
       T Val<T>(string propName) {
         var token = responseJson.SelectToken($"videoDetails.{propName}");
         return token == null ? default : token.Value<T>();
@@ -506,14 +517,12 @@ namespace YtReader.YtWebsite {
       var like = LikeDislikeVal("like");
       var dislike = LikeDislikeVal("dislike");
 
-      return new() {
-        Id = videoId,
+      return video with {
         ChannelId = Val<string>("channelId"),
         ChannelTitle = Val<string>("author"),
         Author = Val<string>("author"),
         UploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseExact("yyyy-MM-dd", style: DateTimeStyles.AssumeUniversal).ToUniversalTime() ??
                      default,
-        AddedDate = default,
         Title = Val<string>("title"),
         Description = Val<string>("shortDescription"),
         Duration = TimeSpan.FromSeconds(Val<double>("lengthSeconds")),
