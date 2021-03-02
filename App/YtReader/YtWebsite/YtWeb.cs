@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -23,6 +22,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
+using static System.Net.HttpStatusCode;
 using static System.StringComparison;
 using static SysExtensions.Net.HttpExtensions;
 
@@ -84,10 +84,15 @@ namespace YtReader.YtWebsite {
         }
         catch (Exception ex) {
           log.Debug(ex, "WebScraper - error requesting {url} attempt {Attempt} : {Error} ", request.Url, attempts, ex.Message);
-          if (ex is HttpRequestException {StatusCode: HttpStatusCode.NotFound})
+          
+          // not found (i.e. bad url) and proxy auth (i.e. ran out o quota on smartproxy) are fatal for sure
+          if (ex is HttpRequestException e && e.StatusCode?.In(NotFound, ProxyAuthenticationRequired) == true)
             throw;
-          if (!(ex is HttpRequestException || ex is TaskCanceledException)) // continue on these
+          
+          // throw for exception that aren't the expected transient-possible ones
+          if (!(ex is HttpRequestException || ex is TaskCanceledException || ex is FlurlHttpTimeoutException)) 
             throw;
+          
           if (attempts > RequestAttempts)
             throw;
         }
