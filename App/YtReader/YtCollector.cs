@@ -226,7 +226,7 @@ with review_filtered as (
   select channel_id, channel_title
   from channel_review
   where platform = 'YouTube'
-  {(explicitChannels.None() ? "meets_review_criteria" : $"and channel_id in ({SqlList(explicitChannels)})")}--only explicit channel when provided
+  and {(explicitChannels.None() ? "meets_review_criteria" : $"channel_id in ({SqlList(explicitChannels)})")} --only explicit channel when provided
 )
    , stage_latest as (
   select v
