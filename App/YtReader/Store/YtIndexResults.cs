@@ -200,7 +200,7 @@ with s as (
        , n.channel_id
        , support
        , supplement
-       , v.views video_views
+       , v.views::int video_views
        , v.upload_date::date upload_date
        , e.error_type
        , timediff(seconds, '0'::time, v.duration) as duration_secs
