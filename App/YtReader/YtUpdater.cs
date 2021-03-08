@@ -18,28 +18,30 @@ namespace YtReader {
     public int Parallel { get; set; } = 4;
   }
 
-  public class UpdateOptions {
-    public bool                               FullLoad               { get; set; }
-    public string[]                           Actions                { get; set; }
-    public string[]                           Tables                 { get; set; }
-    public string[]                           StageTables            { get; set; }
-    public string[]                           Results                { get; set; }
-    public string[]                           Channels               { get; set; }
-    public bool                               DisableChannelDiscover { get; set; }
-    public bool                               UserScrapeInit         { get; set; }
-    public string                             UserScrapeTrial        { get; set; }
-    public (string index, string condition)[] SearchConditions       { get; set; }
-    public string[]                           SearchIndexes          { get; set; }
-    public string[]                           UserScrapeAccounts     { get; set; }
-    public string[]                           Indexes                { get; set; }
-    public CollectPart[]                      Parts                  { get; set; }
-    public string                             CollectVideosPath      { get; set; }
-    public string                             CollectVideosView      { get; set; }
-    public bool                               DataformDeps           { get; set; }
-    public StandardCollectPart[]              StandardParts          { get; set; }
-    public string[]                           Videos                 { get; set; }
-    public SearchMode                         SearchMode             { get; set; }
+  public record UpdateOptions {
+    public bool     FullLoad    { get; init; }
+    public string[] Actions     { get; init; }
+    public string[] Tables      { get; init; }
+    public string[] StageTables { get; init; }
+    public string[] Results     { get; init; }
+
+    public CollectOptions Collect { get; init; }
+    
+    public bool                               DisableChannelDiscover { get; init; }
+    public bool                               UserScrapeInit         { get; init; }
+    public string                             UserScrapeTrial        { get; init; }
+    public (string index, string condition)[] SearchConditions       { get; init; }
+    public string[]                           SearchIndexes          { get; init; }
+    public string[]                           UserScrapeAccounts     { get; init; }
+    public string[]                           Indexes                { get; init; }
+
+    public bool                  DataformDeps  { get; init; }
+    public StandardCollectPart[] StandardParts { get; init; }
+    public string[]              Videos        { get; init; }
+    public SearchMode            SearchMode    { get; init; }
   }
+
+
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
   ///   caption search. Many missing features (resume, better recording of tasks etc..). I intend to replace with dagster or
@@ -77,8 +79,8 @@ namespace YtReader {
       _index = index;
     }
 
-    Task Collect(UpdateOptions options, ILogger logger, CancellationToken cancel) =>
-      _collector.Collect(logger, options.Channels, options.Parts, options.CollectVideosPath, options.CollectVideosView, cancel);
+    Task Collect(CollectOptions options, ILogger logger, CancellationToken cancel) =>
+      _collector.Collect(logger, options, cancel);
 
     Task BcCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
       _bcCollect.Collect(options, logger, cancel);
@@ -122,10 +124,10 @@ namespace YtReader {
 
       var fullLoad = options.FullLoad;
 
-      var collectOptions = new SimpleCollectOptions {Parts = options.StandardParts, ExplicitChannels = options.Channels, ExplicitVideos = options.Videos};
+      var collectOptions = new SimpleCollectOptions {Parts = options.StandardParts, ExplicitChannels = options.Collect.LimitChannels, ExplicitVideos = options.Videos};
 
       var actionMethods = TaskGraph.FromMethods(
-        (l, c) => Collect(options, l, c),
+        (l, c) => Collect(options.Collect, l, c),
         (l, c) => BcCollect(collectOptions, l, c),
         (l, c) => RumbleCollect(collectOptions, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),

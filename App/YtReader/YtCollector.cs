@@ -71,6 +71,19 @@ namespace YtReader {
     public DateTime?         LastCaptionUpdate { get; set; }
     public DateTime?         LastRecUpdate     { get; set; }
   }
+  
+  public record CollectOptions {
+    public string[]                             LimitChannels    { get; init; }
+    public CollectPart[]                        Parts            { get; init; }
+    public (CollectFromType Type, string Value) CollectFrom      { get; init; }
+  }
+    
+  public enum CollectFromType {
+    None,
+    VideosPath,
+    VideosView,
+    ChannelsPath
+  }
 
   public class YtCollector {
     readonly YtClient                    Api;
@@ -95,19 +108,18 @@ namespace YtReader {
     YtCollectCfg RCfg => Cfg.Collect;
 
     [Pipe]
-    public async Task Collect(ILogger log, string[] limitChannels = null, CollectPart[] parts = null,
-      StringPath collectVideoPath = null, string collectVideoView = null, CancellationToken cancel = default) {
-      if (collectVideoPath != null || collectVideoView != null) {
-        await CollectFromVideoPathOrView(log, collectVideoPath, collectVideoView, parts, limitChannels, cancel);
+    public async Task Collect(ILogger log, CollectOptions options, CancellationToken cancel = default) {
+      if (options.CollectFrom.Type != CollectFromType.None) {
+        await CollectFromVideoPathOrView(options, log, cancel);
       }
       else {
-        var channels = await PlanAndUpdateChannelStats(parts, limitChannels, log, cancel);
+        var channels = await PlanAndUpdateChannelStats(options.Parts, options.LimitChannels, log, cancel);
         if (cancel.IsCancellationRequested)
           return;
         var (result, dur) = await channels
           .Randomize() // randomize to even the load
           .Process(PipeCtx,
-            b => ProcessChannels(b, parts, Inject<ILogger>(), Inject<CancellationToken>(), null), log: log, cancel: cancel)
+            b => ProcessChannels(b, options.Parts, Inject<ILogger>(), Inject<CancellationToken>(), null), log: log, cancel: cancel)
           .WithDuration();
 
         var allChannelResults = result.Where(r => r.OutState != null).SelectMany(r => r.OutState.Channels).ToArray();
@@ -119,22 +131,24 @@ namespace YtReader {
     public record DiscoverRow(string video_id, string channel_id, DateTime? extra_updated, bool caption_exists);
 
     /// <summary>Collect extra and recommendationa from an imported list of videos. Used for arbitrary lists.</summary>
-    async Task CollectFromVideoPathOrView(ILogger log, StringPath collectVideoPath, string videoView, CollectPart[] parts = null, string[] limitChannels = null,
-      CancellationToken cancel = default) {
-      parts ??= new[] {CollectPart.Channel, VidStats, VidExtra, Caption};
+    async Task CollectFromVideoPathOrView(CollectOptions options, ILogger log, CancellationToken cancel = default) {
+      var parts = options.Parts ?? new[] {CollectPart.Channel, VidStats, VidExtra, Caption};
+      log.Information("YtCollect - Special Collect from {CollectFrom} started", options.CollectFrom);
 
-      log.Information("Collecting video list from {ViewOrPath}", videoView ?? collectVideoPath);
+      var (type, value) = options.CollectFrom;
+      var select = type switch {
+        CollectFromType.ChannelsPath => $"select null video_id, $1::string channel_id from @public.yt_data/{value} (file_format => tsv)",
+        CollectFromType.VideosPath =>
+          $"select $1::string video_id, $2::string channel_id  from @public.yt_data/{value} (file_format => tsv)",
+        CollectFromType.VideosView => $"select video_id, channel_id from {value}",
+        _ => throw new NotImplementedException($"CollectFrom {options.CollectFrom} not supported")
+      };
 
       var sw = Stopwatch.StartNew();
       IReadOnlyCollection<DiscoverRow> videos;
       using (var db = await Sf.Open(log))
         videos = await db.Query<DiscoverRow>("missing video's", @$"
-with raw_vids as (
-{(videoView != null ?
-            $"select video_id, channel_id from {videoView}" :
-            $"select $1::string video_id, $2::string channel_id  from @public.yt_data/{collectVideoPath} (file_format => tsv)"
-          )}
-)
+with raw_vids as ({select})
 , s as (
   select v.video_id
        , coalesce(v.channel_id, e.channel_id) channel_id
@@ -144,7 +158,7 @@ with raw_vids as (
          left join video_extra e on v.video_id=e.video_id
 )
 select * from s
-{(limitChannels.None() ? "" : $"where channel_id in ({SqlList(limitChannels)})")}
+{(options.LimitChannels.None() ? "" : $"where channel_id in ({SqlList(options.LimitChannels)})")}
 ");
       var forVideoProcess = videos.Where(v => v.extra_updated == null && v.video_id != null).ToArray();
 

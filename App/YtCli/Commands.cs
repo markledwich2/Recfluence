@@ -248,12 +248,16 @@ namespace YtCli {
     public string SearchIndexes { get; set; }
 
     [CommandOption("search-mode")] public SearchMode SearchMode { get; set; }
+    
+    [CommandOption("collect-channels-path",
+      Description = @"path in the data blob container a file with newline separated channel id's. e.g. import/channels/full_12M_chan_info.txt.gz")]
+    public string CollectChannelsPath { get; set; }
 
     [CommandOption("collect-videos-path",
       Description = @"path in the data blob container a file with newline separated video id's. e.g. import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz")]
     public string CollectVideosPath { get; set; }
     
-    [CommandOption("collect-videos-view", Description = @"name of a view in the warehouse that has a column video_id with all the video's ot be collected")]
+    [CommandOption("collect-view", Description = @"name of a view in the warehouse that has a column video_id, channel_id videos or channels to collect data for")]
     public string CollectVideosView { get; set; }
 
     [CommandOption("dataform-deps", Description = "when specified, dataform will run with dependencies included", IsRequired = false)]
@@ -263,11 +267,20 @@ namespace YtCli {
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
       console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
+
+      (CollectFromType Type, string Value) collectFrom = default;
+      if (CollectVideosPath.HasValue()) collectFrom = (CollectFromType.VideosPath, CollectVideosPath);
+      if (CollectVideosView.HasValue()) collectFrom = (CollectFromType.VideosView, CollectVideosView);
+      if (CollectChannelsPath.HasValue()) collectFrom = (CollectFromType.ChannelsPath, CollectChannelsPath);
+      
       var options = new UpdateOptions {
         Actions = Actions?.UnJoin('|'),
-        Channels = Channels?.UnJoin('|'),
+        Collect = new() {
+          LimitChannels = Channels?.UnJoin('|'),
+          CollectFrom = collectFrom,
+          Parts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<CollectPart>(out _)).Select(p => p.ParseEnum<CollectPart>()).ToArray(),
+        },
         Videos = Videos?.UnJoin('|'),
-        Parts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<CollectPart>(out _)).Select(p => p.ParseEnum<CollectPart>()).ToArray(),
         StandardParts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<StandardCollectPart>(out _)).Select(p => p.ParseEnum<StandardCollectPart>()).ToArray(),
         Tables = Tables?.UnJoin('|'),
         StageTables = StageTables?.UnJoin('|'),
@@ -283,8 +296,7 @@ namespace YtCli {
         UserScrapeInit = UserScrapeInit,
         UserScrapeTrial = UserScrapeTrial,
         UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|'),
-        CollectVideosPath = CollectVideosPath,
-        CollectVideosView = CollectVideosView,
+
         DataformDeps = DataformDeps,
         SearchMode = SearchMode
       };
