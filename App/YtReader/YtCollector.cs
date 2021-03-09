@@ -30,8 +30,9 @@ using static YtReader.CollectPart;
 
 namespace YtReader {
   public static class RefreshHelper {
-    public static bool OlderThanOrNull(this DateTime? updated, TimeSpan age, DateTime? now = null) => 
+    public static bool OlderThanOrNull(this DateTime? updated, TimeSpan age, DateTime? now = null) =>
       updated == null || updated.Value.OlderThan(age, now);
+
     public static bool OlderThan(this DateTime updated, TimeSpan age, DateTime? now = null) => (now ?? DateTime.UtcNow) - updated > age;
     public static bool YoungerThan(this DateTime updated, TimeSpan age, DateTime? now = null) => !updated.OlderThan(age, now);
   }
@@ -71,13 +72,13 @@ namespace YtReader {
     public DateTime?         LastCaptionUpdate { get; set; }
     public DateTime?         LastRecUpdate     { get; set; }
   }
-  
+
   public record CollectOptions {
-    public string[]                             LimitChannels    { get; init; }
-    public CollectPart[]                        Parts            { get; init; }
-    public (CollectFromType Type, string Value) CollectFrom      { get; init; }
+    public string[]                             LimitChannels { get; init; }
+    public CollectPart[]                        Parts         { get; init; }
+    public (CollectFromType Type, string Value) CollectFrom   { get; init; }
   }
-    
+
   public enum CollectFromType {
     None,
     VideosPath,
@@ -144,9 +145,39 @@ namespace YtReader {
         _ => throw new NotImplementedException($"CollectFrom {options.CollectFrom} not supported")
       };
 
+      var refreshPeriod = 7.Days();
       var sw = Stopwatch.StartNew();
       IReadOnlyCollection<DiscoverRow> videos;
-      using (var db = await Sf.Open(log))
+      IReadOnlyCollection<string> channelsForUpdate;
+      using (var db = await Sf.Open(log)) {
+
+        // sometimes updates fail. When re-running this, we should refresh channels that are missing videos or have a portion of captions not attempted
+        channelsForUpdate = await db.Query<string>("stale or captionless channels", @$"
+with
+  raw_vids as ({select})
+  , chans as (
+      select * from (
+        select distinct coalesce(d.channel_id,v.channel_id) channel_id
+        from raw_vids d
+               left join video_latest v on v.video_id=d.video_id
+      ) c
+      {(options.LimitChannels.None() ? "" : $"where c.channel_id in ({SqlList(options.LimitChannels)})")}
+  )
+  , chan_refresh as (
+  select c.channel_id
+       , count(*) videos
+       , count_if(v.updated > :newer_than) recent_videos
+       , div0(count_if(s.video_id is null), videos) caption_not_attempted_pct
+  from chans c
+         left join video_latest v on v.channel_id=c.channel_id
+         left join caption_load s on s.video_id=v.video_id
+  group by 1
+  having caption_not_attempted_pct > 0.2 or recent_videos = 0
+)
+select channel_id from chan_refresh
+", new {newer_than = DateTime.UtcNow - refreshPeriod});
+
+        // videos sans extra update
         videos = await db.Query<DiscoverRow>("missing video's", @$"
 with raw_vids as ({select})
 , s as (
@@ -156,26 +187,30 @@ with raw_vids as ({select})
        , exists(select * from caption s where s.video_id=v.video_id) caption_exists
   from raw_vids v
          left join video_extra e on v.video_id=e.video_id
+  where v.video_id is not null and extra_updated is null
 )
 select * from s
 {(options.LimitChannels.None() ? "" : $"where channel_id in ({SqlList(options.LimitChannels)})")}
 ");
-      var forVideoProcess = videos.Where(v => v.extra_updated == null && v.video_id != null).ToArray();
+      }
 
       // process all videos
       var extras = parts.ShouldRun(VidExtra)
-        ? forVideoProcess.Length > 200 ? await videos
+        ? videos.Count > 200 ? await videos
           .Process(PipeCtx, b => ProcessVideos(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
           .Then(r => r.SelectMany(r => r.OutState))
-        : await ProcessVideos(forVideoProcess, log, cancel)
+        : await ProcessVideos(videos, log, cancel)
         : Array.Empty<VideoExtra>();
 
       // then process all unique channels we don't allready have recent data for
-      var channelIds = extras.Select(e => e.ChannelId).Concat(videos.Select(v => v.channel_id)).NotNull().Distinct().ToArray();
+      var channelIds = extras.Select(e => e.ChannelId)
+        .Concat(videos.Select(v => v.channel_id))
+        .Concat(channelsForUpdate)
+        .NotNull().Distinct().ToArray();
       if (channelIds.Any()) {
         var channels = await PlanAndUpdateChannelStats(parts, channelIds, log, cancel)
           .Then(c => c
-            .Where(c => c.LastVideoUpdate.OlderThanOrNull(12.Hours())) // filter to channels we haven't updated video's in recently
+            .Where(c => c.LastVideoUpdate.OlderThanOrNull(refreshPeriod)) // filter to channels we haven't updated video's in recently
             .Select(c => c with {Update = c.Update == Discover ? Standard : c.Update})); // revert to standard update for channels detected as discover
 
         DateTime? fromDate = new DateTime(2020, 01, 01);
@@ -186,7 +221,8 @@ select * from s
           .WithDuration();
       }
 
-      log.Information("YtCollect - ProcessVideos complete - {Videos} videos and {Channels} channels processed", videos.Count, channelIds.Length);
+      log.Information("YtCollect - ProcessVideos complete - {Videos} videos and {Channels} channels processed",
+        videos.Count, channelIds.Length);
     }
 
     [Pipe]
