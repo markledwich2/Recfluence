@@ -88,20 +88,22 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo,
       string incrementalCondition = null,
       CancellationToken cancel = default)
       where TEs : class, IHasUpdated where TDb : class {
-      var lastUpdate = await Es.MaxDateField<TEs>(m => m.Field(p => p.updated));
-      var sql = CreateSql(selectSql, mode, lastUpdate, conditions, incrementalCondition);
-
       var alias = Es.GetIndexFor<TEs>() ?? throw new InvalidOperationException("The ElasticClient must have default indexes created for types used");
       var existingIndex = (await Es.GetIndicesPointingToAliasAsync(alias)).FirstOrDefault();
+      
       var existingIndexCheck = (await Es.Indices.GetAsync(alias)).Indices.FirstOrDefault();
       if (existingIndexCheck.Key == alias) throw new InvalidOperationException($"Existing index with the alias {alias}. Not supported for update");
+      
       // full load into random indexes and use aliases. This is to avoid downtime on full loads
+      var lastUpdate = existingIndex != null ? await Es.MaxDateField<TEs>(m => m.Field(p => p.updated)) : null;
       var newIndex = mode == FullLoad || existingIndex == null || lastUpdate == null ? $"{alias}-{ShortGuid.Create(5).ToLower()}" : null;
 
       if (newIndex != null) {
         await Es.Indices.CreateAsync(newIndex, c => c.Map<TEs>(m => m.AutoMap()));
         log.Information("Search - Created new ElasticSearch Index {Index} ({Alias})", newIndex, alias);
       }
+      
+      var sql = CreateSql(selectSql, mode, lastUpdate, conditions, incrementalCondition);
 
       using var conn = await OpenConnection(log);
       var rows = Query<TDb>(sql, conn).Select(map);
@@ -149,9 +151,9 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo,
       channel_title = c.CHANNEL_TITLE,
       age = c.AGE,
       avg_minutes = c.AVG_MINUTES,
-      channel_lifetime_daily_views = c.CHANNEL_LIFETIME_DAILY_VIEWS,
-      channel_lifetime_daily_views_relevant = c.CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT,
-      channel_video_views = c.CHANNEL_VIDEO_VIEWS,
+      channel_lifetime_daily_views = (decimal?)c.CHANNEL_LIFETIME_DAILY_VIEWS,
+      channel_lifetime_daily_views_relevant = (decimal?)c.CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT,
+      channel_video_views = (decimal?)c.CHANNEL_VIDEO_VIEWS,
       channel_views = c.CHANNEL_VIEWS,
       country = c.COUNTRY,
       day_range = c.DAY_RANGE,
