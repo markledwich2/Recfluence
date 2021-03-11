@@ -82,7 +82,8 @@ namespace YtReader.Db {
           $"create or replace file format {db}.{schema}.json type = 'json'",
           $"create or replace file format {db}.{schema}.json_zst type = 'json' compression = ZSTD",
           $"create or replace file format {db}.{schema}.tsv type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('')",
-          $"create or replace file format {db}.{schema}.tsv_header type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('') skip_header=1 field_optionally_enclosed_by ='\"'"
+          $"create or replace file format {db}.{schema}.tsv_header type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('') skip_header=1 field_optionally_enclosed_by ='\"'",
+          $"create or replace file format {db}.{schema}.tsv_header_no_enclose type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('') skip_header=1"
         ));
 
       foreach (var s in scripts)
