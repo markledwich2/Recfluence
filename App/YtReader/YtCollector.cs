@@ -110,6 +110,7 @@ namespace YtReader {
 
     [Pipe]
     public async Task Collect(ILogger log, CollectOptions options, CancellationToken cancel = default) {
+      options ??= new();
       if (options.CollectFrom.Type != CollectFromType.None) {
         await CollectFromVideoPathOrView(options, log, cancel);
       }

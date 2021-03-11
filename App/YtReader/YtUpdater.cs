@@ -117,29 +117,29 @@ namespace YtReader {
       _userScrape.Run(Log, init, trial, accounts, cancel);
 
     [Pipe]
-    public async Task Update(UpdateOptions p = null, CancellationToken cancel = default) {
-      p ??= new();
+    public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
+      options ??= new();
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
 
-      var fullLoad = p.FullLoad;
+      var fullLoad = options.FullLoad;
 
-      var collectOptions = new SimpleCollectOptions {Parts = p.StandardParts, ExplicitChannels = p.Collect?.LimitChannels, ExplicitVideos = p.Videos};
+      var collectOptions = new SimpleCollectOptions {Parts = options.StandardParts, ExplicitChannels = options.Collect?.LimitChannels, ExplicitVideos = options.Videos};
 
       var actionMethods = TaskGraph.FromMethods(
-        (l, c) => Collect(p.Collect, l, c),
+        (l, c) => Collect(options.Collect, l, c),
         (l, c) => BcCollect(collectOptions, l, c),
         (l, c) => RumbleCollect(collectOptions, l, c),
-        (l, c) => Stage(fullLoad, p.StageTables, l),
-        (l, c) => Search(p.SearchMode, p.SearchIndexes, p.SearchConditions, l, c),
-        (l, c) => Result(p.Results, l, c),
-        (l, c) => Index(p.Indexes, l, c),
+        (l, c) => Stage(fullLoad, options.StageTables, l),
+        (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
+        (l, c) => Result(options.Results, l, c),
+        (l, c) => Index(options.Indexes, l, c),
         //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
-        (l, c) => Dataform(fullLoad, p.Tables, p.DataformDeps, l, c),
+        (l, c) => Dataform(fullLoad, options.Tables, options.DataformDeps, l, c),
         (l, c) => Backup(l)
       );
 
-      var actions = p.Actions;
+      var actions = options.Actions;
       if (actions?.Any() == true) {
         var missing = actions.Where(a => actionMethods[a] == null).ToArray();
         if (missing.Any())
