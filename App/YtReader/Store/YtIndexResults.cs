@@ -198,15 +198,15 @@ with s as (
        , n.video_id
        , n.video_title
        , n.channel_id
-       , support
-       , supplement
+       , n.support
+       , n.supplement
        , v.views::int video_views
        , case
-           when supplement='manual' then 1
-           when support='support' then iff(v.upload_date<'2020-12-09 ',0.84/0.96,0.68/0.97)
-           when support='dispute' then iff(v.upload_date<'2020-12-09 ',0.84/0.94,0.80/0.97)
+           when n.supplement='manual' then 1
+           when n.support='support' then iff(v.upload_date<'2020-12-09 ',0.84/0.96,0.68/0.97)
+           when n.support='dispute' then iff(v.upload_date<'2020-12-09 ',0.84/0.94,0.80/0.97)
            else 1
-         end*video_views video_views_adjusted
+         end * v.views::int as video_views_adjusted
        , v.upload_date::date upload_date
        , ve.error_type
        , timediff(seconds,'0'::time,v.duration) duration_secs

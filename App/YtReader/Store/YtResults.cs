@@ -138,8 +138,8 @@ order by channel_views desc
           new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_tag = UserScrapeCfg.SeedsPerTag}),
           new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos = UserScrapeCfg.Tests}),
 
-          new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
-            parameters: new {from_date = "2020-11-03", to_date = "2021-03-12"}),
+          /*new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
+            parameters: new {from_date = "2020-11-03", to_date = "2021-03-12"}),*/
 
           new ResQuery("us_rec_stats", @"
 with r1 as (
