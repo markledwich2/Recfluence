@@ -201,13 +201,21 @@ with s as (
        , support
        , supplement
        , v.views::int video_views
+       , case
+           when supplement='manual' then 1
+           when support='support' then iff(v.upload_date<'2020-12-09 ',0.84/0.96,0.68/0.97)
+           when support='dispute' then iff(v.upload_date<'2020-12-09 ',0.84/0.94,0.80/0.97)
+           else 1
+         end*video_views video_views_adjusted
        , v.upload_date::date upload_date
-       , e.error_type
-       , timediff(seconds, '0'::time, v.duration) as duration_secs
+       , ve.error_type
+       , timediff(seconds,'0'::time,v.duration) duration_secs
        , n.captions
+       , ve.last_seen
   from video_narrative n
          left join video_latest v on n.video_id=v.video_id
          left join video_extra e on e.video_id=v.video_id
+         left join video_error ve on ve.video_id=n.video_id
 )
 select *
 from s
