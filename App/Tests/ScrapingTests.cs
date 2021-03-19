@@ -19,6 +19,7 @@ namespace Tests {
       using var ctx = await TextCtx();
       var chrome = ctx.Resolve<ChromeScraper>();
       var vids = new[] {
+        
         "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
         "-ryPLVEExA0", // private 
         /*"Ms9WOSXU5tY", "n_vzBGB3F_Y",
@@ -33,7 +34,8 @@ namespace Tests {
       using var ctx = await TextCtx();
       var ws = ctx.Scope.Resolve<YtWeb>();
       var extra = await ws.GetRecsAndExtra(new[] {
-        "XztR0CnVKNo", // normal
+        "V8kxdw0UASE", // should work. looks like ti was errored and then re-instated
+        //"XztR0CnVKNo", // normal
         // "JPiiySjShng", //nbc suspected parsing problem
         //"OijWK4Y6puI", //unlisted
         //"-sc6JCu5rZk",

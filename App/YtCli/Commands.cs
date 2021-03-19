@@ -207,8 +207,11 @@ namespace YtCli {
     [CommandOption('f', Description = "will force a refresh of collect, and full load of staging files + warehouse. Does not impact search")]
     public bool FullLoad { get; set; }
 
-    [CommandOption('t', Description = "| delimited list of tables to restrict updates to")]
-    public string Tables { get; set; }
+    [CommandOption('w', Description = "| delimited list of warehouse tables to restrict updates to")]
+    public string WarehouseTables { get; set; }
+
+    [CommandOption('t', Description = "| delimited list of tags to restrict updates to Currently applies to Index updates, but will be all.")]
+    public string Tags { get; set; }
 
     [CommandOption('s', Description = "| delimited list of staging tables to restrict updates to")]
     public string StageTables { get; set; }
@@ -282,7 +285,7 @@ namespace YtCli {
         },
         Videos = Videos?.UnJoin('|'),
         StandardParts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<StandardCollectPart>(out _)).Select(p => p.ParseEnum<StandardCollectPart>()).ToArray(),
-        Tables = Tables?.UnJoin('|'),
+        WarehouseTables = WarehouseTables?.UnJoin('|'),
         StageTables = StageTables?.UnJoin('|'),
         Results = Results?.UnJoin('|'),
         Indexes = Indexes?.UnJoin('|'),
@@ -296,7 +299,7 @@ namespace YtCli {
         UserScrapeInit = UserScrapeInit,
         UserScrapeTrial = UserScrapeTrial,
         UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|'),
-
+        Tags = Tags?.UnJoin('|'),
         DataformDeps = DataformDeps,
         SearchMode = SearchMode
       };

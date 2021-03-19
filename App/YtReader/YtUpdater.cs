@@ -21,7 +21,7 @@ namespace YtReader {
   public record UpdateOptions {
     public bool     FullLoad    { get; init; }
     public string[] Actions     { get; init; }
-    public string[] Tables      { get; init; }
+    public string[] WarehouseTables      { get; init; }
     public string[] StageTables { get; init; }
     public string[] Results     { get; init; }
 
@@ -39,6 +39,7 @@ namespace YtReader {
     public StandardCollectPart[] StandardParts { get; init; }
     public string[]              Videos        { get; init; }
     public SearchMode            SearchMode    { get; init; }
+    public string[]              Tags     { get; init; }
   }
 
 
@@ -105,8 +106,8 @@ namespace YtReader {
       _results.SaveBlobResults(logger, results, cancel);
 
     [GraphTask(nameof(Dataform))]
-    Task Index(string[] tables, ILogger logger, CancellationToken cancel) =>
-      _index.Run(tables, logger, cancel);
+    Task Index(string[] tables, string[] tags, ILogger logger, CancellationToken cancel) =>
+      _index.Run(tables, tags, logger, cancel);
 
     [GraphTask(nameof(Stage))]
     Task Backup(ILogger logger) =>
@@ -133,9 +134,9 @@ namespace YtReader {
         (l, c) => Stage(fullLoad, options.StageTables, l),
         (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),
-        (l, c) => Index(options.Indexes, l, c),
+        (l, c) => Index(options.Indexes, options.Tags, l, c),
         //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
-        (l, c) => Dataform(fullLoad, options.Tables, options.DataformDeps, l, c),
+        (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c),
         (l, c) => Backup(l)
       );
 
