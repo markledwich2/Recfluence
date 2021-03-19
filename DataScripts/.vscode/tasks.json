@@ -1,0 +1,31 @@
+{
+    "tasks": [
+        {
+            "type": "docker-build",
+            "label": "docker-build",
+            "platform": "python",
+            "dockerBuild": {
+                "tag": "ytnetworks.azurecr.io/userscrape:latest",
+                "dockerfile": "${workspaceFolder}/Dockerfile",
+                "context": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "run docker -it",
+            "type": "shell",
+            "command": "docker",
+            "args": [
+                "run",
+                "-it",
+                "--env-file",
+                ".env",
+                "ytnetworks.azurecr.io/userscrape:latest"
+            ],
+            "problemMatcher": []
+        }
+    ],
+}

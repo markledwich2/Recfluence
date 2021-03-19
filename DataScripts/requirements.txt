@@ -1,0 +1,11 @@
+python-dotenv
+dataclasses
+dataclasses_json
+dataclasses_jsonschema
+pandas
+seqlog
+spacy
+setuptools
+wheel
+snowflake-connector-python
+aiohttp
