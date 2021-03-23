@@ -30,6 +30,11 @@ class SeqCfg:
 
 
 @dataclass
+class DataScriptsCfg:
+    spacyBatchSize: int = 800
+
+
+@dataclass
 class RunState(DataClassJsonMixin):
     videoPaths: Optional[List[str]] = None
 
@@ -39,7 +44,8 @@ class Cfg(DataClassJsonMixin):
     snowflake: SnowflakeCfg
     storage: StoreCfg
     seq: SeqCfg
-    state: RunState = None
+    dataScripts: DataScriptsCfg = DataScriptsCfg()
+    state: RunState = RunState()
     env: Optional[str] = None
     branchEnv: Optional[str] = None
     machine: Optional[str] = None

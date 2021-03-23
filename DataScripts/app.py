@@ -62,9 +62,6 @@ class VideoEntity:
     updated: DateTime
 
 
-BATCH = 2000
-
-
 def get_ents(pipe_res) -> List[Entity]:
     return list(map(lambda r: list([Entity(ent.text.strip(), ent.label_) for ent in r.ents]), pipe_res))
 
@@ -135,7 +132,7 @@ select * from s
 
             videoCount = 0
             while True:
-                raw_rows = cur.fetchmany(BATCH)
+                raw_rows = cur.fetchmany(cfg.dataScripts.spacyBatchSize)
                 if(len(raw_rows) == 0):
                     break
                 videoCount = videoCount + len(raw_rows)

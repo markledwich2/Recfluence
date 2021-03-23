@@ -20,7 +20,7 @@ using YtReader.Store;
 
 namespace YtReader {
   
-  public record DataScriptsCfg(int Containers = 8, int BatchSize= 100_000, int Cores = 4, int Mem = 4);
+  public record DataScriptsCfg(int Containers = 20, int VideosPerFile= 100_000, int Cores = 4, int Mem = 12, int SpacyBatchSize = 800);
   public record DataScriptRunState(string[] VideoPaths);
   
   record EntityVideoRow(string video_id);
@@ -34,6 +34,11 @@ namespace YtReader {
         ("env", RootCfg.Env),
         ("branch_env", Version.Prerelease)
       };
+      
+      var existingFiles = runId != null;
+      runId ??= $"{DateTime.UtcNow.FileSafeTimestamp()}.{ShortGuid.Create(5)}";
+      
+      log.Information("DataScripts - runId {runId} ({existing})", runId, existingFiles ? "existing" : "new");
 
       async Task<List<StringPath>> LoadNewEntityFiles() {
         using var db = await Db.Open(log);
@@ -41,7 +46,7 @@ namespace YtReader {
   from video_latest v
   where not exists(select * from video_entity e where e.video_id = v.video_id)
   order by video_id")
-          .Batch(ScriptsCfg.BatchSize)
+          .Batch(ScriptsCfg.VideosPerFile)
           .BlockTrans(async (vids, i) => {
             var path = RunPath(runId).Add($"videos.{i:00000}.jsonl.gz");
             await store.Save(path, await vids.ToJsonlGzStream());
@@ -49,15 +54,13 @@ namespace YtReader {
           }, AppCfg.DefaultParallel, cancel: cancel).ToListAsync();
       }
 
-      var existingFiles = runId != null;
-      runId ??= $"{DateTime.UtcNow.FileSafeTimestamp()}.{ShortGuid.Create(5)}";
       var filesToProcess = existingFiles
         ? await store.List(RunPath(runId), allDirectories: false, log).SelectMany().Select(f => f.Path).ToListAsync()
         : await LoadNewEntityFiles();
 
       await filesToProcess.BatchFixed(ScriptsCfg.Containers).BlockAction(async (paths,i) => {
         var containerCfg = ContainerCfg with {Cores = ScriptsCfg.Cores, Mem = ScriptsCfg.Mem, ImageName = "datascripts"};
-        await containers.RunContainer($"{containerCfg.ImageName}-{DateTime.UtcNow:yyyy-MM-dd}-{i:00}-{ShortGuid.Create(3).Replace("_", "-")}".ToLowerInvariant(), 
+        await containers.RunContainer($"{containerCfg.ImageName}-{DateTime.UtcNow:yyyy-MM-dd-hh-mm}-{i:00}-{ShortGuid.Create(3).Replace("_", "-")}".ToLowerInvariant(), 
           containerCfg.FullContainerImageName("latest"), 
           env.Concat(("run_state", new DataScriptRunState(paths.Select(p => p.ToString()).ToArray()).ToJson())).ToArray(),
           returnOnStart: false, 

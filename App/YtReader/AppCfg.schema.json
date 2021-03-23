@@ -1,5 +1,16 @@
 {
   "definitions": {
+    "AirtableCfg": {
+      "type": "object",
+      "properties": {
+        "apiKey": {
+          "type": "string"
+        },
+        "baseId": {
+          "type": "string"
+        }
+      }
+    },
     "AzureCleanerCfg": {
       "type": "object",
       "properties": {
@@ -64,6 +75,26 @@
         }
       }
     },
+    "DataScriptsCfg": {
+      "type": "object",
+      "properties": {
+        "containers": {
+          "type": "integer"
+        },
+        "videosPerFile": {
+          "type": "integer"
+        },
+        "cores": {
+          "type": "integer"
+        },
+        "mem": {
+          "type": "integer"
+        },
+        "spacyBatchSize": {
+          "type": "integer"
+        }
+      }
+    },
     "ElasticCfg": {
       "type": "object",
       "properties": {
@@ -74,6 +105,15 @@
           "type": "string"
         },
         "indexPrefix": {
+          "type": "string"
+        }
+      }
+    },
+    "GoogleCfg": {
+      "type": "object",
+      "properties": {
+        "creds": {},
+        "test": {
           "type": "string"
         }
       }
@@ -95,6 +135,14 @@
         },
         "container": {
           "$ref": "#/definitions/ContainerCfg"
+        }
+      }
+    },
+    "NarrativesCfg": {
+      "type": "object",
+      "properties": {
+        "covidAirtable": {
+          "type": "string"
         }
       }
     },
@@ -428,6 +476,9 @@
         "refreshRecsWithin": {
           "type": "string"
         },
+        "refreshChannelDetailDebounce": {
+          "type": "string"
+        },
         "refreshRecsMin": {
           "type": "integer"
         },
@@ -472,6 +523,15 @@
         },
         "minChannelViews": {
           "type": "integer"
+        },
+        "channelBatchSize": {
+          "type": "integer"
+        },
+        "maxChannelDailyVideos": {
+          "type": "integer"
+        },
+        "maxChannelFullVideos": {
+          "type": "integer"
         }
       }
     },
@@ -503,7 +563,7 @@
         "Fatal"
       ]
     },
-    "env": {
+    "envCfg": {
       "$ref": "#/definitions/BranchEnvCfg"
     },
     "collect": {
@@ -568,6 +628,18 @@
     },
     "rumble": {
       "$ref": "#/definitions/RumbleCfg"
+    },
+    "google": {
+      "$ref": "#/definitions/GoogleCfg"
+    },
+    "airtable": {
+      "$ref": "#/definitions/AirtableCfg"
+    },
+    "narratives": {
+      "$ref": "#/definitions/NarrativesCfg"
+    },
+    "dataScripts": {
+      "$ref": "#/definitions/DataScriptsCfg"
     }
   }
 }
