@@ -68,7 +68,7 @@ class VideoEntity:
     updated: DateTime
 
 
-BATCH = 10000
+BATCH = 2000
 
 
 def get_ents(pipe_res) -> List[Entity]:
@@ -124,6 +124,8 @@ select * from s
         log.info('video_entities - getting data for this video batch: {sql}', sql=sql)
         cur.execute(sql)
 
+        log.info('video_entities - processing entities')
+
         def entities(rows: List[T], getVal: Callable[[T], str]) -> Iterable[Iterable[Entity]]:
             res = list(space_lg.pipe([getVal(r) or "" for r in rows], n_process=4))
             return map(lambda r: [Entity(ent.text.strip(), ent.label_) for ent in r.ents if ent.label_ not in EXCLUDE_LABELS], res)
@@ -157,7 +159,7 @@ select * from s
             with gzip.open(localFile, 'wb') as f:
                 jsonl.dump(res_rows, f, cls=jsonl.JsonlEncoder)
             blob.save_file(localFile, PurePath(f'db2/video_entities/{fileName}'))
-            log.info('video_entities - loaded {rows} video entities into {fileName}', rows=len(res_rows), fileName=fileName)
+            log.info('video_entities - saved {rows} video entities into {fileName}', rows=len(res_rows), fileName=fileName)
 
     finally:
         cur.close()
