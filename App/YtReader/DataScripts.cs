@@ -19,6 +19,9 @@ using YtReader.Store;
 // ReSharper disable InconsistentNaming
 
 namespace YtReader {
+  
+  public record DataScriptsCfg(int Containers = 2, int BatchSize= 100_000);
+  
   record EntityVideoRow(string video_id);
 
   public record DataScripts(DataScriptsCfg ScriptsCfg, BlobStores Stores, SnowflakeConnectionProvider Db, AzureContainers containers, SemVersion Version,
@@ -36,11 +39,10 @@ namespace YtReader {
         return await db.QueryBlocking<EntityVideoRow>("new entities", @"select video_id
   from video_latest v
   where not exists(select * from video_entity e where e.video_id = v.video_id)
-  order by video_id
-  limit 100000") // TODO REMOVE LIMIT
+  order by video_id")
           .Batch(ScriptsCfg.BatchSize)
           .BlockTrans(async (vids, i) => {
-            var path = RunPath(runId).Add($"videos.{i}.jsonl.gz");
+            var path = RunPath(runId).Add($"videos.{i:00000}.jsonl.gz");
             await store.Save(path, await vids.ToJsonlGzStream());
             return path;
           }, parallel: 4, cancel: cancel).ToListAsync();
@@ -52,11 +54,13 @@ namespace YtReader {
         ? await store.List(RunPath(runId), allDirectories: false, log).SelectMany().Select(f => f.Path).ToListAsync()
         : await LoadNewEntityFiles();
 
-
-      await filesToProcess.BlockAction(async path => {
-        const string containerName = "datascripts";
-        await containers.RunContainer(containerName, containerName, env, new[] {"-p", path.ToString()},
-          returnOnStart: false, cfg: ContainerCfg with {Cores = 4, Mem = 4}, log: log, cancel: cancel);
+      await filesToProcess.BlockAction(async (path,i) => {
+        var containerCfg = ContainerCfg with {Cores = 4, Mem = 4, ImageName = "datascripts"};
+        await containers.RunContainer($"{containerCfg.ImageName}-{i}-{ShortGuid.Create(3)}".ToLowerInvariant(), 
+          containerCfg.FullContainerImageName("latest"), 
+          env.Concat(("video_path", path.ToString())).ToArray(),
+          returnOnStart: false, 
+          cfg: containerCfg, log: log, cancel: cancel);
         await store.Delete(path);
       }, ScriptsCfg.Containers, cancel: cancel);
     }

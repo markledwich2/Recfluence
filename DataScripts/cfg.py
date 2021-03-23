@@ -1,28 +1,21 @@
 
 from typing import Optional
-from dataclasses import dataclass, field
-from dataclasses_jsonschema import JsonSchemaMixin
-from dataclasses_jsonschema.type_defs import JsonSchemaMeta
+from dataclasses import dataclass
+from dataclasses_json.api import DataClassJsonMixin
 from dotenv import load_dotenv
 import os
 import aiohttp
 
 
 @dataclass
-class StoreCfg(JsonSchemaMixin):
-    dataStorageCs: str = field(metadata=JsonSchemaMeta(
-        default="DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=xxx;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;",
-        description="connection string to the azure blob storage account storing the input, and output from scraping.",
-        examples=["DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=xxx;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"],
-        required=False
-    ))
-    container: str = field(default='userscrape', metadata=JsonSchemaMeta(description="the name of the container to store data"))
+class StoreCfg:
+    dataStorageCs: str
+    container: str
 
 
 @dataclass
-class SnowflakeCfg(JsonSchemaMixin):
-    '''Snowflake configuration'''
-    creds: str = field(metadata={"description": "email of the user e.g. mra.userscrape@gmail.com"})
+class SnowflakeCfg:
+    creds: str
     host: str
     warehouse: str
     db: str
@@ -31,24 +24,22 @@ class SnowflakeCfg(JsonSchemaMixin):
 
 
 @dataclass
-class SeqCfg(JsonSchemaMixin):
-    '''Seq logging config'''
+class SeqCfg:
     seqUrl: str
 
 
 @dataclass
-class Cfg(JsonSchemaMixin):
-    '''Subset of the recfluence cfg'''
+class Cfg(DataClassJsonMixin):
     snowflake: SnowflakeCfg
-    env: Optional[str] = field(metadata=JsonSchemaMeta(description="prod/dev", required=False))
-    branchEnv: Optional[str] = field(metadata=JsonSchemaMeta(description="suffix to add to environment to avoid using production", required=False))
     storage: StoreCfg
     seq: SeqCfg
+    videoPath: Optional[str] = None
+    env: Optional[str] = None
+    branchEnv: Optional[str] = None
 
 
 async def load_cfg() -> Cfg:
-    '''loads application configuration form a blob from the cfg_sas environment variable
-    '''
+    '''loads application configuration form a blob from the cfg_sas environment variable'''
     load_dotenv()
     cfg_sas = os.getenv('cfg_sas')
     cfg: Cfg
@@ -59,6 +50,7 @@ async def load_cfg() -> Cfg:
 
     cfg.env = os.getenv('env') or cfg.env
     cfg.branchEnv = os.getenv('branch_env') or cfg.branchEnv
+    cfg.runId = os.getenv('run_id')
 
     if(cfg.branchEnv != None):
         cfg.storage.container = f'{cfg.storage.container }-{cfg.branchEnv}'

@@ -1,30 +1,24 @@
 
-import dataclasses
 from datetime import datetime, timezone
 import gzip
 from itertools import chain
 from dataclasses_json.api import DataClassJsonMixin
-from dataclasses_jsonschema import JsonSchemaMixin
 from dataclasses_json import dataclass_json
 from marshmallow.fields import DateTime
 from log import configure_log
 import jsonl
 from blobstore import BlobStore
-from os import pathconf
-from pathlib import Path, PurePath, PurePosixPath
-from typing import Any, Callable, Dict, Generic, Iterable, List, Optional, Tuple, TypeVar
+from pathlib import Path, PurePath
+from typing import Callable, Iterable, List, Optional, TypeVar
 from snowflake.connector.cursor import SnowflakeCursor
 import spacy
-from ner import ner_run
-from sf import sf_connect, sf_test
+from sf import sf_connect
 from cfg import load_cfg
 import asyncio
 from dataclasses import dataclass
-import ndjson
 import tempfile
 import time
 import secrets
-import argparse
 
 
 @dataclass
@@ -80,7 +74,8 @@ T = TypeVar('T')
 EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'DATE']
 
 
-async def video_entities(path: str):
+async def video_entities():
+    '''loads video named entities from a list of video id's in a jsonl.gz file'''
     cfg = await load_cfg()
     log = configure_log(cfg.seq.seqUrl, branchEnv=cfg.branchEnv)
     log.info('video_entities - started')
@@ -97,7 +92,7 @@ async def video_entities(path: str):
 
 with
   load as (
-    {f'select $1:video_id::string video_id from @public.yt_data/{path}' if path 
+    {f'select $1:video_id::string video_id from @public.yt_data/{cfg.videoPath}' if cfg.videoPath 
     else 'select video_id from video_latest limit 100'}
 )
   , vids as (
@@ -165,11 +160,4 @@ select * from s
         cur.close()
         db.close()
 
-
-parser = argparse.ArgumentParser(description='Run python scripts')
-parser.add_argument("--path", "-p",
-                    help="A path within the data container to a jsonl file with videoId's",
-                    default=None)
-args = parser.parse_args()
-
-asyncio.run(video_entities(args.path))
+asyncio.run(video_entities())

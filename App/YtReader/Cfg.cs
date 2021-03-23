@@ -67,8 +67,6 @@ namespace YtReader {
     [Required] public NarrativesCfg   Narratives            { get; set; } = new();
     [Required] public DataScriptsCfg  DataScripts            { get; set; } = new();
   }
-
-  public record DataScriptsCfg(int Containers = 1, int BatchSize= 10_000);
   
   public class GoogleCfg {
     [SkipRecursiveValidation] public JObject Creds { get; set; }

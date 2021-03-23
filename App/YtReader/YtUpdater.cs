@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using SysExtensions;
@@ -20,14 +19,14 @@ namespace YtReader {
   }
 
   public record UpdateOptions {
-    public bool     FullLoad    { get; init; }
-    public string[] Actions     { get; init; }
-    public string[] WarehouseTables      { get; init; }
-    public string[] StageTables { get; init; }
-    public string[] Results     { get; init; }
+    public bool     FullLoad        { get; init; }
+    public string[] Actions         { get; init; }
+    public string[] WarehouseTables { get; init; }
+    public string[] StageTables     { get; init; }
+    public string[] Results         { get; init; }
 
     public CollectOptions Collect { get; init; }
-    
+
     public bool                               DisableChannelDiscover { get; init; }
     public bool                               UserScrapeInit         { get; init; }
     public string                             UserScrapeTrial        { get; init; }
@@ -36,14 +35,13 @@ namespace YtReader {
     public string[]                           UserScrapeAccounts     { get; init; }
     public string[]                           Indexes                { get; init; }
 
-    public bool                  DataformDeps  { get; init; }
-    public StandardCollectPart[] StandardParts { get; init; }
-    public string[]              Videos        { get; init; }
-    public SearchMode            SearchMode    { get; init; }
-    public string[]              Tags     { get; init; }
+    public bool                  DataformDeps     { get; init; }
+    public StandardCollectPart[] StandardParts    { get; init; }
+    public string[]              Videos           { get; init; }
+    public SearchMode            SearchMode       { get; init; }
+    public string[]              Tags             { get; init; }
+    public string                DataScriptsRunId { get; init; }
   }
-
-
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
   ///   caption search. Many missing features (resume, better recording of tasks etc..). I intend to replace with dagster or
@@ -62,7 +60,7 @@ namespace YtReader {
     readonly YtIndexResults _index;
     readonly BcCollect      _bcCollect;
     readonly RumbleCollect  _rumbleCollect;
-    readonly DataScripts             _dataScripts;
+    readonly DataScripts    _dataScripts;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, Stage warehouse, YtSearch search,
       YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtIndexResults index, BcCollect bcCollect,
@@ -111,7 +109,7 @@ namespace YtReader {
     [GraphTask(nameof(Dataform))]
     Task Index(string[] tables, string[] tags, ILogger logger, CancellationToken cancel) =>
       _index.Run(tables, tags, logger, cancel);
-    
+
     [GraphTask(nameof(Dataform))]
     Task DataScripts(ILogger logger, CancellationToken cancel, string runId = null) =>
       _dataScripts.Run(logger, cancel, runId);
@@ -132,7 +130,8 @@ namespace YtReader {
 
       var fullLoad = options.FullLoad;
 
-      var collectOptions = new SimpleCollectOptions {Parts = options.StandardParts, ExplicitChannels = options.Collect?.LimitChannels, ExplicitVideos = options.Videos};
+      var collectOptions = new SimpleCollectOptions
+        {Parts = options.StandardParts, ExplicitChannels = options.Collect?.LimitChannels, ExplicitVideos = options.Videos};
 
       var actionMethods = TaskGraph.FromMethods(
         (l, c) => Collect(options.Collect, l, c),
@@ -144,7 +143,7 @@ namespace YtReader {
         (l, c) => Index(options.Indexes, options.Tags, l, c),
         //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
         (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c),
-        (l, c) => DataScripts(l, c, null),
+        (l, c) => DataScripts(l, c, options.DataScriptsRunId),
         (l, c) => Backup(l)
       );
 
@@ -176,6 +175,7 @@ namespace YtReader {
 
   public static class YtUpdaterEx {
     public static bool ShouldRunAny<T>(this T[] parts, params T[] toRun) where T : struct, Enum => toRun.Any(parts.ShouldRun);
+
     public static bool ShouldRun<T>(this T[] parts, T part) where T : struct, Enum {
       var name = Enum.GetName(part) ?? part.ToString();
       var ignore = part.GetType().GetField(name)?.GetCustomAttribute<CollectPartAttribute>()?.Explicit;
