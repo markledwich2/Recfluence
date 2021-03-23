@@ -61,8 +61,12 @@ namespace SysExtensions.Collections {
           excluded.Add(item);
       return (included, excluded);
     }
+    
+    /// <summary>Batches into x chunks</summary>
+    public static IEnumerable<IReadOnlyCollection<T>> BatchFixed<T>(this IReadOnlyCollection<T> items, int maxBatches) =>
+      items.Batch(items.Count / maxBatches);
 
-    /// <summary>Batches items into batchsize or maxBatches batches, whatever has the last batches</summary>
+    /// <summary>Batches items into batchsize or maxBatches batches, whatever has the least batches</summary>
     public static IEnumerable<IReadOnlyCollection<T>> Batch<T>(this IReadOnlyCollection<T> items, int batchSize, int maxBatches) =>
       items.Batch(Math.Max(items.Count / maxBatches, batchSize));
 
@@ -78,6 +82,9 @@ namespace SysExtensions.Collections {
         yield return b;
     }
 
+    /// <summary>
+    /// Batch into size chunks lazily
+    /// </summary>
     public static async IAsyncEnumerable<T[]> Batch<T>(this IAsyncEnumerable<T> items, int size) {
       var batch = new List<T>();
       await foreach (var item in items) {

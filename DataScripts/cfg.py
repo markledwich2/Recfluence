@@ -1,5 +1,5 @@
 
-from typing import Optional
+from typing import List, Optional
 from dataclasses import dataclass
 from dataclasses_json.api import DataClassJsonMixin
 from dotenv import load_dotenv
@@ -29,11 +29,16 @@ class SeqCfg:
 
 
 @dataclass
+class RunState(DataClassJsonMixin):
+    videoPaths: Optional[List[str]] = None
+
+
+@dataclass
 class Cfg(DataClassJsonMixin):
     snowflake: SnowflakeCfg
     storage: StoreCfg
     seq: SeqCfg
-    videoPath: Optional[str] = None
+    state: RunState = None
     env: Optional[str] = None
     branchEnv: Optional[str] = None
 
@@ -50,7 +55,9 @@ async def load_cfg() -> Cfg:
 
     cfg.env = os.getenv('env') or cfg.env
     cfg.branchEnv = os.getenv('branch_env') or cfg.branchEnv
-    cfg.videoPath = os.getenv('video_path')
+
+    runStateJson = os.getenv('run_state')
+    cfg.state = RunState.from_json(runStateJson) if runStateJson else RunState()
 
     if(cfg.branchEnv != None):
         cfg.storage.container = f'{cfg.storage.container }-{cfg.branchEnv}'

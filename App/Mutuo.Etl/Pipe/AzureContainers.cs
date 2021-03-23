@@ -140,6 +140,7 @@ namespace Mutuo.Etl.Pipe {
         returnOnStart, log: log, cancel: cancel);
       await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
       log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());
+      await DeleteContainer(groupName, log);
     }
 
     public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {

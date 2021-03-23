@@ -20,12 +20,13 @@ using YtReader.Store;
 
 namespace YtReader {
   
-  public record DataScriptsCfg(int Containers = 2, int BatchSize= 100_000);
+  public record DataScriptsCfg(int Containers = 8, int BatchSize= 100_000, int Cores = 4, int Mem = 12);
+  public record DataScriptRunState(string[] VideoPaths);
   
   record EntityVideoRow(string video_id);
 
   public record DataScripts(DataScriptsCfg ScriptsCfg, BlobStores Stores, SnowflakeConnectionProvider Db, AzureContainers containers, SemVersion Version,
-    RootCfg RootCfg, ContainerCfg ContainerCfg) {
+    RootCfg RootCfg, ContainerCfg ContainerCfg, AppCfg AppCfg) {
     public async Task Run(ILogger log, CancellationToken cancel, string runId = null) {
       var store = Stores.Store(DataStoreType.Root);
       var env = new (string name, string value)[] {
@@ -45,7 +46,7 @@ namespace YtReader {
             var path = RunPath(runId).Add($"videos.{i:00000}.jsonl.gz");
             await store.Save(path, await vids.ToJsonlGzStream());
             return path;
-          }, parallel: 4, cancel: cancel).ToListAsync();
+          }, AppCfg.DefaultParallel, cancel: cancel).ToListAsync();
       }
 
       var existingFiles = runId != null;
@@ -54,14 +55,14 @@ namespace YtReader {
         ? await store.List(RunPath(runId), allDirectories: false, log).SelectMany().Select(f => f.Path).ToListAsync()
         : await LoadNewEntityFiles();
 
-      await filesToProcess.BlockAction(async (path,i) => {
-        var containerCfg = ContainerCfg with {Cores = 4, Mem = 4, ImageName = "datascripts"};
+      await filesToProcess.BatchFixed(ScriptsCfg.Containers).BlockAction(async (paths,i) => {
+        var containerCfg = ContainerCfg with {Cores = ScriptsCfg.Cores, Mem = ScriptsCfg.Mem, ImageName = "datascripts"};
         await containers.RunContainer($"{containerCfg.ImageName}-{DateTime.UtcNow:yyyy-MM-dd}-{i:00}-{ShortGuid.Create(3).Replace("_", "-")}".ToLowerInvariant(), 
           containerCfg.FullContainerImageName("latest"), 
-          env.Concat(("video_path", path.ToString())).ToArray(),
+          env.Concat(("run_state", new DataScriptRunState(paths.Select(p => p.ToString()).ToArray()).ToJson())).ToArray(),
           returnOnStart: false, 
           cfg: containerCfg, log: log, cancel: cancel);
-        await store.Delete(path);
+        await paths.BlockAction(async p => await store.Delete(p), AppCfg.DefaultParallel);
       }, ScriptsCfg.Containers, cancel: cancel);
     }
 
