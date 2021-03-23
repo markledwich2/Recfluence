@@ -87,22 +87,22 @@ stages:
               Dockerfile: UserScrape/Dockerfile
 
     - stage: DataScripts
-    dependsOn: []
-    jobs:
-      - job: DataScriptsContainer
-        pool:
-          vmImage: ubuntu-latest
+      dependsOn: []
+      jobs:
+        - job: DataScriptsContainer
+          pool:
+            vmImage: ubuntu-latest
 
-        steps:
-          - task: Docker@2
-            displayName: DataScripts Docker Build & Push
-            inputs:
-              command: buildAndPush
-              containerRegistry: ytnetworks
-              repository: datascripts
-              tags: latest
-              buildContext: DataScripts
-              Dockerfile: DataScripts/Dockerfile
+          steps:
+            - task: Docker@2
+              displayName: DataScripts Docker Build & Push
+              inputs:
+                command: buildAndPush
+                containerRegistry: ytnetworks
+                repository: datascripts
+                tags: latest
+                buildContext: DataScripts
+                Dockerfile: DataScripts/Dockerfile
 
   - stage: YtFunction
     dependsOn: []

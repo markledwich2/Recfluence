@@ -125,7 +125,7 @@ select * from s
         cur.execute(sql)
 
         def entities(rows: List[T], getVal: Callable[[T], str]) -> Iterable[Iterable[Entity]]:
-            res = list(space_lg.pipe([getVal(r) or "" for r in rows]))
+            res = list(space_lg.pipe([getVal(r) or "" for r in rows], n_process=4))
             return map(lambda r: [Entity(ent.text.strip(), ent.label_) for ent in r.ents if ent.label_ not in EXCLUDE_LABELS], res)
 
         def captions(json) -> List[DbCaption]:
