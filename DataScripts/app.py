@@ -62,7 +62,7 @@ class VideoEntity:
     updated: DateTime
 
 
-BATCH = 500
+BATCH = 2000
 
 
 def get_ents(pipe_res) -> List[Entity]:
@@ -77,8 +77,8 @@ EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'DATE']
 async def video_entities():
     '''loads video named entities from a list of video id's in a jsonl.gz file'''
     cfg = await load_cfg()
-    log = configure_log(cfg.seq.seqUrl, branchEnv=cfg.branchEnv)
-    log.info('video_entities - started')
+    log = configure_log(cfg)
+    log.info('video_entities - {machine} started: {state}', machine=cfg.machine, state=cfg.state.to_json())
     blob = BlobStore(cfg.storage)
     space_lg = spacy.load("en_core_web_sm", disable=['parser', 'tagger', 'textcat', 'lemmatizer'])
 
@@ -90,7 +90,10 @@ async def video_entities():
         selects = list([f'select $1:video_id::string video_id from @public.yt_data/{p}' for p in cfg.state.videoPaths]) \
             if cfg.state.videoPaths else list(['select video_id from video_latest limit 100'])
 
+        batchTotal = len(selects)
+        batchNum = 0
         for select in selects:
+            batchNum = batchNum + 1
             cur: SnowflakeCursor = db.cursor()
             sql = f'''
 with
@@ -116,10 +119,12 @@ from vids v
 select * from s
             '''
 
-            log.info('video_entities - getting data for this video batch: {sql}', sql=sql)
-            cur.execute(sql)
+            log.info('video_entities - getting data for this video file batch {batch}/{batchTotal}: {sql}',
+                     sql=sql, batch=batchNum, batchTotal=batchTotal)
+            sqlRes = cur.execute(sql)
+            videoTotal = sqlRes.rowcount
 
-            log.info('video_entities - processing entities')
+            log.debug('video_entities - processing entities')
 
             def entities(rows: List[T], getVal: Callable[[T], str]) -> Iterable[Iterable[Entity]]:
                 res = list(space_lg.pipe([getVal(r) or "" for r in rows], n_process=4))
@@ -128,10 +133,12 @@ select * from s
             def captions(json) -> List[DbCaption]:
                 return DbCaption.schema().loads(json, many=True)
 
+            videoCount = 0
             while True:
                 raw_rows = cur.fetchmany(BATCH)
                 if(len(raw_rows) == 0):
                     break
+                videoCount = videoCount + len(raw_rows)
                 source_videos = list(map(lambda r: DbVideoEntity(r[0], r[1], r[2], r[3], r[4], r[5]), raw_rows))
                 title_entities = entities(source_videos, lambda r: r.videoTitle)
                 description_entities = entities(source_videos, lambda r: r.descripton)
@@ -154,7 +161,8 @@ select * from s
                 with gzip.open(localFile, 'wb') as f:
                     jsonl.dump(res_rows, f, cls=jsonl.JsonlEncoder)
                 blob.save_file(localFile, PurePath(f'db2/video_entities/{fileName}'))
-                log.info('video_entities - saved {rows} video entities into {fileName}', rows=len(res_rows), fileName=fileName)
+                log.info('video_entities - saved {fileName} {videoCount}/{videoTotal} videos in batch {batch}/{batchTotal}',
+                         videoCount=videoCount, videoTotal=videoTotal, fileName=fileName, batch=batchNum, batchTotal=batchTotal)
 
             cur.close()
 

@@ -1,8 +1,9 @@
+from cfg import Cfg
 import seqlog
 import logging
 
 
-def configure_log(url: str, env='dev', branchEnv=None) -> logging.Logger:
+def configure_log(cfg: Cfg) -> logging.Logger:
     seqlog.configure_from_dict({
         'version': 1,
         'disable_existing_loggers': True,
@@ -24,7 +25,7 @@ def configure_log(url: str, env='dev', branchEnv=None) -> logging.Logger:
             },
             'seq': {
                 'class': 'seqlog.structured_logging.SeqLogHandler',
-                'server_url': url,
+                'server_url': cfg.seq.seqUrl,
                 'batch_size': 10,
                 'auto_flush_timeout': 2,
                 'formatter': 'seq'
@@ -39,8 +40,9 @@ def configure_log(url: str, env='dev', branchEnv=None) -> logging.Logger:
 
     seqlog.set_global_log_properties(
         app="DataScripts",
-        env=env,
-        branchEnv=branchEnv
+        env=cfg.env,
+        branchEnv=cfg.branchEnv,
+        machine=cfg.machine
     )
 
     return logging.getLogger('seq')

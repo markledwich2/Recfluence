@@ -5,6 +5,7 @@ from dataclasses_json.api import DataClassJsonMixin
 from dotenv import load_dotenv
 import os
 import aiohttp
+import socket
 
 
 @dataclass
@@ -41,6 +42,7 @@ class Cfg(DataClassJsonMixin):
     state: RunState = None
     env: Optional[str] = None
     branchEnv: Optional[str] = None
+    machine: Optional[str] = None
 
 
 async def load_cfg() -> Cfg:
@@ -58,6 +60,8 @@ async def load_cfg() -> Cfg:
 
     runStateJson = os.getenv('run_state')
     cfg.state = RunState.from_json(runStateJson) if runStateJson else RunState()
+
+    cfg.machine = os.getenv('AzureContainers_Container') or socket.gethostname()
 
     if(cfg.branchEnv != None):
         cfg.storage.container = f'{cfg.storage.container }-{cfg.branchEnv}'
