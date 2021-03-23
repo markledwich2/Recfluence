@@ -56,7 +56,7 @@ namespace YtReader {
 
       await filesToProcess.BlockAction(async (path,i) => {
         var containerCfg = ContainerCfg with {Cores = 4, Mem = 4, ImageName = "datascripts"};
-        await containers.RunContainer($"{containerCfg.ImageName}-{i}-{ShortGuid.Create(3)}".ToLowerInvariant(), 
+        await containers.RunContainer($"{containerCfg.ImageName}-{DateTime.UtcNow:yyyy-MM-dd}-{i:00}-{ShortGuid.Create(3).Replace("_", "-")}".ToLowerInvariant(), 
           containerCfg.FullContainerImageName("latest"), 
           env.Concat(("video_path", path.ToString())).ToArray(),
           returnOnStart: false, 
