@@ -50,7 +50,7 @@ async def load_cfg() -> Cfg:
 
     cfg.env = os.getenv('env') or cfg.env
     cfg.branchEnv = os.getenv('branch_env') or cfg.branchEnv
-    cfg.runId = os.getenv('run_id')
+    cfg.videoPath = os.getenv('run_id')
 
     if(cfg.branchEnv != None):
         cfg.storage.container = f'{cfg.storage.container }-{cfg.branchEnv}'
