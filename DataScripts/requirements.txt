@@ -9,3 +9,5 @@ setuptools
 wheel
 snowflake-connector-python
 aiohttp
+azure-storage-blob
+ndjson

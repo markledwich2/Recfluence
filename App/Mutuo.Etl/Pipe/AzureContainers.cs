@@ -132,11 +132,11 @@ namespace Mutuo.Etl.Pipe {
     }
 
     public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars,
-      string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ILogger log = null, CancellationToken cancel = default) {
+      string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ContainerCfg cfg = null, ILogger log = null, CancellationToken cancel = default) {
       groupName ??= containerName;
-
+      cfg ??= ContainerCfg;
       var sw = Stopwatch.StartNew();
-      var group = await Launch(ContainerCfg with {Exe = exe}, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
+      var group = await Launch(cfg with {Exe = exe}, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
         returnOnStart, log: log, cancel: cancel);
       await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
       log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());

@@ -21,16 +21,20 @@
     "vids",
     "visibles"
   ],
-  "python.linting.pylintEnabled": true,
+  "python.formatting.provider": "autopep8",
   "python.linting.enabled": true,
-  "json.schemas": [
-    {
-      "fileMatch": [
-        "userscrape.json"
-      ],
-      "url": "/userscrape.schema.json"
-    }
+  "python.formatting.autopep8Args": [
+    "--max-line-length",
+    "160"
   ],
+  "[python]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4
+  },
+  "[json]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  },
   "files.exclude": {
     "**/.git": true,
     "**/.svn": true,

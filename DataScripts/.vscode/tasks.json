@@ -5,7 +5,7 @@
             "label": "docker-build",
             "platform": "python",
             "dockerBuild": {
-                "tag": "ytnetworks.azurecr.io/userscrape:latest",
+                "tag": "ytnetworks.azurecr.io/datascripts:latest",
                 "dockerfile": "${workspaceFolder}/Dockerfile",
                 "context": "${workspaceFolder}"
             },
@@ -23,7 +23,7 @@
                 "-it",
                 "--env-file",
                 ".env",
-                "ytnetworks.azurecr.io/userscrape:latest"
+                "ytnetworks.azurecr.io/datascripts:latest"
             ],
             "problemMatcher": []
         }

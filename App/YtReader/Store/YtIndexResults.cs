@@ -173,7 +173,7 @@ with by_channel as (
 s as (
   select n.*
           , cl.channel_title
-         , arrayExclude(cl.tags, array_construct('MissingLinkMedia', 'OrganizedReligion', 'Educational')) tags
+         , arrayExclude(cl.tags, array_construct('MissingLinkMedia', 'OrganizedReligion', 'Educational', 'Black', 'LGBT')) tags
          , cl.lr
          , logo_url
          , subs

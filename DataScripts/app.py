@@ -1,5 +1,18 @@
 
-from typing import Any, Iterable, List, Tuple
+import dataclasses
+from datetime import datetime, timezone
+import gzip
+from itertools import chain
+from dataclasses_json.api import DataClassJsonMixin
+from dataclasses_jsonschema import JsonSchemaMixin
+from dataclasses_json import dataclass_json
+from marshmallow.fields import DateTime
+from log import configure_log
+import jsonl
+from blobstore import BlobStore
+from os import pathconf
+from pathlib import Path, PurePath, PurePosixPath
+from typing import Any, Callable, Dict, Generic, Iterable, List, Optional, Tuple, TypeVar
 from snowflake.connector.cursor import SnowflakeCursor
 import spacy
 from ner import ner_run
@@ -7,6 +20,35 @@ from sf import sf_connect, sf_test
 from cfg import load_cfg
 import asyncio
 from dataclasses import dataclass
+import ndjson
+import tempfile
+import time
+import secrets
+import argparse
+
+
+@dataclass
+class DbVideoEntity:
+    videoId: str
+    videoTitle: str
+    descripton: Optional[str]
+    captions: Optional[str]
+    videoUpdated: DateTime
+    captionUpdated: Optional[DateTime]
+
+
+@dataclass_json
+@dataclass
+class DbCaption(DataClassJsonMixin):
+    offset: Optional[int] = None
+    caption: Optional[str] = None
+
+
+@dataclass
+class VideoCaption:
+    video: DbVideoEntity
+    offset: Optional[int] = None
+    caption: Optional[str] = None
 
 
 @dataclass
@@ -17,41 +59,115 @@ class Entity:
 
 @dataclass
 class VideoEntity:
-    video_id: str
-    title_entities: List[Entity]
-    description_entities: List[Entity]
+    videoId: str
+    part: str  # title, description, captions
+    offset: Optional[int]
+    entities: List[Entity]
+    videoUpdated: DateTime
+    captionUpdated: Optional[DateTime]
+    updated: DateTime
 
 
-BATCH = 1000
+BATCH = 10000
 
 
 def get_ents(pipe_res) -> List[Entity]:
     return list(map(lambda r: list([Entity(ent.text.strip(), ent.label_) for ent in r.ents]), pipe_res))
 
 
-async def run():
-    sp_lg = spacy.load("en_core_web_sm", disable=[
-                       'parser', 'tagger', 'textcat', 'lemmatizer'])
+T = TypeVar('T')
 
+EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'DATE']
+
+
+async def video_entities(path: str):
     cfg = await load_cfg()
+    log = configure_log(cfg.seq.seqUrl, branchEnv=cfg.branchEnv)
+    log.info('video_entities - started')
+    blob = BlobStore(cfg.storage)
+    space_lg = spacy.load("en_core_web_sm", disable=['parser', 'tagger', 'textcat', 'lemmatizer'])
+
+    localPath = Path(tempfile.gettempdir()) / 'data_scripts' / 'video_entities'
+    localPath.mkdir(parents=True, exist_ok=True)
+
     db = sf_connect(cfg.snowflake)
     try:
         cur: SnowflakeCursor = db.cursor()
-        cur.execute_async(
-            'select video_id, video_title, description from video_latest limit 2000')
-        query_id = cur.sfqid
-        cur.get_results_from_sfqid(query_id)
+        sql = f'''
 
-        while db.is_still_running:
-            rows = cur.fetchmany(1000)
-            title_entities = get_ents(sp_lg.pipe([r[1] or "" for r in rows]))
-            description_entities = get_ents(
-                sp_lg.pipe([r[2] or "" for r in rows]))
-            store_rows = list(map(lambda r, t, d: VideoEntity(
-                r[0], t, d), rows, title_entities, description_entities))
-            # todo merge back with id's and save into blob storage
-            print(f'loaded {store_rows.count()}')
+with
+  load as (
+    {f'select $1:video_id::string video_id from @public.yt_data/{path}' if path 
+    else 'select video_id from video_latest limit 100'}
+)
+  , vids as (
+  select v.video_id, v.video_title, v.description, v.updated
+  from load l
+  join video_latest v on v.video_id = l.video_id
+  where not exists(select * from video_entity e where e.video_id = v.video_id)
+  order by video_id
+)
+, s as (
+  select v.video_id
+     , any_value(video_title) video_title
+     , any_value(description) description
+     , array_agg(object_construct('offset',s.offset_seconds::int,'caption',s.caption)) within group ( order by offset_seconds ) captions
+      , max(v.updated) video_updated
+      , max(s.updated) caption_updated
+from vids v
+    left join caption s on v.video_id=s.video_id
+    group by v.video_id
+)
+select * from s
+        '''
+
+        log.info('video_entities - getting data for this video batch: {sql}', sql=sql)
+        cur.execute(sql)
+
+        def entities(rows: List[T], getVal: Callable[[T], str]) -> Iterable[Iterable[Entity]]:
+            res = list(space_lg.pipe([getVal(r) or "" for r in rows]))
+            return map(lambda r: [Entity(ent.text.strip(), ent.label_) for ent in r.ents if ent.label_ not in EXCLUDE_LABELS], res)
+
+        def captions(json) -> List[DbCaption]:
+            return DbCaption.schema().loads(json, many=True)
+
+        while True:
+            raw_rows = cur.fetchmany(BATCH)
+            if(len(raw_rows) == 0):
+                break
+            source_videos = list(map(lambda r: DbVideoEntity(r[0], r[1], r[2], r[3], r[4], r[5]), raw_rows))
+            title_entities = entities(source_videos, lambda r: r.videoTitle)
+            description_entities = entities(source_videos, lambda r: r.descripton)
+            source_captions = [
+                VideoCaption(r, c.offset, c.caption) for r in source_videos
+                for c in captions(r.captions)
+            ]
+            caption_entities = entities(source_captions, lambda r: r.caption)
+
+            updated = datetime.now(timezone.utc)
+            caption_rows = map(lambda r, t: VideoEntity(r.video.videoId, 'caption', r.offset, t, r.video.videoUpdated,
+                                                        r.video.captionUpdated, updated), source_captions, caption_entities)
+            res_rows = list(chain(map(lambda r, t: VideoEntity(r.videoId, 'title', None, t, r.videoUpdated, r.captionUpdated, updated), source_videos, title_entities),
+                                  map(lambda r, t: VideoEntity(r.videoId, 'description', None, t, r.videoUpdated,
+                                                               r.captionUpdated, updated), source_videos, description_entities),
+                                  [r for r in caption_rows if r.offset is not None or r.entities is not None]))
+
+            fileName = f'{time.strftime("%Y-%m-%d_%H-%M-%S")}.{secrets.token_hex(5)[:5]}.jsonl.gz'
+            localFile = localPath / fileName
+            with gzip.open(localFile, 'wb') as f:
+                jsonl.dump(res_rows, f, cls=jsonl.JsonlEncoder)
+            blob.save_file(localFile, PurePath(f'db2/video_entities/{fileName}'))
+            log.info('video_entities - loaded {rows} video entities into {fileName}', rows=len(res_rows), fileName=fileName)
+
     finally:
+        cur.close()
         db.close()
 
-asyncio.run(run())
+
+parser = argparse.ArgumentParser(description='Run python scripts')
+parser.add_argument("--path", "-p",
+                    help="A path within the data container to a jsonl file with videoId's",
+                    default=None)
+args = parser.parse_args()
+
+asyncio.run(video_entities(args.path))

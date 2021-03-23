@@ -292,7 +292,8 @@ namespace YtReader {
       b.RegisterType<RumbleCollect>();
       b.RegisterType<Pushshift>();
       b.RegisterType<CovidNarrative>();
-
+      b.RegisterType<DataScripts>();
+      
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();
 

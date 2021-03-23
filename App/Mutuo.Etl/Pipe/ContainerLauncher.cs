@@ -11,6 +11,7 @@ namespace Mutuo.Etl.Pipe {
       bool returnOnStart = false,
       string exe = null,
       string groupName = null,
+      ContainerCfg cfg = null,
       ILogger log = null,
       CancellationToken cancel = default);
   }
@@ -29,13 +30,14 @@ namespace Mutuo.Etl.Pipe {
       bool returnOnStart = false,
       string exe = null,
       string groupName = null,
+      ContainerCfg cfg = null,
       ILogger log = null,
       CancellationToken cancel = default) {
       IContainerLauncher launcher = Cfg.Location switch {
         PipeRunLocation.Container => Ctx.Scope.Resolve<AzureContainers>(),
         _ => Ctx.Scope.Resolve<LocalPipeWorker>()
       };
-      await launcher.RunContainer(containerName, fullImageName, envVars, args, returnOnStart, exe, groupName, log, cancel);
+      await launcher.RunContainer(containerName, fullImageName, envVars, args, returnOnStart, exe, groupName, cfg, log, cancel);
     }
   }
 }

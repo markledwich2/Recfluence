@@ -65,8 +65,11 @@ namespace YtReader {
     [Required] public GoogleCfg       Google                { get; set; } = new();
     [Required] public AirtableCfg     Airtable              { get; set; } = new();
     [Required] public NarrativesCfg   Narratives            { get; set; } = new();
+    [Required] public DataScriptsCfg  DataScripts            { get; set; } = new();
   }
 
+  public record DataScriptsCfg(int Containers = 1, int BatchSize= 10_000);
+  
   public class GoogleCfg {
     [SkipRecursiveValidation] public JObject Creds { get; set; }
     public                           string  Test  { get; set; }

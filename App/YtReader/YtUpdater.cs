@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using SysExtensions;
@@ -61,10 +62,12 @@ namespace YtReader {
     readonly YtIndexResults _index;
     readonly BcCollect      _bcCollect;
     readonly RumbleCollect  _rumbleCollect;
+    readonly DataScripts             _dataScripts;
 
     public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, Stage warehouse, YtSearch search,
       YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtIndexResults index, BcCollect bcCollect,
-      RumbleCollect rumbleCollect) {
+      RumbleCollect rumbleCollect, DataScripts dataScripts) {
+      _dataScripts = dataScripts;
       _rumbleCollect = rumbleCollect;
       _bcCollect = bcCollect;
       Cfg = cfg;
@@ -108,6 +111,10 @@ namespace YtReader {
     [GraphTask(nameof(Dataform))]
     Task Index(string[] tables, string[] tags, ILogger logger, CancellationToken cancel) =>
       _index.Run(tables, tags, logger, cancel);
+    
+    [GraphTask(nameof(Dataform))]
+    Task DataScripts(ILogger logger, CancellationToken cancel, string runId = null) =>
+      _dataScripts.Run(logger, cancel, runId);
 
     [GraphTask(nameof(Stage))]
     Task Backup(ILogger logger) =>
@@ -137,6 +144,7 @@ namespace YtReader {
         (l, c) => Index(options.Indexes, options.Tags, l, c),
         //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
         (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c),
+        (l, c) => DataScripts(l, c, null),
         (l, c) => Backup(l)
       );
 

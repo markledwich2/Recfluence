@@ -153,6 +153,7 @@ namespace YtReader {
       using (var db = await Sf.Open(log)) {
 
         // sometimes updates fail. When re-running this, we should refresh channels that are missing videos or have a portion of captions not attempted
+        // NOTE: core warehouse table must be updated (not just staging tables) to take into account prevously succesfful loads.
         channelsForUpdate = await db.Query<string>("stale or captionless channels", @$"
 with
   raw_vids as ({select})

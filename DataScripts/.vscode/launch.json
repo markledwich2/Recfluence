@@ -6,6 +6,10 @@
       "request": "launch",
       "program": "app.py",
       "console": "integratedTerminal",
+      "args": [
+        "-p",
+        "pipe/DataScripts/video_entities/2021-03-23_06-59-57-1818518.SehqQ/videos.2.jsonl.gz"
+      ]
     }
   ]
 }
