@@ -255,8 +255,12 @@ namespace Mutuo.Etl.Pipe {
     static async Task SetOutState<T>(this IPipeCtx ctx, T state, PipeRunId id, ILogger log) =>
       await ctx.Store.Set(id.OutStatePath(), state, log: log);
 
-    static readonly JsonSerializerSettings ArgJCfg = JsonExtensions.DefaultSettings()
-      .ShallowWith(new() {TypeNameHandling = TypeNameHandling.All});
+    static readonly JsonSerializerSettings ArgJCfg = GetArgJCfg();
+    static JsonSerializerSettings GetArgJCfg() {
+      var cfg = JsonExtensions.DefaultSettings();
+      cfg.TypeNameHandling = TypeNameHandling.All;
+      return cfg;
+    }
 
     static async Task SaveInArg(this IPipeCtx ctx, PipeArg[] args, PipeRunId id, ILogger log) {
       var path = $"{id.InArgPath()}.json";
