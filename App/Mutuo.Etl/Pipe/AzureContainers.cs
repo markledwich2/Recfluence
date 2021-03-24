@@ -89,7 +89,8 @@ namespace Mutuo.Etl.Pipe {
           md.Save(ctx.Store, pipeLog));
 
         // delete succeeded non-exclusive containers. Failed, and rutned on running will be cleaned up by another process
-        if (group.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0)) await DeleteContainer(containerGroup, log);
+        if (group.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0)) 
+          await DeleteContainer(containerGroup, log);
 
         return md;
       }, returnOnRunning ? ctx.PipeCfg.Azure.Parallel : ids.Count);
@@ -140,7 +141,8 @@ namespace Mutuo.Etl.Pipe {
         returnOnStart, log: log, cancel: cancel);
       await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
       log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());
-      await DeleteContainer(groupName, log);
+      if(!returnOnStart && group.State() == ContainerState.Succeeded)
+        await DeleteContainer(groupName, log);
     }
 
     public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {
