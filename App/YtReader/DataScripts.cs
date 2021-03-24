@@ -45,7 +45,9 @@ namespace YtReader {
         return await db.QueryBlocking<EntityVideoRow>("new entities", @"select video_id
   from video_latest v
   where not exists(select * from video_entity e where e.video_id = v.video_id)
-  order by video_id")
+  order by video_id
+  limit 1000 -- TODO add this back when we have improved it
+")
           .Batch(ScriptsCfg.VideosPerFile)
           .BlockTrans(async (vids, i) => {
             var path = RunPath(runId).Add($"videos.{i:00000}.jsonl.gz");
