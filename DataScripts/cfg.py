@@ -56,6 +56,9 @@ async def load_cfg() -> Cfg:
     '''loads application configuration form a blob from the cfg_sas environment variable'''
     load_dotenv()
     cfg_sas = os.getenv('cfg_sas')
+    if(cfg_sas is None):
+        raise Exception('cfg_sas environment variable is required. Add a .env file with the sas url to a recfluence app config file')
+
     cfg: Cfg
     async with aiohttp.ClientSession() as sesh:
         async with sesh.get(cfg_sas) as r:
