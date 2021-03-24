@@ -39,10 +39,10 @@ def configure_log(cfg: Cfg) -> logging.Logger:
     })
 
     seqlog.set_global_log_properties(
-        app="DataScripts",
-        env=cfg.env or '',
-        branchEnv=cfg.branchEnv or '',
-        machine=cfg.machine or ''
+        App="DataScripts",
+        Env=cfg.env or '',
+        BranchEnv=cfg.branchEnv or '',
+        Machine=cfg.machine or ''
     )
 
     return logging.getLogger('seq')

@@ -50,7 +50,6 @@ namespace YtReader {
     [Required] public ProxyCfg        Proxy                 { get; set; } = new();
     [Required] public SnowflakeCfg    Snowflake             { get; set; } = new();
     [Required] public WarehouseCfg    Warehouse             { get; set; } = new();
-    [Required] public SqlServerCfg    AppDb                 { get; set; } = new();
     [Required] public ResultsCfg      Results               { get; set; } = new();
     [Required] public PipeAppCfg      Pipe                  { get; set; } = new();
     [Required] public DataformCfg     Dataform              { get; set; } = new();

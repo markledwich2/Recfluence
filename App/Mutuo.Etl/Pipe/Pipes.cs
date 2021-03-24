@@ -302,11 +302,11 @@ namespace Mutuo.Etl.Pipe {
           ConstantExpression c => new(name, ArgMode.SerializableValue, c.Value),
           MethodCallExpression m => IsArgInject(m)
             ? new PipeArg(name, ArgMode.Inject)
-            : throw new NotImplementedException("resolving args through methods unsupported"),
+            : new(name, ArgMode.SerializableValue, m.GetValue()) ,
           MemberExpression m => new(name, ArgMode.SerializableValue, m.GetValue()),
           // Parameter's are the left side of the lambda (myParam) => myParam.doThing()
           ParameterExpression p => p.Type.IsEnumerable() ? new(name, ArgMode.InRows) : new PipeArg(name, ArgMode.Inject),
-          UnaryExpression u when u.Operand is MemberExpression m => new(name, ArgMode.SerializableValue, GetValue(m)),
+          UnaryExpression {Operand: MemberExpression m} => new(name, ArgMode.SerializableValue, GetValue(m)),
           _ => throw new NotImplementedException($"resolving args through expression {a} not supported")
         };
         return arg;

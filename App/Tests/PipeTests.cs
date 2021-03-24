@@ -25,9 +25,10 @@ namespace Tests {
       b.RegisterType<PipeApp>();
       b.Register(_ => log).As<ILogger>();
       var scope = b.Build();
+      // relies on a local dev isntance. use vscode to start an Azurite blob service with a container called pipe
       var store = new AzureBlobFileStore("UseDevelopmentStorage=true", "pipe", log);
-      var pipeCtx = new PipeCtx(new PipeAppCfg(), new PipeAppCtx(scope, typeof(PipeApp)), store, log);
-      var res = await pipeCtx.Run((PipeApp app) => app.MakeAndSum(200), new PipeRunOptions {Location = PipeRunLocation.Local});
+      var pipeCtx = new PipeCtx(new (), new (scope, typeof(PipeApp)), store, log);
+      var res = await pipeCtx.Run((PipeApp app) => app.MakeAndSum((int)15L, 1.Thousands()), new () {Location = PipeRunLocation.Local});
       res.Metadata.Error.Should().BeFalse();
     }
 
@@ -42,7 +43,7 @@ namespace Tests {
 
     async Task Generate(ILogger log, bool shouldError) {
       if (shouldError) throw new InvalidOperationException("Generate Errored");
-      generated = new List<Guid>();
+      generated = new ();
       foreach (var i in 0.RangeTo(5)) {
         await 100.Milliseconds().Delay();
         generated.Add(Guid.NewGuid());
@@ -91,10 +92,10 @@ namespace Tests {
     }
 
     [Pipe]
-    public async Task<int[]> MakeAndSum(int size) {
+    public async Task<int[]> MakeAndSum(int size, int shift) {
       Log.Information("MakeAndSum Started - {Size}", size);
-      var things = 0.RangeTo(size).Select(i => new Thing {Number = i});
-      var res = await things.Process(Ctx, b => CountThings(b), new PipeRunCfg {MaxParallel = 2});
+      var things = (0+shift).RangeTo(size+shift).Select(i => new Thing {Number = i});
+      var res = await things.Process(Ctx, b => CountThings(b), new() {MaxParallel = 2});
       Log.Information("MakeAndSum Complete {Batches}", res.Count);
       return res.Select(r => r.OutState).ToArray();
     }
