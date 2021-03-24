@@ -1,7 +1,9 @@
 ## Initial Setup
 
-### 1 - install Requirementts
-`pip install -r requirement.txt`
+### 1 - Run the following in this directory
+`pip install --user -r requirements.txt && python -m spacy download en_core_web_sm`
+
+Alternatively (if you have docker & vscode), open this folder in the devcontainer.
 
 ### 2 - configure `.env` file
 create a `.env` file in this directory with the follwing variables 
