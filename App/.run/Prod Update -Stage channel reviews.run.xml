@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Prod Update -Stage channel reviews" type="DotNetProject" factoryName=".NET Project">
+  <configuration default="false" name="Prod Update -Stage" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.dll" />
-    <option name="PROGRAM_PARAMETERS" value="update -a Stage -t channel_review_stage" />
+    <option name="PROGRAM_PARAMETERS" value="update -z -a Stage" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
