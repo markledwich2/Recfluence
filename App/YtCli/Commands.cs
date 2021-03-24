@@ -175,7 +175,7 @@ namespace YtCli {
       Log = log;
     }
 
-    public async ValueTask ExecuteAsync(IConsole console) => await Cleaner.DeleteExpiredResources(Log);
+    public async ValueTask ExecuteAsync(IConsole console) => await Cleaner.DeleteExpiredResources(deleteCompleteContainers: true, Log);
   }
 
   [Command("create-env", Description = "Create a branch environment for testing")]

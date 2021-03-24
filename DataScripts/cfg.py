@@ -18,10 +18,10 @@ class StoreCfg:
 class SnowflakeCfg:
     creds: str
     host: str
-    warehouse: str
     db: str
-    schema: str
-    role: str
+    warehouse: Optional[str] = None
+    schema: Optional[str] = None
+    role: Optional[str] = None
 
 
 @dataclass
@@ -46,9 +46,10 @@ class Cfg(DataClassJsonMixin):
     seq: SeqCfg
     dataScripts: DataScriptsCfg = DataScriptsCfg()
     state: RunState = RunState()
-    env: Optional[str] = None
+    env: Optional[str] = 'dev'
     branchEnv: Optional[str] = None
     machine: Optional[str] = None
+    localDir: Optional[str] = None  # if provided will use local file storage isstead
 
 
 async def load_cfg() -> Cfg:
@@ -61,13 +62,12 @@ async def load_cfg() -> Cfg:
             json = await r.text()
             cfg = Cfg.from_json(json)
 
-    cfg.env = os.getenv('env') or cfg.env
+    cfg.env = os.getenv('env') or cfg.env or 'dev'
     cfg.branchEnv = os.getenv('branch_env') or cfg.branchEnv
-
     runStateJson = os.getenv('run_state')
     cfg.state = RunState.from_json(runStateJson) if runStateJson else RunState()
-
     cfg.machine = os.getenv('AzureContainers_Container') or socket.gethostname()
+    cfg.localDir = os.getenv('local_dir')
 
     if(cfg.branchEnv != None):
         cfg.storage.container = f'{cfg.storage.container }-{cfg.branchEnv}'

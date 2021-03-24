@@ -31,7 +31,7 @@ namespace YtFunctions {
     public Task DeleteExpiredResources_Timer([TimerTrigger("0 0 * * * *")] TimerInfo myTimer, ExecutionContext exec) =>
       Ctx.Run(exec, async ctx => {
         var cleaner = ctx.Scope.Resolve<AzureCleaner>();
-        await cleaner.DeleteExpiredResources(ctx.Log);
+        await cleaner.DeleteExpiredResources(log:ctx.Log);
       });
 
     [FunctionName("Version")]
