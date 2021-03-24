@@ -93,7 +93,7 @@ namespace YtCli {
           await store.Optimise(Cfg.Optimise, plan, Log);
         else
           await plan.Process(Ctx,
-            b => Stage.ProcessOptimisePlan(b, store, PipeArg.Inject<ILogger>()),
+            b => Stage.ProcessOptimisePlan(b, DataStoreType.DbStage, PipeArg.Inject<ILogger>()),
             new() {MaxParallel = 12, MinWorkItems = 1},
             log: Log, cancel: console.GetCancellationToken());
       }

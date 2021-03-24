@@ -79,9 +79,9 @@ namespace YtReader {
     }
 
     [Pipe]
-    public async Task<bool> ProcessOptimisePlan(IReadOnlyCollection<OptimiseBatch> plan, StageTableCfg t, ILogger log) {
+    public async Task<bool> ProcessOptimisePlan(IReadOnlyCollection<OptimiseBatch> plan, DataStoreType storeType, ILogger log) {
       var runId = ShortGuid.Create(4);
-      var store = Store(t);
+      var store = Stores.Store(storeType);
       log = log.ForContext("RunId", runId);
       log.Information("YtStage - starting optimisation plan ({RunId}) first path '{Dest}' out of {TotalBatches}", runId, plan.First().Dest, plan.Count);
       await store.Optimise(Cfg.Optimise, plan, log);
@@ -95,7 +95,7 @@ namespace YtReader {
         if (plan.Count < 10) // if the plan is small, run locally, otherwise on many machines
           await store.Optimise(Cfg.Optimise, plan, db.Log);
         else
-          await plan.Process(PipeCtx, b => ProcessOptimisePlan(b, t, Inject<ILogger>())
+          await plan.Process(PipeCtx, b => ProcessOptimisePlan(b, t.StoreType, Inject<ILogger>())
             , new() {MaxParallel = 8, MinWorkItems = 1}, db.Log, cancel);
       }
       await db.Execute("truncate table", $"truncate table {table}"); // no transaction, stage tables aren't reported on so don't need to be available
