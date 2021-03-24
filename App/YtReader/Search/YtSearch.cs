@@ -75,11 +75,23 @@ namespace YtReader.Search {
 
       await Sync(ChannelTitle, "select channel_id, channel_title, description, updated from channel_latest", (EsChannelTitle c) => c);
 
-      await Sync<dynamic, EsVideo>(Video, @"select l.*, c.lr, c.tags, timediff(seconds, '0'::time, duration) as duration_secs
+      await Sync<dynamic, EsVideo>(Video, @"select l.channel_id
+     , l.channel_title
+     , l.description
+     , l.error_type
+     , c.lr
+     , c.tags
+     , l.updated
+     , l.upload_date
+     , l.video_id
+     , l.video_title
+     , l.views::int as views
+     , l.keywords
+     , timediff(seconds,'0'::time,duration) duration_secs
 from video_latest l
-inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo,
+       join channel_accepted c on l.channel_id=c.channel_id", MapVideo,
         // update any new videos, or update once per week distributed randomly
-        "updated_first > :max_updated or (updated > :max_updated and abs(hash(video_id)) % 7 = dayofweek(current_date))");
+        "l.updated_first > :max_updated or (l.updated > :max_updated and abs(hash(video_id)) % 7 = dayofweek(current_date))");
 
       await Sync(Caption, "select * from caption_es", (DbEsCaption c) => MapCaption(c));
     }
