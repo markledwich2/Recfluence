@@ -1,3 +1,4 @@
+from logging import Logger
 import tempfile
 import time
 import secrets
@@ -16,7 +17,7 @@ from typing import Callable, Iterable, List, Optional, TypeVar
 from snowflake.connector.cursor import SnowflakeCursor
 import spacy
 from sf import sf_connect
-from cfg import load_cfg
+from cfg import Cfg, load_cfg
 import asyncio
 from dataclasses import dataclass
 
@@ -71,7 +72,7 @@ def get_ents(pipe_res) -> List[Entity]:
     return list(map(lambda r: list([Entity(ent.text.strip(), ent.label_) for ent in r.ents]), pipe_res))
 
 
-def video_entities():
+def video_entities(cfg: Cfg, args: Args, log: Logger):
     blob = BlobStore(cfg.storage)
     space_lg = spacy.load("en_core_web_sm", disable=['parser', 'tagger', 'textcat', 'lemmatizer'])
 
