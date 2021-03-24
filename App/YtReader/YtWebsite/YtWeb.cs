@@ -211,9 +211,21 @@ namespace YtReader.YtWebsite {
           return null;
         return e.SelectToken("browseEndpoint.params")?.Value<string>();
       }).NotNull().FirstOrDefault();
-      
+
+
+
       if (browseParams == null) {
-        var ex = new InvalidOperationException("can't find browse endpoint");
+        var error = ytInitialData
+          .SelectTokens("alerts[*].alertRenderer")
+          .FirstOrDefault(t => t.Value<string>("type") == "ERROR")
+          ?.SelectToken("text.simpleText")?.Value<string>();
+
+        if (error != null) {
+          log.Information("WebScraper - Can't get videos in channel {Channel} because it's dead: {Error}", channelId, error);
+          yield break;
+        }
+        
+        var ex = new InvalidOperationException("WebScraper - can't find browse endpoint");
         await LogParseError("error parsing channel page", ex, channelUrl, ytInitialData.ToString(), log);
         throw ex;
       }
