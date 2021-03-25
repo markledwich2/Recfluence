@@ -1,7 +1,7 @@
 ## Initial Setup
 
 ### 1 - Run the following in this directory
-`pip install --user -r requirements.txt && python -m spacy download en_core_web_sm`
+`pip install --user -r requirements.txt`
 
 Alternatively (if you have docker & vscode), open this folder in the devcontainer.
 
