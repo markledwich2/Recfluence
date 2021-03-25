@@ -91,7 +91,7 @@ namespace YtReader.Search {
 from video_latest l
        join channel_accepted c on l.channel_id=c.channel_id", MapVideo,
         // update any new videos, or update once per week distributed randomly
-        "l.updated_first > :max_updated or (l.updated > :max_updated and abs(hash(video_id)) % 7 = dayofweek(current_date))");
+        "updated_first > :max_updated or (updated > :max_updated and abs(hash(video_id)) % 7 = dayofweek(current_date))");
 
       await Sync(Caption, "select * from caption_es", (DbEsCaption c) => MapCaption(c));
     }

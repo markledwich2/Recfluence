@@ -32,7 +32,7 @@ namespace Mutuo.Etl.Pipe {
       Version = version;
       RegistryClient = registryClient;
       ContainerCfg = containerCfg;
-      Az = new Lazy<IAzure>(azureCfg.GetAzure);
+      Az = new (azureCfg.GetAzure);
     }
 
     public static readonly string ContainerNameEnv = $"{nameof(AzureContainers)}_Container";

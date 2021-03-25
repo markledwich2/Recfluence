@@ -27,7 +27,7 @@
         "registry": "ytnetworks.azurecr.io",
         "imageName": "recfluence",
         "cores": 2,
-        "mem": 2,
+        "mem": 4,
         "exe": "./recfluence"
       }
     },
