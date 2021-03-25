@@ -12,11 +12,13 @@ using YtReader.YtApi;
 using YtReader.YtWebsite;
 
 namespace Tests {
+
+
   public static class ScrapingTests {
     [Test]
     public static async Task ChromeRecsAndExtra() {
       // get comments, does watch page html have it
-      using var ctx = await TextCtx();
+      using var ctx = await TestSetup.TextCtx();
       var chrome = ctx.Resolve<ChromeScraper>();
       var vids = new[] {
         
@@ -31,7 +33,7 @@ namespace Tests {
 
     [Test]
     public static async Task WebRecsAndExtra() {
-      using var ctx = await TextCtx();
+      using var ctx = await TestSetup.TextCtx();
       var ws = ctx.Scope.Resolve<YtWeb>();
       var extra = await ws.GetRecsAndExtra(new[] {
         "V8kxdw0UASE", // should work. looks like ti was errored and then re-instated
@@ -53,7 +55,7 @@ namespace Tests {
 
     [Test]
     public static async Task Captions() {
-      using var ctx = await TextCtx();
+      using var ctx = await TestSetup.TextCtx();
       var scraper = ctx.Scope.Resolve<YtWeb>();
       var tracks = await scraper.GetCaptionTracks("yu_C_K3TuyY", ctx.Log);
       var en = tracks.First(t => t.Language.Code == "en");
@@ -62,7 +64,7 @@ namespace Tests {
 
     [Test]
     public static async Task WatchPageParsing() {
-      using var x = await TextCtx();
+      using var x = await TestSetup.TextCtx();
       var docs = Setup.SolutionDir.Combine("Tests", "WatchPageHtml")
         .Files("*.html")
         .Select(f => Html.ParseDocument(f.OpenText().ReadToEnd()));
@@ -74,34 +76,17 @@ namespace Tests {
 
     [Test]
     public static async Task ChannelVideos() {
-      using var x = await TextCtx();
+      using var x = await TestSetup.TextCtx();
       var ws = x.Scope.Resolve<YtWeb>();
       var res = await ws.ChannelVideos("UChN7H3JFqeFC-WB8NCxhn7g", x.Log).ToListAsync();
     }
 
     [Test]
     public static async Task ChannelData() {
-      using var ctx = await TextCtx();
+      using var ctx = await TestSetup.TextCtx();
       var api = ctx.Resolve<YtClient>();
       var data = await new[] {"UCMDxbhGcsE7EnknxPEzC_Iw", "UCHEf6T_gVq4tlW5i91ESiWg", "UCYeF244yNGuFefuFKqxIAXw"}
         .BlockFunc(c => api.ChannelData(c, full: true));
     }
-
-    static async Task<TestCtx> TextCtx() {
-      var (cfg, rootCfg, version) = await Setup.LoadCfg(basePath: Setup.SolutionDir.Combine("YtCli").FullPath);
-      var log = Setup.CreateTestLogger();
-      log.Information("Starting {TestName}", TestContext.CurrentContext.Test.Name);
-      var appCtx = Setup.PipeAppCtxEmptyScope(rootCfg, cfg, version.Version);
-      return new TestCtx {Scope = Setup.MainScope(rootCfg, cfg, appCtx, version, log), Log = log, App = cfg, Root = rootCfg};
-    }
-  }
-
-  class TestCtx : IDisposable {
-    public ILifetimeScope Scope { get; set; }
-    public ILogger        Log   { get; set; }
-    public AppCfg         App   { get; set; }
-    public RootCfg        Root  { get; set; }
-    public void Dispose() => Scope?.Dispose();
-    public T Resolve<T>() => Scope.Resolve<T>();
   }
 }

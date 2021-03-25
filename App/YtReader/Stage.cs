@@ -26,7 +26,8 @@ namespace YtReader {
     [Required] public string      Private            { get; set; } = "yt_private";
     [Required] public OptimiseCfg Optimise           { get; set; } = new();
     [Required] public int         LoadTablesParallel { get; set; } = 4;
-    public            string[]    Roles              { get; set; } = {"sysadmin", "recfluence"};
+    public            string[]    AdminRoles         { get; set; } = {"sysadmin", "recfluence"};
+    public            string[]    ReadRoles         { get; set; } = {"reader"};
     public            int         MetadataParallel   { get; set; } = 8;
     public            int         FileMb             { get; set; } = 80;
   }

@@ -82,6 +82,7 @@ namespace YtReader.Search {
      , c.lr
      , c.tags
      , l.updated
+     , l.updated_first
      , l.upload_date
      , l.video_id
      , l.video_title
@@ -204,7 +205,7 @@ from video_latest l
     async Task<ILoggedConnection<SnowflakeDbConnection>> OpenConnection(ILogger log) {
       var conn = await Db.Open(log);
       await conn.SetSessionParams(
-        (SfParam.ClientPrefetchThreads, 2),
+        //(SfParam.ClientPrefetchThreads, 2),
         (SfParam.Timezone, "GMT"));
       return conn;
     }

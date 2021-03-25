@@ -7,8 +7,7 @@
     "host": "ql98184.west-us-2.azure.snowflakecomputing.com",
     "warehouse": "yt",
     "schema": "public",
-    "db": "yt",
-    "role": "recfluence"
+    "db": "yt"
   },
   "collect": {
     "discoverChannels": 1

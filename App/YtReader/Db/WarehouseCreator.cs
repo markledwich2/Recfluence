@@ -55,18 +55,16 @@ namespace YtReader.Db {
         Email = EnvCfg.Email
       }.ToJson(JCfg);
       if (state.In(Clone, CloneDb))
-        scripts = new[] {
-            new Script("db copy", @$"create or replace database {db} clone {Sf.Cfg.Db} comment='{dbComment}'")
-          }
-          .Concat(WhCfg.Roles.Select(r =>
-            new Script($"init role {r}", $"grant all on database {db} to role {r}")
-          ));
+        scripts = Array.Empty<Script>()
+          .Concat(new Script("db copy", @$"create or replace database {db} clone {Sf.Cfg.Db} comment='{dbComment}'"))
+          .Concat(WhCfg.AdminRoles.Select(r => new Script($"init role {r}", $"grant all on database {db} to role {r}")))
+          .Concat(WhCfg.ReadRoles.Select(r => new Script($"init role {r}", $"grant usage,monitor on database {db} to role {r}")));
       else
         scripts = new[] {
             new Script("db create", @$"create or replace database {db} comment='{dbComment}'"),
             new Script("schema", $"create schema if not exists {db}.{schema}")
           }
-          .Concat(WhCfg.Roles.Select(r =>
+          .Concat(WhCfg.AdminRoles.Select(r =>
             new Script($"init role {r}", ScriptMode.Parallel,
               $"grant all on database {db} to role {r}",
               $"grant all on schema {db}.{schema} to role {r}",
@@ -74,6 +72,14 @@ namespace YtReader.Db {
               $"grant all on future tables in schema {db}.{schema} to role {r}",
               $"grant all on all views in schema {db}.{schema} to role {r}",
               $"grant all on future views in schema {db}.{schema} to role {r}"
+            ))).Concat(WhCfg.ReadRoles.Select(r =>
+            new Script($"init role {r}", ScriptMode.Parallel,
+              $"grant usage,monitor on database {db} to role {r}",
+              $"grant usage, monitor on all schemas in database {db} to role {r}",
+              $"grant select on future tables in database {db} to role {r}",
+              $"grant select on future views in database {db} to role {r}",
+              $"grant select on all tables in database {db} to role {r}",
+              $"grant select on all views in database {db} to role {r}"
             )));
 
       scripts = scripts
