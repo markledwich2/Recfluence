@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -20,6 +19,7 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Reflection;
 using SysExtensions.Serialization;
+using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Pipe {
@@ -100,7 +100,7 @@ namespace Mutuo.Etl.Pipe {
       log ??= Logger.None;
 
       if (items.None()) return Array.Empty<(PipeRunMetadata Metadata, TOut OutState)>();
-      
+
       var pipeMethods = PipeMethods(ctx);
       var (_, method) = pipeMethods[pipeName];
       if (method == null) throw new InvalidOperationException($"Can't find pipe {pipeName}");
@@ -178,7 +178,7 @@ namespace Mutuo.Etl.Pipe {
       var pipeLog = ctx.Log.ForContext("Pipe", pipeName).ForContext("RunId", id);
 
       var loadInArgs = await LoadInArgs(ctx, id);
-      var args = loadInArgs.ToDictionary(a => a.Name);
+      var args = loadInArgs.Values.ToDictionary(a => a.Name);
 
       if (cancel.IsCancellationRequested)
         return;
@@ -255,7 +255,8 @@ namespace Mutuo.Etl.Pipe {
     static async Task SetOutState<T>(this IPipeCtx ctx, T state, PipeRunId id, ILogger log) =>
       await ctx.Store.Set(id.OutStatePath(), state, log: log);
 
-    static readonly JsonSerializerSettings ArgJCfg = GetArgJCfg();
+    public static readonly JsonSerializerSettings ArgJCfg = GetArgJCfg();
+
     static JsonSerializerSettings GetArgJCfg() {
       var cfg = JsonExtensions.DefaultSettings();
       cfg.TypeNameHandling = TypeNameHandling.All;
@@ -264,12 +265,41 @@ namespace Mutuo.Etl.Pipe {
 
     static async Task SaveInArg(this IPipeCtx ctx, PipeArg[] args, PipeRunId id, ILogger log) {
       var path = $"{id.InArgPath()}.json";
-      await ctx.Store.Save(path, args.ToJsonStream(ArgJCfg), log);
+      await ctx.Store.Save(path, new PipeArgs(args).ToJsonStream(ArgJCfg), log);
     }
 
-    static async Task<PipeArg[]> LoadInArgs(this IPipeCtx ctx, PipeRunId id) {
+    static async Task<PipeArgs> LoadInArgs(this IPipeCtx ctx, PipeRunId id) {
       using var argStream = await ctx.Store.Load($"{id.InArgPath()}.json");
-      return argStream.ToObject<PipeArg[]>(ArgJCfg);
+      using var ts = argStream.TextStream();
+      var jr = new JsonTextReader(ts);
+      var j = await JObject.LoadAsync(jr);
+      return LoadInArgs(j);
+    }
+
+    public static PipeArgs LoadInArgs(JObject j) {
+      if (j.Value<string>("version") == null) {
+        // upgrade from initial version, which had enums accidentally as integers
+        // shouldn't need to do much upgrading, but the function is running an old version
+
+        var jValues = j["$values"] ?? throw new InvalidOperationException("expected $values when upgrading from v0");
+        foreach (var arg in jValues.Children<JObject>().ToArray()) {
+          var jMode = arg["argMode"];
+          if (jMode == null) continue;
+          arg["argMode"] = ((ArgMode) jMode.Value<int>()).EnumString().ToCamelCase();
+        }
+
+        // old serialization was an array, now we have a top level object
+        j = new(new JProperty("$type", "Mutuo.Etl.Pipe.PipeArgs, Mutuo.Etl"),
+          new JProperty("version", PipeArgs.Versions.V1),
+          new JProperty("values", new JObject(
+              new JProperty("$type", "Mutuo.Etl.Pipe.PipeArg[], Mutuo.Etl"),
+              new JProperty("$values", jValues)
+            )
+          )
+        );
+      }
+      var res = j.ToObject<PipeArgs>();
+      return res;
     }
 
     static async Task SaveInRows<T>(this IPipeCtx ctx, IEnumerable<T> rows, PipeRunId id, ILogger log) {
@@ -306,7 +336,7 @@ namespace Mutuo.Etl.Pipe {
           ConstantExpression c => new(name, ArgMode.SerializableValue, c.Value),
           MethodCallExpression m => IsArgInject(m)
             ? new PipeArg(name, ArgMode.Inject)
-            : new(name, ArgMode.SerializableValue, m.GetValue()) ,
+            : new(name, ArgMode.SerializableValue, m.GetValue()),
           MemberExpression m => new(name, ArgMode.SerializableValue, m.GetValue()),
           // Parameter's are the left side of the lambda (myParam) => myParam.doThing()
           ParameterExpression p => p.Type.IsEnumerable() ? new(name, ArgMode.InRows) : new PipeArg(name, ArgMode.Inject),
@@ -324,7 +354,7 @@ namespace Mutuo.Etl.Pipe {
       Expression.Lambda<Func<object>>(Expression.Convert(member, typeof(object))).Compile()();
 
     static PipeArg[] SerializableArgs((string Name, object Value)[] args) =>
-      args.Select(a => new PipeArg {Name = a.Name, Value = a.Value, ArgMode = ArgMode.SerializableValue}).ToArray();
+      args.Select(a => new PipeArg(a.Name, ArgMode.SerializableValue, a.Value)).ToArray();
 
     static MethodCallExpression PipeMethodCall(LambdaExpression expression) =>
       expression.Body as MethodCallExpression ?? throw new InvalidOperationException("The expression must be a call to a pipe method");
@@ -334,21 +364,13 @@ namespace Mutuo.Etl.Pipe {
     public static string PipeTag(this SemVersion version) => version.ToString();
   }
 
-  public class PipeArg {
-    public PipeArg(string name, ArgMode argMode, object value = null) {
-      Name = name;
-      ArgMode = argMode;
-      Value = value;
+  public record PipeArgs(PipeArg[] Values, string Version = PipeArgs.Versions.V1) {
+    public static class Versions {
+      public const string V1 = "1";
     }
+  }
 
-    public PipeArg() { }
-
-    public string  Name    { get; set; }
-    public ArgMode ArgMode { get; set; }
-
-    /// <summary>The value of the arg. We rely on the serializer embedding the type name to deserialize into the instance type</summary>
-    public object Value { get; set; }
-
+  public record PipeArg(string Name, ArgMode ArgMode, object Value = null) {
     /// <summary>used in expressions, this represents an arugment to a pipe that should be resolved</summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>

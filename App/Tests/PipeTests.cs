@@ -12,6 +12,7 @@ using NUnit.Framework;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
@@ -19,6 +20,33 @@ using YtReader.Store;
 
 namespace Tests {
   public class PipeTests {
+
+    [Test]
+    public static void TestPipeArgDeserialization() {
+      var jsonV1 = new PipeArgs(new[] {new PipeArg("cancel", ArgMode.Inject, 2)}).ToJson(Pipes.ArgJCfg);
+      var jsonV0 = @"{
+  ""$type"": ""Mutuo.Etl.Pipe.PipeArg[], Mutuo.Etl"",
+  ""$values"": [
+    {
+      ""$type"": ""Mutuo.Etl.Pipe.PipeArg, Mutuo.Etl"",
+      ""name"": ""options"",
+      ""value"": {
+        ""$type"": ""YtReader.UpdateOptions, YtReader""
+      }
+    },
+    {
+      ""$type"": ""Mutuo.Etl.Pipe.PipeArg, Mutuo.Etl"",
+      ""name"": ""cancel"",
+      ""argMode"": 2
+    }
+  ]
+}".ParseJObject();
+
+      var v2 = Pipes.LoadInArgs(jsonV0);
+      v2.Version.Should().Be(PipeArgs.Versions.V1);
+      v2.Values.First(v => v.Name == "cancel").ArgMode.Should().Be(ArgMode.Inject);
+    }
+    
     [Test]
     public static async Task TestPipeApp() {
       var log = Setup.CreateTestLogger();
