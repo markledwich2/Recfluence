@@ -152,7 +152,7 @@ namespace YtReader {
       new("rec_exports_processed", "rec_export_stage", storeType: DataStoreType.Private),
       new(dir: null, "dbv1_video_stage", isNativeStore: false),
       new(dir: null, "dbv1_rec_stage", isNativeStore: false),
-      new("video_entities", "video_entity_stage")
+      new("video_entities", "video_entity_stage", tsCol:"updated")
     };
   }
 
