@@ -85,7 +85,7 @@ namespace Mutuo.Etl.Pipe {
           ErrorMessage = errorMsg
         };
         await Task.WhenAll(
-          ctx.Store.Save(logPath, logTxt.AsStream(), pipeLog),
+          ctx.Store.Save(logPath, (logTxt ?? "").AsStream(), pipeLog),
           md.Save(ctx.Store, pipeLog));
 
         // delete succeeded non-exclusive containers. Failed, and rutned on running will be cleaned up by another process
