@@ -44,5 +44,15 @@
     "**/__*__": true,
     "__azurite_*.json": true,
   },
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "python.testing.unittestArgs": [
+    "-v",
+    "-s",
+    ".",
+    "-p",
+    "*_test.py"
+  ],
+  "python.testing.pytestEnabled": false,
+  "python.testing.nosetestsEnabled": false,
+  "python.testing.unittestEnabled": true
 }

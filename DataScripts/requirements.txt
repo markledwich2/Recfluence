@@ -4,8 +4,7 @@ dataclasses_json
 dataclasses_jsonschema
 pandas
 seqlog
-spacy==2.2.4
-en_core_web_sm==2.2.5
+spacy==2.3.5
 setuptools
 wheel
 snowflake-connector-python

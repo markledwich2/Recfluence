@@ -2,6 +2,8 @@ from logging import Logger
 import tempfile
 import time
 import secrets
+
+from spacy.language import Language
 from args import Args, load_args
 from datetime import datetime, timezone
 import gzip
@@ -50,6 +52,8 @@ class VideoCaption:
 class Entity:
     name: str
     type: str
+    start_char: int
+    end_char: int
 
 
 @dataclass
@@ -65,16 +69,29 @@ class VideoEntity:
 
 T = TypeVar('T')
 
-EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'DATE']
+EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'DATE', 'TIME']
 
 
 def get_ents(pipe_res) -> List[Entity]:
     return list(map(lambda r: list([Entity(ent.text.strip(), ent.label_) for ent in r.ents]), pipe_res))
 
 
+def get_entities(lang: Language, rows: List[T], getVal: Callable[[T], str] = None) -> Iterable[Iterable[Entity]]:
+    res = list(lang.pipe([getVal(r) if getVal is not None else r or "" for r in rows], n_process=4))
+    return map(lambda r: [Entity(e.text.strip(), e.label_, e.start_char, e.end_char)
+                          for e in r.ents if e.label_ not in EXCLUDE_LABELS], res)
+
+
+def get_language():
+    return spacy.load("en_core_web_sm", disable=['parser', 'tagger', 'textcat', 'lemmatizer'])
+
+
 def video_entities(cfg: Cfg, args: Args, log: Logger):
     blob = BlobStore(cfg.storage)
-    space_lg = spacy.load("en_core_web_sm", disable=['parser', 'tagger', 'textcat', 'lemmatizer'])
+    lang = get_language()
+
+    def entities(rows: List[T], getVal: Callable[[T], str]):
+        return get_entities(lang, rows, getVal)
 
     localBasePath = Path(tempfile.gettempdir()) / 'data_scripts' if cfg.localDir is None else Path(cfg.localDir)
     localPath = localBasePath / 'video_entities'
@@ -122,10 +139,6 @@ select * from s
             videoTotal = sqlRes.rowcount
 
             log.debug('video_entities - processing entities')
-
-            def entities(rows: List[T], getVal: Callable[[T], str]) -> Iterable[Iterable[Entity]]:
-                res = list(space_lg.pipe([getVal(r) or "" for r in rows], n_process=4))
-                return map(lambda r: [Entity(ent.text.strip(), ent.label_) for ent in r.ents if ent.label_ not in EXCLUDE_LABELS], res)
 
             def captions(json) -> List[DbCaption]:
                 return DbCaption.schema().loads(json, many=True)
