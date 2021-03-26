@@ -33,7 +33,7 @@ namespace YtReader {
     public static class Options {
       public const char   RunInContainer = 'z';
       public const string Tag            = "container-tag";
-      public const string GroupName      = "container-group-name";
+      public const string GroupName      = "container-name";
       
       public static readonly HashSet<string> AllFlags = new[] {RunInContainer}.Select(p => $"-{p}").ToHashSet();
       public static readonly HashSet<string> AllArgs = new[] {Tag, GroupName}.Select(p => $"--{p}").ToHashSet();

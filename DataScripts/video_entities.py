@@ -77,7 +77,7 @@ def get_ents(pipe_res) -> List[Entity]:
 
 
 def get_entities(lang: Language, rows: List[T], getVal: Callable[[T], str] = None) -> Iterable[Iterable[Entity]]:
-    res = list(lang.pipe([getVal(r) if getVal is not None else r or "" for r in rows], n_process=4))
+    res = list(lang.pipe([(getVal(r) if getVal is not None else r) or "" for r in rows], n_process=4))
     return map(lambda r: [Entity(e.text.strip(), e.label_, e.start_char, e.end_char)
                           for e in r.ents if e.label_ not in EXCLUDE_LABELS], res)
 
