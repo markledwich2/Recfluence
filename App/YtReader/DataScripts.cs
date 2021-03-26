@@ -20,7 +20,7 @@ using YtReader.Store;
 
 namespace YtReader {
   
-  public record DataScriptsCfg(int Containers = 24, int VideosPerFile= 100_000, int Cores = 4, int Mem = 8, int SpacyBatchSize = 800);
+  public record DataScriptsCfg(int Containers = 24, int VideosPerFile= 50_000, int Cores = 4, int Mem = 8, int SpacyBatchSize = 800, int? VideoLimit = 500_000);
   public record DataScriptRunState(string[] VideoPaths);
   
   record EntityVideoRow(string video_id);
@@ -42,11 +42,11 @@ namespace YtReader {
 
       async Task<List<StringPath>> LoadNewEntityFiles() {
         using var db = await Db.Open(log);
-        return await db.QueryBlocking<EntityVideoRow>("new entities", @"select video_id
+        return await db.QueryBlocking<EntityVideoRow>("new entities", @$"select video_id
   from video_latest v
   where not exists(select * from video_entity e where e.video_id = v.video_id)
   order by video_id
-  limit 1000 -- TODO add this back when we have improved it
+{(ScriptsCfg.VideoLimit == null ? "" : $"limit {ScriptsCfg.VideoLimit}")}
 ")
           .Batch(ScriptsCfg.VideosPerFile)
           .BlockTrans(async (vids, i) => {
