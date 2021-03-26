@@ -92,6 +92,13 @@
         },
         "spacyBatchSize": {
           "type": "integer"
+        },
+        "videoLimit": {
+          "type": "integer"
+        },
+        "stale": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -355,26 +362,6 @@
         }
       }
     },
-    "SqlServerCfg": {
-      "type": "object",
-      "properties": {
-        "host": {
-          "type": "string"
-        },
-        "db": {
-          "type": "string"
-        },
-        "creds": {
-          "type": "string"
-        },
-        "defaultSchema": {
-          "type": "string"
-        },
-        "minPoolSize": {
-          "type": "integer"
-        }
-      }
-    },
     "StorageCfg": {
       "type": "object",
       "properties": {
@@ -435,7 +422,13 @@
         "loadTablesParallel": {
           "type": "integer"
         },
-        "roles": {
+        "adminRoles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "readRoles": {
           "type": "array",
           "items": {
             "type": "string"
@@ -592,9 +585,6 @@
     },
     "warehouse": {
       "$ref": "#/definitions/WarehouseCfg"
-    },
-    "appDb": {
-      "$ref": "#/definitions/SqlServerCfg"
     },
     "results": {
       "$ref": "#/definitions/ResultsCfg"

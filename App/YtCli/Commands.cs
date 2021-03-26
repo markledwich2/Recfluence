@@ -266,9 +266,9 @@ namespace YtCli {
     [CommandOption("dataform-deps", Description = "when specified, dataform will run with dependencies included", IsRequired = false)]
     public bool DataformDeps { get; set; }
 
-    [CommandOption("data-script-run", Description = "a previous runid to run scripts on", IsRequired = false)]
+    [CommandOption("ds-run", Description = "a previous runid to run scripts on", IsRequired = false)]
     public string DataScriptsRunId { get; set; }
-    
+
     protected override string GroupName => "update";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
