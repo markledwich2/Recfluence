@@ -2,6 +2,7 @@ from logging import Logger
 import tempfile
 import time
 import secrets
+import re
 
 from spacy.language import Language
 from args import Args, load_args
@@ -71,13 +72,25 @@ T = TypeVar('T')
 
 EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'DATE', 'TIME']
 
+def clean_text(text):
+    # Remove newlines and lowercase if mostly uppercase (both first letter or all letters)
+    text = re.sub("\s+", " ", text)
+    if len(text) < 10:
+        return text
+    if sum(1 for x in text if x.islower()) == 0:
+        return text.lower()
+    tok_l = text.split(" ")
+    if len(tok_l) >= 5 and sum(1 for tok in tok_l if tok[0].islower()) == 0:
+        return text.lower()
+    return text
+
 
 def get_ents(pipe_res) -> List[Entity]:
     return list(map(lambda r: list([Entity(ent.text.strip(), ent.label_) for ent in r.ents]), pipe_res))
 
 
 def get_entities(lang: Language, rows: List[T], getVal: Callable[[T], str] = None) -> Iterable[Iterable[Entity]]:
-    res = list(lang.pipe([(getVal(r) if getVal is not None else r) or "" for r in rows], n_process=4))
+    res = list(lang.pipe([clean_text(getVal(r) if getVal is not None else r) or "" for r in rows], n_process=4))
     return map(lambda r: [Entity(e.text.strip(), e.label_, e.start_char, e.end_char)
                           for e in r.ents if e.label_ not in EXCLUDE_LABELS], res)
 
