@@ -70,7 +70,7 @@ class VideoEntity:
 
 T = TypeVar('T')
 
-EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'TIME', 'PERCENT']
+EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'PERCENT']
 
 
 def clean_text(text):
