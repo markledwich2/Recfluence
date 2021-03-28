@@ -20,7 +20,7 @@ using YtReader.Store;
 
 namespace YtReader {
   public record DataScriptsCfg(int Containers = 24, int VideosPerFile = 50_000, int Cores = 4, int Mem = 8, int SpacyBatchSize = 800,
-    int? VideoLimit = 500_000, DateTime? Stale = null);
+    int? VideoLimit = 5_000_000, DateTime? Stale = null);
 
   public record DataScriptRunState(string[] VideoPaths);
 

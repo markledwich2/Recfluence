@@ -70,7 +70,8 @@ class VideoEntity:
 
 T = TypeVar('T')
 
-EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'DATE', 'TIME']
+EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'TIME', 'PERCENT']
+
 
 def clean_text(text):
     # Remove newlines and lowercase if mostly uppercase (both first letter or all letters)

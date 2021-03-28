@@ -17,5 +17,5 @@ async def run(args: Args):
 
     video_entities(cfg, args, log)
 
-
-asyncio.run(run(load_args()))
+if __name__ == "__main__":
+    asyncio.run(run(load_args()))
