@@ -59,5 +59,6 @@
   ],
   "python.testing.pytestEnabled": false,
   "python.testing.nosetestsEnabled": false,
-  "python.testing.unittestEnabled": true
+  "python.testing.unittestEnabled": true,
+  "python.analysis.typeCheckingMode": "basic"
 }

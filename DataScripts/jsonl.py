@@ -22,11 +22,15 @@ class JsonlEncoder(json.JSONEncoder):
         return '\n'.join(lines)
 
 
-def dump(obj: Any, fp: io.IOBase, cls=None, **kwargs):
-    if cls is None:
-        cls = JsonlEncoder
-    text = cls(**kwargs).encode(obj)
+def write_jsonl(obj: Any, fp: io.IOBase, cls=None, **kwargs):
+    text = to_jsonl(obj, cls, **kwargs)
     if(isinstance(fp, (io.RawIOBase, io.BufferedIOBase))):
         fp.write(text.encode())
     else:
         fp.write(text)
+
+
+def to_jsonl(obj: Any, cls=None, **kwargs):
+    if cls is None:
+        cls = JsonlEncoder
+    return cls(**kwargs).encode(obj)

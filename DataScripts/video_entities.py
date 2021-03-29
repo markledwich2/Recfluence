@@ -11,12 +11,11 @@ import gzip
 from itertools import chain
 from dataclasses_json.api import DataClassJsonMixin
 from dataclasses_json import dataclass_json
-from marshmallow.fields import DateTime
 from log import configure_log
 import jsonl
 from blobstore import BlobStore
 from pathlib import Path, PurePath
-from typing import Callable, Iterable, List, Optional, TypeVar
+from typing import Any, Callable, Iterable, List, Optional, TypeVar, Union, cast
 from snowflake.connector.cursor import SnowflakeCursor
 import spacy
 from sf import sf_connect
@@ -31,8 +30,8 @@ class DbVideoEntity:
     videoTitle: str
     descripton: Optional[str]
     captions: Optional[str]
-    videoUpdated: DateTime
-    captionUpdated: Optional[DateTime]
+    videoUpdated: datetime
+    captionUpdated: Optional[datetime]
 
 
 @dataclass_json
@@ -63,9 +62,9 @@ class VideoEntity:
     part: str  # title, description, captions
     offset: Optional[int]
     entities: List[Entity]
-    videoUpdated: DateTime
-    captionUpdated: Optional[DateTime]
-    updated: DateTime
+    videoUpdated: Optional[datetime] = None
+    captionUpdated: Optional[datetime] = None
+    updated: Optional[datetime] = None
 
 
 T = TypeVar('T')
@@ -75,7 +74,7 @@ EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'PERCENT']
 
 def clean_text(text):
     # Remove newlines and lowercase if mostly uppercase (both first letter or all letters)
-    text = re.sub("\s+", " ", text)
+    text = re.sub(r'\s+', ' ', text)
     if len(text) < 10:
         return text
     if sum(1 for x in text if x.islower()) == 0:
@@ -86,12 +85,16 @@ def clean_text(text):
     return text
 
 
-def get_ents(pipe_res) -> List[Entity]:
+def get_ents(pipe_res) -> List[List[Entity]]:
     return list(map(lambda r: list([Entity(ent.text.strip(), ent.label_) for ent in r.ents]), pipe_res))
 
 
-def get_entities(lang: Language, rows: List[T], getVal: Callable[[T], str] = None) -> Iterable[Iterable[Entity]]:
-    res = list(lang.pipe([clean_text(getVal(r) if getVal is not None else r) or "" for r in rows], n_process=4))
+def get_entities(lang: Language, rows: List[T], getVal: Callable[[T], Union[str, None]] = None) -> Iterable[Iterable[Entity]]:
+    def get_cleaned_txt(r: T):
+        val = (getVal(r) if getVal is not None else r) or ""
+        return clean_text(val)
+
+    res: List[Any] = list(lang.pipe([get_cleaned_txt(r) for r in rows], n_process=4))
     return map(lambda r: [Entity(e.text.strip(), e.label_, e.start_char, e.end_char)
                           for e in r.ents if e.label_ not in EXCLUDE_LABELS], res)
 
@@ -100,12 +103,35 @@ def get_language():
     return spacy.load("en_core_web_sm", disable=['parser', 'tagger', 'textcat', 'lemmatizer'])
 
 
-def video_entities(cfg: Cfg, args: Args, log: Logger):
-    blob = BlobStore(cfg.storage)
+def videos_to_entities(source_videos: List[DbVideoEntity]):
     lang = get_language()
 
-    def entities(rows: List[T], getVal: Callable[[T], str]):
+    def entities(rows: List[T], getVal: Callable[[T], Union[str, None]]):
         return get_entities(lang, rows, getVal)
+
+    def captions(json) -> List[DbCaption]:
+        return cast(List[DbCaption], DbCaption.schema().loads(json, many=True)) if json else []
+
+    title_entities = entities(source_videos, lambda r: r.videoTitle)
+    description_entities = entities(source_videos, lambda r: r.descripton)
+    source_captions = [
+        VideoCaption(r, c.offset, c.caption) for r in source_videos
+        for c in captions(r.captions)
+    ]
+    caption_entities = entities(source_captions, lambda r: r.caption)
+
+    updated = datetime.now(timezone.utc)
+    caption_rows = map(lambda r, t: VideoEntity(r.video.videoId, 'caption', r.offset, list(t), r.video.videoUpdated,
+                                                r.video.captionUpdated, updated), source_captions, caption_entities)
+    res_rows = list(chain(map(lambda r, t: VideoEntity(r.videoId, 'title', None, t, r.videoUpdated, r.captionUpdated, updated), source_videos, title_entities),
+                          map(lambda r, t: VideoEntity(r.videoId, 'description', None, t, r.videoUpdated,
+                                                       r.captionUpdated, updated), source_videos, description_entities),
+                          [r for r in caption_rows if r.offset is not None or r.entities is not None]))
+    return res_rows
+
+
+def video_entities(cfg: Cfg, args: Args, log: Logger):
+    blob = BlobStore(cfg.storage)
 
     localBasePath = Path(tempfile.gettempdir()) / 'data_scripts' if cfg.localDir is None else Path(cfg.localDir)
     localPath = localBasePath / 'video_entities'
@@ -149,42 +175,24 @@ select * from s
 
             log.info('video_entities - getting data for this video file batch {batch}/{batchTotal}: {sql}',
                      sql=sql, batch=batchNum, batchTotal=batchTotal)
-            sqlRes = cur.execute(sql)
+            sqlRes = cast(SnowflakeCursor, cur.execute(sql))
             videoTotal = sqlRes.rowcount
-
-            log.debug('video_entities - processing entities')
-
-            def captions(json) -> List[DbCaption]:
-                return DbCaption.schema().loads(json, many=True)
+            log.debug('video_entities - batch sql complete. About to process entities')
 
             videoCount = 0
             while True:
                 raw_rows = cur.fetchmany(cfg.dataScripts.spacyBatchSize)
                 if(len(raw_rows) == 0):
                     break
-                videoCount = videoCount + len(raw_rows)
                 source_videos = list(map(lambda r: DbVideoEntity(r[0], r[1], r[2], r[3], r[4], r[5]), raw_rows))
-                title_entities = entities(source_videos, lambda r: r.videoTitle)
-                description_entities = entities(source_videos, lambda r: r.descripton)
-                source_captions = [
-                    VideoCaption(r, c.offset, c.caption) for r in source_videos
-                    for c in captions(r.captions)
-                ]
-                caption_entities = entities(source_captions, lambda r: r.caption)
-
-                updated = datetime.now(timezone.utc)
-                caption_rows = map(lambda r, t: VideoEntity(r.video.videoId, 'caption', r.offset, t, r.video.videoUpdated,
-                                                            r.video.captionUpdated, updated), source_captions, caption_entities)
-                res_rows = list(chain(map(lambda r, t: VideoEntity(r.videoId, 'title', None, t, r.videoUpdated, r.captionUpdated, updated), source_videos, title_entities),
-                                      map(lambda r, t: VideoEntity(r.videoId, 'description', None, t, r.videoUpdated,
-                                                                   r.captionUpdated, updated), source_videos, description_entities),
-                                      [r for r in caption_rows if r.offset is not None or r.entities is not None]))
+                videoCount = videoCount + len(raw_rows)
+                res_rows = videos_to_entities(source_videos)
 
                 fileName = f'{time.strftime("%Y-%m-%d_%H-%M-%S")}.{secrets.token_hex(5)[:5]}.jsonl.gz'
                 localFile = localPath / fileName
                 blobFile = PurePath(f'db2/video_entities/{fileName}') if cfg.localDir is None else None
                 with gzip.open(localFile, 'wb') as f:
-                    jsonl.dump(res_rows, f, cls=jsonl.JsonlEncoder)
+                    jsonl.write_jsonl(res_rows, f)
                 if(blobFile):
                     blob.save_file(localFile, blobFile)
 
