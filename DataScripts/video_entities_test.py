@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, tzinfo
 from jsonl import to_jsonl
-from video_entities import DbVideoEntity, VideoEntity, get_entities, get_language, videos_to_entities
+from video_entities import DbVideoEntity, VideoEntity, clean_text, get_entities, get_language, videos_to_entities
 import unittest   # The test framework
 
 
@@ -24,6 +24,10 @@ class Test_VideoEntities(unittest.TestCase):
 
         json = to_jsonl([VideoEntity(e.videoId, e.part, e.offset, e.entities) for e in entities])
         self.assertEquals(json, '{"videoId": "v1", "part": "title", "offset": null, "entities": [], "videoUpdated": null, "captionUpdated": null, "updated": null}\n{"videoId": "v2", "part": "title", "offset": null, "entities": [{"name": "Bill Gates", "type": "PERSON", "start_char": 9, "end_char": 19}], "videoUpdated": null, "captionUpdated": null, "updated": null}\n{"videoId": "v1", "part": "description", "offset": null, "entities": [], "videoUpdated": null, "captionUpdated": null, "updated": null}\n{"videoId": "v2", "part": "description", "offset": null, "entities": [], "videoUpdated": null, "captionUpdated": null, "updated": null}\n{"videoId": "v2", "part": "caption", "offset": 120, "entities": [{"name": "mary", "type": "PERSON", "start_char": 67, "end_char": 71}, {"name": "joseph", "type": "PERSON", "start_char": 76, "end_char": 82}], "videoUpdated": null, "captionUpdated": null, "updated": null}')
+
+    def test_clean_text_edge_cases(self):
+        clean_text(' one two three\n four   ')  # just test it doesn't break with delemeters at the end
+        self.assertEquals('one two three four five six', clean_text('ONE TWO THREE FOUR FIVE SIX'))
 
 
 if __name__ == '__main__':

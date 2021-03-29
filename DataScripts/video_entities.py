@@ -4,23 +4,21 @@ import time
 import secrets
 import re
 
+import spacy
 from spacy.language import Language
-from args import Args, load_args
+from args import Args
 from datetime import datetime, timezone
 import gzip
 from itertools import chain
 from dataclasses_json.api import DataClassJsonMixin
 from dataclasses_json import dataclass_json
-from log import configure_log
 import jsonl
 from blobstore import BlobStore
 from pathlib import Path, PurePath
 from typing import Any, Callable, Iterable, List, Optional, TypeVar, Union, cast
 from snowflake.connector.cursor import SnowflakeCursor
-import spacy
 from sf import sf_connect
-from cfg import Cfg, load_cfg
-import asyncio
+from cfg import Cfg
 from dataclasses import dataclass
 
 
@@ -80,13 +78,9 @@ def clean_text(text):
     if sum(1 for x in text if x.islower()) == 0:
         return text.lower()
     tok_l = text.split(" ")
-    if len(tok_l) >= 5 and sum(1 for tok in tok_l if tok[0].islower()) == 0:
+    if len(tok_l) >= 5 and sum(1 for tok in tok_l if len(tok) > 0 and tok[0].islower()) == 0:
         return text.lower()
     return text
-
-
-def get_ents(pipe_res) -> List[List[Entity]]:
-    return list(map(lambda r: list([Entity(ent.text.strip(), ent.label_) for ent in r.ents]), pipe_res))
 
 
 def get_entities(lang: Language, rows: List[T], getVal: Callable[[T], Union[str, None]] = None) -> Iterable[Iterable[Entity]]:
