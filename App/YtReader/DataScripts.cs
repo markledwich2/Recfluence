@@ -20,7 +20,7 @@ using YtReader.Store;
 
 namespace YtReader {
   public record DataScriptsCfg(int Containers = 24, int VideosPerFile = 50_000, int Cores = 4, int Mem = 8, int SpacyBatchSize = 800,
-    int? VideoLimit = 5_000_000, DateTime? Stale = null);
+    int? VideoLimit = null, DateTime? Stale = null);
 
   public record DataScriptRunState(string[] VideoPaths);
 
@@ -46,7 +46,7 @@ namespace YtReader {
         return await db.QueryBlocking<EntityVideoRow>("new entities", @$"
 with ents as (
   select video_id, max(updated) updated
-  from video_entity
+  from video_entity_stage_view
   group by 1
 )
 select v.video_id
