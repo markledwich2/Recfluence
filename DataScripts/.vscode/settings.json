@@ -50,6 +50,8 @@
     "__azurite_*.json": true,
   },
   "editor.formatOnSave": true,
+  "python.languageServer": "Pylance",
+  "python.analysis.typeCheckingMode": "basic",
   "python.testing.unittestArgs": [
     "-v",
     "-s",
@@ -59,6 +61,5 @@
   ],
   "python.testing.pytestEnabled": false,
   "python.testing.nosetestsEnabled": false,
-  "python.testing.unittestEnabled": true,
-  "python.analysis.typeCheckingMode": "basic"
+  "python.testing.unittestEnabled": true
 }
