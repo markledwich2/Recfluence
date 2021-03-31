@@ -199,3 +199,5 @@ from {'vid_caption' if should_run_part(parts, Part.caption) else 'vid'}
 
     finally:
         db.close()
+
+    log.info('video_entities - cometed successfully')
