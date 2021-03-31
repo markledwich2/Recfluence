@@ -149,7 +149,7 @@ namespace YtReader {
       if (secrets == null) throw new InvalidOperationException("can't find secrets cfg file");
 
       var appJson = new JObject();
-      var mergeSettings = new JsonMergeSettings {MergeNullValueHandling = MergeNullValueHandling.Ignore};
+      var mergeSettings = new JsonMergeSettings {MergeNullValueHandling = MergeNullValueHandling.Ignore, MergeArrayHandling = MergeArrayHandling.Concat};
 
       void MergeAppJson(string path) {
         var p = (basePath ?? ".").AsPath().Combine(path);
@@ -216,6 +216,10 @@ namespace YtReader {
       // merge default properties from the pipe config
       appCfg.Dataform.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.Dataform.Container);
       appCfg.UserScrape.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.UserScrape.Container);
+      
+      
+      // de-dupe merged pipe configuration
+      appCfg.Pipe.Pipes = appCfg.Pipe.Pipes.GroupBy(p => p.PipeName).Select(g => g.Last()).ToArray();
     }
 
     static IReadOnlyCollection<ValidationResult> Validate(object cfgObject) =>
