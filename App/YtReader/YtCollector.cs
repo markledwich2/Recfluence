@@ -672,14 +672,9 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
     }
 
     /// <summary>Saves recs for all of the given vids</summary>
-    async Task<(VideoExtra[] allExtra, List<RecStored2> recs)> SaveRecsAndExtra(Channel c, CollectPart[] parts, ILogger log,
-      HashSet<string> forChromeUpdate = null, HashSet<string> forRecsAndExtra = null, HashSet<string> forExtra = null) {
-      forChromeUpdate ??= new();
-      forRecsAndExtra ??= new();
-      forExtra ??= new();
-
+    async Task<(VideoExtra[] allExtra, List<RecStored2> recs)> SaveRecsAndExtra(Channel c, CollectPart[] parts, ILogger log, VideoExtraParts extraParts) {
       var chromeExtra = await ChromeScraper.GetRecsAndExtra(forChromeUpdate, log);
-      var webRecsExtra = await Scraper.GetRecsAndExtra(forRecsAndExtra, log, c?.ChannelId, c?.ChannelTitle);
+      var webRecsExtra = await Scraper.GetExtra(forRecsAndExtra, log, c?.ChannelId, c?.ChannelTitle);
       var webExtra = await Scraper.GetExtra(forExtra, log, c?.ChannelId, c?.ChannelTitle);
       var allRecsAndExtra = chromeExtra.Concat(webRecsExtra).ToArray();
       var allExtra = chromeExtra.Select(v => v.Extra).Concat(webRecsExtra.Select(v => v.Extra)).Concat(webExtra).NotNull().ToArray();
@@ -706,7 +701,7 @@ limit :remaining", param: new {remaining = RCfg.DiscoverChannels});
       return (allExtra, recs);
     }
 
-    public static RecStored2[] ToRecStored(RecsAndExtra[] allExtra, DateTime updated) =>
+    public static RecStored2[] ToRecStored(ExtraAndParts[] allExtra, DateTime updated) =>
       allExtra
         .SelectMany(v => v.Recs?.Select((r, i) => new RecStored2 {
           FromChannelId = v.Extra.ChannelId,

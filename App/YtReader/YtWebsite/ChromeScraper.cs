@@ -50,8 +50,8 @@ namespace YtReader.YtWebsite {
 
     int _lastUsedBrowserIdx; // re-use the same browser proxies across different calls to recs and extra
 
-    public async Task<IReadOnlyCollection<RecsAndExtra>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) {
-      if (videos.None()) return new RecsAndExtra[] { };
+    public async Task<IReadOnlyCollection<ExtraAndParts>> GetRecsAndExtra(IReadOnlyCollection<string> videos, ILogger log) {
+      if (videos.None()) return new ExtraAndParts[] { };
 
       var sw = Stopwatch.StartNew();
       log = log.ForContext("Module", nameof(ChromeScraper));
@@ -73,7 +73,7 @@ namespace YtReader.YtWebsite {
       return recs.NotNull().SelectMany().NotNull().ToReadOnly();
     }
 
-    async Task<IReadOnlyCollection<RecsAndExtra>> VideoBatch(ILogger log, ProxyConnectionCfg[] proxies, IReadOnlyCollection<string> b, Stopwatch sw, int i) {
+    async Task<IReadOnlyCollection<ExtraAndParts>> VideoBatch(ILogger log, ProxyConnectionCfg[] proxies, IReadOnlyCollection<string> b, Stopwatch sw, int i) {
       await using var browsers = new ResourceCycle<Browser, ProxyConnectionCfg>(proxies, p => CreateBrowser(log, p), _lastUsedBrowserIdx);
 
       return await b.BlockFunc(async v => {
@@ -105,7 +105,7 @@ namespace YtReader.YtWebsite {
       return page;
     }
 
-    async Task<RecsAndExtra> Video(ResourceCycle<Browser, ProxyConnectionCfg> browsers, string videoId, Stopwatch sw, ILogger log) {
+    async Task<ExtraAndParts> Video(ResourceCycle<Browser, ProxyConnectionCfg> browsers, string videoId, Stopwatch sw, ILogger log) {
       var (browser, proxy) = await browsers.Get();
       log.Debug("loading video {Video}. Proxy={Proxy}", videoId, proxy?.Url ?? "Direct");
 
@@ -177,7 +177,7 @@ namespace YtReader.YtWebsite {
       public string subReason { get; set; }
     }
 
-    async Task<(RecsAndExtra video, Response notOkResponse)> GetVideo(Page page, string videoId, ILogger log) {
+    async Task<(ExtraAndParts video, Response notOkResponse)> GetVideo(Page page, string videoId, ILogger log) {
       log = log.ForContext("Video", videoId);
       var (response, dur) = await page.GoToAsync($"https://youtube.com/watch?v={videoId}", (int) 2.Minutes().TotalMilliseconds,
         new[] {WaitUntilNavigation.Networkidle2, WaitUntilNavigation.Load, WaitUntilNavigation.DOMContentLoaded}).WithDuration();
@@ -207,7 +207,7 @@ namespace YtReader.YtWebsite {
 ");
       video.Error = error ?? reason?.reason;
       video.SubError = reason?.subReason;
-      if (video.Error.HasValue()) return (new(video, default), default);
+      if (video.Error.HasValue()) return (new(video), default);
 
       await ScrollDown(page, maxScroll: null, videoId, log);
       (video.Ad, video.HasAd) = await GetAd(page);
@@ -276,7 +276,7 @@ namespace YtReader.YtWebsite {
       }
     }
 
-    async Task<(VideoCommentStored2[] comments, string msg, long? count)> GetComments(Page page, VideoExtra video, ILogger log) {
+    async Task<(Store.VideoComment[] comments, string msg, long? count)> GetComments(Page page, VideoExtra video, ILogger log) {
       try {
         await page.WaitForSelectorAsync($"{CommentCountSel}, {CommentErrorSel}");
       }
@@ -302,13 +302,12 @@ namespace YtReader.YtWebsite {
 })";
 
       var videoComments = await page.EvaluateExpressionAsync<VideoComment[]>(commentSel);
-      var comments = videoComments.Select(c => new VideoCommentStored2 {
+      var comments = videoComments.Select(c => new Store.VideoComment {
         Author = c.author,
         AuthorChannelId = c.authorChannelId,
         Comment = c.comment,
-        ChannelId = video.ChannelId,
         VideoId = video.VideoId,
-        Created = ParseAgo(c.ago).Date()
+        Created = c.ago.ParseAgo().Date()
       }).ToArray();
 
       if (comments.HasItems())
@@ -361,7 +360,7 @@ namespace YtReader.YtWebsite {
             Rank = r.rank,
             ToVideoTitle = r.title,
             ToViews = ParseViews(r.viewText),
-            ToUploadDate = ParseAgo(r.publishAgo).Date(),
+            ToUploadDate = r.publishAgo.ParseAgo().Date(),
             ForYou = ParseForYou(r.viewText),
           }).ToArray();
 
@@ -517,24 +516,6 @@ namespace YtReader.YtWebsite {
       if (!m.Success) return null;
       var views = m.Groups[1].Value.ParseLong();
       return views;
-    }
-
-    public static (TimeSpan Dur, AgoUnit Unit) ParseAgo(string ago) {
-      if (ago == null) return default;
-      var res = Regex.Match(ago, "(?<num>\\d)\\s(?<unit>minute|hour|day|week|month|year)[s]? ago");
-      if (!res.Success) return default;
-      var num = res.Groups["num"].Value.ParseInt();
-      var unit = res.Groups["unit"].Value.ParseEnum<AgoUnit>();
-      var timeSpan = unit switch {
-        Minute => num.Minutes(),
-        Hour => num.Hours(),
-        Day => num.Days(),
-        Week => num.Weeks(),
-        Month => TimeSpan.FromDays(365 / 12.0 * num),
-        Year => TimeSpan.FromDays(365 * num),
-        _ => throw new InvalidOperationException($"unexpected ago unit {res.Groups["unit"].Value}")
-      };
-      return (timeSpan, unit);
     }
 
     class VideoDetailsFromScript {

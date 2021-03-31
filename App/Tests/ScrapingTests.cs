@@ -10,33 +10,28 @@ using SysExtensions.Threading;
 using YtReader;
 using YtReader.YtApi;
 using YtReader.YtWebsite;
+using static YtReader.YtWebsite.ExtraPart;
 
 namespace Tests {
 
 
   public static class ScrapingTests {
+    
     [Test]
-    public static async Task ChromeRecsAndExtra() {
+    public static async Task VideoComments() {
       // get comments, does watch page html have it
       using var ctx = await TestSetup.TextCtx();
-      var chrome = ctx.Resolve<ChromeScraper>();
-      var vids = new[] {
-        
-        "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
-        "-ryPLVEExA0", // private 
-        /*"Ms9WOSXU5tY", "n_vzBGB3F_Y",
-        "xxQOtOCbASs", // tall
-        "DLq1DUcMh1Q"*/
-      };
-      var chromeExtras = await chrome.GetRecsAndExtra(vids, ctx.Log);
+      var ws = ctx.Scope.Resolve<YtWeb>();
+      var video = await ws.GetVideo(ctx.Log, "Su1FQUkMojU", loadComments: true);
     }
-
+    
     [Test]
     public static async Task WebRecsAndExtra() {
       using var ctx = await TestSetup.TextCtx();
       var ws = ctx.Scope.Resolve<YtWeb>();
-      var extra = await ws.GetRecsAndExtra(new[] {
-        "V8kxdw0UASE", // should work. looks like ti was errored and then re-instated
+      var extra = await ws.GetExtra(new[] {
+        "Su1FQUkMojU", // JP video with lots of comments
+        //"V8kxdw0UASE", // should work. looks like ti was errored and then re-instated
         //"XztR0CnVKNo", // normal
         // "JPiiySjShng", //nbc suspected parsing problem
         //"OijWK4Y6puI", //unlisted
@@ -50,7 +45,7 @@ namespace Tests {
         "MbXbFchrTgw",
         "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)*/
         //"-ryPLVEExA0", // private 
-      }, ctx.Log);
+      }, new [] {Comments, Recs}, ctx.Log);
     }
 
     [Test]

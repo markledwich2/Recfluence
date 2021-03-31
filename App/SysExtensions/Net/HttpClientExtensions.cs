@@ -16,6 +16,8 @@ using Serilog;
 using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using System.Net.Http.Headers;
+using Microsoft.Net.Http.Headers;
 
 namespace SysExtensions.Net {
   public static class HttpClientExtensions {
@@ -218,5 +220,10 @@ namespace SysExtensions.Net {
     public static string UrlEncode(this string url) => WebUtility.UrlEncode(url);
 
     public static string UrlDecode(this string url) => WebUtility.UrlDecode(url);
+    
+    public static (string Name, string Value)[] Cookies(this HttpResponseHeaders headers) => 
+      headers.TryGetValues("Set-Cookie", out var values) 
+        ? SetCookieHeaderValue.ParseList(values.ToList()).Select(cookie => (cookie.Name.Value, cookie.Value.Value)).ToArray() 
+        : Array.Empty<(string,string)>();
   }
 }

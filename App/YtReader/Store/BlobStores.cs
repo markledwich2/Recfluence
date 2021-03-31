@@ -245,23 +245,27 @@ namespace YtReader.Store {
     public VideoExtra() { }
     public VideoExtra(Platform platform, string id, string sourceId) : base(platform, id, sourceId) { }
 
-    public bool?                 HasAd        { get; set; }
-    public string                Error        { get; set; }
-    public string                SubError     { get; set; }
-    public VideoCommentStored2[] Comments     { get; set; }
-    public string                Ad           { get; set; }
-    public string                CommentsMsg  { get; set; }
-    public ScrapeSource          Source       { get; set; }
-    public long?                 CommentCount { get; set; }
+    public bool?          HasAd        { get; set; }
+    public string         Error        { get; set; }
+    public string         SubError     { get; set; }
+    public VideoComment[] Comments     { get; set; }
+    public string         Ad           { get; set; }
+    public string         CommentsMsg  { get; set; }
+    public ScrapeSource   Source       { get; set; }
+    public long?          CommentCount { get; set; }
   }
 
-  public class VideoCommentStored2 {
-    public string    ChannelId       { get; set; }
-    public string    VideoId         { get; set; }
-    public string    Author          { get; set; }
-    public string    AuthorChannelId { get; set; }
-    public string    Comment         { get; set; }
-    public DateTime? Created         { get; set; }
+  public record VideoComment {
+    public string    CommentId       { get; init; }
+    public string    ThreadId        { get; set; }
+    public string    VideoId         { get; init; }
+    public string    Author          { get; init; }
+    public string    AuthorChannelId { get; init; }
+    public string    Comment         { get; init; }
+    public string    AuthorThumb     { get; init; }
+    public DateTime? Created         { get; init; }
+    public int?      Likes           { get; init; }
+    public bool      IsChannelOwner  { get; init; }
   }
 
   public class RecStored2 : Rec, IHasUpdated {

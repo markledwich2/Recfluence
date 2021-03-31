@@ -103,7 +103,7 @@ namespace SysExtensions {
       }
     }
 
-    public static (T, Exception) Try<T>(this Func<T> task, T defaultValue = default) {
+    public static (T Value, Exception Ex) Try<T>(this Func<T> task, T defaultValue = default) {
       try {
         return (task(), default);
       }

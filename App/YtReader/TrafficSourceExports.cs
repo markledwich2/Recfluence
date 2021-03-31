@@ -66,9 +66,9 @@ namespace YtReader {
           if (source.Length != 2 || source[0] != "YT_RELATED")
             return null; // total at the top or otherwise. not interested
           var videoId = source[1];
-          var fromVideo = await ytWeb.GetVideo(videoId, log);
+          var fromVideo = await ytWeb.GetVideo(log, videoId);
 
-          return new TrafficSourceRow {
+          return new() {
             ToChannelTitle = exportInfo.Channel,
             From = exportInfo.From,
             To = exportInfo.To,
