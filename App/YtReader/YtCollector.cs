@@ -273,10 +273,11 @@ select * from s
       using (var db = await Sf.Open(log)) {
         // retrieve previous channel state to update with new classification (algos and human) and stats form the API
         existingChannels = (await db.Query<(string j, long? daysBack, DateTime? lastVideoUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate)>(
-            "channels - previous", $@"
+            "channels - previous",
+            $@"
 with review_filtered as (
   select channel_id, channel_title
-  from channel_review
+  from channel_latest
   where platform = 'YouTube'
   and {(explicitChannels.None() ? "meets_review_criteria" : $"channel_id in ({SqlList(explicitChannels)})")} --only explicit channel when provided
 )
@@ -286,6 +287,7 @@ with review_filtered as (
   where exists(select * from review_filtered r where r.channel_id=v:ChannelId)
     qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc)=1
 )
+, s as (
 select coalesce(v, object_construct('ChannelId', r.channel_id)) channel_json
      , b.daily_update_days_back
      , (select max(vs.v:Updated::timestamp_ntz) from video_stage vs where vs.v:ChannelId=r.channel_id) last_video_update
@@ -294,7 +296,8 @@ select coalesce(v, object_construct('ChannelId', r.channel_id)) channel_json
 from review_filtered r
        left join stage_latest on v:ChannelId=r.channel_id
        left join channel_collection_days_back b on b.channel_id=v:ChannelId
-       left join channel_latest l on v:ChannelId=l.channel_id
+  )
+select * from s
 "))
           .Select(r => new ChannelUpdatePlan {
             Channel = r.j.ToObject<Channel>(IJsonlStore.JCfg),

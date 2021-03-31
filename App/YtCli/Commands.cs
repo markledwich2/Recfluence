@@ -165,17 +165,22 @@ namespace YtCli {
     public async ValueTask ExecuteAsync(IConsole console) => await Backup.Backup(Log);
   }
 
+
+  
   [Command("clean", Description = "Clean expired resources")]
   public class CleanCmd : ICommand {
     readonly AzureCleaner Cleaner;
     readonly ILogger      Log;
+    
+    [CommandOption("mode", Description = "the cleaning behavior. Standard, DeleteCompleted or DeleteAll")]
+    public CleanContainerMode Mode { get; set; }
 
     public CleanCmd(AzureCleaner cleaner, ILogger log) {
       Cleaner = cleaner;
       Log = log;
     }
 
-    public async ValueTask ExecuteAsync(IConsole console) => await Cleaner.DeleteExpiredResources(deleteCompleteContainers: true, Log);
+    public async ValueTask ExecuteAsync(IConsole console) => await Cleaner.DeleteExpiredResources(Mode, Log);
   }
 
   [Command("create-env", Description = "Create a branch environment for testing")]

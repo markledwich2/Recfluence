@@ -123,31 +123,31 @@ namespace YtReader {
       _userScrape.Run(Log, init, trial, accounts, cancel);
 
     [Pipe]
-    public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
-      options ??= new();
+    public async Task Update(UpdateOptions o = null, CancellationToken cancel = default) {
+      o ??= new();
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
 
-      var fullLoad = options.FullLoad;
+      var fullLoad = o.FullLoad;
 
       var collectOptions = new SimpleCollectOptions
-        {Parts = options.StandardParts, ExplicitChannels = options.Collect?.LimitChannels, ExplicitVideos = options.Videos};
+        {Parts = o.StandardParts, ExplicitChannels = o.Collect?.LimitChannels, ExplicitVideos = o.Videos};
 
       var actionMethods = TaskGraph.FromMethods(
-        (l, c) => Collect(options.Collect, l, c),
+        (l, c) => Collect(o.Collect, l, c),
         (l, c) => BcCollect(collectOptions, l, c),
         (l, c) => RumbleCollect(collectOptions, l, c),
-        (l, c) => Stage(fullLoad, options.StageTables, l),
-        (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
-        (l, c) => Result(options.Results, l, c),
-        (l, c) => Index(options.Indexes, options.Tags, l, c),
+        (l, c) => Stage(fullLoad, o.StageTables, l),
+        (l, c) => Search(o.SearchMode, o.SearchIndexes, o.SearchConditions, l, c),
+        (l, c) => Result(o.Results, l, c),
+        (l, c) => Index(o.Indexes, o.Tags, l, c),
         //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
-        (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c),
-        (l, c) => DataScripts(l, c, options.DataScriptsRunId),
+        (l, c) => Dataform(fullLoad, o.WarehouseTables, o.DataformDeps, l, c),
+        (l, c) => DataScripts(l, c, o.DataScriptsRunId),
         (l, c) => Backup(l)
       );
 
-      var actions = options.Actions;
+      var actions = o.Actions;
       if (actions?.Any() == true) {
         var missing = actions.Where(a => actionMethods[a] == null).ToArray();
         if (missing.Any())

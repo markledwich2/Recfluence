@@ -228,8 +228,8 @@ namespace Mutuo.Etl.Pipe {
         return type.DefaultForType();
       if (value is string s && type.IsEnum)
         return s.ParseEnum(type);
-      if (value is JObject j && j.Children().None())
-        return type.GetConstructor(Type.EmptyTypes)?.Invoke(null);
+      if (value is JToken j)
+        return j.ToObject(type, ArgJCfg.Serializer());
       try {
         return Convert.ChangeType(value, type);
       }
