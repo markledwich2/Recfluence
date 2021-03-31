@@ -521,7 +521,7 @@ namespace YtReader.YtWebsite {
 
     public static (TimeSpan Dur, AgoUnit Unit) ParseAgo(string ago) {
       if (ago == null) return default;
-      var res = Regex.Match(ago, "(?<num>\\d)\\s(?<unit>minute|hour|day|week|month|year)[s]? ago");
+      var res = Regex.Match(ago, "(?<num>\\d+)\\s(?<unit>minute|hour|day|week|month|year)[s]? ago");
       if (!res.Success) return default;
       var num = res.Groups["num"].Value.ParseInt();
       var unit = res.Groups["unit"].Value.ParseEnum<AgoUnit>();
