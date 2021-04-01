@@ -273,6 +273,12 @@ namespace YtCli {
 
     [CommandOption("ds-run", Description = "a previous runid to run scripts on", IsRequired = false)]
     public string DataScriptsRunId { get; set; }
+    
+    [CommandOption("ds-part", Description = "| separated list of data-script parts to collect.")]
+    public string DataScriptParts { get; set; }
+    
+    [CommandOption("ds-video-view", Description = "a view name to get a custom list of videos to update")]
+    public string DataScriptVideosView { get; set; }
 
     protected override string GroupName => "update";
 
@@ -310,11 +316,12 @@ namespace YtCli {
         Tags = Tags?.UnJoin('|'),
         DataformDeps = DataformDeps,
         SearchMode = SearchMode,
-        DataScriptsRunId = DataScriptsRunId
+        DataScript = new (DataScriptsRunId, DataScriptParts.UnJoin('|').Select(p => p.ToLower()).ToArray(), DataScriptVideosView)
       };
       await Updater.Update(options, console.GetCancellationToken());
     }
   }
+
 
   [Command("test-chrome-scraper")]
   public class TestChromeScraperCmd : ICommand {

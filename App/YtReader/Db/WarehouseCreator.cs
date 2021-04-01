@@ -49,32 +49,36 @@ namespace YtReader.Db {
       using var conn = await Sf.Open(log, "", ""); // connection sans db & schema. If you specify ones that doesn't exist, all queries hang.
 
       var db = Sf.Cfg.DbName();
-      IEnumerable<Script> scripts;
       var dbComment = new DbComment {
         Expires = DateTime.UtcNow.AddDays(2),
         Email = EnvCfg.Email
       }.ToJson(JCfg);
-      if (state.In(Clone, CloneDb))
-        scripts = Array.Empty<Script>()
-          .Concat(new Script("db copy", @$"create or replace database {db} clone {Sf.Cfg.Db} comment='{dbComment}'"))
-          .Concat(WhCfg.AdminRoles.Select(r => new Script($"init role {r}", $"grant all on database {db} to role {r}")))
-          .Concat(WhCfg.ReadRoles.Select(r => new Script($"init role {r}", $"grant usage,monitor on database {db} to role {r}")));
-      else
-        scripts = new[] {
+
+      var scripts = (state.In(Clone, CloneDb)
+        ? new[] {new Script("db copy", @$"create or replace database {db} clone {Sf.Cfg.Db} comment='{dbComment}'")}
+        : new[] {
             new Script("db create", @$"create or replace database {db} comment='{dbComment}'"),
-            new Script("schema", $"create schema if not exists {db}.{schema}")
-          }
-          .Concat(WhCfg.AdminRoles.Select(r =>
-            new Script($"init role {r}", ScriptMode.Parallel,
-              $"grant all on database {db} to role {r}",
-              $"grant all on schema {db}.{schema} to role {r}",
-              $"grant all on all tables in schema {db}.{schema} to role {r}",
-              $"grant all on future tables in schema {db}.{schema} to role {r}",
-              $"grant all on all views in schema {db}.{schema} to role {r}",
-              $"grant all on future views in schema {db}.{schema} to role {r}",
-              $"grant all on all stages in database {db} to role {r}"
-            )))
-          
+            new Script("schema", $"create schema if not exists {db}.{schema}"),
+          })
+          .Concat(new Script("stage",
+            $"create or replace stage {db}.{schema}.yt_data url='{stageUrl}' credentials=(azure_sas_token='{sasToken}') file_format=(type=json compression=gzip)",
+            $"create or replace file format {db}.{schema}.json type = 'json'",
+            $"create or replace file format {db}.{schema}.json_zst type = 'json' compression = ZSTD",
+            $"create or replace file format {db}.{schema}.tsv type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('')",
+            $"create or replace file format {db}.{schema}.tsv_header type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('') skip_header=1 field_optionally_enclosed_by ='\"'",
+            $"create or replace file format {db}.{schema}.tsv_header_no_enclose type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('') skip_header=1"
+          ))
+          .Concat(
+            WhCfg.AdminRoles.Select(r =>
+              new Script($"init role {r}", ScriptMode.Parallel,
+                $"grant all on database {db} to role {r}",
+                $"grant all on schema {db}.{schema} to role {r}",
+                $"grant all on all tables in schema {db}.{schema} to role {r}",
+                $"grant all on future tables in schema {db}.{schema} to role {r}",
+                $"grant all on all views in schema {db}.{schema} to role {r}",
+                $"grant all on future views in schema {db}.{schema} to role {r}",
+                $"grant all on all stages in database {db} to role {r}"
+              )))
           .Concat(WhCfg.ReadRoles.Select(r =>
             new Script($"init role {r}", ScriptMode.Parallel,
               $"grant usage,monitor on database {db} to role {r}",
@@ -84,16 +88,7 @@ namespace YtReader.Db {
               $"grant select on all tables in database {db} to role {r}",
               $"grant select on all views in database {db} to role {r}",
               $"grant usage on all stages in database {db} to role {r}"
-            )))
-          
-          .Concat(new Script("stage",
-            $"create or replace stage {db}.{schema}.yt_data url='{stageUrl}' credentials=(azure_sas_token='{sasToken}') file_format=(type=json compression=gzip)",
-            $"create or replace file format {db}.{schema}.json type = 'json'",
-            $"create or replace file format {db}.{schema}.json_zst type = 'json' compression = ZSTD",
-            $"create or replace file format {db}.{schema}.tsv type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('')",
-            $"create or replace file format {db}.{schema}.tsv_header type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('') skip_header=1 field_optionally_enclosed_by ='\"'",
-            $"create or replace file format {db}.{schema}.tsv_header_no_enclose type = 'csv' field_delimiter = '\t' validate_UTF8 = false  NULL_IF=('') skip_header=1"
-        ));
+            )));
 
       foreach (var s in scripts)
         await s.Sqls.BlockAction(q => conn.Execute(s.Name, q), s.Mode == Sequential ? 1 : WhCfg.MetadataParallel);
