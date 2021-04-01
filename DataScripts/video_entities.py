@@ -113,7 +113,7 @@ def videos_to_entities(source_videos: List[DbVideoEntity], lang: Language, parts
 
     updated = datetime.now(timezone.utc)
     caption_rows = map(lambda r, t: VideoEntity(r.video.videoId, 'caption', r.offset, list(t),
-                       r.video.videoUpdated, updated), source_captions, caption_entities)
+                                                r.video.videoUpdated, updated), source_captions, caption_entities)
     res_rows = list(chain(map(lambda r, t: VideoEntity(r.videoId, 'title', None, t, r.videoUpdated, updated), source_videos, title_entities),
                           map(lambda r, t: VideoEntity(r.videoId, 'description', None, t, r.videoUpdated, updated), source_videos, description_entities),
                           [r for r in caption_rows if r.offset is not None or r.entities is not None]))
@@ -170,7 +170,7 @@ from {'vid_caption' if should_run_part(parts, Part.caption) else 'vid'}
                      sql=sql, batch=batchNum, batchTotal=batchTotal)
             sqlRes = cast(DictCursor, cur.execute(sql))
             videoTotal = sqlRes.rowcount
-            log.debug('video_entities - batch sql complete. About to process entities')
+            log.debug('video_entities - batch sql complete. About to process entities in {videoTotal} videos', videoTotal=videoTotal)
 
             lang = get_language()
             videoCount = 0
@@ -179,7 +179,7 @@ from {'vid_caption' if should_run_part(parts, Part.caption) else 'vid'}
                 if(len(raw_rows) == 0):
                     break
                 source_videos = list(map(lambda r: DbVideoEntity(r['VIDEO_ID'], r['VIDEO_TITLE'], r['DESCRIPTION'],
-                                     r.get('CAPTIONS'), r.get('VIDEO_UPDATED')), raw_rows))
+                                                                 r.get('CAPTIONS'), r.get('VIDEO_UPDATED')), raw_rows))
                 videoCount = videoCount + len(raw_rows)
                 res_rows = videos_to_entities(source_videos, lang, parts)
 
