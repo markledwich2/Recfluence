@@ -16,11 +16,12 @@ class Test_VideoEntities(unittest.TestCase):
 
     def test_video_entity_regression(self):
         dt = datetime(2020, 12, 1, 0, 0, 0, 0, timezone.utc)
+        lang = get_language()
         entities = videos_to_entities([
-            DbVideoEntity('v1', 'VideoTitle', None, None, dt, dt),
+            DbVideoEntity('v1', 'VideoTitle', None, None, dt),
             DbVideoEntity('v2', '''How does Bill Gates get so much conspiracy attention''',
-                          'description goes here', '[{"caption":"UPPERCASE CAPTIONS SHOULD BE\\nCLEANED OF NEWLINES\\nSWEET BABY JESUS, MARY AND JOSEPH", "offset":120}]', dt, dt)
-        ])
+                          'description goes here', '[{"caption":"UPPERCASE CAPTIONS SHOULD BE\\nCLEANED OF NEWLINES\\nSWEET BABY JESUS, MARY AND JOSEPH", "offset":120}]', dt)
+        ], lang)
 
         json = to_jsonl([VideoEntity(e.videoId, e.part, e.offset, e.entities) for e in entities])
         self.assertEquals(json, '{"videoId": "v1", "part": "title", "offset": null, "entities": [], "videoUpdated": null, "captionUpdated": null, "updated": null}\n{"videoId": "v2", "part": "title", "offset": null, "entities": [{"name": "Bill Gates", "type": "PERSON", "start_char": 9, "end_char": 19}], "videoUpdated": null, "captionUpdated": null, "updated": null}\n{"videoId": "v1", "part": "description", "offset": null, "entities": [], "videoUpdated": null, "captionUpdated": null, "updated": null}\n{"videoId": "v2", "part": "description", "offset": null, "entities": [], "videoUpdated": null, "captionUpdated": null, "updated": null}\n{"videoId": "v2", "part": "caption", "offset": 120, "entities": [{"name": "mary", "type": "PERSON", "start_char": 67, "end_char": 71}, {"name": "joseph", "type": "PERSON", "start_char": 76, "end_char": 82}], "videoUpdated": null, "captionUpdated": null, "updated": null}')

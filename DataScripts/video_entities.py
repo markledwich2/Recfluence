@@ -16,9 +16,9 @@ import jsonl
 from blobstore import BlobStore
 from pathlib import Path, PurePath
 from typing import Any, Callable, Iterable, List, Optional, TypeVar, Union, cast
-from snowflake.connector.cursor import SnowflakeCursor
+from snowflake.connector.cursor import DictCursor, SnowflakeCursor
 from sf import sf_connect
-from cfg import Cfg
+from cfg import Cfg, Part, should_run_part
 from dataclasses import dataclass
 
 
@@ -29,7 +29,6 @@ class DbVideoEntity:
     descripton: Optional[str]
     captions: Optional[str]
     videoUpdated: datetime
-    captionUpdated: Optional[datetime]
 
 
 @dataclass_json
@@ -61,13 +60,12 @@ class VideoEntity:
     offset: Optional[int]
     entities: List[Entity]
     videoUpdated: Optional[datetime] = None
-    captionUpdated: Optional[datetime] = None
     updated: Optional[datetime] = None
 
 
 T = TypeVar('T')
 
-EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'PERCENT']
+EXCLUDE_LABELS = ['CARDINAL', 'MONEY', 'PERCENT', 'ORDINAL']
 
 
 def clean_text(text):
@@ -97,35 +95,34 @@ def get_language():
     return spacy.load("en_core_web_sm", disable=['parser', 'tagger', 'textcat', 'lemmatizer'])
 
 
-def videos_to_entities(source_videos: List[DbVideoEntity]):
-    lang = get_language()
+def videos_to_entities(source_videos: List[DbVideoEntity], lang: Language, parts: Optional[List[Part]] = None):
 
-    def entities(rows: List[T], getVal: Callable[[T], Union[str, None]]):
-        return get_entities(lang, rows, getVal)
+    def entities(rows: List[T], part: Part, getVal: Callable[[T], Union[str, None]]):
+        return get_entities(lang, rows, getVal) if should_run_part(parts, part) else []
 
     def captions(json) -> List[DbCaption]:
         return cast(List[DbCaption], DbCaption.schema().loads(json, many=True)) if json else []
 
-    title_entities = entities(source_videos, lambda r: r.videoTitle)
-    description_entities = entities(source_videos, lambda r: r.descripton)
+    title_entities = entities(source_videos, Part.title, lambda r: r.videoTitle)
+    description_entities = entities(source_videos, Part.description, lambda r: r.descripton)
     source_captions = [
         VideoCaption(r, c.offset, c.caption) for r in source_videos
         for c in captions(r.captions)
-    ]
-    caption_entities = entities(source_captions, lambda r: r.caption)
+    ] if should_run_part(parts, Part.caption) else []
+    caption_entities = entities(source_captions, Part.caption, lambda r: r.caption)
 
     updated = datetime.now(timezone.utc)
-    caption_rows = map(lambda r, t: VideoEntity(r.video.videoId, 'caption', r.offset, list(t), r.video.videoUpdated,
-                                                r.video.captionUpdated, updated), source_captions, caption_entities)
-    res_rows = list(chain(map(lambda r, t: VideoEntity(r.videoId, 'title', None, t, r.videoUpdated, r.captionUpdated, updated), source_videos, title_entities),
-                          map(lambda r, t: VideoEntity(r.videoId, 'description', None, t, r.videoUpdated,
-                                                       r.captionUpdated, updated), source_videos, description_entities),
+    caption_rows = map(lambda r, t: VideoEntity(r.video.videoId, 'caption', r.offset, list(t),
+                                                r.video.videoUpdated, updated), source_captions, caption_entities)
+    res_rows = list(chain(map(lambda r, t: VideoEntity(r.videoId, 'title', None, t, r.videoUpdated, updated), source_videos, title_entities),
+                          map(lambda r, t: VideoEntity(r.videoId, 'description', None, t, r.videoUpdated, updated), source_videos, description_entities),
                           [r for r in caption_rows if r.offset is not None or r.entities is not None]))
     return res_rows
 
 
 def video_entities(cfg: Cfg, args: Args, log: Logger):
     blob = BlobStore(cfg.storage)
+    parts = cfg.state.parts
 
     localBasePath = Path(tempfile.gettempdir()) / 'data_scripts' if cfg.localDir is None else Path(cfg.localDir)
     localPath = localBasePath / 'video_entities'
@@ -143,44 +140,48 @@ def video_entities(cfg: Cfg, args: Args, log: Logger):
         batchNum = 0
         for select in selects:
             batchNum = batchNum + 1
-            cur: SnowflakeCursor = db.cursor()
+
+            cur: DictCursor = db.cursor(DictCursor)
             sql = f'''
-with
-load as ({select})
-, vids as (
-select v.video_id, v.video_title, v.description, v.updated
-from load l
-join video_latest v on v.video_id = l.video_id
-order by video_id
+
+with load as ({select})
+  , vid as (
+  select v.video_id, v.video_title, v.description, v.updated video_updated
+  from load l
+         join video_latest v on v.video_id=l.video_id
+  order by video_id
 )
-, s as (
-select v.video_id
-    , any_value(video_title) video_title
-    , any_value(description) description
-    , array_agg(object_construct('offset',s.offset_seconds::int,'caption',s.caption)) within group ( order by offset_seconds ) captions
-    , max(v.updated) video_updated
-    , max(s.updated) caption_updated
-from vids v
-    left join caption s on v.video_id=s.video_id
-    group by v.video_id
+  , vid_caption as (
+  select v.video_id
+       , any_value(video_title) video_title
+       , any_value(description) description
+       , array_agg(object_construct('offset',s.offset_seconds::int,'caption',s.caption)) within group ( order by offset_seconds ) captions
+       , max(v.video_updated) video_updated
+       , max(s.updated) caption_updated
+  from vid v
+         left join caption s on v.video_id=s.video_id
+  group by v.video_id
 )
-select * from s
+select *
+from {'vid_caption' if should_run_part(parts, Part.caption) else 'vid'}
             '''
 
             log.info('video_entities - getting data for this video file batch {batch}/{batchTotal}: {sql}',
                      sql=sql, batch=batchNum, batchTotal=batchTotal)
-            sqlRes = cast(SnowflakeCursor, cur.execute(sql))
+            sqlRes = cast(DictCursor, cur.execute(sql))
             videoTotal = sqlRes.rowcount
-            log.debug('video_entities - batch sql complete. About to process entities')
+            log.debug('video_entities - batch sql complete. About to process entities in {videoTotal} videos', videoTotal=videoTotal)
 
+            lang = get_language()
             videoCount = 0
             while True:
                 raw_rows = cur.fetchmany(cfg.dataScripts.spacyBatchSize)
                 if(len(raw_rows) == 0):
                     break
-                source_videos = list(map(lambda r: DbVideoEntity(r[0], r[1], r[2], r[3], r[4], r[5]), raw_rows))
+                source_videos = list(map(lambda r: DbVideoEntity(r['VIDEO_ID'], r['VIDEO_TITLE'], r['DESCRIPTION'],
+                                                                 r.get('CAPTIONS'), r.get('VIDEO_UPDATED')), raw_rows))
                 videoCount = videoCount + len(raw_rows)
-                res_rows = videos_to_entities(source_videos)
+                res_rows = videos_to_entities(source_videos, lang, parts)
 
                 fileName = f'{time.strftime("%Y-%m-%d_%H-%M-%S")}.{secrets.token_hex(5)[:5]}.jsonl.gz'
                 localFile = localPath / fileName
@@ -198,3 +199,5 @@ select * from s
 
     finally:
         db.close()
+
+    log.info('video_entities - cometed successfully')

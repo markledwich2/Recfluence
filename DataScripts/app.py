@@ -15,7 +15,10 @@ async def run(args: Args):
 
     log.info('video_entities - {machine} started: {state}', machine=cfg.machine, state=cfg.state.to_json())
 
-    video_entities(cfg, args, log)
+    try:
+        video_entities(cfg, args, log)
+    except Exception as e:
+        log.error("error running video_entities", exc_info=True)
 
 if __name__ == "__main__":
     asyncio.run(run(load_args()))
