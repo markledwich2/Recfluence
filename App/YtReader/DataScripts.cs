@@ -20,15 +20,17 @@ using YtReader.Store;
 
 namespace YtReader {
   public record DataScriptsCfg(int Containers = 24, int VideosPerFile = 50_000, int Cores = 4, int Mem = 8, int SpacyBatchSize = 800,
-    int? VideoLimit = 5_000_000, DateTime? Stale = null);
+    int? VideoLimit = null, DateTime? Stale = null);
 
-  public record DataScriptRunState(string[] VideoPaths);
-
+  public record DataScriptRunState(string[] Parts, string[] VideoPaths);
+  public record DataScriptOptions(string RunId, string[] Parts, string VideosView);
+  
   record EntityVideoRow(string video_id);
 
   public record DataScripts(DataScriptsCfg ScriptsCfg, BlobStores Stores, SnowflakeConnectionProvider Db, AzureContainers containers, SemVersion Version,
     RootCfg RootCfg, ContainerCfg ContainerCfg, AppCfg AppCfg) {
-    public async Task Run(ILogger log, CancellationToken cancel, string runId = null) {
+    
+    public async Task Run(ILogger log, CancellationToken cancel, DataScriptOptions opts) {
       var store = Stores.Store(DataStoreType.Root);
       var env = new (string name, string value)[] {
         ("cfg_sas", GetAppCfgSas()),
@@ -36,17 +38,19 @@ namespace YtReader {
         ("branch_env", Version.Prerelease)
       };
 
-      var existingFiles = runId != null;
-      runId ??= $"{DateTime.UtcNow.FileSafeTimestamp()}.{ShortGuid.Create(5)}";
+      var existingFiles = opts.RunId != null;
+      var runId = opts.RunId ?? $"{DateTime.UtcNow.FileSafeTimestamp()}.{ShortGuid.Create(5)}";
 
       log.Information("DataScripts - runId {runId} ({existing})", runId, existingFiles ? "existing" : "new");
 
       async Task<List<StringPath>> LoadNewEntityFiles() {
         using var db = await Db.Open(log);
-        return await db.QueryBlocking<EntityVideoRow>("new entities", @$"
+        return await db.QueryBlocking<EntityVideoRow>("new entities", 
+            opts.VideosView != null ? $"select video_id from {opts.VideosView}"
+        : @$"
 with ents as (
   select video_id, max(updated) updated
-  from video_entity
+  from video_entity_stage_view
   group by 1
 )
 select v.video_id
@@ -74,7 +78,7 @@ where e.video_id is null {(ScriptsCfg.Stale == null ? "" : "or e.updated < :stal
           await containers.RunContainer(
             $"{containerCfg.ImageName}-{DateTime.UtcNow:yyyy-MM-dd-hh-mm}-{i:00}-{ShortGuid.Create(3).Replace("_", "-")}".ToLowerInvariant(),
             containerCfg.FullContainerImageName("latest"),
-            env.Concat(("run_state", new DataScriptRunState(paths.Select(p => p.ToString()).ToArray()).ToJson())).ToArray(),
+            env.Concat(("run_state", new DataScriptRunState(opts.Parts, paths.Select(p => p.ToString()).ToArray()).ToJson())).ToArray(),
             returnOnStart: false,
             cfg: containerCfg, log: log, cancel: cancel);
           await paths.BlockAction(async p => await store.Delete(p), AppCfg.DefaultParallel);

@@ -40,7 +40,7 @@ namespace YtReader {
     public string[]              Videos           { get; init; }
     public SearchMode            SearchMode       { get; init; }
     public string[]              Tags             { get; init; }
-    public string                DataScriptsRunId { get; init; }
+    public DataScriptOptions     DataScript       { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -111,8 +111,8 @@ namespace YtReader {
       _index.Run(tables, tags, logger, cancel);
 
     [GraphTask(nameof(Dataform))]
-    Task DataScripts(ILogger logger, CancellationToken cancel, string runId = null) =>
-      _dataScripts.Run(logger, cancel, runId);
+    Task DataScripts(ILogger logger, CancellationToken cancel, DataScriptOptions options) =>
+      _dataScripts.Run(logger, cancel, options);
 
     [GraphTask(nameof(Stage))]
     Task Backup(ILogger logger) =>
@@ -143,7 +143,7 @@ namespace YtReader {
         (l, c) => Index(options.Indexes, options.Tags, l, c),
         //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
         (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c),
-        (l, c) => DataScripts(l, c, options.DataScriptsRunId),
+        (l, c) => DataScripts(l, c, options.DataScript),
         (l, c) => Backup(l)
       );
 

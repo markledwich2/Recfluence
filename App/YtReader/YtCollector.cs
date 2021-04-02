@@ -151,10 +151,11 @@ namespace YtReader {
       IReadOnlyCollection<DiscoverRow> videos;
       IReadOnlyCollection<string> channelsForUpdate;
       using (var db = await Sf.Open(log)) {
-
         // sometimes updates fail. When re-running this, we should refresh channels that are missing videos or have a portion of captions not attempted
         // NOTE: core warehouse table must be updated (not just staging tables) to take into account prevously succesfful loads.
-        channelsForUpdate = await db.Query<string>("stale or captionless channels", @$"
+        channelsForUpdate = !parts.ShouldRun(CollectPart.Channel)
+          ? Array.Empty<string>()
+          : await db.Query<string>("stale or captionless channels", @$"
 with
   raw_vids as ({select})
   , chans as (
@@ -196,61 +197,72 @@ select * from s
 ");
       }
 
+      var channelIds = Array.Empty<string>();
+
       // process all videos
       var extras = parts.ShouldRun(VidExtra)
         ? videos.Count > 200 ? await videos
-          .Process(PipeCtx, b => ProcessVideos(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
+          .Process(PipeCtx, b => ProcessVideos(b, parts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
           .Then(r => r.SelectMany(r => r.OutState))
-        : await ProcessVideos(videos, log, cancel)
+        : await ProcessVideos(videos, parts, log, cancel)
         : Array.Empty<VideoExtra>();
 
-      // then process all unique channels we don't allready have recent data for
-      var channelIds = extras.Select(e => e.ChannelId)
-        .Concat(videos.Select(v => v.channel_id))
-        .Concat(channelsForUpdate)
-        .NotNull().Distinct().ToArray();
-      if (channelIds.Any()) {
-        var channels = await PlanAndUpdateChannelStats(parts, channelIds, log, cancel)
-          .Then(c => c
-            .Where(c => c.LastVideoUpdate.OlderThanOrNull(refreshPeriod)) // filter to channels we haven't updated video's in recently
-            .Select(c => c with {Update = c.Update == Discover ? Standard : c.Update})); // revert to standard update for channels detected as discover
+      if (parts.ShouldRun(CollectPart.Channel)) {
+        // then process all unique channels we don't allready have recent data for
+        channelIds = extras.Select(e => e.ChannelId)
+          .Concat(videos.Select(v => v.channel_id))
+          .Concat(channelsForUpdate)
+          .NotNull().Distinct().ToArray();
+        if (channelIds.Any()) {
+          var channels = await PlanAndUpdateChannelStats(parts, channelIds, log, cancel)
+            .Then(c => c
+              .Where(c => c.LastVideoUpdate.OlderThanOrNull(refreshPeriod)) // filter to channels we haven't updated video's in recently
+              .Select(c => c with {Update = c.Update == Discover ? Standard : c.Update})); // revert to standard update for channels detected as discover
 
-        DateTime? fromDate = new DateTime(2020, 01, 01);
-        var (result, dur) = await channels
-          .Randomize() // randomize to even the load
-          .Process(PipeCtx,
-            b => ProcessChannels(b, parts, Inject<ILogger>(), Inject<CancellationToken>(), fromDate), log: log, cancel: cancel)
-          .WithDuration();
+          DateTime? fromDate = new DateTime(2020, 01, 01);
+          var (result, dur) = await channels
+            .Randomize() // randomize to even the load
+            .Process(PipeCtx,
+              b => ProcessChannels(b, parts, Inject<ILogger>(), Inject<CancellationToken>(), fromDate), log: log, cancel: cancel)
+            .WithDuration();
+        }
       }
+
 
       log.Information("YtCollect - ProcessVideos complete - {Videos} videos and {Channels} channels processed",
         videos.Count, channelIds.Length);
     }
 
     [Pipe]
-    public async Task<VideoExtra[]> ProcessVideos(IReadOnlyCollection<DiscoverRow> videos, ILogger log, CancellationToken cancel) {
+    public async Task<VideoExtra[]> ProcessVideos(IReadOnlyCollection<DiscoverRow> videos, CollectPart[] parts, ILogger log, CancellationToken cancel) {
       log ??= Logger.None;
       const int batchSize = 1000;
-      var forExtra = videos.Select(v => v.video_id).ToHashSet();
-      var extra = await forExtra.Batch(batchSize)
-        .BlockTrans(async (vids, i) => {
-          var (extra, _) = await SaveRecsAndExtra(c: null, new[] {VidExtra}, log, forExtra: vids.ToHashSet());
-          log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + extra.Length, forExtra.Count);
-          return extra;
-        }, parallel: Cfg.Collect.ParallelChannels, cancel: cancel).SelectManyList();
 
-      // videos that exist allready, but are missing caption
-      var forCaptionUpdate = videos.Where(v => v.channel_id != null && !v.caption_exists && v.video_id != null).ToKeyedCollection(v => v.video_id);
-      forCaptionUpdate.AddRange(extra
-        .Where(e => !forCaptionUpdate.ContainsKey(e.VideoId))
-        .Select(e => new DiscoverRow(e.VideoId, e.ChannelId, null, false)));
+      IReadOnlyCollection<VideoExtra> extra = new List<VideoExtra>();
 
-      await forCaptionUpdate.Batch(batchSize).BlockAction(async (vids, i) => {
-        var caption = await vids.BlockTrans(v => GetCaption(v.channel_id, v.video_id, log)).NotNull().ToListAsync();
-        await DbStore.Captions.Append(caption);
-        log.Information("ProcessVideos - saved {CaptionBatch}/{Total} captions", i * batchSize + caption.Count, forCaptionUpdate.Count);
-      }, Cfg.Collect.CaptionParallel, cancel: cancel);
+      if (parts.ShouldRun(VidExtra)) {
+        var forExtra = videos.Select(v => v.video_id).ToHashSet();
+        extra = await forExtra.Batch(batchSize)
+          .BlockTrans(async (vids, i) => {
+            var (extra, _) = await SaveRecsAndExtra(c: null, new[] {VidExtra}, log, forExtra: vids.ToHashSet());
+            log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + extra.Length, forExtra.Count);
+            return extra;
+          }, parallel: Cfg.Collect.ParallelChannels, cancel: cancel).SelectManyList();
+      }
 
+      if (parts.ShouldRun(Caption)) {
+        // videos that exist allready, but are missing caption
+        var forCaptionUpdate = videos.Where(v => v.channel_id != null && !v.caption_exists && v.video_id != null).ToKeyedCollection(v => v.video_id);
+        forCaptionUpdate.AddRange(extra
+          .Where(e => !forCaptionUpdate.ContainsKey(e.VideoId))
+          .Select(e => new DiscoverRow(e.VideoId, e.ChannelId, null, false)));
+
+        await forCaptionUpdate.Batch(batchSize).BlockAction(async (vids, i) => {
+          var caption = await vids.BlockTrans(v => GetCaption(v.channel_id, v.video_id, log)).NotNull().ToListAsync();
+          await DbStore.Captions.Append(caption);
+          log.Information("ProcessVideos - saved {CaptionBatch}/{Total} captions", i * batchSize + caption.Count, forCaptionUpdate.Count);
+        }, Cfg.Collect.CaptionParallel, cancel: cancel);
+      }
       return extra.ToArray();
     }
 
@@ -273,10 +285,11 @@ select * from s
       using (var db = await Sf.Open(log)) {
         // retrieve previous channel state to update with new classification (algos and human) and stats form the API
         existingChannels = (await db.Query<(string j, long? daysBack, DateTime? lastVideoUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate)>(
-            "channels - previous", $@"
+            "channels - previous",
+            $@"
 with review_filtered as (
   select channel_id, channel_title
-  from channel_review
+  from channel_latest
   where platform = 'YouTube'
   and {(explicitChannels.None() ? "meets_review_criteria" : $"channel_id in ({SqlList(explicitChannels)})")} --only explicit channel when provided
 )
@@ -286,6 +299,7 @@ with review_filtered as (
   where exists(select * from review_filtered r where r.channel_id=v:ChannelId)
     qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc)=1
 )
+, s as (
 select coalesce(v, object_construct('ChannelId', r.channel_id)) channel_json
      , b.daily_update_days_back
      , (select max(vs.v:Updated::timestamp_ntz) from video_stage vs where vs.v:ChannelId=r.channel_id) last_video_update
@@ -294,7 +308,8 @@ select coalesce(v, object_construct('ChannelId', r.channel_id)) channel_json
 from review_filtered r
        left join stage_latest on v:ChannelId=r.channel_id
        left join channel_collection_days_back b on b.channel_id=v:ChannelId
-       left join channel_latest l on v:ChannelId=l.channel_id
+  )
+select * from s
 "))
           .Select(r => new ChannelUpdatePlan {
             Channel = r.j.ToObject<Channel>(IJsonlStore.JCfg),

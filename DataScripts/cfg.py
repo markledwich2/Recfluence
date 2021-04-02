@@ -1,4 +1,5 @@
 
+from enum import Enum
 from typing import List, Optional
 from dataclasses import dataclass
 from dataclasses_json.api import DataClassJsonMixin
@@ -34,9 +35,16 @@ class DataScriptsCfg:
     spacyBatchSize: int = 800
 
 
+class Part(Enum):
+    caption = "caption"
+    title = "title"
+    description = "description"
+
+
 @dataclass
 class RunState(DataClassJsonMixin):
     videoPaths: Optional[List[str]] = None
+    parts: Optional[List[Part]] = None
 
 
 @dataclass
@@ -49,7 +57,11 @@ class Cfg(DataClassJsonMixin):
     env: Optional[str] = 'dev'
     branchEnv: Optional[str] = None
     machine: Optional[str] = None
-    localDir: Optional[str] = None  # if provided will use local file storage isstead
+    localDir: Optional[str] = None  # if provided will use local file storage instead
+
+
+def should_run_part(parts: Optional[List[Part]], part: Part):
+    return part in parts if parts else True
 
 
 async def load_cfg() -> Cfg:
