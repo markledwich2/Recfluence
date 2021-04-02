@@ -40,7 +40,7 @@ namespace YtReader {
     public string[]              Videos           { get; init; }
     public SearchMode            SearchMode       { get; init; }
     public string[]              Tags             { get; init; }
-    public string                DataScriptsRunId { get; init; }
+    public DataScriptOptions     DataScript       { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
@@ -111,8 +111,8 @@ namespace YtReader {
       _index.Run(tables, tags, logger, cancel);
 
     [GraphTask(nameof(Dataform))]
-    Task DataScripts(ILogger logger, CancellationToken cancel, string runId = null) =>
-      _dataScripts.Run(logger, cancel, runId);
+    Task DataScripts(ILogger logger, CancellationToken cancel, DataScriptOptions options) =>
+      _dataScripts.Run(logger, cancel, options);
 
     [GraphTask(nameof(Stage))]
     Task Backup(ILogger logger) =>
@@ -123,31 +123,31 @@ namespace YtReader {
       _userScrape.Run(Log, init, trial, accounts, cancel);
 
     [Pipe]
-    public async Task Update(UpdateOptions o = null, CancellationToken cancel = default) {
-      o ??= new();
+    public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
+      options ??= new();
       var sw = Stopwatch.StartNew();
       Log.Information("Update {RunId} - started", _updated);
 
-      var fullLoad = o.FullLoad;
+      var fullLoad = options.FullLoad;
 
       var collectOptions = new SimpleCollectOptions
-        {Parts = o.StandardParts, ExplicitChannels = o.Collect?.LimitChannels, ExplicitVideos = o.Videos};
+        {Parts = options.StandardParts, ExplicitChannels = options.Collect?.LimitChannels, ExplicitVideos = options.Videos};
 
       var actionMethods = TaskGraph.FromMethods(
-        (l, c) => Collect(o.Collect, l, c),
+        (l, c) => Collect(options.Collect, l, c),
         (l, c) => BcCollect(collectOptions, l, c),
         (l, c) => RumbleCollect(collectOptions, l, c),
-        (l, c) => Stage(fullLoad, o.StageTables, l),
-        (l, c) => Search(o.SearchMode, o.SearchIndexes, o.SearchConditions, l, c),
-        (l, c) => Result(o.Results, l, c),
-        (l, c) => Index(o.Indexes, o.Tags, l, c),
+        (l, c) => Stage(fullLoad, options.StageTables, l),
+        (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
+        (l, c) => Result(options.Results, l, c),
+        (l, c) => Index(options.Indexes, options.Tags, l, c),
         //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
-        (l, c) => Dataform(fullLoad, o.WarehouseTables, o.DataformDeps, l, c),
-        (l, c) => DataScripts(l, c, o.DataScriptsRunId),
+        (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c),
+        (l, c) => DataScripts(l, c, options.DataScript),
         (l, c) => Backup(l)
       );
 
-      var actions = o.Actions;
+      var actions = options.Actions;
       if (actions?.Any() == true) {
         var missing = actions.Where(a => actionMethods[a] == null).ToArray();
         if (missing.Any())
