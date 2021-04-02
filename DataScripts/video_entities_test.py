@@ -14,6 +14,18 @@ class Test_VideoEntities(unittest.TestCase):
         res = ','.join([f'{e.type}: {e.name}' for b in entities for e in b])
         self.assertEquals('TIME: this morning,DATE: christmas,PERSON: jesus,LAW: chapter 29', res)
 
+    def test_adhoc(self):
+        txt = [
+            '''Vlad and Nikita were playing with toys, but a magic wheel appeared. Children turn the wheel and magic happens.
+Please Subscribe!
+
+VLAD Instagram - https://www.instagram.com/Vlad.super.Vlad/
+NIKITA Instagram - https://www.instagram.com/nikitoys_official/''',
+        ]
+        entities = list(get_entities(get_language(), txt))
+        res = ','.join([f'{e.type}: {e.name}' for b in entities for e in b])
+        print(res)
+
     def test_video_entity_regression(self):
         dt = datetime(2020, 12, 1, 0, 0, 0, 0, timezone.utc)
         lang = get_language()
