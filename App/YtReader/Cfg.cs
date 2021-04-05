@@ -158,7 +158,7 @@ namespace YtReader {
     public int ChromeAttempts  { get; set; } = 3;
 
     /// <summary>maximum number of videos (in total for all channels in a process update).</summary>
-    public int ChromeUpdateMax { get; set; } = 1000;
+    public int CommentUpdateMax { get; set; } = 2_000_000;
 
     /// <summary>These thresholds shortcut the collection for channels to save costs. Bellow the analysis thresholds because we
     ///   want to collect ones that might tip over</summary>

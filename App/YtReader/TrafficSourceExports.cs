@@ -13,7 +13,7 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.IO;
 using SysExtensions.Threading;
-using YtReader.YtWebsite;
+using YtReader.Yt;
 
 namespace YtReader {
   public static class TrafficSourceExports {
@@ -66,7 +66,7 @@ namespace YtReader {
           if (source.Length != 2 || source[0] != "YT_RELATED")
             return null; // total at the top or otherwise. not interested
           var videoId = source[1];
-          var fromVideo = await ytWeb.GetVideo(log, videoId);
+          var fromVideo = await ytWeb.GetExtra(log, videoId, new [] {ExtraPart.Extra }).Then(r => r.Extra);
 
           return new() {
             ToChannelTitle = exportInfo.Channel,
@@ -79,7 +79,7 @@ namespace YtReader {
             SourceType = row.SourceType,
             FromChannelId = fromVideo?.ChannelId,
             FromChannelTitle = fromVideo?.ChannelTitle,
-            FromVideoId = fromVideo?.Id,
+            FromVideoId = fromVideo?.VideoId,
             FromVideoTitle = fromVideo?.Title,
             ImpressionClickThrough = row.ImpressionClickThrough,
             WatchTimeHrsTotal = row.WatchTimeHrsTotal,

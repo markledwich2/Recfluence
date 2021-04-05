@@ -64,6 +64,9 @@ namespace YtReader {
     public static Task<JObject> JsonObject(this IFlurlResponse response) =>
       response.GetStreamAsync().Then(s => JObject.LoadAsync(new JsonTextReader(new StreamReader(s)) {CloseInput = true}));
     
+    /// <summary>Reads the content as Json (and unzip if required)</summary>
+    public static Task<JArray> JsonArray(this IFlurlResponse response) =>
+      response.GetStreamAsync().Then(s => JArray.LoadAsync(new JsonTextReader(new StreamReader(s)) {CloseInput = true}));
     
     public static Url SetParams(this Url url, object values, bool isEncoded = false) {
       if (values == null)

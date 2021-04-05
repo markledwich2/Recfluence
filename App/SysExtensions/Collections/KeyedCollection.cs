@@ -16,6 +16,7 @@ namespace SysExtensions.Collections {
     V this[K key] { get; }
     bool ContainsKey(K key);
     K GetKey(V item);
+    IEnumerable<K> Keys { get; }
   }
 
   /// <summary>Wraps a dictionary for items that can provide a way to key items. More clean and collection compatible usage

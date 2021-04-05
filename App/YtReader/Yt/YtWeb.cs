@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -27,14 +26,21 @@ using YtReader.Store;
 using static System.Net.HttpStatusCode;
 using static System.StringComparison;
 using static SysExtensions.Net.HttpExtensions;
+using static YtReader.Yt.CommentAction;
 
 // ReSharper disable InconsistentNaming
 
 //// a modified version of https://github.com/Tyrrrz/YoutubeExplode
 
-namespace YtReader.YtWebsite {
+namespace YtReader.Yt {
   public record YtHtmlPage(HtmlDocument Html, string Raw, string Url, HttpResponseHeaders Headers);
-
+  enum CommentAction {
+    [EnumMember(Value = "action_get_comments")]
+    AComments,
+    [EnumMember(Value = "action_get_comment_replies")]
+    AReplies
+  }
+  
   public class YtWeb {
     readonly ProxyCfg                                      Proxy;
     readonly YtCollectCfg                                  CollectCfg;
@@ -332,12 +338,9 @@ namespace YtReader.YtWebsite {
       var headers = httpRes.Headers;
       var raw = await httpRes.ContentAsString();
       return new(Html.ParseDocument(raw), raw, url, headers); // think about using parser than can use stream to avoid large strings using mem
+    }
 
     public const string RestrictedVideoError = "Restricted";
-
-    public async Task<IReadOnlyCollection<ExtraAndParts>> GetExtras(VideoExtraParts extras, ILogger log,
-      string channelId = null, string channelTitle = null) =>
-      await extras.BlockFunc(async v => await GetExtra(log, v, parts, channelId, channelTitle), CollectCfg.WebParallel);
 
     /// <summary>Loads the watch page, and the video info dic to get: recommendations and video details (including errors)</summary>
     public async Task<ExtraAndParts> GetExtra(ILogger log, string videoId, ExtraPart[] parts, string channelId = null, string channelTitle = null) {
@@ -384,7 +387,16 @@ namespace YtReader.YtWebsite {
       var comments = Array.Empty<VideoComment>();
       if (parts.Contains(ExtraPart.Comments))
         comments = await GetComments(log, videoId, ytInitialData, watchPage).Then(c => c.ToArray());
-      return new(extra, recs, comments);
+
+      VideoCaption caption = null;
+      if (parts.Contains(ExtraPart.Captions))
+        caption = await GetCaption(channelId, videoId, infoDic, log);
+
+      return new(extra) {
+        Caption = caption,
+        Comments = comments,
+        Recs = recs
+      };
     }
 
     static VideoExtra VideoItemToExtra(string videoId, string channelId, string channelTitle, YtVideo videoItem) =>
@@ -429,9 +441,9 @@ namespace YtReader.YtWebsite {
             ToChannelTitle = j.SelectToken("longBylineText.runs[0].text")?.Value<string>(),
             Rank = i + 1,
             Source = ScrapeSource.Web,
-            ToViews = ChromeScraper.ParseViews(viewText),
+            ToViews = viewText?.ParseViews(),
             ToUploadDate = j.SelectToken("publishedTimeText.simpleText")?.Str().ParseAgo().Date(),
-            ForYou = ChromeScraper.ParseForYou(viewText)
+            ForYou = YtWebExtensions.ParseForYou(viewText)
           };
         }).ToArray();
       return recs;
@@ -470,25 +482,31 @@ namespace YtReader.YtWebsite {
         msg, logUrl, ex?.ToString());
     }
 
-    public async Task<IReadOnlyCollection<ClosedCaptionTrackInfo>> GetCaptionTracks(string videoId, ILogger log) {
-      var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
-      var playerResponseJson = JToken.Parse(videoInfoDic["player_response"]);
-      var captions = GetCaptionTracks(playerResponseJson);
-      return captions;
+    async Task<VideoCaption> GetCaption(string channelId, string videoId, IReadOnlyDictionary<string, string> videoInfoDic, ILogger log) {
+      var videoLog = log.ForContext("VideoId", videoId);
+      VideoCaption caption = new() {
+        ChannelId = channelId,
+        VideoId = videoId,
+        Updated = DateTime.Now
+      };
+      try {
+        var playerResponseJson = JToken.Parse(videoInfoDic["player_response"]);
+        var tracks = GetCaptionTracks(playerResponseJson);
+        var enInfo = tracks.FirstOrDefault(t => t.Language.Code == "en");
+        if (enInfo == null)
+          return caption;
+        var track = await GetClosedCaptionTrackAsync(enInfo, videoLog);
+        return caption with {
+          Info = track.Info,
+          Captions = track.Captions
+        };
+      }
+      catch (Exception ex) {
+        ex.ThrowIfUnrecoverable();
+        videoLog.Warning(ex, "Unable to get captions for {VideoID}: {Error}", videoId, ex.Message);
+        return null;
+      }
     }
-
-    /*
-    public async Task<YtVideo> GetVideo(ILogger log, string videoId, bool loadComments = false) {
-      if (!ValidateVideoId(videoId))
-        throw new ArgumentException($"Invalid YouTube video ID [{videoId}].", nameof(videoId));
-      var videoInfoDic = await GetVideoInfoDicAsync(videoId, log);
-      var page = await GetVideoWatchPageHtmlAsync(videoId, log);
-      var ytInitialData = await GetClientObjectFromWatchPage(log, page.Html, videoId, "ytInitialData");
-      var video = GetVideo(videoId, videoInfoDic, ytInitialData);
-      if (loadComments) // commment data
-        await GetComments(log, videoId, ytInitialData, page);
-      return video;
-    }*/
 
     async Task<IReadOnlyCollection<VideoComment>> GetComments(ILogger log, string videoId, JObject ytInitialData, YtHtmlPage page) {
       async Task<(InnerTubeCfg Cfg, string CToken)> CommentCfgFromVideoPage() {
@@ -513,57 +531,77 @@ namespace YtReader.YtWebsite {
     #region Comments
 
     record InnerTubeCfg(string Xsrf, string ClientVersion, object Cookies);
-    record CommentResult(VideoComment Comment, string ReplyContinuation);
+    record CommentResult(VideoComment Comment, string ReplyContinuation = null);
 
-    enum CommentAction {
-      [EnumMember(Value = "action_get_comments")]
-      Comments,
-      [EnumMember(Value = "action_get_comment_replies")]
-      Replies
-    }
-
-    async IAsyncEnumerable<VideoComment[]> Comments(string videoId, string cToken, InnerTubeCfg cfg, ILogger log) {
-      async Task<JObject> CommentRequest(CommentAction action) {
-        var req = $"https://www.youtube.com/comment_service_ajax?{action.EnumString()}=1&ctoken={cToken}&type=next".AsUrl()
+    async IAsyncEnumerable<VideoComment[]> Comments(string videoId, string mainContinuation, InnerTubeCfg cfg, ILogger log) {
+      async Task<IFlurlResponse> CommentRequest(CommentAction action, string continuation) {
+        var req = $"https://www.youtube.com/comment_service_ajax?{action.EnumString()}=1&ctoken={continuation}&type=next".AsUrl()
           .WithHeader("x-youtube-client-name", "1")
           .WithHeader("x-youtube-client-version", cfg.ClientVersion)
           .WithCookies(cfg.Cookies);
-        return await FlurlClients
-          .Send(req, HttpMethod.Post, req.FormUrlContent(new {session_token = cfg.Xsrf}), log)
-          .Then(r => r.JsonObject());
+        return await FlurlClients.Send(req, HttpMethod.Post, req.FormUrlContent(new {session_token = cfg.Xsrf}), log);
       }
 
-      async Task<(CommentResult[] Comments, string Continuation)> InnerGetComments(string threadId = null) {
-        var j = await CommentRequest(threadId == null ? CommentAction.Comments : CommentAction.Replies);
-        var threads = j.Tokens("$..commentThreadRenderer");
-        var comments = threads.Select(t => t["comment.commentRenderer"])
-          .NotNull()
-          .Select(c => new CommentResult(new() {
-            CommentId = c!.Str("commentId"),
-            VideoId = videoId,
-            Author = c.Token("authorText.simpleText")?.Str(),
-            AuthorChannelId = c.Token("authorEndpoint.browseEndpoint.browseId")?.Str(),
-            AuthorThumb = c.Tokens("authorThumbnail.thumbnails").LastOrDefault()?.Str("url"),
-            Comment = c.Tokens("contentText.runs[*].text").Join(" "),
-            Created = c.Token("publishedTimeText.runs[0].text")?.Str().ParseAgo().Date(),
-            Likes = c.Str("likeCount")?.TryParseInt(),
-            IsChannelOwner = c.Value<bool>("authorIsChannelOwner"),
-            ThreadId = threadId
-          }, c.Token("replies.commentRepliesRenderer.continuations[0].nextContinuationData.continuation")?.Str())).ToArray();
-        var continuation = j.Token("response.continuationContents.itemSectionContinuation.continuations[0].nextContinuationData.continuation")?.Str();
-        return (comments, continuation);
+      async Task<(CommentResult[] Comments, string Continuation)> RequestComments(string continuation, VideoComment parent = null) {
+        var action = parent == null ? AComments : AReplies;
+        var res = await CommentRequest(action, continuation);
+        var rootJ = action switch {
+          AComments => await res.JsonObject(),
+          AReplies => await res.JsonArray().Then(a => a.Children<JObject>().FirstOrDefault(j => j["response"] != null)),
+          _ => throw new NotImplementedException()
+        };
+
+        var comments = action switch {
+          AComments => from t in rootJ.Tokens("$..commentThreadRenderer")
+            let c = t.SelectToken("comment.commentRenderer")
+            where c != null
+            select new CommentResult(ParseComment(videoId, c, parent),
+              t.Token("replies.commentRepliesRenderer.continuations[0].nextContinuationData.continuation")?.Str()),
+          AReplies => rootJ.Tokens("$..commentRenderer").Select(c => new CommentResult(ParseComment(videoId, c, parent))),
+          _ => throw new NotImplementedException()
+        };
+        
+        var nextContinue = rootJ.Token("response.continuationContents.itemSectionContinuation.continuations[0].nextContinuationData.continuation")?.Str();
+        return (comments.ToArray(), nextContinue);
       }
 
-      var ct = cToken;
-      while (ct != null) {
-        var threads = await InnerGetComments();
-        yield return threads.Comments.Select(c => c.Comment).ToArray();
-        var replies = await threads.Comments.BlockTrans(t => InnerGetComments(t.Comment.CommentId), parallel: 4).ToArrayAsync();
-        yield return replies.SelectMany(r => r.Comments.Select(c => c.Comment)).ToArray();
 
-        ct = threads.Continuation;
+      async IAsyncEnumerable<(CommentResult[] Comments, string Continuation)> AllComments(string continuation, VideoComment parent = null) {
+        while (continuation != null) {
+          var comments = await RequestComments(continuation, parent);
+          continuation = comments.Continuation;
+          if (comments.Comments.None()) yield break;
+          yield return comments;
+        }
+      }
+
+      await foreach (var ((comments, _),batch) in AllComments(mainContinuation).Select((b,i) => (b,i))) {
+        var threads = comments.Select(c => c.Comment).ToArray();
+        log.Debug("YtWeb - loaded {Threads} threads in batch {Batch} for video {Video}", threads.Length, batch, videoId);
+        yield return threads;
+        var allReplies = comments.Where(c => c.ReplyContinuation != null)
+          .BlockTrans(async t => await AllComments(t.ReplyContinuation, t.Comment).ToListAsync(), parallel: 4);
+        await foreach (var replies in allReplies) {
+          var replyComments = replies.SelectMany(r => r.Comments.Select(c => c.Comment)).ToArray();
+          log.Debug("YtWeb - loaded {Replies} replies in batch {Batch} for video {Video}", threads.Length, batch, videoId);
+          yield return replyComments;
+        }
       }
     }
+
+    static VideoComment ParseComment(string videoId, JToken c, VideoComment parent) =>
+      new() {
+        CommentId = c!.Str("commentId"),
+        VideoId = videoId,
+        Author = c.Token("authorText.simpleText")?.Str(),
+        AuthorChannelId = c.Token("authorEndpoint.browseEndpoint.browseId")?.Str(),
+        Comment = c.Tokens("contentText.runs[*].text").Join(" "),
+        Created = c.Token("publishedTimeText.runs[0].text")?.Str().ParseAgo().Date(),
+        Likes = c.Str("likeCount")?.TryParseInt(),
+        IsChannelOwner = c.Value<bool>("authorIsChannelOwner"),
+        ReplyToCommentId = parent?.CommentId,
+        Updated = DateTime.UtcNow
+      };
 
     #endregion
 
@@ -713,10 +751,19 @@ namespace YtReader.YtWebsite {
     #endregion
   }
 
+  public enum AgoUnit {
+    Minute,
+    Hour,
+    Day,
+    Week,
+    Month,
+    Year
+  }
+
   public static class YtWebExtensions {
     public static (TimeSpan Dur, AgoUnit Unit) ParseAgo(this string ago) {
       if (ago == null) return default;
-      var res = Regex.Match(ago, "(?<num>\\d)\\s(?<unit>minute|hour|day|week|month|year)[s]? ago");
+      var res = Regex.Match(ago, "(?<num>\\d+)\\s(?<unit>minute|hour|day|week|month|year)[s]? ago");
       if (!res.Success) return default;
       var num = res.Groups["num"].Value.ParseInt();
       var unit = res.Groups["unit"].Value.ParseEnum<AgoUnit>();
@@ -731,27 +778,26 @@ namespace YtReader.YtWebsite {
       };
       return (timeSpan, unit);
     }
-  }
 
-  /// <summary>Helps build up a plan for updating videos. NOTE: not serializable</summary>
-  public record VideoExtraParts : IEnumerable<VideoExtraPart> {
-    readonly IKeyedCollection<string, VideoExtraPart> _list = new KeyedCollection<string, VideoExtraPart>(v => v.VideoId);
+    public static DateTime Date(this (TimeSpan Dur, AgoUnit Unit) ago) => ago.Dur.Before(DateTime.UtcNow);
 
-    /// <summary>Adds a video to update with the given parts unioned with what is existing</summary>
-    public void Add(string videoId, params ExtraPart[] parts) {
-      var r = _list[videoId];
-      _list.Add(new(videoId, (r == null ? parts : r.Parts.Union(parts)).ToArray()));
+    public static long? ParseViews(this string s) {
+      if (s.NullOrEmpty()) return null;
+      var m = Regex.Match(s, "^(\\d+,?\\d*) views");
+      if (!m.Success) return null;
+      var views = m.Groups[1].Value.ParseLong();
+      return views;
     }
 
-    public IEnumerator<VideoExtraPart> GetEnumerator() => _list.GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable) _list).GetEnumerator();
-  }
+    public static bool ParseForYou(string viewText) => viewText == "Recommended for you";
 
-  public record VideoExtraPart(string VideoId, ExtraPart[] Parts);
+    public static (VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions) Split(this IReadOnlyCollection<ExtraAndParts> extras) =>
+      (extras.Extras().ToArray(), extras.Recs().ToArray(), extras.Comments().ToArray(), extras.Captions().ToArray());
 
-  public enum ExtraPart {
-    Recs,
-    Comments
+    public static IEnumerable<VideoExtra> Extras(this IEnumerable<ExtraAndParts> extra) => extra.Select(e => e.Extra).NotNull();
+    public static IEnumerable<Rec> Recs(this IEnumerable<ExtraAndParts> extra) => extra.SelectMany(e => e.Recs).NotNull();
+    public static IEnumerable<VideoComment> Comments(this IEnumerable<ExtraAndParts> extra) => extra.SelectMany(e => e.Comments).NotNull();
+    public static IEnumerable<VideoCaption> Captions(this IEnumerable<ExtraAndParts> extra) => extra.Select(e => e.Caption).NotNull();
   }
 
   public record ChannelExtended {
@@ -780,5 +826,10 @@ namespace YtReader.YtWebsite {
     Chrome
   }
 
-  public record ExtraAndParts(VideoExtra Extra, Rec[] Recs = null, VideoComment[] Comments = null);
+  public enum ExtraPart {
+    Extra,
+    Recs,
+    Comments,
+    Captions
+  }
 }

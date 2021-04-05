@@ -5,8 +5,7 @@ using Semver;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
-using YtReader.YtApi;
-using YtReader.YtWebsite;
+using YtReader.Yt;
 using static YtReader.Store.DataStoreType;
 using static YtReader.Store.StoreTier;
 
@@ -85,9 +84,10 @@ namespace YtReader.Store {
       Searches = CreateStore<UserSearchWithUpdated>("searches");
       Videos = CreateStore<Video>("videos");
       VideoExtra = CreateStore<VideoExtra>("video_extra");
-      Recs = CreateStore<RecStored2>("recs");
-      Captions = CreateStore<VideoCaptionStored2>("captions");
+      Recs = CreateStore<RecStored>("recs");
+      Captions = CreateStore<VideoCaption>("captions");
       ChannelReviews = CreateStore<UserChannelReview>("channel_reviews", r => r.Email);
+      Comments = CreateStore<VideoComment>("comments");
     }
 
     public ISimpleFileStore Store { get; }
@@ -96,9 +96,10 @@ namespace YtReader.Store {
     public JsonlStore<UserSearchWithUpdated> Searches       { get; }
     public JsonlStore<Video>                 Videos         { get; }
     public JsonlStore<VideoExtra>            VideoExtra     { get; }
-    public JsonlStore<RecStored2>            Recs           { get; }
-    public JsonlStore<VideoCaptionStored2>   Captions       { get; }
+    public JsonlStore<RecStored>             Recs           { get; }
+    public JsonlStore<VideoCaption>          Captions       { get; }
     public JsonlStore<UserChannelReview>     ChannelReviews { get; }
+    public JsonlStore<VideoComment>          Comments       { get; }
 
     JsonlStore<T> CreateStore<T>(string name, Func<T, string> getPartition = null) where T : IHasUpdated =>
       new(Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);
@@ -244,7 +245,6 @@ namespace YtReader.Store {
   public record VideoExtra : Video {
     public VideoExtra() { }
     public VideoExtra(Platform platform, string id, string sourceId) : base(platform, id, sourceId) { }
-
     public bool?          HasAd        { get; set; }
     public string         Error        { get; set; }
     public string         SubError     { get; set; }
@@ -255,20 +255,20 @@ namespace YtReader.Store {
     public long?          CommentCount { get; set; }
   }
 
-  public record VideoComment {
+  public record VideoComment : IHasUpdated {
     public string    CommentId       { get; init; }
-    public string    ThreadId        { get; set; }
+    public string    ReplyToCommentId        { get; set; }
     public string    VideoId         { get; init; }
     public string    Author          { get; init; }
     public string    AuthorChannelId { get; init; }
     public string    Comment         { get; init; }
-    public string    AuthorThumb     { get; init; }
     public DateTime? Created         { get; init; }
     public int?      Likes           { get; init; }
     public bool      IsChannelOwner  { get; init; }
+    public DateTime  Updated         { get; init; }
   }
 
-  public class RecStored2 : Rec, IHasUpdated {
+  public record RecStored : Rec, IHasUpdated {
     public string   FromVideoId    { get; set; }
     public string   FromVideoTitle { get; set; }
     public string   FromChannelId  { get; set; }
@@ -277,7 +277,7 @@ namespace YtReader.Store {
     public override string ToString() => $"{FromVideoTitle} -> {ToVideoTitle}";
   }
 
-  public record VideoCaptionStored2 : WithUpdatedItem {
+  public record VideoCaption : WithUpdatedItem {
     public string                             ChannelId { get; set; }
     public string                             VideoId   { get; set; }
     public ClosedCaptionTrackInfo             Info      { get; set; }

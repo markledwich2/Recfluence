@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 // all of this only minor midifications to https://github.com/Tyrrrz/YoutubeExplode
 
-namespace YtReader.YtWebsite {
+namespace YtReader.Yt {
   public record YtVideoItem {
     /// <summary>ID of this video.</summary>
     public string Id { get; init; }

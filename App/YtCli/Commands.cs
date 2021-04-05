@@ -23,8 +23,7 @@ using YtReader.Narrative;
 using YtReader.Reddit;
 using YtReader.Search;
 using YtReader.Store;
-using YtReader.YtApi;
-using YtReader.YtWebsite;
+using YtReader.Yt;
 
 namespace YtCli {
   [Command("channel-info", Description = "Show channel information (ID,Name) given a video ID")]
