@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
@@ -148,63 +149,6 @@ namespace SysExtensions.Serialization {
       return JsonConvert.DeserializeObject<T>(json, settings);
     }
 
-    public static T TryToObject<T>(this string json, JsonSerializerSettings settings = null) {
-      try {
-        return json.ToObject<T>(settings);
-      }
-      catch { }
-
-      return default;
-    }
-
-    /// <summary>When an object is serialized to JObject's, some serialization formatting hasn't been applied yet (e.g. date
-    ///   time formatting). You must also use settings when outputting a string from the JToken</summary>
-    /// <param name="token"></param>
-    /// <param name="formatting"></param>
-    /// <param name="settings"></param>
-    /// <returns></returns>
-    public static string ToString(this JToken token, Formatting formatting = Formatting.Indented, JsonSerializerSettings settings = null) {
-      using (var sw = new StringWriter(CultureInfo.InvariantCulture)) {
-        using (var jsonWriter = new JsonTextWriter(sw)) {
-          jsonWriter.Formatting = formatting;
-          jsonWriter.Culture = CultureInfo.InvariantCulture;
-          if (settings != null) {
-            jsonWriter.DateFormatHandling = settings.DateFormatHandling;
-            jsonWriter.DateFormatString = settings.DateFormatString;
-            jsonWriter.DateTimeZoneHandling = settings.DateTimeZoneHandling;
-            jsonWriter.FloatFormatHandling = settings.FloatFormatHandling;
-            jsonWriter.StringEscapeHandling = settings.StringEscapeHandling;
-          }
-          token.WriteTo(jsonWriter);
-        }
-        return sw.ToString();
-      }
-    }
-
-    public static T PropertyValue<T>(this JObject jObject, string name, JsonSerializerSettings settings = null) {
-      var prop = jObject.Property(name);
-      if (prop == null) return default;
-      return prop.PropertyValue<T>(settings);
-    }
-
-    /// <summary>Returns the .NET property value if it exists, null otherwise. Automatically converts types and deserializes
-    ///   string if required</summary>
-    public static T PropertyValue<T>(this JProperty jProp, JsonSerializerSettings settings = null) {
-      var value = (jProp?.Value as JValue)?.Value;
-      if (value == null) return default;
-      if (value is T v) return v;
-
-      var converter = TypeDescriptor.GetConverter(typeof(T));
-      if (converter.CanConvertFrom(value.GetType()))
-        return (T) converter.ConvertFrom(value);
-
-      // if the value is a string that can't be converted to the given type. Deserialize it
-      if (value is string s)
-        return s.ToObject<T>(settings);
-
-      throw new InvalidOperationException($"Unable to convert value of {value.GetType()} to {typeof(T)}");
-    }
-
     public static JObject ToCamelCase(this JObject original) {
       var newObj = new JObject();
       foreach (var property in original.Properties()) {
@@ -220,5 +164,13 @@ namespace SysExtensions.Serialization {
         JTokenType.Array => new JArray(((JArray) original).Select(x => x.ToCamelCaseJToken())),
         _ => original.DeepClone()
       };
+
+    /// <summary>
+    /// Shorthand for t.Value<string>()
+    /// </summary>
+    public static string Str(this JToken t, string prop = null) => prop == null ? t.Value<string>() : t.Value<string>(prop);
+
+    public static JToken Token(this JToken t, string path) => t.SelectToken(path);
+    public static IEnumerable<JToken> Tokens(this JToken t, string path) => t.SelectTokens(path);
   }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Autofac;
+using Nito.AsyncEx;
 using NUnit.Framework;
 using Serilog;
 using YtReader;
@@ -12,12 +13,17 @@ namespace Tests {
   }
 
   public static class TestSetup {
-    public static async Task<TestCtx> TextCtx() {
+    static readonly AsyncLazy<TestCtx> Ctx = new (async () => {
       var (cfg, rootCfg, version) = await Setup.LoadCfg(basePath: Setup.SolutionDir.Combine("YtCli").FullPath);
-      var log = Setup.CreateTestLogger();
-      log.Information("Starting {TestName}", TestContext.CurrentContext.Test.Name);
+      var log = Setup.CreateLogger(rootCfg.Env, "Recfluence.Tests", version, cfg);
       var appCtx = Setup.PipeAppCtxEmptyScope(rootCfg, cfg, version.Version);
       return new(Setup.MainScope(rootCfg, cfg, appCtx, version, log), log, cfg, rootCfg);
+    });
+    
+    public static async Task<TestCtx> TextCtx() {
+      var ctx = await Ctx;
+      ctx.Log.Information("Starting {TestName}", TestContext.CurrentContext.Test.Name);
+      return ctx;
     }
   }
 }

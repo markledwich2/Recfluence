@@ -23,8 +23,7 @@ using YtReader.Narrative;
 using YtReader.Reddit;
 using YtReader.Search;
 using YtReader.Store;
-using YtReader.YtApi;
-using YtReader.YtWebsite;
+using YtReader.Yt;
 
 namespace YtCli {
   [Command("channel-info", Description = "Show channel information (ID,Name) given a video ID")]
@@ -319,26 +318,6 @@ namespace YtCli {
         DataScript = new (DataScriptsRunId, DataScriptParts.UnJoin('|').Select(p => p.ToLower()).ToArray(), DataScriptVideosView)
       };
       await Updater.Update(options, console.GetCancellationToken());
-    }
-  }
-
-
-  [Command("test-chrome-scraper")]
-  public class TestChromeScraperCmd : ICommand {
-    readonly ChromeScraper Scraper;
-    readonly ILogger       Log;
-
-    public TestChromeScraperCmd(ChromeScraper scraper, ILogger log) {
-      Scraper = scraper;
-      Log = log;
-    }
-
-    [CommandOption('v', Description = "| separated video id's")]
-    public string VideoIds { get; set; }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      var res = await Scraper.GetRecsAndExtra(VideoIds.UnJoin('|'), Log);
-      Log.Information("Scraping of {VideoIds} complete", VideoIds, res);
     }
   }
 

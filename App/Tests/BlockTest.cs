@@ -21,16 +21,16 @@ namespace Tests {
 
     [Test]
     public static async Task TestBatchBlock() {
-      var log = Setup.CreateTestLogger();
-      log.Information("TestBatchBlock started");
+      var ctx = await TestSetup.TextCtx();
+      ctx.Log.Information("TestBatchBlock started");
       var numItems = 10_000_000;
-      var (res, dur) = await MakeItems(numItems, log)
+      var (res, dur) = await MakeItems(numItems, ctx.Log)
         .BlockBatch(async (b, i) => {
           await 1.Seconds().Delay();
-          log.Debug("batch {Batch} processed", i);
+          ctx.Log.Debug("batch {Batch} processed", i);
           return b.Count;
         }, 100_000, 8).WithDuration();
-      log.Information("Processing {Items} took {Duration} {Speed}",
+      ctx.Log.Information("Processing {Items} took {Duration} {Speed}",
         numItems, dur.HumanizeShort(), (numItems / 1000).Speed("K items", dur).Humanize());
       res.Sum().Should().Be(numItems);
     }

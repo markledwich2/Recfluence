@@ -64,9 +64,9 @@ namespace YtReader {
     [Required] public GoogleCfg       Google                { get; set; } = new();
     [Required] public AirtableCfg     Airtable              { get; set; } = new();
     [Required] public NarrativesCfg   Narratives            { get; set; } = new();
-    [Required] public DataScriptsCfg  DataScripts            { get; set; } = new();
+    [Required] public DataScriptsCfg  DataScripts           { get; set; } = new();
   }
-  
+
   public class GoogleCfg {
     [SkipRecursiveValidation] public JObject Creds { get; set; }
     public                           string  Test  { get; set; }
@@ -128,7 +128,7 @@ namespace YtReader {
 
     /// <summary>How old a video before we stop collecting recs this is fairly expensive so we keep it within</summary>
     public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
-    
+
     public TimeSpan RefreshChannelDetailDebounce { get; set; } = 12.Hours();
 
     /// <summary>We want to keep monitoring YouTube influence even if no new videos have been created (min). Get at least this
@@ -147,18 +147,13 @@ namespace YtReader {
     /// <summary>the number of vids to populate with data when discovering new channels (i.e. preparing data to be classified)</summary>
     public int DiscoverChannelVids { get; set; } = 3;
 
-    /// <summary>The maximum number of videos to refresh exta info on (per run) because they have no comments (we didn't used
-    ///   to collect them)</summary>
-    public int PopulateMissingCommentsLimit { get; set; } = 0; // disabled for now due to performance costs
-    public int ParallelChannels { get;             set; } = 4;
+    public int ParallelChannels { get; set; } = 4;
 
-    public int ChromeParallel  { get; set; } = 2;
     public int WebParallel     { get; set; } = 6; // parallelism for plain html scraping of video's, recs
     public int CaptionParallel { get; set; } = 3; // smaller than Web to try and reduce changes of out-of-mem failures
-    public int ChromeAttempts  { get; set; } = 3;
 
-    /// <summary>maximum number of videos (in total for all channels in a process update).</summary>
-    public int ChromeUpdateMax { get; set; } = 1000;
+    /// <summary>maximum number of videos to load when updating a channel.</summary>
+    public int MaxChannelComments { get; set; } = 4;
 
     /// <summary>These thresholds shortcut the collection for channels to save costs. Bellow the analysis thresholds because we
     ///   want to collect ones that might tip over</summary>
@@ -169,7 +164,7 @@ namespace YtReader {
     ///   go and backfill information from the video itself</summary>
     public int ChannelBatchSize { get;      set; } = 100;
     public int MaxChannelDailyVideos { get; set; } = 10_000;
-    public int MaxChannelFullVideos { get; set; } = 40_000;
+    public int MaxChannelFullVideos  { get; set; } = 40_000;
   }
 
   public class StorageCfg {

@@ -49,14 +49,14 @@ namespace Tests {
     
     [Test]
     public static async Task TestPipeApp() {
-      var log = Setup.CreateTestLogger();
+      var ctx = await TestSetup.TextCtx();
       var b = new ContainerBuilder();
       b.RegisterType<PipeApp>();
-      b.Register(_ => log).As<ILogger>();
+      b.Register(_ => ctx.Log).As<ILogger>();
       var scope = b.Build();
       // relies on a local dev isntance. use vscode to start an Azurite blob service with a container called pipe
-      var store = new AzureBlobFileStore("UseDevelopmentStorage=true", "pipe", log);
-      var pipeCtx = new PipeCtx(new (), new (scope, typeof(PipeApp)), store, log);
+      var store = new AzureBlobFileStore("UseDevelopmentStorage=true", "pipe", ctx.Log);
+      var pipeCtx = new PipeCtx(new (), new (scope, typeof(PipeApp)), store, ctx.Log);
       var res = await pipeCtx.Run((PipeApp app) => app.MakeAndSum((int)15L, 1.Thousands(), DataStoreType.Backup), new () {Location = PipeRunLocation.Local});
       res.Metadata.Error.Should().BeFalse();
     }
@@ -94,20 +94,19 @@ namespace Tests {
 
     [Test]
     public async Task TestGraphRunner() {
-      using var log = Setup.CreateTestLogger();
-
+      var ctx = await TestSetup.TextCtx();;
       var res = await TaskGraph.FromMethods(
           (l,c) => Shorten(l),
           (l,c) => Generate(l, true),
           (l,c) => NotDependent(l))
-        .Run(parallel: 2, log, CancellationToken.None);
+        .Run(parallel: 2, ctx.Log, CancellationToken.None);
 
       var resByName = res.ToKeyedCollection(r => r.Name);
       resByName[nameof(Generate)].FinalStatus.Should().Be(GraphTaskStatus.Error);
       resByName[nameof(Shorten)].FinalStatus.Should().Be(GraphTaskStatus.Cancelled);
       resByName[nameof(NotDependent)].FinalStatus.Should().Be(GraphTaskStatus.Success);
 
-      log.Information("Res {Res}, Shortened {Values}", res.Join("\n"), shortened);
+      ctx.Log.Information("Res {Res}, Shortened {Values}", res.Join("\n"), shortened);
     }
   }
 

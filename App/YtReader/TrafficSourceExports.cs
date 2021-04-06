@@ -13,7 +13,7 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.IO;
 using SysExtensions.Threading;
-using YtReader.YtWebsite;
+using YtReader.Yt;
 
 namespace YtReader {
   public static class TrafficSourceExports {
@@ -54,7 +54,7 @@ namespace YtReader {
         using var csvReader = new CsvReader(csvStream, CsvExtensions.DefaultConfig);
 
         var records = csvReader.GetRecords<TrafficSourceExportRow>().ToList();
-        var rows = (await records.BlockFunc(ToTrafficSourceRow, 4,
+        var rows = (await records.BlockFunc(ToTrafficSourceRow, parallel: 4,
             progressUpdate: p => log.Debug("Processing traffic sources for {Path}: {Rows}/{TotalRows}", b.Path, p.Completed, records.Count)))
           .NotNull().ToList();
 
@@ -66,9 +66,9 @@ namespace YtReader {
           if (source.Length != 2 || source[0] != "YT_RELATED")
             return null; // total at the top or otherwise. not interested
           var videoId = source[1];
-          var fromVideo = await ytWeb.GetVideo(videoId, log);
+          var fromVideo = await ytWeb.GetExtra(log, videoId, new[] {ExtraPart.EExtra}).Then(r => r.Extra);
 
-          return new TrafficSourceRow {
+          return new() {
             ToChannelTitle = exportInfo.Channel,
             From = exportInfo.From,
             To = exportInfo.To,
@@ -79,7 +79,7 @@ namespace YtReader {
             SourceType = row.SourceType,
             FromChannelId = fromVideo?.ChannelId,
             FromChannelTitle = fromVideo?.ChannelTitle,
-            FromVideoId = fromVideo?.Id,
+            FromVideoId = fromVideo?.VideoId,
             FromVideoTitle = fromVideo?.Title,
             ImpressionClickThrough = row.ImpressionClickThrough,
             WatchTimeHrsTotal = row.WatchTimeHrsTotal,

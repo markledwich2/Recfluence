@@ -324,7 +324,7 @@ group by channel_id",
       Log.Information("Result - saved zip {Name} in {Duration}", zipPath.FileName, sw.Elapsed);
     }
 
-    static FPath TempDir() {
+    public static FPath TempDir() {
       var path = Path.GetTempPath().AsPath().Combine(Guid.NewGuid().ToShortString());
       if (!path.Exists)
         path.CreateDirectory();

@@ -1,42 +1,31 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
 using LtGt;
 using NUnit.Framework;
-using Serilog;
 using SysExtensions.IO;
+using SysExtensions.Serialization;
 using SysExtensions.Threading;
 using YtReader;
-using YtReader.YtApi;
-using YtReader.YtWebsite;
+using YtReader.Yt;
 
 namespace Tests {
-
-
   public static class ScrapingTests {
     [Test]
-    public static async Task ChromeRecsAndExtra() {
+    public static async Task VideoComments() {
       // get comments, does watch page html have it
       using var ctx = await TestSetup.TextCtx();
-      var chrome = ctx.Resolve<ChromeScraper>();
-      var vids = new[] {
-        
-        "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)
-        "-ryPLVEExA0", // private 
-        /*"Ms9WOSXU5tY", "n_vzBGB3F_Y",
-        "xxQOtOCbASs", // tall
-        "DLq1DUcMh1Q"*/
-      };
-      var chromeExtras = await chrome.GetRecsAndExtra(vids, ctx.Log);
+      var ws = ctx.Scope.Resolve<YtWeb>();
+      var video = await ws.GetExtra(ctx.Log, "Su1FQUkMojU", new[] {ExtraPart.EComments});
+      await video.Comments.ToJsonl("comments.jsonl");
     }
 
     [Test]
     public static async Task WebRecsAndExtra() {
       using var ctx = await TestSetup.TextCtx();
-      var ws = ctx.Scope.Resolve<YtWeb>();
-      var extra = await ws.GetRecsAndExtra(new[] {
-        "V8kxdw0UASE", // should work. looks like ti was errored and then re-instated
+      var plans = new VideoExtraPlans(new[] {
+        "Su1FQUkMojU", // JP video with lots of comments
+        //"V8kxdw0UASE", // should work. looks like ti was errored and then re-instated
         //"XztR0CnVKNo", // normal
         // "JPiiySjShng", //nbc suspected parsing problem
         //"OijWK4Y6puI", //unlisted
@@ -49,17 +38,17 @@ namespace Tests {
         "gRJnTYHID3w", // var ytInitialData instead of window["ytInitialData"]
         "MbXbFchrTgw",
         "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)*/
-        //"-ryPLVEExA0", // private 
-      }, ctx.Log);
+        //"-ryPLVEExA0", // private
+      });
+      var collector = ctx.Scope.Resolve<YtCollector>();
+      var extra = await collector.GetExtras(plans, ctx.Log).ToListAsync();
     }
 
     [Test]
     public static async Task Captions() {
       using var ctx = await TestSetup.TextCtx();
       var scraper = ctx.Scope.Resolve<YtWeb>();
-      var tracks = await scraper.GetCaptionTracks("yu_C_K3TuyY", ctx.Log);
-      var en = tracks.First(t => t.Language.Code == "en");
-      var captions = await scraper.GetClosedCaptionTrackAsync(en, ctx.Log);
+      var extra = await scraper.GetExtra(ctx.Log, "yu_C_K3TuyY", new[] {ExtraPart.ECaptions});
     }
 
     [Test]
@@ -68,9 +57,7 @@ namespace Tests {
       var docs = Setup.SolutionDir.Combine("Tests", "WatchPageHtml")
         .Files("*.html")
         .Select(f => Html.ParseDocument(f.OpenText().ReadToEnd()));
-
       var scrape = x.Resolve<YtWeb>();
-
       var clientObjects = docs.Select(d => scrape.GetRecs2(x.Log, d, "(fake video id)")).ToList();
     }
 

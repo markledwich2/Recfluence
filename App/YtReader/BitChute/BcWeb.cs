@@ -4,6 +4,7 @@ using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AngleSharp;
@@ -18,11 +19,9 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Text;
-using SysExtensions.Threading;
 using YtReader.Store;
 using static System.StringComparison;
 using static System.Text.RegularExpressions.RegexOptions;
-using static SysExtensions.Net.HttpExtensions;
 using static SysExtensions.Reflection.ReflectionExtensions;
 using static SysExtensions.Threading.Def;
 using Url = Flurl.Url;
@@ -30,20 +29,19 @@ using Url = Flurl.Url;
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.BitChute {
-  record FlurlClients(FlurlClient Direct, FlurlClient Proxy);
+  
 
   public class BcWeb : IScraper {
     readonly        ProxyCfg       Proxy;
     readonly        BitChuteCfg    Cfg;
     static readonly string         Url      = "https://www.bitchute.com";
     static readonly IConfiguration AngleCfg = Configuration.Default.WithDefaultLoader().WithDefaultCookies();
-    bool                           UseProxy;
-    readonly FlurlClients          FlurlClients;
+    readonly FlurlProxyFallbackClient          FlurlClient;
 
     public BcWeb(ProxyCfg proxy, BitChuteCfg cfg) {
       Proxy = proxy;
       Cfg = cfg;
-      FlurlClients = new(new(), new(proxy.Proxies.FirstOrDefault()?.CreateHttpClient()));
+      FlurlClient = new(new(), new(proxy.Proxies.FirstOrDefault()?.CreateHttpClient()));
     }
 
     public Platform Platform        => Platform.BitChute;
@@ -60,8 +58,10 @@ namespace YtReader.BitChute {
       chanDoc.EnsureSuccess();
       var csrf = chanDoc.CsrfToken();
 
-      Task<T> Post<T>(string path, object data = null) =>
-        FurlAsync(Url.AppendPathSegment(path).WithBcHeaders(chanDoc, csrf), r => r.BcPost(csrf, data)).ReceiveJson<T>();
+      Task<T> Post<T>(string path, object data = null) {
+        var req = Url.AppendPathSegment(path).WithBcHeaders(chanDoc, csrf);
+        return FlurlClient.Send(req, HttpMethod.Post, req.FormUrlContent(data)).ReceiveJson<T>();
+      }
 
       var chan = ParseChannel(chanDoc, sourceId);
       if (chan.Status != ChannelStatus.Alive)
@@ -149,7 +149,7 @@ namespace YtReader.BitChute {
       return vid;
     }
 
-    IBrowsingContext GetBrowser() => BrowsingContext.New(UseProxy && Proxy.Proxies.Any()
+    IBrowsingContext GetBrowser() => BrowsingContext.New(FlurlClient.UseProxy && Proxy.Proxies.Any()
       ? AngleCfg.WithRequesters(new() {
         Proxy = Proxy.Proxies.First().CreateWebProxy(),
         PreAuthenticate = true,
@@ -168,36 +168,10 @@ namespace YtReader.BitChute {
 
       var (doc, ex) = await Fun(() => retryTransient.ExecuteAsync(() => getDoc(browser, url))).Try();
       if (doc?.StatusCode.IsTransient() == false) return doc; // if there was a non-transient error, return the doc in that state 
-      UseProxyOrThrow(ex, url, (int?) doc?.StatusCode); // if we are already using the proxy, throw the error
+      FlurlClient.UseProxyOrThrow(ex, url, (int?) doc?.StatusCode); // if we are already using the proxy, throw the error
       doc = await retryTransient.ExecuteAsync(() => getDoc(browser, url));
       doc.EnsureSuccess();
       return doc;
-    }
-
-    /// <summary>Posts to Bitchute and retries and proxy fallback. Always ensure successful results</summary>
-    public async Task<IFlurlResponse> FurlAsync(IFlurlRequest request, Func<IFlurlRequest, Task<IFlurlResponse>> getResponse, ILogger log = null) {
-      Task<IFlurlResponse> GetRes() => getResponse(request.WithClient(UseProxy ? FlurlClients.Proxy : FlurlClients.Direct).AllowAnyHttpStatus());
-
-      var retry = Policy.HandleResult<IFlurlResponse>(d => IsTransient(d.StatusCode))
-        .RetryWithBackoff("BcWeb flurl transient error", 5, d => d.StatusCode.ToString(), log);
-      var (res, ex) = await Fun(() => retry.ExecuteAsync(GetRes)).Try();
-      if (res != null && IsSuccess(res.StatusCode)) return res;
-      UseProxyOrThrow(ex, request.Url, res?.StatusCode);
-      res = await retry.ExecuteAsync(GetRes);
-      EnsureSuccess(res.StatusCode, request.Url.ToString());
-      return res;
-    }
-
-    void UseProxyOrThrow(Exception ex, string url, int? statusCode) {
-      if (statusCode != null && !IsTransient(statusCode.Value))
-        EnsureSuccess(statusCode.Value, url); // throw for non-transient errors
-
-      if (UseProxy) { // throw if there is an error and we are allready using proxy
-        if (ex != null) throw ex;
-        if (statusCode != null) EnsureSuccess(statusCode.Value, url);
-      }
-
-      UseProxy = true;
     }
 
     Channel ParseChannel(IDocument doc, string idOrName) {

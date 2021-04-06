@@ -16,7 +16,7 @@ using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Text;
 
-namespace YtReader.YtApi {
+namespace YtReader.Yt {
   public class YtClient {
     public YtClient(YtApiCfg cfg, ILogger log) {
       Log = log;

@@ -39,8 +39,7 @@ using YtReader.Reddit;
 using YtReader.Rumble;
 using YtReader.Search;
 using YtReader.Store;
-using YtReader.YtApi;
-using YtReader.YtWebsite;
+using YtReader.Yt;
 using static Serilog.Events.LogEventLevel;
 
 namespace YtReader {
@@ -96,14 +95,14 @@ namespace YtReader {
       return resCfg;
     }
 
-    public static Logger CreateTestLogger() {
+    /*public static Logger CreateTestLogger() {
       var log = new LoggerConfiguration()
         .WriteTo.Seq("http://localhost:5341", Debug).MinimumLevel.Debug()
         .WriteTo.Console().MinimumLevel.Debug()
         .CreateLogger();
       ConfigureFlurlLogging(log);
       return log;
-    }
+    }*/
 
     public static ILogger ConsoleLogger(LogEventLevel level = Information) =>
       new LoggerConfiguration()
@@ -271,7 +270,6 @@ namespace YtReader {
       b.RegisterType<StoreUpgrader>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
       b.RegisterType<Stage>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
       b.RegisterType<YtWeb>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<ChromeScraper>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
 
       b.RegisterType<YtSearch>();
       b.RegisterType<YtCollector>();
