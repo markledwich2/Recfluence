@@ -97,15 +97,15 @@ from review_filtered r
       }).ToArray();
     }
 
-    public static Task<IReadOnlyCollection<string>> MissingUserChannels(this YtCollectDbCtx ctx) =>
-      ctx.Db.Query<string>("missing user channels", @$"
+    public static Task<IReadOnlyCollection<string>> MissingUsers(this YtCollectDbCtx ctx) =>
+      ctx.Db.Query<string>("missing users", @$"
 select distinct author_channel_id
 from comment t
 join video_latest v on v.video_id = t.video_id
 where
  platform = 'YouTube'
- and not exists(select * from channel_latest where channel_id = author_channel_id)
-{ctx.Cfg.MaxMissingUserChannels?.Do(i => $"limit {i}") ?? ""}
+ and not exists(select * from user where user_id = author_channel_id)
+{ctx.Cfg.MaxMissingUsers?.Do(i => $"limit {i}") ?? ""}
 ");
 
     public record DiscoverRow(string video_id, string channel_id, DateTime? extra_updated, bool caption_exists);

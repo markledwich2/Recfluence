@@ -157,7 +157,7 @@ namespace YtReader.Yt {
     async Task ProcessAllMissingUserChannels(ILogger log, CancellationToken cancel = default) {
       var sw = Stopwatch.StartNew();
       using var db = await Db(log);
-      var missing = await db.MissingUserChannels();
+      var missing = await db.MissingUsers();
       var total = await missing.Process(PipeCtx,
           b => CollectUserChannels(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
         .Then(r => r.Sum(i => i.OutState));
@@ -167,7 +167,7 @@ namespace YtReader.Yt {
     [Pipe]
     async Task<int> CollectUserChannels(IReadOnlyCollection<string> channelIds, ILogger log, CancellationToken cancel) {
       log.Information("Collect - started scraping user channels {Total}", channelIds.Count);
-      var batchTotal = channelIds.Count / RCfg.ChannelBatchSize;
+      var batchTotal = channelIds.Count / RCfg.UserBatchSize;
       var start = Stopwatch.StartNew();
       var total = await channelIds.Batch(RCfg.ChannelBatchSize).BlockTrans(async (ids, i) => {
         var userChannels = await ids.BlockTrans(async c => {
@@ -184,7 +184,7 @@ namespace YtReader.Yt {
             };
           }, RCfg.WebParallel, cancel: cancel)
           .NotNull().ToListAsync();
-        log.Information("Collect - scraped {Users} users. Batch {Batch}/{Total}", userChannels.Count, i, batchTotal);
+        log.Debug("Collect - scraped {Users} users. Batch {Batch}/{Total}", userChannels.Count, i, batchTotal);
         await DbStore.Users.Append(userChannels);
         return userChannels.Count;
       }, cancel: cancel).SumAsync();
