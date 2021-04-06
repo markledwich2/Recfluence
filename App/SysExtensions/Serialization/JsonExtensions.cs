@@ -168,8 +168,7 @@ namespace SysExtensions.Serialization {
     /// <summary>
     /// Shorthand for t.Value<string>()
     /// </summary>
-    public static string Str(this JToken t, string prop = null) => prop == null ? t.Value<string>() : t.Value<string>(prop);
-
+    public static string Str(this JToken t, string path = null) => (path == null ? t : t.Token(path))?.Value<string>();
     public static JToken Token(this JToken t, string path) => t.SelectToken(path);
     public static IEnumerable<JToken> Tokens(this JToken t, string path) => t.SelectTokens(path);
   }

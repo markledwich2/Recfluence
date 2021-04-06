@@ -62,12 +62,25 @@ namespace Tests {
     }
 
     [Test]
-    public static async Task ChannelVideos() {
+    public static async Task Channels() {
       using var x = await TestSetup.TextCtx();
       var ws = x.Scope.Resolve<YtWeb>();
-      var res = await ws.ChannelVideos("UChN7H3JFqeFC-WB8NCxhn7g", x.Log).ToListAsync();
+      var chans = await new[] {
+        "UCdfQFG50Hu88-1CpRmPDA2A", // user channel with pagination of subs
+        "UChN7H3JFqeFC-WB8NCxhn7g", // error - unavaialbe
+        "UCaJ8FsMMnefU7NXdMaXW8WQ", // error - terminated
+        "UCdQ5jrBSBEOUKr91f6zucag", // user
+        "UCUowFWIWGw6Pv2JqfEj8njQ", // channel
+      }.BlockTrans(async c => {
+        var chan = await ws.Channel(x.Log, c);
+        return new {
+          Chan = chan, 
+          Subscriptions = await chan.Subscriptions().ToListAsync(), 
+          Vids = await chan.Videos().ToListAsync()
+        };
+      }).ToListAsync();
     }
-
+    
     [Test]
     public static async Task ChannelData() {
       using var ctx = await TestSetup.TextCtx();

@@ -165,6 +165,8 @@ namespace YtReader {
     public int ChannelBatchSize { get;      set; } = 100;
     public int MaxChannelDailyVideos { get; set; } = 10_000;
     public int MaxChannelFullVideos  { get; set; } = 40_000;
+
+    public int? MaxMissingUserChannels { get; set; } = 10_000;
   }
 
   public class StorageCfg {

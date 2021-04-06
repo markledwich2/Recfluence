@@ -57,6 +57,11 @@
         "minWorkItems": 2000
       },
       {
+        "pipeName": "CollectUserChannels",
+        "maxParallel": 8,
+        "minWorkItems": 2000
+      },
+      {
         "pipeName": "DataScripts",
         "container": {
           "mem": 4,

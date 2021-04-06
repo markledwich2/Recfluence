@@ -10,14 +10,16 @@ using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using SysExtensions.Threading;
 using YtReader.Store;
+
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.Yt {
   public record YtCollectDbCtx(YtCollectCfg Cfg, ILoggedConnection<IDbConnection> Db, ILogger Log) : IDisposable {
     public void Dispose() => Db?.Dispose();
   }
-  
+
   public record ChannelUpdatePlan {
     public Channel           Channel           { get; set; }
     public UpdateChannelType Update            { get; set; }
@@ -27,11 +29,11 @@ namespace YtReader.Yt {
     public DateTime?         LastCommentUpdate { get; set; }
     public DateTime?         LastRecUpdate     { get; set; }
   }
-  
+
   public static class YtCollectDb {
     public static string SqlList<T>(IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
-    
-    public static Task<IReadOnlyCollection<string>> StaleOrCaptionlessChannels(this YtCollectDbCtx ctx,CollectOptions options, TimeSpan refreshPeriod) =>
+
+    public static Task<IReadOnlyCollection<string>> StaleOrCaptionlessChannels(this YtCollectDbCtx ctx, CollectOptions options, TimeSpan refreshPeriod) =>
       ctx.Db.Query<string>("stale or captionless channels", @$"
 with
   raw_vids as ({GetVideoChannelSelect(options)})
@@ -57,8 +59,9 @@ with
 select channel_id from chan_refresh
 ", new {newer_than = DateTime.UtcNow - refreshPeriod});
 
-    public static async Task<IKeyedCollection<string, ChannelUpdatePlan>> ExistingChannels(this YtCollectDbCtx ctx, HashSet<string> explicitChannels) {
-      var channels = await ctx.Db.Query<(string j, long? daysBack, 
+    /// <summary>Existing reviewed channels with information on the last updates to extra parts</summary>
+    public static async Task<IReadOnlyCollection<ChannelUpdatePlan>> ExistingChannels(this YtCollectDbCtx ctx, IReadOnlyCollection<string> chans) {
+      var channels = await ctx.Db.Query<(string j, long? daysBack,
         DateTime? lastVideoUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate, DateTime? lastCommentUpdate)>(
         "channels - previous",
         $@"
@@ -66,7 +69,7 @@ with review_filtered as (
   select channel_id, channel_title
   from channel_latest
   where platform = 'YouTube'
-  and {(explicitChannels.None() ? "meets_review_criteria" : $"channel_id in ({SqlList(explicitChannels)})")} --only explicit channel when provided
+  and {(chans.None() ? "meets_review_criteria" : $"channel_id in ({SqlList(chans)})")} --only explicit channel when provided
 )
    , stage_latest as (
   select v
@@ -85,19 +88,28 @@ from review_filtered r
        left join channel_collection_days_back b on b.channel_id=v:ChannelId
 ");
       return channels.Select(r => new ChannelUpdatePlan {
-          Channel = r.j.ToObject<Channel>(IJsonlStore.JCfg),
-          VideosFrom = r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : (DateTime?) null,
-          LastVideoUpdate = r.lastVideoUpdate,
-          LastCaptionUpdate = r.lastCaptionUpdate,
-          LastRecUpdate = r.lastRecUpdate,
-          LastCommentUpdate = r.lastCommentUpdate
-        })
-        .ToKeyedCollection(r => r.Channel.ChannelId);
+        Channel = r.j.ToObject<Channel>(IJsonlStore.JCfg),
+        VideosFrom = r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : (DateTime?) null,
+        LastVideoUpdate = r.lastVideoUpdate,
+        LastCaptionUpdate = r.lastCaptionUpdate,
+        LastRecUpdate = r.lastRecUpdate,
+        LastCommentUpdate = r.lastCommentUpdate
+      }).ToArray();
     }
-    
-    
+
+    public static Task<IReadOnlyCollection<string>> MissingUserChannels(this YtCollectDbCtx ctx) =>
+      ctx.Db.Query<string>("missing user channels", @$"
+select distinct author_channel_id
+from comment t
+join video_latest v on v.video_id = t.video_id
+where
+ platform = 'YouTube'
+ and not exists(select * from channel_latest where channel_id = author_channel_id)
+{ctx.Cfg.MaxMissingUserChannels?.Do(i => $"limit {i}") ?? ""}
+");
+
     public record DiscoverRow(string video_id, string channel_id, DateTime? extra_updated, bool caption_exists);
-    
+
     static string GetVideoChannelSelect(CollectOptions options) {
       var (type, value) = options.CollectFrom;
       var select = type switch {
@@ -107,7 +119,7 @@ from review_filtered r
         CollectFromType.VideosView => $"select video_id, channel_id from {value}",
         _ => throw new NotImplementedException($"CollectFrom {options.CollectFrom} not supported")
       };
-      return @select;
+      return select;
     }
 
     public static Task<IReadOnlyCollection<DiscoverRow>> MissingVideos(this YtCollectDbCtx db, CollectOptions options) =>
@@ -161,7 +173,7 @@ from video_latest v
 where not exists(select * from comment_stage c where c.v:VideoId=v.video_id) and error_type is null
 qualify row_number() over (partition by channel_id order by random() desc)<=:max_comments
   and channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
-                ", new{max_comments =ctx.Cfg.MaxChannelComments});
+                ", new {max_comments = ctx.Cfg.MaxChannelComments});
 
     public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingCaptions(this YtCollectDbCtx ctx,
       IReadOnlyCollection<Channel> channels) =>

@@ -120,7 +120,7 @@ namespace Mutuo.Etl.Pipe {
           return b.Id;
         }, ctx.PipeCfg.Store.Parallel);
 
-      var pipeWorker = PipeWorker(ctx);
+      var pipeWorker = PipeWorker(ctx, batches.Count <= 1 ? PipeRunLocation.Local : null); // get the pipe worker. force local if we are going to just create 1 container anyway
       log.Debug("{PipeWorker} - launching batches {@batches}", pipeWorker.GetType().Name, batches);
       var res = pipeWorker is IPipeWorkerStartable s
         ? await s.Launch(ctx, batches, runCfg.ReturnOnStart, false, log, cancel: cancel)

@@ -206,7 +206,7 @@ namespace YtReader.Yt {
         FeaturedChannelIds = c.BrandingSettings?.Channel?.FeaturedChannelsUrls?.ToArray(),
         DefaultLanguage = c.BrandingSettings?.Channel?.DefaultLanguage,
         Keywords = c.BrandingSettings?.Channel?.Keywords,
-        Subscriptions = subRes?.Items?.Select(s => new ChannelSubscription {Id = s.Snippet?.ChannelId, Title = s.Snippet?.Title}).ToArray()
+        Subscriptions = subRes?.Items?.Select(s => new ChannelSubscription(s.Snippet?.ChannelId, s.Snippet?.Title)).ToArray()
       };
       return data;
     }
@@ -214,72 +214,71 @@ namespace YtReader.Yt {
     #endregion
   }
 
-  public class ChannelData {
-    public string                Id                 { get; set; }
-    public string                Title              { get; set; }
-    public string                Country            { get; set; }
-    public string                Description        { get; set; }
-    public ThumbnailDetails      Thumbnails         { get; set; }
-    public ChannelStats          Stats              { get; set; }
-    public string[]              FeaturedChannelIds { get; set; }
-    public string                DefaultLanguage    { get; set; }
-    public string                Keywords           { get; set; }
-    public ChannelSubscription[] Subscriptions      { get; set; }
+  public record ChannelData {
+    public string                Id                 { get; init; }
+    public string                Title              { get; init; }
+    public string                Country            { get; init; }
+    public string                Description        { get; init; }
+    public ThumbnailDetails      Thumbnails         { get; init; }
+    public ChannelStats          Stats              { get; init; }
+    public string[]              FeaturedChannelIds { get; init; }
+    public string                DefaultLanguage    { get; init; }
+    public string                Keywords           { get; init; }
+    public ChannelSubscription[] Subscriptions      { get; init; }
 
     public override string ToString() => Title;
   }
 
-  public class ChannelSubscription {
-    public string Id    { get; set; }
-    public string Title { get; set; }
+  public record ChannelSubscription(string Id, string Title) {
+    public long? Subs { get; init; }
   }
 
-  public class ChannelStats {
-    public ulong?   ViewCount { get; set; }
-    public ulong?   SubCount  { get; set; }
-    public DateTime Updated   { get; set; }
+  public record ChannelStats {
+    public ulong?   ViewCount { get; init; }
+    public ulong?   SubCount  { get; init; }
+    public DateTime Updated   { get; init; }
   }
 
-  public class VideoData : ChannelVideoListItem {
-    public string Description  { get; set; }
-    public string ChannelTitle { get; set; }
-    public string ChannelId    { get; set; }
-    public string Language     { get; set; }
+  public record VideoData : ChannelVideoListItem {
+    public string Description  { get; init; }
+    public string ChannelTitle { get; init; }
+    public string ChannelId    { get; init; }
+    public string Language     { get; init; }
 
-    public string CategoryId { get; set; }
+    public string CategoryId { get; init; }
 
     public ICollection<string> Topics { get; } = new List<string>();
     public ICollection<string> Tags   { get; } = new List<string>();
 
-    public VideoStats Stats { get; set; } = new();
+    public VideoStats Stats { get; init; } = new();
 
     public override string ToString() => $"{ChannelTitle} {VideoTitle}";
   }
 
-  public class VideoStats {
-    public ulong?   Views    { get; set; }
-    public ulong?   Likes    { get; set; }
-    public ulong?   Dislikes { get; set; }
-    public DateTime Updated  { get; set; }
+  public record VideoStats {
+    public ulong?   Views    { get; init; }
+    public ulong?   Likes    { get; init; }
+    public ulong?   Dislikes { get; init; }
+    public DateTime Updated  { get; init; }
   }
 
-  public class VideoItem {
-    public string VideoId    { get; set; }
-    public string VideoTitle { get; set; }
+  public record VideoItem {
+    public string VideoId    { get; init; }
+    public string VideoTitle { get; init; }
 
     public override string ToString() => VideoTitle;
   }
 
-  public class RecommendedVideoListItem : VideoItem {
-    public string ChannelTitle { get; set; }
-    public string ChannelId    { get; set; }
-    public int    Rank         { get; set; }
+  public record RecommendedVideoListItem : VideoItem {
+    public string ChannelTitle { get; init; }
+    public string ChannelId    { get; init; }
+    public int    Rank         { get; init; }
 
     public override string ToString() => $"{Rank}. {ChannelTitle}: {VideoTitle}";
   }
 
-  public class ChannelVideoListItem : VideoItem {
-    public DateTime PublishedAt { get; set; }
-    public DateTime Updated     { get; set; }
+  public record ChannelVideoListItem : VideoItem {
+    public DateTime PublishedAt { get; init; }
+    public DateTime Updated     { get; init; }
   }
 }

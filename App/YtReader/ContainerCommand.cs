@@ -52,7 +52,7 @@ namespace YtReader {
       }
 
       await ExecuteLocal(console)
-        .WithOnError(ex => Log.Error(ex, "Unhandled error running command {Command}: {Message}", GetType().Name, ex.Message));
+        .OnError(ex => Log.Error(ex, "Unhandled error running command {Command}: {Message}", GetType().Name, ex.Message));
     }
 
     protected abstract string GroupName { get; }

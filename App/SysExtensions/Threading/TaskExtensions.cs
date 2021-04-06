@@ -10,6 +10,9 @@ namespace SysExtensions.Threading {
   public static class Def {
     /// <summary>Create a func with type inference</summary>
     public static Func<T> Fun<T>(Func<T> func) => func;
+
+    /// <summary>Run a func on a thing. Easy to way make something fluent</summary>
+    public static TR Do<T, TR>(this T thing, Func<T, TR> fun) => fun(thing);
   }
 
   public static class TaskExtensions {
@@ -36,7 +39,7 @@ namespace SysExtensions.Threading {
     /// <summary>Executes the tasks in order. Completing tasks trigger the next one to start</summary>
     public static IEnumerable<Task<T>> Interleaved<T>(this IEnumerable<Task<T>> tasks) {
       var inputTasks = tasks.ToList();
-      var sources = Enumerable.Range(0, inputTasks.Count).Select(_ => new TaskCompletionSource<T>()).ToList();
+      var sources = Enumerable.Range(start: 0, inputTasks.Count).Select(_ => new TaskCompletionSource<T>()).ToList();
       var nextTaskIndex = -1;
       foreach (var inputTask in inputTasks)
         inputTask.ContinueWith(completed => {

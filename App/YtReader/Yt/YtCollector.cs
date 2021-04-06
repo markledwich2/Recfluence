@@ -47,33 +47,11 @@ namespace YtReader.Yt {
 
     YtCollectCfg RCfg => Cfg.Collect;
 
-    [Pipe]
-    public async Task Collect(ILogger log, CollectOptions options, CancellationToken cancel = default) {
-      options ??= new();
-      if (options.CollectFrom.Type != CollectFromType.None) {
-        await CollectFromVideoPathOrView(options, log, cancel);
-      }
-      else {
-        var channels = await PlanAndUpdateChannelStats(options.Parts, options.LimitChannels, log, cancel);
-        if (cancel.IsCancellationRequested)
-          return;
-        var (result, dur) = await channels
-          .Randomize() // randomize to even the load
-          .Process(PipeCtx,
-            b => ProcessChannels(b, options.Parts, Inject<ILogger>(), Inject<CancellationToken>(), null), log: log, cancel: cancel)
-          .WithDuration();
-
-        var allChannelResults = result.Where(r => r.OutState != null).SelectMany(r => r.OutState.Channels).ToArray();
-        log.Information("Collect - {Pipe} Complete - {Success}/{Total} channels updated in {Duration}",
-          nameof(ProcessChannels), allChannelResults.Count(c => c.Success), allChannelResults.Length, dur.HumanizeShort());
-      }
-    }
-
     #region FromPathOrView
 
     /// <summary>Collect extra and recommendations from an imported list of videos. Used for arbitrary lists.</summary>
     async Task CollectFromVideoPathOrView(CollectOptions options, ILogger log, CancellationToken cancel = default) {
-      var parts = options.Parts ?? new[] {PChannel, PStats, PExtra, PCaption};
+      var parts = options.Parts ?? new[] {PChannel, PStat, PExtra, PCaption};
       log.Information("YtCollect - Special Collect from {CollectFrom} started", options.CollectFrom);
 
 
@@ -146,6 +124,75 @@ namespace YtReader.Yt {
 
     #endregion
 
+    [Pipe]
+    public async Task Collect(ILogger log, CollectOptions options, CancellationToken cancel = default) {
+      options ??= new();
+      if (options.CollectFrom.Type != CollectFromType.None)
+        await CollectFromVideoPathOrView(options, log, cancel);
+      else
+        await Task.WhenAll(
+          options.Parts.ShouldRunAny(PUser) ? ProcessAllMissingUserChannels(log, cancel) : Task.CompletedTask,
+          options.Parts.ShouldRunAny(PChannel, PExtra, PComment, PCaption, PDiscover, PRec, PStat)
+            ? ProcessAllChannels(log, options, cancel)
+            : Task.CompletedTask
+        );
+    }
+
+    async Task<bool> ProcessAllChannels(ILogger log, CollectOptions options, CancellationToken cancel) {
+      var channels = await PlanAndUpdateChannelStats(options.Parts, options.LimitChannels, log, cancel);
+      if (cancel.IsCancellationRequested)
+        return true;
+      var (result, dur) = await channels
+        .Randomize() // randomize to even the load
+        .Process(PipeCtx,
+          b => ProcessChannels(b, options.Parts, Inject<ILogger>(), Inject<CancellationToken>(), null), log: log, cancel: cancel)
+        .WithDuration();
+
+      var allChannelResults = result.Where(r => r.OutState != null).SelectMany(r => r.OutState.Channels).ToArray();
+      log.Information("Collect - {Pipe} Complete - {Success}/{Total} channels updated in {Duration}",
+        nameof(ProcessChannels), allChannelResults.Count(c => c.Success), allChannelResults.Length, dur.HumanizeShort());
+      return false;
+    }
+
+    async Task ProcessAllMissingUserChannels(ILogger log, CancellationToken cancel = default) {
+      var sw = Stopwatch.StartNew();
+      using var db = await Db(log);
+      var missing = await db.MissingUserChannels();
+      var total = await missing.Process(PipeCtx,
+          b => CollectUserChannels(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
+        .Then(r => r.Sum(i => i.OutState));
+      log.Information("Collect - completed scraping all user channels {Total} in {Duration}", total, sw.Elapsed.HumanizeShort());
+    }
+
+    [Pipe]
+    async Task<int> CollectUserChannels(IReadOnlyCollection<string> channelIds, ILogger log, CancellationToken cancel) {
+      log.Information("Collect - started scraping user channels {Total}", channelIds.Count);
+      var batchTotal = channelIds.Count / RCfg.ChannelBatchSize;
+      var start = Stopwatch.StartNew();
+      var total = await channelIds.Batch(RCfg.ChannelBatchSize).BlockTrans(async (ids, i) => {
+        var userChannels = await ids.BlockTrans(async c => {
+            var u = await Scraper.Channel(log, c).Swallow(ex => log.Warning(ex, "error loading channel {Channel}", c));
+            if (u == null) return null;
+            var subs = await u.Subscriptions().SelectManyList().Swallow(ex => log.Warning(ex, "error loading subscriptions for user {User}", u.Id));
+            return new User {
+              UserId = u.Id,
+              Platform = Platform.YouTube,
+              Name = u.Title,
+              ProfileUrl = u.LogoUrl,
+              Updated = DateTime.UtcNow,
+              Subscriptions = subs
+            };
+          }, RCfg.WebParallel, cancel: cancel)
+          .NotNull().ToListAsync();
+        log.Information("Collect - scraped {Users} users. Batch {Batch}/{Total}", userChannels.Count, i, batchTotal);
+        await DbStore.Users.Append(userChannels);
+        return userChannels.Count;
+      }, cancel: cancel).SumAsync();
+      log.Information("Collect - completed scraping user channels {Success}/{Total} in {Duration}",
+        total, channelIds.Count, start.Elapsed.HumanizeShort());
+      return total;
+    }
+
     /// <summary>Update channel data from the YouTube API and determine what type of update should be performed on each channel</summary>
     /// <returns></returns>
     async Task<IReadOnlyCollection<ChannelUpdatePlan>> PlanAndUpdateChannelStats(CollectPart[] parts, string[] limitChannels,
@@ -162,7 +209,7 @@ namespace YtReader.Yt {
       IKeyedCollection<string, ChannelUpdatePlan> existingChannels;
       using (var db = await Db(log)) {
         // retrieve previous channel state to update with new classification (algos and human) and stats form the API
-        existingChannels = await db.ExistingChannels(explicitChannels);
+        existingChannels = await db.ExistingChannels(explicitChannels).Then(r => r.ToKeyedCollection(c => c.Channel.ChannelId));
 
         if (limitChannels != null) // discover channels specified in limit if they aren't in our dataset
           explicitMissing.AddRange(limitChannels.Where(c => !existingChannels.ContainsKey(c))
@@ -236,7 +283,7 @@ namespace YtReader.Yt {
         else {
           c.Status = ChannelStatus.Dead;
         }
-        channelLog.Information("Collect - {Channel} - channel details ({Update})", c.ChannelTitle, plan.Update.EnumString());
+        channelLog.Debug("Collect - {Channel} - channel details ({Update})", c.ChannelTitle, plan.Update.EnumString());
       }
       catch (Exception ex) {
         channelLog.Error(ex, "Collect - {Channel} - Error when updating details for channel : {Error}", c.ChannelTitle, ex.Message);
@@ -260,9 +307,8 @@ namespace YtReader.Yt {
         VideoExtraPlans VideoPlans(string channelId) => channelPlans.GetOrAdd(channelId, () => new());
         void SetPlanPart(string channelId, string videoId, ExtraPart part) => VideoPlans(channelId).SetPart(videoId, part);
 
-        if (parts.ShouldRunAny(PExtra, PCaption)) {
-          using var db = await Db(log);
-
+        using (var db = await Db(log)) {
+          // configure video plans
           if (parts.ShouldRun(PExtra))
             foreach (var u in await db.VideosForUpdate(channelBatch))
               VideoPlans(u.ChannelId).SetForUpdate(u);
@@ -271,10 +317,11 @@ namespace YtReader.Yt {
             foreach (var (c, v) in await db.MissingCaptions(channelBatch))
               SetPlanPart(c, v, ECaptions);
 
-          if (parts.ShouldRun(PComments))
+          if (parts.ShouldRun(PComment))
             foreach (var (c, v) in await db.MissingComments(channelBatch))
               SetPlanPart(c, v, EComments);
         }
+
 
         var channelResults = await planBatch
           .Select(p => new {ChannelPlan = p, VideoPlans = channelPlans.TryGet(p.Channel.ChannelId) ?? new VideoExtraPlans()})
@@ -337,7 +384,7 @@ namespace YtReader.Yt {
       var full = plan.Update == Full;
 
       var videoItems = new List<YtVideoItem>();
-      if (parts.ShouldRunAny(PStats, PRecs, PCaption) || discover && parts.ShouldRun(PDiscover)) {
+      if (parts.ShouldRunAny(PStat, PRec, PCaption) || discover && parts.ShouldRun(PDiscover)) {
         log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions", c.ChannelTitle);
 
         // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.
@@ -346,12 +393,12 @@ namespace YtReader.Yt {
         var vidsEnum = ChannelVidItems(c, videosFrom, plans, log);
         videoItems = await vidsEnum.Take(videoItemsLimit).ToListAsync();
 
-        if (parts.ShouldRun(PStats))
+        if (parts.ShouldRun(PStat))
           await SaveVids(c, videoItems, DbStore.Videos, log);
       }
 
-      if (parts.ShouldRunAny(PRecs, PExtra, PCaption, PComments)) {
-        if (parts.ShouldRun(PRecs) && !discover)
+      if (parts.ShouldRunAny(PRec, PExtra, PCaption, PComment)) {
+        if (parts.ShouldRun(PRec) && !discover)
           plans.SetPart(VideoToUpdateRecs(plan, videoItems), ERecs);
 
         if (parts.ShouldRun(PExtra) && plans.Any()) {
@@ -431,7 +478,8 @@ namespace YtReader.Yt {
 
     async IAsyncEnumerable<YtVideoItem> ChannelVidItems(Channel c, DateTime uploadFrom, VideoExtraPlans plans, ILogger log) {
       long vidCount = 0;
-      await foreach (var vids in Scraper.ChannelVideos(c.ChannelId, log)) {
+      var chan = await Scraper.Channel(log, c.ChannelId);
+      await foreach (var vids in chan.Videos()) {
         vidCount += vids.Count;
         log.Debug("YtCollect - read {Videos} videos for channel {Channel}", vidCount, c.ChannelTitle);
         foreach (var v in vids) {
@@ -459,8 +507,8 @@ namespace YtReader.Yt {
       var s = extrasAndParts.Split();
       var updated = DateTime.UtcNow;
       if (parts.ShouldRun(PExtra)) await DbStore.VideoExtra.Append(s.Extras, log);
-      if (parts.ShouldRun(PRecs)) await DbStore.Recs.Append(ToRecStored(extrasAndParts, updated), log);
-      if (parts.ShouldRun(PComments)) await DbStore.Comments.Append(s.Comments, log);
+      if (parts.ShouldRun(PRec)) await DbStore.Recs.Append(ToRecStored(extrasAndParts, updated), log);
+      if (parts.ShouldRun(PComment)) await DbStore.Comments.Append(s.Comments, log);
       if (parts.ShouldRun(PCaption)) await DbStore.Captions.Append(s.Captions, log);
 
       log.Information("Collect - {Channel} - Recorded {WebExtras} web-extras, {Recs} recs, {Comments} comments, {Captions} captions",

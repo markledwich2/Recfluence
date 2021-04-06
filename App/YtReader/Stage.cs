@@ -141,6 +141,7 @@ namespace YtReader {
       UsTable("watch"),
       UsTable("ad"),
       new("channels", "channel_stage"),
+      new("users", "user_stage"),
       new("channel_reviews", "channel_review_stage"),
       new("videos", "video_stage"),
       new("recs", "rec_stage"),

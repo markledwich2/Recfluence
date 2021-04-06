@@ -81,6 +81,7 @@ namespace YtReader.Store {
       Store = store;
       Log = log;
       Channels = CreateStore<Channel>("channels");
+      Users = CreateStore<User>("users");
       Searches = CreateStore<UserSearchWithUpdated>("searches");
       Videos = CreateStore<Video>("videos");
       VideoExtra = CreateStore<VideoExtra>("video_extra");
@@ -93,6 +94,7 @@ namespace YtReader.Store {
     public ISimpleFileStore Store { get; }
 
     public JsonlStore<Channel>               Channels       { get; }
+    public JsonlStore<User>                  Users          { get; }
     public JsonlStore<UserSearchWithUpdated> Searches       { get; }
     public JsonlStore<Video>                 Videos         { get; }
     public JsonlStore<VideoExtra>            VideoExtra     { get; }
@@ -123,6 +125,14 @@ namespace YtReader.Store {
   }
 
   public record DiscoverSource(ChannelSourceType? Type, string LinkId = null, Platform? FromPlatform = null);
+
+  public record User : WithUpdatedItem {
+    public string                                   UserId        { get; init; }
+    public string                                   Name          { get; init; }
+    public Platform                                 Platform      { get; init; }
+    public string                                   ProfileUrl    { get; init; }
+    public IReadOnlyCollection<ChannelSubscription> Subscriptions { get; init; }
+  }
 
   public record Channel : WithUpdatedItem {
     public Channel() { }
@@ -245,25 +255,25 @@ namespace YtReader.Store {
   public record VideoExtra : Video {
     public VideoExtra() { }
     public VideoExtra(Platform platform, string id, string sourceId) : base(platform, id, sourceId) { }
-    public bool?          HasAd        { get; set; }
-    public string         Error        { get; set; }
-    public string         SubError     { get; set; }
-    public string         Ad           { get; set; }
-    public string         CommentsMsg  { get; set; }
-    public ScrapeSource   Source       { get; set; }
+    public bool?        HasAd       { get; set; }
+    public string       Error       { get; set; }
+    public string       SubError    { get; set; }
+    public string       Ad          { get; set; }
+    public string       CommentsMsg { get; set; }
+    public ScrapeSource Source      { get; set; }
   }
 
   public record VideoComment : IHasUpdated {
-    public string    CommentId       { get; init; }
-    public string    ReplyToCommentId        { get; set; }
-    public string    VideoId         { get; init; }
-    public string    Author          { get; init; }
-    public string    AuthorChannelId { get; init; }
-    public string    Comment         { get; init; }
-    public DateTime? Created         { get; init; }
-    public int?      Likes           { get; init; }
-    public bool      IsChannelOwner  { get; init; }
-    public DateTime  Updated         { get; init; }
+    public string    CommentId        { get; init; }
+    public string    ReplyToCommentId { get; set; }
+    public string    VideoId          { get; init; }
+    public string    Author           { get; init; }
+    public string    AuthorChannelId  { get; init; }
+    public string    Comment          { get; init; }
+    public DateTime? Created          { get; init; }
+    public int?      Likes            { get; init; }
+    public bool      IsChannelOwner   { get; init; }
+    public DateTime  Updated          { get; init; }
   }
 
   public record RecStored : Rec, IHasUpdated {

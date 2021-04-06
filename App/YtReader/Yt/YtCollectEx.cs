@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using SysExtensions.Collections;
 using SysExtensions.Text;
@@ -56,17 +57,22 @@ namespace YtReader.Yt {
     /// <summary>Update the subscribers and other more costly information about a channel</summary>
     Full,
     /// <summary>Update a un-cassified channels information useful for predicting political/non and tags</summary>
-    Discover
+    Discover,
+    /// <summary>Just update the channel details for a user (no video extra parts). For quota reasons we use the website for
+    ///   this.</summary>
+    UserChannel
   }
 
   public enum CollectPart {
-    PChannel,
-    PStats,
-    PExtra,
-    PRecs,
-    PCaption,
-    PComments,
-    [CollectPart(Explicit = true)] PDiscover
+    [EnumMember(Value = "channel")] PChannel,
+    [EnumMember(Value = "stat")]    PStat,
+    [EnumMember(Value = "extra")]   PExtra,
+    [EnumMember(Value = "rec")]     PRec,
+    [EnumMember(Value = "caption")] PCaption,
+    [EnumMember(Value = "comment")] PComment,
+    [EnumMember(Value = "user")]    PUser,
+    [EnumMember(Value = "discover")] [CollectPart(Explicit = true)]
+    PDiscover
   }
 
   public record CollectOptions {

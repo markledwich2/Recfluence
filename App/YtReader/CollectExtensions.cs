@@ -138,7 +138,7 @@ namespace YtReader {
       var log = ctx.Log;
       var crawledVideos = await ctx.VideosToCrawl.BlockTrans(async (discover, i) => {
         var video = await ctx.Web.Video(discover.LinkId, log)
-          .WithSwallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", ctx.Platform, discover.LinkId, e.Message));
+          .Swallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", ctx.Platform, discover.LinkId, e.Message));
         log.Debug("Collect {Platform} - crawled video {VideoId} {Vid}/{Total}", ctx.Platform, video?.VideoId, i, ctx.VideosToCrawl.Count);
         return (discover, video);
       }, ctx.Web.CollectParallel).ToListAsync();
