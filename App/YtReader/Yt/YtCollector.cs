@@ -21,6 +21,7 @@ using YtReader.Store;
 using static Mutuo.Etl.Pipe.PipeArg;
 using static YtReader.Yt.UpdateChannelType;
 using static YtReader.Yt.CollectPart;
+using static YtReader.Yt.ExtraPart;
 using static YtReader.Yt.YtCollectEx;
 
 // ReSharper disable InconsistentNaming
@@ -70,19 +71,19 @@ namespace YtReader.Yt {
 
     #region FromPathOrView
 
-    /// <summary>Collect extra and recommendationa from an imported list of videos. Used for arbitrary lists.</summary>
+    /// <summary>Collect extra and recommendations from an imported list of videos. Used for arbitrary lists.</summary>
     async Task CollectFromVideoPathOrView(CollectOptions options, ILogger log, CancellationToken cancel = default) {
-      var parts = options.Parts ?? new[] {CollectPart.Channel, VidStats, VidExtra, Caption};
+      var parts = options.Parts ?? new[] {PChannel, PStats, PExtra, PCaption};
       log.Information("YtCollect - Special Collect from {CollectFrom} started", options.CollectFrom);
 
 
       var refreshPeriod = 7.Days();
-      IReadOnlyCollection<YtCollectWh.DiscoverRow> videos;
+      IReadOnlyCollection<YtCollectDb.DiscoverRow> videos;
       IReadOnlyCollection<string> channelsForUpdate;
       using (var db = await Db(log)) {
         // sometimes updates fail. When re-running this, we should refresh channels that are missing videos or have a portion of captions not attempted
-        // NOTE: core warehouse table must be updated (not just staging tables) to take into account prevously succesfful loads.
-        channelsForUpdate = !parts.ShouldRun(CollectPart.Channel)
+        // NOTE: core warehouse table must be updated (not just staging tables) to take into account previously successful loads.
+        channelsForUpdate = !parts.ShouldRun(PChannel)
           ? Array.Empty<string>()
           : await db.StaleOrCaptionlessChannels(options, refreshPeriod);
 
@@ -91,28 +92,28 @@ namespace YtReader.Yt {
       }
 
       // process all videos
-      var extras = parts.ShouldRun(VidExtra)
+      var extras = parts.ShouldRun(PExtra)
         ? videos.Count > 200 ? await videos
           .Process(PipeCtx, b => ProcessVideos(b, parts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
-          .Then(r => r.SelectMany(r => r.OutState))
+          .Then(res => res.SelectMany(r => r.OutState))
         : await ProcessVideos(videos, parts, log, cancel)
         : Array.Empty<VideoExtra>();
 
       var channelIds = Array.Empty<string>();
-      if (parts.ShouldRun(CollectPart.Channel)) {
-        // then process all unique channels we don't allready have recent data for
+      if (parts.ShouldRun(PChannel)) {
+        // then process all unique channels we don't already have recent data for
         channelIds = extras.Select(e => e.ChannelId)
           .Concat(videos.Select(v => v.channel_id))
           .Concat(channelsForUpdate)
           .NotNull().Distinct().ToArray();
         if (channelIds.Any()) {
           var channels = await PlanAndUpdateChannelStats(parts, channelIds, log, cancel)
-            .Then(c => c
+            .Then(chans => chans
               .Where(c => c.LastVideoUpdate.OlderThanOrNull(refreshPeriod)) // filter to channels we haven't updated video's in recently
               .Select(c => c with {Update = c.Update == Discover ? Standard : c.Update})); // revert to standard update for channels detected as discover
 
           DateTime? fromDate = new DateTime(year: 2020, month: 01, day: 01);
-          var (result, dur) = await channels
+          await channels
             .Randomize() // randomize to even the load
             .Process(PipeCtx,
               b => ProcessChannels(b, parts, Inject<ILogger>(), Inject<CancellationToken>(), fromDate), log: log, cancel: cancel)
@@ -124,20 +125,20 @@ namespace YtReader.Yt {
     }
 
     [Pipe]
-    public async Task<VideoExtra[]> ProcessVideos(IReadOnlyCollection<YtCollectWh.DiscoverRow> videos, CollectPart[] parts, ILogger log,
+    public async Task<VideoExtra[]> ProcessVideos(IReadOnlyCollection<YtCollectDb.DiscoverRow> videos, CollectPart[] parts, ILogger log,
       CancellationToken cancel) {
       log ??= Logger.None;
       const int batchSize = 1000;
       var plans = new VideoExtraPlans();
-      if (parts.ShouldRun(VidExtra))
-        plans.SetPart(videos.Select(v => v.video_id), ExtraPart.Extra);
-      if (parts.ShouldRun(Caption))
-        plans.SetPart(videos.Where(v => v.channel_id != null && !v.caption_exists && v.video_id != null).Select(v => v.video_id), ExtraPart.Captions);
+      if (parts.ShouldRun(PExtra))
+        plans.SetPart(videos.Select(v => v.video_id), EExtra);
+      if (parts.ShouldRun(PCaption))
+        plans.SetPart(videos.Where(v => v.channel_id != null && !v.caption_exists && v.video_id != null).Select(v => v.video_id), ECaptions);
       var extra = await plans.Batch(batchSize)
-        .BlockTrans(async (plans, i) => {
-          var (extra, _, _, _) = await SaveExtraAndParts(c: null, new[] {VidExtra, Caption}, log, new VideoExtraPlans(plans));
-          log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + extra.Length, plans.Count);
-          return extra;
+        .BlockTrans(async (p, i) => {
+          var (e, _, _, _) = await SaveExtraAndParts(c: null, new[] {PExtra, PCaption}, log, new(p));
+          log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + e.Length, p.Count);
+          return e;
         }, Cfg.Collect.ParallelChannels, cancel: cancel)
         .SelectManyList();
       return extra.ToArray();
@@ -167,7 +168,7 @@ namespace YtReader.Yt {
           explicitMissing.AddRange(limitChannels.Where(c => !existingChannels.ContainsKey(c))
             .Select(c => new ChannelUpdatePlan {Channel = new() {ChannelId = c}, Update = Discover}));
 
-        if (parts.ShouldRun(DiscoverPart))
+        if (parts.ShouldRun(PDiscover))
           toDiscover.AddRange(await db.ChannelsToDiscover());
       }
 
@@ -188,7 +189,7 @@ namespace YtReader.Yt {
         .Concat(explicitMissing)
         .Concat(toDiscover).ToArray();
 
-      if (!parts.ShouldRun(CollectPart.Channel)) return channels;
+      if (!parts.ShouldRun(PChannel)) return channels;
 
       var (updatedChannels, duration) = await channels
         .Where(c => c.Update != None && c.Channel.Updated.Age() > RCfg.RefreshChannelDetailDebounce)
@@ -254,26 +255,25 @@ namespace YtReader.Yt {
       var results = await channels.Batch(RCfg.ChannelBatchSize).BlockTrans(async (planBatch, batchNo) => {
         var channelBatch = planBatch.Select(p => p.Channel).ToArray();
 
-        // to save on db roundtrips we batch our plan for updates
+        // to save on db round trips we batch our plan for updates
         var channelPlans = new Dictionary<string, VideoExtraPlans>();
-        VideoExtraPlans VideoPlans(string channeId) => channelPlans.GetOrAdd(channeId, () => new VideoExtraPlans());
+        VideoExtraPlans VideoPlans(string channelId) => channelPlans.GetOrAdd(channelId, () => new());
         void SetPlanPart(string channelId, string videoId, ExtraPart part) => VideoPlans(channelId).SetPart(videoId, part);
 
-        if (parts.ShouldRunAny(VidExtra, Caption)) {
+        if (parts.ShouldRunAny(PExtra, PCaption)) {
           using var db = await Db(log);
 
-          if (parts.ShouldRun(VidExtra)) {
-            foreach (var v in await db.VideosForCommentUpdate(channelBatch).Then(c => c.Take(RCfg.CommentUpdateMax)))
-              SetPlanPart(v.ChannelId, v.VideoId, ExtraPart.Comments);
-
-            // get all existing vids for channel and detect missing as we go, have delay??
+          if (parts.ShouldRun(PExtra))
             foreach (var u in await db.VideosForUpdate(channelBatch))
               VideoPlans(u.ChannelId).SetForUpdate(u);
-          }
 
-          if (parts.ShouldRun(Caption))
+          if (parts.ShouldRun(PCaption))
             foreach (var (c, v) in await db.MissingCaptions(channelBatch))
-              SetPlanPart(c, v, ExtraPart.Captions);
+              SetPlanPart(c, v, ECaptions);
+
+          if (parts.ShouldRun(PComments))
+            foreach (var (c, v) in await db.MissingComments(channelBatch))
+              SetPlanPart(c, v, EComments);
         }
 
         var channelResults = await planBatch
@@ -337,7 +337,7 @@ namespace YtReader.Yt {
       var full = plan.Update == Full;
 
       var videoItems = new List<YtVideoItem>();
-      if (parts.ShouldRunAny(VidStats, VidRecs, Caption) || discover && parts.ShouldRun(DiscoverPart)) {
+      if (parts.ShouldRunAny(PStats, PRecs, PCaption) || discover && parts.ShouldRun(PDiscover)) {
         log.Information("Collect - {Channel} - Starting channel update of videos/recs/captions", c.ChannelTitle);
 
         // get the oldest date for videos to store updated statistics for. This overlaps so that we have a history of video stats.
@@ -346,26 +346,26 @@ namespace YtReader.Yt {
         var vidsEnum = ChannelVidItems(c, videosFrom, plans, log);
         videoItems = await vidsEnum.Take(videoItemsLimit).ToListAsync();
 
-        if (parts.ShouldRun(VidStats))
+        if (parts.ShouldRun(PStats))
           await SaveVids(c, videoItems, DbStore.Videos, log);
       }
 
-      if (parts.ShouldRunAny(VidRecs, VidExtra, Caption, Comments)) {
-        if (parts.ShouldRun(VidRecs) && !discover)
-          plans.SetPart(VideoToUpdateRecs(plan, videoItems), ExtraPart.Recs);
+      if (parts.ShouldRunAny(PRecs, PExtra, PCaption, PComments)) {
+        if (parts.ShouldRun(PRecs) && !discover)
+          plans.SetPart(VideoToUpdateRecs(plan, videoItems), ERecs);
 
-        if (parts.ShouldRun(VidExtra) && plans.Any()) {
+        if (parts.ShouldRun(PExtra) && plans.Any()) {
           // add videos that look seem missing given the current update
           var videoItemsKey = videoItems.ToKeyedCollection(v => v.Id);
           var oldestUpdate = videoItems.Min(v => v.UploadDate);
 
           var suspectMissingFresh = plans
-            .Where(v => v.ForUpdate.UploadDate > oldestUpdate // newer than our oldest update
+            .Where(v => v.ForUpdate?.UploadDate > oldestUpdate // newer than our oldest update
                         && !videoItemsKey.ContainsKey(v.VideoId) // missing from this run
-                        && v.ForUpdate.ExtraUpdated.OlderThanOrNull(7.Days())) // haven't tried updating extra for more than 7d
+                        && v.ForUpdate?.ExtraUpdated.OlderThanOrNull(7.Days()) == true) // haven't tried updating extra for more than 7d
             .Select(v => v.VideoId).ToArray();
           log.Debug("Collect {Channel} - Video-extra for {Videos} video's because they look  missing", c.ChannelTitle, suspectMissingFresh.Length);
-          plans.SetPart(suspectMissingFresh, ExtraPart.Extra);
+          plans.SetPart(suspectMissingFresh, EExtra);
 
           // videos that we just refreshed but don't have any extra yet. limit per run to not slow down a particular update too much
           var missingExtra = videoItems
@@ -373,15 +373,19 @@ namespace YtReader.Yt {
             .OrderByDescending(v => v.UploadDate)
             .Select(v => v.Id).ToArray();
           log.Debug("Collect {Channel} - Video-extra for {Videos} video's new video's or ones without any extra yet", c.ChannelTitle, missingExtra.Length);
-          plans.SetPart(missingExtra, ExtraPart.Extra);
+          plans.SetPart(missingExtra, EExtra);
 
           // videos that we know are missing extra updated
-          foreach (var p in plans.Where(p => p.ForUpdate != null && p.ForUpdate.ExtraUpdated == null && !p.Parts.Contains(ExtraPart.Extra)))
-            p.Parts = p.Parts.Concat(ExtraPart.Extra).ToArray();
+          foreach (var p in plans.Where(p => p.ForUpdate != null && p.ForUpdate.ExtraUpdated == null && !p.Parts.Contains(EExtra)))
+            p.Parts = p.Parts.Concat(EExtra).ToArray();
 
-          /// captions for all new videos from the vids list. missing captions have allready been planned for existing videos.
-          var newCaptions = videoItems.Where(v => plan.LastCaptionUpdate == null || v.UploadDate > plan.LastCaptionUpdate).Select(v => v.Id).ToArray();
-          plans.SetPart(newCaptions, ExtraPart.Captions);
+          // captions for all new videos from the vids list. missing captions have already been planned for existing videos.
+          plans.SetPart(videoItems.Where(v => plan.LastCaptionUpdate == null || v.UploadDate > plan.LastCaptionUpdate).Select(v => v.Id), ECaptions);
+
+          // take a random sample of comments for new videos since last comment record (NOTE: this is in addition to missing comments have separately been planned)
+          plans.SetPart(videoItems
+            .Where(v => plan.LastCommentUpdate == null || v.UploadDate > plan.LastCommentUpdate)
+            .Randomize().Take(RCfg.MaxChannelComments).Select(v => v.Id), EComments);
         }
         await SaveExtraAndParts(c, parts, log, plans);
       }
@@ -432,20 +436,21 @@ namespace YtReader.Yt {
         log.Debug("YtCollect - read {Videos} videos for channel {Channel}", vidCount, c.ChannelTitle);
         foreach (var v in vids) {
           var u = plans[v.Id]?.ForUpdate;
-          yield return u?.UploadDate == null ? v : v with {UploadDate = u.UploadDate}; // not really needed. but prefer to fix innacurate dates when we can
+          yield return u?.UploadDate == null ? v : v with {UploadDate = u.UploadDate}; // not really needed. but prefer to fix inaccurate dates when we can
         }
         if (vids.Any(v => v.UploadDate < uploadFrom)) // return all vids on a page because its free. Stop on page with something older than uploadFrom
           yield break;
       }
     }
 
-    public async Task<IReadOnlyCollection<ExtraAndParts>> GetExtras(VideoExtraPlans extras, ILogger log, string channelId = null, string channelTitle = null) =>
-      await extras.BlockFunc(async v => await Scraper.GetExtra(log, v.VideoId, v.Parts, channelId, channelTitle), RCfg.WebParallel);
+    public IAsyncEnumerable<ExtraAndParts> GetExtras(VideoExtraPlans extras, ILogger log, string channelId = null, string channelTitle = null) =>
+      extras.Where(e => e.Parts.Any())
+        .BlockTrans(async v => await Scraper.GetExtra(log, v.VideoId, v.Parts, channelId, channelTitle), RCfg.WebParallel);
 
     /// <summary>Saves recs for all of the given vids</summary>
     async Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(Channel c, CollectPart[] parts,
       ILogger log, VideoExtraPlans planedExtras) {
-      var extrasAndParts = await GetExtras(planedExtras, log, c?.ChannelId, c?.ChannelTitle);
+      var extrasAndParts = await GetExtras(planedExtras, log, c?.ChannelId, c?.ChannelTitle).ToListAsync();
       foreach (var e in extrasAndParts) {
         e.Extra.ChannelId ??= c?.ChannelId; // if the video has an error, it may not have picked up the channel
         e.Extra.ChannelTitle ??= c?.ChannelTitle;
@@ -453,10 +458,10 @@ namespace YtReader.Yt {
 
       var s = extrasAndParts.Split();
       var updated = DateTime.UtcNow;
-      if (parts.ShouldRun(VidExtra)) await DbStore.VideoExtra.Append(s.Extras, log);
-      if (parts.ShouldRun(VidRecs)) await DbStore.Recs.Append(ToRecStored(extrasAndParts, updated), log);
-      if (parts.ShouldRun(Comments)) await DbStore.Comments.Append(s.Comments, log);
-      if (parts.ShouldRun(Caption)) await DbStore.Captions.Append(s.Captions, log);
+      if (parts.ShouldRun(PExtra)) await DbStore.VideoExtra.Append(s.Extras, log);
+      if (parts.ShouldRun(PRecs)) await DbStore.Recs.Append(ToRecStored(extrasAndParts, updated), log);
+      if (parts.ShouldRun(PComments)) await DbStore.Comments.Append(s.Comments, log);
+      if (parts.ShouldRun(PCaption)) await DbStore.Captions.Append(s.Captions, log);
 
       log.Information("Collect - {Channel} - Recorded {WebExtras} web-extras, {Recs} recs, {Comments} comments, {Captions} captions",
         c?.ChannelTitle ?? "(unknown)", s.Extras.Length, s.Recs.Length, s.Comments.Length, s.Captions.Length);

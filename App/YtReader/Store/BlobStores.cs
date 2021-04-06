@@ -248,11 +248,9 @@ namespace YtReader.Store {
     public bool?          HasAd        { get; set; }
     public string         Error        { get; set; }
     public string         SubError     { get; set; }
-    public VideoComment[] Comments     { get; set; }
     public string         Ad           { get; set; }
     public string         CommentsMsg  { get; set; }
     public ScrapeSource   Source       { get; set; }
-    public long?          CommentCount { get; set; }
   }
 
   public record VideoComment : IHasUpdated {

@@ -27,7 +27,7 @@ namespace YtReader {
     [Required] public OptimiseCfg Optimise           { get; set; } = new();
     [Required] public int         LoadTablesParallel { get; set; } = 4;
     public            string[]    AdminRoles         { get; set; } = {"sysadmin", "recfluence"};
-    public            string[]    ReadRoles         { get; set; } = {"reader"};
+    public            string[]    ReadRoles          { get; set; } = {"reader"};
     public            int         MetadataParallel   { get; set; } = 8;
     public            int         FileMb             { get; set; } = 80;
   }
@@ -133,7 +133,7 @@ namespace YtReader {
     public static string DbName(this SnowflakeCfg cfg) => cfg.DbSuffix.HasValue() ? $"{cfg.Db}_{cfg.DbSuffix}" : cfg.Db;
 
     static StageTableCfg UsTable(string name) =>
-      new($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, tsCol: "updated");
+      new($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, "updated");
 
     public static readonly StageTableCfg[] AllTables = {
       UsTable("rec"),
@@ -147,12 +147,13 @@ namespace YtReader {
       new("video_extra", "video_extra_stage"),
       new("searches", "search_stage"),
       new("captions", "caption_stage"),
+      new("comments", "comment_stage"),
       new("bc_videos", "bc_video_stage"),
       new("bc_channels", "bc_channel_stage"),
       new("rec_exports_processed", "rec_export_stage", storeType: DataStoreType.Private),
       new(dir: null, "dbv1_video_stage", isNativeStore: false),
       new(dir: null, "dbv1_rec_stage", isNativeStore: false),
-      new("video_entities", "video_entity_stage", tsCol:"updated")
+      new("video_entities", "video_entity_stage", tsCol: "updated")
     };
   }
 

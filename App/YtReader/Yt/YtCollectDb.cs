@@ -11,6 +11,7 @@ using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader.Store;
+// ReSharper disable InconsistentNaming
 
 namespace YtReader.Yt {
   public record YtCollectDbCtx(YtCollectCfg Cfg, ILoggedConnection<IDbConnection> Db, ILogger Log) : IDisposable {
@@ -23,16 +24,17 @@ namespace YtReader.Yt {
     public DateTime?         VideosFrom        { get; set; }
     public DateTime?         LastVideoUpdate   { get; set; }
     public DateTime?         LastCaptionUpdate { get; set; }
+    public DateTime?         LastCommentUpdate { get; set; }
     public DateTime?         LastRecUpdate     { get; set; }
   }
   
-  public static class YtCollectWh {
+  public static class YtCollectDb {
     public static string SqlList<T>(IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
     
     public static Task<IReadOnlyCollection<string>> StaleOrCaptionlessChannels(this YtCollectDbCtx ctx,CollectOptions options, TimeSpan refreshPeriod) =>
       ctx.Db.Query<string>("stale or captionless channels", @$"
 with
-  raw_vids as ({@GetVideoChannelSelect(options)})
+  raw_vids as ({GetVideoChannelSelect(options)})
   , chans as (
       select * from (
         select distinct coalesce(d.channel_id,v.channel_id) channel_id
@@ -56,7 +58,8 @@ select channel_id from chan_refresh
 ", new {newer_than = DateTime.UtcNow - refreshPeriod});
 
     public static async Task<IKeyedCollection<string, ChannelUpdatePlan>> ExistingChannels(this YtCollectDbCtx ctx, HashSet<string> explicitChannels) {
-      var channels = await ctx.Db.Query<(string j, long? daysBack, DateTime? lastVideoUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate)>(
+      var channels = await ctx.Db.Query<(string j, long? daysBack, 
+        DateTime? lastVideoUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate, DateTime? lastCommentUpdate)>(
         "channels - previous",
         $@"
 with review_filtered as (
@@ -71,24 +74,23 @@ with review_filtered as (
   where exists(select * from review_filtered r where r.channel_id=v:ChannelId)
     qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc)=1
 )
-, s as (
 select coalesce(v, object_construct('ChannelId', r.channel_id)) channel_json
      , b.daily_update_days_back
-     , (select max(vs.v:Updated::timestamp_ntz) from video_stage vs where vs.v:ChannelId=r.channel_id) last_video_update
-     , (select max(cs.v:Updated::timestamp_ntz) from caption_stage cs where cs.v:ChannelId=r.channel_id) last_caption_update
-     , (select max(rs.v:Updated::timestamp_ntz) from rec_stage rs where rs.v:FromChannelId=r.channel_id) last_rec_update
+     , (select max(v:Updated::timestamp_ntz) from video_stage where v:ChannelId=r.channel_id) last_video_update
+     , (select max(v:Updated::timestamp_ntz) from caption_stage where v:ChannelId=r.channel_id) last_caption_update
+     , (select max(v:Updated::timestamp_ntz) from rec_stage where v:FromChannelId=r.channel_id) last_rec_update
+      , (select max(v:Updated::timestamp_ntz) from comment_stage where v:ChannelId=r.channel_id) last_comment_update
 from review_filtered r
        left join stage_latest on v:ChannelId=r.channel_id
        left join channel_collection_days_back b on b.channel_id=v:ChannelId
-  )
-select * from s
 ");
       return channels.Select(r => new ChannelUpdatePlan {
           Channel = r.j.ToObject<Channel>(IJsonlStore.JCfg),
           VideosFrom = r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : (DateTime?) null,
           LastVideoUpdate = r.lastVideoUpdate,
           LastCaptionUpdate = r.lastCaptionUpdate,
-          LastRecUpdate = r.lastRecUpdate
+          LastRecUpdate = r.lastRecUpdate,
+          LastCommentUpdate = r.lastCommentUpdate
         })
         .ToKeyedCollection(r => r.Channel.ChannelId);
     }
@@ -151,43 +153,15 @@ qualify row_number() over (partition by b.channel_id order by upload_date desc) 
       return ids;
     }
 
-    /// <summary>Find videos that we should update to collect comments (chrome update). We do this once x days after a video is
-    ///   uploaded.</summary>
-    public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> VideosForCommentUpdate(this YtCollectDbCtx ctx,
-      IReadOnlyCollection<Channel> channels) {
-      var ids = await ctx.Db.Query<(string ChannelId, string VideoId)>("videos sans-comments",
-        $@"with chrome_extra_latest as (
-  select video_id
-       , updated
-       , row_number() over (partition by video_id order by updated desc) as age_no
-       , count(1) over (partition by video_id) as extras
-  from video_extra v
-  where source='Chrome'
-    qualify age_no=1
-)
-   , videos_to_update as (
-  select *
-       , row_number() over (partition by channel_id order by views desc) as channel_rank
-  from (
-         select v.video_id
-              , v.channel_id
-              , v.views
-              , datediff(d, e.updated, convert_timezone('UTC', current_timestamp())) as extra_ago
-              , datediff(d, v.upload_date, convert_timezone('UTC', current_timestamp())) as upload_ago
-
-         from video_latest v
-                left join chrome_extra_latest e on e.video_id=v.video_id
-         where v.channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
-           and upload_ago>7
-           and e.updated is null -- update only 7 days after being uploaded
-       )
-    qualify channel_rank<=:videos_per_channel
-)
+    public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingComments(this YtCollectDbCtx ctx,
+      IReadOnlyCollection<Channel> channels) =>
+      await ctx.Db.Query<(string ChannelId, string VideoId)>("missing comments", $@"
 select channel_id, video_id
-from videos_to_update",
-        new {videos_per_channel = ctx.Cfg.PopulateMissingCommentsLimit});
-      return ids;
-    }
+from video_latest v
+where not exists(select * from comment_stage c where c.v:VideoId=v.video_id) and error_type is null
+qualify row_number() over (partition by channel_id order by random() desc)<=:max_comments
+  and channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
+                ", new{max_comments =ctx.Cfg.MaxChannelComments});
 
     public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingCaptions(this YtCollectDbCtx ctx,
       IReadOnlyCollection<Channel> channels) =>
@@ -195,7 +169,7 @@ from videos_to_update",
                 select channel_id, video_id
                 from video_latest v
                 where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
-                  qualify row_number() over (partition by channel_id order by upload_date desc)<=400
+                  qualify row_number() over (partition by channel_id order by views desc)<=400
                     and channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
                 ");
 

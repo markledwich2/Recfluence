@@ -382,14 +382,14 @@ namespace YtReader.Yt {
       if (extra.Error != null) return new(extra);
 
       var recs = Array.Empty<Rec>();
-      if (parts.Contains(ExtraPart.Recs))
+      if (parts.Contains(ExtraPart.ERecs))
         recs = await GetRecs2(log, html, videoId);
       var comments = Array.Empty<VideoComment>();
-      if (parts.Contains(ExtraPart.Comments))
+      if (parts.Contains(ExtraPart.EComments))
         comments = await GetComments(log, videoId, ytInitialData, watchPage).Then(c => c.ToArray());
 
       VideoCaption caption = null;
-      if (parts.Contains(ExtraPart.Captions))
+      if (parts.Contains(ExtraPart.ECaptions))
         caption = await GetCaption(channelId, videoId, infoDic, log);
 
       return new(extra) {
@@ -827,9 +827,9 @@ namespace YtReader.Yt {
   }
 
   public enum ExtraPart {
-    Extra,
-    Recs,
-    Comments,
-    Captions
+    EExtra,
+    ERecs,
+    EComments,
+    ECaptions
   }
 }

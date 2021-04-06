@@ -3,14 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
-using Mutuo.Etl.Db;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using Troschuetz.Random;
 using YtReader.Store;
 
 namespace YtReader.Yt {
-  
   public static class YtCollectEx {
     public static bool OlderThanOrNull(this DateTime? updated, TimeSpan age, DateTime? now = null) =>
       updated == null || updated.Value.OlderThan(age, now);
@@ -35,8 +33,7 @@ namespace YtReader.Yt {
           ToUploadDate = r.ToUploadDate,
           Updated = updated
         }) ?? new RecStored[] { }).ToArray();
-    
-    
+
     public static Video[] ToVidsStored(Channel c, IReadOnlyCollection<YtVideoItem> vids) =>
       vids.Select(v => new Video {
         VideoId = v.Id,
@@ -46,11 +43,11 @@ namespace YtReader.Yt {
         ChannelId = c.ChannelId,
         ChannelTitle = c.ChannelTitle,
         UploadDate = v.UploadDate,
-        Updated = DateTime.UtcNow, 
+        Updated = DateTime.UtcNow,
         Platform = Platform.YouTube
       }).ToArray();
   }
-  
+
   public enum UpdateChannelType {
     /// <summary>Don't update the channel details. Has no impact the collection of videos/recs/caption.</summary>
     None,
@@ -63,13 +60,13 @@ namespace YtReader.Yt {
   }
 
   public enum CollectPart {
-    Channel,
-    VidStats,
-    VidExtra,
-    VidRecs,
-    Caption,
-    Comments,
-    [CollectPart(Explicit = true)] DiscoverPart
+    PChannel,
+    PStats,
+    PExtra,
+    PRecs,
+    PCaption,
+    PComments,
+    [CollectPart(Explicit = true)] PDiscover
   }
 
   public record CollectOptions {
@@ -116,7 +113,7 @@ namespace YtReader.Yt {
 
     public VideoExtraPlans(IEnumerable<string> videosForExtra) {
       foreach (var v in videosForExtra)
-        SetPart(v, ExtraPart.Extra);
+        SetPart(v, ExtraPart.EExtra);
     }
 
     public VideoExtraPlans(IEnumerable<VideoPlan> plans) => _c.AddRange(plans);
@@ -159,5 +156,7 @@ namespace YtReader.Yt {
     public string         VideoId   { get; set; }
     public ExtraPart[]    Parts     { get; set; } = Array.Empty<ExtraPart>();
     public VideoForUpdate ForUpdate { get; set; }
+
+    public override string ToString() => $"{VideoId} ({Parts.Join("|")}): {ForUpdate}";
   }
 }

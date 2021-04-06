@@ -16,7 +16,7 @@ namespace Tests {
       // get comments, does watch page html have it
       using var ctx = await TestSetup.TextCtx();
       var ws = ctx.Scope.Resolve<YtWeb>();
-      var video = await ws.GetExtra(ctx.Log, "Su1FQUkMojU", new[] {ExtraPart.Comments});
+      var video = await ws.GetExtra(ctx.Log, "Su1FQUkMojU", new[] {ExtraPart.EComments});
       await video.Comments.ToJsonl("comments.jsonl");
     }
 
@@ -41,14 +41,14 @@ namespace Tests {
         //"-ryPLVEExA0", // private
       });
       var collector = ctx.Scope.Resolve<YtCollector>();
-      var extra = await collector.GetExtras(plans, ctx.Log);
+      var extra = await collector.GetExtras(plans, ctx.Log).ToListAsync();
     }
 
     [Test]
     public static async Task Captions() {
       using var ctx = await TestSetup.TextCtx();
       var scraper = ctx.Scope.Resolve<YtWeb>();
-      var extra = await scraper.GetExtra(ctx.Log, "yu_C_K3TuyY", new[] {ExtraPart.Captions});
+      var extra = await scraper.GetExtra(ctx.Log, "yu_C_K3TuyY", new[] {ExtraPart.ECaptions});
     }
 
     [Test]
