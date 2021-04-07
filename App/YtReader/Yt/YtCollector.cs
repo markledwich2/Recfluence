@@ -491,14 +491,23 @@ namespace YtReader.Yt {
       }
     }
 
-    public IAsyncEnumerable<ExtraAndParts> GetExtras(VideoExtraPlans extras, ILogger log, string channelId = null, string channelTitle = null) =>
-      extras.Where(e => e.Parts.Any())
-        .BlockTrans(async v => await Scraper.GetExtra(log, v.VideoId, v.Parts, channelId, channelTitle), RCfg.WebParallel);
+    public IAsyncEnumerable<ExtraAndParts> GetExtras(VideoExtraPlans extras, ILogger log, string channelId = null, string channelTitle = null) {
+      var errors = 0;
+      return extras.Where(e => e.Parts.Any())
+        .BlockTrans(async v => await Scraper.GetExtra(log, v.VideoId, v.Parts, channelId, channelTitle)
+            .Swallow(ex => {
+              log.Warning(ex, "error in GetExtra for video {VideoId}", v.VideoId);
+              Interlocked.Increment(ref errors);
+              if (errors > RCfg.MaxExtraErrorsInChannel)
+                throw ex;
+            }),
+          RCfg.WebParallel);
+    }
 
     /// <summary>Saves recs for all of the given vids</summary>
     async Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(Channel c, CollectPart[] parts,
       ILogger log, VideoExtraPlans planedExtras) {
-      var extrasAndParts = await GetExtras(planedExtras, log, c?.ChannelId, c?.ChannelTitle).ToListAsync();
+      var extrasAndParts = await GetExtras(planedExtras, log, c?.ChannelId, c?.ChannelTitle).NotNull().ToListAsync();
       foreach (var e in extrasAndParts) {
         e.Extra.ChannelId ??= c?.ChannelId; // if the video has an error, it may not have picked up the channel
         e.Extra.ChannelTitle ??= c?.ChannelTitle;

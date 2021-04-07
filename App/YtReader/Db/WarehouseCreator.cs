@@ -20,16 +20,14 @@ namespace YtReader.Db {
     readonly WarehouseCfg                WhCfg;
     readonly StorageCfg                  StorageCfg;
     readonly BranchEnvCfg                EnvCfg;
-    readonly VersionInfo                 Version;
     readonly SnowflakeConnectionProvider Sf;
     readonly BlobStores                  Stores;
 
-    public WarehouseCreator(WarehouseCfg whCfg, StorageCfg storageCfg, BranchEnvCfg envCfg, VersionInfo version, SnowflakeConnectionProvider sf,
+    public WarehouseCreator(WarehouseCfg whCfg, StorageCfg storageCfg, BranchEnvCfg envCfg, SnowflakeConnectionProvider sf,
       BlobStores stores) {
       WhCfg = whCfg;
       StorageCfg = storageCfg;
       EnvCfg = envCfg;
-      Version = version;
       Sf = sf;
       Stores = stores;
     }

@@ -45,10 +45,10 @@ namespace Tests {
     }
 
     [Test]
-    public static async Task Captions() {
+    public static async Task ExtraParts() {
       using var ctx = await TestSetup.TextCtx();
       var scraper = ctx.Scope.Resolve<YtWeb>();
-      var extra = await scraper.GetExtra(ctx.Log, "yu_C_K3TuyY", new[] {ExtraPart.ECaptions});
+      var extra = await scraper.GetExtra(ctx.Log, "e54vOGWJIqs", new[] {ExtraPart.EComments});
     }
 
     [Test]
