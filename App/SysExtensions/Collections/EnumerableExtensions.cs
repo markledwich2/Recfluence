@@ -25,6 +25,10 @@ namespace SysExtensions.Collections {
     public static IEnumerable<T> NotNull<T>(this IEnumerable<T> items)
       => items?.Where(i => i != null) ?? Array.Empty<T>();
 
+    /// <summary>If items is null return an empty set, if an item is null remove it from the list</summary>
+    public static IEnumerable<T> NotNull<T>(this IEnumerable<T?> items) where T : struct
+      => items?.Where(i => i.HasValue).Select(i => i.Value) ?? Array.Empty<T>();
+
     public static IAsyncEnumerable<T> NotNull<T>(this IAsyncEnumerable<T> items) => items.Where(i => i != null);
 
     public static IEnumerable<T> Randomize<T>(this IEnumerable<T> source) {
@@ -61,7 +65,7 @@ namespace SysExtensions.Collections {
           excluded.Add(item);
       return (included, excluded);
     }
-    
+
     /// <summary>Batches into x chunks</summary>
     public static IEnumerable<IReadOnlyCollection<T>> BatchFixed<T>(this IReadOnlyCollection<T> items, int maxBatches) =>
       items.Batch(items.Count / maxBatches);
@@ -82,9 +86,7 @@ namespace SysExtensions.Collections {
         yield return b;
     }
 
-    /// <summary>
-    /// Batch into size chunks lazily
-    /// </summary>
+    /// <summary>Batch into size chunks lazily</summary>
     public static async IAsyncEnumerable<T[]> Batch<T>(this IAsyncEnumerable<T> items, int size) {
       var batch = new List<T>();
       await foreach (var item in items) {

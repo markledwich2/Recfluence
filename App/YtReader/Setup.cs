@@ -126,7 +126,7 @@ namespace YtReader {
       basePath ??= Environment.CurrentDirectory;
       var cfgRoot = new ConfigurationBuilder()
         .SetBasePath(basePath)
-        .AddJsonFile("local.rootcfg.json", true)
+        .AddJsonFile("local.rootcfg.json", optional: true)
         .AddEnvironmentVariables()
         .Build().Get<RootCfg>();
 
@@ -215,8 +215,8 @@ namespace YtReader {
       // merge default properties from the pipe config
       appCfg.Dataform.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.Dataform.Container);
       appCfg.UserScrape.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.UserScrape.Container);
-      
-      
+
+
       // de-dupe merged pipe configuration
       appCfg.Pipe.Pipes = appCfg.Pipe.Pipes.GroupBy(p => p.PipeName).Select(g => g.Last()).ToArray();
     }
@@ -248,9 +248,10 @@ namespace YtReader {
       b.Register(_ => rootCfg).SingleInstance();
       b.Register(_ => containerCfg);
 
-      foreach (var p in cfg.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.PropertyType.IsClass && !p.PropertyType.IsEnumerable())) {
+      foreach (var p in cfg.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        .Where(p => p.PropertyType.IsClass && !p.PropertyType.IsEnumerable())) {
         var v = p.GetValue(cfg);
-        if(v != null)
+        if (v != null)
           b.RegisterInstance(v).As(p.PropertyType).SingleInstance();
       }
 
@@ -295,7 +296,8 @@ namespace YtReader {
       b.RegisterType<Pushshift>();
       b.RegisterType<CovidNarrative>();
       b.RegisterType<DataScripts>();
-      
+      b.RegisterType<YtCollectList>();
+
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();
 

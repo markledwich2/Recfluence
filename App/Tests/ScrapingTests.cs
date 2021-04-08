@@ -16,7 +16,7 @@ namespace Tests {
       // get comments, does watch page html have it
       using var ctx = await TestSetup.TextCtx();
       var ws = ctx.Scope.Resolve<YtWeb>();
-      var video = await ws.GetExtra(ctx.Log, "Su1FQUkMojU", new[] {ExtraPart.EComments});
+      var video = await ws.GetExtra(ctx.Log, "Su1FQUkMojU", new[] {ExtraPart.EComment});
       await video.Comments.ToJsonl("comments.jsonl");
     }
 
@@ -48,7 +48,7 @@ namespace Tests {
     public static async Task ExtraParts() {
       using var ctx = await TestSetup.TextCtx();
       var scraper = ctx.Scope.Resolve<YtWeb>();
-      var extra = await scraper.GetExtra(ctx.Log, "e54vOGWJIqs", new[] {ExtraPart.EComments});
+      var extra = await scraper.GetExtra(ctx.Log, "e54vOGWJIqs", new[] {ExtraPart.EComment});
     }
 
     [Test]
@@ -74,13 +74,13 @@ namespace Tests {
       }.BlockTrans(async c => {
         var chan = await ws.Channel(x.Log, c);
         return new {
-          Chan = chan, 
-          Subscriptions = await chan.Subscriptions().ToListAsync(), 
+          Chan = chan,
+          Subscriptions = await chan.Subscriptions().ToListAsync(),
           Vids = await chan.Videos().ToListAsync()
         };
       }).ToListAsync();
     }
-    
+
     [Test]
     public static async Task ChannelData() {
       using var ctx = await TestSetup.TextCtx();

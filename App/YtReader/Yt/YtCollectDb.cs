@@ -33,48 +33,28 @@ namespace YtReader.Yt {
   public static class YtCollectDb {
     public static string SqlList<T>(IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
 
-    public static Task<IReadOnlyCollection<string>> StaleOrCaptionlessChannels(this YtCollectDbCtx ctx, CollectOptions options, TimeSpan refreshPeriod) =>
-      ctx.Db.Query<string>("stale or captionless channels", @$"
-with
-  raw_vids as ({GetVideoChannelSelect(options)})
-  , chans as (
-      select * from (
-        select distinct coalesce(d.channel_id,v.channel_id) channel_id
-        from raw_vids d
-               left join video_latest v on v.video_id=d.video_id
-      ) c
-      {(options.LimitChannels.None() ? "" : $"where c.channel_id in ({SqlList(options.LimitChannels)})")}
-  )
-  , chan_refresh as (
-  select c.channel_id
-       , count(*) videos
-       , count_if(v.updated > :newer_than) recent_videos
-       , div0(count_if(s.video_id is null), videos) caption_not_attempted_pct
-  from chans c
-         left join video_latest v on v.channel_id=c.channel_id
-         left join caption_load s on s.video_id=v.video_id
-  group by 1
-  having caption_not_attempted_pct > 0.2 or recent_videos = 0
-)
-select channel_id from chan_refresh
-", new {newer_than = DateTime.UtcNow - refreshPeriod});
+    /// <summary>Existing reviewed channels with information on the last updates to extra parts.
+    ///   <param name="channelSelect">By default will return channels that meet review criteria. To override, specify a select
+    ///     query that returns rows with a column named channel_id</param>
+    /// </summary>
+    public static async Task<IReadOnlyCollection<ChannelUpdatePlan>> ChannelUpdateStats(this YtCollectDbCtx ctx,
+      IReadOnlyCollection<string> chans = null, string channelSelect = null) {
+      channelSelect ??= @$"
+select channel_id from channel_latest  
+where platform = 'YouTube' and {(chans.None() ? "meets_review_criteria" : $"channel_id in ({SqlList(chans)})")}";
 
-    /// <summary>Existing reviewed channels with information on the last updates to extra parts</summary>
-    public static async Task<IReadOnlyCollection<ChannelUpdatePlan>> ExistingChannels(this YtCollectDbCtx ctx, IReadOnlyCollection<string> chans) {
       var channels = await ctx.Db.Query<(string j, long? daysBack,
         DateTime? lastVideoUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate, DateTime? lastCommentUpdate)>(
         "channels - previous",
         $@"
-with review_filtered as (
-  select channel_id, channel_title
-  from channel_latest
-  where platform = 'YouTube'
-  and {(chans.None() ? "meets_review_criteria" : $"channel_id in ({SqlList(chans)})")} --only explicit channel when provided
+with channels_raw as (
+  select distinct channel_id from ({channelSelect})
+  where channel_id is not null
 )
-   , stage_latest as (
+, stage_latest as (
   select v
   from channel_stage -- query from stage because it can be deserialized without modification
-  where exists(select * from review_filtered r where r.channel_id=v:ChannelId)
+  where exists(select * from channels_raw r where r.channel_id=v:ChannelId)
     qualify row_number() over (partition by v:ChannelId::string order by v:Updated::timestamp_ntz desc)=1
 )
 select coalesce(v, object_construct('ChannelId', r.channel_id)) channel_json
@@ -83,7 +63,7 @@ select coalesce(v, object_construct('ChannelId', r.channel_id)) channel_json
      , (select max(v:Updated::timestamp_ntz) from caption_stage where v:ChannelId=r.channel_id) last_caption_update
      , (select max(v:Updated::timestamp_ntz) from rec_stage where v:FromChannelId=r.channel_id) last_rec_update
       , (select max(v:Updated::timestamp_ntz) from comment_stage where v:ChannelId=r.channel_id) last_comment_update
-from review_filtered r
+from channels_raw r
        left join stage_latest on v:ChannelId=r.channel_id
        left join channel_collection_days_back b on b.channel_id=v:ChannelId
 ");
@@ -106,36 +86,6 @@ where
  platform = 'YouTube'
  and not exists(select * from user where user_id = author_channel_id)
 {ctx.Cfg.MaxMissingUsers?.Do(i => $"limit {i}") ?? ""}
-");
-
-    public record DiscoverRow(string video_id, string channel_id, DateTime? extra_updated, bool caption_exists);
-
-    static string GetVideoChannelSelect(CollectOptions options) {
-      var (type, value) = options.CollectFrom;
-      var select = type switch {
-        CollectFromType.ChannelsPath => $"select null video_id, $1::string channel_id from @public.yt_data/{value} (file_format => tsv)",
-        CollectFromType.VideosPath =>
-          $"select $1::string video_id, $2::string channel_id  from @public.yt_data/{value} (file_format => tsv)",
-        CollectFromType.VideosView => $"select video_id, channel_id from {value}",
-        _ => throw new NotImplementedException($"CollectFrom {options.CollectFrom} not supported")
-      };
-      return select;
-    }
-
-    public static Task<IReadOnlyCollection<DiscoverRow>> MissingVideos(this YtCollectDbCtx db, CollectOptions options) =>
-      db.Db.Query<DiscoverRow>("missing video's", @$"
-with raw_vids as ({GetVideoChannelSelect(options)})
-, s as (
-  select v.video_id
-       , coalesce(v.channel_id, e.channel_id) channel_id
-       , e.updated extra_updated
-       , exists(select * from caption s where s.video_id=v.video_id) caption_exists
-  from raw_vids v
-         left join video_extra e on v.video_id=e.video_id
-  where v.video_id is not null and extra_updated is null
-)
-select * from s
-{(options.LimitChannels.None() ? "" : $"where channel_id in ({SqlList(options.LimitChannels)})")}
 ");
 
     /// <summary>Videos to help plan which to refresh extra for (we don't actualy refresh every one of these). We detect dead

@@ -137,10 +137,10 @@ namespace YtReader.Yt {
     }
 
     public async Task<WebChannel> Channel(ILogger log, string channelId) {
-      if (!ValidateChannelId(channelId)) throw new ($"Invalid YouTube channel ID [{channelId}].");
+      if (!ValidateChannelId(channelId)) throw new($"Invalid YouTube channel ID [{channelId}].");
       var channelUrl = YtUrl.AppendPathSegments("channel", channelId);
       var doc = await GetHtml("channel page", channelUrl, log);
-      var page = new ChannelPage(channelId, channelUrl, doc, 
+      var page = new ChannelPage(channelId, channelUrl, doc,
         await JsonFromScript(log, doc, channelUrl, ClientObject.InitialData),
         await JsonFromScript(log, doc, channelUrl, ClientObject.Cfg));
       var chan = await ParseChannel(page, log) with {
@@ -154,7 +154,7 @@ namespace YtReader.Yt {
 
     enum BrowseType {
       [EnumMember(Value = "channels")] Channel,
-      [EnumMember(Value = "videos")]  Video
+      [EnumMember(Value = "videos")]   Video
     }
 
     /// <summary>Iterates through all of the browse pages, parse the JObject to get what you need</summary>
@@ -165,10 +165,8 @@ namespace YtReader.Yt {
           var cmd = e.SelectToken("commandMetadata.webCommandMetadata");
           return cmd == null ? null : new {ApiPath = cmd.Str("apiUrl"), Path = cmd.Str("url"), Param = e.SelectToken("browseEndpoint.params")?.Str()};
         }).NotNull()
-        .FirstOrDefault(p => {
-          return p.Path?.Split('/').LastOrDefault()?.ToLowerInvariant() == pathSuffix;
-        });
-      
+        .FirstOrDefault(p => { return p.Path?.Split('/').LastOrDefault()?.ToLowerInvariant() == pathSuffix; });
+
       if (browse == default) {
         var error = page.Data
           .SelectTokens("alerts[*].alertRenderer")
@@ -184,7 +182,7 @@ namespace YtReader.Yt {
         await LogParseError("error parsing channel page", ex, page.Url, page.Data.ToString(), log);
         throw ex;
       }
-      
+
       if (browse?.Param == null) throw new($"unable to find {pathSuffix} browse endpoint on page: {page.Url}");
       string continueToken = null;
       while (true) {
@@ -227,7 +225,8 @@ namespace YtReader.Yt {
           var parsedVideo = new YtVideoItem {
             Id = j.Str("videoId"), Title = j.YtTxt("title"),
             Duration = j.Str("..thumbnailOverlayTimeStatusRenderer.text.simpleText").TryParseTimeSpanExact(TimeFormats) ?? TimeSpan.Zero,
-            Statistics = new(viewCountText == "No views" ? 0 : viewCountText?.Match(ViewCountRe).Groups["num"].Value.TryParseULong(NumberStyles.AllowThousands)),
+            Statistics =
+              new(viewCountText == "No views" ? 0 : viewCountText?.Match(ViewCountRe).Groups["num"].Value.TryParseULong(NumberStyles.AllowThousands)),
             UploadDate = j.YtTxt("publishedTimeText").ParseAgo().Date() // this is very imprecise. We rely on video extra for a reliable upload date
           };
           if (parsedVideo.Statistics.ViewCount == null)
@@ -289,14 +288,14 @@ namespace YtReader.Yt {
       if (extra.Error != null) return new(extra);
 
       var recs = Array.Empty<Rec>();
-      if (parts.Contains(ExtraPart.ERecs))
+      if (parts.Contains(ExtraPart.ERec))
         recs = await GetRecs2(log, html, videoId);
       var comments = Array.Empty<VideoComment>();
-      if (parts.Contains(ExtraPart.EComments))
+      if (parts.Contains(ExtraPart.EComment))
         comments = await GetComments(log, videoId, ytInitialData, watchPage).Then(c => c.ToArray());
 
       VideoCaption caption = null;
-      if (parts.Contains(ExtraPart.ECaptions))
+      if (parts.Contains(ExtraPart.ECaption))
         caption = await GetCaption(channelId, videoId, infoDic, log);
 
       return new(extra) {
@@ -703,9 +702,9 @@ namespace YtReader.Yt {
   }
 
   public enum ExtraPart {
-    EExtra,
-    ERecs,
-    EComments,
-    ECaptions
+    [EnumMember(Value = "extra")]   EExtra,
+    [EnumMember(Value = "rec")]     ERec,
+    [EnumMember(Value = "comment")] EComment,
+    [EnumMember(Value = "caption")] ECaption
   }
 }

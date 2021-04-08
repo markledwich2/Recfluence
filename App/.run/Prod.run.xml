@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Prod Update" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.dll" />
-    <option name="PROGRAM_PARAMETERS" value="update -a DataScripts --data-script-run 2021-03-23_11-27-14-2858335.bTgbg" />
+    <option name="PROGRAM_PARAMETERS" value="update -z -a Stage|Dataform|Result|Index|Search" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>

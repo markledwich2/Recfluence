@@ -8,6 +8,7 @@ using SysExtensions.Collections;
 using SysExtensions.Text;
 using Troschuetz.Random;
 using YtReader.Store;
+using static YtReader.Yt.ExtraPart;
 
 namespace YtReader.Yt {
   public static class YtCollectEx {
@@ -19,7 +20,7 @@ namespace YtReader.Yt {
 
     public static RecStored[] ToRecStored(IReadOnlyCollection<ExtraAndParts> allExtra, DateTime updated) =>
       allExtra
-        .SelectMany(v => v.Recs?.Select((r, i) => new RecStored {
+        .SelectMany(v => v.Recs?.Select(r => new RecStored {
           FromChannelId = v.Extra.ChannelId,
           FromVideoId = v.Extra.VideoId,
           FromVideoTitle = v.Extra.Title,
@@ -33,7 +34,7 @@ namespace YtReader.Yt {
           ToViews = r.ToViews,
           ToUploadDate = r.ToUploadDate,
           Updated = updated
-        }) ?? new RecStored[] { }).ToArray();
+        }) ?? Array.Empty<RecStored>()).ToArray();
 
     public static Video[] ToVidsStored(Channel c, IReadOnlyCollection<YtVideoItem> vids) =>
       vids.Select(v => new Video {
@@ -56,7 +57,7 @@ namespace YtReader.Yt {
     Standard,
     /// <summary>Update the subscribers and other more costly information about a channel</summary>
     Full,
-    /// <summary>Update a un-cassified channels information useful for predicting political/non and tags</summary>
+    /// <summary>Update a un-classified channels information useful for predicting political/non and tags</summary>
     Discover,
     /// <summary>Just update the channel details for a user (no video extra parts). For quota reasons we use the website for
     ///   this.</summary>
@@ -65,43 +66,32 @@ namespace YtReader.Yt {
 
   public enum CollectPart {
     [EnumMember(Value = "channel")] PChannel,
-    [EnumMember(Value = "stat")]    PStat,
-    [EnumMember(Value = "extra")]   PExtra,
-    [EnumMember(Value = "rec")]     PRec,
-    [EnumMember(Value = "caption")] PCaption,
-    [EnumMember(Value = "comment")] PComment,
+    [EnumMember(Value = "extra")]   PChannelVideos,
     [EnumMember(Value = "user")]    PUser,
     [EnumMember(Value = "discover")] [CollectPart(Explicit = true)]
     PDiscover
   }
 
   public record CollectOptions {
-    public string[]                             LimitChannels { get; init; }
-    public CollectPart[]                        Parts         { get; init; }
-    public (CollectFromType Type, string Value) CollectFrom   { get; init; }
-  }
-
-  public enum CollectFromType {
-    None,
-    VideosPath,
-    VideosView,
-    ChannelsPath
+    public string[]      LimitChannels { get; init; }
+    public CollectPart[] Parts         { get; init; }
+    public ExtraPart[]   ExtraParts    { get; init; }
   }
 
   public record ExtraAndParts(VideoExtra Extra) {
     public Rec[]          Recs     { get; init; } = Array.Empty<Rec>();
     public VideoComment[] Comments { get; init; } = Array.Empty<VideoComment>();
-    public VideoCaption   Caption  { get; init; } = null;
+    public VideoCaption   Caption  { get; init; }
   }
 
-  public class ProcessChannelResult {
-    public string ChannelId { get; set; }
-    public bool   Success   { get; set; }
+  public record ProcessChannelResult {
+    public string ChannelId { get; init; }
+    public bool   Success   { get; init; }
   }
 
-  public class ProcessChannelResults {
-    public ProcessChannelResult[] Channels { get; set; }
-    public TimeSpan               Duration { get; set; }
+  public record ProcessChannelResults {
+    public ProcessChannelResult[] Channels { get; init; }
+    public TimeSpan               Duration { get; init; }
   }
 
   public static class YtCollectorRegion {
@@ -119,7 +109,7 @@ namespace YtReader.Yt {
 
     public VideoExtraPlans(IEnumerable<string> videosForExtra) {
       foreach (var v in videosForExtra)
-        SetPart(v, ExtraPart.EExtra);
+        SetPart(v, EExtra);
     }
 
     public VideoExtraPlans(IEnumerable<VideoPlan> plans) => _c.AddRange(plans);

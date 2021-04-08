@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Exceptions;
+using Humanizer;
 using Medallion.Shell;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
+using Newtonsoft.Json.Linq;
 using Semver;
 using Serilog;
 using SysExtensions;
@@ -94,7 +96,7 @@ namespace YtCli {
           await plan.Process(Ctx,
             b => Stage.ProcessOptimisePlan(b, DataStoreType.DbStage, PipeArg.Inject<ILogger>()),
             new() {MaxParallel = 12, MinWorkItems = 1},
-            log: Log, cancel: console.GetCancellationToken());
+            Log, console.GetCancellationToken());
       }
     }
   }
@@ -164,13 +166,11 @@ namespace YtCli {
     public async ValueTask ExecuteAsync(IConsole console) => await Backup.Backup(Log);
   }
 
-
-  
   [Command("clean", Description = "Clean expired resources")]
   public class CleanCmd : ICommand {
     readonly AzureCleaner Cleaner;
     readonly ILogger      Log;
-    
+
     [CommandOption("mode", Description = "the cleaning behavior. Standard, DeleteCompleted or DeleteAll")]
     public CleanContainerMode Mode { get; set; }
 
@@ -232,8 +232,11 @@ namespace YtCli {
     [CommandOption('v', Description = "| delimited list of videos (source id's)")]
     public string Videos { get; set; }
 
-    [CommandOption("collect-parts", shortName: 'p', Description = "optional '|' separated list of collect parts to run")]
+    [CommandOption("collect-parts", shortName: 'p', Description = "| delimited list of collect parts to run (e.g. channel|channel-video|user|extra)")]
     public string Parts { get; set; }
+
+    [CommandOption("extra-parts", shortName: 'e', Description = "| delimited list of extra parts to run (e.g. extra|comment|rec|caption)")]
+    public string ExtraParts { get; set; }
 
     [CommandOption("us-init", Description = "Run userscrape in init mode (additional seed videos)")]
     public bool UserScrapeInit { get; set; }
@@ -255,27 +258,16 @@ namespace YtCli {
     public string SearchIndexes { get; set; }
 
     [CommandOption("search-mode")] public SearchMode SearchMode { get; set; }
-    
-    [CommandOption("collect-channels-path",
-      Description = @"path in the data blob container a file with newline separated channel id's. e.g. import/channels/full_12M_chan_info.txt.gz")]
-    public string CollectChannelsPath { get; set; }
-
-    [CommandOption("collect-videos-path",
-      Description = @"path in the data blob container a file with newline separated video id's. e.g. import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz")]
-    public string CollectVideosPath { get; set; }
-    
-    [CommandOption("collect-view", Description = @"name of a view in the warehouse that has a column video_id, channel_id videos or channels to collect data for")]
-    public string CollectVideosView { get; set; }
 
     [CommandOption("dataform-deps", Description = "when specified, dataform will run with dependencies included", IsRequired = false)]
     public bool DataformDeps { get; set; }
 
     [CommandOption("ds-run", Description = "a previous runid to run scripts on", IsRequired = false)]
     public string DataScriptsRunId { get; set; }
-    
+
     [CommandOption("ds-part", Description = "| separated list of data-script parts to collect.")]
     public string DataScriptParts { get; set; }
-    
+
     [CommandOption("ds-video-view", Description = "a view name to get a custom list of videos to update")]
     public string DataScriptVideosView { get; set; }
 
@@ -283,21 +275,15 @@ namespace YtCli {
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
       console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
-
-      (CollectFromType Type, string Value) collectFrom = default;
-      if (CollectVideosPath.HasValue()) collectFrom = (CollectFromType.VideosPath, CollectVideosPath);
-      if (CollectVideosView.HasValue()) collectFrom = (CollectFromType.VideosView, CollectVideosView);
-      if (CollectChannelsPath.HasValue()) collectFrom = (CollectFromType.ChannelsPath, CollectChannelsPath);
-      
       var options = new UpdateOptions {
         Actions = Actions?.UnJoin('|'),
         Collect = new() {
           LimitChannels = Channels?.UnJoin('|'),
-          CollectFrom = collectFrom,
-          Parts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<CollectPart>(out _)).Select(p => p.ParseEnum<CollectPart>()).ToArray(),
+          Parts = ParseParts<CollectPart>(Parts),
+          ExtraParts = ParseParts<ExtraPart>(ExtraParts)
         },
         Videos = Videos?.UnJoin('|'),
-        StandardParts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<StandardCollectPart>(out _)).Select(p => p.ParseEnum<StandardCollectPart>()).ToArray(),
+        StandardParts = ParseParts<StandardCollectPart>(Parts),
         WarehouseTables = WarehouseTables?.UnJoin('|'),
         StageTables = StageTables?.UnJoin('|'),
         Results = Results?.UnJoin('|'),
@@ -315,9 +301,61 @@ namespace YtCli {
         Tags = Tags?.UnJoin('|'),
         DataformDeps = DataformDeps,
         SearchMode = SearchMode,
-        DataScript = new (DataScriptsRunId, DataScriptParts.UnJoin('|').Select(p => p.ToLower()).ToArray(), DataScriptVideosView)
+        DataScript = new(DataScriptsRunId, DataScriptParts.UnJoin('|').Select(p => p.ToLower()).ToArray(), DataScriptVideosView)
       };
       await Updater.Update(options, console.GetCancellationToken());
+    }
+
+    public static T[] ParseParts<T>(string parts) where T : Enum =>
+      parts?.UnJoin('|').Where(p => p.TryParseEnum<T>(out _)).Select(p => p.ParseEnum<T>()).ToArray();
+  }
+
+  [Command("collect-list")]
+  public record CollectList(YtCollectList Col, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log)
+    : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
+    [CommandParameter(0, Description = "The type of list to run (i.e. channel-path, video-path, view, named)")]
+    public CollectFromType Mode { get; set; }
+
+    [CommandParameter(1, Description = @"The path/name of the list.
+channel-path: path in the data blob container a file with newline separated channel id's. e.g. import/channels/full_12M_chan_info.txt.gz
+video-path: path in the data blob container a file with newline separated channel id's. e.g. import/channels/full_12M_chan_info.txt.gz
+view: name of a view in the warehouse that has a column video_id, channel_id videos or channels to collect data for e.g. collect_video_sans_extra
+named: name of an sql statement CollectListSql. This will use parameters if specified
+ ")]
+    public string Value { get; set; }
+
+    [CommandOption("channels", shortName: 'c', IsRequired = false,
+      Description = "| delimited list of channels (source id's) to collect. This is an additional filter to the list given")]
+    public string Channels { get; set; }
+
+    [CommandOption("parts", shortName: 'p', IsRequired = false, Description = @"| list of parts to collect ()")]
+    public string Parts { get; set; }
+
+    [CommandOption("extra-parts", shortName: 'e', IsRequired = false, Description = @"| delimited list of extra parts to run (e.g. extra|comment|rec|caption)")]
+    public string ExtraParts { get; set; }
+
+    [CommandOption("stale-hrs", shortName: 'f', IsRequired = false,
+      Description = @"e.g. 24. use when re-running failed lists. Before this period has elapsed, channels/videos won't be updated again")]
+    public int? StaleHrs { get; set; }
+
+    [CommandOption("sql-args", shortName: 'a', Description = "Json object representing params to pass to the query")]
+    public string Args { get; set; }
+
+    /*[CommandOption("operations", 'l', Description = @"| top level things to do with this list")]
+    public string ListParts { get; set; }*/
+
+    protected override string GroupName => "collect-list";
+
+    protected override async ValueTask ExecuteLocal(IConsole console) {
+      var opts = new CollectListOptions {
+        CollectFrom = (Mode, Value),
+        Parts = UpdateCmd.ParseParts<CollectListPart>(Parts),
+        ExtraParts = UpdateCmd.ParseParts<ExtraPart>(ExtraParts),
+        LimitChannels = Channels?.UnJoin('|'),
+        StaleAgo = StaleHrs?.Hours() ?? 2.Days(),
+        Args = JObject.Parse(Args)
+      };
+      await Col.Run(opts, Log, console.GetCancellationToken());
     }
   }
 
@@ -357,7 +395,7 @@ namespace YtCli {
     public async ValueTask ExecuteAsync(IConsole console) {
       var sw = Stopwatch.StartNew();
       var slnName = "Recfluence.sln";
-      var sln = FPath.Current.ParentWithFile(slnName, true);
+      var sln = FPath.Current.ParentWithFile(slnName, includeIfDir: true);
       if (sln == null) throw new CommandException($"Can't find {slnName} file to organize build");
       var image = $"{Cfg.Registry}/{Cfg.ImageName}";
 
@@ -405,8 +443,7 @@ namespace YtCli {
       Log.Information("Pulling of posts from pushshift complete");
     }
   }
-  
-  
+
   [Command("covid-narrative")]
   public record CovidNarrativeCmd(ILogger Log, CovidNarrative Covid) : ICommand {
     public async ValueTask ExecuteAsync(IConsole console) {
