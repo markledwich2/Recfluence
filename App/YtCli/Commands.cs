@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Exceptions;
+using CliFx.Infrastructure;
 using Humanizer;
 using Medallion.Shell;
 using Mutuo.Etl.AzureManagement;
@@ -96,7 +97,7 @@ namespace YtCli {
           await plan.Process(Ctx,
             b => Stage.ProcessOptimisePlan(b, DataStoreType.DbStage, PipeArg.Inject<ILogger>()),
             new() {MaxParallel = 12, MinWorkItems = 1},
-            Log, console.GetCancellationToken());
+            Log, console.RegisterCancellationHandler());
       }
     }
   }
@@ -274,7 +275,8 @@ namespace YtCli {
     protected override string GroupName => "update";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
-      console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
+      var cancel = console.RegisterCancellationHandler();
+      cancel.Register(() => Log.Information("Cancellation requested"));
       var options = new UpdateOptions {
         Actions = Actions?.UnJoin('|'),
         Collect = new() {
@@ -303,7 +305,7 @@ namespace YtCli {
         SearchMode = SearchMode,
         DataScript = new(DataScriptsRunId, DataScriptParts.UnJoin('|').Select(p => p.ToLower()).ToArray(), DataScriptVideosView)
       };
-      await Updater.Update(options, console.GetCancellationToken());
+      await Updater.Update(options, cancel);
     }
 
     public static T[] ParseParts<T>(string parts) where T : Enum =>
@@ -355,7 +357,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
         StaleAgo = StaleHrs?.Hours() ?? 2.Days(),
         Args = JObject.Parse(Args)
       };
-      await Col.Run(opts, Log, console.GetCancellationToken());
+      await Col.Run(opts, Log, console.RegisterCancellationHandler());
     }
   }
 

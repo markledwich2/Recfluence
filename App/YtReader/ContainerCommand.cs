@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
+using CliFx.Infrastructure;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using SysExtensions;
@@ -48,7 +49,7 @@ namespace YtReader {
     public async ValueTask ExecuteAsync(IConsole console) {
       if (RunOnContainer) {
         var image = ContainerTag.HasValue() ? ContainerCfg.FullContainerImageName(ContainerTag) : null;
-        await Runner.Run(ContainerName ?? GroupName, image, console.GetCancellationToken(), returnOnStart: true);
+        await Runner.Run(ContainerName ?? GroupName, image, console.RegisterCancellationHandler(), returnOnStart: true);
         return;
       }
 

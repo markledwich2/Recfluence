@@ -32,16 +32,16 @@ namespace YtReader.BitChute {
   
 
   public class BcWeb : IScraper {
-    readonly        ProxyCfg       Proxy;
+    readonly        ProxyCfg       ProxyCfg;
     readonly        BitChuteCfg    Cfg;
     static readonly string         Url      = "https://www.bitchute.com";
     static readonly IConfiguration AngleCfg = Configuration.Default.WithDefaultLoader().WithDefaultCookies();
     readonly FlurlProxyFallbackClient          FlurlClient;
 
-    public BcWeb(ProxyCfg proxy, BitChuteCfg cfg) {
-      Proxy = proxy;
+    public BcWeb(ProxyCfg proxyCfg, BitChuteCfg cfg) {
+      ProxyCfg = proxyCfg;
       Cfg = cfg;
-      FlurlClient = new(new(), new(proxy.Proxies.FirstOrDefault()?.CreateHttpClient()));
+      FlurlClient = new(new(), new(proxyCfg.Proxies.FirstOrDefault()?.CreateHttpClient()), proxyCfg);
     }
 
     public Platform Platform        => Platform.BitChute;
@@ -51,7 +51,7 @@ namespace YtReader.BitChute {
     public string SourceToFullId(string sourceId, LinkType type) => FullId(sourceId);
 
     public async Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log) {
-      var chanDoc = await Open(Url.AppendPathSegment($"channel/{sourceId}"), (b, url) => b.OpenAsync(url), log);
+      var chanDoc = await Open("channel", Url.AppendPathSegment($"channel/{sourceId}"), (b, url) => b.OpenAsync(url), log);
 
       if (chanDoc.StatusCode == HttpStatusCode.NotFound)
         return (this.NewChan(sourceId) with {Status = ChannelStatus.NotFound, Updated = DateTime.UtcNow}, null);
@@ -60,14 +60,15 @@ namespace YtReader.BitChute {
 
       Task<T> Post<T>(string path, object data = null) {
         var req = Url.AppendPathSegment(path).WithBcHeaders(chanDoc, csrf);
-        return FlurlClient.Send(req, HttpMethod.Post, req.FormUrlContent(data)).ReceiveJson<T>();
+        return FlurlClient.Send(typeof(T).Name, req, HttpMethod.Post, 
+          req.FormUrlContent(MergeDynamics(new {csrfmiddlewaretoken = csrf}, data ?? new ExpandoObject())), log:log).ReceiveJson<T>();
       }
 
       var chan = ParseChannel(chanDoc, sourceId);
       if (chan.Status != ChannelStatus.Alive)
         return (chan, null);
 
-      var (subscriberCount, aboutViewCount) = await Post<CountResponse>($"channel/{chan.SourceId}/counts/");
+      var (subscriberCount, aboutViewCount) = await Post<CountResponse>($"channel/{chan.SourceId}/counts/", new { });
       chan = chan with {
         Subs = subscriberCount,
         ChannelViews = aboutViewCount.TryParseNumberWithUnits()?.RoundToULong()
@@ -95,7 +96,7 @@ namespace YtReader.BitChute {
     static readonly Regex RDate = new(@"(?<time>\d{2}:\d{2}) UTC on (?<month>\w*)\s+(?<day>\d+)\w*\, (?<year>\d*)", Compiled);
 
     public async Task<VideoExtra> Video(string sourceId, ILogger log) {
-      var doc = await Open(Url.AppendPathSegment($"video/{sourceId}/"), (b, url) => b.OpenAsync(url), log);
+      var doc = await Open("video", Url.AppendPathSegment($"video/{sourceId}/"), (b, url) => b.OpenAsync(url), log);
       var vid = this.NewVidExtra(sourceId);
 
       if (doc.StatusCode == HttpStatusCode.NotFound)
@@ -117,7 +118,7 @@ namespace YtReader.BitChute {
       string error = null;
       VideoStatus? status = null;
       if (chanA == null) {
-        // restircted example https://www.bitchute.com/video/AFIyaKIYgI6P/
+        // restricted example https://www.bitchute.com/video/AFIyaKIYgI6P/
         if (title?.Contains("RESTRICTED", OrdinalIgnoreCase) == true) {
           error = title;
           status = VideoStatus.Restricted;
@@ -149,26 +150,26 @@ namespace YtReader.BitChute {
       return vid;
     }
 
-    IBrowsingContext GetBrowser() => BrowsingContext.New(FlurlClient.UseProxy && Proxy.Proxies.Any()
+    IBrowsingContext GetBrowser() => BrowsingContext.New(FlurlClient.UseProxy && ProxyCfg.Proxies.Any()
       ? AngleCfg.WithRequesters(new() {
-        Proxy = Proxy.Proxies.First().CreateWebProxy(),
+        Proxy = ProxyCfg.Proxies.First().CreateWebProxy(),
         PreAuthenticate = true,
         UseDefaultCredentials = false
       })
       : AngleCfg);
 
-    /// <summary>Executes the given function with retries and proxy fallback. Returns documnet in non-transient error states</summary>
-    async Task<IDocument> Open(Url url, Func<IBrowsingContext, Url, Task<IDocument>> getDoc, ILogger log) {
+    /// <summary>Executes the given function with retries and proxy fallback. Returns document in non-transient error states</summary>
+    async Task<IDocument> Open(string desc, Url url, Func<IBrowsingContext, Url, Task<IDocument>> getDoc, ILogger log) {
       var browser = GetBrowser();
       var retryTransient = Policy.HandleResult<IDocument>(d => {
-        if (!d.StatusCode.IsTransient()) return false;
+        if (!d.StatusCode.IsTransientError()) return false;
         log.Debug($"BcWeb angle transient error '{(int) d.StatusCode}'");
         return true;
-      }).RetryWithBackoff("BcWeb angle open", 5, d => d.StatusCode.ToString(), log);
+      }).RetryWithBackoff("BcWeb angle open", 5, log:log);
 
       var (doc, ex) = await Fun(() => retryTransient.ExecuteAsync(() => getDoc(browser, url))).Try();
-      if (doc?.StatusCode.IsTransient() == false) return doc; // if there was a non-transient error, return the doc in that state 
-      FlurlClient.UseProxyOrThrow(ex, url, (int?) doc?.StatusCode); // if we are already using the proxy, throw the error
+      if (doc?.StatusCode.IsTransientError() == false) return doc; // if there was a non-transient error, return the doc in that state
+      FlurlClient.UseProxyOrThrow(log, desc, url, ex, (int?) doc?.StatusCode); // if we are already using the proxy, throw the error
       doc = await retryTransient.ExecuteAsync(() => getDoc(browser, url));
       doc.EnsureSuccess();
       return doc;
@@ -238,17 +239,20 @@ namespace YtReader.BitChute {
 
     public static IFlurlRequest WithBcHeaders(this Url url, IDocument originating, string csrf = null) => url
       .WithCookie("csrftoken", csrf ?? originating.CsrfToken())
+      //.WithCookies(originating.GetCookies().Select(c => (c.Name, c.Value)))
       .WithHeader("referer", originating.Url);
 
     public static string CsrfToken(this IDocument originating) => originating.GetCookie("csrftoken").Value;
 
-    public static Cookie GetCookie(this IDocument document, string name) {
+    public static IEnumerable<Cookie> GetCookies(this IDocument doc) {
       var cc = new CookieContainer();
-      var url = document.Url.AsUri();
+      var url = doc.Url.AsUri();
       var domain = $"{url.Scheme}://{url.Host}".AsUri();
-      cc.SetCookies(domain, document.Cookie);
-      return cc.GetCookies(domain).FirstOrDefault(c => c.Name == name);
+      cc.SetCookies(domain, doc.Cookie);
+      return cc.GetCookies(domain);
     }
+    
+    public static Cookie GetCookie(this IDocument doc, string name) => doc.GetCookies().FirstOrDefault(c => c.Name == name);
 
     static readonly Regex CreatedRe = new(@"(?<num>\d+)\s(?<unit>day|week|month|year)[s]?", Compiled | IgnoreCase);
 

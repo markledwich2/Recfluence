@@ -25,12 +25,15 @@ namespace SysExtensions.Net {
     }
 
 
-    public static AsyncRetryPolicy<T> RetryWithBackoff<T>(this PolicyBuilder<T> policy, string description, int retryCount = 3, Func<T, string> errorMessage = null,
+    public static AsyncRetryPolicy<T> RetryWithBackoff<T>(this PolicyBuilder<T> policy, string description, int retryCount = 3, Action<DelegateResult<T>, int> onError = null,
       ILogger log = null) =>
       policy.RetryAsync(retryCount, async (e, i, c) => {
         var delay = i.ExponentialBackoff(1.Seconds());
-        log?.Debug("retryable error with {Description}: '{Error}'. Retrying in {Duration}, attempt {Attempt}/{Total}",
-          description, errorMessage?.Invoke(e.Result) ?? e.Exception?.Message ?? "Unknown error", delay, i, retryCount);
+        if (onError == null)
+          log?.Debug("retryable error with {Description}: '{Error}'. Retrying in {Duration}, attempt {Attempt}/{Total}",
+            description, e.Exception?.Message ?? "Unknown error", delay, i, retryCount);
+        else
+          onError(e, i);
         await Task.Delay(delay);
       });
 

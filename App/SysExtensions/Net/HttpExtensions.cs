@@ -15,11 +15,11 @@ namespace SysExtensions.Net {
     public static bool IsSuccess(int code) => code >= 200 && code <= 299;
     public static bool IsSuccess(this HttpStatusCode code) => IsSuccess((int) code);
 
-    public static bool IsTransient(int code) => code switch {
-      < 500 => code == 408,
+    public static bool IsTransientError(int code) => !IsSuccess(code) && code switch {
+      < 500 => code.In(408, 429, 425),
       _ => true
     };
 
-    public static bool IsTransient(this HttpStatusCode code) => IsTransient((int) code);
+    public static bool IsTransientError(this HttpStatusCode code) => IsTransientError((int) code);
   }
 }

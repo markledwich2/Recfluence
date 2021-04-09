@@ -2,6 +2,7 @@
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Exceptions;
+using CliFx.Infrastructure;
 using Mutuo.Etl.Pipe;
 using Serilog;
 using SysExtensions.Text;
@@ -25,14 +26,14 @@ namespace YtCli {
       if (!pipeMethods.ContainsKey(runId.Name))
         throw new CommandException($"Pipe {runId.Name} not found. Available: {pipeMethods.Join(", ", m => m.Method.Name)}");
 
+      var cancel = console.RegisterCancellationHandler();
       var log = Log.ForContext("RunId", runId);
       log.Information("Pipe Run Command Started {RunId}", RunId);
       if (runId.HasGroup) {
-        await PipeCtx.DoPipeWork(runId, console.GetCancellationToken());
+        await PipeCtx.DoPipeWork(runId, cancel);
       }
       else {
-        var res = await PipeCtx.Run(runId.Name, new() {Location = Location ?? PipeRunLocation.Local}, log: log,
-          cancel: console.GetCancellationToken());
+        var res = await PipeCtx.Run(runId.Name, new() {Location = Location ?? PipeRunLocation.Local}, log: log, cancel: cancel);
         if (res.Error)
           throw new CommandException(res.ErrorMessage);
       }

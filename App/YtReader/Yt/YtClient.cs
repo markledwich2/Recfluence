@@ -55,7 +55,7 @@ namespace YtReader.Yt {
         // wrap generic transient fault handling
         .WrapAsync(Policy
           .Handle<HttpRequestException>()
-          .Or<GoogleApiException>(g => g.HttpStatusCode.IsTransient())
+          .Or<GoogleApiException>(g => g.HttpStatusCode.IsTransientError())
           .WaitAndRetryAsync(6, i => i.ExponentialBackoff(1.Seconds())))
         .ExecuteAsync(request.ExecuteAsync);
     }
@@ -70,7 +70,7 @@ namespace YtReader.Yt {
         ChannelTitle = v.Snippet.ChannelTitle,
         ChannelId = v.Snippet.ChannelId,
         Language = v.Snippet.DefaultLanguage,
-        PublishedAt = v.Snippet.PublishedAt?.ParseDate() ?? DateTime.MinValue,
+        PublishedAt = v.Snippet.PublishedAt ?? DateTime.MinValue,
         CategoryId = v.Snippet.CategoryId,
         Stats = new() {
           Views = v.Statistics?.ViewCount,
@@ -162,7 +162,7 @@ namespace YtReader.Yt {
         vids.AddRange(res.Items.Where(v => v.Snippet.PublishedAt != null).Select(v => new ChannelVideoListItem {
           VideoId = v.Id.VideoId,
           VideoTitle = v.Snippet.Title,
-          PublishedAt = v.Snippet.PublishedAt.ParseDate(),
+          PublishedAt = v.Snippet.PublishedAt,
           Updated = DateTime.UtcNow
         }));
         if (res.NextPageToken == null)
@@ -278,7 +278,7 @@ namespace YtReader.Yt {
   }
 
   public record ChannelVideoListItem : VideoItem {
-    public DateTime PublishedAt { get; init; }
-    public DateTime Updated     { get; init; }
+    public DateTime? PublishedAt { get; init; }
+    public DateTime  Updated     { get; init; }
   }
 }

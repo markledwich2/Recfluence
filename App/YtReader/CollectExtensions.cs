@@ -29,8 +29,10 @@ namespace YtReader {
 
   public enum StandardCollectPart {
     ExistingChannel,
+    [CollectPart(Explicit = true)] 
     Discover,
-    [CollectPart(Explicit = true)] DiscoverFromVideo,
+    [CollectPart(Explicit = true)] 
+    DiscoverFromVideo,
     Video
   }
 
@@ -217,13 +219,12 @@ where not link_found
       var existing = await db.Query<string>(@"get channels", @$"
 with latest as (
   -- use channel table as a filter for staging data. it filters out bad records.
-  select * from channel
-  where platform='{platform}'
+  select channel_id, updated from channel_latest
+  where platform='BitChute'
   {(explicitIds.HasItems() ? $"and channel_id in ({explicitIds.Join(",", c => $"'{c}'")})" : "")}
-  qualify row_number() over (partition by channel_id order by updated desc)=1
 )
 select s.v
-from latest c join channel_stage s on s.v:ChannelId = c.channel_id
+from latest c join channel_stage s on s.v:ChannelId = c.channel_id and s.v:Updated = c.updated
 ");
       return existing.Select(e => e.ToObject<Channel>(IJsonlStore.JCfg)).ToArray();
     }

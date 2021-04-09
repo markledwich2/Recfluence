@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Flurl;
 using Flurl.Http;
+using Flurl.Http.Content;
 using Humanizer;
 using LtGt;
 using Mutuo.Etl.Blob;
@@ -23,9 +24,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
-using static System.Net.HttpStatusCode;
 using static System.StringComparison;
-using static SysExtensions.Net.HttpExtensions;
 using static YtReader.Yt.CommentAction;
 using static YtReader.Yt.YtWebExtensions;
 
@@ -35,72 +34,15 @@ using static YtReader.Yt.YtWebExtensions;
 
 namespace YtReader.Yt {
   public class YtWeb {
-    readonly ProxyCfg                                      Proxy;
     readonly ISimpleFileStore                              LogStore;
-    readonly ResourceCycle<HttpClient, ProxyConnectionCfg> Clients;
     readonly FlurlProxyFallbackClient                      FlurlClients;
 
-    public YtWeb(ProxyCfg proxy, ISimpleFileStore logStore) {
-      Proxy = proxy;
+    public YtWeb(ProxyCfg cfg, ISimpleFileStore logStore) {
       LogStore = logStore;
-      Clients = new(proxy.DirectAndProxies(), p => Task.FromResult(p.CreateHttpClient()));
-      FlurlClients = new(new(), new(proxy.Proxies.FirstOrDefault()?.CreateHttpClient()));
+      FlurlClients = new(new(), new(cfg.Proxies.FirstOrDefault()?.CreateHttpClient()), cfg);
     }
 
-    const int RequestAttempts = 3;
-
-    public Task<IFlurlResponse> Send(string desc, Url url, ILogger log, Func<IFlurlRequest, Task<IFlurlResponse>> getResponse = null) =>
-      Send(desc, url.AsRequest(), log, getResponse);
-
-    /// <summary>Send a request with error handling and proxy fallback. Allows any type of request (e.g. post with headers
-    ///   etc..)</summary>
-    public async Task<IFlurlResponse> Send(string desc, IFlurlRequest request, ILogger log, Func<IFlurlRequest, Task<IFlurlResponse>> getResponse = null) {
-      var attempts = 0;
-      getResponse ??= r => r.GetAsync();
-      while (true) {
-        attempts++;
-        var (http, proxy) = await Clients.Get();
-
-        Task<IFlurlResponse> GetRes() => getResponse(request
-          .WithClient(new FlurlClient(http))
-          .WithHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36")
-          .AllowAnyHttpStatus());
-
-        try {
-          var resTask = GetRes();
-          if (await Task.WhenAny(resTask, Task.Delay((Proxy.TimeoutSeconds + 10).Seconds())) != resTask)
-            throw new TaskCanceledException($"SendAsync on {request.Url} took to long without timing out itself");
-          var res = await resTask;
-          if (res.StatusCode == 404)
-            EnsureSuccess(res.StatusCode, request.Url); // fail immediately for not found
-          if (
-            (proxy.IsDirect() || attempts > RequestAttempts) // fall back immediately for direct, 3 failures for proxies
-            && res.StatusCode == 429) {
-            log.Debug("WebScraper - TooManyRequests status, falling back to next proxy");
-            await Clients.NextResource(http);
-            attempts = 0;
-            continue;
-          }
-          EnsureSuccess(res.StatusCode, request.Url);
-          log.Verbose("WebScraper - {Desc} {Url}. Proxy: {Proxy}", desc, request.Url, proxy.Url ?? "Direct");
-          return res;
-        }
-        catch (Exception ex) {
-          log.Debug(ex, "WebScraper - error requesting {url} attempt {Attempt} : {Error} ", request.Url, attempts, ex.Message);
-
-          // not found (i.e. bad url) and proxy auth (i.e. ran out o quota on smartproxy) are fatal for sure
-          if (ex is HttpRequestException e && e.StatusCode?.In(NotFound, ProxyAuthenticationRequired) == true)
-            throw;
-
-          // throw for exception that aren't the expected transient-possible ones
-          if (!(ex is HttpRequestException || ex is TaskCanceledException || ex is FlurlHttpTimeoutException))
-            throw;
-
-          if (attempts > RequestAttempts)
-            throw;
-        }
-      }
-    }
+    public Task<IFlurlResponse> Send(ILogger log, string desc, IFlurlRequest req, HttpMethod verb = null, HttpContent content = null, Func<IFlurlResponse, bool> isTransient = null) => FlurlClients.Send(desc, req, verb, content, isTransient, log);
 
     async Task<HtmlDocument> GetHtml(string desc, Url url, ILogger log) {
       var res = await GetHttp(url, desc, log);
@@ -108,8 +50,7 @@ namespace YtReader.Yt {
     }
 
     async Task<HttpResponseMessage> GetHttp(string url, string desc, ILogger log) {
-      log.Verbose("WebScraper -  {Desc} {Url}", desc, url);
-      var res = await Send(desc, url.AsUrl(), log);
+      var res = await Send(log, desc, url.AsUrl().AsRequest());
       return res.ResponseMessage;
     }
 
@@ -187,8 +128,8 @@ namespace YtReader.Yt {
       string continueToken = null;
       while (true) {
         object token = continueToken == null ? new BpFirst(page.ChannelId, browse.Param) : new BpContinue(continueToken);
-        var req = YtUrl.AppendPathSegments(BrowsePath).SetQueryParam("key", page.InnertubeKey);
-        var j = await Send($"browse {pathSuffix}", req, log, r => r.PostJsonAsync(token)).Then(r => r.JsonObject());
+        var req = YtUrl.AppendPathSegments(BrowsePath).SetQueryParam("key", page.InnertubeKey).AsRequest();
+        var j = await Send(log, $"browse {pathSuffix}", req, HttpMethod.Post, new CapturedJsonContent(token.ToJson())).Then(r => r.JsonObject());
         continueToken = j.SelectToken("..continuationCommand.token").Str();
         yield return j;
         if (continueToken == null) break;
@@ -453,7 +394,7 @@ namespace YtReader.Yt {
           .WithHeader("x-youtube-client-name", "1")
           .WithHeader("x-youtube-client-version", cfg.ClientVersion)
           .WithCookies(cfg.Cookies);
-        return (await FlurlClients.Send(req, HttpMethod.Post, req.FormUrlContent(new {session_token = cfg.Xsrf}), log), req);
+        return (await Send(log, "get comments", req, HttpMethod.Post, req.FormUrlContent(new {session_token = cfg.Xsrf})), req);
       }
 
       async Task<(CommentResult[] Comments, string Continuation)> RequestComments(string continuation, VideoComment parent = null) {

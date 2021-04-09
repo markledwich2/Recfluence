@@ -8,8 +8,8 @@
     <LangVersion>9</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CliFx" Version="1.6.0" />
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.16.0" />
+    <PackageReference Include="CliFx" Version="2.0.2" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0" />
   </ItemGroup>
   <ItemGroup>

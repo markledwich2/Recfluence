@@ -9,6 +9,7 @@ using Autofac;
 using Autofac.Util;
 using CliFx;
 using CliFx.Attributes;
+using CliFx.Infrastructure;
 using Mutuo.Etl.Blob;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
