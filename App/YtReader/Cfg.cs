@@ -103,7 +103,7 @@ namespace YtReader {
   public class ProxyCfg {
     [Required] public ProxyConnectionCfg[] Proxies        { get; set; } = { };
     public            int                  TimeoutSeconds { get; set; } = 40;
-    public            int                  Retry          { get; set; } = 10;
+    public            int                  Retry          { get; set; } = 5;
     public            bool                 AlwaysUseProxy { get; set; }
   }
 

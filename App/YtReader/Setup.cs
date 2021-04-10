@@ -297,6 +297,7 @@ namespace YtReader {
       b.RegisterType<CovidNarrative>();
       b.RegisterType<DataScripts>();
       b.RegisterType<YtCollectList>();
+      b.RegisterType<FlurlProxyClient>();
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();

@@ -22,7 +22,7 @@ namespace Tests {
     
     public static async Task<TestCtx> TextCtx() {
       var ctx = await Ctx;
-      ctx.Log.Information("Starting {TestName}", TestContext.CurrentContext.Test.Name);
+      ctx.Log.Information("Starting Test - {TestName}", TestContext.CurrentContext.Test.Name);
       return ctx;
     }
   }

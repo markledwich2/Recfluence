@@ -1,6 +1,15 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Autofac;
+using FluentAssertions;
+using Flurl.Http;
+using Flurl.Http.Configuration;
+using Flurl.Http.Testing;
+using Flurl.Util;
+using Humanizer;
 using LtGt;
 using NUnit.Framework;
 using SysExtensions.IO;
@@ -16,7 +25,7 @@ namespace Tests {
       // get comments, does watch page html have it
       using var ctx = await TestSetup.TextCtx();
       var ws = ctx.Scope.Resolve<YtWeb>();
-      var video = await ws.GetExtra(ctx.Log, "Su1FQUkMojU", new[] {ExtraPart.EComment});
+      var video = await ws.GetExtra(ctx.Log, "NjJ2YEBK3Ic", new[] {ExtraPart.EComment});
       await video.Comments.ToJsonl("comments.jsonl");
     }
 
@@ -48,7 +57,7 @@ namespace Tests {
     public static async Task ExtraParts() {
       using var ctx = await TestSetup.TextCtx();
       var scraper = ctx.Scope.Resolve<YtWeb>();
-      var extra = await scraper.GetExtra(ctx.Log, "OMHXN1YhBDU", new[] {ExtraPart.EComment});
+      var extra = await scraper.GetExtra(ctx.Log, "O63NEnuJupU", new[] {ExtraPart.EComment});
     }
 
     [Test]
@@ -87,6 +96,20 @@ namespace Tests {
       var api = ctx.Resolve<YtClient>();
       var data = await new[] {"UCMDxbhGcsE7EnknxPEzC_Iw", "UCHEf6T_gVq4tlW5i91ESiWg", "UCYeF244yNGuFefuFKqxIAXw"}
         .BlockFunc(c => api.ChannelData(c, full: true));
+    }
+
+
+    [Test]
+    public static async Task TestProxyFallback() {
+      using var x = await TestSetup.TextCtx();
+      var scraper = x.Scope.Resolve<YtWeb>();
+      using var httpTest = new HttpTest();
+      var rw = httpTest.ForCallsTo("*youtube.com*").RespondWith("mock too many requests failure", 429);
+      var getExtra = scraper.GetExtra(x.Log, "Su1FQUkMojU", new[] {ExtraPart.EComment});
+      await 5.Seconds().Delay();
+      rw.AllowRealHttp();
+      var extra = await getExtra; // this should have fallen back to proxy and retried a once or twice in the 5 seconds.
+      scraper.Client.UseProxy.Should().Be(true);
     }
   }
 }

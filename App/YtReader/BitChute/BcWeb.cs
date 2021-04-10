@@ -29,21 +29,9 @@ using Url = Flurl.Url;
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.BitChute {
-  
-
-  public class BcWeb : IScraper {
-    readonly        ProxyCfg       ProxyCfg;
-    readonly        BitChuteCfg    Cfg;
+  public record BcWeb(FlurlProxyClient FlurlClient, BitChuteCfg Cfg, ProxyCfg ProxyCfg) : IScraper {
     static readonly string         Url      = "https://www.bitchute.com";
     static readonly IConfiguration AngleCfg = Configuration.Default.WithDefaultLoader().WithDefaultCookies();
-    readonly FlurlProxyFallbackClient          FlurlClient;
-
-    public BcWeb(ProxyCfg proxyCfg, BitChuteCfg cfg) {
-      ProxyCfg = proxyCfg;
-      Cfg = cfg;
-      FlurlClient = new(new(), new(proxyCfg.Proxies.FirstOrDefault()?.CreateHttpClient()), proxyCfg);
-    }
-
     public Platform Platform        => Platform.BitChute;
     public int      CollectParallel => Cfg.CollectParallel;
 

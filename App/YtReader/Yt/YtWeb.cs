@@ -33,16 +33,10 @@ using static YtReader.Yt.YtWebExtensions;
 //// a modified version of https://github.com/Tyrrrz/YoutubeExplode
 
 namespace YtReader.Yt {
-  public class YtWeb {
-    readonly ISimpleFileStore                              LogStore;
-    readonly FlurlProxyFallbackClient                      FlurlClients;
-
-    public YtWeb(ProxyCfg cfg, ISimpleFileStore logStore) {
-      LogStore = logStore;
-      FlurlClients = new(new(), new(cfg.Proxies.FirstOrDefault()?.CreateHttpClient()), cfg);
-    }
-
-    public Task<IFlurlResponse> Send(ILogger log, string desc, IFlurlRequest req, HttpMethod verb = null, HttpContent content = null, Func<IFlurlResponse, bool> isTransient = null) => FlurlClients.Send(desc, req, verb, content, isTransient, log);
+  public record YtWeb(FlurlProxyClient Client, ISimpleFileStore LogStore) {
+    public Task<IFlurlResponse> Send(ILogger log, string desc, IFlurlRequest req, HttpMethod verb = null, HttpContent content = null,
+      Func<IFlurlResponse, bool> isTransient = null) =>
+      Client.Send(desc, req, verb, content, isTransient, log);
 
     async Task<HtmlDocument> GetHtml(string desc, Url url, ILogger log) {
       var res = await GetHttp(url, desc, log);
@@ -61,9 +55,7 @@ namespace YtReader.Yt {
     #region Channel
 
     const string YtUrl = "https://www.youtube.com";
-
-    static readonly Regex ClientKeyRe = new(@"\""INNERTUBE_API_KEY\""\s*?:\s*?\""(?<key>\w*)\""");
-
+    
     record BpBase(BpContext context);
     record BpContext(BpClient client);
     record BpClient(string hl = "en-US", string clientName = "WEB", string clientVersion = "2.20210210.08.00", int utcOffsetMinutes = 0);
@@ -106,7 +98,7 @@ namespace YtReader.Yt {
           var cmd = e.SelectToken("commandMetadata.webCommandMetadata");
           return cmd == null ? null : new {ApiPath = cmd.Str("apiUrl"), Path = cmd.Str("url"), Param = e.SelectToken("browseEndpoint.params")?.Str()};
         }).NotNull()
-        .FirstOrDefault(p => { return p.Path?.Split('/').LastOrDefault()?.ToLowerInvariant() == pathSuffix; });
+        .FirstOrDefault(p => p.Path?.Split('/').LastOrDefault()?.ToLowerInvariant() == pathSuffix);
 
       if (browse == default) {
         var error = page.Data
@@ -124,7 +116,7 @@ namespace YtReader.Yt {
         throw ex;
       }
 
-      if (browse?.Param == null) throw new($"unable to find {pathSuffix} browse endpoint on page: {page.Url}");
+      if (browse.Param == null) throw new($"unable to find {pathSuffix} browse endpoint on page: {page.Url}");
       string continueToken = null;
       while (true) {
         object token = continueToken == null ? new BpFirst(page.ChannelId, browse.Param) : new BpContinue(continueToken);
@@ -161,17 +153,17 @@ namespace YtReader.Yt {
 
     IAsyncEnumerable<IReadOnlyCollection<YtVideoItem>> ChannelVideos(ChannelPage page, ILogger log) =>
       BrowseResults(page, BrowseType.Video, log)
-        .Select(j => j.SelectTokens("..gridVideoRenderer").Select(j => {
-          var viewCountText = j.YtTxt("viewCountText");
+        .Select(j => j.SelectTokens("..gridVideoRenderer").Select(t => {
+          var viewCountText = t.YtTxt("viewCountText");
           var parsedVideo = new YtVideoItem {
-            Id = j.Str("videoId"), Title = j.YtTxt("title"),
-            Duration = j.Str("..thumbnailOverlayTimeStatusRenderer.text.simpleText").TryParseTimeSpanExact(TimeFormats) ?? TimeSpan.Zero,
+            Id = t.Str("videoId"), Title = t.YtTxt("title"),
+            Duration = t.Str("..thumbnailOverlayTimeStatusRenderer.text.simpleText").TryParseTimeSpanExact(TimeFormats) ?? TimeSpan.Zero,
             Statistics =
               new(viewCountText == "No views" ? 0 : viewCountText?.Match(ViewCountRe).Groups["num"].Value.TryParseULong(NumberStyles.AllowThousands)),
-            UploadDate = j.YtTxt("publishedTimeText").ParseAgo().Date() // this is very imprecise. We rely on video extra for a reliable upload date
+            UploadDate = t.YtTxt("publishedTimeText").ParseAgo().Date() // this is very imprecise. We rely on video extra for a reliable upload date
           };
           if (parsedVideo.Statistics.ViewCount == null)
-            log.Debug("Can't find views for {Video} in {Json}", parsedVideo.Id, j.ToString());
+            log.Debug("Can't find views for {Video} in {Json}", parsedVideo.Id, t.ToString());
           return parsedVideo;
         }).ToArray());
 
@@ -394,7 +386,9 @@ namespace YtReader.Yt {
           .WithHeader("x-youtube-client-name", "1")
           .WithHeader("x-youtube-client-version", cfg.ClientVersion)
           .WithCookies(cfg.Cookies);
-        return (await Send(log, "get comments", req, HttpMethod.Post, req.FormUrlContent(new {session_token = cfg.Xsrf})), req);
+        var res = await Send(log, "get comments", req, HttpMethod.Post, req.FormUrlContent(new {session_token = cfg.Xsrf}),
+          r => HttpExtensions.IsTransientError(r.StatusCode) || r.StatusCode.In(402));
+        return (res, req);
       }
 
       async Task<(CommentResult[] Comments, string Continuation)> RequestComments(string continuation, VideoComment parent = null) {
@@ -474,10 +468,10 @@ namespace YtReader.Yt {
       };
 
       var playability = responseJson["playabilityStatus"];
-      if (playability?.Value<string>("status").ToLowerInvariant() == "error")
+      if (playability?.Str("status")?.ToLowerInvariant() == "error")
         return video with {
-          Error = playability.Value<string>("reason"),
-          SubError = playability.SelectToken("errorScreen.playerErrorMessageRenderer.subreason.simpleText")?.Value<string>()
+          Error = playability.Str("reason"),
+          SubError = playability.SelectToken("errorScreen.playerErrorMessageRenderer.subreason.simpleText")?.Str()
         };
 
       T Val<T>(string propName) {
@@ -507,13 +501,11 @@ namespace YtReader.Yt {
 
     static IReadOnlyCollection<ClosedCaptionTrackInfo> GetCaptionTracks(JToken playerResponseJson) =>
       (from trackJson in playerResponseJson.SelectToken("..captionTracks").NotNull()
-        let url = new UriBuilder(trackJson.SelectToken("baseUrl").Value<string>()).WithParameter("format", "3")
-        let languageCode = trackJson.SelectToken("languageCode").Value<string>()
-        let languageName = trackJson.SelectToken("name.simpleText").Value<string>()
+        let url = new UriBuilder(trackJson.Str("baseUrl")).WithParameter("format", "3")
+        let languageCode = trackJson.Str("languageCode")
+        let languageName = trackJson.Str("name.simpleText")
         let language = new Language(languageCode, languageName)
-        let isAutoGenerated = trackJson.SelectToken("vssId")
-          .Value<string>()
-          .StartsWith("a.", OrdinalIgnoreCase)
+        let isAutoGenerated = trackJson.Str("vssId").StartsWith("a.", OrdinalIgnoreCase)
         select new ClosedCaptionTrackInfo(url.ToString(), language, isAutoGenerated)).ToList();
 
     async Task<IReadOnlyDictionary<string, string>> GetVideoInfoDicAsync(string videoId, ILogger log) {
@@ -609,11 +601,7 @@ namespace YtReader.Yt {
     [EnumMember(Value = "action_get_comment_replies")]
     AReplies
   }
-
-  public enum ChannelPart {
-    Subscriptions
-  }
-
+  
   public record WebChannel {
     public string                                                           Id            { get; init; }
     public string                                                           Title         { get; init; }
