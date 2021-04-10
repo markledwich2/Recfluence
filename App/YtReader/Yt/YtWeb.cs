@@ -370,6 +370,7 @@ namespace YtReader.Yt {
 
       var cfg = await CommentCfgFromVideoPage();
       var comments = await Comments(videoId, cfg.CToken, cfg.Cfg, log).SelectManyList();
+      log.Debug("YtWeb - loaded {Comments} for video {VideoId}", comments.Count, videoId);
       return comments;
     }
 
@@ -387,7 +388,7 @@ namespace YtReader.Yt {
           .WithHeader("x-youtube-client-version", cfg.ClientVersion)
           .WithCookies(cfg.Cookies);
         var res = await Send(log, "get comments", req, HttpMethod.Post, req.FormUrlContent(new {session_token = cfg.Xsrf}),
-          r => HttpExtensions.IsTransientError(r.StatusCode) || r.StatusCode.In(402));
+          r => HttpExtensions.IsTransientError(r.StatusCode) || r.StatusCode.In(400));
         return (res, req);
       }
 
@@ -426,7 +427,7 @@ namespace YtReader.Yt {
 
       await foreach (var ((comments, _), batch) in AllComments(mainContinuation).Select((b, i) => (b, i))) {
         var threads = comments.Select(c => c.Comment).ToArray();
-        log.Debug("YtWeb - loaded {Threads} threads in batch {Batch} for video {Video}", threads.Length, batch, videoId);
+        log.Verbose("YtWeb - loaded {Threads} threads in batch {Batch} for video {Video}", threads.Length, batch, videoId);
         yield return threads;
         var allReplies = comments.Where(c => c.ReplyContinuation != null)
           .BlockTrans(async t => await AllComments(t.ReplyContinuation, t.Comment).ToListAsync(), parallel: 4);

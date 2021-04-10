@@ -5,7 +5,7 @@ using SysExtensions.Collections;
 namespace YtReader.Yt {
   public static class CollectListSql {
     public static (string Sql, JObject args) NamedQuery(string name, JObject args) =>
-      (NamedSql.TryGet(name) ?? throw new("no sql called {name}"), args);
+      (NamedSql.TryGet(name) ?? throw new($"no sql called {name}"), args);
 
     public static readonly Dictionary<string, string> NamedSql = new() {
       {
