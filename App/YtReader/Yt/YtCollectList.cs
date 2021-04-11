@@ -8,6 +8,7 @@ using Dapper;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Serilog;
+using Serilog.Core;
 using SysExtensions.Collections;
 using SysExtensions.Threading;
 using static Mutuo.Etl.Pipe.PipeArg;
@@ -15,6 +16,7 @@ using static YtReader.Yt.CollectFromType;
 using static YtReader.Yt.UpdateChannelType;
 using static YtReader.Yt.CollectListPart;
 using static YtReader.Yt.CollectPart;
+using static YtReader.Yt.ExtraPart;
 using static YtReader.Yt.YtCollectDb;
 
 // ReSharper disable InconsistentNaming
@@ -54,7 +56,7 @@ namespace YtReader.Yt {
 
   public record VideoListStats(string video_id, string channel_id, DateTime? extra_updated, bool caption_exists, bool comment_exists);
 
-  public record YtCollectList(YtCollector Col, IPipeCtx PipeCtx) {
+  public record YtCollectList(YtCollector Col, IPipeCtx PipeCtx, AppCfg Cfg) {
     /// <summary>Collect extra & parts from an imported list of channels and or videos. Use instead of update to process
     ///   arbitrary lists and ad-hoc fixes</summary>
     public async Task Run(CollectListOptions opts, ILogger log, CancellationToken cancel = default) {
@@ -66,13 +68,13 @@ namespace YtReader.Yt {
       // sometimes updates fail. When re-running this, we should refresh channels that are missing videos or have a portion of captions not attempted
       // NOTE: core warehouse table must be updated (not just staging tables) to take into account previously successful loads.
       var vidChanSelect = VideoChannelSelect(opts);
-      var videosProcessed = Array.Empty<YtCollector.VideoProcessResult>();
+      var videosProcessed = Array.Empty<VideoProcessResult>();
       if (parts.ShouldRun(LVideo)) {
         IReadOnlyCollection<VideoListStats> videos;
         using (var db = await Col.Db(log)) // videos sans extra update
           videos = await VideoStats(db, vidChanSelect, opts.LimitChannels);
         videosProcessed = await videos
-          .Process(PipeCtx, b => Col.ProcessVideos(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
+          .Process(PipeCtx, b => ProcessVideos(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
           .Then(r => r.Select(p => p.OutState).SelectMany().ToArray());
       }
 
@@ -103,6 +105,33 @@ namespace YtReader.Yt {
       }
       log.Information("YtCollect - ProcessVideos complete - {Videos} videos and {Channels} channels processed",
         videosProcessed.Length, channelIds.Count);
+    }
+    
+    
+    public record VideoProcessResult(string VideoId, string ChannelId);
+
+    [Pipe]
+    public async Task<VideoProcessResult[]> ProcessVideos(IReadOnlyCollection<VideoListStats> videos, ExtraPart[] parts, ILogger log,
+      CancellationToken cancel) {
+      log ??= Logger.None;
+      const int batchSize = 1000;
+      var plans = new VideoExtraPlans();
+      if (parts.ShouldRun(EExtra))
+        plans.SetPart(videos.Select(v => v.video_id), EExtra);
+      if (parts.ShouldRun(ECaption))
+        plans.SetPart(videos.Where(v => v.channel_id != null && !v.caption_exists && v.video_id != null).Select(v => v.video_id), ECaption);
+      if (parts.ShouldRun(EComment))
+        plans.SetPart(videos.Where(v => !v.comment_exists).Select(v => v.video_id), EComment);
+
+      var planBatches = plans.Batch(batchSize).ToArray();
+      var extra = await planBatches
+        .BlockTrans(async (planBatch, i) => {
+          var (e, _, _, _) = await Col.SaveExtraAndParts(c: null, parts, log, new(planBatch));
+          log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + e.Length, planBatches.Length);
+          return e;
+        }, Cfg.Collect.ParallelChannels, cancel: cancel)
+        .SelectManyList();
+      return extra.Select(e => new VideoProcessResult(e.VideoId, e.ChannelId)).ToArray();
     }
 
     static (string Sql, JObject Args) VideoChannelSelect(CollectListOptions opts) {

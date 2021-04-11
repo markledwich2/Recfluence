@@ -47,35 +47,6 @@ namespace YtReader.Yt {
 
     YtCollectCfg RCfg => Cfg.Collect;
 
-    #region FromPathOrView
-
-    public record VideoProcessResult(string VideoId, string ChannelId);
-
-    [Pipe]
-    public async Task<VideoProcessResult[]> ProcessVideos(IReadOnlyCollection<VideoListStats> videos, ExtraPart[] parts, ILogger log,
-      CancellationToken cancel) {
-      log ??= Logger.None;
-      const int batchSize = 1000;
-      var plans = new VideoExtraPlans();
-      if (parts.ShouldRun(EExtra))
-        plans.SetPart(videos.Select(v => v.video_id), EExtra);
-      if (parts.ShouldRun(ECaption))
-        plans.SetPart(videos.Where(v => v.channel_id != null && !v.caption_exists && v.video_id != null).Select(v => v.video_id), ECaption);
-      if (parts.ShouldRun(EComment))
-        plans.SetPart(videos.Where(v => !v.comment_exists).Select(v => v.video_id), EComment);
-
-      var extra = await plans.Batch(batchSize)
-        .BlockTrans(async (p, i) => {
-          var (e, _, _, _) = await SaveExtraAndParts(c: null, parts, log, new(p));
-          log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + e.Length, p.Count);
-          return e;
-        }, Cfg.Collect.ParallelChannels, cancel: cancel)
-        .SelectManyList();
-      return extra.Select(e => new VideoProcessResult(e.VideoId, e.ChannelId)).ToArray();
-    }
-
-    #endregion
-
     [Pipe]
     public async Task Collect(ILogger log, CollectOptions options, CancellationToken cancel = default) {
       options ??= new();
@@ -137,7 +108,8 @@ namespace YtReader.Yt {
         log.Debug("Collect - scraped {Users} users. Batch {Batch}/{Total}", userChannels.Count, i, batchTotal);
         await DbStore.Users.Append(userChannels);
         return userChannels.Count;
-      }, cancel: cancel).SumAsync();
+      }, RCfg.ParallelChannels, cancel: cancel) // mimic parallel settings from channel processing e.g. x4 outer, x6 inner
+        .SumAsync();
       log.Information("Collect - completed scraping user channels {Success}/{Total} in {Duration}",
         total, channelIds.Count, start.Elapsed.HumanizeShort());
       return total;
@@ -455,7 +427,7 @@ namespace YtReader.Yt {
     }
 
     /// <summary>Saves recs for all of the given vids</summary>
-    async Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(Channel c, ExtraPart[] parts,
+    public async Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(Channel c, ExtraPart[] parts,
       ILogger log, VideoExtraPlans planedExtras) {
       var extrasAndParts = await GetExtras(planedExtras, log, c?.ChannelId, c?.ChannelTitle).NotNull().ToListAsync();
       foreach (var e in extrasAndParts) {

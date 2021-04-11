@@ -167,7 +167,7 @@ namespace YtReader {
     public int MaxChannelFullVideos  { get; set; } = 40_000;
 
     public int  UserBatchSize           { get; set; } = 1000;
-    public int? MaxMissingUsers         { get; set; } = 1_000_000;
+    public int? MaxMissingUsers         { get; set; } = 5_000_000;
     public int? MaxExtraErrorsInChannel { get; set; } = 10;
   }
 
