@@ -58,7 +58,7 @@
       },
       {
         "pipeName": "CollectUserChannels",
-        "maxParallel": 8,
+        "maxParallel": 12,
         "minWorkItems": 2000
       },
       {
