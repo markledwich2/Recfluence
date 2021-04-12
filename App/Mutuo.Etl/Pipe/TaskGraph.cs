@@ -184,6 +184,7 @@ namespace Mutuo.Etl.Pipe {
       }
 
       var producer = Producer();
+      if (producer.IsFaulted) await producer;
 
       var taskResults = new List<GraphTaskResult>();
       while (await block.OutputAvailableAsync()) {

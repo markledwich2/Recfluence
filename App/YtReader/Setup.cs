@@ -294,7 +294,7 @@ namespace YtReader {
       b.RegisterType<RumbleWeb>();
       b.RegisterType<RumbleCollect>();
       b.RegisterType<Pushshift>();
-      b.RegisterType<CovidNarrative>();
+      b.RegisterType<Narrative.Narrative>();
       b.RegisterType<DataScripts>();
       b.RegisterType<YtCollectList>();
       b.RegisterType<FlurlProxyClient>();

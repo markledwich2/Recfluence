@@ -32,7 +32,7 @@ namespace Mutuo.Etl.Pipe {
       DepsByTo.Add(to, from);
     }
 
-    public IEnumerable<T> Dependencies(T node) => DepsByFrom.TryGet(GetKey(node)).Select(to => _nodes[to]);
+    public IEnumerable<T> Dependencies(T node) => DepsByFrom.TryGet(GetKey(node)).Select(to => _nodes[to]).NotNull();
 
     public IEnumerable<T> DependenciesDeep(T node) {
       var discoveredDeps = new KeyedCollection<string, T>(_getKey);

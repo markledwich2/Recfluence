@@ -102,22 +102,6 @@ namespace YtCli {
     }
   }
 
-  [Command("results", Description = "Query snowflake to create result data in blob storage for use by other apps and recfluence.net")]
-  public class ResultsCmd : ICommand {
-    readonly YtResults Results;
-    readonly ILogger   Log;
-
-    [CommandOption('q', Description = "| delimited list of query names to run. All if empty")]
-    public string QueryNames { get; set; }
-
-    public ResultsCmd(YtResults results, ILogger log) {
-      Results = results;
-      Log = log;
-    }
-
-    public async ValueTask ExecuteAsync(IConsole console) => await Results.SaveBlobResults(Log, QueryNames?.Split("|").ToArray());
-  }
-
   [Command("stage", Description = "creates/updates the staging data in snowflake from blob storage")]
   public class StageCmd : ICommand {
     readonly Stage   Stage;
@@ -312,7 +296,7 @@ namespace YtCli {
       parts?.UnJoin('|').Where(p => p.TryParseEnum<T>(out _)).Select(p => p.ParseEnum<T>()).ToArray();
   }
 
-  [Command("collect-list")]
+  [Command("collect-list", Description = "Refresh video/channel information for a given list")]
   public record CollectList(YtCollectList Col, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
     [CommandParameter(0, Description = "The type of list to run (i.e. channel-path, video-path, view, named)")]
@@ -361,7 +345,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     }
   }
 
-  [Command("build-container")]
+  [Command("build-container", Description = "build the recfluence docker container")]
   public class BuildContainerCmd : ICommand {
     readonly SemVersion   Version;
     readonly ContainerCfg Cfg;
@@ -425,7 +409,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     }
   }
 
-  [Command("parler")]
+  [Command("parler", Description = "load data from leaked parler posts")]
   public record ParlerCmd(ILogger Log, Parler Parler, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
     [CommandOption('f')] public string Folder { get; set; }
@@ -438,7 +422,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     }
   }
 
-  [Command("pushshift")]
+  [Command("pushshift", Description = "Loads data from pushshift. A fee elastic search database for reddit")]
   public record PushshiftCmd(ILogger Log, Pushshift Push) : ICommand {
     public async ValueTask ExecuteAsync(IConsole console) {
       await Push.Process(Log);
@@ -446,10 +430,13 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     }
   }
 
-  [Command("covid-narrative")]
-  public record CovidNarrativeCmd(ILogger Log, CovidNarrative Covid) : ICommand {
+  [Command("narrative", Description = "Merge rows matching a filter into an airtable sheet for manual labeling")]
+  public record NarrativeCmd(ILogger Log, Narrative Covid) : ICommand {
+    
+    [CommandOption('t')] public string Airtable { get; set; }
+    
     public async ValueTask ExecuteAsync(IConsole console) {
-      await Covid.MargeIntoAirtable(Log);
+      await Covid.MargeIntoAirtable(new(Airtable), Log);
       Log.Information("CovidNarrativeCmd - complete");
     }
   }

@@ -15,17 +15,21 @@ using YtReader.Store;
 
 namespace YtReader.Narrative {
   public record AirtableCfg(string ApiKey = null, string BaseId = "appwfe3XfYqxn7v7I");
-  public record NarrativesCfg(string CovidAirtable = "Covid");
+  public record NarrativesCfg();
   public record VideoIdRow(string videoId);
 
-  public record CovidNarrative(NarrativesCfg Cfg, AirtableCfg AirCfg, SnowflakeConnectionProvider Sf) {
-    public async Task MargeIntoAirtable(ILogger log) {
+  public record NarrativeOpts(string Airtable);
+  
+  public record Narrative(NarrativesCfg Cfg, AirtableCfg AirCfg, SnowflakeConnectionProvider Sf) {
+    public async Task MargeIntoAirtable(NarrativeOpts opts, ILogger log) {
       using var airTable = new AirtableBase(AirCfg.ApiKey, AirCfg.BaseId);
-      var airRows = await airTable.Rows<VideoIdRow>(Cfg.CovidAirtable, new[] {"videoId"}).ToListAsync()
+      
+      
+      var airRows = await airTable.Rows<VideoIdRow>(opts.Airtable, new[] {"videoId"}).ToListAsync()
         .Then(rows => rows.ToKeyedCollection(r => r.Fields.videoId));
       using var db = await Sf.Open(log);
       var batchSize = 10;
-      await db.ReadAsJson("covid narrative", @"
+      await db.ReadAsJson("narrative videos", @"
 select n.video_id
      , n.video_title
      , n.channel_id
@@ -47,14 +51,14 @@ limit 1000")
           var (update, create) = rows.Select(r => r.ToAirFields()).Split(r => airRows.ContainsKey(r.Value<string>("videoId")));
 
           if (create.Any()) {
-            var res = await airTable.CreateMultipleRecords(Cfg.CovidAirtable, create.ToArray());
+            var res = await airTable.CreateMultipleRecords(opts.Airtable, create.ToArray());
             res.EnsureSuccess();
             log.Information("CovidNarrative - created airtable records {Rows}, batch {Batch}", update.Count, i+1);
           }
 
           if (update.Any()) {
             var updateFields = update.Select(u => new IdFields(airRows[u.Value<string>("videoId")].Id) {FieldsCollection = u.FieldsCollection}).ToArray();
-            var res = await airTable.UpdateMultipleRecords(Cfg.CovidAirtable, updateFields);
+            var res = await airTable.UpdateMultipleRecords(opts.Airtable, updateFields);
             res.EnsureSuccess();
             /*await update.BlockAction(async u => {
               var airRow = airRows[u.Value<string>("videoId")];
