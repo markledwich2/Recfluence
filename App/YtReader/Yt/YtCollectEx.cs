@@ -51,10 +51,10 @@ namespace YtReader.Yt {
   }
 
   public enum UpdateChannelType {
-    /// <summary>Don't update the channel details. Has no impact the collection of videos/recs/caption.</summary>
-    None,
     /// <summary>A standard & cheap update to the channel details</summary>
     Standard,
+    /// <summary>Don't update the channel details. Has no impact the collection of videos/recs/caption.</summary>
+    StandardNoChannel,
     /// <summary>Update the subscribers and other more costly information about a channel</summary>
     Full,
     /// <summary>Update a un-classified channels information useful for predicting political/non and tags</summary>

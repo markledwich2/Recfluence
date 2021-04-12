@@ -29,10 +29,8 @@ namespace YtReader {
 
   public enum StandardCollectPart {
     ExistingChannel,
-    [CollectPart(Explicit = true)] 
-    Discover,
-    [CollectPart(Explicit = true)] 
-    DiscoverFromVideo,
+    [CollectPart(Explicit = true)] Discover,
+    [CollectPart(Explicit = true)] DiscoverFromVideo,
     Video
   }
 
@@ -117,21 +115,20 @@ namespace YtReader {
       WithUp("explicit",
         ctx.ExplicitChannels.NotNull().Select(c => ctx.Web.NewChan(c) with {DiscoverSource = new(Manual, c)}).ToArray());
 
-      if (parts.ShouldRunAny(Discover, DiscoverFromVideo) && ctx.ExplicitChannels?.Any() != true) {
-        var discovered = await db.DiscoverChannelsAndVideos(platform);
+      if (!parts.ShouldRunAny(Discover, DiscoverFromVideo) || ctx.ExplicitChannels?.Any() == true) return ctx;
+      var discovered = await db.DiscoverChannelsAndVideos(platform);
 
-        if (parts.ShouldRun(Discover))
-          WithUp("discovered", discovered.Where(d => d.LinkType == LinkType.Channel)
-            .Select(selector: l => ctx.Web.NewChan(l.LinkId) with {DiscoverSource = l.ToDiscoverSource()}).ToArray());
+      if (parts.ShouldRun(Discover))
+        WithUp("discovered", discovered.Where(d => d.LinkType == LinkType.Channel)
+          .Select(selector: l => ctx.Web.NewChan(l.LinkId) with {DiscoverSource = l.ToDiscoverSource()}).ToArray());
 
-        if (parts.ShouldRun(DiscoverFromVideo)) {
-          ctx = ctx with {
-            VideosToCrawl = discovered.Where(d => d.LinkType == LinkType.Video)
-              .Select(l => new DiscoverSource(VideoLink, l.LinkId, l.FromPlatform)).ToArray()
-          };
-          ctx.Log.Information("Collect {Platform} - planned {Videos} videos for crawl", platform, ctx.VideosToCrawl.Count);
-        }
-      }
+      if (!parts.ShouldRun(DiscoverFromVideo)) return ctx;
+
+      ctx = ctx with {
+        VideosToCrawl = discovered.Where(d => d.LinkType == LinkType.Video)
+          .Select(l => new DiscoverSource(VideoLink, l.LinkId, l.FromPlatform)).ToArray()
+      };
+      ctx.Log.Information("Collect {Platform} - planned {Videos} videos for crawl", platform, ctx.VideosToCrawl.Count);
       return ctx;
     }
 
@@ -182,7 +179,7 @@ namespace YtReader {
 
 
         if (ctx.Parts.ShouldRun(StandardCollectPart.Video) && getVideos != null
-                                                           && chan.ForUpdate()) // check in case we discovered a channel but it doesn't have enough subs
+          && chan.ForUpdate()) // check in case we discovered a channel but it doesn't have enough subs
         {
           var (videos, vEx) = await getVideos.SelectManyList().Try();
           if (vEx != null) {

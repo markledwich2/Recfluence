@@ -91,24 +91,24 @@ namespace YtReader.Yt {
       var batchTotal = channelIds.Count / RCfg.UserBatchSize;
       var start = Stopwatch.StartNew();
       var total = await channelIds.Batch(RCfg.ChannelBatchSize).BlockTrans(async (ids, i) => {
-        var userChannels = await ids.BlockTrans(async c => {
-            var u = await Scraper.Channel(log, c).Swallow(ex => log.Warning(ex, "error loading channel {Channel}", c));
-            if (u == null) return null;
-            var subs = await u.Subscriptions().SelectManyList().Swallow(ex => log.Warning(ex, "error loading subscriptions for user {User}", u.Id));
-            return new User {
-              UserId = u.Id,
-              Platform = Platform.YouTube,
-              Name = u.Title,
-              ProfileUrl = u.LogoUrl,
-              Updated = DateTime.UtcNow,
-              Subscriptions = subs
-            };
-          }, RCfg.WebParallel, cancel: cancel)
-          .NotNull().ToListAsync();
-        log.Debug("Collect - scraped {Users} users. Batch {Batch}/{Total}", userChannels.Count, i, batchTotal);
-        await DbStore.Users.Append(userChannels);
-        return userChannels.Count;
-      }, RCfg.ParallelChannels, cancel: cancel) // mimic parallel settings from channel processing e.g. x4 outer, x6 inner
+          var userChannels = await ids.BlockTrans(async c => {
+              var u = await Scraper.Channel(log, c).Swallow(ex => log.Warning(ex, "error loading channel {Channel}", c));
+              if (u == null) return null;
+              var subs = await u.Subscriptions().SelectManyList().Swallow(ex => log.Warning(ex, "error loading subscriptions for user {User}", u.Id));
+              return new User {
+                UserId = u.Id,
+                Platform = Platform.YouTube,
+                Name = u.Title,
+                ProfileUrl = u.LogoUrl,
+                Updated = DateTime.UtcNow,
+                Subscriptions = subs
+              };
+            }, RCfg.WebParallel, cancel: cancel)
+            .NotNull().ToListAsync();
+          log.Debug("Collect - scraped {Users} users. Batch {Batch}/{Total}", userChannels.Count, i, batchTotal);
+          await DbStore.Users.Append(userChannels);
+          return userChannels.Count;
+        }, RCfg.ParallelChannels, cancel: cancel) // mimic parallel settings from channel processing e.g. x4 outer, x6 inner
         .SumAsync();
       log.Information("Collect - completed scraping user channels {Success}/{Total} in {Duration}",
         total, channelIds.Count, start.Elapsed.HumanizeShort());
@@ -118,8 +118,7 @@ namespace YtReader.Yt {
     /// <summary>Update channel data from the YouTube API and determine what type of update should be performed on each channel</summary>
     /// <returns></returns>
     public async Task<IReadOnlyCollection<ChannelUpdatePlan>> PlanAndUpdateChannelStats(CollectPart[] parts, IReadOnlyCollection<string> limitChannels,
-      ILogger log,
-      CancellationToken cancel) {
+      ILogger log, CancellationToken cancel) {
       var store = DbStore.Channels;
       var explicitChannels = limitChannels.HasItems() ? limitChannels.ToHashSet() : Cfg.LimitedToSeedChannels?.ToHashSet() ?? new HashSet<string>();
       log.Information("Collect - Starting channels update. Limited to ({Included}). Parts ({Parts})",
@@ -148,11 +147,13 @@ namespace YtReader.Yt {
         .Select(c => c.Channel.ChannelId).ToHashSet();
 
       var channels = existingChannels
-        .Select(c => {
-          var full = fullUpdate.Contains(c.Channel.ChannelId);
-          return c with {
-            Update = full ? Full : Standard,
-            VideosFrom = full ? null : c.VideosFrom // don't limit from date when on a full update
+        .Select(plan => {
+          var c = plan.Channel;
+          var full = fullUpdate.Contains(c.ChannelId);
+          var chanDetail = ExpiredOrInTodaysCycle(c.ChannelId, c.Updated, cycleDays: 7);
+          return plan with {
+            Update = full ? Full : chanDetail ? Standard : StandardNoChannel,
+            VideosFrom = full ? null : plan.VideosFrom // don't limit from date when on a full update
           };
         })
         .Concat(explicitMissing)
@@ -161,7 +162,7 @@ namespace YtReader.Yt {
       if (!parts.ShouldRun(PChannel)) return channels;
 
       var (updatedChannels, duration) = await channels
-        .Where(c => c.Update != None && c.Channel.Updated.Age() > RCfg.RefreshChannelDetailDebounce)
+        .Where(c => c.Update != StandardNoChannel)
         .BlockFunc(async c => await UpdateChannelDetail(c, log), Cfg.DefaultParallel, cancel: cancel)
         .WithDuration();
       if (cancel.IsCancellationRequested) return updatedChannels;
@@ -182,6 +183,7 @@ namespace YtReader.Yt {
       var channel = plan.Channel;
       var channelLog = log.ForContext("Channel", channel.ChannelId).ForContext("ChannelId", channel.ChannelId);
       var full = plan.Update == Full;
+
       var c = channel.JsonClone();
       try {
         c.Platform = Platform.YouTube;
@@ -330,8 +332,8 @@ namespace YtReader.Yt {
 
           var suspectMissingFresh = plans
             .Where(v => v.ForUpdate?.UploadDate > oldestUpdate // newer than our oldest update
-                        && !videoItemsKey.ContainsKey(v.VideoId) // missing from this run
-                        && v.ForUpdate?.ExtraUpdated.OlderThanOrNull(7.Days()) == true) // haven't tried updating extra for more than 7d
+              && !videoItemsKey.ContainsKey(v.VideoId) // missing from this run
+              && v.ForUpdate?.ExtraUpdated.OlderThanOrNull(7.Days()) == true) // haven't tried updating extra for more than 7d
             .Select(v => v.VideoId).ToArray();
           log.Debug("Collect {Channel} - Video-extra for {Videos} video's because they look  missing", c.ChannelTitle, suspectMissingFresh.Length);
           plans.SetPart(suspectMissingFresh, EExtra);
@@ -362,14 +364,9 @@ namespace YtReader.Yt {
 
     /// <summary>Returns a list of videos that should have recommendations updated.</summary>
     IEnumerable<string> VideoToUpdateRecs(ChannelUpdatePlan plan, List<YtVideoItem> vids) {
-      static bool ChannelInTodaysRecsUpdate(ChannelUpdatePlan plan, int cycleDays) =>
-        plan.LastRecUpdate == null ||
-        DateTime.UtcNow - plan.LastRecUpdate > 8.Days() ||
-        plan.Channel.ChannelId.GetHashCode().Abs() % cycleDays == (DateTime.Today - DateTime.UnixEpoch).TotalDays.RoundToInt() % cycleDays;
-
       var c = plan.Channel;
       var vidsDesc = vids.OrderByDescending(v => v.UploadDate).ToList();
-      var inThisWeeksRecUpdate = ChannelInTodaysRecsUpdate(plan, cycleDays: 7);
+      var inThisWeeksRecUpdate = ExpiredOrInTodaysCycle(plan.Channel.ChannelId, plan.LastRecUpdate, cycleDays: 7);
       var toUpdate = new List<YtVideoItem>();
       if (plan.LastRecUpdate == null) {
         Log.Debug("Collect - {Channel} - first rec update, collecting max", c.ChannelTitle);
@@ -390,6 +387,12 @@ namespace YtReader.Yt {
 
       return toUpdate.Select(v => v.Id);
     }
+
+    /// <summary>true if: a) the lst update is older than max age b) the hash in on a cycle day. E.g. to update once per week
+    ///   use cycleDays = 7, and it will hash channels to days</summary>
+    static bool ExpiredOrInTodaysCycle(string hashOn, DateTime? lastUpdate, int cycleDays, TimeSpan? maxAge = null) =>
+      lastUpdate.OlderThanOrNull(maxAge ?? cycleDays.Days() + 1.Days()) ||
+      hashOn.GetHashCode().Abs() % cycleDays == (DateTime.Today - DateTime.UnixEpoch).TotalDays.RoundToInt() % cycleDays;
 
     static async Task SaveVids(Channel c, IReadOnlyCollection<YtVideoItem> vids, JsonlStore<Video> vidStore, ILogger log) {
       var vidsStored = ToVidsStored(c, vids);
