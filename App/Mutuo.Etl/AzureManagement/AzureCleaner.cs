@@ -44,7 +44,7 @@ namespace Mutuo.Etl.AzureManagement {
       var az = Az.Value;
       await DelContainerImages(log);
       await DelContainerGroups(az, mode, log);
-      // no need to do this for blobs. They sypport setting policies for expiry. 
+      // no need to do this for blobs. They support setting policies for expiry. 
     }
 
     async Task DelContainerImages(ILogger log) {

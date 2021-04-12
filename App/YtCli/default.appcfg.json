@@ -1,4 +1,5 @@
 ﻿{
+  "$schema": "https://raw.githubusercontent.com/markledwich2/Recfluence/master/App/YtReader/AppCfg.schema.json",
   "seq": {
     "seqUrl": "http://seq.recfluence.net",
     "containerGroupName": "seq"
@@ -58,6 +59,10 @@
       },
       {
         "pipeName": "CollectUserChannels",
+        "container": {
+          "cores": 1,
+          "mem": 1
+        },
         "maxParallel": 12,
         "minWorkItems": 2000
       },
