@@ -25,6 +25,15 @@ from chans c
        join video_latest v on v.channel_id=c.channel_id
   qualify row_number() over (partition by c.channel_id order by random())<:chan_per_vid
 "
+      },
+      {
+        "fashion", @"
+  select channel_id
+  from channel_latest c
+  where array_contains('Fashion'::variant, topics)
+    and not exists(select * from video_latest v where v.channel_id=c.channel_id)
+    and subs > :min_subs
+"
       }
     };
   }

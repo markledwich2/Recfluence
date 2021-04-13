@@ -148,7 +148,10 @@ namespace YtReader.Yt {
     }
 
     static Task<IReadOnlyCollection<string>> ChannelIds(YtCollectDbCtx db, (string Sql, JObject Args) select, string[] channels = null) =>
-      db.Db.Query<string>("distinct channels", $@"select distinct channel_id from ({select.Sql}) where channel_id is not null", select.Args);
+      db.Db.Query<string>("distinct channels", $@"select distinct channel_id from ({select.Sql}) 
+where channel_id is not null
+{(channels.None() ? "" : $"and channel_id in ({SqlList(channels)})")}
+", ToDapperArgs(select.Args));
 
     /// <summary>Find videos fromt he given select that are missing one of the required parts</summary>
     static Task<IReadOnlyCollection<VideoListStats>> VideoStats(YtCollectDbCtx db, (string Sql, dynamic Args) select,
