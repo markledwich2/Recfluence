@@ -32,13 +32,14 @@ using SysExtensions.IO;
 using SysExtensions.Reflection;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using YtReader.Amazon;
 using YtReader.BitChute;
 using YtReader.Db;
-using YtReader.Narrative;
 using YtReader.Reddit;
 using YtReader.Rumble;
 using YtReader.Search;
 using YtReader.Store;
+using YtReader.Web;
 using YtReader.Yt;
 using static Serilog.Events.LogEventLevel;
 
@@ -298,6 +299,7 @@ namespace YtReader {
       b.RegisterType<DataScripts>();
       b.RegisterType<YtCollectList>();
       b.RegisterType<FlurlProxyClient>();
+      b.RegisterType<AmazonWeb>();
 
       b.Register(_ => pipeAppCtx);
       b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();

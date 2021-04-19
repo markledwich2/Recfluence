@@ -2,10 +2,14 @@
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
+using Flurl;
 using Humanizer;
+using Mutuo.Etl.Blob;
+using Serilog;
 using SysExtensions.Text;
 
-namespace YtReader {
+namespace YtReader.Web {
   public static class WebEx {
     public static string LastInPath(this string path) => path?.Split('/').LastOrDefault(t => !t.NullOrEmpty());
 
@@ -25,5 +29,13 @@ namespace YtReader {
       }) {
         Timeout = timeout ?? 30.Seconds()
       };
+
+    public static async Task LogParseError(this ISimpleFileStore logStore, string msg, Exception ex, Url url, string content, ILogger log) {
+      var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), url.Path);
+      var logUrl = logStore.Url(path);
+      await logStore.Save(path, content.AsStream(), log);
+      log.Warning(ex, "Saved content that we could not parse '{Msg}' ({Url}). error: {Error}",
+        msg, logUrl, ex?.ToString());
+    }
   }
 }

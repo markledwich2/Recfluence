@@ -20,6 +20,7 @@ using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Text;
 using YtReader.Store;
+using YtReader.Web;
 using static System.StringComparison;
 using static System.Text.RegularExpressions.RegexOptions;
 using static SysExtensions.Reflection.ReflectionExtensions;
@@ -32,8 +33,8 @@ namespace YtReader.BitChute {
   public record BcWeb(FlurlProxyClient FlurlClient, BitChuteCfg Cfg, ProxyCfg ProxyCfg) : IScraper {
     static readonly string         Url      = "https://www.bitchute.com";
     static readonly IConfiguration AngleCfg = Configuration.Default.WithDefaultLoader().WithDefaultCookies();
-    public Platform Platform        => Platform.BitChute;
-    public int      CollectParallel => Cfg.CollectParallel;
+    public          Platform       Platform        => Platform.BitChute;
+    public          int            CollectParallel => Cfg.CollectParallel;
 
     static string FullId(string sourceId) => Platform.BitChute.FullId(sourceId);
     public string SourceToFullId(string sourceId, LinkType type) => FullId(sourceId);
@@ -48,8 +49,8 @@ namespace YtReader.BitChute {
 
       Task<T> Post<T>(string path, object data = null) {
         var req = Url.AppendPathSegment(path).WithBcHeaders(chanDoc, csrf);
-        return FlurlClient.Send(typeof(T).Name, req, HttpMethod.Post, 
-          req.FormUrlContent(MergeDynamics(new {csrfmiddlewaretoken = csrf}, data ?? new ExpandoObject())), log:log).ReceiveJson<T>();
+        return FlurlClient.Send(typeof(T).Name, req, HttpMethod.Post,
+          req.FormUrlContent(MergeDynamics(new {csrfmiddlewaretoken = csrf}, data ?? new ExpandoObject())), log: log).ReceiveJson<T>();
       }
 
       var chan = ParseChannel(chanDoc, sourceId);
@@ -69,7 +70,7 @@ namespace YtReader.BitChute {
         while (true) {
           var (html, success) = await Post<ExtendResponse>($"channel/{chan.SourceId}/extend/", new {offset});
           if (!success) break;
-          var extendDoc = await GetBrowser().OpenAsync(req => req.Content(html));
+          var extendDoc = await AngleCfg.Browser(FlurlClient).OpenAsync(req => req.Content(html));
           var videos = GetChanVids(extendDoc, chan, log);
           if (videos.Length <= 0) break;
           offset += videos.Length;
@@ -91,7 +92,7 @@ namespace YtReader.BitChute {
         return vid with {Status = VideoStatus.NotFound};
       doc.EnsureSuccess();
 
-      var chanA = doc.Qs<IHtmlAnchorElement>(".channel-banner .details .name > a.spa");
+      var chanA = doc.El<IHtmlAnchorElement>(".channel-banner .details .name > a.spa");
       var dateMatch = doc.QuerySelector(".video-publish-date")?.TextContent?.Match(RDate);
       string G(string group) => dateMatch?.Groups[group].Value;
       var dateString = $"{G("year")}-{G("month")}-{G("day")} {G("time")}";
@@ -111,7 +112,7 @@ namespace YtReader.BitChute {
           error = title;
           status = VideoStatus.Restricted;
         }
-        else if (videoPs.Length.Between(1, 3)) {
+        else if (videoPs.Length.Between(@from: 1, to: 3)) {
           // blocked example https://www.bitchute.com/video/memlIDAzcSQq/
           error = videoPs.First().TextContent;
           status = error?.Contains("blocked") == true ? VideoStatus.Removed : null;
@@ -120,11 +121,11 @@ namespace YtReader.BitChute {
 
       vid = vid with {
         Title = title ?? doc.Title,
-        Thumb = doc.Qs<IHtmlMetaElement>("meta[name=\"twitter:image:src\"]")?.Content,
+        Thumb = doc.El<IHtmlMetaElement>("meta[name=\"twitter:image:src\"]")?.Content,
         Statistics = new(
-          viewCount: GetStat("#video-view-count"),
-          likeCount: GetStat("#video-like-count"),
-          dislikeCount: GetStat("#video-dislike-count")
+          GetStat("#video-view-count"),
+          GetStat("#video-like-count"),
+          GetStat("#video-dislike-count")
         ),
         ChannelTitle = chanA?.TextContent,
         ChannelId = FullId(chanA?.Href?.LastInPath()),
@@ -138,22 +139,14 @@ namespace YtReader.BitChute {
       return vid;
     }
 
-    IBrowsingContext GetBrowser() => BrowsingContext.New(FlurlClient.UseProxy && ProxyCfg.Proxies.Any()
-      ? AngleCfg.WithRequesters(new() {
-        Proxy = ProxyCfg.Proxies.First().CreateWebProxy(),
-        PreAuthenticate = true,
-        UseDefaultCredentials = false
-      })
-      : AngleCfg);
-
     /// <summary>Executes the given function with retries and proxy fallback. Returns document in non-transient error states</summary>
     async Task<IDocument> Open(string desc, Url url, Func<IBrowsingContext, Url, Task<IDocument>> getDoc, ILogger log) {
-      var browser = GetBrowser();
+      var browser = AngleCfg.Browser(FlurlClient);
       var retryTransient = Policy.HandleResult<IDocument>(d => {
         if (!d.StatusCode.IsTransientError()) return false;
         log.Debug($"BcWeb angle transient error '{(int) d.StatusCode}'");
         return true;
-      }).RetryWithBackoff("BcWeb angle open", 5, log:log);
+      }).RetryWithBackoff("BcWeb angle open", retryCount: 5, log: log);
 
       var (doc, ex) = await Fun(() => retryTransient.ExecuteAsync(() => getDoc(browser, url))).Try();
       if (doc?.StatusCode.IsTransientError() == false) return doc; // if there was a non-transient error, return the doc in that state
@@ -166,8 +159,8 @@ namespace YtReader.BitChute {
     Channel ParseChannel(IDocument doc, string idOrName) {
       IElement Qs(string s) => doc.Body.QuerySelector(s);
 
-      var profileA = doc.Qs<IHtmlAnchorElement>(".channel-banner .details .name > a");
-      var id = doc.Qs<IHtmlLinkElement>("link#canonical")?.Href.AsUri().LocalPath.LastInPath() ?? idOrName;
+      var profileA = doc.El<IHtmlAnchorElement>(".channel-banner .details .name > a");
+      var id = doc.El<IHtmlLinkElement>("link#canonical")?.Href.AsUri().LocalPath.LastInPath() ?? idOrName;
       var title = doc.QuerySelector(".page-title")?.TextContent;
       var status = title?.ToLowerInvariant() == "blocked content" ? ChannelStatus.Blocked : ChannelStatus.Alive;
       var chan = this.NewChan(id) with {
@@ -177,7 +170,7 @@ namespace YtReader.BitChute {
         ProfileId = profileA?.Href.LastInPath(),
         ProfileName = profileA?.TextContent,
         Created = Qs(".channel-about-details > p:first-child")?.TextContent.ParseCreated(),
-        LogoUrl = doc.Qs<IHtmlImageElement>("img[alt=\"Channel Image\"]")?.Dataset["src"],
+        LogoUrl = doc.El<IHtmlImageElement>("img[alt=\"Channel Image\"]")?.Dataset["src"],
         Status = status,
         StatusMessage = status == ChannelStatus.Blocked ? doc.QuerySelector("#main-content #page-detail p")?.TextContent : null,
         Updated = DateTime.UtcNow
@@ -195,7 +188,7 @@ namespace YtReader.BitChute {
     static Video ParseChanVid(IElement c) {
       IElement Qs(string s) => c.QuerySelector(s);
 
-      var videoA = c.Qs<IHtmlAnchorElement>(".channel-videos-title .spa");
+      var videoA = c.El<IHtmlAnchorElement>(".channel-videos-title .spa");
       var videoId = videoA?.Href.LastInPath();
       return new() {
         Platform = Platform.BitChute,
@@ -208,7 +201,7 @@ namespace YtReader.BitChute {
         Description = Qs(".channel-videos-text")?.InnerHtml,
         Duration = Qs(".video-duration")?.TextContent.TryParseTimeSpan(),
         Statistics = new(Qs(".video-views")?.TextContent.Trim().TryParseNumberWithUnits()?.RoundToULong()),
-        Thumb = c.Qs<IHtmlImageElement>("img[alt=\"video image\"]")?.Dataset["src"],
+        Thumb = c.El<IHtmlImageElement>("img[alt=\"video image\"]")?.Dataset["src"],
         Updated = DateTime.UtcNow
       };
     }
@@ -239,7 +232,7 @@ namespace YtReader.BitChute {
       cc.SetCookies(domain, doc.Cookie);
       return cc.GetCookies(domain);
     }
-    
+
     public static Cookie GetCookie(this IDocument doc, string name) => doc.GetCookies().FirstOrDefault(c => c.Name == name);
 
     static readonly Regex CreatedRe = new(@"(?<num>\d+)\s(?<unit>day|week|month|year)[s]?", Compiled | IgnoreCase);

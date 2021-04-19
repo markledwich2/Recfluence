@@ -10,9 +10,6 @@ namespace SysExtensions.Threading {
   public static class Def {
     /// <summary>Create a func with type inference</summary>
     public static Func<T> Fun<T>(Func<T> func) => func;
-
-    /// <summary>Run a func on a thing. Easy to way make something fluent</summary>
-    public static TR Do<T, TR>(this T thing, Func<T, TR> fun) => fun(thing);
   }
 
   public static class TaskExtensions {

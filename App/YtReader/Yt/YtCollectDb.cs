@@ -7,10 +7,10 @@ using Humanizer;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Serilog;
+using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
-using SysExtensions.Threading;
 using YtReader.Store;
 
 // ReSharper disable InconsistentNaming
@@ -69,7 +69,7 @@ from channels_raw r
 ");
       return channels.Select(r => new ChannelUpdatePlan {
         Channel = r.j.ToObject<Channel>(IJsonlStore.JCfg),
-        VideosFrom = r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : (DateTime?) null,
+        VideosFrom = r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : null,
         LastVideoUpdate = r.lastVideoUpdate,
         LastCaptionUpdate = r.lastCaptionUpdate,
         LastRecUpdate = r.lastRecUpdate,
@@ -85,7 +85,7 @@ join video_latest v on v.video_id = t.video_id
 where
  platform = 'YouTube'
  and not exists(select * from user where user_id = author_channel_id)
-{ctx.Cfg.MaxMissingUsers?.Do(i => $"limit {i}") ?? ""}
+{ctx.Cfg.MaxMissingUsers.Do(i => $"limit {i}")}
 ");
 
     /// <summary>Videos to help plan which to refresh extra for (we don't actualy refresh every one of these). We detect dead

@@ -24,6 +24,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
+using YtReader.Web;
 using static System.StringComparison;
 using static YtReader.Yt.CommentAction;
 using static YtReader.Yt.YtWebExtensions;
@@ -55,7 +56,7 @@ namespace YtReader.Yt {
     #region Channel
 
     const string YtUrl = "https://www.youtube.com";
-    
+
     record BpBase(BpContext context);
     record BpContext(BpClient client);
     record BpClient(string hl = "en-US", string clientName = "WEB", string clientVersion = "2.20210210.08.00", int utcOffsetMinutes = 0);
@@ -112,7 +113,7 @@ namespace YtReader.Yt {
         }
 
         var ex = new InvalidOperationException("WebScraper - can't find browse endpoint");
-        await LogParseError("error parsing channel page", ex, page.Url, page.Data.ToString(), log);
+        await LogStore.LogParseError("error parsing channel page", ex, page.Url, page.Data.ToString(), log);
         throw ex;
       }
 
@@ -138,7 +139,7 @@ namespace YtReader.Yt {
       var error = page.Data.Tokens("alerts[*].alertRenderer").FirstOrDefault(a => a.Str("type") == "ERROR")?.YtTxt("text");
       var d = page.Data?.Token("microformat.microformatDataRenderer");
       if (d == null && error == null) {
-        await LogParseError("can't find channel data in initialData json", ex: null, page.Url, page.Data?.ToString(), log);
+        await LogStore.LogParseError("can't find channel data in initialData json", ex: null, page.Url, page.Data?.ToString(), log);
         throw new($"Unable to parse channel data from {page.Url}");
       }
       var res = new WebChannel {
@@ -195,7 +196,7 @@ namespace YtReader.Yt {
         var playerError = ytInitPr.SelectToken("playabilityStatus.errorScreen.playerErrorMessageRenderer");
         extra.Error = playerError?.SelectToken("reason.simpleText")?.Value<string>();
         extra.SubError = (playerError?.SelectToken("subreason.simpleText") ??
-                          playerError?.SelectTokens("subreason.runs[*].text").Join(""))
+            playerError?.SelectTokens("subreason.runs[*].text").Join(""))
           ?.Value<string>();
       }
       if (extra.Error == null) {
@@ -315,16 +316,8 @@ namespace YtReader.Yt {
         .FirstOrDefault();
 
       if (jObj == null)
-        await LogParseError($"Unable to parse {clientObjectName} json from watch page", ex: null, url, html.ToHtml(), log);
+        await LogStore.LogParseError($"Unable to parse {clientObjectName} json from watch page", ex: null, url, html.ToHtml(), log);
       return jObj;
-    }
-
-    async Task LogParseError(string msg, Exception ex, Url url, string content, ILogger log) {
-      var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), url.Path);
-      var logUrl = LogStore.Url(path);
-      await LogStore.Save(path, content.AsStream(), log);
-      log.Warning(ex, "WebScraper - saved content that we could not parse '{Msg}' ({Url}). error: {Error}",
-        msg, logUrl, ex?.ToString());
     }
 
     async Task<VideoCaption> GetCaption(string channelId, string videoId, IReadOnlyDictionary<string, string> videoInfoDic, ILogger log) {
@@ -401,7 +394,7 @@ namespace YtReader.Yt {
           _ => throw new NotImplementedException()
         };
         var rootJ = await getRootJ.Swallow(e => log.Warning(e, "YtWeb - couldn't load comments. {Curl}: {Error}", req.FormatCurl(), e.Message)) ??
-                    new JObject();
+          new JObject();
         var comments = action switch {
           AComments => from t in rootJ.Tokens("$..commentThreadRenderer")
             let c = t.SelectToken("comment.commentRenderer")
@@ -491,7 +484,7 @@ namespace YtReader.Yt {
         ChannelTitle = Val<string>("author"),
         Author = Val<string>("author"),
         UploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseExact("yyyy-MM-dd", style: DateTimeStyles.AssumeUniversal).ToUniversalTime() ??
-                     default,
+        default,
         Title = Val<string>("title"),
         Description = Val<string>("shortDescription"),
         Duration = TimeSpan.FromSeconds(Val<double>("lengthSeconds")),
@@ -602,7 +595,7 @@ namespace YtReader.Yt {
     [EnumMember(Value = "action_get_comment_replies")]
     AReplies
   }
-  
+
   public record WebChannel {
     public string                                                           Id            { get; init; }
     public string                                                           Title         { get; init; }

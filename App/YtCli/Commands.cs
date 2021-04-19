@@ -22,11 +22,13 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
+using YtReader.Amazon;
 using YtReader.Narrative;
 using YtReader.Reddit;
 using YtReader.Search;
 using YtReader.Store;
 using YtReader.Yt;
+using static YtCli.UpdateCmd;
 
 namespace YtCli {
   [Command("channel-info", Description = "Show channel information (ID,Name) given a video ID")]
@@ -172,7 +174,7 @@ namespace YtCli {
     readonly BranchEnvCreator Creator;
     readonly ILogger          Log;
 
-    [CommandOption('m', Description = "the mode to copy the database Fresh|Clone|CloneBasic")]
+    [CommandOption('m', Description = "the mode to copy the database Fresh|Clone|CloneDb")]
     public BranchState Mode { get; set; }
 
     [CommandOption('p', Description = "| separated list of staging db paths to copy")]
@@ -335,8 +337,8 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     protected override async ValueTask ExecuteLocal(IConsole console) {
       var opts = new CollectListOptions {
         CollectFrom = (Mode, Value),
-        Parts = UpdateCmd.ParseParts<CollectListPart>(Parts),
-        ExtraParts = UpdateCmd.ParseParts<ExtraPart>(ExtraParts),
+        Parts = ParseParts<CollectListPart>(Parts),
+        ExtraParts = ParseParts<ExtraPart>(ExtraParts),
         LimitChannels = Channels?.UnJoin('|'),
         StaleAgo = StaleHrs?.Hours() ?? 2.Days(),
         Args = JObject.Parse(Args)
@@ -432,12 +434,31 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
 
   [Command("narrative", Description = "Merge rows matching a filter into an airtable sheet for manual labeling")]
   public record NarrativeCmd(ILogger Log, Narrative Covid) : ICommand {
-    
-    [CommandOption('t')] public string Airtable { get; set; }
-    
+    [CommandOption("query", shortName: 'q', Description = "The name of the query to sync with airtable")]
+    public string MentionQuery { get; set; }
+    [CommandOption("parts", shortName: 'p', Description = "| separated airtable to updated (Mention|Channel|Video)")]
+    public string Parts { get; set; }
+    [CommandOption("channel-table", shortName: 'c', Description = "The name of the channel airtable")]
+    public string ChannelTable { get; set; }
+    [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
+    public int? Limit { get; set; }
+    [CommandOption("videos", shortName: 'v', Description = "| separated videos to limit update to")]
+    public string Videos { get; set; }
+
     public async ValueTask ExecuteAsync(IConsole console) {
-      await Covid.MargeIntoAirtable(new(Airtable), Log);
+      await Covid.MargeIntoAirtable(new(MentionQuery, Limit, ParseParts<AirtablePart>(Parts), Videos?.UnJoin('|')), Log);
       Log.Information("CovidNarrativeCmd - complete");
+    }
+  }
+
+  [Command("amazon")]
+  public record AmazonCmd(ILogger Log, AmazonWeb Amazon) : ICommand {
+    [CommandOption("query", shortName: 'q', Description = "The name of the query to sync with airtable")]
+    public string MentionQuery { get; set; }
+
+    public async ValueTask ExecuteAsync(IConsole console) {
+      await Amazon.GetProductLinkInfo(Log);
+      Log.Information("amazon - complete");
     }
   }
 }

@@ -14,6 +14,7 @@ using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
 using YtReader.Store;
+using YtReader.Web;
 using Url = Flurl.Url;
 
 namespace YtReader.Rumble {
@@ -26,7 +27,7 @@ namespace YtReader.Rumble {
       var doc = await bc.OpenAsync(ChannelUrl(sourceId));
       doc.EnsureSuccess();
 
-      var chanUrl = doc.Qs<IHtmlLinkElement>("link[rel=canonical]")?.Href.AsUrl();
+      var chanUrl = doc.El<IHtmlLinkElement>("link[rel=canonical]")?.Href.AsUrl();
       string[] altIds = null;
       if (chanUrl != null) {
         // use the canonical link to fix up ones where have a url that redirects. e.g.c/c-346475 redirects to c/RedpillProject, so we use c/RedpillProject
@@ -41,13 +42,13 @@ namespace YtReader.Rumble {
         SourceIdAlts = altIds,
         ChannelTitle = doc.Title,
         Subs = doc.QuerySelector(".subscribe-button-count")?.TextContent.TryParseNumberWithUnits()?.RoundToULong(),
-        LogoUrl = doc.Qs<IHtmlImageElement>(".listing-header--thumb")?.Source,
+        LogoUrl = doc.El<IHtmlImageElement>(".listing-header--thumb")?.Source,
         Status = ChannelStatus.Alive
       };
 
       async IAsyncEnumerable<Video[]> Videos() {
         Video[] ParseVideos(IDocument d) => d.QuerySelectorAll(".video-listing-entry").Select(e => ParseVideo(e, chan)).ToArray();
-        string NextUrl(IDocument d) => d.Qs<IHtmlLinkElement>("link[rel=next]")?.Href;
+        string NextUrl(IDocument d) => d.El<IHtmlLinkElement>("link[rel=next]")?.Href;
 
         yield return ParseVideos(doc);
         var next = NextUrl(doc);
@@ -83,8 +84,8 @@ namespace YtReader.Rumble {
       string MetaProp(string prop) => MetaProps(prop).FirstOrDefault();
       IEnumerable<string> MetaProps(string prop) => doc.QuerySelectorAll<IHtmlMetaElement>($"meta[property=\"og:{prop}\"]").Select(e => e.Content);
 
-      var mediaByDiv = doc.Qs<IHtmlDivElement>("div.media-by");
-      var chanA = doc.Qs<IHtmlAnchorElement>(".media-by--a[rel=author]");
+      var mediaByDiv = doc.El<IHtmlDivElement>("div.media-by");
+      var chanA = doc.El<IHtmlAnchorElement>(".media-by--a[rel=author]");
       var chanUrl = chanA?.Href.AsUrl();
       var channelSourceId = chanUrl?.Path.TrimPath();
       var ldJson = doc.QuerySelectorAll<IHtmlScriptElement>("script[type=\"application/ld+json\"]").SelectMany(e => JArray.Parse(e.Text).Children<JObject>());
@@ -115,7 +116,7 @@ namespace YtReader.Rumble {
     public string SourceToFullId(string sourceId, LinkType type) => type switch {
       LinkType.Channel => ChannelUrl(sourceId),
       LinkType.Video => VideoUrl(sourceId),
-      _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+      _ => throw new ArgumentOutOfRangeException(nameof(type), type, message: null)
     };
 
     public          int      CollectParallel => Cfg.CollectParallel;
@@ -123,18 +124,18 @@ namespace YtReader.Rumble {
     static readonly Regex    VideoIdRe = new(@"(?<id>v\w{5})-.*");
 
     Video ParseVideo(IElement e, Channel chan) {
-      var url = e.Qs<IHtmlAnchorElement>(".video-item--a")?.Href?.AsUrl();
+      var url = e.El<IHtmlAnchorElement>(".video-item--a")?.Href?.AsUrl();
       var sourceId = url?.Path.Match(VideoIdRe).Groups["id"].Value.NullIfEmpty();
 
-      string Data(string name) => e.Qs<IHtmlSpanElement>($".video-item--{name}")?.Dataset["value"];
+      string Data(string name) => e.El<IHtmlSpanElement>($".video-item--{name}")?.Dataset["value"];
 
       var video = this.NewVid(sourceId) with {
         ChannelId = chan.ChannelId,
         ChannelTitle = chan.ChannelTitle,
         Title = e.QuerySelector(".video-item--title")?.TextContent,
-        Thumb = e.Qs<IHtmlImageElement>("img.video-item--img")?.Source,
+        Thumb = e.El<IHtmlImageElement>("img.video-item--img")?.Source,
         Statistics = new(Data("views")?.ParseULong()),
-        UploadDate = e.Qs<IHtmlTimeElement>(".video-item--time")?.DateTime.ParseDate(style: DateTimeStyles.AssumeUniversal),
+        UploadDate = e.El<IHtmlTimeElement>(".video-item--time")?.DateTime.ParseDate(style: DateTimeStyles.AssumeUniversal),
         Duration = Data("duration")?.TryParseTimeSpanExact(@"h\:m\:s", @"m\:s"),
         Earned = Data("earned")?.TryParseDecimal()
       };

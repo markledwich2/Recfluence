@@ -10,15 +10,15 @@ using SysExtensions;
 using SysExtensions.Net;
 using SysExtensions.Threading;
 
-namespace YtReader {
+namespace YtReader.Web {
   public record FlurlProxyClient {
-    readonly FlurlClient Direct;
-    readonly FlurlClient Proxy;
-    readonly ProxyCfg    Cfg;
+    readonly        FlurlClient Direct;
+    readonly        FlurlClient Proxy;
+    public readonly ProxyCfg    Cfg;
 
     public FlurlProxyClient(ProxyCfg cfg) {
       Cfg = cfg;
-      Direct = new ();
+      Direct = new();
       Proxy = new(cfg.Proxies.FirstOrDefault()?.CreateHttpClient());
     }
 
@@ -27,19 +27,21 @@ namespace YtReader {
       Func<IFlurlResponse, bool> isTransient = null, ILogger log = null) {
       verb ??= HttpMethod.Get;
       isTransient ??= DefaultIsTransient;
-      var contentString = content == null ? null : await content.ReadAsStringAsync(); // we read the content at the start for logging, to avoid it being disposed on us
+      var contentString =
+        content == null ? null : await content.ReadAsStringAsync(); // we read the content at the start for logging, to avoid it being disposed on us
 
       Task<IFlurlResponse> GetRes() => request.WithClient(UseProxy ? Proxy : Direct).AllowAnyHttpStatus().SendAsync(verb, content);
       void ThrowIfError(IFlurlResponse r, Exception e) => r.EnsureSuccess(log, desc, request, e, verb, contentString);
       var retry = Policy.HandleResult(isTransient).RetryWithBackoff("BcWeb flurl transient error", Cfg.Retry,
-          (r, i) => log?.Debug("retryable error with {Desc}: '{Error}'. Attempt {Attempt}/{Total}\n{Curl}",
-            desc, r.Result?.StatusCode.ToString() ?? r.Exception?.Message ?? "Unknown error", i, Cfg.Retry, request.FormatCurl())
-          , log);
+        (r, i) => log?.Debug("retryable error with {Desc}: '{Error}'. Attempt {Attempt}/{Total}\n{Curl}",
+          desc, r.Result?.StatusCode.ToString() ?? r.Exception?.Message ?? "Unknown error", i, Cfg.Retry, request.FormatCurl())
+        , log);
 
       var (res, ex) = await Def.Fun(() => retry.ExecuteAsync(GetRes)).Try();
       if (res != null && HttpExtensions.IsSuccess(res.StatusCode)) return res;
-      if (UseProxy)
+      if (UseProxy) {
         ThrowIfError(res, ex); // throw if there is an error and we are already using proxy
+      }
       else {
         UseProxy = true;
         log?.Debug("Flurl - switch to proxy service");

@@ -15,7 +15,7 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using static SysExtensions.Net.HttpExtensions;
 
-namespace YtReader {
+namespace YtReader.Web {
   public static class FlurlExtensions {
     public static Url AsUrl(this string url) => new(url);
     public static IFlurlRequest AsRequest(this Url url) => new FlurlRequest(url);
@@ -46,7 +46,7 @@ namespace YtReader {
       throw new($"Flurl '{desc}' failed ({error})", ex);
     }
 
-    public static  void EnsureSuccess(this IFlurlResponse res, ILogger log, string desc, IFlurlRequest request, Exception ex = null, HttpMethod verb = null,
+    public static void EnsureSuccess(this IFlurlResponse res, ILogger log, string desc, IFlurlRequest request, Exception ex = null, HttpMethod verb = null,
       string content = null) {
       if (res != null && IsSuccess(res.StatusCode)) return;
       var error = res?.StatusCode.ToString() ?? ex?.Message ?? "unknown";
@@ -63,9 +63,7 @@ namespace YtReader {
       var args = Array.Empty<string>()
         .Concat(req.Url.ToString(), "-X", verb.Method.ToUpper())
         .Concat(req.Headers.SelectMany(h => new[] {"-H", $"'{h.Name}:{h.Value}'"}));
-      if (content != null) {
-        args = args.Concat("-d", $"'{content}'");
-      }
+      if (content != null) args = args.Concat("-d", $"'{content}'");
       var curl = $"curl {args.NotNull().Join(" ")}";
       return curl;
     }

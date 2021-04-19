@@ -5,6 +5,7 @@ using Semver;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
+using YtReader.Amazon;
 using YtReader.Yt;
 using static YtReader.Store.DataStoreType;
 using static YtReader.Store.StoreTier;
@@ -89,6 +90,7 @@ namespace YtReader.Store {
       Captions = CreateStore<VideoCaption>("captions");
       ChannelReviews = CreateStore<UserChannelReview>("channel_reviews", r => r.Email);
       Comments = CreateStore<VideoComment>("comments");
+      AmazonLink = CreateStore<AmazonLink>("link_meta/amazon/");
     }
 
     public ISimpleFileStore Store { get; }
@@ -102,6 +104,7 @@ namespace YtReader.Store {
     public JsonlStore<VideoCaption>          Captions       { get; }
     public JsonlStore<UserChannelReview>     ChannelReviews { get; }
     public JsonlStore<VideoComment>          Comments       { get; }
+    public JsonlStore<AmazonLink>            AmazonLink     { get; }
 
     JsonlStore<T> CreateStore<T>(string name, Func<T, string> getPartition = null) where T : IHasUpdated =>
       new(Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);

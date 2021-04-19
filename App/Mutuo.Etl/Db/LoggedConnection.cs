@@ -29,6 +29,7 @@ namespace Mutuo.Etl.Db {
     Task<T> ExecuteScalar<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
 
     Task<DbDataReader> ExecuteReader(string operation, string sql, object param = null, DbTransaction transaction = null);
+    IAsyncEnumerable<T> QueryAsync<T>(string desc, string sql, object param = null, DbTransaction transaction = null);
   }
 
   public class LoggedConnection<TC> : ILoggedConnection<TC> where TC : IDbConnection {
@@ -61,6 +62,13 @@ namespace Mutuo.Etl.Db {
       object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
       (await ExecWithLog(() => Conn.QueryAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, desc, param))
       .ToArray(); // make greedy load explicit load because that is what dapper does under the covers for async anyway.
+
+    public async IAsyncEnumerable<T> QueryAsync<T>(string desc, string sql, object param = null, DbTransaction transaction = null) {
+      using var reader = await ExecuteReader(desc, sql, param, transaction);
+      var rowParser = reader.GetRowParser<T>();
+      while (await reader.ReadAsync())
+        yield return rowParser(reader);
+    }
 
     /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
     /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>

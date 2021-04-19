@@ -10,8 +10,11 @@ using SysExtensions.Text;
 
 namespace Mutuo.Etl.Db {
   public static class DbExtensions {
-    public static string SquareBrackets(this string name) => $"[{name}]";
-    public static string DoubleQuote(this string s) => $"\"{s.Replace("\"", "\"\"")}\"";
+    public static string InParentheses(this string name) => $"({name})";
+    public static string InSquareBrackets(this string name) => $"[{name}]";
+    public static string InDoubleQuote(this string s) => $"\"{s.Replace("\"", "\"\"")}\"";
+
+    /// <summary>Surrounds in single quotes, escapes according to escape chart</summary>
     public static string SingleQuote(this string s, char escape = '\'') => $"'{s.Replace("'", $"{escape}'")}'";
 
     public static TableSchema Schema(this IDataReader reader) {
@@ -45,7 +48,7 @@ namespace Mutuo.Etl.Db {
 
     public static async IAsyncEnumerable<IDictionary<string, object>> AsyncEnumerable(this DbDataReader reader) {
       while (await reader.ReadAsync().ConfigureAwait(false))
-        yield return Enumerable.Range(0, reader.FieldCount)
+        yield return Enumerable.Range(start: 0, reader.FieldCount)
           .ToDictionary(reader.GetName, reader.GetValue);
     }
   }

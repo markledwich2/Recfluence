@@ -1,14 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Autofac;
 using FluentAssertions;
-using Flurl.Http;
-using Flurl.Http.Configuration;
 using Flurl.Http.Testing;
-using Flurl.Util;
 using Humanizer;
 using LtGt;
 using NUnit.Framework;
@@ -16,6 +10,7 @@ using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Threading;
 using YtReader;
+using YtReader.Amazon;
 using YtReader.Yt;
 
 namespace Tests {
@@ -98,18 +93,24 @@ namespace Tests {
         .BlockFunc(c => api.ChannelData(c, full: true));
     }
 
-
     [Test]
     public static async Task TestProxyFallback() {
       using var x = await TestSetup.TextCtx();
       var scraper = x.Scope.Resolve<YtWeb>();
       using var httpTest = new HttpTest();
-      var rw = httpTest.ForCallsTo("*youtube.com*").RespondWith("mock too many requests failure", 429);
+      var rw = httpTest.ForCallsTo("*youtube.com*").RespondWith("mock too many requests failure", status: 429);
       var getExtra = scraper.GetExtra(x.Log, "Su1FQUkMojU", new[] {ExtraPart.EComment});
       await 5.Seconds().Delay();
       rw.AllowRealHttp();
       var extra = await getExtra; // this should have fallen back to proxy and retried a once or twice in the 5 seconds.
       scraper.Client.UseProxy.Should().Be(true);
+    }
+
+    [Test]
+    public static async Task TestAmazonProduct() {
+      using var x = await TestSetup.TextCtx();
+      var aw = x.Scope.Resolve<AmazonWeb>();
+      await new[] {"https://amzn.to/2ZMojrd "}.BlockTrans(l => aw.LoadLinkMeta(new("", l), x.Log)).ToListAsync();
     }
   }
 }

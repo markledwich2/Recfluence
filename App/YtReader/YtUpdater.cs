@@ -14,6 +14,8 @@ using YtReader.Search;
 using YtReader.Store;
 using YtReader.Yt;
 
+// ReSharper disable InconsistentNaming
+
 namespace YtReader {
   public class YtUpdaterCfg {
     public int Parallel { get; set; } = 4;
@@ -36,54 +38,22 @@ namespace YtReader {
     public string[]                           UserScrapeAccounts     { get; init; }
     public string[]                           Indexes                { get; init; }
 
-    public bool                  DataformDeps     { get; init; }
-    public StandardCollectPart[] StandardParts    { get; init; }
-    public string[]              Videos           { get; init; }
-    public SearchMode            SearchMode       { get; init; }
-    public string[]              Tags             { get; init; }
-    public DataScriptOptions     DataScript       { get; set; }
+    public bool                  DataformDeps  { get; init; }
+    public StandardCollectPart[] StandardParts { get; init; }
+    public string[]              Videos        { get; init; }
+    public SearchMode            SearchMode    { get; init; }
+    public string[]              Tags          { get; init; }
+    public DataScriptOptions     DataScript    { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
   ///   caption search. Many missing features (resume, better recording of tasks etc..). I intend to replace with dagster or
   ///   make Mutuo.Etl into a data application runner once I have evaluated it.</summary>
-  public class YtUpdater {
-    readonly YtUpdaterCfg   Cfg;
-    readonly ILogger        Log;
-    readonly YtCollector    _collector;
-    readonly Stage          _warehouse;
-    readonly YtSearch       _search;
-    readonly YtResults      _results;
-    readonly YtDataform     YtDataform;
-    readonly YtBackup       _backup;
-    readonly string         _updated;
-    readonly UserScrape     _userScrape;
-    readonly YtIndexResults _index;
-    readonly BcCollect      _bcCollect;
-    readonly RumbleCollect  _rumbleCollect;
-    readonly DataScripts    _dataScripts;
-
-    public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, Stage warehouse, YtSearch search,
-      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtIndexResults index, BcCollect bcCollect,
-      RumbleCollect rumbleCollect, DataScripts dataScripts) {
-      _dataScripts = dataScripts;
-      _rumbleCollect = rumbleCollect;
-      _bcCollect = bcCollect;
-      Cfg = cfg;
-      _updated = Guid.NewGuid().ToShortString(6);
-      Log = log.ForContext("UpdateId", _updated);
-      _collector = collector;
-      _warehouse = warehouse;
-      _search = search;
-      _results = results;
-      YtDataform = ytDataform;
-      _backup = backup;
-      _userScrape = userScrape;
-      _index = index;
-    }
-
+  public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, Stage _stage, YtSearch _search,
+    YtResults _results, YtDataform YtDataform, YtBackup _backup, UserScrape _userScrape, YtIndexResults _index, BcCollect _bcCollect,
+    RumbleCollect _rumbleCollect, DataScripts _dataScripts) {
     Task Collect(CollectOptions options, ILogger logger, CancellationToken cancel) =>
-      _collector.Collect(logger, options, cancel);
+      YtCollect.Collect(logger, options, cancel);
 
     Task BcCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
       _bcCollect.Collect(options, logger, cancel);
@@ -93,7 +63,7 @@ namespace YtReader {
 
     [GraphTask(nameof(Collect), nameof(BcCollect), nameof(RumbleCollect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
-      _warehouse.StageUpdate(logger, fullLoad, tables);
+      _stage.StageUpdate(logger, fullLoad, tables);
 
     [GraphTask(nameof(Stage))]
     Task Dataform(bool fullLoad, string[] tables, bool includeDeps, ILogger logger, CancellationToken cancel) =>
@@ -101,7 +71,7 @@ namespace YtReader {
 
     [GraphTask(nameof(Dataform))]
     Task Search(SearchMode mode, string[] optionsSearchIndexes, (string index, string condition)[] conditions, ILogger logger, CancellationToken cancel) =>
-      _search.SyncToElastic(logger, mode, indexes: optionsSearchIndexes, conditions, cancel: cancel);
+      _search.SyncToElastic(logger, mode, optionsSearchIndexes, conditions, cancel);
 
     [GraphTask(nameof(Dataform))]
     Task Result(string[] results, ILogger logger, CancellationToken cancel) =>
@@ -121,13 +91,15 @@ namespace YtReader {
 
     [GraphTask(nameof(Result), nameof(Collect), nameof(Dataform))]
     Task UserScrape(bool init, string trial, string[] accounts, ILogger logger, CancellationToken cancel) =>
-      _userScrape.Run(Log, init, trial, accounts, cancel);
+      _userScrape.Run(logger, init, trial, accounts, cancel);
 
     [Pipe]
     public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
       options ??= new();
       var sw = Stopwatch.StartNew();
-      Log.Information("Update {RunId} - started", _updated);
+      var updateId = Guid.NewGuid().ToShortString(6);
+      var log = Log.ForContext("UpdateId", updateId);
+      log.Information("Update {RunId} - started", updateId);
 
       var fullLoad = options.FullLoad;
 
@@ -164,13 +136,13 @@ namespace YtReader {
       // too costly. TODO: update to incremtnal backup or de-partition the big db2 directories
       //if (backup.Status != GraphTaskStatus.Ignored && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
 
-      var res = await actionMethods.Run(Cfg.Parallel, Log, cancel);
+      var res = await actionMethods.Run(Cfg.Parallel, log, cancel);
 
       var errors = res.Where(r => r.Error).ToArray();
       if (errors.Any())
-        Log.Error("Update {RunId} - failed in {Duration}: {@TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res.Join("\n"));
+        Log.Error("Update {RunId} - failed in {Duration}: {@TaskResults}", updateId, sw.Elapsed.HumanizeShort(), res.Join("\n"));
       else
-        Log.Information("Update {RunId} - completed in {Duration}: {TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res.Join("\n"));
+        Log.Information("Update {RunId} - completed in {Duration}: {TaskResults}", updateId, sw.Elapsed.HumanizeShort(), res.Join("\n"));
     }
   }
 

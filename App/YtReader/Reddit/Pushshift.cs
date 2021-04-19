@@ -10,6 +10,7 @@ using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using YtReader.Store;
+using YtReader.Web;
 
 // ReSharper disable InconsistentNaming
 
@@ -61,13 +62,13 @@ namespace YtReader.Reddit {
       if (latestFile != null) throw new InvalidOperationException("Don't support incremental yet :( pls delete files if you intend to re-get");
       long saved = 0;
       var (total, subs) = await GetSubmissions(new() {
-        q = "(covid|\"covid-19\"|coronavirus|sars|\"SARS-CoV-2\"|vaccine|\"Wuhan flu\"|\"China virus\"|vaccinated|\"Bill Gates\"" 
-            + "|Pfizer|Moderna|BioNTech|AstraZeneca|CDC|\"world health organization\"|\"Herd immunity\"|Pandemic|Lockdown) +(youtu.be|youtube.com|youtube)",
+        q = "(covid|\"covid-19\"|coronavirus|sars|\"SARS-CoV-2\"|vaccine|\"Wuhan flu\"|\"China virus\"|vaccinated|\"Bill Gates\""
+          + "|Pfizer|Moderna|BioNTech|AstraZeneca|CDC|\"world health organization\"|\"Herd immunity\"|Pandemic|Lockdown) +(youtu.be|youtube.com|youtube)",
         fields = Fields.Join(","),
         sort_type = "created_utc",
         sort = "asc",
         size = 100,
-        after = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero).ToUnixTimeSeconds() //latestFile?.Ts.ParseLong() ?? 
+        after =new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero).ToUnixTimeSeconds() //latestFile?.Ts.ParseLong() ?? 
       }, log);
 
       await subs.Batch(10).ForEachAsync(async r => {
@@ -78,7 +79,7 @@ namespace YtReader.Reddit {
           saved, total, DateTimeOffset.FromUnixTimeSeconds(items.Last().created_utc).ToString("s"));
       });
 
-      await stage.UpdateTable(new(store.Path, "reddit_post_stage", isNativeStore: false), fullLoad: true, log); 
+      await stage.UpdateTable(new(store.Path, "reddit_post_stage", isNativeStore: false), fullLoad: true, log);
     }
 
     async Task<(long total_results, IAsyncEnumerable<PushPost[]>)> GetSubmissions(PushParams pushParams, ILogger log) {
