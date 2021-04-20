@@ -27,9 +27,7 @@ using YtReader.Web;
 using PT = YtReader.Amazon.AmazonPageType;
 
 // ReSharper disable PossibleLossOfFraction
-
 // ReSharper disable StringLiteralTypo
-
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.Amazon {
@@ -102,7 +100,7 @@ select video_id, url from l
         }, Cfg.WebParallel)
         .Batch(Cfg.BatchSize)
         .BlockTrans(async (b, i) => {
-          var metas = b.Select(l => l.Link).NotNull().ToArray();
+          var metas = b.Select(l => l?.Link).NotNull().ToArray();
           log.Debug("Aamazon - saved {Videos} video link metadata. Batch {Batch}", metas.Length, i);
           await Store.AmazonLink.Append(metas);
           return metas.Length;
