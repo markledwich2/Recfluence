@@ -34,8 +34,7 @@ namespace YtReader.Web {
       var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), url.Path);
       var logUrl = logStore.Url(path);
       await logStore.Save(path, content.AsStream(), log);
-      log.Warning(ex, "Saved content that we could not parse '{Msg}' ({Url}). error: {Error}",
-        msg, logUrl, ex?.ToString());
+      log.Warning(ex, "Parsing Diagnostics - Saved content from {Url} to {LogUrl}: {Msg}", url, logUrl, msg);
     }
   }
 }

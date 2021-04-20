@@ -455,9 +455,12 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
   public record AmazonCmd(ILogger Log, AmazonWeb Amazon) : ICommand {
     [CommandOption("query", shortName: 'q', Description = "The name of the query to sync with airtable")]
     public string MentionQuery { get; set; }
+    
+    [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
+    public int? Limit { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) {
-      await Amazon.GetProductLinkInfo(Log);
+      await Amazon.GetProductLinkInfo(Log, MentionQuery, Limit);
       Log.Information("amazon - complete");
     }
   }

@@ -110,7 +110,12 @@ namespace Tests {
     public static async Task TestAmazonProduct() {
       using var x = await TestSetup.TextCtx();
       var aw = x.Scope.Resolve<AmazonWeb>();
-      await new[] {"https://amzn.to/2ZMojrd "}.BlockTrans(l => aw.LoadLinkMeta(new("", l), x.Log)).ToListAsync();
+      var links = new[] {
+        "https://www.amazon.com/gp/product/B005VYCFXA", // product details in bullet form
+        "https://www.amazon.com/gp/product/B07TC76671",
+        //"https://amzn.to/2ZMojrd"
+      };
+      var completed = await aw.ProcessLinks(links.Select(l => new AmazonWeb.VideoUrl("", l)).ToArray(), x.Log);
     }
   }
 }

@@ -34,7 +34,7 @@ namespace SysExtensions.Threading {
       CancellationToken cancel = default) {
       var options = ActionOptions<T>(parallel, capacity, cancel);
       var block = new ActionBlock<(T, int)>(i => action(i.Item1, i.Item2), options);
-      var produced = await ProduceAsync(source.Select((o,i) => (o,i)), block);
+      var produced = await ProduceAsync(source, block);
       await block.Completion;
       return produced;
     }
@@ -142,8 +142,12 @@ namespace SysExtensions.Threading {
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
       BlockTrans(source, (o, _) => func(o), parallel, capacity, cancel);
 
+    public static IAsyncEnumerable<R> BlockTrans<T, R>(this IAsyncEnumerable<T> source,
+      Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
+      source.BlockTrans((r, _) => func(r), parallel, capacity, cancel);
+
     public static async IAsyncEnumerable<R> BlockTrans<T, R>(this IAsyncEnumerable<T> source,
-      Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
+      Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
       var produceTask = ProduceAsync(source, block, cancel);
       while (true) {
@@ -220,9 +224,9 @@ namespace SysExtensions.Threading {
       return result;
     }
 
-    static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<T> block, CancellationToken cancel = default) {
+    static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<(T,int)> block, CancellationToken cancel = default) {
       var produced = 0;
-      await foreach (var item in source) {
+      await foreach (var item in source.Select((r,i) => (r,i)).WithCancellation(cancel)) {
         if (cancel.IsCancellationRequested) return produced;
         await block.SendAsync(item).ConfigureAwait(false);
         produced++;

@@ -1,33 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Io;
+using Humanizer;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
+using Newtonsoft.Json.Linq;
 using Polly;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
-using SysExtensions.IO;
 using SysExtensions.Net;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 using YtReader.Store;
 using YtReader.Web;
+using PT = YtReader.Amazon.AmazonPageType;
+
+// ReSharper disable PossibleLossOfFraction
 
 // ReSharper disable StringLiteralTypo
 
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.Amazon {
-  public record AmazonCfg(int WebParallel = 16, int BatchSize = 1000);
+  public record AmazonCfg(int WebParallel = 16, int BatchSize = 100);
 
   public record AmazonWeb(SnowflakeConnectionProvider Conn, FlurlProxyClient FlurlClient, YtStore Store, AmazonCfg Cfg, VersionInfo Version,
     BlobStores Stores, IPipeCtx Pipe) {
@@ -51,10 +57,11 @@ where u.value:host::string like any ('%amazon%', '%amzn%')
 
     public record VideoUrl(string video_id, string url);
 
-    public async Task GetProductLinkInfo(ILogger log, string queryName = null) {
+    public async Task GetProductLinkInfo(ILogger log, string queryName = null, int? limit = null) {
       var sql = @$"with l as ({NamedSql[queryName ?? "Activewear Links"]})
 select video_id, url from l
 --where not exists (select * from amazon_link_stage...)
+{limit.Do(l => $"limit {l}")}
 ";
       using var db = await Conn.Open(log);
 
@@ -62,62 +69,110 @@ select video_id, url from l
       await links.Process(Pipe, b => ProcessLinks(b, PipeArg.Inject<ILogger>()));
     }
 
-    public record LoadFromUrlRes(AmazonLink Link, HttpStatusCode Status = HttpStatusCode.OK, string ErrorMsg = null);
+    public record LoadFromUrlRes(AmazonLink Link, HttpStatusCode Status = HttpStatusCode.OK, string ErrorMsg = null, string newUrl = null);
 
     [Pipe]
-    public async Task<long> ProcessLinks(IReadOnlyCollection<VideoUrl> urls, ILogger log) =>
-      await urls.BlockTrans(async l => {
-          var retryTransient = Policy.HandleResult<LoadFromUrlRes>(
-            d => { // todo make this re-usable. Needed a higher level than http send for handling bot errors
-              if (!d.Status.IsTransientError()) return false;
-              if (d.Status == HttpStatusCode.TooManyRequests && !FlurlClient.UseProxy)
-                FlurlClient.UseProxy = true;
-              log.Debug("Amazon - transient error {@Result}", d);
-              return true;
-            }).RetryWithBackoff("Amazon - product", retryCount: 5, log: log);
-          return await retryTransient.ExecuteAsync(() => LoadLinkMeta(l, log));
+    public async Task<long> ProcessLinks(IReadOnlyCollection<VideoUrl> urls, ILogger log) {
+      var unhandledErrors = 0;
+      var res = await urls.BlockTrans(async (l, i) => {
+          var videoLog = log.ForContext("VideoId", l.video_id);
+          var retryTransient = Policy
+            .HandleResult<LoadFromUrlRes>(
+              d => { // todo make this re-usable. Needed a higher level than http send for handling bot errors
+                if (!d.Status.IsTransientError()) return false;
+                if (d.Status == HttpStatusCode.TooManyRequests && !FlurlClient.UseProxy)
+                  FlurlClient.UseProxy = true;
+                videoLog.Debug("Amazon - transient error {@Result}", d);
+                return true;
+              }).OrInner<HttpRequestException>(e => {
+              if (e.Message.Contains("SSL")) // todo is there a specific code?
+                return true;
+              return false;
+            })
+            .RetryWithBackoff("Amazon - product", retryCount: 6);
+          var (meta, ex) = await retryTransient.ExecuteAsync(() => LoadLinkMeta(l, videoLog)).Try();
+          if (ex == null) return meta;
+          Interlocked.Increment(ref unhandledErrors);
+          if (unhandledErrors > 5 && unhandledErrors / (1 + i) > 0.1) {
+            videoLog.Warning(ex, "Amazon - too many unhandled errors");
+            throw ex;
+          }
+          videoLog.Debug(ex, "Amazon - unhandled error: {Error}", ex.Message);
+          return null;
         }, Cfg.WebParallel)
         .Batch(Cfg.BatchSize)
-        .BlockAction(async (b, i) => { await Store.AmazonLink.Append(b.Select(l => l.Link).NotNull().ToArray()); });
+        .BlockTrans(async (b, i) => {
+          var metas = b.Select(l => l.Link).NotNull().ToArray();
+          log.Debug("Aamazon - saved {Videos} video link metadata. Batch {Batch}", metas.Length, i);
+          await Store.AmazonLink.Append(metas);
+          return metas.Length;
+        })
+        .ToListAsync().Then(completed => completed.Sum());
+      return res;
+    }
 
     public async Task<LoadFromUrlRes> LoadLinkMeta(VideoUrl v, ILogger log) {
       var requester = new DefaultHttpRequester($"Recfluence/{Version.Version}") {
         Headers = {
-          {"Accept", "text/html"},
-          {"Cache-Control", "no-cache"}
+          {"Cache-Control", "no-cache"},
+          {"Accept-Language", "en-US"},
         }
       };
 
       AmazonLink r = new() {
         Updated = DateTime.UtcNow,
-        VideoId = v.video_id
+        VideoId = v.video_id,
+        SourceUrl = v.url
       };
-      var doc = await Configuration.Default.WithRequester(requester).WithDefaultLoader().WithDefaultCookies().Browser(FlurlClient).OpenAsync(v.url);
-      if (!doc.StatusCode.IsSuccess()) {
-        log.Warning("AmazonWeb - error requesting {Url}: error", v.url, doc.StatusCode);
-        return new(r with {Error = doc.StatusCode.ToString()}, doc.StatusCode);
+      var browse = Configuration.Default.WithRequester(requester).WithDefaultLoader().WithDefaultCookies().Browser(FlurlClient);
+      var doc = await browse.OpenAsync(v.url);
+      var status = doc.StatusCode;
+      var statusMsg = ((int) status).ToString();
+      if (doc.Source.Text == "") {
+        status = HttpStatusCode.TooManyRequests;
+        statusMsg = "emtpy response, treating as 429";
+      }
+      else if (doc.Head.Children.None()) {
+        status = HttpStatusCode.TooManyRequests;
+        statusMsg = "response was unable to be decoded, treating as 429";
       }
 
-      var testFile = $"{ShortGuid.Create()}.html".AsPath().InAppData("recfluence");
-      testFile.EnsureDirectoryExists();
-      using (var fs = testFile.Open(FileMode.CreateNew)) await doc.ToHtmlAsync(fs);
+      if (!status.IsSuccess()) {
+        log.Debug("AmazonWeb - error requesting {Url}: {Error}", v.url, statusMsg);
+        return new(r with {Error = statusMsg}, doc.StatusCode, statusMsg);
+      }
 
-      var url = doc.Url.AsUrl();
+      while (true) {
+        var refreshContent = doc.El<IHtmlMetaElement>("meta[http-equiv='refresh']")?.Content;
+        if (refreshContent == null)
+          break;
+        var split = refreshContent.Split(";");
+        var delay = split.FirstOrDefault()?.TryParseInt() ?? 1;
+        var refreshUrl = split.Skip(1).Select(s => {
+          var (name, value, _) = s.UnJoin('=');
+          return new {name, value};
+        }).FirstOrDefault(s => s.name == "url")?.value ?? doc.Url;
+        await delay.Seconds().Delay();
+        doc = await browse.OpenAsync(refreshUrl);
+      }
+
+      var pageType = DetectPageType(doc);
+
       r = r with {
-        SourceUrl = v.url,
         Url = doc.Url,
         CanonUrl = doc.El<IHtmlLinkElement>("link[rel='canonical']")?.Href,
         Title = doc.El<IHtmlMetaElement>("meta[name='title']")?.Content.Trim(),
         Description = doc.El<IHtmlMetaElement>("meta[name='description']")?.Content.Trim(),
-        LinkType = url.PathSegments.FirstOrDefault() switch {
-          "shop" => "shop",
-          "gp" => "product",
-          _ => null
-        }
+        PageType = pageType
       };
 
-      if (r.LinkType != null && r.LinkType != "product")
+      if (r.PageType.NotIn(PT.Unknown, PT.Product)) // while we are working out which pages are product, try to detect as product even if unknown
         return new(r);
+
+      JObject JFromTuples(IEnumerable<(string, string)> props) => props == null
+        ? new JObject()
+        : new(props.Select(p => new JProperty(p.Item1.Trim(), p.Item2?.Trim()))
+          .GroupBy(p => p.Name).Select(g => g.First())); // take first of same property name
 
       r = r with {
         SourceUrl = v.url,
@@ -128,33 +183,85 @@ select video_id, url from l
         ProductTitle = doc.El("#productTitle")?.Text().Trim(),
         Breadcrumb = doc.Els<IHtmlAnchorElement>("#wayfinding-breadcrumbs_container a")
           .Select(e => new AmazonA(e.Text?.Trim(), e.Href)).ToArray(),
-        Price = doc.El("#priceblock_ourprice")?.Text().TryParseDecimal(),
+        //Price = doc.El("#priceblock_ourprice")?.Text().TryParseDecimal(), // pricing will take some work 
         CreativeAsin = doc.Url.AsUrl().QueryParams.Str("creativeASIN"),
         BiLine = doc.El<IHtmlAnchorElement>("a#bylineInfo").Do(a => new AmazonA(a.Text, a.Href)),
-        ImageUrl = doc.El<IHtmlImageElement>("#main-image-container img")?.GetAttribute("data-old-hires")
+        ImageUrl = doc.El<IHtmlImageElement>("#main-image-container img").Do(img => img.GetAttribute("data-old-hires").NullIfEmpty() ?? img.Source),
+        Props = JFromTuples(doc.El<IHtmlTableElement>("table.prodDetTable")
+            ?.Rows.Select(row => (row.El(".prodDetSectionEntry")?.Text(), row.El(".prodDetAttrValue")?.Text() ?? row.El("td")?.Text()))
+          ?? doc.Els("#detailBullets_feature_div > ul span.a-list-item").Select(e => {
+            var (nameEl, valueEl, _) = e.Els("span").ToArray();
+            return nameEl == null ? default : (nameEl.Text().Trim(':', '\n'), valueEl?.Text());
+          }))
       };
 
       if (!r.ProductTitle.HasValue()) {
-        var alert = doc.El(".a-icon-alert")?.ParentElement.Text() ?? "missing product title";
+        var alert = doc.El(".a-icon-alert")?.ParentElement.Text()?.Trim() ?? "missing product title";
         if (alert.Contains("robot"))
           return new(r, HttpStatusCode.TooManyRequests, alert);
-        var outerHtml = doc.ToHtml();
-        await LogStore.LogParseError("Error getting amazon product information", new(alert), doc.Url, outerHtml, log);
-        return new(r with {Error = alert}, HttpStatusCode.BadRequest, alert);
+        if (r.PageType == AmazonPageType.Product) {
+          var outerHtml = doc.ToHtml();
+          await LogStore.LogParseError("Error getting amazon product information", new(alert), doc.Url, outerHtml, log);
+          return new(r with {Error = alert}, HttpStatusCode.BadRequest, alert);
+        }
       }
 
-      log.Debug("Amazon - loaded product {@Product}", r);
+      log.Debug("Amazon - loaded product {Row}", r.ToJson());
       return new(r);
+    }
+
+    static readonly (string Selector, AmazonPageType PageType)[] SelectorsToPageTypes = {
+      ("div#authorPageContainer", PT.Author),
+      ("div#search", PT.Search),
+      ("div.a-page > .av-page-desktop", PT.Prime),
+      ("div#dp", PT.Product)
+    };
+
+    static AmazonPageType DetectPageType(IDocument doc) {
+      var url = doc.Url.AsUrl();
+      var p = url.PathSegments;
+      if (p.None()) return PT.Home;
+      var pathType = p.FirstOrDefault() switch {
+        "shop" => PT.Store,
+        "gp" => PT.Product,
+        "live" => PT.Live,
+        "stores" => PT.Store,
+        _ => default
+      };
+      // sometimes a search url a sub-path of product
+      if (pathType.In(PT.Unknown, PT.Product)) {
+        if (p.Contains("search")) return PT.Search;
+        if (p.Contains("wishlist")) return PT.Wishlist;
+      }
+      if (pathType == default)
+        if (p.Contains("audible"))
+          return PT.Audible;
+      if (pathType != PT.Unknown) return pathType;
+      return SelectorsToPageTypes.FirstOrDefault(s => doc.El(s.Selector) != null).PageType;
     }
   }
 
   public record AmazonA(string Txt, string Url);
 
+  /// <summary>The typeof page detected to extract metadata from it</summary>
+  public enum AmazonPageType {
+    Unknown,
+    Product,
+    Store,
+    Live,
+    Author,
+    Search,
+    Audible,
+    Home,
+    Wishlist,
+    Prime
+  }
+
   public record AmazonLink : IHasUpdated {
-    public string   VideoId   { get; init; }
-    public DateTime Updated   { get; init; }
-    public string   SourceUrl { get; init; }
-    public string   LinkType  { get; init; }
+    public string         VideoId   { get; init; }
+    public DateTime       Updated   { get; init; }
+    public string         SourceUrl { get; init; }
+    public AmazonPageType PageType  { get; init; }
 
     public string    CanonUrl     { get; init; }
     public string    Title        { get; init; }
@@ -162,10 +269,10 @@ select video_id, url from l
     public string    ProductTitle { get; init; }
     public AmazonA[] Breadcrumb   { get; init; }
     public string    Url          { get; init; }
-    public decimal?  Price        { get; init; }
     public string    CreativeAsin { get; init; }
     public AmazonA   BiLine       { get; init; }
     public string    ImageUrl     { get; init; }
     public string    Error        { get; init; }
+    public JObject   Props        { get; init; }
   }
 }

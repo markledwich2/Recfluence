@@ -90,7 +90,7 @@ namespace YtReader.Store {
       Captions = CreateStore<VideoCaption>("captions");
       ChannelReviews = CreateStore<UserChannelReview>("channel_reviews", r => r.Email);
       Comments = CreateStore<VideoComment>("comments");
-      AmazonLink = CreateStore<AmazonLink>("link_meta/amazon/");
+      AmazonLink = CreateStore<AmazonLink>("link_meta/amazon");
     }
 
     public ISimpleFileStore Store { get; }
