@@ -106,7 +106,7 @@ select url from l
         .Batch(Cfg.BatchSize)
         .BlockTrans(async (b, i) => {
           log.Debug("Aamazon - about to save batch {Batch}", i + 1);
-          var metas = b.Where(l => l.Status.In(HttpStatusCode.OK, HttpStatusCode.NotFound) && l.Link != null).Select(l => l.Link).ToArray();
+          var metas = b.NotNull().Where(l => l.Status.In(HttpStatusCode.OK, HttpStatusCode.NotFound) && l.Link != null).Select(l => l.Link).ToArray();
           log.Debug("Aamazon - saved {Videos} video link metadata. Batch {Batch}/{BatchTotal}", metas.Length, i + 1,
             Math.Ceiling(urls.Count / (double) Cfg.BatchSize));
           await Store.AmazonLink.Append(metas);
@@ -117,15 +117,10 @@ select url from l
     }
 
     /// <summary>Loads the given url. Handles basic loading issues and retries content requested refreshing</summary>
-    async Task<(IDocument Doc, HttpStatusCode Status, string Msg)> LoadLink(string url, ILogger log) {
-      var requester = new DefaultHttpRequester($"Recfluence/{Version.Version}") {
-        Headers = {
-          {"Cache-Control", "no-cache"},
-          {"Accept-Language", "en-US"},
-        },
-        Timeout = Cfg.RequestTimeout
-      };
-      var browse = Configuration.Default.WithRequester(requester).WithDefaultLoader().WithTemporaryCookies().WithProxyRequester(FlurlClient);
+    async Task<(IDocument Doc, HttpStatusCode Status, string Msg)> LoadLink(string url) {
+      var browse = Configuration.Default
+        .WithProxyRequester(FlurlClient, new []{ ("Cache-Control", "no-cache"), ("Accept-Language", "en-US")}, Cfg.RequestTimeout)
+        .WithDefaultLoader().WithTemporaryCookies().Browser();
       var refreshAttempts = 0;
       var requestUrl = url;
       while (refreshAttempts < 3) {
@@ -134,13 +129,10 @@ select url from l
         if (!finished) return new(item1: null, HttpStatusCode.GatewayTimeout, "request timed out, reating as 504");
         var status = (Code: doc.StatusCode, Msg: ((int) doc.StatusCode).ToString());
 
-        if (doc.Source.Text == "") {
-          var res = await FlurlClient.Send("test get", doc.Url.AsUrl().AsRequest(), HttpMethod.Get);
-          var content = await res.GetStringAsync(); // this works but anglesharp doesn't
-          var doc2 = await browse.OpenAsync(doc.Url); // does this work with the redirected url?
+        if (doc.Source.Text == "")
           status = (HttpStatusCode.TooManyRequests, "emtpy response, treating as 429");
-        }
-        else if (doc.Head.Children.None()) status = (HttpStatusCode.TooManyRequests, "response was unable to be decoded, treating as 429");
+        if (doc.Head.Children.None()) 
+          status = (HttpStatusCode.TooManyRequests, "response was unable to be decoded, treating as 429");
         else if (doc.El("head > title")?.TextContent == "Sorry! Something went wrong!")
           status = (HttpStatusCode.TooManyRequests, "response was typical for a bot error, treating as 429");
 
@@ -159,7 +151,7 @@ select url from l
     }
 
     public async Task<LoadFromUrlRes> LoadLinkMeta(string url, ILogger log) {
-      var (doc, status, statusMsg) = await LoadLink(url, log);
+      var (doc, status, statusMsg) = await LoadLink(url);
       AmazonLink r = new() {
         Updated = DateTime.UtcNow,
         SourceUrl = url

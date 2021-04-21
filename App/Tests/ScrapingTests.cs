@@ -110,7 +110,9 @@ namespace Tests {
     public static async Task TestAmazonProduct() {
       using var x = await TestSetup.TextCtx();
       var aw = x.Scope.Resolve<AmazonWeb>();
+      aw.FlurlClient.UseProxy = true;
       var links = new[] {
+        "https://amzn.to/2DGXN96", // empty response
         "https://amzn.to/39tl3nX", // empty response
         //"https://www.amazon.com/Manfrotto-MKCOMPACTACN-BK-Compact-Action-Tripod/dp/B07JMQJKC8?th=1", // comments leaking into props
         //"https://www.amazon.com/gp/product/B005VYCFXA", // product details in bullet form
