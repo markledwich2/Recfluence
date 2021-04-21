@@ -111,11 +111,13 @@ namespace Tests {
       using var x = await TestSetup.TextCtx();
       var aw = x.Scope.Resolve<AmazonWeb>();
       var links = new[] {
-        "https://www.amazon.com/gp/product/B005VYCFXA", // product details in bullet form
-        "https://www.amazon.com/gp/product/B07TC76671",
+        "https://amzn.to/39tl3nX", // empty response
+        //"https://www.amazon.com/Manfrotto-MKCOMPACTACN-BK-Compact-Action-Tripod/dp/B07JMQJKC8?th=1", // comments leaking into props
+        //"https://www.amazon.com/gp/product/B005VYCFXA", // product details in bullet form
+        //"https://www.amazon.com/gp/product/B07TC76671",
         //"https://amzn.to/2ZMojrd"
       };
-      var completed = await aw.ProcessLinks(links.Select(l => new AmazonWeb.VideoUrl("", l)).ToArray(), x.Log);
+      var completed = await aw.ProcessLinks(links, x.Log);
     }
   }
 }

@@ -33,7 +33,7 @@ namespace YtReader.Web {
       Task<IFlurlResponse> GetRes() => request.WithClient(UseProxy ? Proxy : Direct).AllowAnyHttpStatus().SendAsync(verb, content);
       void ThrowIfError(IFlurlResponse r, Exception e) => r.EnsureSuccess(log, desc, request, e, verb, contentString);
       var retry = Policy.HandleResult(isTransient).RetryWithBackoff("BcWeb flurl transient error", Cfg.Retry,
-        (r, i) => log?.Debug("retryable error with {Desc}: '{Error}'. Attempt {Attempt}/{Total}\n{Curl}",
+        (r, i, _) => log?.Debug("retryable error with {Desc}: '{Error}'. Attempt {Attempt}/{Total}\n{Curl}",
           desc, r.Result?.StatusCode.ToString() ?? r.Exception?.Message ?? "Unknown error", i, Cfg.Retry, request.FormatCurl())
         , log);
 

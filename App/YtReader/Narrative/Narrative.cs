@@ -17,7 +17,7 @@ using YtReader.Store;
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.Narrative {
-  public record AirtableCfg(string ApiKey = null, string BaseId = "appwfe3XfYqxn7v7I");
+  public record AirtableCfg(string ApiKey = null);
   public record NarrativesCfg;
   public record MentionRowKey(string mentionId);
   public record ChannelRowKey(string channelId);
@@ -29,19 +29,28 @@ namespace YtReader.Narrative {
     Video
   }
 
-  public record NarrativeOpts(string MentionQuery, int? Limit, AirtablePart[] Parts = null, string[] Videos = null);
+  //"appwfe3XfYqxn7v7I"
+  public record NarrativeOpts(string BaseId, string NarrativeName, int? Limit, AirtablePart[] Parts = null, string[] Videos = null);
 
   public static class NarrativeSql {
     public static string NamedQuery(string name) => NamedSql.TryGet(name) ?? throw new($"no sql called {name}");
 
     public static readonly Dictionary<string, string> NamedSql = new() {
       {
-        "Activewear v2", @"
+        "Activewear", @"
   select n.video_id, part, context, offset_seconds, m.value::string keyword
-  from activewear_mentions n
+  from mention_activewear n
   join video_latest v on v.video_id = n.video_id
   , table (flatten(matches)) m
   where keyword in ('lululemon')
+"
+      }, {
+        "Vaccine", @"
+  select n.video_id, part, context, offset_seconds, m.value::string keyword
+from mention_vaccine n
+join video_latest v on v.video_id = n.video_id
+, table (flatten(matches)) m
+where v.views > 10000 and v.upload_date >= '2021-04-13'
 "
       }
     };
@@ -54,7 +63,7 @@ namespace YtReader.Narrative {
       await db.Execute("create tmp mentions table", $@"
 create or replace temporary table _mentions as 
 (
-  with q as ({NarrativeSql.NamedQuery(op.MentionQuery)}) 
+  with q as ({NarrativeSql.NamedQuery(op.NarrativeName)}) 
   select * from q
   {op.Videos.Do(vids => $"where video_id in ({vids.Join(", ", v => v.SingleQuote())})")}
   {op.Limit.Do(l => $"limit {l}")}
@@ -63,16 +72,15 @@ create or replace temporary table _mentions as
       var mentionSql = "select * from _mentions";
 
       if (op.Parts.ShouldRun(AirtablePart.Channel))
-        await Sync<ChannelRowKey>($"{op.MentionQuery} Channels", db.ReadAsJson("narrative channels", @$"
+        await Sync<ChannelRowKey>(op, "Channels", db.ReadAsJson("narrative channels", @$"
   with mention as ({mentionSql})
-  select c.channel_id, c.channel_title, c.subs, c.channel_views 
+  select c.channel_id, c.channel_title, c.subs, c.channel_views , c.tags
 from channel_latest c
     where exists(select * from mention n join video_latest v on v.video_id = n.video_id where v.channel_id = c.channel_id)
   "), log);
 
-
       if (op.Parts.ShouldRun(AirtablePart.Video))
-        await Sync<VideoRowKey>($"{op.MentionQuery} Videos", db.ReadAsJson("narrative channels", @$"
+        await Sync<VideoRowKey>(op, "Videos", db.ReadAsJson("narrative channels", @$"
   with mention as ({mentionSql})
   select video_id, video_title, views, channel_id from video_latest v
     where exists(select * from mention m where m.video_id = v.video_id)
@@ -83,7 +91,7 @@ from channel_latest c
         }), log);
 
       if (op.Parts.ShouldRun(AirtablePart.Mention))
-        await Sync<MentionRowKey>(op.MentionQuery, db.ReadAsJson("narrative mentions", @$"
+        await Sync<MentionRowKey>(op, "Mentions", db.ReadAsJson("narrative mentions", @$"
   with mention as ({mentionSql})
   select 
   n.video_id||'|'||n.part||'|'||n.keyword||coalesce('|'||n.offset_seconds, '') as mention_id
@@ -101,6 +109,7 @@ from channel_latest c
        , v.error_type
   from mention n
          join video_latest v on v.video_id=n.video_id
+qualify row_number() over (partition by mention_id order by 1) = 1
   ").Select(r => {
           // linking records need to ba an array
           r["CHANNEL_ID"] = new JArray(r["CHANNEL_ID"]);
@@ -109,8 +118,8 @@ from channel_latest c
         }), log);
     }
 
-    public async Task Sync<TKey>(string airTableName, IAsyncEnumerable<JObject> sourceRows, ILogger log) where TKey : class {
-      using var airTable = new AirtableBase(AirCfg.ApiKey, AirCfg.BaseId);
+    public async Task Sync<TKey>(NarrativeOpts op, string airTableName, IAsyncEnumerable<JObject> sourceRows, ILogger log) where TKey : class {
+      using var airTable = new AirtableBase(AirCfg.ApiKey, op.BaseId);
       var keyFields = typeof(TKey).GetProperties().Select(p => p.Name).ToArray();
       var airRows = await airTable.Rows<TKey>(airTableName, keyFields, log).ToListAsync()
         .Then(rows => rows.ToKeyedCollection(r => r.Fields));

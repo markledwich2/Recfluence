@@ -70,7 +70,7 @@ namespace YtReader.BitChute {
         while (true) {
           var (html, success) = await Post<ExtendResponse>($"channel/{chan.SourceId}/extend/", new {offset});
           if (!success) break;
-          var extendDoc = await AngleCfg.Browser(FlurlClient).OpenAsync(req => req.Content(html));
+          var extendDoc = await AngleCfg.WithProxyRequester(FlurlClient).OpenAsync(req => req.Content(html));
           var videos = GetChanVids(extendDoc, chan, log);
           if (videos.Length <= 0) break;
           offset += videos.Length;
@@ -141,7 +141,7 @@ namespace YtReader.BitChute {
 
     /// <summary>Executes the given function with retries and proxy fallback. Returns document in non-transient error states</summary>
     async Task<IDocument> Open(string desc, Url url, Func<IBrowsingContext, Url, Task<IDocument>> getDoc, ILogger log) {
-      var browser = AngleCfg.Browser(FlurlClient);
+      var browser = AngleCfg.WithProxyRequester(FlurlClient);
       var retryTransient = Policy.HandleResult<IDocument>(d => {
         if (!d.StatusCode.IsTransientError()) return false;
         log.Debug($"BcWeb angle transient error '{(int) d.StatusCode}'");

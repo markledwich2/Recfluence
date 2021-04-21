@@ -434,19 +434,20 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
 
   [Command("narrative", Description = "Merge rows matching a filter into an airtable sheet for manual labeling")]
   public record NarrativeCmd(ILogger Log, Narrative Covid) : ICommand {
-    [CommandOption("query", shortName: 'q', Description = "The name of the query to sync with airtable")]
-    public string MentionQuery { get; set; }
+    [CommandParameter(0, Description = "The name of the narrative to sync with airtable. e.g. (Activewear|Vaccine)")]
+    public string NarrativeName { get; set; }
+    
     [CommandOption("parts", shortName: 'p', Description = "| separated airtable to updated (Mention|Channel|Video)")]
     public string Parts { get; set; }
-    [CommandOption("channel-table", shortName: 'c', Description = "The name of the channel airtable")]
-    public string ChannelTable { get; set; }
+    [CommandOption("base", shortName: 'b', Description = "The base id from airtable. To get this, open https://airtable.com/api and select your base")]
+    public string Base { get; set; }
     [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
     public int? Limit { get; set; }
     [CommandOption("videos", shortName: 'v', Description = "| separated videos to limit update to")]
     public string Videos { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) {
-      await Covid.MargeIntoAirtable(new(MentionQuery, Limit, ParseParts<AirtablePart>(Parts), Videos?.UnJoin('|')), Log);
+      await Covid.MargeIntoAirtable(new(Base, NarrativeName, Limit, ParseParts<AirtablePart>(Parts), Videos?.UnJoin('|')), Log);
       Log.Information("CovidNarrativeCmd - complete");
     }
   }
