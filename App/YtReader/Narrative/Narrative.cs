@@ -107,6 +107,7 @@ from channel_latest c
        , v.description
        , v.upload_date
        , v.error_type
+  , substr(md5(n.video_id), 0, 5) || ' - ' || v.channel_title || ' - ' || v.video_title as video_group
   from mention n
          join video_latest v on v.video_id=n.video_id
 qualify row_number() over (partition by mention_id order by 1) = 1

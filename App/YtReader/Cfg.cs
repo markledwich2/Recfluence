@@ -102,22 +102,22 @@ namespace YtReader {
     [Required] public int    Parallel     { get; set; } = 4;
   }
 
-  public class ProxyCfg {
-    [Required] public ProxyConnectionCfg[] Proxies        { get; set; } = { };
-    public            int                  TimeoutSeconds { get; set; } = 40;
-    public            int                  Retry          { get; set; } = 5;
-    public            bool                 AlwaysUseProxy { get; set; }
+  public record ProxyCfg {
+    [Required] public ProxyConnectionCfg[] Proxies        { get; init; } = Array.Empty<ProxyConnectionCfg>();
+    public            int                  TimeoutSeconds { get; init; } = 40;
+    public            int                  Retry          { get; init; } = 5;
+    public            bool                 AlwaysUseProxy { get; init; }
   }
 
-  public static class ProxyCfgEx {
-    public static ProxyConnectionCfg[] DirectAndProxies(this ProxyCfg cfg) => new[] {new ProxyConnectionCfg()}.Concat(cfg.Proxies).ToArray();
+  public enum ProxyType {
+    Datacenter,
+    Residential
   }
 
-  public class ProxyConnectionCfg {
-    [Required] public string     Url   { get; set; }
-    [Required] public NameSecret Creds { get; set; }
-
-    public bool IsDirect() => Url.NullOrEmpty();
+  public record ProxyConnectionCfg {
+    [Required] public string     Url   { get; init; }
+    [Required] public NameSecret Creds { get; init; }
+    public            ProxyType  Type  { get; set; }
   }
 
   public class YtCollectCfg {

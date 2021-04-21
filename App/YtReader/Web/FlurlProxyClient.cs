@@ -19,7 +19,7 @@ namespace YtReader.Web {
     public FlurlProxyClient(ProxyCfg cfg) {
       Cfg = cfg;
       Direct = new();
-      Proxy = new(cfg.Proxies.FirstOrDefault()?.CreateHttpClient());
+      Proxy = new(cfg.Proxy(ProxyType.Datacenter)?.CreateHttpClient());
     }
 
     /// <summary>Executes getResponse and retries with proxy fallback. Throws if unsuccessful</summary>

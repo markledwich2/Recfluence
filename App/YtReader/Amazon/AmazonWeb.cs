@@ -32,8 +32,8 @@ using PT = YtReader.Amazon.AmazonPageType;
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.Amazon {
-  public record AmazonCfg(int WebParallel = 16, int BatchSize = 100, int Retries = 8) {
-    public TimeSpan RequestTimeout { get; init; } = 1.Minutes();
+  public record AmazonCfg(int WebParallel = 16, int BatchSize = 100, int Retries = 8, ProxyType ProxyType = ProxyType.Residential) {
+    public TimeSpan RequestTimeout { get; init; } = 2.Minutes();
   }
 
   public record AmazonWeb(SnowflakeConnectionProvider Conn, FlurlProxyClient FlurlClient, YtStore Store, AmazonCfg Cfg, VersionInfo Version,
@@ -119,8 +119,12 @@ select url from l
     /// <summary>Loads the given url. Handles basic loading issues and retries content requested refreshing</summary>
     async Task<(IDocument Doc, HttpStatusCode Status, string Msg)> LoadLink(string url) {
       var browse = Configuration.Default
-        .WithProxyRequester(FlurlClient, new []{ ("Cache-Control", "no-cache"), ("Accept-Language", "en-US")}, Cfg.RequestTimeout)
-        .WithDefaultLoader().WithTemporaryCookies().Browser();
+        //.WithProxyRequester(FlurlClient, new []{ ("Cache-Control", "no-cache"), ("Accept-Language", "en-US")}, Cfg.RequestTimeout, Cfg.ProxyType, log)
+        .WithProxyRequester(FlurlClient, Cfg.ProxyType)
+        .WithDefaultLoader()
+        .WithTemporaryCookies()
+        .Browser();
+      
       var refreshAttempts = 0;
       var requestUrl = url;
       while (refreshAttempts < 3) {

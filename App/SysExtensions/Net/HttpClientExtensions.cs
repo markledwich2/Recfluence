@@ -17,6 +17,7 @@ using Serilog;
 using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using SysExtensions.Collections;
 
 namespace SysExtensions.Net {
   public static class HttpClientExtensions {
@@ -72,6 +73,21 @@ namespace SysExtensions.Net {
         baseUrl = new(baseUrl.OriginalString + "/");
       client.BaseAddress = baseUrl;
       return client;
+    }
+    
+    public static string FormatCurl(this  HttpWebRequest req, HttpMethod verb = null, string content = null) {
+      verb ??= HttpMethod.Get;
+      var args = Array.Empty<string>()
+        .Concat(req.RequestUri.ToString(), "-X", verb.Method.ToUpper())
+        .Concat(req.Headers.ToTuples().SelectMany(h => new[] {"-H", $"'{h.Name}:{h.Value}'"}));
+
+      var cookies = req.CookieContainer?.GetCookieHeader(req.Address);
+      if (cookies.HasValue())
+        args = args.Concat($"--cookie {cookies}");
+      
+      if (content != null) args = args.Concat("-d", $"'{content}'");
+      var curl = $"curl {args.NotNull().Join(" ")}";
+      return curl;
     }
 
     public static string FormatAsCurl(this HttpRequestMessage request, string content = null) {

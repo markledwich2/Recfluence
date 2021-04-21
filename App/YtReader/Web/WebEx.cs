@@ -16,6 +16,8 @@ namespace YtReader.Web {
     /// <summary>Removes leading and trailing slashes from the path</summary>
     public static string TrimPath(this string path) => path?.Split('/').Where(t => !t.Trim().NullOrEmpty()).Join("/");
 
+    public static ProxyConnectionCfg Proxy(this ProxyCfg cfg, ProxyType type) => cfg.Proxies.FirstOrDefault(c => c.Type == type);
+
     public static WebProxy CreateWebProxy(this ProxyConnectionCfg proxy) =>
       new(proxy.Url, BypassOnLocal: true, new string[] { },
         proxy.Creds != null ? new NetworkCredential(proxy.Creds.Name, proxy.Creds.Secret) : null);

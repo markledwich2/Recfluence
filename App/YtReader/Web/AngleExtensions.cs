@@ -7,6 +7,7 @@ using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Io;
 using Flurl.Http;
+using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 
@@ -21,16 +22,30 @@ namespace YtReader.Web {
     public static string QsAttr(this IParentNode b, string selector, string attribute) => b.QuerySelector(selector)?.GetAttribute(attribute);
     public static void EnsureSuccess(this IDocument doc) => doc.StatusCode.EnsureSuccess(doc.Url);
 
-    public static IConfiguration WithProxyRequester(this IConfiguration angleCfg, FlurlProxyClient proxyClient, (string,string)[] headers = null, TimeSpan timeout = default) {
-      var requester = new DefaultHttpRequester($"Recfluence/1.0", request => {
-        if (proxyClient.UseProxy)
-          request.Proxy = proxyClient.Cfg.Proxies.First().CreateWebProxy();
-      });
-      if (headers != null)
+    public static IConfiguration WithProxyRequester(this IConfiguration angleCfg, FlurlProxyClient proxyClient
+      , ProxyType proxyType = default) {
+      
+      
+      var proxy = proxyClient.UseProxy ? proxyClient.Cfg.Proxy(proxyType)?.CreateWebProxy() : null;
+      var handler = new HttpClientHandler()
+      {
+        Proxy = proxy,
+        PreAuthenticate = true,
+        UseDefaultCredentials = false,
+        UseCookies = true,
+        UseProxy = true,
+      };
+      
+      /*var requester = new DefaultHttpRequester("PostmanRuntime/7.26.10", request => {
+        var proxy = proxyClient.UseProxy ? proxyClient.Cfg.Proxy(proxyType)?.CreateWebProxy() : null;
+        if (proxy != null) request.Proxy = proxy;
+        log?.Debug("Angle Request {Proxy}: {Curl}", proxy?.Address?.ToString() ?? "(direct)", request.FormatCurl());
+      });*/
+      /*if (headers != null)
         requester.Headers.AddRange(headers);
       if (timeout != default)
-        requester.Timeout = timeout;
-      return angleCfg.WithRequester(requester);
+        requester.Timeout = timeout;*/
+      return angleCfg.WithRequesters(handler);
     }
 
     /// <summary>Configures the angle requester from the given flurl proxy client configuration (doesn't actually use flurl
