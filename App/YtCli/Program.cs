@@ -11,8 +11,8 @@ using var cmdScope = scope.BeginLifetimeScope(c => { c.RegisterAssemblyTypes(typ
 var app = new CliApplicationBuilder()
   .AddCommandsFromThisAssembly()
   .UseTypeActivator(t => cmdScope.Resolve(t))
-  .UseTitle("Recfluence")
-  .UseVersionText(version.Version.ToString())
+  .SetTitle("Recfluence")
+  .SetVersion(version.Version.ToString())
   .Build();
 log.Information("Starting cmd (recfluence {Args}) {Env} {Version}", args.Join(" "), root.Env, version.Version);
 var res = await app.RunAsync(args);

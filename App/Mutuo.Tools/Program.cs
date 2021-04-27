@@ -19,7 +19,7 @@ namespace Mutuo.Tools {
       var app = new CliApplicationBuilder()
         .AddCommandsFromThisAssembly()
         .UseTypeActivator(t => scope.Resolve(t))
-        .UseTitle("Mutuo Tools")
+        .SetTitle("Mutuo Tools")
         .Build();
 
       return await app.RunAsync(args);

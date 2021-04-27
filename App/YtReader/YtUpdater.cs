@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Mutuo.Etl.Pipe;
@@ -11,71 +12,48 @@ using YtReader.BitChute;
 using YtReader.Rumble;
 using YtReader.Search;
 using YtReader.Store;
+using YtReader.Yt;
+
+// ReSharper disable InconsistentNaming
 
 namespace YtReader {
   public class YtUpdaterCfg {
     public int Parallel { get; set; } = 4;
   }
 
-  public class UpdateOptions {
-    public bool                               FullLoad               { get; set; }
-    public string[]                           Actions                { get; set; }
-    public string[]                           Tables                 { get; set; }
-    public string[]                           StageTables            { get; set; }
-    public string[]                           Results                { get; set; }
-    public string[]                           Channels               { get; set; }
-    public bool                               DisableChannelDiscover { get; set; }
-    public bool                               UserScrapeInit         { get; set; }
-    public string                             UserScrapeTrial        { get; set; }
-    public (string index, string condition)[] SearchConditions       { get; set; }
-    public string[]                           SearchIndexes          { get; set; }
-    public string[]                           UserScrapeAccounts     { get; set; }
-    public string[]                           Indexes                { get; set; }
-    public CollectPart[]                      Parts                  { get; set; }
-    public string                             CollectVideosPath      { get; set; }
-    public bool                               DataformDeps           { get; set; }
-    public StandardCollectPart[]              StandardParts          { get; set; }
-    public string[]                           Videos                 { get; set; }
+  public record UpdateOptions {
+    public bool     FullLoad        { get; init; }
+    public string[] Actions         { get; init; }
+    public string[] WarehouseTables { get; init; }
+    public string[] StageTables     { get; init; }
+    public string[] Results         { get; init; }
+
+    public CollectOptions Collect { get; init; }
+
+    public bool                               DisableChannelDiscover { get; init; }
+    public bool                               UserScrapeInit         { get; init; }
+    public string                             UserScrapeTrial        { get; init; }
+    public (string index, string condition)[] SearchConditions       { get; init; }
+    public string[]                           SearchIndexes          { get; init; }
+    public string[]                           UserScrapeAccounts     { get; init; }
+    public string[]                           Indexes                { get; init; }
+
+    public bool                  DataformDeps  { get; init; }
+    public StandardCollectPart[] StandardParts { get; init; }
+    public string[]              Videos        { get; init; }
+    public SearchMode            SearchMode    { get; init; }
+    public string[]              Tags          { get; init; }
+    public DataScriptOptions     DataScript    { get; set; }
   }
 
   /// <summary>Updates all data daily. i.e. Collects from YT, updates warehouse, updates blob results for website, indexes
   ///   caption search. Many missing features (resume, better recording of tasks etc..). I intend to replace with dagster or
   ///   make Mutuo.Etl into a data application runner once I have evaluated it.</summary>
-  public class YtUpdater {
-    readonly YtUpdaterCfg   Cfg;
-    readonly ILogger        Log;
-    readonly YtCollector    _collector;
-    readonly Stage          _warehouse;
-    readonly YtSearch       _search;
-    readonly YtResults      _results;
-    readonly YtDataform     YtDataform;
-    readonly YtBackup       _backup;
-    readonly string         _updated;
-    readonly UserScrape     _userScrape;
-    readonly YtIndexResults _index;
-    readonly BcCollect      _bcCollect;
-    readonly RumbleCollect  _rumbleCollect;
-
-    public YtUpdater(YtUpdaterCfg cfg, ILogger log, YtCollector collector, Stage warehouse, YtSearch search,
-      YtResults results, YtDataform ytDataform, YtBackup backup, UserScrape userScrape, YtIndexResults index, BcCollect bcCollect,
-      RumbleCollect rumbleCollect) {
-      _rumbleCollect = rumbleCollect;
-      _bcCollect = bcCollect;
-      Cfg = cfg;
-      _updated = Guid.NewGuid().ToShortString(6);
-      Log = log.ForContext("UpdateId", _updated);
-      _collector = collector;
-      _warehouse = warehouse;
-      _search = search;
-      _results = results;
-      YtDataform = ytDataform;
-      _backup = backup;
-      _userScrape = userScrape;
-      _index = index;
-    }
-
-    Task Collect(string[] channels, CollectPart[] parts, string collectVideoPath, ILogger logger, CancellationToken cancel) =>
-      _collector.Collect(logger, channels, parts, collectVideoPath, cancel);
+  public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, Stage _stage, YtSearch _search,
+    YtResults _results, YtDataform YtDataform, YtBackup _backup, UserScrape _userScrape, YtIndexResults _index, BcCollect _bcCollect,
+    RumbleCollect _rumbleCollect, DataScripts _dataScripts) {
+    Task Collect(CollectOptions options, ILogger logger, CancellationToken cancel) =>
+      YtCollect.Collect(logger, options, cancel);
 
     Task BcCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
       _bcCollect.Collect(options, logger, cancel);
@@ -85,23 +63,27 @@ namespace YtReader {
 
     [GraphTask(nameof(Collect), nameof(BcCollect), nameof(RumbleCollect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
-      _warehouse.StageUpdate(logger, fullLoad, tables);
+      _stage.StageUpdate(logger, fullLoad, tables);
 
     [GraphTask(nameof(Stage))]
     Task Dataform(bool fullLoad, string[] tables, bool includeDeps, ILogger logger, CancellationToken cancel) =>
       YtDataform.Update(logger, fullLoad, tables, includeDeps, cancel);
 
     [GraphTask(nameof(Dataform))]
-    Task Search(bool fullLoad, string[] optionsSearchIndexes, (string index, string condition)[] conditions, ILogger logger, CancellationToken cancel) =>
-      _search.SyncToElastic(logger, fullLoad, indexes: optionsSearchIndexes, conditions, cancel: cancel);
+    Task Search(SearchMode mode, string[] optionsSearchIndexes, (string index, string condition)[] conditions, ILogger logger, CancellationToken cancel) =>
+      _search.SyncToElastic(logger, mode, optionsSearchIndexes, conditions, cancel);
 
     [GraphTask(nameof(Dataform))]
     Task Result(string[] results, ILogger logger, CancellationToken cancel) =>
       _results.SaveBlobResults(logger, results, cancel);
 
     [GraphTask(nameof(Dataform))]
-    Task Index(string[] tables, ILogger logger, CancellationToken cancel) =>
-      _index.Run(tables, logger, cancel);
+    Task Index(string[] tables, string[] tags, ILogger logger, CancellationToken cancel) =>
+      _index.Run(tables, tags, logger, cancel);
+
+    [GraphTask(nameof(Dataform))]
+    Task DataScripts(ILogger logger, CancellationToken cancel, DataScriptOptions options) =>
+      _dataScripts.Run(logger, cancel, options);
 
     [GraphTask(nameof(Stage))]
     Task Backup(ILogger logger) =>
@@ -109,28 +91,32 @@ namespace YtReader {
 
     [GraphTask(nameof(Result), nameof(Collect), nameof(Dataform))]
     Task UserScrape(bool init, string trial, string[] accounts, ILogger logger, CancellationToken cancel) =>
-      _userScrape.Run(Log, init, trial, accounts, cancel);
+      _userScrape.Run(logger, init, trial, accounts, cancel);
 
     [Pipe]
     public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
       options ??= new();
       var sw = Stopwatch.StartNew();
-      Log.Information("Update {RunId} - started", _updated);
+      var updateId = Guid.NewGuid().ToShortString(6);
+      var log = Log.ForContext("UpdateId", updateId);
+      log.Information("Update {RunId} - started", updateId);
 
       var fullLoad = options.FullLoad;
 
-      var collectOptions = new SimpleCollectOptions {Parts = options.StandardParts, ExplicitChannels = options.Channels, ExplicitVideos = options.Videos};
+      var collectOptions = new SimpleCollectOptions
+        {Parts = options.StandardParts, ExplicitChannels = options.Collect?.LimitChannels, ExplicitVideos = options.Videos};
 
       var actionMethods = TaskGraph.FromMethods(
-        (l, c) => Collect(options.Channels, options.Parts, options.CollectVideosPath, l, c),
-        (l, c) => BcCollect(collectOptions, l, c),
-        (l, c) => RumbleCollect(collectOptions, l, c),
+        (l, c) => Collect(options.Collect, l, c),
+        //(l, c) => BcCollect(collectOptions, l, c), // disabled. daily data no worth maintenance right now
+        //(l, c) => RumbleCollect(collectOptions, l, c), // disabled. daily data no worth maintenance. Issue with many channels recieving 404's
         (l, c) => Stage(fullLoad, options.StageTables, l),
-        (l, c) => Search(options.FullLoad, options.SearchIndexes, options.SearchConditions, l, c),
+        (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),
-        (l, c) => Index(options.Indexes, l, c),
+        (l, c) => Index(options.Indexes, options.Tags, l, c),
         //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
-        (l, c) => Dataform(fullLoad, options.Tables, options.DataformDeps, l, c),
+        (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c),
+        (l, c) => DataScripts(l, c, options.DataScript),
         (l, c) => Backup(l)
       );
 
@@ -150,18 +136,23 @@ namespace YtReader {
       // too costly. TODO: update to incremtnal backup or de-partition the big db2 directories
       //if (backup.Status != GraphTaskStatus.Ignored && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
 
-      var res = await actionMethods.Run(Cfg.Parallel, Log, cancel);
+      var res = await actionMethods.Run(Cfg.Parallel, log, cancel);
 
       var errors = res.Where(r => r.Error).ToArray();
       if (errors.Any())
-        Log.Error("Update {RunId} - failed in {Duration}: {@TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res.Join("\n"));
+        Log.Error("Update {RunId} - failed in {Duration}: {@TaskResults}", updateId, sw.Elapsed.HumanizeShort(), res.Join("\n"));
       else
-        Log.Information("Update {RunId} - completed in {Duration}: {TaskResults}", _updated, sw.Elapsed.HumanizeShort(), res.Join("\n"));
+        Log.Information("Update {RunId} - completed in {Duration}: {TaskResults}", updateId, sw.Elapsed.HumanizeShort(), res.Join("\n"));
     }
   }
 
   public static class YtUpdaterEx {
-    public static bool ShouldRunAny<T>(this T[] parts, params T[] toRun) where T : Enum => parts == null || toRun.Any(parts.Contains);
-    public static bool ShouldRun<T>(this T[] parts, T part) where T : Enum => parts == null || parts.Contains(part);
+    public static bool ShouldRunAny<T>(this T[] parts, params T[] toRun) where T : struct, Enum => toRun.Any(parts.ShouldRun);
+
+    public static bool ShouldRun<T>(this T[] parts, T part) where T : struct, Enum {
+      var name = Enum.GetName(part) ?? part.ToString();
+      var ignore = part.GetType().GetField(name)?.GetCustomAttribute<CollectPartAttribute>()?.Explicit;
+      return ignore == true ? parts?.Contains(part) == true : parts?.Contains(part) != false;
+    }
   }
 }

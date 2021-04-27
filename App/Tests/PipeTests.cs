@@ -12,22 +12,52 @@ using NUnit.Framework;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
+using YtReader.Store;
 
 namespace Tests {
   public class PipeTests {
+
+    [Test]
+    public static void TestPipeArgDeserialization() {
+      var jsonV1 = new PipeArgs(new[] {new PipeArg("cancel", ArgMode.Inject, 2)}).ToJson(Pipes.ArgJCfg);
+      var jsonV0 = @"{
+  ""$type"": ""Mutuo.Etl.Pipe.PipeArg[], Mutuo.Etl"",
+  ""$values"": [
+    {
+      ""$type"": ""Mutuo.Etl.Pipe.PipeArg, Mutuo.Etl"",
+      ""name"": ""options"",
+      ""value"": {
+        ""$type"": ""YtReader.UpdateOptions, YtReader""
+      }
+    },
+    {
+      ""$type"": ""Mutuo.Etl.Pipe.PipeArg, Mutuo.Etl"",
+      ""name"": ""cancel"",
+      ""argMode"": 2
+    }
+  ]
+}".ParseJObject();
+
+      var v2 = Pipes.LoadInArgs(jsonV0);
+      v2.Version.Should().Be(PipeArgs.Versions.V1);
+      v2.Values.First(v => v.Name == "cancel").ArgMode.Should().Be(ArgMode.Inject);
+    }
+    
     [Test]
     public static async Task TestPipeApp() {
-      var log = Setup.CreateTestLogger();
+      var ctx = await TestSetup.TextCtx();
       var b = new ContainerBuilder();
       b.RegisterType<PipeApp>();
-      b.Register(_ => log).As<ILogger>();
+      b.Register(_ => ctx.Log).As<ILogger>();
       var scope = b.Build();
-      var store = new AzureBlobFileStore("UseDevelopmentStorage=true", "pipe", log);
-      var pipeCtx = new PipeCtx(new PipeAppCfg(), new PipeAppCtx(scope, typeof(PipeApp)), store, log);
-      var res = await pipeCtx.Run((PipeApp app) => app.MakeAndSum(200), new PipeRunOptions {Location = PipeRunLocation.Local});
+      // relies on a local dev isntance. use vscode to start an Azurite blob service with a container called pipe
+      var store = new AzureBlobFileStore("UseDevelopmentStorage=true", "pipe", ctx.Log);
+      var pipeCtx = new PipeCtx(new (), new (scope, typeof(PipeApp)), store, ctx.Log);
+      var res = await pipeCtx.Run((PipeApp app) => app.MakeAndSum((int)15L, 1.Thousands(), DataStoreType.Backup), new () {Location = PipeRunLocation.Local});
       res.Metadata.Error.Should().BeFalse();
     }
 
@@ -42,7 +72,7 @@ namespace Tests {
 
     async Task Generate(ILogger log, bool shouldError) {
       if (shouldError) throw new InvalidOperationException("Generate Errored");
-      generated = new List<Guid>();
+      generated = new ();
       foreach (var i in 0.RangeTo(5)) {
         await 100.Milliseconds().Delay();
         generated.Add(Guid.NewGuid());
@@ -64,20 +94,19 @@ namespace Tests {
 
     [Test]
     public async Task TestGraphRunner() {
-      using var log = Setup.CreateTestLogger();
-
+      var ctx = await TestSetup.TextCtx();;
       var res = await TaskGraph.FromMethods(
           (l,c) => Shorten(l),
           (l,c) => Generate(l, true),
           (l,c) => NotDependent(l))
-        .Run(parallel: 2, log, CancellationToken.None);
+        .Run(parallel: 2, ctx.Log, CancellationToken.None);
 
       var resByName = res.ToKeyedCollection(r => r.Name);
       resByName[nameof(Generate)].FinalStatus.Should().Be(GraphTaskStatus.Error);
       resByName[nameof(Shorten)].FinalStatus.Should().Be(GraphTaskStatus.Cancelled);
       resByName[nameof(NotDependent)].FinalStatus.Should().Be(GraphTaskStatus.Success);
 
-      log.Information("Res {Res}, Shortened {Values}", res.Join("\n"), shortened);
+      ctx.Log.Information("Res {Res}, Shortened {Values}", res.Join("\n"), shortened);
     }
   }
 
@@ -91,10 +120,10 @@ namespace Tests {
     }
 
     [Pipe]
-    public async Task<int[]> MakeAndSum(int size) {
-      Log.Information("MakeAndSum Started - {Size}", size);
-      var things = 0.RangeTo(size).Select(i => new Thing {Number = i});
-      var res = await things.Process(Ctx, b => CountThings(b), new PipeRunCfg {MaxParallel = 2});
+    public async Task<int[]> MakeAndSum(int size, int shift, DataStoreType dataStoreType) {
+      Log.Information("MakeAndSum Started - {Size} - Enum Parameter {DataStoreType}", size, dataStoreType);
+      var things = (0+shift).RangeTo(size+shift).Select(i => new Thing {Number = i});
+      var res = await things.Process(Ctx, b => CountThings(b), new() {MaxParallel = 2});
       Log.Information("MakeAndSum Complete {Batches}", res.Count);
       return res.Select(r => r.OutState).ToArray();
     }

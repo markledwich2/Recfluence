@@ -23,7 +23,13 @@ namespace SysExtensions.Collections {
     /// <summary>If items is null return an empty set, if an item is null remove it from the list</summary>
     [return: NotNull]
     public static IEnumerable<T> NotNull<T>(this IEnumerable<T> items)
-      => items?.Where(i => i != null) ?? new T[] { };
+      => items?.Where(i => i != null) ?? Array.Empty<T>();
+
+    /// <summary>If items is null return an empty set, if an item is null remove it from the list</summary>
+    public static IEnumerable<T> NotNull<T>(this IEnumerable<T?> items) where T : struct
+      => items?.Where(i => i.HasValue).Select(i => i.Value) ?? Array.Empty<T>();
+
+    public static IAsyncEnumerable<T> NotNull<T>(this IAsyncEnumerable<T> items) => items.Where(i => i != null);
 
     public static IEnumerable<T> Randomize<T>(this IEnumerable<T> source) {
       var rnd = new Random();
@@ -53,14 +59,18 @@ namespace SysExtensions.Collections {
       var included = new List<T>();
       var excluded = new List<T>();
       foreach (var item in items)
-        if (@where(item))
+        if (where(item))
           included.Add(item);
         else
           excluded.Add(item);
       return (included, excluded);
     }
 
-    /// <summary>Batches items into batchsize or maxBatches batches, whatever has the last batches</summary>
+    /// <summary>Batches into x chunks</summary>
+    public static IEnumerable<IReadOnlyCollection<T>> BatchFixed<T>(this IReadOnlyCollection<T> items, int maxBatches) =>
+      items.Batch(items.Count / maxBatches);
+
+    /// <summary>Batches items into batchsize or maxBatches batches, whatever has the least batches</summary>
     public static IEnumerable<IReadOnlyCollection<T>> Batch<T>(this IReadOnlyCollection<T> items, int batchSize, int maxBatches) =>
       items.Batch(Math.Max(items.Count / maxBatches, batchSize));
 
@@ -70,10 +80,23 @@ namespace SysExtensions.Collections {
         b.Add(item);
         if (b.Count != batchSize) continue;
         yield return b;
-        b = new List<T>(batchSize);
+        b = new(batchSize);
       }
       if (b.Count > 0)
         yield return b;
+    }
+
+    /// <summary>Batch into size chunks lazily</summary>
+    public static async IAsyncEnumerable<T[]> Batch<T>(this IAsyncEnumerable<T> items, int size) {
+      var batch = new List<T>();
+      await foreach (var item in items) {
+        batch.Add(item);
+        if (batch.Count < size) continue;
+        yield return batch.ToArray();
+        batch.Clear();
+      }
+      if (batch.Count > 0)
+        yield return batch.ToArray();
     }
 
     public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> items) => items.Select((item, index) => (item, index));
@@ -83,40 +106,14 @@ namespace SysExtensions.Collections {
 
     public static IEnumerable<IGrouping<TKey, TSource>> ChunkBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector,
       IEqualityComparer<TKey> comparer) {
-      // Flag to signal end of source sequence.
       const bool noMoreSourceElements = true;
-
-      // Auto-generated iterator for the source array.       
       var enumerator = source.GetEnumerator();
-
-      // Move to the first element in the source sequence.
       if (!enumerator.MoveNext()) yield break;
-
-      // Iterate through source sequence and create a copy of each Chunk.
-      // On each pass, the iterator advances to the first element of the next "Chunk"
-      // in the source sequence. This loop corresponds to the outer foreach loop that
-      // executes the query.
       Chunk<TKey, TSource> current = null;
       while (true) {
-        // Get the key for the current Chunk. The source iterator will churn through
-        // the source sequence until it finds an element with a key that doesn't match.
         var key = keySelector(enumerator.Current);
-
-        // Make a new Chunk (group) object that initially has one GroupItem, which is a copy of the current source element.
-        current = new Chunk<TKey, TSource>(key, enumerator, value => comparer.Equals(key, keySelector(value)));
-
-        // Return the Chunk. A Chunk is an IGrouping<TKey,TSource>, which is the return value of the ChunkBy method.
-        // At this point the Chunk only has the first element in its source sequence. The remaining elements will be
-        // returned only when the client code foreach's over this chunk. See Chunk.GetEnumerator for more info.
+        current = new (key, enumerator, value => comparer.Equals(key, keySelector(value)));
         yield return current;
-
-        // Check to see whether (a) the chunk has made a copy of all its source elements or 
-        // (b) the iterator has reached the end of the source sequence. If the caller uses an inner
-        // foreach loop to iterate the chunk items, and that loop ran to completion,
-        // then the Chunk.GetEnumerator method will already have made
-        // copies of all chunk items before we get here. If the Chunk.GetEnumerator loop did not
-        // enumerate all elements in the chunk, we need to do it here to avoid corrupting the iterator
-        // for clients that may be calling us on a separate thread.
         if (current.CopyAllChunkElements() == noMoreSourceElements) yield break;
       }
     }

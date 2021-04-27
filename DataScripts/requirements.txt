@@ -1,0 +1,13 @@
+python-dotenv
+dataclasses
+dataclasses_json
+dataclasses_jsonschema
+pandas
+seqlog
+spacy==2.3.5
+setuptools
+wheel
+snowflake-connector-python
+aiohttp
+azure-storage-blob
+ndjson

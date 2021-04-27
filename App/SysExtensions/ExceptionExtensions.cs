@@ -66,7 +66,7 @@ namespace SysExtensions {
     }
 
     /// <summary>Allows you to log exception without changing behaviour. It re-throws the exception</summary>
-    public static async ValueTask WithOnError(this ValueTask task, Action<Exception> onError) {
+    public static async ValueTask OnError(this ValueTask task, Action<Exception> onError) {
       try {
         await task;
       }
@@ -77,7 +77,7 @@ namespace SysExtensions {
     }
 
     /// <summary>Allows you to log exception without changing behaviour. It re-throws the exception</summary>
-    public static async ValueTask<T> WithOnError<T>(this ValueTask<T> task, Action<Exception> onError) {
+    public static async ValueTask<T> OnError<T>(this ValueTask<T> task, Action<Exception> onError) {
       try {
         return await task;
       }
@@ -87,7 +87,7 @@ namespace SysExtensions {
       }
     }
 
-    public static async ValueTask<T> WithSwallow<T>(this ValueTask<T> task, Action<Exception> onError) {
+    public static async ValueTask<T> Swallow<T>(this ValueTask<T> task, Action<Exception> onError) {
       try {
         return await task;
       }
@@ -97,12 +97,12 @@ namespace SysExtensions {
       }
     }
 
-    public static async Task<T> WithSwallow<T>(this Task<T> task, Action<Exception> onError) {
+    public static async Task<T> Swallow<T>(this Task<T> task, Action<Exception> onError = null) {
       try {
         return await task;
       }
       catch (Exception ex) {
-        onError(ex);
+        onError?.Invoke(ex);
         return default;
       }
     }
@@ -125,7 +125,7 @@ namespace SysExtensions {
       }
     }
 
-    public static (T, Exception) Try<T>(this Func<T> task, T defaultValue = default) {
+    public static (T Value, Exception Ex) Try<T>(this Func<T> task, T defaultValue = default) {
       try {
         return (task(), default);
       }

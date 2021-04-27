@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CsvHelper;
+using CsvHelper.Configuration;
 using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions.Serialization;
@@ -21,14 +22,12 @@ namespace YtReader {
       await files.BlockAction(async f => {
         using var stream = await Store.Load(f.Path);
         using var sr = new StreamReader(stream);
-        using var csv = new CsvReader(sr, CultureInfo.InvariantCulture) {
-          Configuration = {
-            Encoding = Encoding.UTF8,
-            HasHeaderRecord = true,
-            MissingFieldFound = null,
-            BadDataFound = r => log.Warning("Error reading csv data at {RowNumber}: {RowData}", r.Row, r.RawRecord)
-          }
-        };
+        using var csv = new CsvReader(sr, new(CultureInfo.InvariantCulture) {
+          Encoding = Encoding.UTF8,
+          HasHeaderRecord = true,
+          MissingFieldFound = null,
+          BadDataFound = r => log.Warning("Error reading csv data at: {RowData}", r.RawRecord)
+        });
         var rows = await csv.GetRecordsAsync<dynamic>().ToListAsync();
         await Store.Save(f.Path.Parent.Add($"{f.Path.NameSansExtension}.json.gz"), await rows.ToJsonlGzStream(), log);
       }, parallel: 4);

@@ -1,5 +1,16 @@
 {
   "definitions": {
+    "AirtableCfg": {
+      "type": "object",
+      "properties": {
+        "apiKey": {
+          "type": "string"
+        },
+        "baseId": {
+          "type": "string"
+        }
+      }
+    },
     "AzureCleanerCfg": {
       "type": "object",
       "properties": {
@@ -64,6 +75,33 @@
         }
       }
     },
+    "DataScriptsCfg": {
+      "type": "object",
+      "properties": {
+        "containers": {
+          "type": "integer"
+        },
+        "videosPerFile": {
+          "type": "integer"
+        },
+        "cores": {
+          "type": "integer"
+        },
+        "mem": {
+          "type": "integer"
+        },
+        "spacyBatchSize": {
+          "type": "integer"
+        },
+        "videoLimit": {
+          "type": "integer"
+        },
+        "stale": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
     "ElasticCfg": {
       "type": "object",
       "properties": {
@@ -74,6 +112,15 @@
           "type": "string"
         },
         "indexPrefix": {
+          "type": "string"
+        }
+      }
+    },
+    "GoogleCfg": {
+      "type": "object",
+      "properties": {
+        "creds": {},
+        "test": {
           "type": "string"
         }
       }
@@ -95,6 +142,14 @@
         },
         "container": {
           "$ref": "#/definitions/ContainerCfg"
+        }
+      }
+    },
+    "NarrativesCfg": {
+      "type": "object",
+      "properties": {
+        "covidAirtable": {
+          "type": "string"
         }
       }
     },
@@ -307,26 +362,6 @@
         }
       }
     },
-    "SqlServerCfg": {
-      "type": "object",
-      "properties": {
-        "host": {
-          "type": "string"
-        },
-        "db": {
-          "type": "string"
-        },
-        "creds": {
-          "type": "string"
-        },
-        "defaultSchema": {
-          "type": "string"
-        },
-        "minPoolSize": {
-          "type": "integer"
-        }
-      }
-    },
     "StorageCfg": {
       "type": "object",
       "properties": {
@@ -387,7 +422,13 @@
         "loadTablesParallel": {
           "type": "integer"
         },
-        "roles": {
+        "adminRoles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "readRoles": {
           "type": "array",
           "items": {
             "type": "string"
@@ -426,6 +467,9 @@
           "type": "string"
         },
         "refreshRecsWithin": {
+          "type": "string"
+        },
+        "refreshChannelDetailDebounce": {
           "type": "string"
         },
         "refreshRecsMin": {
@@ -472,6 +516,15 @@
         },
         "minChannelViews": {
           "type": "integer"
+        },
+        "channelBatchSize": {
+          "type": "integer"
+        },
+        "maxChannelDailyVideos": {
+          "type": "integer"
+        },
+        "maxChannelFullVideos": {
+          "type": "integer"
         }
       }
     },
@@ -503,7 +556,7 @@
         "Fatal"
       ]
     },
-    "env": {
+    "envCfg": {
       "$ref": "#/definitions/BranchEnvCfg"
     },
     "collect": {
@@ -532,9 +585,6 @@
     },
     "warehouse": {
       "$ref": "#/definitions/WarehouseCfg"
-    },
-    "appDb": {
-      "$ref": "#/definitions/SqlServerCfg"
     },
     "results": {
       "$ref": "#/definitions/ResultsCfg"
@@ -568,6 +618,18 @@
     },
     "rumble": {
       "$ref": "#/definitions/RumbleCfg"
+    },
+    "google": {
+      "$ref": "#/definitions/GoogleCfg"
+    },
+    "airtable": {
+      "$ref": "#/definitions/AirtableCfg"
+    },
+    "narratives": {
+      "$ref": "#/definitions/NarrativesCfg"
+    },
+    "dataScripts": {
+      "$ref": "#/definitions/DataScriptsCfg"
     }
   }
 }

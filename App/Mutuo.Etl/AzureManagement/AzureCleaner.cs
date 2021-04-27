@@ -11,8 +11,15 @@ using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Threading;
+using static Mutuo.Etl.AzureManagement.CleanContainerMode;
 
 namespace Mutuo.Etl.AzureManagement {
+  public enum CleanContainerMode {
+    Standard,
+    DeleteCompleted,
+    DeleteAll
+  }
+
   public class AzureCleaner {
     readonly AzureCleanerCfg Cfg;
     readonly PipeAzureCfg    AzureCfg;
@@ -27,17 +34,17 @@ namespace Mutuo.Etl.AzureManagement {
       ContainerCfg = containerCfg;
       RegistryClient = registryClient;
       Log = log;
-      Az = new Lazy<IAzure>(azureCfg.GetAzure);
+      Az = new(azureCfg.GetAzure);
     }
 
     public static (string key, string value) ExpireTag(DateTime utcDate) => ("expire", utcDate.ToString("o", DateTimeFormatInfo.InvariantInfo));
 
-    public async Task DeleteExpiredResources(ILogger log = null) {
+    public async Task DeleteExpiredResources(CleanContainerMode mode = Standard, ILogger log = null) {
       log ??= Log;
       var az = Az.Value;
       await DelContainerImages(log);
-      await DelContainerGroups(az, log);
-      // no need to do this for blobs. They sypport setting policies for expiry. 
+      await DelContainerGroups(az, mode, log);
+      // no need to do this for blobs. They support setting policies for expiry. 
     }
 
     async Task DelContainerImages(ILogger log) {
@@ -64,10 +71,14 @@ namespace Mutuo.Etl.AzureManagement {
       }
     }
 
-    async ValueTask DelContainerGroups(IAzure azure, ILogger log) {
-      var (allGroups, listEx) = await Def.F(() => azure.ContainerGroups.ListAsync()).Try();
+    async ValueTask DelContainerGroups(IAzure azure, CleanContainerMode mode, ILogger log) {
+      var (allGroups, listEx) = await Def.Fun(() => azure.ContainerGroups.ListAsync()).Try();
       if (listEx != null) log.Warning(listEx, "AzureCleaner - error deleting container groups: {Error}`", listEx.Message);
-      var toDelete = allGroups.NotNull().Where(g => g.IsExpired() && g.State().IsCompletedState()).ToArray();
+      var toDelete = allGroups.NotNull().Where(g => mode switch {
+        DeleteAll => true,
+        DeleteCompleted => g.State().IsCompletedState(),
+        _ => g.State().IsCompletedState() && g.IsExpired()
+      }).ToArray();
       if (toDelete.Any())
         try {
           await azure.ContainerGroups.DeleteByIdsAsync(toDelete.Select(g => g.Id).ToArray());

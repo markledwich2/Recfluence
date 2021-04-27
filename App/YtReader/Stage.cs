@@ -26,7 +26,8 @@ namespace YtReader {
     [Required] public string      Private            { get; set; } = "yt_private";
     [Required] public OptimiseCfg Optimise           { get; set; } = new();
     [Required] public int         LoadTablesParallel { get; set; } = 4;
-    public            string[]    Roles              { get; set; } = {"sysadmin", "recfluence"};
+    public            string[]    AdminRoles         { get; set; } = {"sysadmin", "recfluence"};
+    public            string[]    ReadRoles          { get; set; } = {"reader"};
     public            int         MetadataParallel   { get; set; } = 8;
     public            int         FileMb             { get; set; } = 80;
   }
@@ -49,21 +50,23 @@ namespace YtReader {
       log.Information("StageUpdate - started for snowflake host '{Host}', db '{Db}'", Conn.Cfg.Host, Conn.Cfg.DbName());
       var sw = Stopwatch.StartNew();
       var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table, StringComparer.OrdinalIgnoreCase) == true).ToArray();
-      await tables.BlockAction(async t => {
-        var table = t.Table;
-        using var db = await Conn.Open(log);
-        await db.Execute("create table", $"create table if not exists {table} (v Variant)");
-
-        if (t.Dir != null) {
-          log.Information("StageUpdate - {Table} ({LoadType})", table, fullLoad ? "full" : "incremental");
-          var latestTs = fullLoad ? null : await db.ExecuteScalar<DateTime?>("latest timestamp", $"select max(v:{t.TsCol}::timestamp_ntz) from {table}");
-          if (latestTs == null)
-            await FullLoad(db, table, t);
-          else
-            await Incremental(db, table, t, latestTs.Value);
-        }
-      }, Cfg.LoadTablesParallel);
+      await tables.BlockAction(async t => { await UpdateTable(t, fullLoad, log); }, Cfg.LoadTablesParallel);
       log.Information("StageUpdate - {Tables} updated in {Duration}", tables.Join("|", t => t.Table), sw.Elapsed.HumanizeShort());
+    }
+
+    public async Task UpdateTable(StageTableCfg t, bool fullLoad, ILogger log) {
+      var table = t.Table;
+      using var db = await Conn.Open(log);
+      await db.Execute("create table", $"create table if not exists {table} (v Variant)");
+
+      if (t.Dir != null) {
+        log.Information("StageUpdate - {Table} ({LoadType})", table, fullLoad ? "full" : "incremental");
+        var latestTs = fullLoad ? null : await db.ExecuteScalar<DateTime?>("latest timestamp", $"select max(v:{t.TsCol}::timestamp_ntz) from {table}");
+        if (latestTs == null)
+          await FullLoad(db, table, t);
+        else
+          await Incremental(db, table, t, latestTs.Value);
+      }
     }
 
     AzureBlobFileStore Store(StageTableCfg t) => Stores.Store(t.StoreType);
@@ -77,8 +80,9 @@ namespace YtReader {
     }
 
     [Pipe]
-    public async Task<bool> ProcessOptimisePlan(IReadOnlyCollection<OptimiseBatch> plan, AzureBlobFileStore store, ILogger log) {
+    public async Task<bool> ProcessOptimisePlan(IReadOnlyCollection<OptimiseBatch> plan, DataStoreType storeType, ILogger log) {
       var runId = ShortGuid.Create(4);
+      var store = Stores.Store(storeType);
       log = log.ForContext("RunId", runId);
       log.Information("YtStage - starting optimisation plan ({RunId}) first path '{Dest}' out of {TotalBatches}", runId, plan.First().Dest, plan.Count);
       await store.Optimise(Cfg.Optimise, plan, log);
@@ -92,7 +96,7 @@ namespace YtReader {
         if (plan.Count < 10) // if the plan is small, run locally, otherwise on many machines
           await store.Optimise(Cfg.Optimise, plan, db.Log);
         else
-          await plan.Process(PipeCtx, b => ProcessOptimisePlan(b, Stores.Store(t.StoreType), Inject<ILogger>())
+          await plan.Process(PipeCtx, b => ProcessOptimisePlan(b, t.StoreType, Inject<ILogger>())
             , new() {MaxParallel = 8, MinWorkItems = 1}, db.Log, cancel);
       }
       await db.Execute("truncate table", $"truncate table {table}"); // no transaction, stage tables aren't reported on so don't need to be available
@@ -129,7 +133,7 @@ namespace YtReader {
     public static string DbName(this SnowflakeCfg cfg) => cfg.DbSuffix.HasValue() ? $"{cfg.Db}_{cfg.DbSuffix}" : cfg.Db;
 
     static StageTableCfg UsTable(string name) =>
-      new($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, tsCol: "updated");
+      new($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, "updated");
 
     public static readonly StageTableCfg[] AllTables = {
       UsTable("rec"),
@@ -137,17 +141,21 @@ namespace YtReader {
       UsTable("watch"),
       UsTable("ad"),
       new("channels", "channel_stage"),
+      new("users", "user_stage"),
       new("channel_reviews", "channel_review_stage"),
       new("videos", "video_stage"),
       new("recs", "rec_stage"),
       new("video_extra", "video_extra_stage"),
       new("searches", "search_stage"),
       new("captions", "caption_stage"),
+      new("comments", "comment_stage"),
       new("bc_videos", "bc_video_stage"),
       new("bc_channels", "bc_channel_stage"),
       new("rec_exports_processed", "rec_export_stage", storeType: DataStoreType.Private),
       new(dir: null, "dbv1_video_stage", isNativeStore: false),
       new(dir: null, "dbv1_rec_stage", isNativeStore: false),
+      new("video_entities", "video_entity_stage", tsCol: "updated"),
+      new("link_meta", "link_meta_stage")
     };
   }
 

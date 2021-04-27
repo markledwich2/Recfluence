@@ -10,12 +10,14 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Humanizer;
+using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
 using Polly;
 using Serilog;
 using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using SysExtensions.Collections;
 
 namespace SysExtensions.Net {
   public static class HttpClientExtensions {
@@ -72,6 +74,21 @@ namespace SysExtensions.Net {
       client.BaseAddress = baseUrl;
       return client;
     }
+    
+    public static string FormatCurl(this  HttpWebRequest req, HttpMethod verb = null, string content = null) {
+      verb ??= HttpMethod.Get;
+      var args = Array.Empty<string>()
+        .Concat(req.RequestUri.ToString(), "-X", verb.Method.ToUpper())
+        .Concat(req.Headers.ToTuples().SelectMany(h => new[] {"-H", $"'{h.Name}:{h.Value}'"}));
+
+      var cookies = req.CookieContainer?.GetCookieHeader(req.Address);
+      if (cookies.HasValue())
+        args = args.Concat($"--cookie {cookies}");
+      
+      if (content != null) args = args.Concat("-d", $"'{content}'");
+      var curl = $"curl {args.NotNull().Join(" ")}";
+      return curl;
+    }
 
     public static string FormatAsCurl(this HttpRequestMessage request, string content = null) {
       var curl = $"curl -X {request.Method.ToString().ToUpper()} "
@@ -109,7 +126,7 @@ namespace SysExtensions.Net {
     public static Task<HttpResponseMessage> SendAsyncWithLog(this HttpClient client, HttpRequestMessage request, ILogger log = null,
       HttpCompletionOption completion = HttpCompletionOption.ResponseHeadersRead) {
       try {
-        return InnerSendAsyncWithLog(client, null, request, completion, log);
+        return InnerSendAsyncWithLog(client, getRequest: null, request, completion, log);
       }
       catch (TaskCanceledException e) {
         throw
@@ -121,7 +138,7 @@ namespace SysExtensions.Net {
     public static async Task<HttpResponseMessage> SendAsyncWithLog(this HttpClient client, Func<HttpRequestMessage> request, ILogger log,
       HttpCompletionOption completion, AsyncPolicy<HttpResponseMessage> policy) {
       try {
-        return await policy.ExecuteAsync(() => InnerSendAsyncWithLog(client, null, request(), completion, log));
+        return await policy.ExecuteAsync(() => InnerSendAsyncWithLog(client, getRequest: null, request(), completion, log));
       }
       catch (TaskCanceledException e) {
         throw
@@ -133,7 +150,7 @@ namespace SysExtensions.Net {
     public static async Task<HttpResponseMessage> SendAsyncWithLog(this HttpClient client, Func<Task<HttpRequestMessage>> getRequest, ILogger log,
       HttpCompletionOption completion, AsyncPolicy<HttpResponseMessage> policy) {
       try {
-        return await policy.ExecuteAsync(() => InnerSendAsyncWithLog(client, getRequest, null, completion, log));
+        return await policy.ExecuteAsync(() => InnerSendAsyncWithLog(client, getRequest, request: null, completion, log));
       }
       catch (TaskCanceledException e) {
         throw
@@ -218,5 +235,10 @@ namespace SysExtensions.Net {
     public static string UrlEncode(this string url) => WebUtility.UrlEncode(url);
 
     public static string UrlDecode(this string url) => WebUtility.UrlDecode(url);
+
+    public static (string Name, string Value)[] Cookies(this HttpResponseHeaders headers) =>
+      headers.TryGetValues("Set-Cookie", out var values)
+        ? SetCookieHeaderValue.ParseList(values.ToList()).Select(cookie => (cookie.Name.Value, cookie.Value.Value)).ToArray()
+        : Array.Empty<(string, string)>();
   }
 }

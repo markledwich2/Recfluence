@@ -9,7 +9,7 @@ using SysExtensions.Collections;
 namespace SysExtensions.Threading {
   public static class Def {
     /// <summary>Create a func with type inference</summary>
-    public static Func<T> F<T>(Func<T> func) => func;
+    public static Func<T> Fun<T>(Func<T> func) => func;
   }
 
   public static class TaskExtensions {
@@ -36,7 +36,7 @@ namespace SysExtensions.Threading {
     /// <summary>Executes the tasks in order. Completing tasks trigger the next one to start</summary>
     public static IEnumerable<Task<T>> Interleaved<T>(this IEnumerable<Task<T>> tasks) {
       var inputTasks = tasks.ToList();
-      var sources = Enumerable.Range(0, inputTasks.Count).Select(_ => new TaskCompletionSource<T>()).ToList();
+      var sources = Enumerable.Range(start: 0, inputTasks.Count).Select(_ => new TaskCompletionSource<T>()).ToList();
       var nextTaskIndex = -1;
       foreach (var inputTask in inputTasks)
         inputTask.ContinueWith(completed => {
@@ -105,11 +105,19 @@ namespace SysExtensions.Threading {
       return await then(r);
     }
 
+    public static async Task<TR> Then<T, TR>(this Task<T> task, Func<T, TR> then) {
+      var r = await task;
+      return then(r);
+    }
+
     public static async ValueTask<TR> Then<T, TR>(this ValueTask<T> task, Func<T, ValueTask<TR>> then) {
       var r = await task;
       return await then(r);
     }
 
-    public static async Task<TR> Then<T, TR>(this Task<T> task, Func<Task<T>, Task<TR>> then) => await task.ContinueWith(then).Unwrap();
+    public static async ValueTask<TR> Then<T, TR>(this ValueTask<T> task, Func<T, TR> then) {
+      var r = await task;
+      return then(r);
+    }
   }
 }

@@ -32,7 +32,7 @@ namespace Mutuo.Etl.Pipe {
       Version = version;
       RegistryClient = registryClient;
       ContainerCfg = containerCfg;
-      Az = new Lazy<IAzure>(azureCfg.GetAzure);
+      Az = new (azureCfg.GetAzure);
     }
 
     public static readonly string ContainerNameEnv = $"{nameof(AzureContainers)}_Container";
@@ -85,11 +85,12 @@ namespace Mutuo.Etl.Pipe {
           ErrorMessage = errorMsg
         };
         await Task.WhenAll(
-          ctx.Store.Save(logPath, logTxt.AsStream(), pipeLog),
+          ctx.Store.Save(logPath, (logTxt ?? "").AsStream(), pipeLog),
           md.Save(ctx.Store, pipeLog));
 
         // delete succeeded non-exclusive containers. Failed, and rutned on running will be cleaned up by another process
-        if (group.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0)) await DeleteContainer(containerGroup, log);
+        if (group.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0)) 
+          await DeleteContainer(containerGroup, log);
 
         return md;
       }, returnOnRunning ? ctx.PipeCfg.Azure.Parallel : ids.Count);
@@ -132,14 +133,16 @@ namespace Mutuo.Etl.Pipe {
     }
 
     public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars,
-      string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ILogger log = null, CancellationToken cancel = default) {
+      string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ContainerCfg cfg = null, ILogger log = null, CancellationToken cancel = default) {
       groupName ??= containerName;
-
+      cfg ??= ContainerCfg;
       var sw = Stopwatch.StartNew();
-      var group = await Launch(ContainerCfg with {Exe = exe}, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
+      var group = await Launch(cfg with {Exe = exe}, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
         returnOnStart, log: log, cancel: cancel);
       await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
       log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());
+      if(!returnOnStart && group.State() == ContainerState.Succeeded)
+        await DeleteContainer(groupName, log);
     }
 
     public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {

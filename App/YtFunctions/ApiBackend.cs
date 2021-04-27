@@ -7,9 +7,15 @@ using Mutuo.Etl.Pipe;
 using Semver;
 using Serilog;
 using SysExtensions.Text;
-using YtReader;
 using static System.Net.HttpStatusCode;
 using static YtFunctions.HttpResponseEx;
+using YtReader.Yt;
+using ExecutionContext = Microsoft.Azure.WebJobs.ExecutionContext;
+using IMSLogger = Microsoft.Extensions.Logging.ILogger;
+
+#pragma warning disable 618
+
+// ML 29 Jan 2021: Azure Functions does' work with .NEt5, but support is imminent, in the meantime if function need to be update, this must be done from a branch with .net 4 and deployed manually.
 
 namespace YtFunctions {
   public record ApiBackend(SemVersion Version, IPipeCtx Ctx, ILogger Log, ContainerCfg ContainerCfg, YtContainerRunner Runner, AzureCleaner AzCleaner) {

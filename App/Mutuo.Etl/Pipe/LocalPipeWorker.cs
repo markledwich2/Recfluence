@@ -40,7 +40,7 @@ namespace Mutuo.Etl.Pipe {
 
     public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars, string[] args = null,
       bool returnOnStart = false, string exe = null,
-      string groupName = null, ILogger log = null, CancellationToken cancel = default) {
+      string groupName = null, ContainerCfg cfg = null, ILogger log = null, CancellationToken cancel = default) {
       groupName ??= containerName;
       var dockerArgs = new[] {"run"}
         .Concat(envVars.SelectMany(e => new[] {"--env", $"{e.name}={e.value}"}))

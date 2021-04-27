@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug",
+      "type": "python",
+      "request": "launch",
+      "program": "app.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--videos",
+        "So1i3LA6IIU,L__k9QzfyE"
+      ]
+    }
+  ]
+}

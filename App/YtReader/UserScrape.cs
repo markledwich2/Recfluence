@@ -19,6 +19,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
+using YtReader.Yt;
 
 namespace YtReader {
   public class UserScrapeCfg {

@@ -18,13 +18,19 @@ using YtReader.Store;
 using static System.Array;
 using static YtReader.StandardCollectPart;
 using static YtReader.Store.ChannelSourceType;
-using ChanById = SysExtensions.Collections.IReadonlyKeyedCollection<string, YtReader.Store.Channel>;
+using ChanById = SysExtensions.Collections.IKeyedCollection<string, YtReader.Store.Channel>;
 
 namespace YtReader {
+  [AttributeUsage(AttributeTargets.Field)]
+  public class CollectPartAttribute : Attribute {
+    /// <summary>When true, the part will only run if included explicitly</summary>
+    public bool Explicit { get; init; }
+  }
+
   public enum StandardCollectPart {
     ExistingChannel,
-    Discover,
-    DiscoverFromVideo,
+    [CollectPart(Explicit = true)] Discover,
+    [CollectPart(Explicit = true)] DiscoverFromVideo,
     Video
   }
 
@@ -109,21 +115,20 @@ namespace YtReader {
       WithUp("explicit",
         ctx.ExplicitChannels.NotNull().Select(c => ctx.Web.NewChan(c) with {DiscoverSource = new(Manual, c)}).ToArray());
 
-      if (parts.ShouldRunAny(Discover, DiscoverFromVideo) && ctx.ExplicitChannels?.Any() != true) {
-        var discovered = await db.DiscoverChannelsAndVideos(platform);
+      if (!parts.ShouldRunAny(Discover, DiscoverFromVideo) || ctx.ExplicitChannels?.Any() == true) return ctx;
+      var discovered = await db.DiscoverChannelsAndVideos(platform);
 
-        if (parts.ShouldRun(Discover))
-          WithUp("discovered", discovered.Where(d => d.LinkType == LinkType.Channel)
-            .Select(selector: l => ctx.Web.NewChan(l.LinkId) with {DiscoverSource = l.ToDiscoverSource()}).ToArray());
+      if (parts.ShouldRun(Discover))
+        WithUp("discovered", discovered.Where(d => d.LinkType == LinkType.Channel)
+          .Select(selector: l => ctx.Web.NewChan(l.LinkId) with {DiscoverSource = l.ToDiscoverSource()}).ToArray());
 
-        if (parts.ShouldRun(DiscoverFromVideo)) {
-          ctx = ctx with {
-            VideosToCrawl = discovered.Where(d => d.LinkType == LinkType.Video)
-              .Select(l => new DiscoverSource(VideoLink, l.LinkId, l.FromPlatform)).ToArray()
-          };
-          ctx.Log.Information("Collect {Platform} - planned {Videos} videos for crawl", platform, ctx.VideosToCrawl.Count);
-        }
-      }
+      if (!parts.ShouldRun(DiscoverFromVideo)) return ctx;
+
+      ctx = ctx with {
+        VideosToCrawl = discovered.Where(d => d.LinkType == LinkType.Video)
+          .Select(l => new DiscoverSource(VideoLink, l.LinkId, l.FromPlatform)).ToArray()
+      };
+      ctx.Log.Information("Collect {Platform} - planned {Videos} videos for crawl", platform, ctx.VideosToCrawl.Count);
       return ctx;
     }
 
@@ -132,7 +137,7 @@ namespace YtReader {
       var log = ctx.Log;
       var crawledVideos = await ctx.VideosToCrawl.BlockTrans(async (discover, i) => {
         var video = await ctx.Web.Video(discover.LinkId, log)
-          .WithSwallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", ctx.Platform, discover.LinkId, e.Message));
+          .Swallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", ctx.Platform, discover.LinkId, e.Message));
         log.Debug("Collect {Platform} - crawled video {VideoId} {Vid}/{Total}", ctx.Platform, video?.VideoId, i, ctx.VideosToCrawl.Count);
         return (discover, video);
       }, ctx.Web.CollectParallel).ToListAsync();
@@ -158,7 +163,7 @@ namespace YtReader {
       }
 
       await ctx.ToUpdate.BlockAction(async (c, i) => {
-        var ((freshChan, getVideos), ex) = await Def.F(() => ctx.Web.ChannelAndVideos(c.SourceId, log)).Try();
+        var ((freshChan, getVideos), ex) = await Def.Fun(() => ctx.Web.ChannelAndVideos(c.SourceId, log)).Try();
         if (ex != null) {
           log.Warning(ex, "Collect {Platform} - Unable to load channel {c}: {Message}", ctx.Platform, c, ex.Message);
           return; // don't save exceptional case. Don't know if it is our problem or thiers
@@ -174,7 +179,7 @@ namespace YtReader {
 
 
         if (ctx.Parts.ShouldRun(StandardCollectPart.Video) && getVideos != null
-                                                           && chan.ForUpdate()) // check in case we discovered a channel but it doesn't have enough subs
+          && chan.ForUpdate()) // check in case we discovered a channel but it doesn't have enough subs
         {
           var (videos, vEx) = await getVideos.SelectManyList().Try();
           if (vEx != null) {
@@ -211,13 +216,12 @@ where not link_found
       var existing = await db.Query<string>(@"get channels", @$"
 with latest as (
   -- use channel table as a filter for staging data. it filters out bad records.
-  select * from channel
-  where platform='{platform}'
+  select channel_id, updated from channel_latest
+  where platform='BitChute'
   {(explicitIds.HasItems() ? $"and channel_id in ({explicitIds.Join(",", c => $"'{c}'")})" : "")}
-  qualify row_number() over (partition by channel_id order by updated desc)=1
 )
 select s.v
-from latest c join channel_stage s on s.v:ChannelId = c.channel_id
+from latest c join channel_stage s on s.v:ChannelId = c.channel_id and s.v:Updated = c.updated
 ");
       return existing.Select(e => e.ToObject<Channel>(IJsonlStore.JCfg)).ToArray();
     }

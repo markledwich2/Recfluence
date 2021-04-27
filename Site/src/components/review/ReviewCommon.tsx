@@ -161,7 +161,9 @@ const Mandatory = () => <span data-tip="required" aria-label="required">*</span>
 
 export interface ChannelOption extends Option { channel: BasicChannel }
 
-export const isChannelId = (s: string) => s.length == 24 && s.startsWith('UC')
+const channelIdRe = new RegExp(`^(?:[\w]{24}|BitChute\|[\w]+|https://rumble\.com/(?:user|c)/[\w-]+)$`).compile()
+
+export const isChannelId = (s: string) => channelIdRe.test(s)
 
 export const loadChannelOptions = async (esCfg: EsCfg, s: string): Promise<ChannelOption[]> => {
   if (s == null) return []
@@ -185,7 +187,8 @@ export const channelCustomOption = ({ innerRef, innerProps, isDisabled, data, is
     <FlexRow style={{ alignItems: 'center' }}>
       {c ? <>
         <ChannelLogo channelId={c.channelId} thumb={c.logoUrl} style={{ height: '50px', verticalAlign: 'middle', margin: '0 5px' }} />
-        <b>{c.channelTitle}</b>
+        <b>{c.channelTitle}</b><i>{c.platform}</i><b>{c.channelViews} views</b>
+
       </>
         : <b style={{ padding: '0.5em' }}>{data.label}</b>}
 

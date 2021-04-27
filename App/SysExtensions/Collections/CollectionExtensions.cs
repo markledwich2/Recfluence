@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -58,5 +59,10 @@ namespace SysExtensions.Collections {
       Expression<Func<V, K>> getKey) => new KeyedCollection<K, V>(getKey, list.Select(getValue));
 
     public static IReadOnlyCollection<T> ToReadOnly<T>(this IEnumerable<T> items) => items.ToList();
+    
+    public static IEnumerable<(string Name, string Value)> ToTuples(this NameValueCollection items) =>
+      from key in items.Cast<string>()
+      from value in items.GetValues(key)
+      select (key, value);
   }
 }

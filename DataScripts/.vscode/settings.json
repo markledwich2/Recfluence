@@ -1,0 +1,65 @@
+{
+  "cSpell.words": [
+    "Identitarian",
+    "aiohttp",
+    "appcfg",
+    "asdict",
+    "asyncio",
+    "creds",
+    "dotenv",
+    "ents",
+    "getenv",
+    "groupby",
+    "islower",
+    "iterrows",
+    "itertools",
+    "jdbc",
+    "jsonl",
+    "jsons",
+    "lemmatizer",
+    "nargs",
+    "sesh",
+    "spacy",
+    "spawnl",
+    "strftime",
+    "userscrape",
+    "vids",
+    "visibles"
+  ],
+  "python.formatting.provider": "autopep8",
+  "python.linting.enabled": true,
+  "python.formatting.autopep8Args": [
+    "--max-line-length",
+    "160"
+  ],
+  "[python]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4
+  },
+  "[json]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/__*__": true,
+    "__azurite_*.json": true,
+  },
+  "editor.formatOnSave": true,
+  "python.languageServer": "Pylance",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.testing.unittestArgs": [
+    "-v",
+    "-s",
+    ".",
+    "-p",
+    "*_test.py"
+  ],
+  "python.testing.pytestEnabled": false,
+  "python.testing.nosetestsEnabled": false,
+  "python.testing.unittestEnabled": true
+}

@@ -1,12 +1,9 @@
-﻿<component name="ProjectRunConfigurationManager">
+<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Update" type="DotNetProject" factoryName=".NET Project">
-    <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.dll" />
-    <option name="PROGRAM_PARAMETERS" value="update -z --container-group-name rumble -a RumbleCollect" />
+    <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.exe" />
+    <option name="PROGRAM_PARAMETERS" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
-    <envs>
-      <env name="BranchEnv" value="ml" />
-    </envs>
     <option name="USE_EXTERNAL_CONSOLE" value="0" />
     <option name="USE_MONO" value="0" />
     <option name="RUNTIME_ARGUMENTS" value="" />

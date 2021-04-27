@@ -6,10 +6,13 @@ using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Exceptions;
+using CliFx.Infrastructure;
+using Humanizer;
 using Medallion.Shell;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
+using Newtonsoft.Json.Linq;
 using Semver;
 using Serilog;
 using SysExtensions;
@@ -19,9 +22,13 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
+using YtReader.Amazon;
+using YtReader.Narrative;
+using YtReader.Reddit;
+using YtReader.Search;
 using YtReader.Store;
-using YtReader.YtApi;
-using YtReader.YtWebsite;
+using YtReader.Yt;
+using static YtCli.UpdateCmd;
 
 namespace YtCli {
   [Command("channel-info", Description = "Show channel information (ID,Name) given a video ID")]
@@ -90,27 +97,11 @@ namespace YtCli {
           await store.Optimise(Cfg.Optimise, plan, Log);
         else
           await plan.Process(Ctx,
-            b => Stage.ProcessOptimisePlan(b, store, PipeArg.Inject<ILogger>()),
+            b => Stage.ProcessOptimisePlan(b, DataStoreType.DbStage, PipeArg.Inject<ILogger>()),
             new() {MaxParallel = 12, MinWorkItems = 1},
-            log: Log, cancel: console.GetCancellationToken());
+            Log, console.RegisterCancellationHandler());
       }
     }
-  }
-
-  [Command("results", Description = "Query snowflake to create result data in blob storage for use by other apps and recfluence.net")]
-  public class ResultsCmd : ICommand {
-    readonly YtResults Results;
-    readonly ILogger   Log;
-
-    [CommandOption('q', Description = "| delimited list of query names to run. All if empty")]
-    public string QueryNames { get; set; }
-
-    public ResultsCmd(YtResults results, ILogger log) {
-      Results = results;
-      Log = log;
-    }
-
-    public async ValueTask ExecuteAsync(IConsole console) => await Results.SaveBlobResults(Log, QueryNames?.Split("|").ToArray());
   }
 
   [Command("stage", Description = "creates/updates the staging data in snowflake from blob storage")]
@@ -134,10 +125,10 @@ namespace YtCli {
   [Command("traffic", Description = "Process source traffic data for comparison")]
   public class TrafficCmd : ICommand {
     readonly BlobStores Stores;
-    readonly WebScraper Scraper;
+    readonly YtWeb      Scraper;
     readonly ILogger    Log;
 
-    public TrafficCmd(BlobStores stores, WebScraper scraper, ILogger log) {
+    public TrafficCmd(BlobStores stores, YtWeb scraper, ILogger log) {
       Stores = stores;
       Scraper = scraper;
       Log = log;
@@ -167,12 +158,15 @@ namespace YtCli {
     readonly AzureCleaner Cleaner;
     readonly ILogger      Log;
 
+    [CommandOption("mode", Description = "the cleaning behavior. Standard, DeleteCompleted or DeleteAll")]
+    public CleanContainerMode Mode { get; set; }
+
     public CleanCmd(AzureCleaner cleaner, ILogger log) {
       Cleaner = cleaner;
       Log = log;
     }
 
-    public async ValueTask ExecuteAsync(IConsole console) => await Cleaner.DeleteExpiredResources(Log);
+    public async ValueTask ExecuteAsync(IConsole console) => await Cleaner.DeleteExpiredResources(Mode, Log);
   }
 
   [Command("create-env", Description = "Create a branch environment for testing")]
@@ -180,7 +174,7 @@ namespace YtCli {
     readonly BranchEnvCreator Creator;
     readonly ILogger          Log;
 
-    [CommandOption('m', Description = "the mode to copy the database Fresh|Clone|CloneBasic")]
+    [CommandOption('m', Description = "the mode to copy the database Fresh|Clone|CloneDb")]
     public BranchState Mode { get; set; }
 
     [CommandOption('p', Description = "| separated list of staging db paths to copy")]
@@ -196,7 +190,7 @@ namespace YtCli {
   }
 
   [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]
-  public record UpdateCmd(YtUpdater Updater, IPipeCtx PipeCtx, YtContainerRunner ContainerRunner, AzureContainers Az, ContainerCfg ContainerCfg, ILogger Log) 
+  public record UpdateCmd(YtUpdater Updater, IPipeCtx PipeCtx, YtContainerRunner ContainerRunner, AzureContainers Az, ContainerCfg ContainerCfg, ILogger Log)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
     [CommandOption('a', Description = "| delimited list of action to run (empty for all)")]
     public string Actions { get; set; }
@@ -204,8 +198,11 @@ namespace YtCli {
     [CommandOption('f', Description = "will force a refresh of collect, and full load of staging files + warehouse. Does not impact search")]
     public bool FullLoad { get; set; }
 
-    [CommandOption('t', Description = "| delimited list of tables to restrict updates to")]
-    public string Tables { get; set; }
+    [CommandOption('w', Description = "| delimited list of warehouse tables to restrict updates to")]
+    public string WarehouseTables { get; set; }
+
+    [CommandOption('t', Description = "| delimited list of tags to restrict updates to Currently applies to Index updates, but will be all.")]
+    public string Tags { get; set; }
 
     [CommandOption('s', Description = "| delimited list of staging tables to restrict updates to")]
     public string StageTables { get; set; }
@@ -222,8 +219,11 @@ namespace YtCli {
     [CommandOption('v', Description = "| delimited list of videos (source id's)")]
     public string Videos { get; set; }
 
-    [CommandOption("collect-parts", shortName: 'p', Description = "optional '|' separated list of collect parts to run")]
+    [CommandOption("collect-parts", shortName: 'p', Description = "| delimited list of collect parts to run (e.g. channel|channel-video|user|extra)")]
     public string Parts { get; set; }
+
+    [CommandOption("extra-parts", shortName: 'e', Description = "| delimited list of extra parts to run (e.g. extra|comment|rec|caption)")]
+    public string ExtraParts { get; set; }
 
     [CommandOption("us-init", Description = "Run userscrape in init mode (additional seed videos)")]
     public bool UserScrapeInit { get; set; }
@@ -244,24 +244,35 @@ namespace YtCli {
     [CommandOption("search-index", Description = @"| separated list of indexes to update. leave empty for all indexes")]
     public string SearchIndexes { get; set; }
 
-    [CommandOption("collect-videos",
-      Description = @"path in the data blob container a file with newline separated video id's. e.g. import/videos/pop_all_1m_plus_last_30.vid_ids.tsv.gz")]
-    public string CollectVideos { get; set; }
+    [CommandOption("search-mode")] public SearchMode SearchMode { get; set; }
 
     [CommandOption("dataform-deps", Description = "when specified, dataform will run with dependencies included", IsRequired = false)]
     public bool DataformDeps { get; set; }
 
+    [CommandOption("ds-run", Description = "a previous runid to run scripts on", IsRequired = false)]
+    public string DataScriptsRunId { get; set; }
+
+    [CommandOption("ds-part", Description = "| separated list of data-script parts to collect.")]
+    public string DataScriptParts { get; set; }
+
+    [CommandOption("ds-video-view", Description = "a view name to get a custom list of videos to update")]
+    public string DataScriptVideosView { get; set; }
+
     protected override string GroupName => "update";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
-      console.GetCancellationToken().Register(() => Log.Information("Cancellation requested"));
+      var cancel = console.RegisterCancellationHandler();
+      cancel.Register(() => Log.Information("Cancellation requested"));
       var options = new UpdateOptions {
         Actions = Actions?.UnJoin('|'),
-        Channels = Channels?.UnJoin('|'),
+        Collect = new() {
+          LimitChannels = Channels?.UnJoin('|'),
+          Parts = ParseParts<CollectPart>(Parts),
+          ExtraParts = ParseParts<ExtraPart>(ExtraParts)
+        },
         Videos = Videos?.UnJoin('|'),
-        Parts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<CollectPart>(out _)).Select(p => p.ParseEnum<CollectPart>()).ToArray(),
-        StandardParts = Parts?.UnJoin('|').Where(p => p.TryParseEnum<StandardCollectPart>(out _)).Select(p => p.ParseEnum<StandardCollectPart>()).ToArray(),
-        Tables = Tables?.UnJoin('|'),
+        StandardParts = ParseParts<StandardCollectPart>(Parts),
+        WarehouseTables = WarehouseTables?.UnJoin('|'),
         StageTables = StageTables?.UnJoin('|'),
         Results = Results?.UnJoin('|'),
         Indexes = Indexes?.UnJoin('|'),
@@ -275,33 +286,68 @@ namespace YtCli {
         UserScrapeInit = UserScrapeInit,
         UserScrapeTrial = UserScrapeTrial,
         UserScrapeAccounts = UserScrapeAccounts?.UnJoin('|'),
-        CollectVideosPath = CollectVideos,
-        DataformDeps = DataformDeps
+        Tags = Tags?.UnJoin('|'),
+        DataformDeps = DataformDeps,
+        SearchMode = SearchMode,
+        DataScript = new(DataScriptsRunId, DataScriptParts.UnJoin('|').Select(p => p.ToLower()).ToArray(), DataScriptVideosView)
       };
-      await Updater.Update(options, console.GetCancellationToken());
+      await Updater.Update(options, cancel);
+    }
+
+    public static T[] ParseParts<T>(string parts) where T : Enum =>
+      parts?.UnJoin('|').Where(p => p.TryParseEnum<T>(out _)).Select(p => p.ParseEnum<T>()).ToArray();
+  }
+
+  [Command("collect-list", Description = "Refresh video/channel information for a given list")]
+  public record CollectList(YtCollectList Col, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log)
+    : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
+    [CommandParameter(0, Description = "The type of list to run (i.e. channel-path, video-path, view, named)")]
+    public CollectFromType Mode { get; set; }
+
+    [CommandParameter(1, Description = @"The path/name of the list.
+channel-path: path in the data blob container a file with newline separated channel id's. e.g. import/channels/full_12M_chan_info.txt.gz
+video-path: path in the data blob container a file with newline separated channel id's. e.g. import/channels/full_12M_chan_info.txt.gz
+view: name of a view in the warehouse that has a column video_id, channel_id videos or channels to collect data for e.g. collect_video_sans_extra
+named: name of an sql statement CollectListSql. This will use parameters if specified
+ ")]
+    public string Value { get; set; }
+
+    [CommandOption("channels", shortName: 'c', IsRequired = false,
+      Description = "| delimited list of channels (source id's) to collect. This is an additional filter to the list given")]
+    public string Channels { get; set; }
+
+    [CommandOption("parts", shortName: 'p', IsRequired = false, Description = @"| list of parts to collect ()")]
+    public string Parts { get; set; }
+
+    [CommandOption("extra-parts", shortName: 'e', IsRequired = false, Description = @"| delimited list of extra parts to run (e.g. extra|comment|rec|caption)")]
+    public string ExtraParts { get; set; }
+
+    [CommandOption("stale-hrs", shortName: 'f', IsRequired = false,
+      Description = @"e.g. 24. use when re-running failed lists. Before this period has elapsed, channels/videos won't be updated again")]
+    public int? StaleHrs { get; set; }
+
+    [CommandOption("sql-args", shortName: 'a', Description = "Json object representing params to pass to the query")]
+    public string Args { get; set; }
+
+    /*[CommandOption("operations", 'l', Description = @"| top level things to do with this list")]
+    public string ListParts { get; set; }*/
+
+    protected override string GroupName => "collect-list";
+
+    protected override async ValueTask ExecuteLocal(IConsole console) {
+      var opts = new CollectListOptions {
+        CollectFrom = (Mode, Value),
+        Parts = ParseParts<CollectListPart>(Parts),
+        ExtraParts = ParseParts<ExtraPart>(ExtraParts),
+        LimitChannels = Channels?.UnJoin('|'),
+        StaleAgo = StaleHrs?.Hours() ?? 2.Days(),
+        Args = JObject.Parse(Args)
+      };
+      await Col.Run(opts, Log, console.RegisterCancellationHandler());
     }
   }
 
-  [Command("test-chrome-scraper")]
-  public class TestChromeScraperCmd : ICommand {
-    readonly ChromeScraper Scraper;
-    readonly ILogger       Log;
-
-    public TestChromeScraperCmd(ChromeScraper scraper, ILogger log) {
-      Scraper = scraper;
-      Log = log;
-    }
-
-    [CommandOption('v', Description = "| separated video id's")]
-    public string VideoIds { get; set; }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      var res = await Scraper.GetRecsAndExtra(VideoIds.UnJoin('|'), Log);
-      Log.Information("Scraping of {VideoIds} complete", VideoIds, res);
-    }
-  }
-
-  [Command("build-container")]
+  [Command("build-container", Description = "build the recfluence docker container")]
   public class BuildContainerCmd : ICommand {
     readonly SemVersion   Version;
     readonly ContainerCfg Cfg;
@@ -337,7 +383,7 @@ namespace YtCli {
     public async ValueTask ExecuteAsync(IConsole console) {
       var sw = Stopwatch.StartNew();
       var slnName = "Recfluence.sln";
-      var sln = FPath.Current.ParentWithFile(slnName, true);
+      var sln = FPath.Current.ParentWithFile(slnName, includeIfDir: true);
       if (sln == null) throw new CommandException($"Can't find {slnName} file to organize build");
       var image = $"{Cfg.Registry}/{Cfg.ImageName}";
 
@@ -365,16 +411,61 @@ namespace YtCli {
     }
   }
 
-  [Command("parler")]
-  public record ParlerCmd(ILogger Log, Parler Parler, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg) 
+  [Command("parler", Description = "load data from leaked parler posts")]
+  public record ParlerCmd(ILogger Log, Parler Parler, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
-
     [CommandOption('f')] public string Folder { get; set; }
-    
+
     protected override string GroupName => "parler";
+
     protected override async ValueTask ExecuteLocal(IConsole console) {
       await Parler.LoadFromGoogleDrive(Folder, "posts", Log);
       Log.Information("Completed load parler data");
+    }
+  }
+
+  [Command("pushshift", Description = "Loads data from pushshift. A fee elastic search database for reddit")]
+  public record PushshiftCmd(ILogger Log, Pushshift Push) : ICommand {
+    public async ValueTask ExecuteAsync(IConsole console) {
+      await Push.Process(Log);
+      Log.Information("Pulling of posts from pushshift complete");
+    }
+  }
+
+  [Command("narrative", Description = "Merge rows matching a filter into an airtable sheet for manual labeling")]
+  public record NarrativeCmd(ILogger Log, Narrative Covid) : ICommand {
+    [CommandParameter(0, Description = "The name of the narrative to sync with airtable. e.g. (Activewear|Vaccine)")]
+    public string NarrativeName { get; set; }
+    
+    [CommandOption("parts", shortName: 'p', Description = "| separated airtable to updated (Mention|Channel|Video)")]
+    public string Parts { get; set; }
+    [CommandOption("base", shortName: 'b', Description = "The base id from airtable. To get this, open https://airtable.com/api and select your base")]
+    public string Base { get; set; }
+    [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
+    public int? Limit { get; set; }
+    [CommandOption("videos", shortName: 'v', Description = "| separated videos to limit update to")]
+    public string Videos { get; set; }
+
+    public async ValueTask ExecuteAsync(IConsole console) {
+      await Covid.MargeIntoAirtable(new(Base, NarrativeName, Limit, ParseParts<AirtablePart>(Parts), Videos?.UnJoin('|')), Log);
+      Log.Information("CovidNarrativeCmd - complete");
+    }
+  }
+
+  [Command("amazon")]
+  public record AmazonCmd(ILogger Log, AmazonWeb Amazon) : ICommand {
+    [CommandOption("query", shortName: 'q', Description = "The name of the query to sync with airtable")]
+    public string MentionQuery { get; set; }
+    
+    [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
+    public int? Limit { get; set; }
+    
+    [CommandOption("force-local", Description = "if true, won't launch any containers to process")]
+    public bool ForceLocal { get; set; }
+
+    public async ValueTask ExecuteAsync(IConsole console) {
+      await Amazon.GetProductLinkInfo(Log, console.RegisterCancellationHandler(), MentionQuery, Limit, ForceLocal);
+      Log.Information("amazon - complete");
     }
   }
 }

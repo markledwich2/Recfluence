@@ -1,0 +1,623 @@
+<?xml version='1.0' encoding='utf-8' ?>
+
+<!-- build 20204.21.0217.1203                               -->
+<workbook original-version='18.1' source-build='2020.4.2 (20204.21.0217.1203)' source-platform='win' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <document-format-change-manifest>
+    <_.fcp.MarkAnimation.true...MarkAnimation />
+    <_.fcp.ObjectModelEncapsulateLegacy.true...ObjectModelEncapsulateLegacy />
+    <_.fcp.ObjectModelExtractV2.true...ObjectModelExtractV2 />
+    <_.fcp.ObjectModelTableType.true...ObjectModelTableType />
+    <_.fcp.SchemaViewerObjectModel.true...SchemaViewerObjectModel />
+    <SheetIdentifierTracking />
+    <SortTagCleanup />
+    <WindowsPersistSimpleIdentifiers />
+  </document-format-change-manifest>
+  <preferences>
+    <preference name='ui.encoding.shelf.height' value='24' />
+    <preference name='ui.shelf.height' value='26' />
+  </preferences>
+  <datasources>
+    <datasource hasconnection='false' inline='true' name='Parameters' version='18.1'>
+      <aliases enabled='yes' />
+      <column caption='FromDate' datatype='date' name='[Parameter 1]' param-domain-type='any' role='measure' type='quantitative' value='#2021-02-01#'>
+        <calculation class='tableau' formula='#2021-02-01#' />
+      </column>
+    </datasource>
+    <datasource caption='PUBLIC' inline='true' name='federated.1sng24109zddz218odkmc0qgn1h8' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='ql98184.west-us-2.azure.snowflakecomputing.com' name='snowflake.0t8qfl31u88elu1h2ldl80yk60tx'>
+            <connection authentication='Username Password' class='snowflake' dbname='YT' odbc-connect-string-extras='' one-time-sql='' schema='PUBLIC' server='ql98184.west-us-2.azure.snowflakecomputing.com' service='' username='mledwich' warehouse='YT' />
+          </named-connection>
+        </named-connections>
+        <_.fcp.ObjectModelEncapsulateLegacy.false...relation connection='snowflake.0t8qfl31u88elu1h2ldl80yk60tx' name='Custom SQL Query' type='text'><![CDATA[with video_recs as (
+  select from_video_id
+       , to_video_id
+       , r.updated::date rec_date
+       , any_value(from_channel_id) from_channel_id
+       , any_value(to_channel_id) to_channel_id
+       , any_value(to_channel_title) to_channel_title -- we often don't have the to channel in our dataset, so get title from recs
+       , any_value(to_video_title) to_video_title
+
+       -- recs between the two videos
+       , count(1) recs
+       -- recs for this video
+       , sum(recs) over (partition by from_video_id, rec_date) from_video_recs
+       -- views * by the portion recs to the video compared to the total number of recs
+       , min(fd.views)*(recs/nullif(from_video_recs,0)) rec_view_portion
+       -- estimate for the times a rec is seen. Assume 10 is the average number of recs visible form a video. so the impressions is 10*the portion of recs
+       , rec_view_portion*10 impressions
+       , max(r.updated) max_rec_updated
+
+  from rec r
+         join video_stats_daily fd on fd.video_id=r.from_video_id and fd.date=r.updated::date
+         join channel_accepted fc on fc.channel_id=r.from_channel_id
+  where rec_date>>=<[Parameters].[Parameter 1]>
+  group by 1, 2, 3
+)
+  , s_recs as (
+  select rec_date, lr, to_video_title like '%Seuss%' seus, sum(impressions) impressions
+  from video_recs r
+         join channel_latest c on c.channel_id=r.to_channel_id
+  group by 1, 2, 3
+)
+  , s_vids as (
+  select date, lr, v.video_title like '%Seuss%' seus, sum(d.views) views
+  from video_stats_daily d
+         join video_latest v on v.video_id=d.video_id
+         join channel_latest c on c.channel_id=d.channel_id
+  where date>>=<[Parameters].[Parameter 1]>
+  group by 1, 2, 3
+)
+select r.*, v.views
+from s_recs r
+       join s_vids v on r.rec_date=v.date and r.lr=v.lr and r.seus=v.seus]]></_.fcp.ObjectModelEncapsulateLegacy.false...relation>
+        <_.fcp.ObjectModelEncapsulateLegacy.true...relation connection='snowflake.0t8qfl31u88elu1h2ldl80yk60tx' name='Custom SQL Query' type='text'><![CDATA[with video_recs as (
+  select from_video_id
+       , to_video_id
+       , r.updated::date rec_date
+       , any_value(from_channel_id) from_channel_id
+       , any_value(to_channel_id) to_channel_id
+       , any_value(to_channel_title) to_channel_title -- we often don't have the to channel in our dataset, so get title from recs
+       , any_value(to_video_title) to_video_title
+
+       -- recs between the two videos
+       , count(1) recs
+       -- recs for this video
+       , sum(recs) over (partition by from_video_id, rec_date) from_video_recs
+       -- views * by the portion recs to the video compared to the total number of recs
+       , min(fd.views)*(recs/nullif(from_video_recs,0)) rec_view_portion
+       -- estimate for the times a rec is seen. Assume 10 is the average number of recs visible form a video. so the impressions is 10*the portion of recs
+       , rec_view_portion*10 impressions
+       , max(r.updated) max_rec_updated
+
+  from rec r
+         join video_stats_daily fd on fd.video_id=r.from_video_id and fd.date=r.updated::date
+         join channel_accepted fc on fc.channel_id=r.from_channel_id
+  where rec_date>>=<[Parameters].[Parameter 1]>
+  group by 1, 2, 3
+)
+  , s_recs as (
+  select rec_date, lr, to_video_title like '%Seuss%' seus, sum(impressions) impressions
+  from video_recs r
+         join channel_latest c on c.channel_id=r.to_channel_id
+  group by 1, 2, 3
+)
+  , s_vids as (
+  select date, lr, v.video_title like '%Seuss%' seus, sum(d.views) views
+  from video_stats_daily d
+         join video_latest v on v.video_id=d.video_id
+         join channel_latest c on c.channel_id=d.channel_id
+  where date>>=<[Parameters].[Parameter 1]>
+  group by 1, 2, 3
+)
+select r.*, v.views
+from s_recs r
+       join s_vids v on r.rec_date=v.date and r.lr=v.lr and r.seus=v.seus]]></_.fcp.ObjectModelEncapsulateLegacy.true...relation>
+        <metadata-records>
+          <metadata-record class='column'>
+            <remote-name>REC_DATE</remote-name>
+            <remote-type>7</remote-type>
+            <local-name>[REC_DATE]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>REC_DATE</remote-alias>
+            <ordinal>1</ordinal>
+            <local-type>date</local-type>
+            <aggregation>Year</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_TYPE_DATE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_TYPE_DATE&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[_58CF2D4A27364F879C0528E8F988A6B3]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>LR</remote-name>
+            <remote-type>129</remote-type>
+            <local-name>[LR]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>LR</remote-alias>
+            <ordinal>2</ordinal>
+            <local-type>string</local-type>
+            <aggregation>Count</aggregation>
+            <width>16777216</width>
+            <contains-null>true</contains-null>
+            <collation flag='0' name='binary' />
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_VARCHAR&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_CHAR&quot;</attribute>
+              <attribute datatype='string' name='TypeIsVarchar'>&quot;true&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[_58CF2D4A27364F879C0528E8F988A6B3]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>SEUS</remote-name>
+            <remote-type>11</remote-type>
+            <local-name>[SEUS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>SEUS</remote-alias>
+            <ordinal>3</ordinal>
+            <local-type>boolean</local-type>
+            <aggregation>Count</aggregation>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_BIT&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_BIT&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[_58CF2D4A27364F879C0528E8F988A6B3]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>IMPRESSIONS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[IMPRESSIONS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>IMPRESSIONS</remote-alias>
+            <ordinal>4</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[_58CF2D4A27364F879C0528E8F988A6B3]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+          <metadata-record class='column'>
+            <remote-name>VIEWS</remote-name>
+            <remote-type>5</remote-type>
+            <local-name>[VIEWS]</local-name>
+            <parent-name>[Custom SQL Query]</parent-name>
+            <remote-alias>VIEWS</remote-alias>
+            <ordinal>5</ordinal>
+            <local-type>real</local-type>
+            <aggregation>Sum</aggregation>
+            <precision>15</precision>
+            <contains-null>true</contains-null>
+            <attributes>
+              <attribute datatype='string' name='DebugRemoteType'>&quot;SQL_DOUBLE&quot;</attribute>
+              <attribute datatype='string' name='DebugWireType'>&quot;SQL_C_DOUBLE&quot;</attribute>
+            </attributes>
+            <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[_58CF2D4A27364F879C0528E8F988A6B3]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+          </metadata-record>
+        </metadata-records>
+      </connection>
+      <aliases enabled='yes' />
+      <column caption='Impressions per view' datatype='real' name='[Calculation_1075234429711093760]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='[IMPRESSIONS]/[VIEWS]' />
+      </column>
+      <column datatype='real' default-format='*0,,.##M' name='[IMPRESSIONS]' role='measure' type='quantitative' />
+      <column datatype='string' name='[LR]' role='dimension' type='nominal' />
+      <column datatype='boolean' name='[SEUS]' role='dimension' type='nominal'>
+        <aliases>
+          <alias key='false' value='Other' />
+          <alias key='true' value='Seuss' />
+        </aliases>
+      </column>
+      <column datatype='real' default-format='*#,,.#M' name='[VIEWS]' role='measure' type='quantitative' />
+      <_.fcp.ObjectModelTableType.true...column caption='Custom SQL Query' datatype='table' name='[__tableau_internal_object_id__].[_58CF2D4A27364F879C0528E8F988A6B3]' role='measure' type='quantitative' />
+      <column-instance column='[LR]' derivation='None' name='[none:LR:nk]' pivot='key' type='nominal' />
+      <extract _.fcp.ObjectModelExtractV2.true...object-id='' count='-1' enabled='true' units='records'>
+        <connection access_mode='readonly' authentication='auth-none' author-locale='en_US' class='hyper' dbname='C:/Users/mark/Documents/My Tableau Repository/Datasources/Seus.hyper' default-settings='yes' schema='Extract' sslmode='' tablename='Extract' update-time='03/08/2021 02:47:59 AM' username='tableau_internal_user'>
+          <_.fcp.ObjectModelEncapsulateLegacy.false...relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <_.fcp.ObjectModelEncapsulateLegacy.true...relation name='Extract' table='[Extract].[Extract]' type='table' />
+          <refresh>
+            <refresh-event add-from-file-path='PUBLIC' increment-value='%null%' refresh-type='create' rows-inserted='99' timestamp-start='2021-03-08 02:47:59.450' />
+          </refresh>
+          <metadata-records>
+            <metadata-record class='column'>
+              <remote-name>REC_DATE</remote-name>
+              <remote-type>133</remote-type>
+              <local-name>[REC_DATE]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>REC_DATE</remote-alias>
+              <ordinal>0</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>date</local-type>
+              <aggregation>Year</aggregation>
+              <approx-count>26</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[_58CF2D4A27364F879C0528E8F988A6B3]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>LR</remote-name>
+              <remote-type>129</remote-type>
+              <local-name>[LR]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>LR</remote-alias>
+              <ordinal>1</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>string</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>3</approx-count>
+              <contains-null>true</contains-null>
+              <collation flag='0' name='binary' />
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[_58CF2D4A27364F879C0528E8F988A6B3]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>SEUS</remote-name>
+              <remote-type>11</remote-type>
+              <local-name>[SEUS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>SEUS</remote-alias>
+              <ordinal>2</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>boolean</local-type>
+              <aggregation>Count</aggregation>
+              <approx-count>2</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[_58CF2D4A27364F879C0528E8F988A6B3]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>IMPRESSIONS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[IMPRESSIONS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>IMPRESSIONS</remote-alias>
+              <ordinal>3</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>99</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[_58CF2D4A27364F879C0528E8F988A6B3]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+            <metadata-record class='column'>
+              <remote-name>VIEWS</remote-name>
+              <remote-type>5</remote-type>
+              <local-name>[VIEWS]</local-name>
+              <parent-name>[Extract]</parent-name>
+              <remote-alias>VIEWS</remote-alias>
+              <ordinal>4</ordinal>
+              <family>Custom SQL Query</family>
+              <local-type>real</local-type>
+              <aggregation>Sum</aggregation>
+              <approx-count>99</approx-count>
+              <contains-null>true</contains-null>
+              <_.fcp.ObjectModelEncapsulateLegacy.true...object-id>[_58CF2D4A27364F879C0528E8F988A6B3]</_.fcp.ObjectModelEncapsulateLegacy.true...object-id>
+            </metadata-record>
+          </metadata-records>
+        </connection>
+      </extract>
+      <layout _.fcp.SchemaViewerObjectModel.false...dim-percentage='0.5' _.fcp.SchemaViewerObjectModel.false...measure-percentage='0.4' dim-ordering='alphabetic' measure-ordering='alphabetic' show-aliased-fields='true' show-structure='true' />
+      <style>
+        <style-rule element='mark'>
+          <encoding attr='color' field='[none:LR:nk]' type='palette'>
+            <map to='#4e79a7'>
+              <bucket>&quot;L&quot;</bucket>
+            </map>
+            <map to='#b07aa1'>
+              <bucket>&quot;C&quot;</bucket>
+            </map>
+            <map to='#e15759'>
+              <bucket>&quot;R&quot;</bucket>
+            </map>
+          </encoding>
+        </style-rule>
+      </style>
+      <semantic-values>
+        <semantic-value key='[Country].[Name]' value='&quot;Australia&quot;' />
+      </semantic-values>
+      <datasource-dependencies datasource='Parameters'>
+        <column caption='FromDate' datatype='date' name='[Parameter 1]' param-domain-type='any' role='measure' type='quantitative' value='#2021-02-01#'>
+          <calculation class='tableau' formula='#2021-02-01#' />
+        </column>
+      </datasource-dependencies>
+      <_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+        <objects>
+          <object caption='Custom SQL Query' id='_58CF2D4A27364F879C0528E8F988A6B3'>
+            <properties context=''>
+              <relation connection='snowflake.0t8qfl31u88elu1h2ldl80yk60tx' name='Custom SQL Query' type='text'><![CDATA[with video_recs as (
+  select from_video_id
+       , to_video_id
+       , r.updated::date rec_date
+       , any_value(from_channel_id) from_channel_id
+       , any_value(to_channel_id) to_channel_id
+       , any_value(to_channel_title) to_channel_title -- we often don't have the to channel in our dataset, so get title from recs
+       , any_value(to_video_title) to_video_title
+
+       -- recs between the two videos
+       , count(1) recs
+       -- recs for this video
+       , sum(recs) over (partition by from_video_id, rec_date) from_video_recs
+       -- views * by the portion recs to the video compared to the total number of recs
+       , min(fd.views)*(recs/nullif(from_video_recs,0)) rec_view_portion
+       -- estimate for the times a rec is seen. Assume 10 is the average number of recs visible form a video. so the impressions is 10*the portion of recs
+       , rec_view_portion*10 impressions
+       , max(r.updated) max_rec_updated
+
+  from rec r
+         join video_stats_daily fd on fd.video_id=r.from_video_id and fd.date=r.updated::date
+         join channel_accepted fc on fc.channel_id=r.from_channel_id
+  where rec_date>>=<[Parameters].[Parameter 1]>
+  group by 1, 2, 3
+)
+  , s_recs as (
+  select rec_date, lr, to_video_title like '%Seuss%' seus, sum(impressions) impressions
+  from video_recs r
+         join channel_latest c on c.channel_id=r.to_channel_id
+  group by 1, 2, 3
+)
+  , s_vids as (
+  select date, lr, v.video_title like '%Seuss%' seus, sum(d.views) views
+  from video_stats_daily d
+         join video_latest v on v.video_id=d.video_id
+         join channel_latest c on c.channel_id=d.channel_id
+  where date>>=<[Parameters].[Parameter 1]>
+  group by 1, 2, 3
+)
+select r.*, v.views
+from s_recs r
+       join s_vids v on r.rec_date=v.date and r.lr=v.lr and r.seus=v.seus]]></relation>
+            </properties>
+            <properties context='extract'>
+              <relation name='Extract' table='[Extract].[Extract]' type='table' />
+            </properties>
+          </object>
+        </objects>
+      </_.fcp.ObjectModelEncapsulateLegacy.true...object-graph>
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Sheet 1'>
+      <layout-options>
+        <title>
+          <formatted-text>
+            <run>Impressions &amp; VIews for Dr. Seuss Videos</run>
+          </formatted-text>
+        </title>
+      </layout-options>
+      <table>
+        <view>
+          <datasources>
+            <datasource caption='PUBLIC' name='federated.1sng24109zddz218odkmc0qgn1h8' />
+          </datasources>
+          <datasource-dependencies datasource='federated.1sng24109zddz218odkmc0qgn1h8'>
+            <column datatype='real' default-format='*0,,.##M' name='[IMPRESSIONS]' role='measure' type='quantitative' />
+            <column datatype='string' name='[LR]' role='dimension' type='nominal' />
+            <column datatype='date' name='[REC_DATE]' role='dimension' type='ordinal' />
+            <column datatype='boolean' name='[SEUS]' role='dimension' type='nominal'>
+              <aliases>
+                <alias key='false' value='Other' />
+                <alias key='true' value='Seuss' />
+              </aliases>
+            </column>
+            <column datatype='real' default-format='*#,,.#M' name='[VIEWS]' role='measure' type='quantitative' />
+            <column-instance column='[LR]' derivation='None' name='[none:LR:nk]' pivot='key' type='nominal' />
+            <column-instance column='[SEUS]' derivation='None' name='[none:SEUS:nk]' pivot='key' type='nominal' />
+            <column-instance column='[IMPRESSIONS]' derivation='Sum' name='[sum:IMPRESSIONS:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[VIEWS]' derivation='Sum' name='[sum:VIEWS:qk]' pivot='key' type='quantitative' />
+            <column-instance column='[REC_DATE]' derivation='Week-Trunc' name='[twk:REC_DATE:qk]' pivot='key' type='quantitative' />
+          </datasource-dependencies>
+          <filter class='categorical' column='[federated.1sng24109zddz218odkmc0qgn1h8].[none:LR:nk]'>
+            <groupfilter function='level-members' level='[none:LR:nk]' />
+          </filter>
+          <manual-sort column='[federated.1sng24109zddz218odkmc0qgn1h8].[none:LR:nk]' direction='ASC'>
+            <dictionary>
+              <bucket>&quot;L&quot;</bucket>
+              <bucket>&quot;C&quot;</bucket>
+              <bucket>&quot;R&quot;</bucket>
+            </dictionary>
+          </manual-sort>
+          <filter class='categorical' column='[federated.1sng24109zddz218odkmc0qgn1h8].[none:SEUS:nk]'>
+            <groupfilter function='member' level='[none:SEUS:nk]' member='true' user:ui-domain='relevant' user:ui-enumeration='inclusive' user:ui-marker='enumerate' />
+          </filter>
+          <filter class='quantitative' column='[federated.1sng24109zddz218odkmc0qgn1h8].[twk:REC_DATE:qk]' included-values='in-range'>
+            <min>#2021-02-20 00:00:00#</min>
+            <max>#2021-03-03 23:59:59#</max>
+          </filter>
+          <slices>
+            <column>[federated.1sng24109zddz218odkmc0qgn1h8].[none:LR:nk]</column>
+            <column>[federated.1sng24109zddz218odkmc0qgn1h8].[none:SEUS:nk]</column>
+            <column>[federated.1sng24109zddz218odkmc0qgn1h8].[twk:REC_DATE:qk]</column>
+          </slices>
+          <aggregation value='true' />
+        </view>
+        <style>
+          <style-rule element='worksheet'>
+            <format attr='display-field-labels' scope='cols' value='false' />
+          </style-rule>
+        </style>
+        <panes>
+          <pane id='7' selection-relaxation-option='selection-relaxation-allow'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Bar' />
+            <encodings>
+              <color column='[federated.1sng24109zddz218odkmc0qgn1h8].[none:LR:nk]' />
+            </encodings>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-cull' value='true' />
+              </style-rule>
+            </style>
+          </pane>
+          <pane id='8' selection-relaxation-option='selection-relaxation-allow' y-axis-name='[federated.1sng24109zddz218odkmc0qgn1h8].[sum:VIEWS:qk]'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Bar' />
+            <encodings>
+              <color column='[federated.1sng24109zddz218odkmc0qgn1h8].[none:LR:nk]' />
+            </encodings>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-cull' value='true' />
+              </style-rule>
+            </style>
+          </pane>
+          <pane id='9' selection-relaxation-option='selection-relaxation-allow' y-axis-name='[federated.1sng24109zddz218odkmc0qgn1h8].[sum:IMPRESSIONS:qk]'>
+            <view>
+              <breakdown value='auto' />
+            </view>
+            <mark class='Bar' />
+            <encodings>
+              <color column='[federated.1sng24109zddz218odkmc0qgn1h8].[none:LR:nk]' />
+            </encodings>
+            <style>
+              <style-rule element='mark'>
+                <format attr='mark-labels-show' value='true' />
+                <format attr='mark-labels-cull' value='true' />
+              </style-rule>
+            </style>
+          </pane>
+        </panes>
+        <rows>([federated.1sng24109zddz218odkmc0qgn1h8].[sum:VIEWS:qk] + [federated.1sng24109zddz218odkmc0qgn1h8].[sum:IMPRESSIONS:qk])</rows>
+        <cols>[federated.1sng24109zddz218odkmc0qgn1h8].[none:LR:nk]</cols>
+      </table>
+      <simple-id uuid='{EF69EE64-7642-47B9-A327-C0A27B408C80}' />
+    </worksheet>
+  </worksheets>
+  <windows saved-dpi-scale-factor='1.5' source-height='44'>
+    <window class='worksheet' maximized='true' name='Sheet 1'>
+      <cards>
+        <edge name='left'>
+          <strip size='160'>
+            <card type='pages' />
+            <card type='filters' />
+            <card type='marks' />
+          </strip>
+        </edge>
+        <edge name='top'>
+          <strip size='2147483647'>
+            <card type='columns' />
+          </strip>
+          <strip size='2147483647'>
+            <card type='rows' />
+          </strip>
+          <strip size='30'>
+            <card type='title' />
+          </strip>
+        </edge>
+        <edge name='right'>
+          <strip size='160'>
+            <card param='[federated.1sng24109zddz218odkmc0qgn1h8].[twk:REC_DATE:qk]' show-domain='false' show-null-ctrls='false' type='filter' />
+            <card param='[federated.1sng24109zddz218odkmc0qgn1h8].[none:SEUS:nk]' type='filter' />
+            <card param='[federated.1sng24109zddz218odkmc0qgn1h8].[none:LR:nk]' type='filter' />
+            <card pane-specification-id='8' param='[federated.1sng24109zddz218odkmc0qgn1h8].[none:LR:nk]' type='color' />
+          </strip>
+        </edge>
+      </cards>
+      <viewpoint>
+        <zoom type='fit-width' />
+        <highlight>
+          <color-one-way>
+            <field>[federated.1sng24109zddz218odkmc0qgn1h8].[none:LR:nk]</field>
+            <field>[federated.1sng24109zddz218odkmc0qgn1h8].[none:SEUS:nk]</field>
+            <field>[federated.1sng24109zddz218odkmc0qgn1h8].[yr:REC_DATE:ok]</field>
+          </color-one-way>
+        </highlight>
+      </viewpoint>
+      <simple-id uuid='{70FF20A5-FB89-476A-99F3-1680F2188E2C}' />
+    </window>
+  </windows>
+  <thumbnails>
+    <thumbnail height='192' name='Sheet 1' width='192'>
+      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
+      Aw7yMprsyiD8AAAAAElFTkSuQmCC
+    </thumbnail>
+  </thumbnails>
+</workbook>

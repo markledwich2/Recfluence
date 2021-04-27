@@ -16,63 +16,35 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Blob {
-  public class IndexCol {
+  public record IndexCol {
     public string Name          { get; set; }
     public bool   InIndex       { get; set; }
     public bool   WriteDistinct { get; set; }
     public string DbName        { get; set; }
   }
 
-  public class BlobIndexResult {
-    public BlobIndexResult(BlobIndexMeta index, StringPath indexPath, StringPath indexFilesPath, StringPath[] toDelete) {
-      Index = index;
-      IndexPath = indexPath;
-      ToDelete = toDelete;
-      IndexFilesPath = indexFilesPath;
-    }
+  public record BlobIndexResult(BlobIndexMeta Index, StringPath IndexPath, StringPath IndexFilesPath, StringPath[] ToDelete);
 
-    public BlobIndexMeta Index     { get; set; }
-    public StringPath    IndexPath { get; set; }
-    public StringPath    IndexFilesPath { get; set; }
-    public StringPath[]  ToDelete  { get; set; }
-  }
+  public record BlobIndexWork(StringPath Path, IndexCol[] Cols, IAsyncEnumerable<JObject> Rows, ByteSize Size,
+    NullValueHandling NullHandling = NullValueHandling.Include, Action<JObject> OnProcessed = null);
 
-  public class BlobIndexWork {
-    public StringPath                Path        { get; }
-    public IAsyncEnumerable<JObject> Rows        { get; }
-    public IndexCol[]                Cols        { get; }
-    public ByteSize                  Size        { get; }
-    public Action<JObject>           OnProcessed { get; }
-
-    public BlobIndexWork(StringPath path, IndexCol[] cols, IAsyncEnumerable<JObject> rows,
-      ByteSize size, Action<JObject> onProcessed = null) {
-      Path = path;
-      Rows = rows;
-      Cols = cols;
-      Size = size;
-      OnProcessed = onProcessed;
-    }
-  }
-
-  public class BlobIndex {
-    readonly ISimpleFileStore Store;
-    public BlobIndex(ISimpleFileStore store) => Store = store;
-
+  public record BlobIndex(ISimpleFileStore Store) {
     /// <summary>Indexes into blob storage the given data. Reader needs to be ordered by the index columns.</summary>
     public async Task<BlobIndexResult> SaveIndexedJsonl(BlobIndexWork work, ILogger log, CancellationToken cancel = default) {
       var indexPath = work.Path.Add("index");
-      var (oldIndex, _) = await Store.Get<BlobIndexMeta>(indexPath).Try(new ());
-      oldIndex.RunIds ??= new RunId[] { };
+      var (oldIndex, _) = await Store.Get<BlobIndexMeta>(indexPath).Try(new());
+      if (oldIndex.RunIds == null) oldIndex = oldIndex with {RunIds = Array.Empty<RunId>()};
+
       var runId = DateTime.UtcNow.FileSafeTimestamp();
 
-      IDictionary<string,HashSet<string>> colDistinctValues = work.Cols.Where(c => c.WriteDistinct).ToDictionary(c => c.Name, c => new HashSet<string>());
+      IDictionary<string, HashSet<string>> colDistinctValues = work.Cols.Where(c => c.WriteDistinct).ToDictionary(c => c.Name, c => new HashSet<string>());
 
       void OnProcessed(JObject j) {
         work.OnProcessed?.Invoke(j);
         RecordColDistinct(j, colDistinctValues);
       }
 
-      var files = (await IndexFiles(work.Rows, work.Cols, work.Size, log, OnProcessed)
+      var files = (await IndexFiles(work.Rows, work.Cols, work.Size, work.NullHandling, log, OnProcessed)
         .Select((b, i) => (b.first, b.last, b.stream, i))
         .BlockTrans(async b => {
           if (cancel.IsCancellationRequested) return null;
@@ -83,7 +55,7 @@ namespace Mutuo.Etl.Blob {
             First = b.first,
             Last = b.last
           };
-        }, parallel: 16, cancel:cancel).ToListAsync()).NotNull();
+        }, parallel: 16, cancel: cancel).ToListAsync()).NotNull();
 
       var colMd = work.Cols
         .Where(c => c.WriteDistinct)
@@ -91,7 +63,7 @@ namespace Mutuo.Etl.Blob {
           Name = c.Name,
           DbName = c.DbName,
           InIndex = c.InIndex,
-          Distinct = colDistinctValues.TryGet(c.Name)?.ToArray() ?? new string[]{}
+          Distinct = colDistinctValues.TryGet(c.Name)?.ToArray() ?? new string[] { }
         }).ToArray();
 
       var toDelete = oldIndex.RunIds
@@ -108,7 +80,7 @@ namespace Mutuo.Etl.Blob {
 
       var indexFilesPath = work.Path.Add(runId);
       log.Information("Completed saving index files in {Index}. Not committed yet.", indexFilesPath);
-      return new (index, indexPath, indexFilesPath, toDelete.Select(d => d.Path).ToArray());
+      return new(index, indexPath, indexFilesPath, toDelete.Select(d => d.Path).ToArray());
     }
 
     public async Task CommitIndexJson(BlobIndexResult indexWork, ILogger log) {
@@ -122,8 +94,8 @@ namespace Mutuo.Etl.Blob {
 
     string JValueString(JObject j) => j.JStringValues().Join("|");
 
-    async IAsyncEnumerable<(Stream stream, JObject first, JObject last)> IndexFiles(IAsyncEnumerable<JObject> rows, IndexCol[] cols, ByteSize size, ILogger log,
-      Action<JObject> onProcessed) {
+    async IAsyncEnumerable<(Stream stream, JObject first, JObject last)> IndexFiles(IAsyncEnumerable<JObject> rows, IndexCol[] cols, ByteSize size, 
+      NullValueHandling nullHandling, ILogger log, Action<JObject> onProcessed) {
       var hasRows = true;
       var rowEnum = rows.GetAsyncEnumerator();
       while (hasRows) {
@@ -141,6 +113,8 @@ namespace Mutuo.Etl.Blob {
             var r = rowEnum.Current;
             first ??= r;
             last = r;
+            if (nullHandling == NullValueHandling.Ignore)
+              r = r.JCloneProps(r.Properties().Where(p => p.Value.Type != JTokenType.Null).Select(p => p.Name).ToArray());
             r.WriteTo(jw);
             await tw.WriteLineAsync();
             onProcessed?.Invoke(r);
@@ -150,7 +124,7 @@ namespace Mutuo.Etl.Blob {
         memStream.Seek(offset: 0, SeekOrigin.Begin);
         yield return (memStream, JCopy(first), JCopy(last));
       }
-      
+
       JObject JCopy(JObject j) => j.JCloneProps(cols.Where(c => c.InIndex).Select(c => c.Name).ToArray());
     }
 
@@ -185,24 +159,24 @@ namespace Mutuo.Etl.Blob {
         });
   }
 
-  public class BlobIndexMeta {
-    public BlobIndexFileMeta[] KeyFiles { get; set; }
-    public RunId[]             RunIds   { get; set; }
-    public BlobIndexColMeta[]  Cols     { get; set; }
+  public record BlobIndexMeta {
+    public BlobIndexFileMeta[] KeyFiles { get; init; }
+    public RunId[]             RunIds   { get; init; }
+    public BlobIndexColMeta[]  Cols     { get; init; }
   }
 
-  public class BlobIndexColMeta : IndexCol {
-    public string[] Distinct { get; set; }
+  public record BlobIndexColMeta : IndexCol {
+    public string[] Distinct { get; init; }
   }
 
-  public class RunId {
-    public string   Id      { get; set; }
-    public DateTime Created { get; set; }
+  public record RunId {
+    public string   Id      { get; init; }
+    public DateTime Created { get; init; }
   }
 
-  public class BlobIndexFileMeta {
-    public string  File  { get; set; }
-    public JObject First { get; set; }
-    public JObject Last  { get; set; }
+  public record BlobIndexFileMeta {
+    public string  File  { get; init; }
+    public JObject First { get; init; }
+    public JObject Last  { get; init; }
   }
 }

@@ -26,7 +26,7 @@ namespace SysExtensions.Build {
     /// <summary>Use github to work out the current version in dev, will use the curerent machine as the branch name.
     ///   devVersionInfo will be null when not run in a dev environment </summary>
     public static async Task<(SemVersion version, GitVersionInfo info)> DiscoverVersion(Type typeToDetectVersion, ILogger log = null) {
-      log = log ?? Log.Logger ?? Logger.None;
+      log ??= Log.Logger ?? Logger.None;
       var rootPath = FPath.Current.DirOfParent(".git")?.Parent();
       if (rootPath?.Exists == true) {
         var outputLines = new List<string>();

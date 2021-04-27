@@ -26,11 +26,18 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 using static YtReader.Search.IndexType;
+using static YtReader.Search.SearchMode;
 using Policy = Polly.Policy;
 
 // ReSharper disable InconsistentNaming
-
 namespace YtReader.Search {
+
+  public enum SearchMode {
+    Incremental,
+    UpdateAll,
+    FullLoad
+  }
+  
   public class YtSearch {
     readonly SnowflakeConnectionProvider Db;
     readonly ElasticClient               Es;
@@ -43,8 +50,7 @@ namespace YtReader.Search {
     }
 
     [Pipe]
-    public async Task SyncToElastic(ILogger log, bool fullLoad = false,
-      string[] indexes = null,
+    public async Task SyncToElastic(ILogger log, SearchMode mode = Incremental, string[] indexes = null,
       (string index, string condition)[] conditions = null, CancellationToken cancel = default) {
       string[] Conditions(IndexType index) => conditions?.Where(c => c.index == index.BaseName()).Select(c => c.condition).ToArray() ?? new string[] { };
       bool ShouldRun(IndexType index) => indexes == null || indexes.Any(i => string.Equals(i, index.BaseName(), StringComparison.OrdinalIgnoreCase));
@@ -62,39 +68,55 @@ namespace YtReader.Search {
         }
 
         if (ShouldRun(type))
-          await CoreSync<TDb, TEs>(log, sql, fullLoad, Map, Conditions(type).Concat(extraConditions).ToArray(), incrementalCondition, cancel);
+          await CoreSync<TDb, TEs>(log, sql, mode, Map, Conditions(type).Concat(extraConditions).ToArray(), incrementalCondition, cancel);
       }
 
       await Sync<dynamic, EsChannel>(Channel, @"select * from channel_latest", MapChannel, incrementalCondition: null, "source='recfluence'");
 
       await Sync(ChannelTitle, "select channel_id, channel_title, description, updated from channel_latest", (EsChannelTitle c) => c);
 
-      await Sync<dynamic, EsVideo>(Video, @"select l.*, c.lr, c.tags, timediff(seconds, '0'::time, duration) as duration_secs
+      await Sync<dynamic, EsVideo>(Video, @"select l.channel_id
+     , l.channel_title
+     , l.description
+     , l.error_type
+     , c.lr
+     , c.tags
+     , l.updated
+     , l.updated_first
+     , l.upload_date
+     , l.video_id
+     , l.video_title
+     , l.views::int as views
+     , l.keywords
+     , timediff(seconds,'0'::time,duration) duration_secs
 from video_latest l
-inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo,
+       join channel_accepted c on l.channel_id=c.channel_id", MapVideo,
         // update any new videos, or update once per week distributed randomly
         "updated_first > :max_updated or (updated > :max_updated and abs(hash(video_id)) % 7 = dayofweek(current_date))");
 
       await Sync(Caption, "select * from caption_es", (DbEsCaption c) => MapCaption(c));
     }
 
-    async Task CoreSync<TDb, TEs>(ILogger log, string selectSql, bool fullLoad, Func<TDb, TEs> map, string[] conditions = null, string incrementalCondition = null,
+    async Task CoreSync<TDb, TEs>(ILogger log, string selectSql, SearchMode mode, Func<TDb, TEs> map, string[] conditions = null,
+      string incrementalCondition = null,
       CancellationToken cancel = default)
       where TEs : class, IHasUpdated where TDb : class {
-      var lastUpdate = await Es.MaxDateField<TEs>(m => m.Field(p => p.updated));
-      var sql = CreateSql(selectSql, fullLoad, lastUpdate, conditions, incrementalCondition);
-
       var alias = Es.GetIndexFor<TEs>() ?? throw new InvalidOperationException("The ElasticClient must have default indexes created for types used");
       var existingIndex = (await Es.GetIndicesPointingToAliasAsync(alias)).FirstOrDefault();
+      
       var existingIndexCheck = (await Es.Indices.GetAsync(alias)).Indices.FirstOrDefault();
       if (existingIndexCheck.Key == alias) throw new InvalidOperationException($"Existing index with the alias {alias}. Not supported for update");
+      
       // full load into random indexes and use aliases. This is to avoid downtime on full loads
-      var newIndex = fullLoad || existingIndex == null || lastUpdate == null ? $"{alias}-{ShortGuid.Create(5).ToLower()}" : null;
+      var lastUpdate = existingIndex != null ? await Es.MaxDateField<TEs>(m => m.Field(p => p.updated)) : null;
+      var newIndex = mode == FullLoad || existingIndex == null || lastUpdate == null ? $"{alias}-{ShortGuid.Create(5).ToLower()}" : null;
 
       if (newIndex != null) {
         await Es.Indices.CreateAsync(newIndex, c => c.Map<TEs>(m => m.AutoMap()));
         log.Information("Search - Created new ElasticSearch Index {Index} ({Alias})", newIndex, alias);
       }
+      
+      var sql = CreateSql(selectSql, mode, lastUpdate, conditions, incrementalCondition);
 
       using var conn = await OpenConnection(log);
       var rows = Query<TDb>(sql, conn).Select(map);
@@ -136,12 +158,15 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo,
 
     static EsChannel MapChannel(dynamic c) => new() {
       channel_id = c.CHANNEL_ID,
+      source_id = c.SOURCE_ID,
+      url = c.URL,
+      platform = c.PLATFORM,
       channel_title = c.CHANNEL_TITLE,
       age = c.AGE,
       avg_minutes = c.AVG_MINUTES,
-      channel_lifetime_daily_views = c.CHANNEL_LIFETIME_DAILY_VIEWS,
-      channel_lifetime_daily_views_relevant = c.CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT,
-      channel_video_views = c.CHANNEL_VIDEO_VIEWS,
+      channel_lifetime_daily_views = (decimal?)c.CHANNEL_LIFETIME_DAILY_VIEWS,
+      channel_lifetime_daily_views_relevant = (decimal?)c.CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT,
+      channel_video_views = (decimal?)c.CHANNEL_VIDEO_VIEWS,
       channel_views = c.CHANNEL_VIEWS,
       country = c.COUNTRY,
       day_range = c.DAY_RANGE,
@@ -180,16 +205,16 @@ inner join channel_accepted c on l.channel_id = c.channel_id", MapVideo,
     async Task<ILoggedConnection<SnowflakeDbConnection>> OpenConnection(ILogger log) {
       var conn = await Db.Open(log);
       await conn.SetSessionParams(
-        (SfParam.ClientPrefetchThreads, 2),
+        //(SfParam.ClientPrefetchThreads, 2),
         (SfParam.Timezone, "GMT"));
       return conn;
     }
-    
-    (string sql, object param) CreateSql(string selectSql, bool fullLoad, DateTime? lastUpdate
+
+    (string sql, object param) CreateSql(string selectSql, SearchMode mode, DateTime? lastUpdate
       , string[] conditions = null, string incrementalCondition = null) {
       conditions ??= new string[] { };
 
-      var param = lastUpdate == null || fullLoad ? null : new {max_updated = lastUpdate};
+      var param = lastUpdate == null || mode != Incremental ? null : new {max_updated = lastUpdate};
       if (param?.max_updated != null)
         conditions = conditions.Concat(incrementalCondition ?? "updated > :max_updated").ToArray();
       var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
@@ -320,7 +345,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     [Keyword] public string   channel_id    { get; set; }
     public           string   video_title   { get; set; }
     public           string   channel_title { get; set; }
-    public           DateTime upload_date   { get; set; }
+    public           DateTime? upload_date   { get; set; }
     public           DateTime updated       { get; set; }
     public           long?    views         { get; set; }
     [Keyword] public string   lr            { get; set; }
@@ -351,6 +376,9 @@ order by updated"; // always order by updated so that if sync fails, we can resu
   [YtEsTableAttribute(Channel)]
   public class EsChannel : EsChannelTitle, IHasUpdated {
     [Keyword] public string    main_channel_id                       { get; set; }
+    [Keyword] public string    source_id                             { get; set; }
+    [Keyword] public string    url                                   { get; set; }
+    [Keyword] public string    platform                              { get; set; }
     [Keyword] public string    logo_url                              { get; set; }
     public           double?   relevance                             { get; set; }
     public           long?     subs                                  { get; set; }

@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
+using CliFx.Infrastructure;
 using Medallion.Shell;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Schema.Generation;
@@ -34,7 +35,7 @@ namespace Mutuo.Tools {
       var shell = new Shell(o => o.WorkingDirectory(Dir.FullName));
 
       var run = shell.Run("dotnet", "build");
-      await run.StandardOutput.PipeToAsync(Console.Out);
+      await run.StandardOutput.PipeToAsync(console.Output);
       var res = await run.Task;
       if (!res.Success) throw new InvalidOperationException($"build failed: {res.StandardError}");
 

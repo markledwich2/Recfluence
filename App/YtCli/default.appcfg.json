@@ -1,4 +1,5 @@
 ﻿{
+  "$schema": "https://raw.githubusercontent.com/markledwich2/Recfluence/master/App/YtReader/AppCfg.schema.json",
   "seq": {
     "seqUrl": "http://seq.recfluence.net",
     "containerGroupName": "seq"
@@ -7,8 +8,7 @@
     "host": "ql98184.west-us-2.azure.snowflakecomputing.com",
     "warehouse": "yt",
     "schema": "public",
-    "db": "yt",
-    "role": "recfluence"
+    "db": "yt"
   },
   "collect": {
     "discoverChannels": 1
@@ -27,7 +27,7 @@
         "registry": "ytnetworks.azurecr.io",
         "imageName": "recfluence",
         "cores": 2,
-        "mem": 2,
+        "mem": 4,
         "exe": "./recfluence"
       }
     },
@@ -45,8 +45,8 @@
           "mem": 3,
           "cores": 2
         },
-        "maxParallel": 16,
-        "minWorkItems": 500
+        "maxParallel": 12,
+        "minWorkItems": 300
       },
       {
         "pipeName": "ProcessVideos",
@@ -56,14 +56,29 @@
         },
         "maxParallel": 8,
         "minWorkItems": 2000
+      },
+      {
+        "pipeName": "CollectUserChannels",
+        "container": {
+          "cores": 1,
+          "mem": 1
+        },
+        "maxParallel": 12,
+        "minWorkItems": 2000
+      },
+      {
+        "pipeName": "DataScripts",
+        "container": {
+          "mem": 4,
+          "cores": 4
+        }
       }
     ]
   },
   "elastic": {
     "cloudId": "Recfluence:d2VzdHVzMi5henVyZS5lbGFzdGljLWNsb3VkLmNvbTo5MjQzJDg5OTljNTUxYjkyYjRmYjA5YTRkZjYwMmVjYTQ3ZmJjJGJmOTFlMzE2YzNkZTQyOWE4Mzk3MDlhZjI0NTRlYzg0"
   },
-  "appDb": {
-    "host": "recfluence.database.windows.net",
-    "db": "yt"
+  "dataScripts": {
+    "stale": "2021-03-26T04:39:34Z"
   }
 }

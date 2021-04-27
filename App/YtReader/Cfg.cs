@@ -11,7 +11,9 @@ using SysExtensions.Collections;
 using SysExtensions.Configuration;
 using SysExtensions.Security;
 using SysExtensions.Text;
+using YtReader.Amazon;
 using YtReader.Db;
+using YtReader.Narrative;
 
 namespace YtReader {
   public class RootCfg {
@@ -49,7 +51,6 @@ namespace YtReader {
     [Required] public ProxyCfg        Proxy                 { get; set; } = new();
     [Required] public SnowflakeCfg    Snowflake             { get; set; } = new();
     [Required] public WarehouseCfg    Warehouse             { get; set; } = new();
-    [Required] public SqlServerCfg    AppDb                 { get; set; } = new();
     [Required] public ResultsCfg      Results               { get; set; } = new();
     [Required] public PipeAppCfg      Pipe                  { get; set; } = new();
     [Required] public DataformCfg     Dataform              { get; set; } = new();
@@ -62,6 +63,10 @@ namespace YtReader {
     [Required] public BitChuteCfg     BitChute              { get; set; } = new();
     [Required] public RumbleCfg       Rumble                { get; set; } = new();
     [Required] public GoogleCfg       Google                { get; set; } = new();
+    [Required] public AirtableCfg     Airtable              { get; set; } = new();
+    [Required] public NarrativesCfg   Narratives            { get; set; } = new();
+    [Required] public DataScriptsCfg  DataScripts           { get; set; } = new();
+    [Required] public AmazonCfg       Amazon                { get; set; } = new();
   }
 
   public class GoogleCfg {
@@ -94,25 +99,25 @@ namespace YtReader {
 
   public class ResultsCfg {
     [Required] public string FileQueryUri { get; set; } = "https://raw.githubusercontent.com/markledwich2/YouTubeNetworks_Dataform/master";
-    [Required] public int Parallel { get; set; } = 4;
+    [Required] public int    Parallel     { get; set; } = 4;
   }
 
-  public class ProxyCfg {
-    [Required] public ProxyConnectionCfg[] Proxies        { get; set; } = { };
-    public            int                  TimeoutSeconds { get; set; } = 40;
-    public            int                  Retry          { get; set; } = 10;
-    public            bool                 AlwaysUseProxy { get; set; }
+  public record ProxyCfg {
+    [Required] public ProxyConnectionCfg[] Proxies        { get; init; } = Array.Empty<ProxyConnectionCfg>();
+    public            int                  TimeoutSeconds { get; init; } = 40;
+    public            int                  Retry          { get; init; } = 5;
+    public            bool                 AlwaysUseProxy { get; init; }
   }
 
-  public static class ProxyCfgEx {
-    public static ProxyConnectionCfg[] DirectAndProxies(this ProxyCfg cfg) => new[] {new ProxyConnectionCfg()}.Concat(cfg.Proxies).ToArray();
+  public enum ProxyType {
+    Datacenter,
+    Residential
   }
 
-  public class ProxyConnectionCfg {
-    [Required] public string     Url   { get; set; }
-    [Required] public NameSecret Creds { get; set; }
-
-    public bool IsDirect() => Url.NullOrEmpty();
+  public record ProxyConnectionCfg {
+    [Required] public string     Url   { get; init; }
+    [Required] public NameSecret Creds { get; init; }
+    public            ProxyType  Type  { get; set; }
   }
 
   public class YtCollectCfg {
@@ -126,6 +131,8 @@ namespace YtReader {
     /// <summary>How old a video before we stop collecting recs this is fairly expensive so we keep it within</summary>
     public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
 
+    public TimeSpan RefreshChannelDetailDebounce { get; set; } = 12.Hours();
+
     /// <summary>We want to keep monitoring YouTube influence even if no new videos have been created (min). Get at least this
     ///   number of recs per channel</summary>
     public int RefreshRecsMin { get; set; } = 2;
@@ -137,28 +144,33 @@ namespace YtReader {
     public bool Headless       { get; set; } = true;
 
     /// <summary>the max number of channels to discover each collect</summary>
-    public int DiscoverChannels { get; set; } = 100;
+    public int DiscoverChannels { get; set; } = 10;
 
     /// <summary>the number of vids to populate with data when discovering new channels (i.e. preparing data to be classified)</summary>
     public int DiscoverChannelVids { get; set; } = 3;
 
-    /// <summary>The maximum number of videos to refresh exta info on (per run) because they have no comments (we didn't used
-    ///   to collect them)</summary>
-    public int PopulateMissingCommentsLimit { get; set; } = 0; // disabled for now due to performance costs
-    public int ParallelChannels { get;             set; } = 4;
+    public int ParallelChannels { get; set; } = 4;
 
-    public int ChromeParallel  { get; set; } = 2;
     public int WebParallel     { get; set; } = 6; // parallelism for plain html scraping of video's, recs
     public int CaptionParallel { get; set; } = 3; // smaller than Web to try and reduce changes of out-of-mem failures
-    public int ChromeAttempts  { get; set; } = 3;
 
-    /// <summary>maximum number of videos (in total for all channels in a process update).</summary>
-    public int ChromeUpdateMax { get; set; } = 1000;
+    /// <summary>maximum number of videos to load when updating a channel.</summary>
+    public int MaxChannelComments { get; set; } = 4;
 
     /// <summary>These thresholds shortcut the collection for channels to save costs. Bellow the analysis thresholds because we
     ///   want to collect ones that might tip over</summary>
     public ulong MinChannelSubs { get;  set; } = 8000;
     public ulong MinChannelViews { get; set; } = 1_000_000; // some channels don't have subs, so we fallback to a minimum views for the channels. 
+
+    /// <summary>Number of video extra's to collect that are missing per channel. Since YT removed a nice endpoint, we need to
+    ///   go and backfill information from the video itself</summary>
+    public int ChannelBatchSize { get;      set; } = 100;
+    public int MaxChannelDailyVideos { get; set; } = 10_000;
+    public int MaxChannelFullVideos  { get; set; } = 40_000;
+
+    public int  UserBatchSize           { get; set; } = 1000;
+    public int? MaxMissingUsers         { get; set; } = 100_000;
+    public int? MaxExtraErrorsInChannel { get; set; } = 10;
   }
 
   public class StorageCfg {
