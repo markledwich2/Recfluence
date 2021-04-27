@@ -120,7 +120,7 @@ namespace Tests {
         //"https://www.amazon.com/gp/product/B07TC76671",
         //"https://amzn.to/2ZMojrd"
       };
-      var completed = await aw.ProcessLinks(links, x.Log);
+      var completed = await aw.ProcessLinks(links, x.Log, cancel: default);
     }
   }
 }

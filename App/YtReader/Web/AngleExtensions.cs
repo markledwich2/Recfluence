@@ -34,6 +34,7 @@ namespace YtReader.Web {
         UseDefaultCredentials = false,
         UseCookies = true,
         UseProxy = true,
+        AutomaticDecompression = DecompressionMethods.All
       };
       
       /*var requester = new DefaultHttpRequester("PostmanRuntime/7.26.10", request => {

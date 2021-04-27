@@ -32,7 +32,7 @@ using PT = YtReader.Amazon.AmazonPageType;
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.Amazon {
-  public record AmazonCfg(int WebParallel = 16, int BatchSize = 100, int Retries = 8, ProxyType ProxyType = ProxyType.Residential) {
+  public record AmazonCfg(int WebParallel = 32, int BatchSize = 100, int Retries = 8, ProxyType ProxyType = ProxyType.Residential) {
     public TimeSpan RequestTimeout { get; init; } = 2.Minutes();
   }
 
@@ -58,22 +58,25 @@ where u.value:host::string like any ('%amazon.%', '%amzn.to%')
 
     record UrlRow(string url);
 
-    public async Task GetProductLinkInfo(ILogger log, string queryName = null, int? limit = null) {
+    public async Task GetProductLinkInfo(ILogger log, CancellationToken cancel, string queryName = null, int? limit = null, bool forceLocal = false) {
       var sql = @$"with l as ({NamedSql[queryName ?? "Activewear Links"]})
 select url from l
---where not exists (select * from amazon_link_stage...)
+where not exists (select * from link_meta_stage s where s.v:SourceUrl = l.url)
 {limit.Do(l => $"limit {l}")}
 ";
       IReadOnlyCollection<string> urls;
       using (var db = await Conn.Open(log))
         urls = await db.QueryAsync<UrlRow>("amazon links", sql).Select(l => l.url).ToListAsync();
-      await urls.Process(Pipe, b => ProcessLinks(b, PipeArg.Inject<ILogger>()));
+      if(forceLocal)
+        await ProcessLinks(urls, log, cancel);
+      else
+        await urls.Process(Pipe, b => ProcessLinks(b, PipeArg.Inject<ILogger>(), PipeArg.Inject<CancellationToken>()), cancel:cancel);
     }
 
     public record LoadFromUrlRes(AmazonLink Link, HttpStatusCode Status = HttpStatusCode.OK, string ErrorMsg = null);
 
     [Pipe]
-    public async Task<long> ProcessLinks(IReadOnlyCollection<string> urls, ILogger log) {
+    public async Task<long> ProcessLinks(IReadOnlyCollection<string> urls, ILogger log, CancellationToken cancel) {
       log = log.ForContext("Module", "Amazon");
       var unhandledErrors = 0;
       var res = await urls.BlockTrans(async (url, urlNo) => {
@@ -102,7 +105,7 @@ select url from l
           }
           urlLog.Debug(ex, "Amazon - unhandled error: {Error}", ex.Message);
           return null;
-        }, Cfg.WebParallel)
+        }, Cfg.WebParallel, cancel:cancel)
         .Batch(Cfg.BatchSize)
         .BlockTrans(async (b, i) => {
           log.Debug("Aamazon - about to save batch {Batch}", i + 1);

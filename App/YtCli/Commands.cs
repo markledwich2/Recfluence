@@ -459,9 +459,12 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     
     [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
     public int? Limit { get; set; }
+    
+    [CommandOption("force-local", Description = "if true, won't launch any containers to process")]
+    public bool ForceLocal { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) {
-      await Amazon.GetProductLinkInfo(Log, MentionQuery, Limit);
+      await Amazon.GetProductLinkInfo(Log, console.RegisterCancellationHandler(), MentionQuery, Limit, ForceLocal);
       Log.Information("amazon - complete");
     }
   }

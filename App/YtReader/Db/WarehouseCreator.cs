@@ -75,7 +75,8 @@ namespace YtReader.Db {
                 $"grant all on future tables in schema {db}.{schema} to role {r}",
                 $"grant all on all views in schema {db}.{schema} to role {r}",
                 $"grant all on future views in schema {db}.{schema} to role {r}",
-                $"grant all on all stages in database {db} to role {r}"
+                $"grant all on all stages in database {db} to role {r}",
+                $"grant all on all functions in database {db} to role {r}"
               )))
           .Concat(WhCfg.ReadRoles.Select(r =>
             new Script($"init role {r}", ScriptMode.Parallel,
@@ -85,7 +86,8 @@ namespace YtReader.Db {
               $"grant select on future views in database {db} to role {r}",
               $"grant select on all tables in database {db} to role {r}",
               $"grant select on all views in database {db} to role {r}",
-              $"grant usage on all stages in database {db} to role {r}"
+              $"grant usage on all stages in database {db} to role {r}",
+              $"grant usage on all functions in database {db} to role {r}"
             )));
 
       foreach (var s in scripts)
