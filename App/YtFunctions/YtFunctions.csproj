@@ -2,24 +2,20 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <AzureFunctionsVersion>v3</AzureFunctionsVersion>
-    <LangVersion>preview</LangVersion>
     <OutputType>Exe</OutputType>
-    <_FunctionsSkipCleanOutput>true</_FunctionsSkipCleanOutput>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.0.13" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.1.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.0.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="5.0.0" />
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0" />
     <PackageReference Include="Serilog.Sinks.ILogger" Version="1.0.3" />
-      <PackageReference Include="Seq.Api" Version="2021.2.0" />
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Http" Version="3.0.12"/>
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="4.0.3"/>
-    <PackageReference Include="Microsoft.Azure.WebJobs.Script.ExtensionsMetadataGenerator" Version="1.2.1"/>
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.0.0-preview3" OutputItemType="Analyzer"/>
-    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.0.0-preview3"/>
-    <PackageReference Include="System.Net.NameResolution" Version="4.3.0"/>
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions" Version="4.0.1"/>
-    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.1.0"/>
-    <PackageReference Include="Serilog.AspNetCore" Version="3.4.0"/>
+    <PackageReference Include="Seq.Api" Version="2021.2.0" />
+    <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.1.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="4.1.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">
@@ -27,12 +23,11 @@
     </None>
     <None Update="local.settings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SysExtensions\SysExtensions.csproj"/>
-    <ProjectReference Include="..\YtReader\YtReader.csproj"/>
+    <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
+    <ProjectReference Include="..\YtReader\YtReader.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\YtCli\default.appcfg.json">

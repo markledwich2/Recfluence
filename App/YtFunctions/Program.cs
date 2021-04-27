@@ -1,6 +1,5 @@
 using System;
 using Autofac.Extensions.DependencyInjection;
-using Microsoft.Azure.Functions.Worker.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;
@@ -20,7 +19,7 @@ try {
       c.ConfigureScope(root, cfg, Setup.PipeAppCtxEmptyScope(root, cfg, version.Version), version, log, args);
     }))
     .ConfigureAppConfiguration(c => c.AddCommandLine(args))
-    .ConfigureFunctionsWorker((c, b) => { b.UseFunctionExecutionMiddleware(); })
+    .ConfigureFunctionsWorkerDefaults()
     .UseSerilog(log)
     .Build();
   await host.RunAsync();
