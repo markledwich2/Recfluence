@@ -1,0 +1,7 @@
+
+az login
+az configure --defaults location=westus2 group=ytnetworks
+az storage account create --name recfluencefunc --sku Standard_LRS
+az functionapp create --consumption-plan-location westus2 --runtime dotnet-isolated --runtime-version 5.0  --functions-version 3 --name recfluence --storage-account recfluencefunc
+
+# once func is created, use azur devops to deploy to it
