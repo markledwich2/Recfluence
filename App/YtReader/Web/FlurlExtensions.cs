@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web;
 using Flurl;
 using Flurl.Http;
 using Flurl.Http.Content;
@@ -18,7 +19,17 @@ using static SysExtensions.Net.HttpExtensions;
 namespace YtReader.Web {
   public static class FlurlExtensions {
     public static Url AsUrl(this string url) => new(url);
+    public static Url AsUrl(this Uri uri) => new(uri.ToString());
     public static IFlurlRequest AsRequest(this Url url) => new FlurlRequest(url);
+
+    public static T QueryObject<T>(this Uri uri) => QueryObject<T>(uri.Query);
+    public static T QueryObject<T>(this Url url) => QueryObject<T>(url.Query);
+    
+    static T QueryObject<T>(string queryString) {
+      var dict = HttpUtility.ParseQueryString(queryString);
+      var json = JsonConvert.SerializeObject(dict.Cast<string>().ToDictionary(k => k, v => dict[v]));
+      return JsonConvert.DeserializeObject<T>(json);
+    }
 
     /// <summary>Reads the content as Json (and unzip if required)</summary>
     public static Task<JObject> JsonObject(this IFlurlResponse response) =>

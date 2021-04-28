@@ -125,6 +125,7 @@ namespace YtReader {
     public static async Task<(AppCfg App, RootCfg Root, VersionInfo Version)> LoadCfg(string basePath = null, ILogger rootLogger = null) {
       rootLogger ??= Log.Logger ?? Logger.None;
       basePath ??= Environment.CurrentDirectory;
+      rootLogger.Information("Loading cfg with base path: {Path}", basePath);
       var cfgRoot = new ConfigurationBuilder()
         .SetBasePath(basePath)
         .AddJsonFile("local.rootcfg.json", optional: true)

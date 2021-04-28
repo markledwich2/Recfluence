@@ -1,0 +1,12 @@
+{
+    "cSpell.words": [
+        "Jsonl",
+        "Mutuo",
+        "Serilog"
+    ],
+    "azureFunctions.deploySubpath": "bin/Release/net5.0/publish",
+    "azureFunctions.projectLanguage": "C#",
+    "azureFunctions.projectRuntime": "~3",
+    "debug.internalConsoleOptions": "neverOpen",
+    "azureFunctions.preDeployTask": "publish"
+}
