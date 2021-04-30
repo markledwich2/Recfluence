@@ -299,7 +299,7 @@ namespace YtCli {
   }
 
   [Command("collect-list", Description = "Refresh video/channel information for a given list")]
-  public record CollectList(YtCollectList Col, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log)
+  public record CollectListCmd(YtCollectList Col, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
     [CommandParameter(0, Description = "The type of list to run (i.e. channel-path, video-path, view, named)")]
     public CollectFromType Mode { get; set; }
@@ -326,7 +326,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
       Description = @"e.g. 24. use when re-running failed lists. Before this period has elapsed, channels/videos won't be updated again")]
     public int? StaleHrs { get; set; }
 
-    [CommandOption("sql-args", shortName: 'a', Description = "Json object representing params to pass to the query")]
+    [CommandOption("sql-args", shortName: 'a', IsRequired = false, Description = "Json object representing params to pass to the query")]
     public string Args { get; set; }
 
     /*[CommandOption("operations", 'l', Description = @"| top level things to do with this list")]
@@ -341,7 +341,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
         ExtraParts = ParseParts<ExtraPart>(ExtraParts),
         LimitChannels = Channels?.UnJoin('|'),
         StaleAgo = StaleHrs?.Hours() ?? 2.Days(),
-        Args = JObject.Parse(Args)
+        Args = Args.Do(JObject.Parse)
       };
       await Col.Run(opts, Log, console.RegisterCancellationHandler());
     }

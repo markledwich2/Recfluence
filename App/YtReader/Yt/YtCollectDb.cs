@@ -95,7 +95,7 @@ where
       var ids = await ctx.Db.Query<VideoForUpdate>("videos for update", $@"
 with chans as (
   select channel_id
-  from channel_accepted
+  from channel_latest
   where status_msg<>'Dead'
     and channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
 )
@@ -106,11 +106,10 @@ select v.channel_id ChannelId
      , v.extra_updated ExtraUpdated
 from video_latest v
 join chans c on v.channel_id = c.channel_id
-join channel_collection_days_back b on b.channel_id = v.channel_id
 where 
     v.upload_date is null -- update extra if we are missing upload
     or v.error_type is null -- removed video's updated separately
-qualify row_number() over (partition by b.channel_id order by upload_date desc) <= :videosPerChannel
+qualify row_number() over (partition by v.channel_id order by upload_date desc) <= :videosPerChannel
 ", new {videosPerChannel = ctx.Cfg.MaxChannelFullVideos});
       return ids;
     }

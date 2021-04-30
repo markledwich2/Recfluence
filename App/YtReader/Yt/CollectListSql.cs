@@ -37,7 +37,7 @@ from chans c
       },
       { 
         "collect_covid", @"
-select count(distinct m.video_id) videos, count(distinct m.channel_id)
+select m.video_id, m.channel_id
 from collect_covid m
 join video_latest v on v.video_id = m.video_id
 left join channel_latest c on c.channel_id =v.channel_id

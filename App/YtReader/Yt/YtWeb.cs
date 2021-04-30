@@ -363,7 +363,7 @@ namespace YtReader.Yt {
 
       var cfg = await CommentCfgFromVideoPage();
       var comments = await Comments(videoId, cfg.CToken, cfg.Cfg, log).SelectManyList();
-      log.Debug("YtWeb - loaded {Comments} for video {VideoId}", comments.Count, videoId);
+      log.Debug("YtWeb - loaded {Comments} comments for video {VideoId}", comments.Count, videoId);
       return comments;
     }
 

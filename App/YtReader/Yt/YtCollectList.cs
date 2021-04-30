@@ -172,6 +172,7 @@ select * from s
 ", ToDapperArgs(select.Args));
 
     static DynamicParameters ToDapperArgs(JObject args) {
+      if (args == null) return null;
       var kvp = args.Properties().Select(p => new KeyValuePair<string, object>(p.Name, ((JValue) p.Value).Value));
       var p = new DynamicParameters(kvp);
       return p;

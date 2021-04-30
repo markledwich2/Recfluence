@@ -325,8 +325,8 @@ namespace YtReader.Yt {
         if (parts.ShouldRun(ERec) && !discover)
           plans.SetPart(VideoToUpdateRecs(plan, videoItems), ERec);
 
-        if (parts.ShouldRun(EExtra) && plans.Any()) {
-          // add videos that look seem missing given the current update
+        if (parts.ShouldRun(EExtra)) {
+          // add videos that seem missing given the current update
           var videoItemsKey = videoItems.ToKeyedCollection(v => v.Id);
           var oldestUpdate = videoItems.Min(v => v.UploadDate);
 
@@ -338,7 +338,7 @@ namespace YtReader.Yt {
           log.Debug("Collect {Channel} - Video-extra for {Videos} video's because they look  missing", c.ChannelTitle, suspectMissingFresh.Length);
           plans.SetPart(suspectMissingFresh, EExtra);
 
-          // videos that we just refreshed but don't have any extra yet. limit per run to not slow down a particular update too much
+          // videos that we just refreshed but don't have any extra yet
           var missingExtra = videoItems
             .Where(v => plans[v.Id]?.ForUpdate?.ExtraUpdated == null)
             .OrderByDescending(v => v.UploadDate)
@@ -354,9 +354,10 @@ namespace YtReader.Yt {
           plans.SetPart(videoItems.Where(v => plan.LastCaptionUpdate == null || v.UploadDate > plan.LastCaptionUpdate).Select(v => v.Id), ECaption);
 
           // take a random sample of comments for new videos since last comment record (NOTE: this is in addition to missing comments have separately been planned)
-          plans.SetPart(videoItems
-            .Where(v => plan.LastCommentUpdate == null || v.UploadDate > plan.LastCommentUpdate)
-            .Randomize().Take(RCfg.MaxChannelComments).Select(v => v.Id), EComment);
+          if(parts.ShouldRun(EComment))
+            plans.SetPart(videoItems
+              .Where(v => plan.LastCommentUpdate == null || v.UploadDate > plan.LastCommentUpdate)
+              .Randomize().Take(RCfg.MaxChannelComments).Select(v => v.Id), EComment);
         }
         await SaveExtraAndParts(c, parts, log, plans);
       }
@@ -418,14 +419,18 @@ namespace YtReader.Yt {
 
     public IAsyncEnumerable<ExtraAndParts> GetExtras(VideoExtraPlans extras, ILogger log, string channelId = null, string channelTitle = null) {
       var errors = 0;
-      return extras.Where(e => e.Parts.Any())
-        .BlockTrans(async v => await Scraper.GetExtra(log, v.VideoId, v.Parts, channelId, channelTitle)
-            .Swallow(ex => {
-              log.Warning(ex, "error in GetExtra for video {VideoId}", v.VideoId);
-              Interlocked.Increment(ref errors);
-              if (errors > RCfg.MaxExtraErrorsInChannel)
-                throw ex;
-            }),
+      var extrasWithParts = extras.Where(e => e.Parts.Any()).ToArray();
+      return extrasWithParts
+        .BlockTrans(async (v, i) => {
+            if (i % 100 == 0) log.Debug("YtCollect - recorded {Extras}/{Total} extras", i, extrasWithParts.Length);
+            return await Scraper.GetExtra(log, v.VideoId, v.Parts, channelId, channelTitle)
+              .Swallow(ex => {
+                log.Warning(ex, "error in GetExtra for video {VideoId}", v.VideoId);
+                Interlocked.Increment(ref errors);
+                if (errors > RCfg.MaxExtraErrorsInChannel)
+                  throw ex;
+              });
+          },
           RCfg.WebParallel);
     }
 
