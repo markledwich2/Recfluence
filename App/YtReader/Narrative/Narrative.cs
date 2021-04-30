@@ -52,6 +52,10 @@ join video_latest v on v.video_id = n.video_id
 , table (flatten(matches)) m
 where v.views > 10000 and v.upload_date >= '2021-04-13'
 "
+      },
+      {
+        "vaccine-personal",
+        @"select n.video_id, 'cation' as part, caption as context, offset_seconds, '' keyword from mention_vaccine_personal n"
       }
     };
   }
@@ -111,6 +115,7 @@ from channel_latest c
   from mention n
          join video_latest v on v.video_id=n.video_id
 qualify row_number() over (partition by mention_id order by 1) = 1
+order by video_group -- use group to randomize the order
   ").Select(r => {
           // linking records need to ba an array
           r["CHANNEL_ID"] = new JArray(r["CHANNEL_ID"]);

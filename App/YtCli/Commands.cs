@@ -316,7 +316,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
       Description = "| delimited list of channels (source id's) to collect. This is an additional filter to the list given")]
     public string Channels { get; set; }
 
-    [CommandOption("parts", shortName: 'p', IsRequired = false, Description = @"| list of parts to collect ()")]
+    [CommandOption("parts", shortName: 'p', IsRequired = false, Description = @"| list of parts to collect (e.g. video|channel)")]
     public string Parts { get; set; }
 
     [CommandOption("extra-parts", shortName: 'e', IsRequired = false, Description = @"| delimited list of extra parts to run (e.g. extra|comment|rec|caption)")]
@@ -437,10 +437,12 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     [CommandParameter(0, Description = "The name of the narrative to sync with airtable. e.g. (Activewear|Vaccine)")]
     public string NarrativeName { get; set; }
     
+    [CommandParameter(1, Description = "The base id from airtable. To get this, open https://airtable.com/api and select your base")]
+    public string Base { get; set; }
+    
     [CommandOption("parts", shortName: 'p', Description = "| separated airtable to updated (Mention|Channel|Video)")]
     public string Parts { get; set; }
-    [CommandOption("base", shortName: 'b', Description = "The base id from airtable. To get this, open https://airtable.com/api and select your base")]
-    public string Base { get; set; }
+
     [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
     public int? Limit { get; set; }
     [CommandOption("videos", shortName: 'v', Description = "| separated videos to limit update to")]

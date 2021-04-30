@@ -34,6 +34,9 @@ namespace YtReader.Store {
           NarrativeChannels,
           NarrativeVideos,
           NarrativeCaptions,
+          Narrative2Channels,
+          Narrative2Videos,
+          Narrative2Captions,
           UsFeed,
           UsRecs,
           UsWatch,
@@ -183,6 +186,8 @@ s as (
 )
 select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
       Tags: new[] {"narrative"});
+    
+
 
     static readonly IndexCol[] NarrativeVideoCols = {Col("narrative", writeDistinct: true), Col("upload_date")};
 
@@ -218,15 +223,86 @@ order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
       Size: 500.Kilobytes(),  // big because the UI loads most/all of it
       NullHandling: NullValueHandling.Ignore, 
       Tags: new[] {"narrative"});
+    
+    
 
     static readonly IndexCol[] NarrativeCaptionCols = {Col("narrative"), Col("channel_id"), Col("video_id")};
 
     WorkCfg NarrativeCaptions = new(nameof(NarrativeCaptions), NarrativeCaptionCols, @$"
-  select narrative, video_id, n.channel_id, n.captions
-  from video_narrative n
+select narrative, video_id, n.channel_id, n.captions
+from video_narrative n
 order by {NarrativeCaptionCols.DbNames().Join(",")}",
       50.Kilobytes(), // small because the UI loads these on demand
       Tags: new[] {"narrative"});
+    
+    
+    
+    readonly WorkCfg Narrative2Channels = new(nameof(Narrative2Channels), NarrativeChannelsCols, $@"
+with by_channel as (
+  select n.narrative, v.channel_id, sum(v.views) views
+  from video_narrative2 n
+         left join video_latest v on v.video_id=n.video_id
+  group by 1,2
+),
+s as (
+  select n.*
+          , cl.channel_title
+         , arrayExclude(cl.tags, array_construct('MissingLinkMedia', 'OrganizedReligion', 'Educational', 'Black', 'LGBT')) tags
+         , cl.lr
+         , logo_url
+         , subs
+         , substr(cl.description, 0, 301) description
+  from by_channel n
+           left join channel_latest cl on n.channel_id=cl.channel_id
+)
+select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
+      Tags: new[] {"narrative2"});
+    
+    readonly WorkCfg Narrative2Videos = new(nameof(Narrative2Videos), NarrativeVideoCols, $@"
+with s as (
+  select n.narrative
+       , n.keywords
+       , n.tags
+       , n.tags_meta
+       , n.video_id
+       , v.video_title
+       , v.channel_id
+       , v.views::int video_views
+       , case narrative
+           when '2020 Election Fraud' then
+             case
+               when array_contains('manual'::variant,n.tags_meta) then 1
+               when array_contains('support'::variant,n.tags) then iff(v.upload_date<'2020-12-09',0.84/0.96,0.68/0.97)
+               when array_contains('dispute'::variant,n.tags) then iff(v.upload_date<'2020-12-09',0.84/0.94,0.80/0.97)
+               else 1
+             end
+           else null
+         end*v.views::int video_views_adjusted
+       , v.upload_date::date upload_date
+       , ve.error_type
+       , timediff(seconds,'0'::time,v.duration) duration_secs
+       --, n.captions
+       , ve.last_seen
+  from video_narrative2 n
+         left join video_latest v on n.video_id=v.video_id
+         left join video_extra e on e.video_id=v.video_id
+         left join video_error ve on ve.video_id=n.video_id
+)
+select *
+from s
+order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
+      500.Kilobytes(),  // big because the UI loads most/all of it
+      Version: "v2.1",
+      NullHandling: NullValueHandling.Ignore, 
+      Tags: new[] {"narrative2"});
+    
+    WorkCfg Narrative2Captions = new(nameof(Narrative2Captions), NarrativeCaptionCols, @$"
+select narrative, n.video_id, v.channel_id, n.captions
+from video_narrative2 n
+left join video_latest v on v.video_id = n.video_id
+order by {NarrativeCaptionCols.DbNames().Join(",")}",
+      50.Kilobytes(), // small because the UI loads these on demand
+      Tags: new[] {"narrative2"});
 
     #endregion
 

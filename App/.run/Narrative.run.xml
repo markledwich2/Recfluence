@@ -1,9 +1,13 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Update" type="DotNetProject" factoryName=".NET Project">
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Narrative" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.exe" />
-    <option name="PROGRAM_PARAMETERS" value="update -a Index -t narrative2" />
+    <option name="PROGRAM_PARAMETERS" value="narrative vaccine-personal appbvtIrrV8KbvjQL -p Mention" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
+    <envs>
+      <env name="branchEnv" value="" />
+      <env name="Env" value="prod" />
+    </envs>
     <option name="USE_EXTERNAL_CONSOLE" value="0" />
     <option name="USE_MONO" value="0" />
     <option name="RUNTIME_ARGUMENTS" value="" />
