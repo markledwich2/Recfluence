@@ -22,8 +22,8 @@ using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
+using YtReader.Airtable;
 using YtReader.Amazon;
-using YtReader.Narrative;
 using YtReader.Reddit;
 using YtReader.Search;
 using YtReader.Store;
@@ -432,10 +432,10 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     }
   }
 
-  [Command("narrative", Description = "Merge rows matching a filter into an airtable sheet for manual labeling")]
-  public record NarrativeCmd(ILogger Log, Narrative Covid) : ICommand {
+  [Command("airtable", Description = "Merge rows matching a filter into an airtable sheet for manual labeling")]
+  public record NarrativeCmd(ILogger Log, AtLabel Covid) : ICommand {
     [CommandParameter(0, Description = "The name of the narrative to sync with airtable. e.g. (Activewear|Vaccine)")]
-    public string NarrativeName { get; set; }
+    public string QueryName { get; set; }
     
     [CommandParameter(1, Description = "The base id from airtable. To get this, open https://airtable.com/api and select your base")]
     public string Base { get; set; }
@@ -445,11 +445,15 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
 
     [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
     public int? Limit { get; set; }
+    
     [CommandOption("videos", shortName: 'v', Description = "| separated videos to limit update to")]
     public string Videos { get; set; }
+    
+    [CommandOption("mode", shortName: 'm', Description = "| separated videos to limit update to")]
+    public AtUpdateMode Mode { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) {
-      await Covid.MargeIntoAirtable(new(Base, NarrativeName, Limit, ParseParts<AirtablePart>(Parts), Videos?.UnJoin('|')), Log);
+      await Covid.MargeIntoAirtable(new(Base, QueryName, Limit, ParseParts<AtLabelPart>(Parts), Videos?.UnJoin('|'), Mode), Log);
       Log.Information("CovidNarrativeCmd - complete");
     }
   }

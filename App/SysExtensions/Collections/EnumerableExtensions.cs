@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace SysExtensions.Collections {
   public static class EnumerableExtensions {
@@ -53,6 +54,17 @@ namespace SysExtensions.Collections {
         yield return item;
         foreach (var c in children(item)) toRecurse.Enqueue(c);
       }
+    }
+    
+    public static async Task<(IReadOnlyCollection<T> included, IReadOnlyCollection<T> excluded)> Split<T>(this IAsyncEnumerable<T> items, Func<T, bool> where) {
+      var included = new List<T>();
+      var excluded = new List<T>();
+      await foreach (var item in items)
+        if (where(item))
+          included.Add(item);
+        else
+          excluded.Add(item);
+      return (included, excluded);
     }
 
     public static (IReadOnlyCollection<T> included, IReadOnlyCollection<T> excluded) Split<T>(this IEnumerable<T> items, Func<T, bool> where) {

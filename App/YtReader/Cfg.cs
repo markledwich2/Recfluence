@@ -11,9 +11,9 @@ using SysExtensions.Collections;
 using SysExtensions.Configuration;
 using SysExtensions.Security;
 using SysExtensions.Text;
+using YtReader.Airtable;
 using YtReader.Amazon;
 using YtReader.Db;
-using YtReader.Narrative;
 
 namespace YtReader {
   public class RootCfg {
@@ -64,7 +64,6 @@ namespace YtReader {
     [Required] public RumbleCfg       Rumble                { get; set; } = new();
     [Required] public GoogleCfg       Google                { get; set; } = new();
     [Required] public AirtableCfg     Airtable              { get; set; } = new();
-    [Required] public NarrativesCfg   Narratives            { get; set; } = new();
     [Required] public DataScriptsCfg  DataScripts           { get; set; } = new();
     [Required] public AmazonCfg       Amazon                { get; set; } = new();
   }

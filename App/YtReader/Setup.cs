@@ -32,6 +32,7 @@ using SysExtensions.IO;
 using SysExtensions.Reflection;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using YtReader.Airtable;
 using YtReader.Amazon;
 using YtReader.BitChute;
 using YtReader.Db;
@@ -296,7 +297,7 @@ namespace YtReader {
       b.RegisterType<RumbleWeb>();
       b.RegisterType<RumbleCollect>();
       b.RegisterType<Pushshift>();
-      b.RegisterType<Narrative.Narrative>();
+      b.RegisterType<AtLabel>();
       b.RegisterType<DataScripts>();
       b.RegisterType<YtCollectList>();
       b.RegisterType<FlurlProxyClient>();

@@ -28,23 +28,23 @@ from chans c
       },
       {
         "fashion", @"
-  select channel_id
-  from channel_latest c
-  where array_contains('Fashion'::variant, topics)
-    and not exists(select * from video_latest v where v.channel_id=c.channel_id)
-    and subs > :min_subs
+select channel_id
+from channel_latest c
+where array_contains('Fashion'::variant, topics)
+and not exists(select * from video_latest v where v.channel_id=c.channel_id)
+and subs > :min_subs
 "
       },
       { 
         "collect_covid", @"
-select m.video_id, m.channel_id
+select v.video_id, c.channel_id
 from collect_covid m
 join video_latest v on v.video_id = m.video_id
-left join channel_latest c on c.channel_id =v.channel_id
+join channel_latest c on c.channel_id =v.channel_id
 where v.upload_date > '2020-01-01'
-  and v.updated<current_date()-14
   and c.subs > 10000
-  and c.meets_review_criteria is null or not c.meets_review_criteria"}
+  and c.meets_review_criteria is null or not c.meets_review_criteria
+qualify max(v.updated) over (partition by m.video_id) < current_date()-2"}
     };
   }
 }
