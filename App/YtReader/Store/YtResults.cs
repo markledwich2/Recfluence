@@ -23,6 +23,8 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
+using static YtReader.Store.JsonCasingStrategy;
+using static YtReader.Store.ResFilType;
 using FileMode = System.IO.FileMode;
 
 namespace YtReader.Store {
@@ -43,7 +45,7 @@ namespace YtReader.Store {
 
   class ResQuery {
     public ResQuery(string name, string query = null, string desc = null, object parameters = null, bool inSharedZip = false,
-      ResFilType fileType = ResFilType.Csv, JsonSource jsonSource = default, JsonCasingStrategy jsonNaming = default) {
+      ResFilType fileType = Csv, JsonSource jsonSource = default, JsonCasingStrategy jsonNaming = default) {
       Name = name;
       Query = query;
       Desc = desc;
@@ -66,7 +68,7 @@ namespace YtReader.Store {
 
   class FileQuery : ResQuery {
     public FileQuery(string name, StringPath path, string desc = null, object parameters = null, bool inSharedZip = false,
-      ResFilType fileType = ResFilType.Csv, JsonCasingStrategy jsonNaming = default)
+      ResFilType fileType = Csv, JsonCasingStrategy jsonNaming = default)
       : base(name, desc: desc, parameters: parameters, inSharedZip: inSharedZip, fileType: fileType, jsonNaming: jsonNaming) =>
       Path = path;
 
@@ -85,6 +87,8 @@ namespace YtReader.Store {
       Store = store;
       UserScrapeCfg = userScrapeCfg;
     }
+    
+    public static readonly string[] FilterTags = {"MissingLinkMedia", "OrganizedReligion", "Educational", "Black", "LGBT"};
 
     public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null, CancellationToken cancel = default) {
       using var db = await Sf.Open(log);
@@ -92,6 +96,9 @@ namespace YtReader.Store {
 
       var now = DateTime.Now;
       var dateRangeParams = new {from = "2019-11-01", to = now.ToString("yyyy-MM-01")};
+
+
+      
 
       /*const string classChannelsSelect = @"
 select c.*
@@ -117,7 +124,7 @@ from channel_accepted
 where platform = 'YouTube'
 order by channel_views desc
 ",
-            fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+            fileType: Json, jsonNaming: Camel),
 
           new FileQuery("vis_category_recs", "sql/vis_category_recs.sql",
             "aggregate recommendations between all combinations of the categories available on recfluence.net", dateRangeParams, inSharedZip: true),
@@ -132,7 +139,7 @@ order by channel_views desc
             desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip: true),
 
           new FileQuery("channel_review_lists", @"sql/channel_review_lists.sql", parameters: new {limit = 100},
-            fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+            fileType: Json, jsonNaming: Camel),
 
           // userscrape data
           new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_tag = UserScrapeCfg.SeedsPerTag}),
@@ -169,7 +176,7 @@ with r1 as (
 )
 select *
 from g;
-", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+", fileType: Json, jsonNaming: Camel),
 
           new ResQuery("us_rec_tag", @"
  select t.value::string tag, month, sum(views) views
@@ -179,7 +186,7 @@ from g;
  where v.month>=(select min(trunc(updated, 'month')) from us_rec)
  group by tag, month
 order by tag, month
-", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+", fileType: Json, jsonNaming: Camel),
 
           new ResQuery("us_rec_month", @"
 select month, sum(views) as views
@@ -187,7 +194,7 @@ from video_stats_monthly v
 where v.month>=(select min(trunc(updated, 'month')) from us_rec)
 group by month
 order by month
-", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+", fileType: Json, jsonNaming: Camel),
 
           new ResQuery("us_feed_stats", @"with r1 as (
   select r.account
@@ -212,8 +219,48 @@ order by month
   group by 1, 2, 3
 )
 select *
-from g", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel),
+from g", fileType: Json, jsonNaming: Camel),
 
+          new ResQuery("narrative_vaccine_highlight", $@"
+with channel_highlights as (
+  with h1 as (
+    select $1::string channel_id
+         --, $7::string video_url
+         , to_number(replace($4,',','')) mention_videos
+         , to_number(replace($5,',','')) mention_video_views
+         , regexmatch($7,'.*(?:v=(?<video>[\\w-]*)).*(?:t=(?<offset>\\d*))',NULL) link_meta
+    from @public.yt_data/import/narratives/channel_highlights.tsv (file_format => tsv_header)
+  )
+  select channel_id, mention_videos, mention_video_views, link_meta:video::string video_id, link_meta: offset::int offset_seconds
+  from h1
+)
+  , narrative_captions as (
+  select video_id, v.value:caption::string caption, v.value:offset_seconds::int offset_seconds
+  from video_narrative2
+    , table (flatten(captions)) v
+  where narrative='Vaccine Personal'
+)
+  , h1 as (
+  select h.*
+       , c.channel_title
+       , c.subs
+       , arrayExclude(c.tags, array_construct({FilterTags.Join(", ", t => t.SingleQuote())})) tags
+       , c.lr
+       , c.logo_url channel_logo
+       , v.video_title
+       , v.views
+       , datediff(seconds,'0'::time,v.duration) duration_secs
+       , coalesce(n.caption,s.caption) caption
+  from channel_highlights h
+         join channel_latest c on c.channel_id=h.channel_id
+         join video_latest v on v.video_id=h.video_id
+         left join narrative_captions n on n.video_id=h.video_id and n.offset_seconds=h.offset_seconds
+         left join caption s on n.caption is null and s.video_id=h.video_id
+    qualify row_number() over (partition by h.video_id order by abs(h.offset_seconds-s.offset_seconds))=1
+)
+select *
+from h1", fileType:Json, jsonNaming:Camel)
+          
           /*new ResQuery("sam_vid", @$"
 with sam_vids_raw as ({samVidsSelect})
 select e.*
@@ -335,8 +382,8 @@ group by channel_id",
     async Task<FPath> SaveResult(ILogger log, ILoggedConnection<IDbConnection> db, FPath tempDir, ResQuery q) {
       var reader = await ResQuery(db, q);
       var fileName = q.FileType switch {
-        ResFilType.Csv => $"{q.Name}.csv.gz",
-        ResFilType.Json => $"{q.Name}.jsonl.gz",
+        Csv => $"{q.Name}.csv.gz",
+        Json => $"{q.Name}.jsonl.gz",
         _ => throw new NotImplementedException()
       };
       var tempFile = tempDir.Combine(fileName);
@@ -344,8 +391,8 @@ group by channel_id",
       using (var zw = new GZipStream(fw, CompressionLevel.Optimal, leaveOpen: true))
       using (var sw = new StreamWriter(zw)) {
         var task = q.FileType switch {
-          ResFilType.Csv => reader.WriteCsvGz(sw, fileName, log),
-          ResFilType.Json => reader.WriteJsonGz(sw, q.JsonSource, q.JsonNaming),
+          Csv => reader.WriteCsvGz(sw, fileName, log),
+          Json => reader.WriteJsonGz(sw, q.JsonSource, q.JsonNaming),
           _ => throw new NotImplementedException()
         };
         await task;
@@ -400,7 +447,7 @@ group by channel_id",
     public static async Task WriteJsonGz(this IDataReader reader, StreamWriter stream, JsonSource jsonSource, JsonCasingStrategy naming) {
       while (reader.Read()) {
         var j = jsonSource == JsonSource.FirstColumn ? JObject.Parse(reader.GetString(0)) : ToSnowflakeJObject(reader);
-        if (naming == JsonCasingStrategy.Camel)
+        if (naming == Camel)
           j = j.ToCamelCase();
         await stream.WriteLineAsync(j.ToString(Formatting.None));
       }
