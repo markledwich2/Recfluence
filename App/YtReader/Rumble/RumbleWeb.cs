@@ -24,7 +24,11 @@ namespace YtReader.Rumble {
 
     public async Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log) {
       var bc = BrowsingContext.New(AngleCfg);
-      var doc = await bc.OpenAsync(ChannelUrl(sourceId));
+      var channelUrl = ChannelUrl(sourceId);
+      var doc = await bc.OpenAsync(channelUrl);
+      var chan = this.NewChan(sourceId);
+      if (doc.StatusCode == HttpStatusCode.NotFound) 
+        return (Channel: chan with {Status = ChannelStatus.Dead, StatusMessage = $"{channelUrl} returned 404"}, Videos: AsyncEnumerable.Empty<Video[]>());
       doc.EnsureSuccess();
 
       var chanUrl = doc.El<IHtmlLinkElement>("link[rel=canonical]")?.Href.AsUrl();
@@ -34,11 +38,11 @@ namespace YtReader.Rumble {
         var canonicalId = chanUrl.Path.TrimPath();
         if (sourceId != canonicalId) {
           altIds = new[] {sourceId};
-          sourceId = canonicalId;
+          chan = this.NewChan(canonicalId);
         }
       }
 
-      var chan = this.NewChan(sourceId) with {
+      chan = chan with {
         SourceIdAlts = altIds,
         ChannelTitle = doc.Title,
         Subs = doc.QuerySelector(".subscribe-button-count")?.TextContent.TryParseNumberWithUnits()?.RoundToULong(),

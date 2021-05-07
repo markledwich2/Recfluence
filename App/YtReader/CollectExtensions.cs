@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Flurl.Http;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Newtonsoft.Json.Linq;
@@ -206,10 +207,10 @@ select distinct link_type LinkType, link_id LinkId, platform_from FromPlatform
 from link_detail l
        left join parler_posts p on l.post_id_from=p.id
 where not link_found
-  and platform_to='{platform}'
+  and platform_to=:platform
   -- for posts only take those that have Q tags
   and (post_id_from is null or arrays_overlap(array_construct('qanon','q','qanons','wwg1wga','wwg','thegreatawakening'),p.hashtags))
-");
+", new { platform=platform.EnumString()});
 
     public static async Task<IReadOnlyCollection<Channel>> ExistingChannels(this ILoggedConnection<SnowflakeDbConnection> db, Platform platform,
       IReadOnlyCollection<string> explicitIds = null) {
@@ -217,12 +218,12 @@ where not link_found
 with latest as (
   -- use channel table as a filter for staging data. it filters out bad records.
   select channel_id, updated from channel_latest
-  where platform='BitChute'
+  where platform=:platform
   {(explicitIds.HasItems() ? $"and channel_id in ({explicitIds.Join(",", c => $"'{c}'")})" : "")}
 )
 select s.v
 from latest c join channel_stage s on s.v:ChannelId = c.channel_id and s.v:Updated = c.updated
-");
+", new { platform=platform.EnumString()});
       return existing.Select(e => e.ToObject<Channel>(IJsonlStore.JCfg)).ToArray();
     }
   }

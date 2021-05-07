@@ -10,7 +10,7 @@ namespace YtReader.Rumble {
   public record RumbleCollect(RumbleWeb Web, YtStore Stores, SnowflakeConnectionProvider Sf, RumbleCfg Cfg) {
     public async Task Collect(SimpleCollectOptions options, ILogger log, CancellationToken cancel) =>
       await options.PlanSimpleCollect(Sf, Web, log, cancel)
-        .Then(c => c.CrawlVideoLinksToFindNewChannels(Stores.Videos))
+        //.Then(c => c.CrawlVideoLinksToFindNewChannels(Stores.Videos))
         .Then(c => c.CollectChannelAndVideos(Stores));
   }
 }

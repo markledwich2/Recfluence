@@ -108,8 +108,8 @@ namespace YtReader {
 
       var actionMethods = TaskGraph.FromMethods(
         (l, c) => Collect(options.Collect, l, c),
-        //(l, c) => BcCollect(collectOptions, l, c), // disabled. daily data no worth maintenance right now
-        //(l, c) => RumbleCollect(collectOptions, l, c), // disabled. daily data no worth maintenance. Issue with many channels recieving 404's
+        (l, c) => BcCollect(collectOptions, l, c),
+        (l, c) => RumbleCollect(collectOptions, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),
         (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),
