@@ -169,8 +169,9 @@ namespace YtReader.SimpleCollect {
 
         if (options.Parts.ShouldRun(Extra)) {
           var extras = await plan.WithPart(EExtra).BlockTrans(v => scraper.Video(v.ForUpdate.SourceId, log)
+              .Swallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", platform, v.VideoId, e.Message))
             , scraper.CollectParallel, cancel: cancel
-          ).ToListAsync();
+          ).NotNull().ToListAsync();
           await Store.VideoExtra.Append(extras, log);
           log.Debug("Collect {Platform} - saved {Videos} video extras for {Channel}", platform, extras.Count, chan.ToString());
         }

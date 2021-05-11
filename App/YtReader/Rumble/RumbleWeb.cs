@@ -3,39 +3,35 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
-using AngleSharp.Io;
 using Flurl;
-using Flurl.Http;
 using Humanizer;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
-using SysExtensions.Threading;
 using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Web;
-using HttpMethod = System.Net.Http.HttpMethod;
 using Url = Flurl.Url;
 
 namespace YtReader.Rumble {
   public record RumbleWeb(RumbleCfg Cfg, FlurlProxyClient Http) : IScraper {
     public const    string         RumbleDotCom = "https://rumble.com/";
     static readonly IConfiguration AngleCfg     = Configuration.Default.WithDefaultLoader();
-    
 
     public async Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log) {
       var bc = BrowsingContext.New(AngleCfg);
       var channelUrl = ChannelUrl(sourceId);
       var doc = await bc.OpenAsync(channelUrl);
       var chan = this.NewChan(sourceId);
-      if (doc.StatusCode == HttpStatusCode.NotFound) 
+      if (doc.StatusCode == HttpStatusCode.NotFound)
         return (Channel: chan with {Status = ChannelStatus.Dead, StatusMessage = $"{channelUrl} returned 404"}, Videos: AsyncEnumerable.Empty<Video[]>());
       doc.EnsureSuccess();
 
@@ -81,19 +77,19 @@ namespace YtReader.Rumble {
 
     static Url VideoUrl(string path) => path == null ? null : RumbleDotCom.AppendPathSegments(path);
 
-    static readonly Regex EarnedRe    = new(@"\$(?<earned>[\d.\d]+) earned", RegexOptions.Compiled);
+    static readonly Regex EarnedRe = new(@"\$(?<earned>[\d.\d]+) earned", RegexOptions.Compiled);
 
     async Task<JObject> EmbeddedVideo(string embedId, ILogger log) {
       var url = RumbleDotCom.AppendPathSegment("embedJS/u3/")
         .SetQueryParams(new {request = "video", ver = "2", v = embedId});
       var req = url.AsRequest();
       const string desc = "rumble video json";
-      var res = await Http.Send(desc, req, HttpMethod.Get, log:log);
+      var res = await Http.Send(desc, req, HttpMethod.Get, log: log);
       res.EnsureSuccess(log, desc, req);
       var j = await res.JsonObject();
       return j;
     }
-    
+
     public async Task<VideoExtra> Video(string sourceId, ILogger log) {
       var bc = BrowsingContext.New(AngleCfg);
       var doc = await bc.OpenAsync(VideoUrl(sourceId)).WhenStable();
@@ -104,19 +100,19 @@ namespace YtReader.Rumble {
 
       string MetaProp(string prop) => MetaProps(prop).FirstOrDefault();
       IEnumerable<string> MetaProps(string prop) => doc.QuerySelectorAll<IHtmlMetaElement>($"meta[property=\"og:{prop}\"]").Select(e => e.Content);
-      
+
       var vidScript = doc.QuerySelectorAll<IHtmlScriptElement>("script[type=\"application/ld+json\"]")
-        .SelectMany(e => JArray.Parse(e.Text).Children<JObject>()).FirstOrDefault(j => j.Str("@type") == "VideoObject") 
+          .SelectMany(e => JArray.Parse(e.Text).Children<JObject>()).FirstOrDefault(j => j.Str("@type") == "VideoObject")
         ?? throw new("Can't find video objects in the page script");
-      
+
       var mediaByDiv = doc.El<IHtmlDivElement>("div.media-by");
       var contentDiv = doc.QuerySelector(".content.media-description");
       contentDiv?.QuerySelector("span.breadcrumbs").Remove(); // clean up description
 
-      var embedId = vidScript.Str("embedUrl")?.AsUrl().PathSegments.LastOrDefault() ?? throw new ("can't find embed video id");
+      var embedId = vidScript.Str("embedUrl")?.AsUrl().PathSegments.LastOrDefault() ?? throw new("can't find embed video id");
       var vidEmbed = await EmbeddedVideo(embedId, log); // need this to get the url
       var chanUrl = vidEmbed.Str("author.url")?.AsUrl();
-      
+
       vid = vid with {
         Title = vidScript.Str("name"),
         Description = vidScript.Str("description"),
@@ -126,7 +122,7 @@ namespace YtReader.Rumble {
         UploadDate = vidScript.Value<DateTime>("uploadDate"),
         Statistics = new(vidScript.SelectToken("interactionStatistic.userInteractionCount")?.Value<ulong>()),
         Thumb = vidScript.Str("thumbnailUrl"),
-        Duration =  vidEmbed.SelectToken("duration")?.Value<int>().Seconds(),
+        Duration = vidEmbed.SelectToken("duration")?.Value<int>().Seconds(),
         Keywords = MetaProp("tag")?.Split(" ").ToArray() ?? MetaProps("video:tag").ToArray(),
         Earned = mediaByDiv?.QuerySelector(".media-earnings")?.TextContent.Match(EarnedRe)?.Groups["earned"].Value.NullIfEmpty()?.ParseDecimal(),
         MediaUrl = vidEmbed.Str("u.mp4.url")
