@@ -74,7 +74,7 @@ namespace YtReader.SimpleCollect {
       var scraper = Scraper(plan.Platform);
       var crawledVideos = await plan.VideosToCrawl.BlockTrans(async (discover, i) => {
         var video = await scraper.Video(discover.LinkId, log)
-          .Swallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", plan.Platform, discover.LinkId, e.Message));
+          .Swallow(e => log.Warning(e, "Collect {Platform} - error crawling video {Video}: {Error}", plan.Platform, discover.LinkId, e.Message));
         log.Debug("Collect {Platform} - crawled video {VideoId} {Vid}/{Total}", plan.Platform, video?.VideoId, i, plan.VideosToCrawl.Count);
         return (discover, video);
       }, scraper.CollectParallel).ToListAsync();

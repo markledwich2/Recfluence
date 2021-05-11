@@ -73,7 +73,7 @@ namespace YtReader {
     public                           string  Test  { get; set; }
   }
 
-  public record RumbleCfg(int CollectParallel = 24);
+  public record RumbleCfg(int CollectParallel = 24, int Retries = 4);
 
   public record BitChuteCfg(int CollectParallel = 24);
 

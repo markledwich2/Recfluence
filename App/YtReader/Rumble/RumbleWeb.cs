@@ -12,10 +12,14 @@ using AngleSharp.Html.Dom;
 using Flurl;
 using Humanizer;
 using Newtonsoft.Json.Linq;
+using Polly;
 using Serilog;
 using SysExtensions;
+using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
+using SysExtensions.Threading;
+using YtReader.Amazon;
 using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Web;
@@ -92,8 +96,21 @@ namespace YtReader.Rumble {
 
     public async Task<VideoExtra> Video(string sourceId, ILogger log) {
       var bc = BrowsingContext.New(AngleCfg);
-      var doc = await bc.OpenAsync(VideoUrl(sourceId)).WhenStable();
+      
+      var retryTransient = Policy
+        .HandleResult<(bool finished, IDocument doc)>(
+          d => { // todo make this re-usable. Needed a higher level than http send for handling bot errors
+            var (finished, document) = d;
+            if (!finished) return true; // retry on timeout
+            if (document == null) throw new("doc null, usually this means anglesharp is misconfigured");
+            if (document.StatusCode == HttpStatusCode.TooManyRequests) throw new("ruble is blocking us. implement proxy fallback");
+            return document.StatusCode.IsTransientError() || document.Body?.Children.Length <= 0;
+          }).RetryWithBackoff("Rumble Video", Cfg.Retries, (_, attempt, delay) =>
+          log.Debug("Rumble - Retrying in {Duration}, attempt {Attempt}/{Total}", delay.HumanizeShort(), attempt, Cfg.Retries), log);
+
       var vid = this.NewVidExtra(sourceId);
+      var (_, doc) = await retryTransient.ExecuteAsync(() => bc.OpenAsync(VideoUrl(sourceId)).WithTimeout(30.Seconds()));
+      if (doc == null) throw new("doc null after retries");
       if (doc.StatusCode == HttpStatusCode.NotFound)
         return vid with {Status = VideoStatus.NotFound};
       doc.EnsureSuccess();

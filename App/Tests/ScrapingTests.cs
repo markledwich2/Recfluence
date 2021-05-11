@@ -128,7 +128,7 @@ namespace Tests {
     public static async Task TestRumbleVideo() {
       using var ctx = await TestSetup.TextCtx();
       var web = ctx.Resolve<RumbleWeb>();
-      var video = await web.Video("vgg87f", ctx.Log);
+      var video = await web.Video("vfn79l", ctx.Log);
     }
   }
 }
