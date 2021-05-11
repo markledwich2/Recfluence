@@ -7,6 +7,7 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using Troschuetz.Random;
+using YtReader.SimpleCollect;
 using YtReader.Store;
 using static YtReader.Yt.ExtraPart;
 
@@ -114,7 +115,7 @@ namespace YtReader.Yt {
 
     public VideoExtraPlans(IEnumerable<VideoPlan> plans) => _c.AddRange(plans);
 
-    VideoPlan GetOrAdd(string videoId) => _c.GetOrAdd(videoId, () => new VideoPlan(videoId));
+    public VideoPlan GetOrAdd(string videoId) => _c.GetOrAdd(videoId, () => new (videoId));
 
     /// <summary>Adds a video to update with the given parts unioned with what is existing</summary>
     public void SetPart(string videoId, params ExtraPart[] parts) {
@@ -136,6 +137,8 @@ namespace YtReader.Yt {
     IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable) _c).GetEnumerator();
     public VideoPlan this[string videoId] => _c[videoId];
 
+    public bool ContainsVideo(string videoId) => this[videoId] != null;
+
     public IEnumerable<VideoPlan> WithPart(ExtraPart part) => this.Where(p => p.Parts.Contains(part));
 
     public VideoPlan[] SerializableItems {
@@ -144,7 +147,14 @@ namespace YtReader.Yt {
     }
   }
 
-  public record VideoForUpdate(string ChannelId, string VideoId, DateTime Updated, DateTime? UploadDate, DateTime? ExtraUpdated);
+  public record VideoForUpdate {
+    public string    ChannelId    { get; init; }
+    public string    VideoId      { get; init; }
+    public DateTime  Updated      { get; init; }
+    public DateTime? UploadDate   { get; init; }
+    public DateTime? ExtraUpdated { get; init; }
+    public string    SourceId     { get; init; }
+  }
 
   public record VideoPlan {
     public VideoPlan(string videoId) => VideoId = videoId;

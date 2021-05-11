@@ -11,6 +11,7 @@ using SysExtensions.Text;
 using YtReader.BitChute;
 using YtReader.Rumble;
 using YtReader.Search;
+using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Yt;
 

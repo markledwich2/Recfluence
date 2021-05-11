@@ -39,6 +39,7 @@ using YtReader.Db;
 using YtReader.Reddit;
 using YtReader.Rumble;
 using YtReader.Search;
+using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Web;
 using YtReader.Yt;
@@ -243,6 +244,8 @@ namespace YtReader {
       ILogger log, string[] args) {
       var containerCfg = cfg.Pipe.Default.Container;
 
+      IRegistrationBuilder<T, ConcreteReflectionActivatorData, SingleRegistrationStyle> R<T>() => b.RegisterType<T>();
+
       b.Register(_ => version);
       b.Register(_ => version.Version);
       b.Register(_ => log);
@@ -260,51 +263,52 @@ namespace YtReader {
 
       b.Register(_ => cfg.Pipe.Azure).SingleInstance();
 
-      b.RegisterType<SnowflakeConnectionProvider>();
+      R<SnowflakeConnectionProvider>();
       b.Register(_ => cfg.Pipe.Azure.GetAzure());
 
-      b.RegisterType<BlobStores>();
+      R<BlobStores>();
       foreach (var storeType in EnumExtensions.Values<DataStoreType>())
         b.Register(_ => _.Resolve<BlobStores>().Store(storeType)).Keyed<ISimpleFileStore>(storeType);
 
-      b.RegisterType<YtClient>();
+      R<YtClient>();
       b.Register(_ => new ElasticClient(cfg.Elastic.ElasticConnectionSettings()));
-      b.RegisterType<YtStore>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<YtResults>().WithKeyedParam(DataStoreType.Results, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<StoreUpgrader>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<Stage>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
-      b.RegisterType<YtWeb>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
+      R<YtStore>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
+      R<YtResults>().WithKeyedParam(DataStoreType.Results, Typ.Of<ISimpleFileStore>());
+      R<StoreUpgrader>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
+      R<Stage>().WithKeyedParam(DataStoreType.DbStage, Typ.Of<ISimpleFileStore>());
+      R<YtWeb>().WithKeyedParam(DataStoreType.Logs, Typ.Of<ISimpleFileStore>());
 
-      b.RegisterType<YtSearch>();
-      b.RegisterType<YtCollector>();
-      b.RegisterType<WarehouseCreator>();
-      b.RegisterType<YtBackup>();
-      b.RegisterType<AzureCleaner>();
-      b.RegisterType<YtUpdater>(); // new instance so it can have a unique runId in its contructor
+      R<YtSearch>();
+      R<YtCollector>();
+      R<WarehouseCreator>();
+      R<YtBackup>();
+      R<AzureCleaner>();
+      R<YtUpdater>(); // new instance so it can have a unique runId in its contructor
       b.Register(_ => new RegistryClient(containerCfg.Registry, containerCfg.RegistryCreds));
-      b.RegisterType<BranchEnvCreator>();
-      b.RegisterType<YtDataform>();
-      b.RegisterType<ContainerLauncher>();
-      b.RegisterType<AzureContainers>();
-      b.RegisterType<LocalPipeWorker>();
-      b.RegisterType<UserScrape>();
-      b.RegisterType<YtConvertWatchTimeFiles>();
-      b.RegisterType<YtIndexResults>();
-      b.RegisterType<BcWeb>();
-      b.RegisterType<BcCollect>();
-      b.RegisterType<Parler>();
-      b.RegisterType<YtContainerRunner>();
-      b.RegisterType<RumbleWeb>();
-      b.RegisterType<RumbleCollect>();
-      b.RegisterType<Pushshift>();
-      b.RegisterType<AtLabel>();
-      b.RegisterType<DataScripts>();
-      b.RegisterType<YtCollectList>();
-      b.RegisterType<FlurlProxyClient>();
-      b.RegisterType<AmazonWeb>();
-
+      R<BranchEnvCreator>();
+      R<YtDataform>();
+      R<ContainerLauncher>();
+      R<AzureContainers>();
+      R<LocalPipeWorker>();
+      R<UserScrape>();
+      R<YtConvertWatchTimeFiles>();
+      R<YtIndexResults>();
+      R<BcWeb>();
+      R<BcCollect>();
+      R<Parler>();
+      R<YtContainerRunner>();
+      R<RumbleWeb>();
+      R<RumbleCollect>();
+      R<Pushshift>();
+      R<AtLabel>();
+      R<DataScripts>();
+      R<YtCollectList>();
+      R<FlurlProxyClient>();
+      R<AmazonWeb>();
+      R<SimpleCollector>();
+      
       b.Register(_ => pipeAppCtx);
-      b.RegisterType<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();
+      R<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();
 
       return b;
     }

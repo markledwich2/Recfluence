@@ -26,6 +26,7 @@ using YtReader.Airtable;
 using YtReader.Amazon;
 using YtReader.Reddit;
 using YtReader.Search;
+using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Yt;
 using static YtCli.UpdateCmd;

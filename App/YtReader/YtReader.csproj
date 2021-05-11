@@ -7,23 +7,24 @@
   <ItemGroup>
     <PackageReference Include="Airtable" Version="1.1.5" />
     <PackageReference Include="AngleSharp" Version="1.0.0-alpha-844" />
-    <PackageReference Include="AngleSharp.Io" Version="0.14.0" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.8.1" />
+    <PackageReference Include="AngleSharp.Io" Version="0.15.0" />
+    <PackageReference Include="AngleSharp.Js" Version="0.14.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.8.3" />
     <PackageReference Include="Azure.Storage.Files.Shares" Version="12.6.1" />
-    <PackageReference Include="CsvHelper" Version="26.1.0" />
-    <PackageReference Include="Dapper" Version="2.0.78" />
-    <PackageReference Include="Elasticsearch.Net" Version="7.12.0" />
-    <PackageReference Include="Flurl" Version="3.0.1" />
-    <PackageReference Include="Flurl.Http" Version="3.0.1" />
-    <PackageReference Include="Google.Apis.Drive.v3" Version="1.51.0.2265" />
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.51.0.2287" />
+    <PackageReference Include="CsvHelper" Version="27.0.2" />
+    <PackageReference Include="Dapper" Version="2.0.90" />
+    <PackageReference Include="Elasticsearch.Net" Version="7.12.1" />
+    <PackageReference Include="Flurl" Version="3.0.2" />
+    <PackageReference Include="Flurl.Http" Version="3.2.0" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.51.0.2300" />
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.51.0.2294" />
     <PackageReference Include="LtGt" Version="2.1.0" />
     <PackageReference Include="Microsoft.Azure.Storage.DataMovement" Version="2.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
-    <PackageReference Include="NEST" Version="7.12.0" />
+    <PackageReference Include="NEST" Version="7.12.1" />
     <PackageReference Include="Nito.AsyncEx" Version="5.1.0" />
     <PackageReference Include="Nito.AsyncEx.Tasks" Version="5.1.0" />
     <PackageReference Include="Octokit" Version="0.50.0" />
@@ -32,10 +33,10 @@
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
-    <PackageReference Include="Serilog.Sinks.Seq" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="5.0.1" />
     <PackageReference Include="Serilog.Sinks.Trace" Version="2.1.0" />
     <PackageReference Include="Serilog.Sinks.Debug" Version="2.0.0" />
-    <PackageReference Include="Snowflake.Data" Version="1.2.1" />
+    <PackageReference Include="Snowflake.Data" Version="2.0.0" />
     <PackageReference Include="System.Linq.Async" Version="5.0.0" />
     <PackageReference Include="Troschuetz.Random" Version="5.0.1" />
     <PackageReference Include="UriBuilder.Fluent" Version="1.5.2" />

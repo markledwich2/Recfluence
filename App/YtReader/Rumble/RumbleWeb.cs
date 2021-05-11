@@ -8,19 +8,27 @@ using System.Threading.Tasks;
 using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
+using AngleSharp.Io;
 using Flurl;
+using Flurl.Http;
+using Humanizer;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using SysExtensions;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
+using SysExtensions.Threading;
+using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Web;
+using HttpMethod = System.Net.Http.HttpMethod;
 using Url = Flurl.Url;
 
 namespace YtReader.Rumble {
-  public record RumbleWeb(RumbleCfg Cfg) : IScraper {
+  public record RumbleWeb(RumbleCfg Cfg, FlurlProxyClient Http) : IScraper {
     public const    string         RumbleDotCom = "https://rumble.com/";
     static readonly IConfiguration AngleCfg     = Configuration.Default.WithDefaultLoader();
+    
 
     public async Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log) {
       var bc = BrowsingContext.New(AngleCfg);
@@ -73,13 +81,22 @@ namespace YtReader.Rumble {
 
     static Url VideoUrl(string path) => path == null ? null : RumbleDotCom.AppendPathSegments(path);
 
-    static readonly Regex ViewsRe     = new(@"(?<views>[\d,]+) Views", RegexOptions.Compiled);
     static readonly Regex EarnedRe    = new(@"\$(?<earned>[\d.\d]+) earned", RegexOptions.Compiled);
-    static readonly Regex PublishedRe = new(@"Published[\s]*(?<date>.*)", RegexOptions.Compiled);
 
+    async Task<JObject> EmbeddedVideo(string embedId, ILogger log) {
+      var url = RumbleDotCom.AppendPathSegment("embedJS/u3/")
+        .SetQueryParams(new {request = "video", ver = "2", v = embedId});
+      var req = url.AsRequest();
+      const string desc = "rumble video json";
+      var res = await Http.Send(desc, req, HttpMethod.Get, log:log);
+      res.EnsureSuccess(log, desc, req);
+      var j = await res.JsonObject();
+      return j;
+    }
+    
     public async Task<VideoExtra> Video(string sourceId, ILogger log) {
       var bc = BrowsingContext.New(AngleCfg);
-      var doc = await bc.OpenAsync(VideoUrl(sourceId));
+      var doc = await bc.OpenAsync(VideoUrl(sourceId)).WhenStable();
       var vid = this.NewVidExtra(sourceId);
       if (doc.StatusCode == HttpStatusCode.NotFound)
         return vid with {Status = VideoStatus.NotFound};
@@ -87,32 +104,32 @@ namespace YtReader.Rumble {
 
       string MetaProp(string prop) => MetaProps(prop).FirstOrDefault();
       IEnumerable<string> MetaProps(string prop) => doc.QuerySelectorAll<IHtmlMetaElement>($"meta[property=\"og:{prop}\"]").Select(e => e.Content);
-
+      
+      var vidScript = doc.QuerySelectorAll<IHtmlScriptElement>("script[type=\"application/ld+json\"]")
+        .SelectMany(e => JArray.Parse(e.Text).Children<JObject>()).FirstOrDefault(j => j.Str("@type") == "VideoObject") 
+        ?? throw new("Can't find video objects in the page script");
+      
       var mediaByDiv = doc.El<IHtmlDivElement>("div.media-by");
-      var chanA = doc.El<IHtmlAnchorElement>(".media-by--a[rel=author]");
-      var chanUrl = chanA?.Href.AsUrl();
-      var channelSourceId = chanUrl?.Path.TrimPath();
-      var ldJson = doc.QuerySelectorAll<IHtmlScriptElement>("script[type=\"application/ld+json\"]").SelectMany(e => JArray.Parse(e.Text).Children<JObject>());
-      var durationText = ldJson.FirstOrDefault(j => j.Value<string>("@type") == "VideoObject")?["duration"]?.Value<string>();
-      var duration = durationText?.TryParseTimeSpanExact(@"\P\Thh\Hmm\Mss\S");
       var contentDiv = doc.QuerySelector(".content.media-description");
       contentDiv?.QuerySelector("span.breadcrumbs").Remove(); // clean up description
-      var viewsText = mediaByDiv?.QuerySelectorAll(".media-heading-info")
-        .Select(s => s.TextContent.Match(ViewsRe)).FirstOrDefault(m => m.Success)?.Groups["views"].Value;
 
-      var publishedText = mediaByDiv?.QuerySelector(".media-heading-published")?.TextContent?.Trim();
+      var embedId = vidScript.Str("embedUrl")?.AsUrl().PathSegments.LastOrDefault() ?? throw new ("can't find embed video id");
+      var vidEmbed = await EmbeddedVideo(embedId, log); // need this to get the url
+      var chanUrl = vidEmbed.Str("author.url")?.AsUrl();
+      
       vid = vid with {
-        Title = MetaProp("title")?.Trim(),
-        ChannelId = ChannelUrl(channelSourceId),
-        ChannelSourceId = channelSourceId,
-        ChannelTitle = chanA?.QuerySelector(".media-heading-name")?.TextContent.Trim(),
-        UploadDate = publishedText?.Match(PublishedRe).Groups["date"].Value.TryParseDateExact("MMMM d, yyyy", DateTimeStyles.AssumeUniversal),
-        Statistics = new(viewsText.TryParseULong()),
-        Thumb = MetaProp("image"),
+        Title = vidScript.Str("name"),
+        Description = vidScript.Str("description"),
+        ChannelId = chanUrl,
+        ChannelSourceId = chanUrl?.Path,
+        ChannelTitle = vidEmbed.Str("author.name"),
+        UploadDate = vidScript.Value<DateTime>("uploadDate"),
+        Statistics = new(vidScript.SelectToken("interactionStatistic.userInteractionCount")?.Value<ulong>()),
+        Thumb = vidScript.Str("thumbnailUrl"),
+        Duration =  vidEmbed.SelectToken("duration")?.Value<int>().Seconds(),
         Keywords = MetaProp("tag")?.Split(" ").ToArray() ?? MetaProps("video:tag").ToArray(),
-        Description = doc.QuerySelector(".content.media-description")?.TextContent.Trim(),
         Earned = mediaByDiv?.QuerySelector(".media-earnings")?.TextContent.Match(EarnedRe)?.Groups["earned"].Value.NullIfEmpty()?.ParseDecimal(),
-        Duration = duration
+        MediaUrl = vidEmbed.Str("u.mp4.url")
       };
       return vid;
     }

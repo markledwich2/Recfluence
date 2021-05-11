@@ -258,17 +258,18 @@ namespace YtReader.Store {
   public record VideoExtra : Video {
     public VideoExtra() { }
     public VideoExtra(Platform platform, string id, string sourceId) : base(platform, id, sourceId) { }
-    public bool?        HasAd       { get; set; }
+    public bool?        HasAd       { get; init; }
     public string       Error       { get; set; }
     public string       SubError    { get; set; }
-    public string       Ad          { get; set; }
-    public string       CommentsMsg { get; set; }
-    public ScrapeSource Source      { get; set; }
+    public string       Ad          { get; init; }
+    public string       CommentsMsg { get; init; }
+    public ScrapeSource Source      { get; init; }
+    public string       MediaUrl    { get; init; }
   }
 
   public record VideoComment : IHasUpdated {
     public string    CommentId        { get; init; }
-    public string    ReplyToCommentId { get; set; }
+    public string    ReplyToCommentId { get; init; }
     public string    VideoId          { get; init; }
     public string    Author           { get; init; }
     public string    AuthorChannelId  { get; init; }

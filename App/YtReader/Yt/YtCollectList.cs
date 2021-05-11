@@ -11,6 +11,7 @@ using Serilog;
 using Serilog.Core;
 using SysExtensions.Collections;
 using SysExtensions.Threading;
+using YtReader.SimpleCollect;
 using static Mutuo.Etl.Pipe.PipeArg;
 using static YtReader.Yt.CollectFromType;
 using static YtReader.Yt.UpdateChannelType;

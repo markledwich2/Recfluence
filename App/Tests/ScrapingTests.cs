@@ -11,6 +11,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Threading;
 using YtReader;
 using YtReader.Amazon;
+using YtReader.Rumble;
 using YtReader.Yt;
 
 namespace Tests {
@@ -121,6 +122,13 @@ namespace Tests {
         //"https://amzn.to/2ZMojrd"
       };
       var completed = await aw.ProcessLinks(links, x.Log, cancel: default);
+    }
+
+    [Test]
+    public static async Task TestRumbleVideo() {
+      using var ctx = await TestSetup.TextCtx();
+      var web = ctx.Resolve<RumbleWeb>();
+      var video = await web.Video("vgg87f", ctx.Log);
     }
   }
 }

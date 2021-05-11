@@ -32,8 +32,10 @@ namespace YtReader.Web {
     }
 
     /// <summary>Reads the content as Json (and unzip if required)</summary>
-    public static Task<JObject> JsonObject(this IFlurlResponse response) =>
-      response.GetStreamAsync().Then(s => JObject.LoadAsync(new JsonTextReader(new StreamReader(s)) {CloseInput = true}));
+    public static async Task<JObject> JsonObject(this IFlurlResponse response) {
+      var stream = await response.GetStreamAsync();
+      return await JObject.LoadAsync(new JsonTextReader(new StreamReader(stream)) {CloseInput = true});
+    }
 
     /// <summary>Reads the content as Json (and unzip if required)</summary>
     public static Task<JArray> JsonArray(this IFlurlResponse response) =>

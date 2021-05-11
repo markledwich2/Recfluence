@@ -19,6 +19,7 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Text;
+using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Web;
 using static System.StringComparison;

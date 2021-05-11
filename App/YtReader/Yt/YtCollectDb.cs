@@ -32,6 +32,7 @@ namespace YtReader.Yt {
 
   public static class YtCollectDb {
     public static string SqlList<T>(IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
+    static string SqlList(IReadOnlyCollection<Channel> channels) => channels.Join(",", c => c.ChannelId.SingleQuote());
 
     /// <summary>Existing reviewed channels with information on the last updates to extra parts.
     ///   <param name="channelSelect">By default will return channels that meet review criteria. To override, specify a select
@@ -97,7 +98,7 @@ with chans as (
   select channel_id
   from channel_latest
   where status_msg<>'Dead'
-    and channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
+    and channel_id in ({SqlList(channels)})
 )
 select v.channel_id ChannelId
      , v.video_id VideoId
@@ -106,9 +107,7 @@ select v.channel_id ChannelId
      , v.extra_updated ExtraUpdated
 from video_latest v
 join chans c on v.channel_id = c.channel_id
-where 
-    v.upload_date is null -- update extra if we are missing upload
-    or v.error_type is null -- removed video's updated separately
+where v.error_type is null -- removed video's updated separately
 qualify row_number() over (partition by v.channel_id order by upload_date desc) <= :videosPerChannel
 ", new {videosPerChannel = ctx.Cfg.MaxChannelFullVideos});
       return ids;
@@ -121,7 +120,7 @@ select channel_id, video_id
 from video_latest v
 where not exists(select * from comment_stage c where c.v:VideoId=v.video_id) and error_type is null
 qualify row_number() over (partition by channel_id order by random() desc)<=:max_comments
-  and channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
+  and channel_id in ({SqlList(channels)})
                 ", new {max_comments = ctx.Cfg.MaxChannelComments});
 
     public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingCaptions(this YtCollectDbCtx ctx,
@@ -131,8 +130,10 @@ qualify row_number() over (partition by channel_id order by random() desc)<=:max
                 from video_latest v
                 where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
                   qualify row_number() over (partition by channel_id order by views desc)<=400
-                    and channel_id in ({channels.Join(",", c => $"'{c.ChannelId}'")})
+                    and channel_id in ({SqlList(channels)})
                 ");
+
+    
 
     public static async Task<ChannelUpdatePlan[]> ChannelsToDiscover(this YtCollectDbCtx ctx) {
       var toAdd = await ctx.Db.Query<(string channel_id, string channel_title, string source)>("channels to classify",

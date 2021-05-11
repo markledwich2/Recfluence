@@ -23,8 +23,6 @@ namespace YtReader {
 
       var source = Stores.Store(DataStoreType.DbStage);
       var dest = Stores.Store(DataStoreType.Backup);
-
-
       if (dest == null) {
         log.Information("not running backup. Normal for pre-release");
         return;
