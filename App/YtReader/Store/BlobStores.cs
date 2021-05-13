@@ -5,7 +5,7 @@ using Semver;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
-using YtReader.Amazon;
+using YtReader.AmazonSite;
 using YtReader.Yt;
 using static YtReader.Store.DataStoreType;
 using static YtReader.Store.StoreTier;
@@ -24,7 +24,8 @@ namespace YtReader.Store {
     Backup,
     Logs,
     Root,
-    RootStandard
+    RootStandard,
+    RootS3
   }
 
   public enum StoreTier {
@@ -34,18 +35,9 @@ namespace YtReader.Store {
   }
 
   /// <summary>Access to any of the stores</summary>
-  public class BlobStores {
-    readonly StorageCfg Cfg;
-    readonly SemVersion Version;
-    readonly ILogger    Log;
+  public record BlobStores(StorageCfg Cfg, S3Cfg S3Cfg, SemVersion Version, ILogger Log) {
 
-    public BlobStores(StorageCfg cfg, SemVersion version, ILogger log) {
-      Cfg = cfg;
-      Version = version;
-      Log = log;
-    }
-
-    public AzureBlobFileStore Store(StringPath path = null, StoreTier tier = Premium, SemVersion version = null) {
+    public ISimpleFileStore Store(StringPath path = null, StoreTier tier = Premium, SemVersion version = null) {
       var p = new StringPath(Cfg.RootPath(version ?? Version));
       if (path != null) p = p.Add(path);
       var store = new AzureBlobFileStore(tier switch {
@@ -56,7 +48,7 @@ namespace YtReader.Store {
       return store;
     }
 
-    public AzureBlobFileStore Store(DataStoreType type) => type switch {
+    public ISimpleFileStore Store(DataStoreType type) => type switch {
       DataStoreType.Backup => Store("pipe", StoreTier.Backup),
       Results => Store("results"),
       Pipe => Store("pipe"),
@@ -64,6 +56,7 @@ namespace YtReader.Store {
       Private => Store("private"),
       Logs => Store("logs"),
       Root => Store(tier: Premium),
+      RootS3 => new S3Store(S3Cfg, "media"),
       _ => throw new NotImplementedException($"No store for type '{type}'")
     };
   }

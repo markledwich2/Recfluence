@@ -18,7 +18,7 @@ using SysExtensions.Text;
 
 namespace SysExtensions.Threading {
   public static class BlockExtensions {
-    public static async Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, int, Task> action, int parallel = 1, int? capacity = null,
+    public static async Task<long> BlockDo<T>(this IEnumerable<T> source, Func<T, int, Task> action, int parallel = 1, int? capacity = null,
       CancellationToken cancel = default) {
       var options = ActionOptions<T>(parallel, capacity, cancel);
       var block = new ActionBlock<(T, int)>(i => action(i.Item1, i.Item2), options);
@@ -27,10 +27,13 @@ namespace SysExtensions.Threading {
       return produced;
     }
 
-    public static Task<long> BlockAction<T>(this IEnumerable<T> source, Func<T, Task> action, int parallel = 1, int? capacity = null,
-      CancellationToken cancel = default) => source.BlockAction((o, _) => action(o), parallel, capacity, cancel);
+    public static Task<long> BlockDo<T>(this IEnumerable<T> source, Func<T, Task> action, int parallel = 1, int? capacity = null,
+      CancellationToken cancel = default) => source.BlockDo((o, _) => action(o), parallel, capacity, cancel);
     
-    public static async Task<long> BlockAction<T>(this IAsyncEnumerable<T> source, Func<T, int, Task> action, int parallel = 1, int? capacity = null,
+    public static Task<long> BlockDo<T>(this IAsyncEnumerable<T> source, Func<T, Task> action, int parallel = 1, int? capacity = null,
+      CancellationToken cancel = default) => source.BlockDo((o, _) => action(o), parallel, capacity, cancel);
+    
+    public static async Task<long> BlockDo<T>(this IAsyncEnumerable<T> source, Func<T, int, Task> action, int parallel = 1, int? capacity = null,
       CancellationToken cancel = default) {
       var options = ActionOptions<T>(parallel, capacity, cancel);
       var block = new ActionBlock<(T, int)>(i => action(i.Item1, i.Item2), options);
@@ -123,7 +126,7 @@ namespace SysExtensions.Threading {
         .Run().ConfigureAwait(false);
     }
 
-    public static async IAsyncEnumerable<R> BlockTrans<T, R>(this IEnumerable<T> source,
+    public static async IAsyncEnumerable<R> BlockMap<T, R>(this IEnumerable<T> source,
       Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
       var produceTask = ProduceAsync(source.WithIndex(), block);
@@ -138,15 +141,15 @@ namespace SysExtensions.Threading {
       await Task.WhenAll(produceTask, block.Completion);
     }
 
-    public static IAsyncEnumerable<R> BlockTrans<T, R>(this IEnumerable<T> source,
+    public static IAsyncEnumerable<R> BlockMap<T, R>(this IEnumerable<T> source,
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
-      BlockTrans(source, (o, _) => func(o), parallel, capacity, cancel);
+      BlockMap(source, (o, _) => func(o), parallel, capacity, cancel);
 
-    public static IAsyncEnumerable<R> BlockTrans<T, R>(this IAsyncEnumerable<T> source,
+    public static IAsyncEnumerable<R> BlockMap<T, R>(this IAsyncEnumerable<T> source,
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
-      source.BlockTrans((r, _) => func(r), parallel, capacity, cancel);
+      source.BlockMap((r, _) => func(r), parallel, capacity, cancel);
 
-    public static async IAsyncEnumerable<R> BlockTrans<T, R>(this IAsyncEnumerable<T> source,
+    public static async IAsyncEnumerable<R> BlockMap<T, R>(this IAsyncEnumerable<T> source,
       Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
       var produceTask = ProduceAsync(source, block, cancel);
@@ -161,9 +164,9 @@ namespace SysExtensions.Threading {
       await Task.WhenAll(produceTask, block.Completion);
     }
 
-    public static async IAsyncEnumerable<R> BlockTrans<T, R>(this Task<IAsyncEnumerable<T>> source,
+    public static async IAsyncEnumerable<R> BlockMap<T, R>(this Task<IAsyncEnumerable<T>> source,
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
-      await foreach (var i in (await source).BlockTrans(func, parallel, capacity, cancel))
+      await foreach (var i in (await source).BlockMap(func, parallel, capacity, cancel))
         yield return i;
     }
 

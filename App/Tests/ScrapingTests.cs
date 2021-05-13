@@ -10,7 +10,7 @@ using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Threading;
 using YtReader;
-using YtReader.Amazon;
+using YtReader.AmazonSite;
 using YtReader.Rumble;
 using YtReader.Yt;
 
@@ -76,7 +76,7 @@ namespace Tests {
         "UCaJ8FsMMnefU7NXdMaXW8WQ", // error - terminated
         "UCdQ5jrBSBEOUKr91f6zucag", // user
         "UCUowFWIWGw6Pv2JqfEj8njQ", // channel
-      }.BlockTrans(async c => {
+      }.BlockMap(async c => {
         var chan = await ws.Channel(x.Log, c);
         return new {
           Chan = chan,

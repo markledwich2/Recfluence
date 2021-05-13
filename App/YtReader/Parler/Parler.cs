@@ -21,7 +21,7 @@ namespace YtReader {
     readonly ILogger            Log;
     readonly GoogleCfg          Cfg;
     readonly FPath              Dir;
-    readonly AzureBlobFileStore Db;
+    readonly ISimpleFileStore Db;
 
     public Parler(ILogger log, BlobStores stores, GoogleCfg Cfg) {
       Log = log;
@@ -57,7 +57,7 @@ namespace YtReader {
         return null;
       }
 
-      await files.Files.WithIndex().BlockAction(async f => {
+      await files.Files.WithIndex().BlockDo(async f => {
         var localFile = Dir.Combine(f.item.Name.Trim().Split(".").First().Replace("Copy of ", "") + ".jsonl.gz");
         var blobPath = $"parler/{folderName}/{localFile.FileName}";
         if (await Db.Exists(blobPath)) {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Mutuo.Etl.Blob;
 using Newtonsoft.Json;
 using Serilog;
 using SysExtensions;
@@ -39,7 +40,7 @@ namespace YtReader.Db {
 
       var schema = Sf.Cfg.Schema;
       var store = Stores.Store(DataStoreType.DbStage);
-      var container = store.Container;
+      var container = ((AzureBlobFileStore)store).Container;
       var sasUri = container.GenerateSasUri(List | Read, DateTimeOffset.UtcNow.AddYears(100));
       var stageUrl = $"azure://{sasUri.Host}{sasUri.AbsolutePath}";
       var sasToken = sasUri.Query;
@@ -91,7 +92,7 @@ namespace YtReader.Db {
             )));
 
       foreach (var s in scripts)
-        await s.Sqls.BlockAction(q => conn.Execute(s.Name, q), s.Mode == Sequential ? 1 : WhCfg.MetadataParallel);
+        await s.Sqls.BlockDo(q => conn.Execute(s.Name, q), s.Mode == Sequential ? 1 : WhCfg.MetadataParallel);
 
       log.Information("Create Warehouse - {Db} created/updated in {Duration}", db, sw.Elapsed.HumanizeShort());
     }

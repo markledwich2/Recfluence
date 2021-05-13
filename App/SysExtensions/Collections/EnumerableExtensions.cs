@@ -55,7 +55,7 @@ namespace SysExtensions.Collections {
         foreach (var c in children(item)) toRecurse.Enqueue(c);
       }
     }
-    
+
     public static async Task<(IReadOnlyCollection<T> included, IReadOnlyCollection<T> excluded)> Split<T>(this IAsyncEnumerable<T> items, Func<T, bool> where) {
       var included = new List<T>();
       var excluded = new List<T>();
@@ -113,6 +113,16 @@ namespace SysExtensions.Collections {
 
     public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> items) => items.Select((item, index) => (item, index));
 
+    public static IEnumerable<TResult> WithPrevious<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TSource, TResult> map) {
+      using var e = source.GetEnumerator();
+      if (!e.MoveNext()) yield break;
+      var previous = e.Current;
+      while (e.MoveNext()) {
+        yield return map(previous, e.Current);
+        previous = e.Current;
+      }
+    }
+
     public static IEnumerable<IGrouping<TKey, TSource>> ChunkBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector) =>
       source.ChunkBy(keySelector, EqualityComparer<TKey>.Default);
 
@@ -124,7 +134,7 @@ namespace SysExtensions.Collections {
       Chunk<TKey, TSource> current = null;
       while (true) {
         var key = keySelector(enumerator.Current);
-        current = new (key, enumerator, value => comparer.Equals(key, keySelector(value)));
+        current = new(key, enumerator, value => comparer.Equals(key, keySelector(value)));
         yield return current;
         if (current.CopyAllChunkElements() == noMoreSourceElements) yield break;
       }

@@ -61,7 +61,7 @@ namespace YtReader.Store {
 
       if (cancel.IsCancellationRequested) return;
 
-      await res.BlockAction(r => BlobIndex.CommitIndexJson(r, log), parallel: 10, cancel: cancel);
+      await res.BlockDo(r => BlobIndex.CommitIndexJson(r, log), parallel: 10, cancel: cancel);
       log.Information("Committed indexes {Indexes}", res.Select(i => i.IndexPath));
     }
 

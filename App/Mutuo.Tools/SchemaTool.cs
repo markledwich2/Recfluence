@@ -46,7 +46,7 @@ namespace Mutuo.Tools {
                            throw new InvalidOperationException("Can't find built assembly");
 
       var a = Assembly.LoadFrom(latestAssembly.FullPath);
-      await Types.Split("|").BlockAction(async type => {
+      await Types.Split("|").BlockDo(async type => {
         var t = a.GetType(type) ?? throw new InvalidOperationException($"can't find type {type}");
         var g = new JSchemaGenerator {
           DefaultRequired = Required.DisallowNull,

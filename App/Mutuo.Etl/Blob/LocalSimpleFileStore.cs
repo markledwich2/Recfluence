@@ -16,6 +16,8 @@ namespace Mutuo.Etl.Blob {
 
     static void InitDirIfRequired() { }
 
+    public StringPath BasePath => "";
+
     public Task Save(StringPath path, FPath file, ILogger log = null) {
       file.EnsureDirectoryExists();
       file.Copy(Dir.Combine(path));
@@ -66,5 +68,7 @@ namespace Mutuo.Etl.Blob {
     public Task<FileListItem> Info(StringPath path) => Task.FromResult(AsListItem(Path(path)));
 
     public Uri Url(StringPath path) => $"file://{Path(path).FullPath}".AsUri();
+    public Task<bool> Exists(StringPath path) => throw new NotImplementedException();
+    
   }
 }

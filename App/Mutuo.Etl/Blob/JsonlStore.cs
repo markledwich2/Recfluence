@@ -82,7 +82,7 @@ namespace Mutuo.Etl.Blob {
     public async Task Append(IReadOnlyCollection<T> items, ILogger log = null) {
       log ??= Log;
       if (items.None()) return;
-      await items.GroupBy(Partition).BlockAction(async g => {
+      await items.GroupBy(Partition).BlockDo(async g => {
         var ts = g.Max(GetTs);
         var path = JsonlStoreExtensions.FilePath(FilePath(g.Key), ts, Version);
         using var memStream = await g.ToJsonlGzStream(IJsonlStore.JCfg);
@@ -92,7 +92,7 @@ namespace Mutuo.Etl.Blob {
 
     public async IAsyncEnumerable<IReadOnlyCollection<T>> Items(string partition = null) {
       await foreach (var dir in Files(partition, allDirectories: true))
-      await foreach (var item in dir.BlockTrans(f => LoadJsonl(f.Path), Parallel, capacity: 10))
+      await foreach (var item in dir.BlockMap(f => LoadJsonl(f.Path), Parallel, capacity: 10))
         yield return item;
     }
 

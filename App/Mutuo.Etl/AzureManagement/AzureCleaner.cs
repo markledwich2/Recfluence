@@ -63,7 +63,7 @@ namespace Mutuo.Etl.AzureManagement {
         var expired = images.Where(i => DateTime.UtcNow - i.created > Cfg.Expires).ToArray();
 
         await expired
-          .BlockAction(async t => {
+          .BlockDo(async t => {
             var digest = await RegistryClient.ManifestContentDigestV2(name, t.tag);
             await RegistryClient.DeleteImage(name, digest);
             log.Information("Deleted - {Name}:{Tag}", name, t.tag);

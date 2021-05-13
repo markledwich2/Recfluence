@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
+using Amazon;
+using Amazon.Runtime;
 using Humanizer;
 using Mutuo.Etl.AzureManagement;
+using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Serilog.Events;
-using SysExtensions.Collections;
 using SysExtensions.Configuration;
 using SysExtensions.Security;
-using SysExtensions.Text;
 using YtReader.Airtable;
-using YtReader.Amazon;
+using YtReader.AmazonSite;
 using YtReader.Db;
 
 namespace YtReader {
@@ -66,6 +66,7 @@ namespace YtReader {
     [Required] public AirtableCfg     Airtable              { get; set; } = new();
     [Required] public DataScriptsCfg  DataScripts           { get; set; } = new();
     [Required] public AmazonCfg       Amazon                { get; set; } = new();
+    [Required] public AwsCfg          Aws                   { get; set; } = new();
   }
 
   public class GoogleCfg {
@@ -79,6 +80,14 @@ namespace YtReader {
 
   public class YtApiCfg {
     [Required] public ICollection<string> Keys { get; set; } = new List<string>();
+  }
+
+  public record AwsCfg {
+    public string              Region         { get; set; }
+    public RegionEndpoint      RegionEndpoint => RegionEndpoint.GetBySystemName(Region);
+    public S3Cfg               S3             { get; init; }
+    public NameSecret          Creds    { get; set; }
+    public BasicAWSCredentials CredsBasic => new (Creds.Name, Creds.Secret);
   }
 
   public class ElasticCfg {

@@ -99,25 +99,33 @@ namespace SysExtensions.Threading {
       timeoutCancellationTokenSource.Cancel();
       return (true, await task);
     }
-
+    
     public static async Task<TR> Then<T, TR>(this Task<T> task, Func<T, Task<TR>> then) {
       var r = await task;
-      return await then(r);
+      var res = await then(r);
+      if(r is IDisposable d) d.Dispose();
+      return res;
     }
 
     public static async Task<TR> Then<T, TR>(this Task<T> task, Func<T, TR> then) {
       var r = await task;
-      return then(r);
+      var res = then(r);
+      if(r is IDisposable d) d.Dispose();
+      return res;
     }
 
     public static async ValueTask<TR> Then<T, TR>(this ValueTask<T> task, Func<T, ValueTask<TR>> then) {
       var r = await task;
-      return await then(r);
+      var res = await then(r);
+      if(r is IDisposable d) d.Dispose();
+      return res;
     }
 
     public static async ValueTask<TR> Then<T, TR>(this ValueTask<T> task, Func<T, TR> then) {
       var r = await task;
-      return then(r);
+      var res = then(r);
+      if(r is IDisposable d) d.Dispose();
+      return res;
     }
   }
 }

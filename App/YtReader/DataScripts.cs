@@ -60,7 +60,7 @@ where e.video_id is null {(ScriptsCfg.Stale == null ? "" : "or e.updated < :stal
 {(ScriptsCfg.VideoLimit == null ? "" : $"limit {ScriptsCfg.VideoLimit}")}
 ", new {stale = ScriptsCfg.Stale})
           .Batch(ScriptsCfg.VideosPerFile)
-          .BlockTrans(async (vids, i) => {
+          .BlockMap(async (vids, i) => {
             var path = RunPath(runId).Add($"videos.{i:00000}.jsonl.gz");
             await store.Save(path, await vids.ToJsonlGzStream());
             return path;
@@ -73,7 +73,7 @@ where e.video_id is null {(ScriptsCfg.Stale == null ? "" : "or e.updated < :stal
 
       var batches = filesToProcess.Batch(batchSize: 1, ScriptsCfg.Containers).ToArray();
       await batches
-        .BlockAction(async (paths, i) => {
+        .BlockDo(async (paths, i) => {
           var containerCfg = ContainerCfg with {Cores = ScriptsCfg.Cores, Mem = ScriptsCfg.Mem, ImageName = "datascripts"};
           await containers.RunContainer(
             $"{containerCfg.ImageName}-{DateTime.UtcNow:yyyy-MM-dd-hh-mm}-{i:00}-{ShortGuid.Create(3).Replace("_", "-")}".ToLowerInvariant(),
@@ -81,7 +81,7 @@ where e.video_id is null {(ScriptsCfg.Stale == null ? "" : "or e.updated < :stal
             env.Concat(("run_state", new DataScriptRunState(opts.Parts, paths.Select(p => p.ToString()).ToArray()).ToJson())).ToArray(),
             returnOnStart: false,
             cfg: containerCfg, log: log, cancel: cancel);
-          await paths.BlockAction(async p => await store.Delete(p), AppCfg.DefaultParallel);
+          await paths.BlockDo(async p => await store.Delete(p), AppCfg.DefaultParallel);
         }, ScriptsCfg.Containers, cancel: cancel);
     }
 

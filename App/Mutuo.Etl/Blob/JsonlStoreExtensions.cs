@@ -135,7 +135,7 @@ namespace Mutuo.Etl.Blob {
     }
 
     public static async Task Optimise(this ISimpleFileStore store, OptimiseCfg cfg, IReadOnlyCollection<OptimiseBatch> plan, ILogger log) =>
-      await plan.Select((b, i) => (b, i)).BlockAction(async b => {
+      await plan.Select((b, i) => (b, i)).BlockDo(async b => {
         var (batch, i) = b;
         var optimiseRes = await JoinFiles(store, batch.Files, batch.Dest, cfg.ParallelFiles, log).WithDuration();
         log.Debug("Optimise {Path} - optimised file {OptimisedFile} from {FilesIn} in {Duration}. batch {Batch}/{Total}",
@@ -172,7 +172,7 @@ namespace Mutuo.Etl.Blob {
 
       // when in-place, this is dirty if we fail now. There is no transaction capability in cloud storage, so downstream process must handle duplicates
       // successfully staged files, delete from land. Incremental using TS will work without delete, but it's more efficient to delete process landed files.
-      await toOptimise.BlockAction(f => store.Delete(f.Path), parallel)
+      await toOptimise.BlockDo(f => store.Delete(f.Path), parallel)
         .WithWrappedException(e => "Failed to delete optimised files. Duplicate records need to be handled downstream");
       log.Debug("Optimise {Path} - deleted {Files} that were optimised into {OptimisedFile}", destPath, toOptimise.Count, optimisedFileName);
 

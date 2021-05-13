@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.Storage.DataMovement;
+using Mutuo.Etl.Blob;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
@@ -21,8 +22,8 @@ namespace YtReader {
       var destPath = StringPath.Relative("db2", DateTime.UtcNow.FileSafeTimestamp());
       log.Information("Backup {Path} - started", destPath);
 
-      var source = Stores.Store(DataStoreType.DbStage);
-      var dest = Stores.Store(DataStoreType.Backup);
+      var source = (AzureBlobFileStore)Stores.Store(DataStoreType.DbStage);
+      var dest = (AzureBlobFileStore)Stores.Store(DataStoreType.Backup);
       if (dest == null) {
         log.Information("not running backup. Normal for pre-release");
         return;
@@ -30,8 +31,8 @@ namespace YtReader {
 
       var sourceContainer = source.LegacyContainer();
       var desContainer = dest.LegacyContainer();
-      var sourceBlob = sourceContainer.GetDirectoryReference(source.BasePathSansContainer);
-      var destBlob = desContainer.GetDirectoryReference(dest.BasePathSansContainer.Add(destPath));
+      var sourceBlob = sourceContainer.GetDirectoryReference(source.BasePathSansContainer());
+      var destBlob = desContainer.GetDirectoryReference(dest.BasePathSansContainer().Add(destPath));
       await CopyBlobs(destPath, sourceBlob, destBlob, log);
     }
 

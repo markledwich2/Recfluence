@@ -88,12 +88,12 @@ namespace YtReader {
           .Where(t => limitAccounts == null || limitAccounts.Any(a => t.accounts?.Contains(a) == true)).ToArray();
 
         log.Information("UserScrape - about to run {Trials} incomplete trials", incompleteTrials.Length);
-        await incompleteTrials.BlockAction(async incompleteTrial => { await RunTrial(cancel, incompleteTrial.trial_id, env, args, null, log); },
+        await incompleteTrials.BlockDo(async incompleteTrial => { await RunTrial(cancel, incompleteTrial.trial_id, env, args, null, log); },
           Cfg.MaxContainers, cancel: cancel);
 
         log.Information("UserScrape - about to new trails for accounts {Accounts}", accounts.Join("|"));
         await accounts.Batch(batchSize: 1, maxBatches: Cfg.MaxContainers)
-          .BlockAction(async b => {
+          .BlockDo(async b => {
             trial = $"{DateTime.UtcNow:yyyy-MM-dd_HH-mm-ss}_{Guid.NewGuid().ToShortString(4)}";
             await RunTrial(cancel, trial, env, args, b, log);
           }, Cfg.MaxContainers, cancel: cancel);
@@ -139,7 +139,7 @@ namespace YtReader {
         .SelectAwait(async f => await Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip: false))
         .ToListAsync();
 
-      await inCfg.BlockAction(async cfg => {
+      await inCfg.BlockDo(async cfg => {
         var name = $"userscrape/run/incomplete_trial/{cfg.trial_id}.json";
         var stream = cfg.ToJsonStream(
           new() {Formatting = Formatting.None},

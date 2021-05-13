@@ -50,7 +50,7 @@ namespace YtReader {
       log.Information("StageUpdate - started for snowflake host '{Host}', db '{Db}'", Conn.Cfg.Host, Conn.Cfg.DbName());
       var sw = Stopwatch.StartNew();
       var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table, StringComparer.OrdinalIgnoreCase) == true).ToArray();
-      await tables.BlockAction(async t => { await UpdateTable(t, fullLoad, log); }, Cfg.LoadTablesParallel);
+      await tables.BlockDo(async t => { await UpdateTable(t, fullLoad, log); }, Cfg.LoadTablesParallel);
       log.Information("StageUpdate - {Tables} updated in {Duration}", tables.Join("|", t => t.Table), sw.Elapsed.HumanizeShort());
     }
 
@@ -69,7 +69,7 @@ namespace YtReader {
       }
     }
 
-    AzureBlobFileStore Store(StageTableCfg t) => Stores.Store(t.StoreType);
+    ISimpleFileStore Store(StageTableCfg t) => Stores.Store(t.StoreType);
 
     async Task Incremental(ILoggedConnection<IDbConnection> db, string table, StageTableCfg t, DateTime latestTs) {
       var store = Store(t);
@@ -115,7 +115,7 @@ namespace YtReader {
       };
 
       var sql =
-        $"copy into {table} from @{new string[] {stage, store.BasePathSansContainer}.Concat(t.Dir.Tokens).NotNull().Join("/")}/ file_format=(type=json)";
+        $"copy into {table} from @{new string[] {stage, store.BasePathSansContainer()}.Concat(t.Dir.Tokens).NotNull().Join("/")}/ file_format=(type=json)";
       await db.Execute("copy into", sql);
 
       // sf should return this info form copy_into (its in their UI, but not in .net or jdbc drivers)

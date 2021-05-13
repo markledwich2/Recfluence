@@ -11,6 +11,7 @@ using SysExtensions.Net;
 using SysExtensions.Threading;
 
 namespace YtReader.Web {
+  
   public record FlurlProxyClient {
     readonly        FlurlClient Direct;
     readonly        FlurlClient Proxy;
@@ -38,17 +39,19 @@ namespace YtReader.Web {
         , log);
 
       var (res, ex) = await Def.Fun(() => retry.ExecuteAsync(GetRes)).Try();
-      if (res != null && HttpExtensions.IsSuccess(res.StatusCode)) return res;
-      if (UseProxy) {
-        ThrowIfError(res, ex); // throw if there is an error and we are already using proxy
-      }
-      else {
+      if (res != null && HttpExtensions.IsSuccess(res.StatusCode)) return res; // return on success
+
+      if (UseProxy) ThrowIfError(res, ex); // throw if there is an error and we are already using proxy
+      
+      if(res?.StatusCode == 429 && !UseProxy) {
         UseProxy = true;
         log?.Debug("Flurl - switch to proxy service");
+        var res2 = await retry.ExecuteAsync(GetRes);
+        ThrowIfError(res2, ex);
+        return res2;
       }
-      var res2 = await retry.ExecuteAsync(GetRes);
-      ThrowIfError(res2, ex);
-      return res2;
+      ThrowIfError(res, ex);
+      return res;
     }
 
     bool DefaultIsTransient(IFlurlResponse res) {

@@ -46,7 +46,7 @@ namespace Mutuo.Etl.Blob {
 
       var files = (await IndexFiles(work.Rows, work.Cols, work.Size, work.NullHandling, log, OnProcessed)
         .Select((b, i) => (b.first, b.last, b.stream, i))
-        .BlockTrans(async b => {
+        .BlockMap(async b => {
           if (cancel.IsCancellationRequested) return null;
           var file = new StringPath($"{runId}/{b.i:000000}.{JValueString(b.first)}.{JValueString(b.last)}.jsonl.gz");
           await Store.Save(work.Path.Add(file), b.stream);
@@ -84,8 +84,8 @@ namespace Mutuo.Etl.Blob {
     }
 
     public async Task CommitIndexJson(BlobIndexResult indexWork, ILogger log) {
-      await indexWork.ToDelete.BlockAction(async deletePath => {
-        await Store.List(deletePath).SelectMany().BlockTrans(f => Store.Delete(f.Path, log)).ToListAsync();
+      await indexWork.ToDelete.BlockDo(async deletePath => {
+        await Store.List(deletePath).SelectMany().BlockMap(f => Store.Delete(f.Path, log)).ToListAsync();
       });
       log.Debug("deleted expired {Files}", indexWork.ToDelete);
       await Store.Set(indexWork.IndexPath, indexWork.Index);

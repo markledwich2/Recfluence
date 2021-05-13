@@ -141,7 +141,7 @@ order by video_group -- use group to randomize the order
         .Select(r => new {Key = r.ToObject<TKey>(), Row = r, AirFields = r.ToAirFields()})
         .Split(r => airRows.ContainsKey(r.Key));
       
-      await create.Batch(AtBatchSize).BlockAction(async (rows, i) => {
+      await create.Batch(AtBatchSize).BlockDo(async (rows, i) => {
         var createFields = rows.Select(r => r.AirFields).ToArray();
         var res = await airTable.CreateMultipleRecords(airTableName, createFields, typecast: true);
         res.EnsureSuccess(log, airTableName);
@@ -149,7 +149,7 @@ order by video_group -- use group to randomize the order
       });
 
       if (op.Mode.In(AtUpdateMode.CreateAndUpdate)) {
-        await update.Batch(AtBatchSize).BlockAction(async (rows, i) => {
+        await update.Batch(AtBatchSize).BlockDo(async (rows, i) => {
           var updateFields = rows.Select(u => new IdFields(airRows[u.Key].Id) {FieldsCollection = u.AirFields.FieldsCollection}).ToArray();
           var res = await airTable.UpdateMultipleRecords(airTableName, updateFields, typecast: true);
           res.EnsureSuccess(log, airTableName);

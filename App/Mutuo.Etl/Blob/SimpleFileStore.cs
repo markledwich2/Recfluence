@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -20,9 +21,15 @@ namespace Mutuo.Etl.Blob {
     Task<bool> Delete(StringPath path, ILogger log = null);
     Task<FileListItem> Info(StringPath path);
     public Uri Url(StringPath path);
+    Task<bool> Exists(StringPath path);
+    /// <summary>the Working directory of this storage wrapper. The first part of the path is the container</summary>
+    StringPath BasePath { get; }
   }
 
   public static class SimpleStoreExtensions {
+    
+    public static StringPath BasePathSansContainer(this ISimpleFileStore store) => new(store.BasePath.Tokens.Skip(1));
+    
     public static StringPath AddJsonExtention(this StringPath path, bool zip = true) =>
       new(path + (zip ? ".json.gz" : ".json"));
 

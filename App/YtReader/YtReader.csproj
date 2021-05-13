@@ -9,6 +9,7 @@
     <PackageReference Include="AngleSharp" Version="1.0.0-alpha-844" />
     <PackageReference Include="AngleSharp.Io" Version="0.15.0" />
     <PackageReference Include="AngleSharp.Js" Version="0.14.0" />
+    <PackageReference Include="AWSSDK.TranscribeService" Version="3.7.2.15" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.8.3" />
     <PackageReference Include="Azure.Storage.Files.Shares" Version="12.6.1" />
     <PackageReference Include="CsvHelper" Version="27.0.2" />

@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Collect List" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.exe" />
-    <option name="PROGRAM_PARAMETERS" value="collect-list named collect_covid -p channel-video|channel -e extra|caption|comment -c  UCumtYpCY26F6Jr3satUgMvA|UCN7B-QD0Qgn2boVH5Q0pOWg " />
+    <option name="PROGRAM_PARAMETERS" value="collect-list VideoPath &quot;import/narratives/covid_vaccine_dna.vid_ids.tsv.gz&quot; -p video -e extra|caption" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>

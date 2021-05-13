@@ -5,9 +5,38 @@
       "properties": {
         "apiKey": {
           "type": "string"
+        }
+      }
+    },
+    "AmazonCfg": {
+      "type": "object",
+      "properties": {
+        "webParallel": {
+          "type": "integer"
         },
-        "baseId": {
+        "batchSize": {
+          "type": "integer"
+        },
+        "retries": {
+          "type": "integer"
+        },
+        "proxyType": {
+          "type": "string",
+          "enum": [
+            "Datacenter",
+            "Residential"
+          ]
+        },
+        "requestTimeout": {
           "type": "string"
+        }
+      }
+    },
+    "AwsCfg": {
+      "type": "object",
+      "properties": {
+        "s3": {
+          "$ref": "#/definitions/S3Cfg"
         }
       }
     },
@@ -145,14 +174,6 @@
         }
       }
     },
-    "NarrativesCfg": {
-      "type": "object",
-      "properties": {
-        "covidAirtable": {
-          "type": "string"
-        }
-      }
-    },
     "OptimiseCfg": {
       "type": "object",
       "properties": {
@@ -274,6 +295,13 @@
         },
         "creds": {
           "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Datacenter",
+            "Residential"
+          ]
         }
       }
     },
@@ -293,6 +321,24 @@
       "properties": {
         "collectParallel": {
           "type": "integer"
+        },
+        "retries": {
+          "type": "integer"
+        }
+      }
+    },
+    "S3Cfg": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bucket": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "credentials": {
+          "type": "string"
         }
       }
     },
@@ -490,13 +536,7 @@
         "discoverChannelVids": {
           "type": "integer"
         },
-        "populateMissingCommentsLimit": {
-          "type": "integer"
-        },
         "parallelChannels": {
-          "type": "integer"
-        },
-        "chromeParallel": {
           "type": "integer"
         },
         "webParallel": {
@@ -505,10 +545,7 @@
         "captionParallel": {
           "type": "integer"
         },
-        "chromeAttempts": {
-          "type": "integer"
-        },
-        "chromeUpdateMax": {
+        "maxChannelComments": {
           "type": "integer"
         },
         "minChannelSubs": {
@@ -524,6 +561,15 @@
           "type": "integer"
         },
         "maxChannelFullVideos": {
+          "type": "integer"
+        },
+        "userBatchSize": {
+          "type": "integer"
+        },
+        "maxMissingUsers": {
+          "type": "integer"
+        },
+        "maxExtraErrorsInChannel": {
           "type": "integer"
         }
       }
@@ -625,11 +671,14 @@
     "airtable": {
       "$ref": "#/definitions/AirtableCfg"
     },
-    "narratives": {
-      "$ref": "#/definitions/NarrativesCfg"
-    },
     "dataScripts": {
       "$ref": "#/definitions/DataScriptsCfg"
+    },
+    "amazon": {
+      "$ref": "#/definitions/AmazonCfg"
+    },
+    "aws": {
+      "$ref": "#/definitions/AwsCfg"
     }
   }
 }

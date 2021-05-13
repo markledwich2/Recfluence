@@ -23,11 +23,12 @@ using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
 using YtReader.Airtable;
-using YtReader.Amazon;
+using YtReader.AmazonSite;
 using YtReader.Reddit;
 using YtReader.Search;
 using YtReader.SimpleCollect;
 using YtReader.Store;
+using YtReader.Transcribe;
 using YtReader.Yt;
 using static YtCli.UpdateCmd;
 
@@ -437,19 +438,19 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
   public record NarrativeCmd(ILogger Log, AtLabel Covid) : ICommand {
     [CommandParameter(0, Description = "The name of the narrative to sync with airtable. e.g. (Activewear|Vaccine)")]
     public string QueryName { get; set; }
-    
+
     [CommandParameter(1, Description = "The base id from airtable. To get this, open https://airtable.com/api and select your base")]
     public string Base { get; set; }
-    
+
     [CommandOption("parts", shortName: 'p', Description = "| separated airtable to updated (Mention|Channel|Video)")]
     public string Parts { get; set; }
 
     [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
     public int? Limit { get; set; }
-    
+
     [CommandOption("videos", shortName: 'v', Description = "| separated videos to limit update to")]
     public string Videos { get; set; }
-    
+
     [CommandOption("mode", shortName: 'm', Description = "| separated videos to limit update to")]
     public AtUpdateMode Mode { get; set; }
 
@@ -463,16 +464,34 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
   public record AmazonCmd(ILogger Log, AmazonWeb Amazon) : ICommand {
     [CommandOption("query", shortName: 'q', Description = "The name of the query to sync with airtable")]
     public string MentionQuery { get; set; }
-    
+
     [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
     public int? Limit { get; set; }
-    
+
     [CommandOption("force-local", Description = "if true, won't launch any containers to process")]
     public bool ForceLocal { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) {
       await Amazon.GetProductLinkInfo(Log, console.RegisterCancellationHandler(), MentionQuery, Limit, ForceLocal);
       Log.Information("amazon - complete");
+    }
+  }
+
+  [Command("transcribe", Description = "download videos and transcribe them. maybe should be part of update cmd once done")]
+  public record TranscribeCmd(ILogger Log, Transcriber Transcriber, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg)
+    : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
+    
+    [CommandOption("platform", shortName: 'p')]
+    public Platform? Platform { get; set; }
+    
+    [CommandOption("limit", shortName: 'l')]
+    public int? Limit { get; set; }
+    
+    protected override string GroupName => "transcribe";
+
+    protected override async ValueTask ExecuteLocal(IConsole console) {
+      await Transcriber.TranscribeVideos(Log, console.RegisterCancellationHandler(), Platform, Limit);
+      Log.Information("Completed downloading videos");
     }
   }
 }

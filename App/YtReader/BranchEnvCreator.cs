@@ -48,8 +48,8 @@ namespace YtReader {
     }
 
     Task<long> CreateContainers(BranchState state, string[] paths, ILogger log) =>
-      new[] {Premium, Standard}.BlockAction(async tier => {
-        var s = Stores.Store(tier: tier);
+      new[] {Premium, Standard}.BlockDo(async tier => {
+        var s = (AzureBlobFileStore)Stores.Store(tier: tier);
         var c = s.Container;
         var exists = await c.ExistsAsync();
         if (!exists) {
@@ -63,7 +63,7 @@ namespace YtReader {
       if (state.In(CloneDb, Fresh)) return;
 
       async Task<(AzureBlobFileStore container, CloudBlobContainer legacy, StringPath[] rooDirs)> GetStorePrep(SemVersion version) {
-        var container = Stores.Store(tier: tier, version: version);
+        var container = (AzureBlobFileStore) Stores.Store(tier: tier, version: version);
         var legacy = container.LegacyContainer();
         var rooDirs = await container.ListDirs("").ToArrayAsync();
         return (container, legacy, rooDirs);

@@ -66,7 +66,7 @@ namespace YtReader.Store {
     [Upgrade("0")]
     async Task UpdateVids_0to1() {
       var filesToUpgrade = await FilesToUpgrade("videos", 0);
-      await filesToUpgrade.BlockAction(async f => {
+      await filesToUpgrade.BlockDo(async f => {
         var existingJs = await Jsonl(f);
         var upgradedJs = existingJs.Select(j => {
           var newJ = j.DeepClone();
@@ -82,7 +82,7 @@ namespace YtReader.Store {
     async Task UpdateRecs_0to1() {
       var toUpgrade = await FilesToUpgrade("recs", 0);
       V0UpdateTime = DateTime.Parse("2019-11-02T13:50:00Z").ToUniversalTime();
-      await toUpgrade.BlockAction(async f => {
+      await toUpgrade.BlockDo(async f => {
         var existingJs = await Jsonl(f);
         var upgradedJs = existingJs.GroupBy(j => j["FromVideoId"].Value<string>()).SelectMany(g => {
           return g.Select((j, i) => {
@@ -100,7 +100,7 @@ namespace YtReader.Store {
     [Upgrade("0")]
     async Task UpdateCaptions_0to1() {
       var toUpgrade = await FilesToUpgrade("captions", 0);
-      await toUpgrade.BlockAction(async f => {
+      await toUpgrade.BlockDo(async f => {
         var js = await Jsonl(f);
         foreach (var j in js) j["Updated"] = V0UpdateTime;
         await ReplaceJsonLFile(f, NewFilePath(f, 1), js);

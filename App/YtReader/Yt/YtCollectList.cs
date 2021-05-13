@@ -33,10 +33,10 @@ namespace YtReader.Yt {
   }
 
   public enum CollectFromType {
-    [EnumMember(Value = "video-path")]   VideoPath,
-    [EnumMember(Value = "view")]         View,
-    [EnumMember(Value = "channel-path")] ChannelPath,
-    [EnumMember(Value = "named")]        Named
+    VideoPath,
+    View,
+    ChannelPath,
+    Named
   }
 
   public enum CollectListPart {
@@ -107,8 +107,7 @@ namespace YtReader.Yt {
       log.Information("YtCollect - ProcessVideos complete - {Videos} videos and {Channels} channels processed",
         videosProcessed.Length, channelIds.Count);
     }
-    
-    
+
     public record VideoProcessResult(string VideoId, string ChannelId);
 
     [Pipe]
@@ -126,7 +125,7 @@ namespace YtReader.Yt {
 
       var planBatches = plans.Batch(batchSize).ToArray();
       var extra = await planBatches
-        .BlockTrans(async (planBatch, i) => {
+        .BlockMap(async (planBatch, i) => {
           var (e, _, _, _) = await Col.SaveExtraAndParts(c: null, parts, log, new(planBatch));
           log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + e.Length, planBatches.Length);
           return e;

@@ -2,79 +2,73 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
+using System.Net;
 using System.Threading.Tasks;
+using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.S3.Transfer;
 using Humanizer;
-using Polly;
-using Polly.Retry;
 using Serilog;
+using SysExtensions;
+using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
+using SysExtensions.Net;
 using SysExtensions.Security;
 using SysExtensions.Text;
 
 namespace Mutuo.Etl.Blob {
-  public class S3Store : ISimpleFileStore {
-    readonly AmazonS3Client S3;
-    readonly AsyncRetryPolicy S3Policy = Policy.Handle<HttpRequestException>()
-      .WaitAndRetryAsync(new[] {1.Seconds(), 4.Seconds(), 30.Seconds()});
+  public record S3Store(S3Cfg Cfg, StringPath BasePath) : ISimpleFileStore {
+    readonly AmazonS3Client S3 = new(
+      Cfg.Credentials.Name, Cfg.Credentials.Secret,
+      new AmazonS3Config {
+        RegionEndpoint = RegionEndpoint.GetBySystemName(Cfg.Region), // use to exposes a concurrency error. Gone 🤞 ?
+        //ServiceURL = "https://s3.us-west-2.amazonaws.com",
+        CacheHttpClient = true,
+        Timeout = 10.Minutes()
+      }
+    );
 
-    public S3Store(S3Cfg cfg, StringPath basePath) {
-      Cfg = cfg;
-      BasePath = basePath;
-      S3 = new AmazonS3Client(
-        Cfg.Credentials.Name, Cfg.Credentials.Secret,
-        new AmazonS3Config {
-          //RegionEndpoint = RegionEndpoint.GetBySystemName(Cfg.Region), // with parreleism, this exposes error in the library
-          ServiceURL = "https://s3.us-west-2.amazonaws.com",
-          CacheHttpClient = true,
-          Timeout = 10.Minutes()
-          //UseAccelerateEndpoint = Cfg.AcceleratedEndpoint,
-          //BufferSize = Cfg.BufferSizeBytes,
-        }
-      );
-    }
+    public async Task<bool> Exists(StringPath path) => await Info(path) != null;
 
-    S3Cfg      Cfg      { get; }
-    StringPath BasePath { get; }
+    public async Task Save(StringPath path, FPath file, ILogger log = default) =>
+      await S3.PutObjectAsync(new() {BucketName = Cfg.Bucket, FilePath = file.FullPath, Key = Key(path)});
 
-    public async Task Save(StringPath path, FPath file, ILogger log = default) {
-      var tu = new TransferUtility(S3);
-      await tu.UploadAsync(file.FullPath, Cfg.Bucket, BasePath.Add(path));
-    }
-
+    //var tu = new TransferUtility(S3);
+    //await tu.UploadAsync(file.FullPath, Cfg.Bucket, BasePath.Add(path));
     public Task Save(StringPath path, Stream contents, ILogger log = null) => throw new NotImplementedException();
-    public Task<Stream> Load(StringPath path, ILogger log = null) => throw new NotImplementedException();
-    public Task LoadToFile(StringPath path, FPath file, ILogger log = null) => throw new NotImplementedException();
 
-    public IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) =>
-      throw new NotImplementedException();
+    public async Task<Stream> Load(StringPath path, ILogger log = null) {
+      var res = await S3.GetObjectAsync(Cfg.Bucket, Key(path));
+      return res.ResponseStream;
+    }
+
+    public Task LoadToFile(StringPath path, FPath file, ILogger log = null) => throw new NotImplementedException();
 
     public Task<bool> Delete(StringPath path, ILogger log = null) => throw new NotImplementedException();
     public Task<Stream> OpenForWrite(StringPath path, ILogger log = null) => throw new NotImplementedException();
-    public Task<FileListItem> Info(StringPath path) => throw new NotImplementedException();
+
+    public async Task<FileListItem> Info(StringPath path) {
+      var (res, ex) = await S3.GetObjectMetadataAsync(Cfg.Bucket, Key(path)).Try();
+      if (res != null) return new(path, res.LastModified); // todo: get size too
+      if (ex is AmazonS3Exception {StatusCode: HttpStatusCode.NotFound}) return null;
+      throw ex;
+    }
+
+    /// <summary>Full path</summary>
     public Uri Url(StringPath path) => throw new NotImplementedException();
 
-    string FilePath(StringPath path) => BasePath.Add(path).WithExtension(".json.gz");
+    public Uri S3Uri(StringPath path) => $"s3://{Cfg.Bucket}/{Key(path)}".AsUri();
 
-    public async IAsyncEnumerable<ICollection<StringPath>> ListKeys(StringPath path) {
-      var prefix = BasePath.Add(path);
-      var request = new ListObjectsV2Request {
-        BucketName = Cfg.Bucket,
-        Prefix = prefix
-      };
+    public StringPath Key(StringPath path) => BasePath.Add(path);
 
+    public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) {
+      var prefix = Key(path);
+      var request = new ListObjectsV2Request {BucketName = Cfg.Bucket, Prefix = prefix};
       while (true) {
         var response = await S3.ListObjectsV2Async(request);
-        var keys = response.S3Objects.Select(f => f.Key);
-        yield return keys.Select(k => new StringPath(k).RelativePath(prefix).WithoutExtension()).ToList();
-
-        if (response.IsTruncated)
-          request.ContinuationToken = response.NextContinuationToken;
-        else
-          break;
+        yield return response.S3Objects.Select(f => new FileListItem(new StringPath(f.Key).RelativePath(prefix), f.LastModified, f.Size)).ToReadOnly();
+        if (response.IsTruncated) request.ContinuationToken = response.NextContinuationToken;
+        else break;
       }
     }
   }

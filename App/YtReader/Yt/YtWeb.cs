@@ -44,8 +44,9 @@ namespace YtReader.Yt {
       return Html.ParseDocument(await res.ContentAsString());
     }
 
-    async Task<HttpResponseMessage> GetHttp(string url, string desc, ILogger log) {
-      var res = await Send(log, desc, url.AsUrl().AsRequest());
+    async Task<HttpResponseMessage> GetHttp(string url, string desc, ILogger log, int[] transientStatus = null) {
+      var res = await Send(log, desc, url.AsUrl().AsRequest(),
+        isTransient: r => HttpExtensions.IsTransientError(r.StatusCode) || (transientStatus ?? Array.Empty<int>()).Contains(r.StatusCode));
       return res.ResponseMessage;
     }
 
@@ -423,7 +424,7 @@ namespace YtReader.Yt {
         log.Verbose("YtWeb - loaded {Threads} threads in batch {Batch} for video {Video}", threads.Length, batch, videoId);
         yield return threads;
         var allReplies = comments.Where(c => c.ReplyContinuation != null)
-          .BlockTrans(async t => await AllComments(t.ReplyContinuation, t.Comment).ToListAsync(), parallel: 4);
+          .BlockMap(async t => await AllComments(t.ReplyContinuation, t.Comment).ToListAsync(), parallel: 4);
         await foreach (var replies in allReplies) {
           var replyComments = replies.SelectMany(r => r.Comments.Select(c => c.Comment)).ToArray();
           log.Verbose("YtWeb - loaded {Replies} replies in batch {Batch} for video {Video}", threads.Length, batch, videoId);
@@ -546,7 +547,8 @@ namespace YtReader.Yt {
 
       // This parameter does magic and a lot of videos don't work without it
       var eurl = $"https://youtube.googleapis.com/v/{videoId}".UrlEncode();
-      var res = await GetHttp($"https://youtube.com/get_video_info?video_id={videoId}&el=embedded&eurl={eurl}&hl=en", "video dictionary", log);
+      var res = await GetHttp($"https://youtube.com/get_video_info?video_id={videoId}&el=embedded&eurl={eurl}&hl=en", "video dictionary", 
+        log, new[] {404}); // unusual, but get_video_info has been returning 404 intermittently and doesn't mean that the video is missing
       using var sr = await res.ContentAsStream();
       var result = SplitQuery(sr);
       return result;

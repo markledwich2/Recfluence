@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using AngleSharp;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
-using AngleSharp.Io;
 using Humanizer;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
@@ -24,14 +23,13 @@ using SysExtensions.Threading;
 using YtReader.Db;
 using YtReader.Store;
 using YtReader.Web;
-using HttpMethod = System.Net.Http.HttpMethod;
-using PT = YtReader.Amazon.AmazonPageType;
+using PT = YtReader.AmazonSite.AmazonPageType;
 
 // ReSharper disable PossibleLossOfFraction
 // ReSharper disable StringLiteralTypo
 // ReSharper disable InconsistentNaming
 
-namespace YtReader.Amazon {
+namespace YtReader.AmazonSite {
   public record AmazonCfg(int WebParallel = 32, int BatchSize = 100, int Retries = 8, ProxyType ProxyType = ProxyType.Residential) {
     public TimeSpan RequestTimeout { get; init; } = 2.Minutes();
   }
@@ -79,7 +77,7 @@ where not exists (select * from link_meta_stage s where s.v:SourceUrl = l.url)
     public async Task<long> ProcessLinks(IReadOnlyCollection<string> urls, ILogger log, CancellationToken cancel) {
       log = log.ForContext("Module", "Amazon");
       var unhandledErrors = 0;
-      var res = await urls.BlockTrans(async (url, urlNo) => {
+      var res = await urls.BlockMap(async (url, urlNo) => {
           var urlLog = log.ForContext("Url", url);
           //log.Debug("Amazon - #{Row}/{Total} ({Url}) - starting", i, urls.Count, l);
           var retryTransient = Policy
@@ -107,7 +105,7 @@ where not exists (select * from link_meta_stage s where s.v:SourceUrl = l.url)
           return null;
         }, Cfg.WebParallel, cancel:cancel)
         .Batch(Cfg.BatchSize)
-        .BlockTrans(async (b, i) => {
+        .BlockMap(async (b, i) => {
           log.Debug("Aamazon - about to save batch {Batch}", i + 1);
           var metas = b.NotNull().Where(l => l.Status.In(HttpStatusCode.OK, HttpStatusCode.NotFound) && l.Link != null).Select(l => l.Link).ToArray();
           log.Debug("Aamazon - saved {Videos} video link metadata. Batch {Batch}/{BatchTotal}", metas.Length, i + 1,

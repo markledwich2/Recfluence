@@ -90,8 +90,8 @@ namespace YtReader.Yt {
       log.Information("Collect - started scraping user channels {Total}", channelIds.Count);
       var batchTotal = channelIds.Count / RCfg.UserBatchSize;
       var start = Stopwatch.StartNew();
-      var total = await channelIds.Batch(RCfg.ChannelBatchSize).BlockTrans(async (ids, i) => {
-          var userChannels = await ids.BlockTrans(async c => {
+      var total = await channelIds.Batch(RCfg.ChannelBatchSize).BlockMap(async (ids, i) => {
+          var userChannels = await ids.BlockMap(async c => {
               var u = await Scraper.Channel(log, c).Swallow(ex => log.Warning(ex, "error loading channel {Channel}", c));
               if (u == null) return null;
               var subs = await u.Subscriptions().SelectManyList().Swallow(ex => log.Warning(ex, "error loading subscriptions for user {User}", u.Id));
@@ -223,7 +223,7 @@ namespace YtReader.Yt {
       log ??= Logger.None;
       var workSw = Stopwatch.StartNew();
 
-      var results = await channels.Batch(RCfg.ChannelBatchSize).BlockTrans(async (planBatch, batchNo) => {
+      var results = await channels.Batch(RCfg.ChannelBatchSize).BlockMap(async (planBatch, batchNo) => {
         var channelBatch = planBatch.Select(p => p.Channel).ToArray();
 
         // to save on db round trips we batch our plan for updates
@@ -248,7 +248,7 @@ namespace YtReader.Yt {
 
         var channelResults = await planBatch
           .Select(p => new {ChannelPlan = p, VideoPlans = channelPlans.TryGet(p.Channel.ChannelId) ?? new VideoExtraPlans()})
-          .BlockTrans(async (plan, i) => {
+          .BlockMap(async (plan, i) => {
             var c = plan.ChannelPlan.Channel;
             var sw = Stopwatch.StartNew();
             var cLog = log
@@ -354,7 +354,7 @@ namespace YtReader.Yt {
           plans.SetPart(videoItems.Where(v => plan.LastCaptionUpdate == null || v.UploadDate > plan.LastCaptionUpdate).Select(v => v.Id), ECaption);
 
           // take a random sample of comments for new videos since last comment record (NOTE: this is in addition to missing comments have separately been planned)
-          if(parts.ShouldRun(EComment))
+          if (parts.ShouldRun(EComment))
             plans.SetPart(videoItems
               .Where(v => plan.LastCommentUpdate == null || v.UploadDate > plan.LastCommentUpdate)
               .Randomize().Take(RCfg.MaxChannelComments).Select(v => v.Id), EComment);
@@ -421,7 +421,7 @@ namespace YtReader.Yt {
       var errors = 0;
       var extrasWithParts = extras.Where(e => e.Parts.Any()).ToArray();
       return extrasWithParts
-        .BlockTrans(async (v, i) => {
+        .BlockMap(async (v, i) => {
             if (i % 100 == 0) log.Debug("YtCollect - recorded {Extras}/{Total} extras", i, extrasWithParts.Length);
             return await Scraper.GetExtra(log, v.VideoId, v.Parts, channelId, channelTitle)
               .Swallow(ex => {

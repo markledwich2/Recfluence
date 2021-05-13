@@ -51,7 +51,7 @@ namespace Mutuo.Etl.Blob {
     /// <summary>the Working directory of this storage wrapper. The first part of the path is the container</summary>
     public StringPath BasePath { get; }
 
-    public StringPath BasePathSansContainer => new(BasePath.Tokens.Skip(1));
+    
 
     //public CloudStorageAccount Storage { get; }
     HttpClient H { get; }
@@ -121,11 +121,11 @@ namespace Mutuo.Etl.Blob {
 
     public IAsyncEnumerable<StringPath> ListDirs(StringPath path) =>
       Container.GetBlobsByHierarchyAsync(delimiter: "/", prefix: path).Where(b => b.IsPrefix)
-        .Select(b => new StringPath(b.Prefix).RelativePath(BasePathSansContainer));
+        .Select(b => new StringPath(b.Prefix).RelativePath(this.BasePathSansContainer()));
 
     public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null) {
       log ??= Log;
-      var p = (path != null ? BasePathSansContainer.Add(path) : BasePathSansContainer) + "/";
+      var p = (path != null ? this.BasePathSansContainer().Add(path) : this.BasePathSansContainer()) + "/";
       if (allDirectories)
         await foreach (var page in Container.GetBlobsAsync(BlobTraits.All, BlobStates.None, p).AsPages())
           yield return page.Values.Select(ToFileItem).ToArray();
@@ -136,7 +136,7 @@ namespace Mutuo.Etl.Blob {
 
     //FileListItem ToFileItem(BlobHierarchyItem b) => new(new StringPath(b.IsBlob).RelativePath(BasePath), b.Properties.LastModified, b.Properties.ContentLength);
     FileListItem ToFileItem(BlobItem b) {
-      FileListItem res = new(new StringPath(b.Name).RelativePath(BasePathSansContainer), b.Properties.LastModified, b.Properties.ContentLength);
+      FileListItem res = new(new StringPath(b.Name).RelativePath(this.BasePathSansContainer()), b.Properties.LastModified, b.Properties.ContentLength);
       return res;
     }
 
@@ -145,7 +145,7 @@ namespace Mutuo.Etl.Blob {
       return await blob.DeleteIfExistsAsync();
     }
 
-    string ContainerRelativePath(StringPath path = null) => path == null ? BasePathSansContainer : BasePathSansContainer.Add(path);
+    string ContainerRelativePath(StringPath path = null) => path == null ? this.BasePathSansContainer() : this.BasePathSansContainer().Add(path);
 
     public BlobClient BlobClient(StringPath path = null) => Container.GetBlobClient(ContainerRelativePath(path));
 

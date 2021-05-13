@@ -72,7 +72,7 @@ namespace YtReader.SimpleCollect {
     /// <summary>Scrape videos from the plan, save to the store, and append new channels to the plan</summary>
     public async ValueTask<SimpleCollectPlan> CrawlVideoLinksToFindNewChannels(SimpleCollectPlan plan, ILogger log) {
       var scraper = Scraper(plan.Platform);
-      var crawledVideos = await plan.VideosToCrawl.BlockTrans(async (discover, i) => {
+      var crawledVideos = await plan.VideosToCrawl.BlockMap(async (discover, i) => {
         var video = await scraper.Video(discover.LinkId, log)
           .Swallow(e => log.Warning(e, "Collect {Platform} - error crawling video {Video}: {Error}", plan.Platform, discover.LinkId, e.Message));
         log.Debug("Collect {Platform} - crawled video {VideoId} {Vid}/{Total}", plan.Platform, video?.VideoId, i, plan.VideosToCrawl.Count);
@@ -94,7 +94,7 @@ namespace YtReader.SimpleCollect {
     public async ValueTask<SimpleCollectPlan> CollectChannelAndVideos(SimpleCollectPlan plan, ILogger log, CancellationToken cancel) {
       var scraper = Scraper(plan.Platform);
       if (plan.ExplicitVideos != null) {
-        var videos = await plan.ExplicitVideos.BlockTrans(v => scraper.Video(v, log)).ToListAsync();
+        var videos = await plan.ExplicitVideos.BlockMap(v => scraper.Video(v, log)).ToListAsync();
         await Store.Videos.Append(videos);
       }
 
@@ -168,7 +168,7 @@ namespace YtReader.SimpleCollect {
         }
 
         if (options.Parts.ShouldRun(Extra)) {
-          var extras = await plan.WithPart(EExtra).BlockTrans(v => scraper.Video(v.ForUpdate.SourceId, log)
+          var extras = await plan.WithPart(EExtra).BlockMap(v => scraper.Video(v.ForUpdate.SourceId, log)
               .Swallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", platform, v.VideoId, e.Message))
             , scraper.CollectParallel, cancel: cancel
           ).NotNull().ToListAsync();
@@ -177,7 +177,7 @@ namespace YtReader.SimpleCollect {
         }
       }
 
-      await channelPlans.BlockAction(async (p,i) => {
+      await channelPlans.BlockDo(async (p,i) => {
         await ProcessChannel(p.c, p.videoPlans, i);
         log.Information("Collect {Platform} - completed processing channel {Channel} {Num}/{BatchTotal}", 
           platform, p.c.ToString(), i + 1, channelPlans.Length);

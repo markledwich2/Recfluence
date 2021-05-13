@@ -19,7 +19,7 @@ namespace YtReader {
 
     public async Task Convert(ILogger log) {
       var files = (await Store.List("import/watch_time").SelectManyList()).Where(f => f.Path.ExtensionsString == "csv");
-      await files.BlockAction(async f => {
+      await files.BlockDo(async f => {
         using var stream = await Store.Load(f.Path);
         using var sr = new StreamReader(stream);
         using var csv = new CsvReader(sr, new(CultureInfo.InvariantCulture) {

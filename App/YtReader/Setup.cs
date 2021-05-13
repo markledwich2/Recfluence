@@ -33,7 +33,7 @@ using SysExtensions.Reflection;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader.Airtable;
-using YtReader.Amazon;
+using YtReader.AmazonSite;
 using YtReader.BitChute;
 using YtReader.Db;
 using YtReader.Reddit;
@@ -41,6 +41,7 @@ using YtReader.Rumble;
 using YtReader.Search;
 using YtReader.SimpleCollect;
 using YtReader.Store;
+using YtReader.Transcribe;
 using YtReader.Web;
 using YtReader.Yt;
 using static Serilog.Events.LogEventLevel;
@@ -220,9 +221,13 @@ namespace YtReader {
       appCfg.Dataform.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.Dataform.Container);
       appCfg.UserScrape.Container = appCfg.Pipe.Default.Container.JsonMerge(appCfg.UserScrape.Container);
 
-
       // de-dupe merged pipe configuration
       appCfg.Pipe.Pipes = appCfg.Pipe.Pipes.GroupBy(p => p.PipeName).Select(g => g.Last()).ToArray();
+      
+      // default aws region into services
+      var s3 = appCfg.Aws.S3;
+      s3.Region ??= appCfg.Aws.Region;
+      s3.Credentials ??= appCfg.Aws.Creds;
     }
 
     static IReadOnlyCollection<ValidationResult> Validate(object cfgObject) =>
@@ -254,6 +259,8 @@ namespace YtReader {
       b.Register(_ => rootCfg).SingleInstance();
       b.Register(_ => containerCfg);
 
+      
+      // reigster all top level properties of AppCfg
       foreach (var p in cfg.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
         .Where(p => p.PropertyType.IsClass && !p.PropertyType.IsEnumerable())) {
         var v = p.GetValue(cfg);
@@ -261,6 +268,8 @@ namespace YtReader {
           b.RegisterInstance(v).As(p.PropertyType).SingleInstance();
       }
 
+      // special case lower level cfg items
+      b.Register(_ => cfg.Aws.S3).SingleInstance();
       b.Register(_ => cfg.Pipe.Azure).SingleInstance();
 
       R<SnowflakeConnectionProvider>();
@@ -306,6 +315,7 @@ namespace YtReader {
       R<FlurlProxyClient>();
       R<AmazonWeb>();
       R<SimpleCollector>();
+      R<Transcriber>();
       
       b.Register(_ => pipeAppCtx);
       R<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();

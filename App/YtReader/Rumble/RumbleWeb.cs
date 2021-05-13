@@ -19,7 +19,6 @@ using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
-using YtReader.Amazon;
 using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Web;
