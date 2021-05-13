@@ -80,5 +80,11 @@
   },
   "dataScripts": {
     "stale": "2021-03-26T04:39:34Z"
+  },
+  "aws": {
+    "region": "us-west-2",
+    "s3": {
+      "bucket": "pendulum-lake"
+    }
   }
 }
