@@ -46,7 +46,7 @@ namespace YtReader.Yt {
 
     async Task<HttpResponseMessage> GetHttp(string url, string desc, ILogger log, int[] transientStatus = null) {
       var res = await Send(log, desc, url.AsUrl().AsRequest(),
-        isTransient: r => HttpExtensions.IsTransientError(r.StatusCode) || (transientStatus ?? Array.Empty<int>()).Contains(r.StatusCode));
+        isTransient: r => Client.DefaultIsTransient(r) || (transientStatus ?? Array.Empty<int>()).Contains(r.StatusCode));
       return res.ResponseMessage;
     }
 

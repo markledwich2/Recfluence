@@ -117,7 +117,7 @@ namespace YtReader.Yt {
       const int batchSize = 1000;
       var plans = new VideoExtraPlans();
       if (parts.ShouldRun(EExtra))
-        plans.SetPart(videos.Select(v => v.video_id), EExtra);
+        plans.SetPart(videos.Where(v => v.extra_updated.OlderThanOrNull(Cfg.Collect.RefreshExtraDebounce)).Select(v => v.video_id), EExtra);
       if (parts.ShouldRun(ECaption))
         plans.SetPart(videos.Where(v => v.channel_id != null && !v.caption_exists && v.video_id != null).Select(v => v.video_id), ECaption);
       if (parts.ShouldRun(EComment))

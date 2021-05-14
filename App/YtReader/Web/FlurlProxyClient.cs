@@ -54,7 +54,7 @@ namespace YtReader.Web {
       return res;
     }
 
-    bool DefaultIsTransient(IFlurlResponse res) {
+    public bool DefaultIsTransient(IFlurlResponse res) {
       if (!UseProxy && res.StatusCode == 429) return false; // return false to immediately fall back to proxy
       return HttpExtensions.IsTransientError(res.StatusCode);
     }

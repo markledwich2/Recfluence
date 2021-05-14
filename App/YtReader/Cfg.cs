@@ -140,6 +140,7 @@ namespace YtReader {
     public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
 
     public TimeSpan RefreshChannelDetailDebounce { get; set; } = 12.Hours();
+    public TimeSpan RefreshExtraDebounce { get; set; } = 12.Hours();
 
     /// <summary>We want to keep monitoring YouTube influence even if no new videos have been created (min). Get at least this
     ///   number of recs per channel</summary>
