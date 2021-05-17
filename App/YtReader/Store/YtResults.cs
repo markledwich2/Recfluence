@@ -222,7 +222,7 @@ order by month
 select *
 from g", fileType: Json, jsonNaming: Camel),
 
-          new ResQuery("narrative_vaccine_highlight", Narrative.VaccinePersonalHighlight, fileType:Json, jsonNaming:Camel),
+          new ResQuery("narrative_vaccine_personal_highlight", Narrative.VaccinePersonalHighlight, fileType:Json, jsonNaming:Camel),
           
           new ResQuery("narrative_vaccine_dna_highlight", Narrative.VaccineDnaHighlight, fileType:Json, jsonNaming:Camel)
           

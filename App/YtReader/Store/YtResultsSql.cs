@@ -15,7 +15,7 @@ with channel_highlights as (
        , regexmatch($7,'.*(?:v=(?<video>[\\w-]*)).*(?:t=(?<offset>\\d*))',NULL) link_meta
     from @public.yt_data/import/narratives/channel_highlights.tsv (file_format => tsv_header)
   )
-  select channel_id, mention_videos, mention_video_views, link_meta:video::string video_id, link_meta: offset::int offset_seconds, link_meta:caption::string caption
+  select channel_id, mention_videos, mention_video_views, link_meta:video::string video_id, link_meta: offset::int offset_seconds
   from h1
 )
   , narrative_captions as (
@@ -25,7 +25,8 @@ with channel_highlights as (
   where narrative='Vaccine Personal'
 )
   , h1 as (
-  select h.channel
+  select 
+        h.*
        , c.channel_title
        , c.subs
        , arrayExclude(c.tags, array_construct({FilterTags.Join(", ", t => t.SingleQuote())})) tags
@@ -34,7 +35,7 @@ with channel_highlights as (
        , v.video_title
        , v.views
        , datediff(seconds,'0'::time,v.duration) duration_secs
-       , coalesce(h.caption,n.caption,s.caption) caption
+       , coalesce(n.caption,s.caption) caption
   from channel_highlights h
          join channel_latest c on c.channel_id=h.channel_id
          join video_latest v on v.video_id=h.video_id
