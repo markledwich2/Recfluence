@@ -1,5 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using SysExtensions;
+using SysExtensions.Collections;
+using SysExtensions.Text;
 
 // all of this only minor midifications to https://github.com/Tyrrrz/YoutubeExplode
 
@@ -61,7 +65,8 @@ namespace YtReader.Yt {
   /// <summary>Text that gets displayed at specific time during video playback, as part of a
   ///   <see cref="ClosedCaptionTrack" />.</summary>
   public record ClosedCaption(string Text, TimeSpan? Offset, TimeSpan? Duration, string Speaker = null) {
-    public override string ToString() => Text;
+    public override string ToString() =>
+      $"{new[] {Offset.Do(o => o.HumanizeShort()), Speaker}.NotNull().ToArray().Do(d => d.Any() ? $"{d.Join(" ")}: " : "")}{Text}";
   }
 
   /// <summary>Set of captions that get displayed during video playback.</summary>

@@ -13,16 +13,15 @@ using YtReader.Store;
 using YtReader.Yt;
 
 namespace YtReader.SimpleCollect {
-
   public record CollectDbCtx(ILoggedConnection<SnowflakeDbConnection> Db, Platform Platform) : IDisposable {
     public void Dispose() => Db?.Dispose();
   }
-  
+
   public static class CollectDb {
     static string SqlList(IReadOnlyCollection<Channel> channels) => channels.Join(",", c => c.ChannelId.SingleQuote());
-    
-    public static async Task<IReadOnlyCollection<DiscoverChannelOrVid>> DiscoverChannelsAndVideos(this CollectDbCtx ctx) => 
-      await ctx.Db.Query<DiscoverChannelOrVid>("discover new channels and videos", $@"
+
+    public static async Task<IReadOnlyCollection<DiscoverChannelOrVid>> DiscoverChannelsAndVideos(this CollectDbCtx ctx) =>
+      await ctx.Db.Query<DiscoverChannelOrVid>("discover new channels and videos", @"
 select distinct link_type LinkType, link_id LinkId, platform_from FromPlatform
 from link_detail l
        left join parler_posts p on l.post_id_from=p.id
@@ -30,7 +29,7 @@ where not link_found
   and platform_to=:platform
   -- for posts only take those that have Q tags
   and (post_id_from is null or arrays_overlap(array_construct('qanon','q','qanons','wwg1wga','wwg','thegreatawakening'),p.hashtags))
-", new { platform=ctx.Platform.EnumString()});
+", new {platform = ctx.Platform.EnumString()});
 
     public static async Task<IReadOnlyCollection<Channel>> ExistingChannels(this CollectDbCtx ctx,
       IReadOnlyCollection<string> explicitIds = null) {
@@ -43,12 +42,12 @@ with latest as (
 )
 select s.v
 from latest c join channel_stage s on s.v:ChannelId = c.channel_id and s.v:Updated = c.updated
-", new { platform=ctx.Platform.EnumString()});
+", new {platform = ctx.Platform.EnumString()});
       return existing.Select(e => e.ToObject<Channel>(IJsonlStore.JCfg)).ToArray();
     }
-    
+
     //public record VideoPlan(string ChannelId, string VideoId, DateTime Updated, DateTime UploadDate, DateTime ExtraUpdated);
-  
+
     public static async Task<VideoForUpdate[]> VideoPlans(this CollectDbCtx ctx, Channel[] channels) {
       var ids = await ctx.Db.QueryAsync<VideoForUpdate>("videos for update", $@"
   with chans as (
@@ -63,15 +62,13 @@ from latest c join channel_stage s on s.v:ChannelId = c.channel_id and s.v:Updat
        , v.updated Updated
        , v.upload_date UploadDate
        , v.extra_updated ExtraUpdated
+       , v.platform Platform
   from video_latest v
   join chans c on v.channel_id = c.channel_id
   where v.error_type is null -- removed video's updated separately
 and platform = :platform
-  ", new { platform = ctx.Platform.EnumString()}).ToArrayAsync();
+  ", new {platform = ctx.Platform.EnumString()}).ToArrayAsync();
       return ids;
     }
   }
-
-
-      
 }

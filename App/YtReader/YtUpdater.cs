@@ -51,18 +51,18 @@ namespace YtReader {
   ///   caption search. Many missing features (resume, better recording of tasks etc..). I intend to replace with dagster or
   ///   make Mutuo.Etl into a data application runner once I have evaluated it.</summary>
   public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, Stage _stage, YtSearch _search,
-    YtResults _results, YtDataform YtDataform, YtBackup _backup, UserScrape _userScrape, YtIndexResults _index, BcCollect _bcCollect,
+    YtResults _results, YtDataform YtDataform, YtBackup _backup, UserScrape _userScrape, YtIndexResults _index, BitChuteCollect _bitChuteCollect,
     RumbleCollect _rumbleCollect, DataScripts _dataScripts) {
     Task Collect(CollectOptions options, ILogger logger, CancellationToken cancel) =>
       YtCollect.Collect(logger, options, cancel);
 
-    Task BcCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
-      _bcCollect.Collect(options, logger, cancel);
+    Task BitChuteCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
+      _bitChuteCollect.Collect(options, logger, cancel);
 
     Task RumbleCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
       _rumbleCollect.Collect(options, logger, cancel);
 
-    [GraphTask(nameof(Collect), nameof(BcCollect), nameof(RumbleCollect))]
+    [GraphTask(nameof(Collect), nameof(BitChuteCollect), nameof(RumbleCollect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
       _stage.StageUpdate(logger, fullLoad, tables);
 
@@ -109,7 +109,7 @@ namespace YtReader {
 
       var actionMethods = TaskGraph.FromMethods(
         (l, c) => Collect(options.Collect, l, c),
-        (l, c) => BcCollect(collectOptions, l, c),
+        (l, c) => BitChuteCollect(collectOptions, l, c),
         (l, c) => RumbleCollect(collectOptions, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),
         (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),

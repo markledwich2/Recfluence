@@ -9,10 +9,10 @@ using Mutuo.Etl.Blob;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
+using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
-using SysExtensions.Collections;
 using YtReader.Db;
 using IndexExpression = System.Linq.Expressions.Expression<System.Func<YtReader.Store.WorkCfg>>;
 
@@ -47,7 +47,7 @@ namespace YtReader.Store {
           TopVideos(20_000),
           TopChannelVideos(50)
         }
-        .Select(t => t with { Name =  t.Name.Underscore()}) // we are building this for javascript land. So snake case everything
+        .Select(t => t with {Name = t.Name.Underscore()}) // we are building this for javascript land. So snake case everything
         .Where(t => names?.Contains(t.Name) != false && tags?.Intersect(t.Tags.NotNull()).Any() != false).ToArray();
 
       var (res, indexDuration) = await toRun.BlockFunc(async t => {
@@ -93,7 +93,7 @@ namespace YtReader.Store {
     };
 
     /// <summary>Top videos for all channels for a given time period</summary>
-    WorkCfg TopVideos(int topPerPeriod) => new(nameof(TopVideos), PeriodCols, TopVideoResSql(rank: topPerPeriod, PeriodCols));
+    WorkCfg TopVideos(int topPerPeriod) => new(nameof(TopVideos), PeriodCols, TopVideoResSql(topPerPeriod, PeriodCols));
 
     /// <summary>Top videos from a channel & time period</summary>
     WorkCfg TopChannelVideos(int topPerChannel) {
@@ -151,13 +151,17 @@ order by {orderCols.DbNames().Join(",")}";
 select e.*
      , exists(select c.video_id from caption c where e.video_id=c.video_id) has_captions
 from video_error e
-where platform = 'YouTube'
+join channel_accepted c on e.channel_id = c.channel_id
+where e.platform = 'YouTube'
 order by last_seen", 100.Kilobytes());
 
     WorkCfg VideoRemovedCaption = new(nameof(VideoRemovedCaption), new[] {Col("video_id")}, @"
-select e.video_id, c.caption, c.offset_seconds from video_error e
-inner join caption c on e.video_id = c.video_id
-where platform = 'YouTube'
+select e.video_id, s.caption, s.offset_seconds
+from video_error e
+join caption s on e.video_id = s.video_id
+join video_latest v on v.video_id = s.video_id
+join channel_accepted c on c.channel_id = v.channel_id
+where v.platform = 'YouTube'
 order by video_id, offset_seconds", 100.Kilobytes());
 
     #endregion
@@ -186,8 +190,6 @@ s as (
 )
 select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
       Tags: new[] {"narrative"});
-    
-
 
     static readonly IndexCol[] NarrativeVideoCols = {Col("narrative", writeDistinct: true), Col("upload_date")};
 
@@ -219,12 +221,10 @@ with s as (
 select *
 from s
 order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
-      Version: "v2.1", 
-      Size: 500.Kilobytes(),  // big because the UI loads most/all of it
-      NullHandling: NullValueHandling.Ignore, 
+      Version: "v2.1",
+      Size: 500.Kilobytes(), // big because the UI loads most/all of it
+      NullHandling: NullValueHandling.Ignore,
       Tags: new[] {"narrative"});
-    
-    
 
     static readonly IndexCol[] NarrativeCaptionCols = {Col("narrative"), Col("channel_id"), Col("video_id")};
 
@@ -234,9 +234,7 @@ from video_narrative n
 order by {NarrativeCaptionCols.DbNames().Join(",")}",
       50.Kilobytes(), // small because the UI loads these on demand
       Tags: new[] {"narrative"});
-    
-    
-    
+
     readonly WorkCfg Narrative2Channels = new(nameof(Narrative2Channels), NarrativeChannelsCols, $@"
 with by_channel as (
   select n.narrative, v.channel_id, sum(v.views) views
@@ -257,7 +255,7 @@ s as (
 )
 select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
       Tags: new[] {"narrative2"});
-    
+
     readonly WorkCfg Narrative2Videos = new(nameof(Narrative2Videos), NarrativeVideoCols, $@"
 with s as (
   select n.narrative
@@ -291,11 +289,11 @@ with s as (
 select *
 from s
 order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
-      500.Kilobytes(),  // big because the UI loads most/all of it
-      Version: "v2.1",
-      NullHandling: NullValueHandling.Ignore, 
-      Tags: new[] {"narrative2"});
-    
+      500.Kilobytes(), // big because the UI loads most/all of it
+      "v2.1",
+      NullValueHandling.Ignore,
+      new[] {"narrative2"});
+
     WorkCfg Narrative2Captions = new(nameof(Narrative2Captions), NarrativeCaptionCols, @$"
 select narrative, n.video_id, v.channel_id, n.captions
 from video_narrative2 n
@@ -359,7 +357,7 @@ with video_date_accounts as (
 )
 select *
 from sets
-order by {UsRecCols.DbNames().Join(",")}", 200.Kilobytes(), Tags:new[] {"us"});
+order by {UsRecCols.DbNames().Join(",")}", 200.Kilobytes(), Tags: new[] {"us"});
 
     static readonly IndexCol[] VideoSeenCols = {Col("part"), Col("account", writeDistinct: true)};
 
@@ -386,8 +384,8 @@ select *
 from s1
 order by {VideoSeenCols.DbNames().Join(",")}, percentile desc";
 
-    WorkCfg UsWatch = new(nameof(UsWatch), VideoSeenCols, GetVideoSeen("us_watch"), 100.Kilobytes(), Tags:new[] {"us"});
-    WorkCfg UsFeed  = new(nameof(UsFeed), VideoSeenCols, GetVideoSeen("us_feed", titleInSeen: true), 100.Kilobytes(), Tags:new[] {"us"});
+    WorkCfg UsWatch = new(nameof(UsWatch), VideoSeenCols, GetVideoSeen("us_watch"), 100.Kilobytes(), Tags: new[] {"us"});
+    WorkCfg UsFeed  = new(nameof(UsFeed), VideoSeenCols, GetVideoSeen("us_feed", titleInSeen: true), 100.Kilobytes(), Tags: new[] {"us"});
 
     #endregion
   }

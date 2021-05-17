@@ -18,7 +18,7 @@ namespace YtReader.SimpleCollect {
   }
 
   public enum StandardCollectPart {
-    ExistingChannel,
+    Channel,
     [CollectPart(Explicit = true)] Discover,
     [CollectPart(Explicit = true)] DiscoverFromVideo,
     Video,

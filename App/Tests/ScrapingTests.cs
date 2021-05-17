@@ -11,6 +11,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Threading;
 using YtReader;
 using YtReader.AmazonSite;
+using YtReader.BitChute;
 using YtReader.Rumble;
 using YtReader.Yt;
 
@@ -71,11 +72,12 @@ namespace Tests {
       using var x = await TestSetup.TextCtx();
       var ws = x.Scope.Resolve<YtWeb>();
       var chans = await new[] {
-        "UCdfQFG50Hu88-1CpRmPDA2A", // user channel with pagination of subs
+        "UCROjSBCTEqNRLFeAIAOyWLA", // failed not sure why
+        /*"UCdfQFG50Hu88-1CpRmPDA2A", // user channel with pagination of subs
         "UChN7H3JFqeFC-WB8NCxhn7g", // error - unavaialbe
         "UCaJ8FsMMnefU7NXdMaXW8WQ", // error - terminated
         "UCdQ5jrBSBEOUKr91f6zucag", // user
-        "UCUowFWIWGw6Pv2JqfEj8njQ", // channel
+        "UCUowFWIWGw6Pv2JqfEj8njQ", // channel*/
       }.BlockMap(async c => {
         var chan = await ws.Channel(x.Log, c);
         return new {
@@ -129,6 +131,13 @@ namespace Tests {
       using var ctx = await TestSetup.TextCtx();
       var web = ctx.Resolve<RumbleWeb>();
       var video = await web.Video("vfn79l", ctx.Log);
+    }
+
+    [Test]
+    public static async Task TestBitChuteVideo() {
+      using var ctx = await TestSetup.TextCtx();
+      var web = ctx.Resolve<BitChuteScraper>();
+      var video = await web.Video("yjoS3BV8CLs0", ctx.Log);
     }
   }
 }

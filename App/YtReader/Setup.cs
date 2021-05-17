@@ -223,7 +223,7 @@ namespace YtReader {
 
       // de-dupe merged pipe configuration
       appCfg.Pipe.Pipes = appCfg.Pipe.Pipes.GroupBy(p => p.PipeName).Select(g => g.Last()).ToArray();
-      
+
       // default aws region into services
       var s3 = appCfg.Aws.S3;
       s3.Region ??= appCfg.Aws.Region;
@@ -259,7 +259,7 @@ namespace YtReader {
       b.Register(_ => rootCfg).SingleInstance();
       b.Register(_ => containerCfg);
 
-      
+
       // reigster all top level properties of AppCfg
       foreach (var p in cfg.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
         .Where(p => p.PropertyType.IsClass && !p.PropertyType.IsEnumerable())) {
@@ -302,8 +302,8 @@ namespace YtReader {
       R<UserScrape>();
       R<YtConvertWatchTimeFiles>();
       R<YtIndexResults>();
-      R<BcWeb>();
-      R<BcCollect>();
+      R<BitChuteScraper>();
+      R<BitChuteCollect>();
       R<Parler>();
       R<YtContainerRunner>();
       R<RumbleWeb>();
@@ -316,7 +316,7 @@ namespace YtReader {
       R<AmazonWeb>();
       R<SimpleCollector>();
       R<Transcriber>();
-      
+
       b.Register(_ => pipeAppCtx);
       R<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();
 

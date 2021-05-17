@@ -25,8 +25,7 @@ from chans c
        join video_latest v on v.channel_id=c.channel_id
   qualify row_number() over (partition by c.channel_id order by random())<:chan_per_vid
 "
-      },
-      {
+      }, {
         "fashion", @"
 select channel_id
 from channel_latest c
@@ -34,8 +33,7 @@ where array_contains('Fashion'::variant, topics)
 and not exists(select * from video_latest v where v.channel_id=c.channel_id)
 and subs > :min_subs
 "
-      },
-      { 
+      }, {
         "collect_covid", @"
 select v.video_id, c.channel_id
 from collect_covid m
@@ -44,7 +42,16 @@ join channel_latest c on c.channel_id =v.channel_id
 where v.upload_date > '2020-01-01'
   and c.subs > 10000
   and c.meets_review_criteria is null or not c.meets_review_criteria
-qualify max(v.updated) over (partition by m.video_id) < current_date()-2"}
+qualify max(v.updated) over (partition by m.video_id) < current_date()-2"
+      }, {
+        "stale_extra",
+        @"
+select video_id, channel_id from video_latest 
+where platform = :platform and (extra_updated is null or extra_updated < current_date() - :older_than_days)
+order by views desc nulls last
+limit :limit
+"
+      }
     };
   }
 }

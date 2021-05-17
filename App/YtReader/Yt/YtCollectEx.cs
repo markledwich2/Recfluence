@@ -115,7 +115,7 @@ namespace YtReader.Yt {
 
     public VideoExtraPlans(IEnumerable<VideoPlan> plans) => _c.AddRange(plans);
 
-    public VideoPlan GetOrAdd(string videoId) => _c.GetOrAdd(videoId, () => new (videoId));
+    public VideoPlan GetOrAdd(string videoId) => _c.GetOrAdd(videoId, () => new(videoId));
 
     /// <summary>Adds a video to update with the given parts unioned with what is existing</summary>
     public void SetPart(string videoId, params ExtraPart[] parts) {
@@ -154,6 +154,7 @@ namespace YtReader.Yt {
     public DateTime? UploadDate   { get; init; }
     public DateTime? ExtraUpdated { get; init; }
     public string    SourceId     { get; init; }
+    public Platform  Platform     { get; set; }
   }
 
   public record VideoPlan {

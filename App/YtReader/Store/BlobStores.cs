@@ -36,7 +36,6 @@ namespace YtReader.Store {
 
   /// <summary>Access to any of the stores</summary>
   public record BlobStores(StorageCfg Cfg, S3Cfg S3Cfg, SemVersion Version, ILogger Log) {
-
     public ISimpleFileStore Store(StringPath path = null, StoreTier tier = Premium, SemVersion version = null) {
       var p = new StringPath(Cfg.RootPath(version ?? Version));
       if (path != null) p = p.Add(path);
@@ -287,6 +286,7 @@ namespace YtReader.Store {
     public string                             VideoId   { get; set; }
     public ClosedCaptionTrackInfo             Info      { get; set; }
     public IReadOnlyCollection<ClosedCaption> Captions  { get; set; } = new List<ClosedCaption>();
+    public Platform                           Platform  { get; set; }
   }
 
   public interface IHasUpdated {

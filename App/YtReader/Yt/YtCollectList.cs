@@ -9,9 +9,12 @@ using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Core;
+using SysExtensions;
 using SysExtensions.Collections;
+using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.SimpleCollect;
+using YtReader.Store;
 using static Mutuo.Etl.Pipe.PipeArg;
 using static YtReader.Yt.CollectFromType;
 using static YtReader.Yt.UpdateChannelType;
@@ -30,6 +33,7 @@ namespace YtReader.Yt {
     public string[]                             LimitChannels { get; init; }
     public TimeSpan                             StaleAgo      { get; init; }
     public JObject                              Args          { get; set; }
+    public Platform[]                           Platforms     { get; set; }
   }
 
   public enum CollectFromType {
@@ -55,9 +59,11 @@ namespace YtReader.Yt {
     LChannelVideo
   }
 
-  public record VideoListStats(string video_id, string channel_id, DateTime? extra_updated, bool caption_exists, bool comment_exists);
+  public record VideoListStats(string video_id, string source_id, string channel_id, DateTime? extra_updated, DateTime upload_date, DateTime updated,
+    bool caption_exists, bool comment_exists,
+    Platform platform);
 
-  public record YtCollectList(YtCollector Col, IPipeCtx PipeCtx, AppCfg Cfg) {
+  public record YtCollectList(YtCollector YtCollector, SimpleCollector SimpleCollector, IPipeCtx PipeCtx, AppCfg Cfg) {
     /// <summary>Collect extra & parts from an imported list of channels and or videos. Use instead of update to process
     ///   arbitrary lists and ad-hoc fixes</summary>
     public async Task Run(CollectListOptions opts, ILogger log, CancellationToken cancel = default) {
@@ -72,8 +78,8 @@ namespace YtReader.Yt {
       var videosProcessed = Array.Empty<VideoProcessResult>();
       if (parts.ShouldRun(LVideo)) {
         IReadOnlyCollection<VideoListStats> videos;
-        using (var db = await Col.Db(log)) // videos sans extra update
-          videos = await VideoStats(db, vidChanSelect, opts.LimitChannels);
+        using (var db = await YtCollector.Db(log)) // videos sans extra update
+          videos = await VideoStats(db, vidChanSelect, opts.LimitChannels, opts.Platforms);
         videosProcessed = await videos
           .Process(PipeCtx, b => ProcessVideos(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
           .Then(r => r.Select(p => p.OutState).SelectMany().ToArray());
@@ -82,33 +88,60 @@ namespace YtReader.Yt {
       IReadOnlyCollection<string> channelIds = Array.Empty<string>();
       if (parts.ShouldRunAny(LChannelVideo, LChannel)) {
         // channels explicitly listed in the query
-        using (var db = await Col.Db(log))
-          channelIds = await ChannelIds(db, vidChanSelect, opts.LimitChannels);
+        using (var db = await YtCollector.Db(log))
+          channelIds = await ChannelIds(db, vidChanSelect, opts.LimitChannels, opts.Platforms);
 
         // channels found from processing videos
         if (parts.ShouldRun(LDiscoveredChannel))
           channelIds = channelIds.Concat(videosProcessed.Select(e => e.ChannelId)).NotNull().Distinct().ToArray();
 
         if (channelIds.Any()) {
-          var channels = await Col.PlanAndUpdateChannelStats(new[] {PChannel, PChannelVideos}, channelIds, log, cancel)
+          var channels = await YtCollector.PlanAndUpdateChannelStats(new[] {PChannel, PChannelVideos}, channelIds, log, cancel)
             .Then(chans => chans
               .Where(c => c.LastVideoUpdate.OlderThanOrNull(opts.StaleAgo)) // filter to channels we haven't updated video's in recently
               .Select(c => c with {Update = c.Update == Discover ? Standard : c.Update})); // revert to standard update for channels detected as discover
 
-          if (parts.ShouldRun(LChannelVideo)) {
-            DateTime? fromDate = new DateTime(year: 2020, month: 1, day: 1);
-            await channels.Randomize() // randomize to even the load
-              .Process(PipeCtx,
-                b => Col.ProcessChannels(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>(), fromDate), log: log, cancel: cancel)
-              .WithDuration();
-          }
+          if (parts.ShouldRun(LChannelVideo))
+            await channels.GroupBy(c => c.Channel.Platform).BlockDo(async g => {
+              var platform = g.Key;
+              var collector = Collector(g.Key);
+              DateTime? fromDate = new DateTime(year: 2020, month: 1, day: 1);
+
+              if (collector is YtCollector yt)
+                await g.Randomize().Process(PipeCtx, b => yt.ProcessChannels(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>(), fromDate),
+                  log: log, cancel: cancel);
+              else if (collector is SimpleCollector sc)
+                await g.Randomize().Process(PipeCtx, b =>
+                    sc.SimpleCollectChannels(g.Select(c => c.Channel).ToArray(),
+                      new() {Platform = platform, Parts = StandardToSimpleParts(parts, extraParts)},
+                      Inject<ILogger>(), Inject<CancellationToken>()),
+                  log: log, cancel: cancel);
+            });
         }
       }
       log.Information("YtCollect - ProcessVideos complete - {Videos} videos and {Channels} channels processed",
         videosProcessed.Length, channelIds.Count);
     }
 
+    static StandardCollectPart[] StandardToSimpleParts(CollectListPart[] parts, ExtraPart[] extraParts) =>
+      (parts ?? Enum.GetValues<CollectListPart>().ToArray())
+      .Select(p => p switch {
+        LChannel => StandardCollectPart.Channel,
+        LVideo => (StandardCollectPart?) null, // explicit videos are done above.. This is just for the channels & channel-videos
+        LDiscoveredChannel => StandardCollectPart.Discover,
+        LChannelVideo => StandardCollectPart.Video,
+        _ => null
+      }).Concat(extraParts.ShouldRun(EExtra) ? StandardCollectPart.Extra : null)
+      .NotNull().ToArray();
+
     public record VideoProcessResult(string VideoId, string ChannelId);
+
+    ICollector Collector(Platform platform) => platform switch {
+      Platform.YouTube => YtCollector,
+      Platform.BitChute => SimpleCollector,
+      Platform.Rumble => SimpleCollector,
+      _ => throw new($"platform {platform} not supported")
+    };
 
     [Pipe]
     public async Task<VideoProcessResult[]> ProcessVideos(IReadOnlyCollection<VideoListStats> videos, ExtraPart[] parts, ILogger log,
@@ -116,6 +149,13 @@ namespace YtReader.Yt {
       log ??= Logger.None;
       const int batchSize = 1000;
       var plans = new VideoExtraPlans();
+
+      foreach (var v in videos)
+        plans.SetForUpdate(new() {
+          VideoId = v.video_id, ChannelId = v.channel_id, Platform = v.platform, SourceId = v.source_id,
+          ExtraUpdated = v.extra_updated, Updated = v.updated, UploadDate = v.upload_date
+        });
+
       if (parts.ShouldRun(EExtra))
         plans.SetPart(videos.Where(v => v.extra_updated.OlderThanOrNull(Cfg.Collect.RefreshExtraDebounce)).Select(v => v.video_id), EExtra);
       if (parts.ShouldRun(ECaption))
@@ -123,15 +163,22 @@ namespace YtReader.Yt {
       if (parts.ShouldRun(EComment))
         plans.SetPart(videos.Where(v => !v.comment_exists).Select(v => v.video_id), EComment);
 
-      var planBatches = plans.Batch(batchSize).ToArray();
-      var extra = await planBatches
-        .BlockMap(async (planBatch, i) => {
-          var (e, _, _, _) = await Col.SaveExtraAndParts(c: null, parts, log, new(planBatch));
-          log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + e.Length, planBatches.Length);
-          return e;
-        }, Cfg.Collect.ParallelChannels, cancel: cancel)
-        .SelectManyList();
-      return extra.Select(e => new VideoProcessResult(e.VideoId, e.ChannelId)).ToArray();
+      var res = await videos.GroupBy(v => v.platform).BlockMap(async g => {
+        var platform = g.Key;
+        var collector = Collector(platform);
+
+        var planBatches = plans.Batch(batchSize).ToArray();
+        var extra = await planBatches
+          .BlockMap(async (planBatch, i) => {
+            var (e, _, _, _) = await collector.SaveExtraAndParts(platform, c: null, parts, log, new(planBatch));
+            log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + e.Length, planBatches.Length);
+            return e;
+          }, Cfg.Collect.ParallelChannels, cancel: cancel)
+          .SelectManyList();
+        return extra.Select(e => new VideoProcessResult(e.VideoId, e.ChannelId)).ToArray();
+      }).SelectMany().ToArrayAsync();
+
+      return res;
     }
 
     static (string Sql, JObject Args) VideoChannelSelect(CollectListOptions opts) {
@@ -147,29 +194,45 @@ namespace YtReader.Yt {
       return select;
     }
 
-    static Task<IReadOnlyCollection<string>> ChannelIds(YtCollectDbCtx db, (string Sql, JObject Args) select, string[] channels = null) =>
-      db.Db.Query<string>("distinct channels", $@"select distinct channel_id from ({select.Sql}) 
-where channel_id is not null
-{(channels.None() ? "" : $"and channel_id in ({SqlList(channels)})")}
+    static Task<IReadOnlyCollection<string>> ChannelIds(YtCollectDbCtx db, (string Sql, JObject Args) select, string[] channels = null,
+      Platform[] platforms = null) =>
+      db.Db.Query<string>("distinct channels", $@"
+with raw_channels as (select distinct channel_id from ({select.Sql})  where channel_id is not null)
+select channel_id, platform from raw_channels r
+left join channel_latest c on c.channel_id = r.channel_id
+{CommonWhereStatements(channels, platforms).Do(w => $"where {w.Join(" and ")}")}
 ", ToDapperArgs(select.Args));
 
-    /// <summary>Find videos fromt he given select that are missing one of the required parts</summary>
+    /// <summary>Find videos from the given select that are missing one of the required parts</summary>
     static Task<IReadOnlyCollection<VideoListStats>> VideoStats(YtCollectDbCtx db, (string Sql, dynamic Args) select,
-      string[] channels = null) => db.Db.Query<VideoListStats>("collect list videos", @$"
+      string[] channels = null, Platform[] platforms = null) =>
+      db.Db.Query<VideoListStats>("collect list videos", @$"
 with raw_vids as ({select.Sql})
 , s as (
-  select v.video_id
-       , coalesce(v.channel_id, e.channel_id) channel_id
-       , e.updated extra_updated
-       , exists(select * from caption s where s.video_id=v.video_id) caption_exists
-       , exists(select * from comment t where t.video_id=v.video_id) comment_exists
-  from raw_vids v
-         left join video_extra e on v.video_id=e.video_id
-  where v.video_id is not null
+  select r.video_id
+       , v.source_id
+       , coalesce(r.channel_id, v.channel_id) channel_id
+       , v.extra_updated
+        , v.upload_date
+        , v.updated
+       , exists(select * from caption s where s.video_id=r.video_id) caption_exists
+       , exists(select * from comment t where t.video_id=r.video_id) comment_exists
+       , v.platform
+  from raw_vids r
+         left join video_latest v on v.video_id=r.video_id
+  where r.video_id is not null
 )
 select * from s
-{(channels.None() ? "" : $"where channel_id in ({SqlList(channels)})")}
+{CommonWhereStatements(channels, platforms).Do(w => $"where {w.Join(" and ")}")}
 ", ToDapperArgs(select.Args));
+
+    static string[] CommonWhereStatements(string[] channels, Platform[] platforms) {
+      var whereStatements = new[] {
+        channels.Do(c => $"channel_id in ({SqlList(c)})"),
+        platforms.Do(p => $"platform in ({SqlList(p)})")
+      }.NotNull().ToArray();
+      return whereStatements;
+    }
 
     static DynamicParameters ToDapperArgs(JObject args) {
       if (args == null) return null;

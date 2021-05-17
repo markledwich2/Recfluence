@@ -31,7 +31,7 @@ using Url = Flurl.Url;
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.BitChute {
-  public record BcWeb(FlurlProxyClient FlurlClient, BitChuteCfg Cfg, ProxyCfg ProxyCfg) : IScraper {
+  public record BitChuteScraper(FlurlProxyClient FlurlClient, BitChuteCfg Cfg, ProxyCfg ProxyCfg) : IScraper {
     static readonly string         Url      = "https://www.bitchute.com";
     static readonly IConfiguration AngleCfg = Configuration.Default.WithDefaultLoader().WithDefaultCookies();
     public          Platform       Platform        => Platform.BitChute;
@@ -101,8 +101,8 @@ namespace YtReader.BitChute {
 
       ulong? GetStat(string selector) => doc.QuerySelector(selector)?.TextContent?.TryParseNumberWithUnits()?.RoundToULong();
       var videoPs = doc.QuerySelectorAll("#video-watch p, #page-detail p");
-
       var title = doc.QuerySelector("h1.page-title")?.TextContent;
+      var mediaUrl = doc.QuerySelector("video#player > source")?.GetAttribute("src");
 
       // its a bit soft to tell if there is an error. if we can't find the channel, and there isn't much text content, then assume it is.
       string error = null;
@@ -113,7 +113,7 @@ namespace YtReader.BitChute {
           error = title;
           status = VideoStatus.Restricted;
         }
-        else if (videoPs.Length.Between(@from: 1, to: 3)) {
+        else if (videoPs.Length.Between(from: 1, to: 3)) {
           // blocked example https://www.bitchute.com/video/memlIDAzcSQq/
           error = videoPs.First().TextContent;
           status = error?.Contains("blocked") == true ? VideoStatus.Removed : null;
@@ -128,29 +128,33 @@ namespace YtReader.BitChute {
           GetStat("#video-like-count"),
           GetStat("#video-dislike-count")
         ),
+        MediaUrl = mediaUrl,
         ChannelTitle = chanA?.TextContent,
         ChannelId = FullId(chanA?.Href?.LastInPath()),
         ChannelSourceId = chanA?.Href?.LastInPath(),
         UploadDate = created,
         Description = doc.QuerySelector("#video-description .full")?.InnerHtml,
         Keywords = doc.QuerySelectorAll<IHtmlAnchorElement>("#video-hashtags ul li a.spa").Select(a => a.Href?.LastInPath()).NotNull().ToArray(),
+        Duration = doc.QuerySelector(".video-duration")?.TextContent.TryParseTimeSpanExact(@"h\:m\:s", @"m\:s"),
         Error = error,
         Status = status
       };
       return vid;
     }
 
+    static bool IsBcTransient(HttpStatusCode code) => code.IsTransientError() || code.In(HttpStatusCode.Forbidden);
+
     /// <summary>Executes the given function with retries and proxy fallback. Returns document in non-transient error states</summary>
     async Task<IDocument> Open(string desc, Url url, Func<IBrowsingContext, Url, Task<IDocument>> getDoc, ILogger log) {
-      var browser = AngleCfg.WithProxyRequester(FlurlClient).Browser();
+      var browser = AngleCfg.Browser();
       var retryTransient = Policy.HandleResult<IDocument>(d => {
-        if (!d.StatusCode.IsTransientError()) return false;
+        if (!IsBcTransient(d.StatusCode)) return false;
         log.Debug($"BcWeb angle transient error '{(int) d.StatusCode}'");
         return true;
       }).RetryWithBackoff("BcWeb angle open", retryCount: 5, log: log);
 
       var (doc, ex) = await Fun(() => retryTransient.ExecuteAsync(() => getDoc(browser, url))).Try();
-      if (doc?.StatusCode.IsTransientError() == false) return doc; // if there was a non-transient error, return the doc in that state
+      if ((doc?.StatusCode).Do(IsBcTransient) == false) return doc; // if there was a non-transient error, return the doc in that state
       FlurlClient.UseProxyOrThrow(log, desc, url, ex, (int?) doc?.StatusCode); // if we are already using the proxy, throw the error
       doc = await retryTransient.ExecuteAsync(() => getDoc(browser, url));
       doc.EnsureSuccess();

@@ -15,6 +15,7 @@ using YtReader.Db;
 using YtReader.Rumble;
 using YtReader.Store;
 using YtReader.Yt;
+using static System.Array;
 using static YtReader.SimpleCollect.StandardCollectPart;
 using static YtReader.Store.ChannelSourceType;
 using ChanById = SysExtensions.Collections.IKeyedCollection<string, YtReader.Store.Channel>;
@@ -24,7 +25,8 @@ using static YtReader.Yt.ExtraPart;
 
 namespace YtReader.SimpleCollect {
   /// <summary>Collector for sources that are simple enough to use the same basic planning and execution of a scrape</summary>
-  public record SimpleCollector(SnowflakeConnectionProvider Sf, RumbleWeb Rumble, BcWeb BitChute, YtStore Store, IPipeCtx PipeCtx) {
+  public record SimpleCollector(SnowflakeConnectionProvider Sf, RumbleWeb Rumble, BitChuteScraper BitChute, YtStore Store, IPipeCtx PipeCtx,
+    YtCollectCfg CollectCfg) : ICollector {
     public IScraper Scraper(Platform platform) => platform switch {
       Platform.Rumble => Rumble,
       Platform.BitChute => BitChute,
@@ -46,7 +48,7 @@ namespace YtReader.SimpleCollect {
 
       void WithUp(string desc, IReadOnlyCollection<Channel> channels) => plan = plan.WithForUpdate(desc, channels, log);
 
-      if (plan.Parts.ShouldRun(ExistingChannel)) // ad existing channels limit to explicit
+      if (plan.Parts.ShouldRun(StandardCollectPart.Channel)) // ad existing channels limit to explicit
         WithUp("existing", plan.Existing.Where(c => c.ForUpdate(plan.ExplicitChannels)).ToArray());
 
       // add explicit channel, no need to lookup existing, because that will already be in the list
@@ -99,16 +101,18 @@ namespace YtReader.SimpleCollect {
       }
 
       await plan.ToUpdate.Process(PipeCtx,
-        b => SimpleCollectChannels(b, plan.Platform, plan.Options, Inject<ILogger>(), Inject<CancellationToken>()), 
+        b => SimpleCollectChannels(b, plan.Options, Inject<ILogger>(), Inject<CancellationToken>()),
         log: log, cancel: cancel);
-      
+
       return plan;
     }
 
     public async Task<CollectDbCtx> DbCtx(Platform platform, ILogger log) => new(await Sf.Open(log), platform);
 
     [Pipe]
-    async Task<int> SimpleCollectChannels(IReadOnlyCollection<Channel> channels, Platform platform, SimpleCollectOptions options, ILogger log, CancellationToken cancel) {
+    public async Task<int> SimpleCollectChannels(IReadOnlyCollection<Channel> channels, SimpleCollectOptions options, ILogger log,
+      CancellationToken cancel) {
+      var platform = options.Platform;
       using var dbCtx = await DbCtx(platform, log);
       //var channelById = channels.ToKeyedCollection(c => c.c.ChannelId);
       var videoPlanById = await dbCtx.VideoPlans(channels.ToArray())
@@ -122,7 +126,7 @@ namespace YtReader.SimpleCollect {
           if (v.ExtraUpdated == null)
             videoPlans.SetPart(v.VideoId, EExtra);
         }
-        return new { videoPlans, c };
+        return new {videoPlans, c};
       }).ToArray();
 
       async Task ProcessChannel(Channel c, VideoExtraPlans plan, int i) {
@@ -139,7 +143,7 @@ namespace YtReader.SimpleCollect {
         }); // merge in new values from the collect. Using merge array because we want alt SourceId's to accumulate
 
         await Store.Channels.Append(chan, log);
-        log.Information("Collect {Platform} - saved channel {Channel}",  platform, c.ToString());
+        log.Information("Collect {Platform} - saved channel {Channel}", platform, c.ToString());
 
         if (options.Parts.ShouldRun(StandardCollectPart.Video) && getVideos != null
           && chan.ForUpdate()) { // check in case we discovered a channel but it doesn't have enough subs
@@ -160,31 +164,37 @@ namespace YtReader.SimpleCollect {
                 VideoId = v.VideoId,
                 Updated = v.Updated,
                 UploadDate = v.UploadDate,
-                SourceId = v.SourceId
+                SourceId = v.SourceId,
+                Platform = v.Platform
               };
               plan.SetForUpdate(forUpdate);
               plan.SetPart(v.VideoId, EExtra);
             }
         }
-
-        if (options.Parts.ShouldRun(Extra)) {
-          log.Information("Collect - Extra part collection disable for now");
-          /*var extras = await plan.WithPart(EExtra).BlockMap(v => scraper.Video(v.ForUpdate.SourceId, log)
-              .Swallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", platform, v.VideoId, e.Message))
-            , scraper.CollectParallel, cancel: cancel
-          ).NotNull().ToListAsync();
-          await Store.VideoExtra.Append(extras, log);
-          log.Debug("Collect {Platform} - saved {Videos} video extras for {Channel}", platform, extras.Count, chan.ToString());*/
-        }
       }
 
-      await channelPlans.BlockDo(async (p,i) => {
+      await channelPlans.BlockDo(async (p, i) => {
         await ProcessChannel(p.c, p.videoPlans, i);
-        log.Information("Collect {Platform} - completed processing channel {Channel} {Num}/{BatchTotal}", 
+        log.Information("Collect {Platform} - completed processing channel {Channel} {Num}/{BatchTotal}",
           platform, p.c.ToString(), i + 1, channelPlans.Length);
-      }, parallel: 4, cancel:cancel);
+      }, parallel: 4, cancel: cancel);
 
       return channelPlans.Length;
+    }
+
+    public async Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(
+      Platform platform, Channel c, ExtraPart[] parts,
+      ILogger log, VideoExtraPlans planedExtras) {
+      var scraper = Scraper(platform);
+      if (c != null && c.Platform != platform) throw new($"platform '{c.Platform}' of channel `{c.ChannelId}` doesn't match provided '{platform}'");
+      var extras = await planedExtras.WithPart(EExtra).BlockMap(v => {
+          return scraper.Video(v.ForUpdate.SourceId, log)
+            .Swallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", platform, v.VideoId, e.Message));
+        }, CollectCfg.WebParallel
+      ).NotNull().ToArrayAsync();
+      await Store.VideoExtra.Append(extras, log);
+      log.Debug("Collect {Platform} - saved {Videos} video extras for {Channel}", platform, extras.Length, c?.ToString() ?? "");
+      return (extras, Empty<Rec>(), Empty<VideoComment>(), Empty<VideoCaption>());
     }
   }
 }

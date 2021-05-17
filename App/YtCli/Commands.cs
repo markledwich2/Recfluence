@@ -269,11 +269,11 @@ namespace YtCli {
         Actions = Actions?.UnJoin('|'),
         Collect = new() {
           LimitChannels = Channels?.UnJoin('|'),
-          Parts = ParseParts<CollectPart>(Parts),
-          ExtraParts = ParseParts<ExtraPart>(ExtraParts)
+          Parts = ParseEnums<CollectPart>(Parts),
+          ExtraParts = ParseEnums<ExtraPart>(ExtraParts)
         },
         Videos = Videos?.UnJoin('|'),
-        StandardParts = ParseParts<StandardCollectPart>(Parts),
+        StandardParts = ParseEnums<StandardCollectPart>(Parts),
         WarehouseTables = WarehouseTables?.UnJoin('|'),
         StageTables = StageTables?.UnJoin('|'),
         Results = Results?.UnJoin('|'),
@@ -296,8 +296,8 @@ namespace YtCli {
       await Updater.Update(options, cancel);
     }
 
-    public static T[] ParseParts<T>(string parts) where T : Enum =>
-      parts?.UnJoin('|').Where(p => p.TryParseEnum<T>(out _)).Select(p => p.ParseEnum<T>()).ToArray();
+    public static T[] ParseEnums<T>(string s) where T : Enum =>
+      s?.UnJoin('|').Where(p => p.TryParseEnum<T>(out _)).Select(p => p.ParseEnum<T>()).ToArray();
   }
 
   [Command("collect-list", Description = "Refresh video/channel information for a given list")]
@@ -328,22 +328,24 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
       Description = @"e.g. 24. use when re-running failed lists. Before this period has elapsed, channels/videos won't be updated again")]
     public int? StaleHrs { get; set; }
 
-    [CommandOption("sql-args", shortName: 'a', IsRequired = false, Description = "Json object representing params to pass to the query")]
+    [CommandOption("sql-args", shortName: 'a', IsRequired = false,
+      Description = "Json object representing params to pass to the query. Check yu query for what it needs. e.g. \"{\"\"older_than_days\"\": 10 }")]
     public string Args { get; set; }
 
-    /*[CommandOption("operations", 'l', Description = @"| top level things to do with this list")]
-    public string ListParts { get; set; }*/
+    [CommandOption("platform", Description = "| delimited list of platforms to restrict collection to")]
+    public string Platforms { get; set; }
 
     protected override string GroupName => "collect-list";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
       var opts = new CollectListOptions {
         CollectFrom = (Mode, Value),
-        Parts = ParseParts<CollectListPart>(Parts),
-        ExtraParts = ParseParts<ExtraPart>(ExtraParts),
+        Parts = ParseEnums<CollectListPart>(Parts),
+        ExtraParts = ParseEnums<ExtraPart>(ExtraParts),
         LimitChannels = Channels?.UnJoin('|'),
         StaleAgo = StaleHrs?.Hours() ?? 2.Days(),
-        Args = Args.Do(JObject.Parse)
+        Args = Args.Do(JObject.Parse),
+        Platforms = ParseEnums<Platform>(Platforms)
       };
       await Col.Run(opts, Log, console.RegisterCancellationHandler());
     }
@@ -455,7 +457,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     public AtUpdateMode Mode { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) {
-      await Covid.MargeIntoAirtable(new(Base, QueryName, Limit, ParseParts<AtLabelPart>(Parts), Videos?.UnJoin('|'), Mode), Log);
+      await Covid.MargeIntoAirtable(new(Base, QueryName, Limit, ParseEnums<AtLabelPart>(Parts), Videos?.UnJoin('|'), Mode), Log);
       Log.Information("CovidNarrativeCmd - complete");
     }
   }
@@ -480,13 +482,12 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
   [Command("transcribe", Description = "download videos and transcribe them. maybe should be part of update cmd once done")]
   public record TranscribeCmd(ILogger Log, Transcriber Transcriber, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
-    
     [CommandOption("platform", shortName: 'p')]
     public Platform? Platform { get; set; }
-    
+
     [CommandOption("limit", shortName: 'l')]
     public int? Limit { get; set; }
-    
+
     protected override string GroupName => "transcribe";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {

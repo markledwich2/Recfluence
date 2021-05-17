@@ -3,93 +3,117 @@ using System.Collections.Generic;
 using System.Linq;
 using Amazon.TranscribeService.Model;
 using Humanizer;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using SysExtensions;
 using SysExtensions.Collections;
+using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader.Store;
 using YtReader.Yt;
 
+// ReSharper disable InconsistentNaming
+
 namespace YtReader.Transcribe {
-  public record TransJob {
-    public string       JobName   { get; init; }
-    public string       AccountId { get; init; }
-    public TransResults Results   { get; init; }
+  public record TransRoot {
+    public static JsonSerializerSettings JsonSettings() {
+      var settings = JsonExtensions.DefaultSettings();
+      settings.ContractResolver = new DefaultContractResolver();
+      return settings;
+    }
+
+    public string       jobName   { get; init; }
+    public string       accountId { get; init; }
+    public TransResults results   { get; init; }
   }
 
   public record TransResults {
-    public TransText[]        Transcripts   { get; init; }
-    public TransSpeakerLabels SpeakerLabels { get; init; }
-    public TransItem[]        Items         { get; set; }
+    public TransText[]        transcripts    { get; init; }
+    public TransSpeakerLabels speaker_labels { get; init; }
+    public TransItem[]        items          { get; set; }
   }
 
   public record TransText {
-    public string Transcript { get; init; }
+    public string transcript { get; init; }
   }
 
   public record TransSpeakerLabels {
-    public int                Speaker  { get; init; }
-    public TransSegmentRoot[] Segments { get; init; }
+    public int                speakers { get; init; }
+    public TransSegmentRoot[] segments { get; init; }
   }
 
   public record TransSegmentRoot : TransSegment {
-    public TransSegment[] Items { get; init; }
+    public TransSegment[] items { get; init; }
   }
 
   public record TransSegment : RTransPeriod {
-    public string SpeakerLabel { get; init; }
+    public string speaker_label { get; init; }
   }
 
   public record RTransPeriod {
-    public string StartTime { get; init; }
-    public string EndTime   { get; init; }
+    public string start_time { get; init; }
+    public string end_time   { get; init; }
   }
 
   public record TransItem : RTransPeriod {
-    public TransAlt[] Alternatives { get; set; }
-    public string     Type         { get; set; }
+    public TransAlt[] alternatives { get; set; }
+    public string     type         { get; set; }
   }
 
   public record TransAlt {
-    public string Confidence { get; set; }
-    public string Content    { get; set; }
+    public string confidence { get; set; }
+    public string content    { get; set; }
   }
 
   public static class AwsTranscribe {
-    public static (TimeSpan Start, TimeSpan End) Period(this RTransPeriod p) => (ParseTs(p.StartTime), ParseTs(p.EndTime));
+    public static (TimeSpan Start, TimeSpan End) Period(this RTransPeriod p) => (ParseTs(p.start_time), ParseTs(p.end_time));
 
     static TimeSpan ParseTs(string p) => p.TryParseDouble().Do(TimeSpan.FromSeconds);
 
-    static bool IsPunctuation(this TransItem item) => item.Type == "punctuation";
-    static string Content(this TransItem item) => item.Alternatives.FirstOrDefault()?.Content;
+    static bool IsPunctuation(this TransItem item) => item.type == "punctuation";
+    static string Content(this TransItem item) => item.alternatives.FirstOrDefault()?.content;
+
+    /// <summary>iterate backwards from an index</summary>
+    static IEnumerable<T> PreviousItems<T>(IList<T> items, int i) {
+      while (i > 0 && items.Count >= i) {
+        i--;
+        yield return items[i];
+      }
+    }
 
     /// <summary>Converts the AWS caption into our format. Splits trnascript at sentence and speaker boundaries, or 1min</summary>
-    public static VideoCaption AwsToVideoCaption(this TransJob res, TranscriptionJob job, string videoId, string channelId) {
-      var speakerByStart = res.Results.SpeakerLabels?.Segments
-        .SelectMany(s => s.Items.Select(i => (s.SpeakerLabel, i.StartTime)))
-        .ToDictionary(s => s.StartTime, s => s.SpeakerLabel) ?? new ();
+    public static VideoCaption AwsToVideoCaption(this TransRoot res, TranscriptionJob job, string videoId, string channelId, Platform platform) {
+      var speakerByStart = res.results.speaker_labels?.segments
+        .SelectMany(s => s.items.Select(i => (s.speaker_label, i.start_time)))
+        .ToDictionary(s => s.start_time, s => s.speaker_label) ?? new();
       (int i, TransItem startItem) group = (0, default);
 
-      var captions = res.Results.Items.WithPrevious((prev, item) => {
+      var captions = res.results.items.Select((item, i) => {
         var (groupStart, _) = group.startItem?.Period() ?? default;
-        var speaker = speakerByStart.TryGet(item.StartTime);
-        var lastSpeaker = speakerByStart.TryGet(prev.StartTime);
-        if (prev.Content() == "."
-          || speaker.HasValue() && speaker != lastSpeaker
-          || groupStart != default && item.Period().Start - groupStart > 1.Minutes())
+        var speaker = item.start_time.Do(s => speakerByStart.TryGet(s));
+        var prevWord = PreviousItems(res.results.items, i).FirstOrDefault(c => !c.IsPunctuation());
+        var prev = PreviousItems(res.results.items, i).FirstOrDefault();
+        var lastSpeaker = prevWord?.start_time.Do(s => speakerByStart.TryGet(s));
+        var span = item.Period().Start - groupStart;
+        if (prev?.Content() == "." && span > 15.Seconds()
+          || speaker.HasValue() && lastSpeaker.HasValue() && speaker != lastSpeaker
+          || groupStart != default && span > 1.Minutes())
           group = (group.i + 1, item);
         return (group, item, speaker);
       }).GroupBy(c => c.group).Select(g => {
-        var (start, _) = g.First().item.Period();
-        return new ClosedCaption(g.Join("", c => (c.item.IsPunctuation() ? "" : " ") + c.item.Alternatives.First().Content),
-          start, g.Last().item.Period().End - start, g.First().speaker);
+        var first = g.FirstOrDefault(c => !c.item.IsPunctuation());
+        var (start, _) = first.item.Period();
+        return new ClosedCaption(g.Join("", c => (c.item.IsPunctuation() ? "" : " ") + c.item.alternatives.First().content).Trim(),
+          start, g.Last().item.Period().End - start, first.speaker);
       }).ToArray();
 
       var caption = new VideoCaption {
         Updated = DateTime.UtcNow,
         VideoId = videoId,
         ChannelId = channelId,
-        Info = new(url: null, new(job.LanguageCode, name: null), isAutoGenerated: true),
-        Captions = captions
+        Info = new(url: null, new(job?.LanguageCode, name: null), isAutoGenerated: true),
+        Captions = captions,
+        Platform = platform
       };
       return caption;
     }

@@ -27,7 +27,12 @@ using static YtReader.Yt.YtCollectEx;
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.Yt {
-  public class YtCollector {
+  public interface ICollector {
+    Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(Platform platform, Channel c, ExtraPart[] parts,
+      ILogger log, VideoExtraPlans planedExtras);
+  }
+
+  public class YtCollector : ICollector {
     readonly YtClient                    Api;
     readonly AppCfg                      Cfg;
     readonly SnowflakeConnectionProvider Sf;
@@ -359,7 +364,7 @@ namespace YtReader.Yt {
               .Where(v => plan.LastCommentUpdate == null || v.UploadDate > plan.LastCommentUpdate)
               .Randomize().Take(RCfg.MaxChannelComments).Select(v => v.Id), EComment);
         }
-        await SaveExtraAndParts(c, parts, log, plans);
+        await SaveExtraAndParts(Platform.YouTube, c, parts, log, plans);
       }
     }
 
@@ -434,8 +439,8 @@ namespace YtReader.Yt {
           RCfg.WebParallel);
     }
 
-    /// <summary>Saves recs for all of the given vids</summary>
-    public async Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(Channel c, ExtraPart[] parts,
+    public async Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(
+      Platform platform, Channel c, ExtraPart[] parts,
       ILogger log, VideoExtraPlans planedExtras) {
       var extrasAndParts = await GetExtras(planedExtras, log, c?.ChannelId, c?.ChannelTitle).NotNull().ToListAsync();
       foreach (var e in extrasAndParts) {
