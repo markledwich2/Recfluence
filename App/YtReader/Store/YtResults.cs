@@ -25,6 +25,7 @@ using SysExtensions.Threading;
 using YtReader.Db;
 using static YtReader.Store.JsonCasingStrategy;
 using static YtReader.Store.ResFilType;
+using static YtReader.Store.YtResultsSql;
 using FileMode = System.IO.FileMode;
 
 namespace YtReader.Store {
@@ -88,7 +89,7 @@ namespace YtReader.Store {
       UserScrapeCfg = userScrapeCfg;
     }
     
-    public static readonly string[] FilterTags = {"MissingLinkMedia", "OrganizedReligion", "Educational", "Black", "LGBT"};
+ 
 
     public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null, CancellationToken cancel = default) {
       using var db = await Sf.Open(log);
@@ -221,45 +222,9 @@ order by month
 select *
 from g", fileType: Json, jsonNaming: Camel),
 
-          new ResQuery("narrative_vaccine_highlight", $@"
-with channel_highlights as (
-  with h1 as (
-    select $1::string channel_id
-         --, $7::string video_url
-         , to_number(replace($4,',','')) mention_videos
-         , to_number(replace($5,',','')) mention_video_views
-         , regexmatch($7,'.*(?:v=(?<video>[\\w-]*)).*(?:t=(?<offset>\\d*))',NULL) link_meta
-    from @public.yt_data/import/narratives/channel_highlights.tsv (file_format => tsv_header)
-  )
-  select channel_id, mention_videos, mention_video_views, link_meta:video::string video_id, link_meta: offset::int offset_seconds
-  from h1
-)
-  , narrative_captions as (
-  select video_id, v.value:caption::string caption, v.value:offset_seconds::int offset_seconds
-  from video_narrative2
-    , table (flatten(captions)) v
-  where narrative='Vaccine Personal'
-)
-  , h1 as (
-  select h.*
-       , c.channel_title
-       , c.subs
-       , arrayExclude(c.tags, array_construct({FilterTags.Join(", ", t => t.SingleQuote())})) tags
-       , c.lr
-       , c.logo_url channel_logo
-       , v.video_title
-       , v.views
-       , datediff(seconds,'0'::time,v.duration) duration_secs
-       , coalesce(n.caption,s.caption) caption
-  from channel_highlights h
-         join channel_latest c on c.channel_id=h.channel_id
-         join video_latest v on v.video_id=h.video_id
-         left join narrative_captions n on n.video_id=h.video_id and n.offset_seconds=h.offset_seconds
-         left join caption s on n.caption is null and s.video_id=h.video_id
-    qualify row_number() over (partition by h.video_id order by abs(h.offset_seconds-s.offset_seconds))=1
-)
-select *
-from h1", fileType:Json, jsonNaming:Camel)
+          new ResQuery("narrative_vaccine_highlight", Narrative.VaccinePersonalHighlight, fileType:Json, jsonNaming:Camel),
+          
+          new ResQuery("narrative_vaccine_dna_highlight", Narrative.VaccineDnaHighlight, fileType:Json, jsonNaming:Camel)
           
           /*new ResQuery("sam_vid", @$"
 with sam_vids_raw as ({samVidsSelect})
