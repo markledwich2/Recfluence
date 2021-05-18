@@ -59,9 +59,9 @@ select h.video_id, v.video_title
   , v.channel_id, v.channel_title
   , v.views::int video_views
   , timediff(seconds,'0'::time,v.duration) duration_secs
-  , arrayExclude(c.tags, array_construct({FilterTags.Join(", ", t => t.SingleQuote())}))
+  , arrayExclude(c.tags, array_construct({FilterTags.Join(", ", t => t.SingleQuote())})) tags
   , c.subs, c.logo_url, c.lr
-  , array_construct(object_construct('caption', h.caption, 'offsetSeconds', h.offset_seconds)) captions
+  , array_construct(object_construct('caption', h.caption, 'offsetSeconds', h.offset_seconds::int)) captions
 from highlights h
        left join video_latest v on v.video_id=h.video_id
        left join channel_latest c on c.channel_id=v.channel_id
