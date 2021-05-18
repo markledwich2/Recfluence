@@ -39,26 +39,27 @@ namespace YtReader.BitChute {
 
     static string FullId(string sourceId) => Platform.BitChute.FullId(sourceId);
     public string SourceToFullId(string sourceId, LinkType type) => FullId(sourceId);
+    
+    Task<T> SubPost<T>(IDocument doc, Url url, ILogger log, object data = null) {
+      var csrf = doc.CsrfToken();
+      var req = url.WithBcHeaders(doc, csrf);
+      return FlurlClient.Send(typeof(T).Name, req, HttpMethod.Post,
+        req.FormUrlContent(MergeDynamics(new {csrfmiddlewaretoken = csrf}, data ?? new ExpandoObject())), log: log).ReceiveJson<T>();
+    }
 
     public async Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log) {
-      var chanDoc = await Open("channel", Url.AppendPathSegment($"channel/{sourceId}"), (b, url) => b.OpenAsync(url), log);
+      var chanUrl = Url.AppendPathSegment($"channel/{sourceId}");
+      var chanDoc = await Open("channel", chanUrl, (b, url) => b.OpenAsync(url), log);
 
       if (chanDoc.StatusCode == HttpStatusCode.NotFound)
         return (this.NewChan(sourceId) with {Status = ChannelStatus.NotFound, Updated = DateTime.UtcNow}, null);
       chanDoc.EnsureSuccess();
-      var csrf = chanDoc.CsrfToken();
-
-      Task<T> Post<T>(string path, object data = null) {
-        var req = Url.AppendPathSegment(path).WithBcHeaders(chanDoc, csrf);
-        return FlurlClient.Send(typeof(T).Name, req, HttpMethod.Post,
-          req.FormUrlContent(MergeDynamics(new {csrfmiddlewaretoken = csrf}, data ?? new ExpandoObject())), log: log).ReceiveJson<T>();
-      }
 
       var chan = ParseChannel(chanDoc, sourceId);
       if (chan.Status != ChannelStatus.Alive)
         return (chan, null);
 
-      var (subscriberCount, aboutViewCount) = await Post<CountResponse>($"channel/{chan.SourceId}/counts/", new { });
+      var (subscriberCount, aboutViewCount) = await SubPost<ChanCountResponse>(chanDoc, chanUrl.AppendPathSegment("counts/"), log);
       chan = chan with {
         Subs = subscriberCount,
         ChannelViews = aboutViewCount.TryParseNumberWithUnits()?.RoundToULong()
@@ -69,7 +70,7 @@ namespace YtReader.BitChute {
         yield return chanVids;
         var offset = chanVids.Length;
         while (true) {
-          var (html, success) = await Post<ExtendResponse>($"channel/{chan.SourceId}/extend/", new {offset});
+          var (html, success) = await SubPost<ExtendResponse>(chanDoc, $"channel/{chan.SourceId}/extend/", log, new {offset});
           if (!success) break;
           var extendDoc = await AngleCfg.WithProxyRequester(FlurlClient).Browser().OpenAsync(req => req.Content(html));
           var videos = GetChanVids(extendDoc, chan, log);
@@ -86,12 +87,15 @@ namespace YtReader.BitChute {
     static readonly Regex RDate = new(@"(?<time>\d{2}:\d{2}) UTC on (?<month>\w*)\s+(?<day>\d+)\w*\, (?<year>\d*)", Compiled);
 
     public async Task<VideoExtra> Video(string sourceId, ILogger log) {
-      var doc = await Open("video", Url.AppendPathSegment($"video/{sourceId}/"), (b, url) => b.OpenAsync(url), log);
+      var videoUrl = Url.AppendPathSegment($"video/{sourceId}/");
+      var doc = await Open("video", videoUrl, (b, url) => b.OpenAsync(url), log);
+      
       var vid = this.NewVidExtra(sourceId);
 
       if (doc.StatusCode == HttpStatusCode.NotFound)
         return vid with {Status = VideoStatus.NotFound};
       doc.EnsureSuccess();
+      var counts = await SubPost<VidCountResponse>(doc, videoUrl.AppendPathSegment("counts/"), log);
 
       var chanA = doc.El<IHtmlAnchorElement>(".channel-banner .details .name > a.spa");
       var dateMatch = doc.QuerySelector(".video-publish-date")?.TextContent?.Match(RDate);
@@ -99,7 +103,6 @@ namespace YtReader.BitChute {
       var dateString = $"{G("year")}-{G("month")}-{G("day")} {G("time")}";
       var created = dateString.TryParseDateExact("yyyy-MMMM-d HH:mm", DateTimeStyles.AssumeUniversal);
 
-      ulong? GetStat(string selector) => doc.QuerySelector(selector)?.TextContent?.TryParseNumberWithUnits()?.RoundToULong();
       var videoPs = doc.QuerySelectorAll("#video-watch p, #page-detail p");
       var title = doc.QuerySelector("h1.page-title")?.TextContent;
       var mediaUrl = doc.QuerySelector("video#player > source")?.GetAttribute("src");
@@ -123,11 +126,7 @@ namespace YtReader.BitChute {
       vid = vid with {
         Title = title ?? doc.Title,
         Thumb = doc.El<IHtmlMetaElement>("meta[name=\"twitter:image:src\"]")?.Content,
-        Statistics = new(
-          GetStat("#video-view-count"),
-          GetStat("#video-like-count"),
-          GetStat("#video-dislike-count")
-        ),
+        Statistics = new(counts.view_count, counts.like_count, counts.dislike_count),
         MediaUrl = mediaUrl,
         ChannelTitle = chanA?.TextContent,
         ChannelId = FullId(chanA?.Href?.LastInPath()),
@@ -139,6 +138,7 @@ namespace YtReader.BitChute {
         Error = error,
         Status = status
       };
+      log.Debug("BitChuteScraper - loaded extra for vid {Url}: {@Video}", videoUrl, vid);
       return vid;
     }
 
@@ -216,7 +216,9 @@ namespace YtReader.BitChute {
 
   record ExtendResponse(string html, bool success) : BcResponse(success);
 
-  record CountResponse(ulong subscriber_count, string about_view_count);
+  record ChanCountResponse(ulong subscriber_count, string about_view_count);
+
+  record VidCountResponse(bool success, ulong view_count, ulong like_count, ulong dislike_count, ulong subscriber_count);
 
   public static class BcExtensions {
     public static async Task<IFlurlResponse> BcPost(this IFlurlRequest req, string csrf, object formValues = null) =>
