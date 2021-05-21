@@ -75,7 +75,7 @@ namespace Mutuo.Etl.AzureManagement {
       var (allGroups, listEx) = await Def.Fun(() => azure.ContainerGroups.ListAsync()).Try();
       if (listEx != null) log.Warning(listEx, "AzureCleaner - error deleting container groups: {Error}`", listEx.Message);
       var toDelete = allGroups.NotNull().Where(g => mode switch {
-        DeleteAll => true,
+        DeleteAll => g.Expires().HasValue, // only delete resources with an expiry
         DeleteCompleted => g.State().IsCompletedState(),
         _ => g.State().IsCompletedState() && g.IsExpired()
       }).ToArray();
@@ -93,10 +93,15 @@ namespace Mutuo.Etl.AzureManagement {
   }
 
   public static class AzureCleanerEx {
+    public static DateTime? Expires(this IResource resource) {
+      return resource.Tags.TryGetValue("expire", out var expire)
+        ? expire.ParseDate(DateTimeFormatInfo.InvariantInfo, DateTimeStyles.RoundtripKind)
+        : null;
+    }
+    
     public static bool IsExpired(this IResource resource) {
-      if (resource.Tags.TryGetValue("expire", out var expire))
-        return expire.ParseDate(DateTimeFormatInfo.InvariantInfo, DateTimeStyles.RoundtripKind) < DateTime.UtcNow;
-      return false;
+      var expires = resource.Expires();
+      return expires.HasValue && expires < DateTime.UtcNow;
     }
   }
 

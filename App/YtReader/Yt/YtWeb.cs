@@ -547,7 +547,7 @@ namespace YtReader.Yt {
 
       // This parameter does magic and a lot of videos don't work without it
       var eurl = $"https://youtube.googleapis.com/v/{videoId}".UrlEncode();
-      var res = await GetHttp($"https://youtube.com/get_video_info?video_id={videoId}&el=embedded&eurl={eurl}&hl=en", "video dictionary",
+      var res = await GetHttp($"https://youtube.com/get_video_info?video_id={videoId}&el=embedded&eurl={eurl}&hl=en&html5=1", "video dictionary",
         log, new[] {404}); // unusual, but get_video_info has been returning 404 intermittently and doesn't mean that the video is missing
       using var sr = await res.ContentAsStream();
       var result = SplitQuery(sr);
