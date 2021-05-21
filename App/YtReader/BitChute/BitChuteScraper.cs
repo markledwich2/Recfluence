@@ -70,7 +70,7 @@ namespace YtReader.BitChute {
       var csrf = doc.CsrfToken();
       var req = url.WithBcHeaders(doc, csrf);
       return await FlurlClient.Send(typeof(T).Name, req, HttpMethod.Post,
-          req.FormUrlContent(MergeDynamics(new {csrfmiddlewaretoken = csrf}, data ?? new ExpandoObject())), log: log, logRequests: true)
+          req.FormUrlContent(MergeDynamics(new {csrfmiddlewaretoken = csrf}, data ?? new ExpandoObject())), log: log)
         .ReceiveJson<T>();
     }
 
