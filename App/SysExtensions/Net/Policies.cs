@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Humanizer;
 using Polly;
@@ -17,15 +15,14 @@ namespace SysExtensions.Net {
 
     public static TimeSpan ExponentialBackoff(this int attempt, TimeSpan? firstWait = null) {
       var firstWaitValue = firstWait ?? MinWait;
-      var waitValue = firstWaitValue.TotalMilliseconds * Math.Pow(2, attempt - 1);
+      var waitValue = firstWaitValue.TotalMilliseconds * Math.Pow(x: 2, attempt - 1);
       var waitWithRandomness = _rand.Normal(waitValue, waitValue * DeviationPercent).Milliseconds();
       if (waitWithRandomness < MinWait) waitWithRandomness = MinWait;
       if (waitWithRandomness > MaxWait) waitWithRandomness = MaxWait;
       return waitWithRandomness;
     }
 
-
-    public static AsyncRetryPolicy<T> RetryWithBackoff<T>(this PolicyBuilder<T> policy, string description, int retryCount = 3, 
+    public static AsyncRetryPolicy<T> RetryWithBackoff<T>(this PolicyBuilder<T> policy, string description, int retryCount = 3,
       Action<DelegateResult<T>, int, TimeSpan> onError = null,
       ILogger log = null) =>
       policy.RetryAsync(retryCount, async (e, i, c) => {

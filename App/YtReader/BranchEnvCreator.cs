@@ -49,7 +49,7 @@ namespace YtReader {
 
     Task<long> CreateContainers(BranchState state, string[] paths, ILogger log) =>
       new[] {Premium, Standard}.BlockDo(async tier => {
-        var s = (AzureBlobFileStore)Stores.Store(tier: tier);
+        var s = (AzureBlobFileStore) Stores.Store(tier: tier);
         var c = s.Container;
         var exists = await c.ExistsAsync();
         if (!exists) {

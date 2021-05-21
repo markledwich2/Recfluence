@@ -80,7 +80,7 @@ namespace YtReader {
 
 
       if (trial.HasValue()) {
-        await RunTrial(cancel, trial, env, args, null, log);
+        await RunTrial(cancel, trial, env, args, accounts: null, log);
       }
       else {
         var blobs = await Store.List("userscrape/run/incomplete_trial", allDirectories: false, log).SelectManyList();
@@ -88,11 +88,11 @@ namespace YtReader {
           .Where(t => limitAccounts == null || limitAccounts.Any(a => t.accounts?.Contains(a) == true)).ToArray();
 
         log.Information("UserScrape - about to run {Trials} incomplete trials", incompleteTrials.Length);
-        await incompleteTrials.BlockDo(async incompleteTrial => { await RunTrial(cancel, incompleteTrial.trial_id, env, args, null, log); },
+        await incompleteTrials.BlockDo(async incompleteTrial => { await RunTrial(cancel, incompleteTrial.trial_id, env, args, accounts: null, log); },
           Cfg.MaxContainers, cancel: cancel);
 
         log.Information("UserScrape - about to new trails for accounts {Accounts}", accounts.Join("|"));
-        await accounts.Batch(batchSize: 1, maxBatches: Cfg.MaxContainers)
+        await accounts.Batch(batchSize: 1, Cfg.MaxContainers)
           .BlockDo(async b => {
             trial = $"{DateTime.UtcNow:yyyy-MM-dd_HH-mm-ss}_{Guid.NewGuid().ToShortString(4)}";
             await RunTrial(cancel, trial, env, args, b, log);
@@ -135,7 +135,7 @@ namespace YtReader {
 
     public async Task UpgradeIncompleteTrials(ILogger log) {
       var inCfg = await Store.List("userscrape/run/cfg", allDirectories: true, log).SelectMany()
-        .Where(f => f.Path.Extensions.Last() == "json" && f.Modified > new DateTimeOffset(new DateTime(2020, 9, 17), TimeSpan.Zero))
+        .Where(f => f.Path.Extensions.Last() == "json" && f.Modified > new DateTimeOffset(new DateTime(year: 2020, month: 9, day: 17), TimeSpan.Zero))
         .SelectAwait(async f => await Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip: false))
         .ToListAsync();
 

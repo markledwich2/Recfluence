@@ -11,7 +11,6 @@ using Google.Apis.YouTube.v3.Data;
 using Humanizer;
 using Polly;
 using Serilog;
-using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.Net;
 using SysExtensions.Text;
@@ -56,7 +55,7 @@ namespace YtReader.Yt {
         .WrapAsync(Policy
           .Handle<HttpRequestException>()
           .Or<GoogleApiException>(g => g.HttpStatusCode.IsTransientError())
-          .WaitAndRetryAsync(6, i => i.ExponentialBackoff(1.Seconds())))
+          .WaitAndRetryAsync(retryCount: 6, i => i.ExponentialBackoff(1.Seconds())))
         .ExecuteAsync(request.ExecuteAsync);
     }
 

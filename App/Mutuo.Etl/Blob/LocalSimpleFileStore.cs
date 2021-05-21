@@ -69,6 +69,5 @@ namespace Mutuo.Etl.Blob {
 
     public Uri Url(StringPath path) => $"file://{Path(path).FullPath}".AsUri();
     public Task<bool> Exists(StringPath path) => throw new NotImplementedException();
-    
   }
 }

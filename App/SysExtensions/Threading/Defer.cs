@@ -6,7 +6,7 @@ using SysExtensions.Reflection;
 
 namespace SysExtensions.Threading {
   public class Defer<T> : IAsyncDisposable {
-    readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+    readonly SemaphoreSlim _lock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
     public Defer(Func<Task<T>> creator) => Creator = creator;
     Func<Task<T>> Creator { get; }
     public T      Value;

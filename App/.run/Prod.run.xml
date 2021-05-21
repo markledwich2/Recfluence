@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Prod Update" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.exe" />
-    <option name="PROGRAM_PARAMETERS" value="update -z -a Stage --container-name stage" />
+    <option name="PROGRAM_PARAMETERS" value="update -a Stage -s video_extra_stage" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>

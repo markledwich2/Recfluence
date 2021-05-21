@@ -49,8 +49,8 @@ namespace SysExtensions.Text {
 
     static MetricNumeralExtensions() {
       const int limit = 27;
-      BigLimit = Math.Pow(10, limit);
-      SmallLimit = Math.Pow(10, -limit);
+      BigLimit = Math.Pow(x: 10, limit);
+      SmallLimit = Math.Pow(x: 10, -limit);
     }
 
     /// <summary>Converts a Metric representation into a number.</summary>
@@ -143,7 +143,7 @@ namespace SysExtensions.Text {
     static double BuildMetricNumber(string input, char last) {
       Func<List<char>, double> getExponent = symbols => (symbols.IndexOf(last) + 1) * 3;
       var number = double.Parse(input.Remove(input.Length - 1));
-      var exponent = Math.Pow(10, Symbols[0].Contains(last)
+      var exponent = Math.Pow(x: 10, Symbols[0].Contains(last)
         ? getExponent(Symbols[0])
         : -getExponent(Symbols[1]));
       return number * exponent;
@@ -175,13 +175,13 @@ namespace SysExtensions.Text {
     /// <param name="useSymbol">True will use symbol instead of name</param>
     /// <returns>A number in a Metric representation</returns>
     static string BuildMetricRepresentation(double input, int exponent, bool hasSpace, bool useSymbol, string format) {
-      var number = input * Math.Pow(1000, -exponent);
+      var number = input * Math.Pow(x: 1000, -exponent);
       var symbol = Math.Sign(exponent) == 1
         ? Symbols[0][exponent - 1]
         : Symbols[1][-exponent - 1];
       return number.ToString(format)
-             + (hasSpace ? " " : string.Empty)
-             + GetUnit(symbol, useSymbol);
+        + (hasSpace ? " " : string.Empty)
+        + GetUnit(symbol, useSymbol);
     }
 
     /// <summary>Get the unit from a symbol of from the symbol's name.</summary>
@@ -197,7 +197,7 @@ namespace SysExtensions.Text {
       Func<double, double, bool> outside = (min, max) => !(max > input && input > min);
 
       return Math.Sign(input) == 1 && outside(SmallLimit, BigLimit)
-             || Math.Sign(input) == -1 && outside(-BigLimit, -SmallLimit);
+        || Math.Sign(input) == -1 && outside(-BigLimit, -SmallLimit);
     }
 
     /// <summary>Check if a string is not a valid Metric representation. A valid representation is in the format "{0}{1}" or

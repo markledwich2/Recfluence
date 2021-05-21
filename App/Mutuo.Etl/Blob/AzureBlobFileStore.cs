@@ -51,8 +51,6 @@ namespace Mutuo.Etl.Blob {
     /// <summary>the Working directory of this storage wrapper. The first part of the path is the container</summary>
     public StringPath BasePath { get; }
 
-    
-
     //public CloudStorageAccount Storage { get; }
     HttpClient H { get; }
 

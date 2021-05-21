@@ -4,6 +4,7 @@ using Mutuo.Etl.Blob;
 using Semver;
 using Serilog;
 using SysExtensions;
+using SysExtensions.Collections;
 using SysExtensions.Text;
 using YtReader.AmazonSite;
 using YtReader.Yt;
@@ -116,6 +117,7 @@ namespace YtReader.Store {
     ChannelLink,
     /// <summary>Link to a video</summary>
     VideoLink,
+    Home,
     Manual
   }
 
@@ -234,15 +236,16 @@ namespace YtReader.Store {
     public string ChannelTitle    { get; set; }
 
     /// <summary>The date the video was uploaded. This is the primary record for this. AddedDate is a fallback with YouTube</summary>
-    public DateTime? UploadDate { get;              set; }
-    public DateTime?             AddedDate   { get; set; }
-    public string                Description { get; set; }
-    public TimeSpan?             Duration    { get; set; }
-    public IReadOnlyList<string> Keywords    { get; set; }
-    public Statistics            Statistics  { get; set; }
-    public string                Thumb       { get; set; }
-    public decimal?              Earned      { get; set; }
-    public VideoStatus?          Status      { get; set; }
+    public DateTime? UploadDate { get;                             set; }
+    public DateTime?                            AddedDate   { get; set; }
+    public string                               Description { get; set; }
+    public TimeSpan?                            Duration    { get; set; }
+    public IReadOnlyList<string>                Keywords    { get; set; }
+    public Statistics                           Statistics  { get; set; }
+    public string                               Thumb       { get; set; }
+    public decimal?                             Earned      { get; set; }
+    public VideoStatus?                         Status      { get; set; }
+    public MultiValueDictionary<string, string> Tags        { get; set; }
 
     public override string ToString() => $"{Title}";
   }
@@ -263,13 +266,17 @@ namespace YtReader.Store {
     public string    CommentId        { get; init; }
     public string    ReplyToCommentId { get; init; }
     public string    VideoId          { get; init; }
+    public string    AuthorThumb      { get; init; }
     public string    Author           { get; init; }
+    public string    AuthorId         { get; init; }
     public string    AuthorChannelId  { get; init; }
     public string    Comment          { get; init; }
     public DateTime? Created          { get; init; }
     public int?      Likes            { get; init; }
     public bool      IsChannelOwner   { get; init; }
     public DateTime  Updated          { get; init; }
+    public DateTime? Modified         { get; init; }
+    public Platform  Platform         { get; init; }
   }
 
   public record RecStored : Rec, IHasUpdated {

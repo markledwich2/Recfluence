@@ -45,7 +45,9 @@ namespace SysExtensions.Collections {
     public V this[K key] => _dic.TryGet(key);
 
     public void Add(V item) {
-      var key = GetKey(item) ?? throw new InvalidOperationException($"Item missing key: {item?.ToString()}"); // it won't be accessible via the key. But we can still hold it in the collection
+      var key = GetKey(item) ??
+        throw new InvalidOperationException(
+          $"Item missing key: {item?.ToString()}"); // it won't be accessible via the key. But we can still hold it in the collection
       _dic[key] = item;
     }
 
@@ -159,7 +161,7 @@ namespace SysExtensions.Collections {
     public static IDictionary<K, V> ToDictionaryForSerialization<K, V>(this IKeyedCollection<K, V> list) {
       var dic = list.ToList().JsonClone().ToDictionary(list.GetKey);
       foreach (var kv in dic.Values)
-        list.SetKey(kv, default);
+        list.SetKey(kv, value: default);
       return dic;
     }
 

@@ -128,7 +128,7 @@ namespace YtReader.Yt {
       .Select(p => p switch {
         LChannel => StandardCollectPart.Channel,
         LVideo => (StandardCollectPart?) null, // explicit videos are done above.. This is just for the channels & channel-videos
-        LDiscoveredChannel => StandardCollectPart.Discover,
+        LDiscoveredChannel => StandardCollectPart.DiscoverLink,
         LChannelVideo => StandardCollectPart.Video,
         _ => null
       }).Concat(extraParts.ShouldRun(EExtra) ? StandardCollectPart.Extra : null)

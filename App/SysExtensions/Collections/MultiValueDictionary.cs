@@ -4,6 +4,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json;
+using SysExtensions.Serialization;
 
 namespace SysExtensions.Collections {
   /// <summary>A MultiValueDictionary can be viewed as a <see cref="IDictionary" /> that allows multiple values for any given
@@ -245,7 +248,7 @@ namespace SysExtensions.Collections {
     /// <param name="enumerable">IEnumerable to copy elements into this from</param>
     /// <exception cref="ArgumentNullException">enumerable must be non-null</exception>
     public MultiValueDictionary(IEnumerable<KeyValuePair<TKey, IReadOnlyCollection<TValue>>> enumerable)
-      : this(enumerable, null) { }
+      : this(enumerable, comparer: null) { }
 
     /// <summary>Initializes a new instance of the <see cref="MultiValueDictionary{TKey, TValue}" /> class that contains
     ///   elements copied from the specified IEnumerable&lt;KeyValuePair&lt;TKey, IReadOnlyCollection&lt;TValue&gt;&gt;&gt; and
@@ -848,6 +851,12 @@ namespace SysExtensions.Collections {
     public IEnumerator<KeyValuePair<TKey, IReadOnlyCollection<TValue>>> GetEnumerator() => new Enumerator(this);
 
     IEnumerator IEnumerable.GetEnumerator() => new Enumerator(this);
+
+    static readonly JsonSerializerSettings JCfg = JsonExtensions.DefaultSettings(Formatting.None);
+
+    public override string ToString() => @$"{Count} items. {(Count > 10
+      ? new MultiValueDictionary<TKey, TValue>(this.Take(10)).ToJson(JCfg) + $" showing 10/{Count - 10} more"
+      : this.ToJson(JCfg))}";
 
     #endregion
   }

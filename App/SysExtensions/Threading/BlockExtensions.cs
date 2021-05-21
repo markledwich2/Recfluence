@@ -29,10 +29,10 @@ namespace SysExtensions.Threading {
 
     public static Task<long> BlockDo<T>(this IEnumerable<T> source, Func<T, Task> action, int parallel = 1, int? capacity = null,
       CancellationToken cancel = default) => source.BlockDo((o, _) => action(o), parallel, capacity, cancel);
-    
+
     public static Task<long> BlockDo<T>(this IAsyncEnumerable<T> source, Func<T, Task> action, int parallel = 1, int? capacity = null,
       CancellationToken cancel = default) => source.BlockDo((o, _) => action(o), parallel, capacity, cancel);
-    
+
     public static async Task<long> BlockDo<T>(this IAsyncEnumerable<T> source, Func<T, int, Task> action, int parallel = 1, int? capacity = null,
       CancellationToken cancel = default) {
       var options = ActionOptions<T>(parallel, capacity, cancel);
@@ -227,9 +227,9 @@ namespace SysExtensions.Threading {
       return result;
     }
 
-    static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<(T,int)> block, CancellationToken cancel = default) {
+    static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<(T, int)> block, CancellationToken cancel = default) {
       var produced = 0;
-      await foreach (var item in source.Select((r,i) => (r,i)).WithCancellation(cancel)) {
+      await foreach (var item in source.Select((r, i) => (r, i)).WithCancellation(cancel)) {
         if (cancel.IsCancellationRequested) return produced;
         await block.SendAsync(item).ConfigureAwait(false);
         produced++;

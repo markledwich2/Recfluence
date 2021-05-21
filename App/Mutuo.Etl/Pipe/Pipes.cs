@@ -121,11 +121,13 @@ namespace Mutuo.Etl.Pipe {
           return b.Id;
         }, ctx.PipeCfg.Store.Parallel);
 
-      var pipeWorker = PipeWorker(ctx, batches.Count <= 1 ? PipeRunLocation.Local : null); // get the pipe worker. force local if we are going to just create 1 container anyway
+      var pipeWorker =
+        PipeWorker(ctx,
+          batches.Count <= 1 ? PipeRunLocation.Local : null); // get the pipe worker. force local if we are going to just create 1 container anyway
       log.Debug("{PipeWorker} - launching batches {@batches}", pipeWorker.GetType().Name, batches);
       var res = pipeWorker is IPipeWorkerStartable s
-        ? await s.Launch(ctx, batches, runCfg.ReturnOnStart, false, log, cancel: cancel)
-        : await pipeWorker.Launch(ctx, batches, log, cancel: cancel);
+        ? await s.Launch(ctx, batches, runCfg.ReturnOnStart, exclusive: false, log, cancel)
+        : await pipeWorker.Launch(ctx, batches, log, cancel);
 
       var hasOutState = typeof(TOut) != typeof(object) && !runCfg.ReturnOnStart;
       var outState = hasOutState ? await GetOutState() : res.Select(r => (Metadata: r, OutState: (TOut) default)).ToArray();
@@ -170,8 +172,8 @@ namespace Mutuo.Etl.Pipe {
 
       var pipeName = id.Name;
       var pipeType = pipeMethods[pipeName];
-      if (pipeType == default) throw new ($"Could not find pipe {pipeName}");
-      if (!pipeType.Method.ReturnType.IsAssignableTo<Task>()) throw new ($"Pipe {pipeName} must be async");
+      if (pipeType == default) throw new($"Could not find pipe {pipeName}");
+      if (!pipeType.Method.ReturnType.IsAssignableTo<Task>()) throw new($"Pipe {pipeName} must be async");
 
       var pipeInstance = ctx.Scope.Resolve(pipeType.Type);
       var method = pipeType.Method;
@@ -192,7 +194,7 @@ namespace Mutuo.Etl.Pipe {
 
       // Find the pipe parameters to invoke by name. In the future we can support easier backwards compatibility by also looking for a position/type match.
       var pipeParamValues = await method.GetParameters().Where(p => p.Name != null).BlockFunc(async p => {
-        if (args.TryGetValue(p.Name ?? throw new ("parameters must have names"), out var arg))
+        if (args.TryGetValue(p.Name ?? throw new("parameters must have names"), out var arg))
           return arg.ArgMode switch {
             ArgMode.SerializableValue => ChangeToType(arg.Value, p.ParameterType),
             ArgMode.InRows => await typeof(Pipes).GetMethod(nameof(LoadInRows), new[] {typeof(IPipeCtx), typeof(PipeRunId)})
@@ -204,7 +206,7 @@ namespace Mutuo.Etl.Pipe {
 
       try {
         dynamic task = method.Invoke(pipeInstance, pipeParamValues.ToArray()) ??
-                       throw new ($"Method '{method.Name}' returned null, should be Task");
+          throw new($"Method '{method.Name}' returned null, should be Task");
         if (method.ReturnType == typeof(Task)) {
           await task;
         }
@@ -233,7 +235,7 @@ namespace Mutuo.Etl.Pipe {
         return Convert.ChangeType(value, type);
       }
       catch (Exception ex) {
-        throw new ($"unable to convert arg deserialized as {value?.GetType()} to parameter type {type} : {ex.Message}", ex);
+        throw new($"unable to convert arg deserialized as {value?.GetType()} to parameter type {type} : {ex.Message}", ex);
       }
     }
 
@@ -282,7 +284,7 @@ namespace Mutuo.Etl.Pipe {
         // upgrade from initial version, which had enums accidentally as integers
         // shouldn't need to do much upgrading, but the function is running an old version
 
-        var jValues = j["$values"] ?? throw new ("expected $values when upgrading from v0");
+        var jValues = j["$values"] ?? throw new("expected $values when upgrading from v0");
         foreach (var arg in jValues.Children<JObject>().ToArray()) {
           var jMode = arg["argMode"];
           if (jMode == null) continue;
@@ -342,7 +344,7 @@ namespace Mutuo.Etl.Pipe {
           // Parameter's are the left side of the lambda (myParam) => myParam.doThing()
           ParameterExpression p => p.Type.IsEnumerable() ? new(name, ArgMode.InRows) : new PipeArg(name, ArgMode.Inject),
           UnaryExpression {Operand: MemberExpression m} => new(name, ArgMode.SerializableValue, GetValue(m)),
-          _ => throw new ($"resolving args through expression {a} not supported")
+          _ => throw new($"resolving args through expression {a} not supported")
         };
         return arg;
       }).ToArray();

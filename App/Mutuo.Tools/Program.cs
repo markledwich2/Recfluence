@@ -1,8 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Autofac;
 using CliFx;
-using Medallion.Shell;
 using Serilog;
 using Serilog.Events;
 

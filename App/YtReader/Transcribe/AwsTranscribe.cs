@@ -81,19 +81,19 @@ namespace YtReader.Transcribe {
       }
     }
 
-    /// <summary>Converts the AWS caption into our format. Splits trnascript at sentence and speaker boundaries, or 1min</summary>
+    /// <summary>Converts the AWS caption into our format. Splits transcript at sentence and speaker boundaries, or 1min</summary>
     public static VideoCaption AwsToVideoCaption(this TransRoot res, TranscriptionJob job, string videoId, string channelId, Platform platform) {
       var speakerByStart = res.results.speaker_labels?.segments
         .SelectMany(s => s.items.Select(i => (s.speaker_label, i.start_time)))
-        .ToDictionary(s => s.start_time, s => s.speaker_label) ?? new();
+        .ToMultiValueDictionary(s => s.start_time, s => s.speaker_label) ?? new();
       (int i, TransItem startItem) group = (0, default);
 
       var captions = res.results.items.Select((item, i) => {
         var (groupStart, _) = group.startItem?.Period() ?? default;
-        var speaker = item.start_time.Do(s => speakerByStart.TryGet(s));
+        var speaker = item.start_time.Do(s => speakerByStart.TryGet(s)?.FirstOrDefault());
         var prevWord = PreviousItems(res.results.items, i).FirstOrDefault(c => !c.IsPunctuation());
         var prev = PreviousItems(res.results.items, i).FirstOrDefault();
-        var lastSpeaker = prevWord?.start_time.Do(s => speakerByStart.TryGet(s));
+        var lastSpeaker = prevWord?.start_time.Do(s => speakerByStart.TryGet(s)?.FirstOrDefault());
         var span = item.Period().Start - groupStart;
         if (prev?.Content() == "." && span > 15.Seconds()
           || speaker.HasValue() && lastSpeaker.HasValue() && speaker != lastSpeaker
@@ -101,10 +101,11 @@ namespace YtReader.Transcribe {
           group = (group.i + 1, item);
         return (group, item, speaker);
       }).GroupBy(c => c.group).Select(g => {
-        var first = g.FirstOrDefault(c => !c.item.IsPunctuation());
-        var (start, _) = first.item.Period();
+        var speaker = g.Select(c => c.speaker).NotNull().FirstOrDefault();
+        var startTime = g.Select(c => c.item.Period().Start).NotNull().FirstOrDefault();
+        var endTime = g.Select(c => c.item.Period().End).NotNull().LastOrDefault();
         return new ClosedCaption(g.Join("", c => (c.item.IsPunctuation() ? "" : " ") + c.item.alternatives.First().content).Trim(),
-          start, g.Last().item.Period().End - start, first.speaker);
+          startTime, endTime - startTime, speaker);
       }).ToArray();
 
       var caption = new VideoCaption {

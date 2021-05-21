@@ -7,17 +7,18 @@
   <ItemGroup>
     <PackageReference Include="Airtable" Version="1.1.5" />
     <PackageReference Include="AngleSharp" Version="1.0.0-alpha-844" />
+    <PackageReference Include="AngleSharp.Css" Version="0.15.0" />
     <PackageReference Include="AngleSharp.Io" Version="0.15.0" />
     <PackageReference Include="AngleSharp.Js" Version="0.14.0" />
-    <PackageReference Include="AWSSDK.TranscribeService" Version="3.7.2.15" />
+    <PackageReference Include="AWSSDK.TranscribeService" Version="3.7.3.2" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.8.3" />
     <PackageReference Include="Azure.Storage.Files.Shares" Version="12.6.1" />
-    <PackageReference Include="CsvHelper" Version="27.0.2" />
+    <PackageReference Include="CsvHelper" Version="27.0.4" />
     <PackageReference Include="Dapper" Version="2.0.90" />
     <PackageReference Include="Elasticsearch.Net" Version="7.12.1" />
     <PackageReference Include="Flurl" Version="3.0.2" />
     <PackageReference Include="Flurl.Http" Version="3.2.0" />
-    <PackageReference Include="Google.Apis.Drive.v3" Version="1.51.0.2300" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.51.0.2320" />
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.51.0.2294" />
     <PackageReference Include="LtGt" Version="2.1.0" />
     <PackageReference Include="Microsoft.Azure.Storage.DataMovement" Version="2.0.1" />
@@ -30,6 +31,7 @@
     <PackageReference Include="Nito.AsyncEx.Tasks" Version="5.1.0" />
     <PackageReference Include="Octokit" Version="0.50.0" />
     <PackageReference Include="Parquet.Net" Version="3.8.6" />
+    <PackageReference Include="Polly" Version="7.2.2" />
     <PackageReference Include="Serilog" Version="2.10.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0" />

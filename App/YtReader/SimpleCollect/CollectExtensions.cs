@@ -19,8 +19,9 @@ namespace YtReader.SimpleCollect {
 
   public enum StandardCollectPart {
     Channel,
-    [CollectPart(Explicit = true)] Discover,
-    [CollectPart(Explicit = true)] DiscoverFromVideo,
+    [CollectPart(Explicit = true)] DiscoverHome,
+    [CollectPart(Explicit = true)] DiscoverLink,
+    [CollectPart(Explicit = true)] DiscoverVideo,
     Video,
     Extra
   }
@@ -53,10 +54,11 @@ namespace YtReader.SimpleCollect {
 
   public interface IScraper {
     Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log);
-    Task<VideoExtra> Video(string sourceId, ILogger log);
+    Task<(VideoExtra Video, VideoComment[] Comments)> VideoAndExtra(string sourceId, ILogger log);
     string SourceToFullId(string sourceId, LinkType type);
     int      CollectParallel { get; }
     Platform Platform        { get; }
+    IAsyncEnumerable<Video[]> HomeVideos(ILogger log);
   }
 
   public static class CollectExtensions {

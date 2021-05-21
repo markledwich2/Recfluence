@@ -21,8 +21,7 @@ namespace Mutuo.Etl.Blob {
     Task<StoreFileMd> LatestFile(StringPath path = null);
 
     IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false);
-    
-    
+
     public static readonly JsonSerializerSettings JCfg = new() {
       NullValueHandling = NullValueHandling.Ignore,
       DefaultValueHandling = DefaultValueHandling.Include,
@@ -74,8 +73,6 @@ namespace Mutuo.Etl.Blob {
 
     public IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false) =>
       Store.Files(FilePath(path), allDirectories);
-
-
 
     public Task Append(T item, ILogger log = null) => Append(item.InArray(), log);
 

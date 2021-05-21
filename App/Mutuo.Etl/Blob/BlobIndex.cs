@@ -94,7 +94,7 @@ namespace Mutuo.Etl.Blob {
 
     string JValueString(JObject j) => j.JStringValues().Join("|");
 
-    async IAsyncEnumerable<(Stream stream, JObject first, JObject last)> IndexFiles(IAsyncEnumerable<JObject> rows, IndexCol[] cols, ByteSize size, 
+    async IAsyncEnumerable<(Stream stream, JObject first, JObject last)> IndexFiles(IAsyncEnumerable<JObject> rows, IndexCol[] cols, ByteSize size,
       NullValueHandling nullHandling, ILogger log, Action<JObject> onProcessed) {
       var hasRows = true;
       var rowEnum = rows.GetAsyncEnumerator();
@@ -102,7 +102,7 @@ namespace Mutuo.Etl.Blob {
         var memStream = new MemoryStream();
         JObject first = null;
         JObject last = null;
-        using (var gz = new GZipStream(memStream, CompressionLevel.Optimal, true))
+        using (var gz = new GZipStream(memStream, CompressionLevel.Optimal, leaveOpen: true))
         using (var tw = new StreamWriter(gz))
         using (var jw = new JsonTextWriter(tw) {
           Formatting = Formatting.None

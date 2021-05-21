@@ -13,7 +13,7 @@ using SysExtensions.Text;
 namespace YtReader.Db {
   public class SnowflakeCfg {
     public            NameSecret Creds     { get; set; } = new NameSecret();
-    [Required] public string     Host   { get; set; }
+    [Required] public string     Host      { get; set; }
     public            string     Warehouse { get; set; }
     public            string     Db        { get; set; }
     public            string     Schema    { get; set; }
@@ -51,8 +51,9 @@ namespace YtReader.Db {
 
     public static string Cs(params (string name, string value)[] values) => values.Join(";", v => $"{v.name}={v.value}");
 
-    public static async Task SetSessionParams(this ILoggedConnection<SnowflakeDbConnection> db, params (SfParam param, object value)[] @params) => await db.Execute("alter session",
-      $"alter session set {@params.Join(" ", v => $"{v.param.EnumString()}={ValueSql(v.value)}")}"); // reduce mem usage (default 4)
+    public static async Task SetSessionParams(this ILoggedConnection<SnowflakeDbConnection> db, params (SfParam param, object value)[] @params) =>
+      await db.Execute("alter session",
+        $"alter session set {@params.Join(" ", v => $"{v.param.EnumString()}={ValueSql(v.value)}")}"); // reduce mem usage (default 4)
 
     static string ValueSql(object value) =>
       value switch {
@@ -65,8 +66,7 @@ namespace YtReader.Db {
   public enum SfParam {
     [EnumMember(Value = "CLIENT_PREFETCH_THREADS")]
     ClientPrefetchThreads,
-    [EnumMember(Value = "TIMEZONE")]
-    Timezone,
+    [EnumMember(Value = "TIMEZONE")] Timezone,
     [EnumMember(Value = "CLIENT_TIMESTAMP_TYPE_MAPPING")]
     ClientTimestampTypeMapping
   }

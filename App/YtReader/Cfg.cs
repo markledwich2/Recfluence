@@ -74,9 +74,9 @@ namespace YtReader {
     public                           string  Test  { get; set; }
   }
 
-  public record RumbleCfg(int CollectParallel = 24, int Retries = 4);
+  public record RumbleCfg(int CollectParallel = 16, int Retries = 4);
 
-  public record BitChuteCfg(int CollectParallel = 24);
+  public record BitChuteCfg(int CollectParallel = 16);
 
   public class YtApiCfg {
     [Required] public ICollection<string> Keys { get; set; } = new List<string>();
@@ -86,8 +86,8 @@ namespace YtReader {
     public string              Region         { get; set; }
     public RegionEndpoint      RegionEndpoint => RegionEndpoint.GetBySystemName(Region);
     public S3Cfg               S3             { get; init; }
-    public NameSecret          Creds    { get; set; }
-    public BasicAWSCredentials CredsBasic => new (Creds.Name, Creds.Secret);
+    public NameSecret          Creds          { get; set; }
+    public BasicAWSCredentials CredsBasic     => new(Creds.Name, Creds.Secret);
   }
 
   public class ElasticCfg {
@@ -140,7 +140,7 @@ namespace YtReader {
     public TimeSpan RefreshRecsWithin { get; set; } = 30.Days();
 
     public TimeSpan RefreshChannelDetailDebounce { get; set; } = 12.Hours();
-    public TimeSpan RefreshExtraDebounce { get; set; } = 12.Hours();
+    public TimeSpan RefreshExtraDebounce         { get; set; } = 12.Hours();
 
     /// <summary>We want to keep monitoring YouTube influence even if no new videos have been created (min). Get at least this
     ///   number of recs per channel</summary>

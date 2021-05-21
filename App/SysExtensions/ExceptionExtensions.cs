@@ -42,7 +42,7 @@ namespace SysExtensions {
         throw new InvalidOperationException(msg, ex);
       }
     }
-    
+
     /// <summary>Allows you to log exception without changing behaviour. It re-throws the exception</summary>
     public static async Task WithOnError(this Task task, Action<Exception> onError) {
       try {

@@ -16,6 +16,5 @@ var app = new CliApplicationBuilder()
   .Build();
 log.Information("Starting cmd (recfluence {Args}) {Env} {Version}", args.Join(" "), root.Env, version.Version);
 var res = await app.RunAsync(args);
-
 log.Information("Completed cmd (recfluence {Args}) {Env} {Version}", args.Join(" "), root.Env, version.Version);
 return res;

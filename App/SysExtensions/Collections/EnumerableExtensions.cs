@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
+using SysExtensions.Reflection;
 
 namespace SysExtensions.Collections {
   public static class EnumerableExtensions {
@@ -24,17 +25,17 @@ namespace SysExtensions.Collections {
     /// <summary>If items is null return an empty set, if an item is null remove it from the list</summary>
     [return: NotNull]
     public static IEnumerable<T> NotNull<T>(this IEnumerable<T> items)
-      => items?.Where(i => i != null) ?? Array.Empty<T>();
+      => items?.Where(i => !i.NullOrDefault()) ?? Array.Empty<T>();
 
     /// <summary>If items is null return an empty set, if an item is null remove it from the list</summary>
     public static IEnumerable<T> NotNull<T>(this IEnumerable<T?> items) where T : struct
       => items?.Where(i => i.HasValue).Select(i => i.Value) ?? Array.Empty<T>();
 
-    public static IAsyncEnumerable<T> NotNull<T>(this IAsyncEnumerable<T> items) => items.Where(i => i != null);
+    public static IAsyncEnumerable<T> NotNull<T>(this IAsyncEnumerable<T> items) => items.Where(i => !i.NullOrDefault());
 
     public static IEnumerable<T> Randomize<T>(this IEnumerable<T> source) {
       var rnd = new Random();
-      return source.OrderBy(item => rnd.Next());
+      return source.OrderBy(_ => rnd.Next());
     }
 
     public static bool None<T>(this IEnumerable<T> items) => items?.Any() != true;
@@ -111,6 +112,7 @@ namespace SysExtensions.Collections {
         yield return batch.ToArray();
     }
 
+    public static IAsyncEnumerable<(T item, int index)> WithIndex<T>(this IAsyncEnumerable<T> items) => items.Select((item, index) => (item, index));
     public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> items) => items.Select((item, index) => (item, index));
 
     public static IEnumerable<TResult> WithPrevious<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TSource, TResult> map) {

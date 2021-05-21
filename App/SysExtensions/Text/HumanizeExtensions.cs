@@ -29,7 +29,7 @@ namespace SysExtensions.Text {
     }
 
     public static string HumanizeShort(this Stopwatch sw) => sw.Elapsed.HumanizeShort();
-    
+
     public static string HumanizeShort(this TimeSpan t) {
       var units = new (int v, string s, TimeUnit u)[]
         {(t.Days, "d", Day), (t.Hours, "h", Hour), (t.Minutes, "m", Minute), (t.Seconds, "s", Second), (t.Milliseconds, "ms", Millisecond)};
@@ -42,10 +42,10 @@ namespace SysExtensions.Text {
         b: res.Length > 1 ? res[1] : default
       );
       static string Format((int v, string s, TimeUnit u) time) => $"{time.v}{time.s}";
-      
+
       return time switch {
         (a: (_, _, Second), _) => $"{t.TotalSeconds:0.##}s", // special case for seconds, because its shorter to use decimals
-        (a: (0,_,_), (0,_,_)) => "0s",
+        (a: (0, _, _), (0, _, _)) => "0s",
         _ => res.Join(" ", Format)
       };
     }

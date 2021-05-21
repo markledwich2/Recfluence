@@ -18,7 +18,7 @@ namespace YtCli {
       PipeCtx = pipeCtx;
       Log = log;
     }
-    
+
     public override async ValueTask ExecuteAsync(IConsole console) {
       var pipeMethods = PipeCtx.PipeMethods();
       var runId = RunId.HasValue() ? PipeRunId.FromString(RunId) : new();

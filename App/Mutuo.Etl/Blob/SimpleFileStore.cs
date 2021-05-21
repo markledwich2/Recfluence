@@ -27,9 +27,8 @@ namespace Mutuo.Etl.Blob {
   }
 
   public static class SimpleStoreExtensions {
-    
     public static StringPath BasePathSansContainer(this ISimpleFileStore store) => new(store.BasePath.Tokens.Skip(1));
-    
+
     public static StringPath AddJsonExtention(this StringPath path, bool zip = true) =>
       new(path + (zip ? ".json.gz" : ".json"));
 
@@ -45,7 +44,7 @@ namespace Mutuo.Etl.Blob {
     public static async Task<T> Get<T>(this ISimpleFileStore store, StringPath path, bool zip = true, ILogger log = null) {
       using var stream = await store.Load(path.AddJsonExtention(zip), log);
       if (!zip) return stream.ToObject<T>();
-      await using var zr = new GZipStream(stream, CompressionMode.Decompress, true);
+      await using var zr = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
       return zr.ToObject<T>();
     }
 
@@ -57,7 +56,7 @@ namespace Mutuo.Etl.Blob {
 
       var serializer = jCfg != null ? JsonSerializer.Create(jCfg) : JsonExtensions.DefaultSerializer;
       if (zip)
-        await using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true)) {
+        await using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, leaveOpen: true)) {
           await using var tw = new StreamWriter(zipWriter, Encoding.UTF8);
           serializer.Serialize(new JsonTextWriter(tw), item);
         }
@@ -66,7 +65,7 @@ namespace Mutuo.Etl.Blob {
           serializer.Serialize(new JsonTextWriter(tw), item);
 
       var fullPath = path.AddJsonExtention(zip);
-      memStream.Seek(0, SeekOrigin.Begin);
+      memStream.Seek(offset: 0, SeekOrigin.Begin);
 
       await store.Save(fullPath, memStream, log);
     }

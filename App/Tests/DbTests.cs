@@ -1,13 +1,12 @@
 ﻿using System.Threading.Tasks;
 using Autofac;
 using NUnit.Framework;
-using YtReader;
 using YtReader.Db;
 
 namespace Tests {
   public class DbTests {
     record VideoResult(string video_id);
-    
+
     [Test]
     public static async Task TestSfQuery() {
       using var ctx = await TestSetup.TextCtx();

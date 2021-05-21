@@ -29,13 +29,13 @@ namespace SysExtensions.Serialization {
     }
 
     public static async Task ToJsonl<T>(this IEnumerable<T> items, string filePath, JsonSerializerSettings settings = null) {
-      using var tw = new StreamWriter(filePath, false);
+      using var tw = new StreamWriter(filePath, append: false);
       await items.ToJsonl(tw, settings);
     }
 
     public static async Task ToJsonlGz<T>(this IEnumerable<T> items, string filePath, JsonSerializerSettings settings = null) {
       using var fw = File.OpenWrite(filePath);
-      using var zipWriter = new GZipStream(fw, CompressionLevel.Optimal, true);
+      using var zipWriter = new GZipStream(fw, CompressionLevel.Optimal, leaveOpen: true);
       using var tw = new StreamWriter(zipWriter);
       await items.ToJsonl(tw, settings);
     }
@@ -56,7 +56,7 @@ namespace SysExtensions.Serialization {
       DefaultValueHandling = DefaultValueHandling.Include,
       Formatting = Formatting.None,
       Converters = {new StringEnumConverter()},
-      ContractResolver = new DefaultContractResolver {NamingStrategy = new CamelCaseNamingStrategy(true, true)}
+      ContractResolver = new DefaultContractResolver {NamingStrategy = new CamelCaseNamingStrategy(processDictionaryKeys: true, overrideSpecifiedNames: true)}
     };
 
     public static IReadOnlyCollection<T> LoadJsonlGz<T>(this Stream stream, JsonSerializerSettings settings = null) {
@@ -78,11 +78,11 @@ namespace SysExtensions.Serialization {
 
     public static async Task<Stream> ToJsonlGzStream<T>(this IEnumerable<T> items, JsonSerializerSettings settings = null) {
       var memStream = new MemoryStream();
-      using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, true)) {
+      using (var zipWriter = new GZipStream(memStream, CompressionLevel.Optimal, leaveOpen: true)) {
         using var tw = new StreamWriter(zipWriter);
         await items.ToJsonl(tw, settings);
       }
-      memStream.Seek(0, SeekOrigin.Begin);
+      memStream.Seek(offset: 0, SeekOrigin.Begin);
       return memStream;
     }
   }

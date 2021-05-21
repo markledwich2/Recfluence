@@ -27,7 +27,7 @@ namespace YtReader.Airtable {
     Channel,
     Video
   }
-  
+
   public enum AtUpdateMode {
     Create,
     CreateAndUpdate
@@ -56,8 +56,7 @@ join video_latest v on v.video_id = n.video_id
 , table (flatten(matches)) m
 where v.views > 10000 and v.upload_date >= '2021-04-13'
 "
-      },
-      {
+      }, {
         "vaccine-personal",
         @"select n.video_id, 'cation' as part, caption as context, offset_seconds, '' keyword from mention_vaccine_personal n"
       }
@@ -127,7 +126,7 @@ order by video_group -- use group to randomize the order
           return r;
         }), log);
     }
-    
+
     const int AtBatchSize = 10;
 
     public async Task Sync<TKey>(AtOps op, string airTableName, IAsyncEnumerable<JObject> sourceRows, ILogger log) where TKey : class {
@@ -135,12 +134,12 @@ order by video_group -- use group to randomize the order
       var keyFields = typeof(TKey).GetProperties().Select(p => p.Name).ToArray();
       var airRows = await airTable.Rows<TKey>(airTableName, keyFields, log).ToListAsync()
         .Then(rows => rows.ToKeyedCollection(r => r.Fields));
-      
+
       var (update, create) = await sourceRows
         .Select(v => v.ToCamelCase())
         .Select(r => new {Key = r.ToObject<TKey>(), Row = r, AirFields = r.ToAirFields()})
         .Split(r => airRows.ContainsKey(r.Key));
-      
+
       await create.Batch(AtBatchSize).BlockDo(async (rows, i) => {
         var createFields = rows.Select(r => r.AirFields).ToArray();
         var res = await airTable.CreateMultipleRecords(airTableName, createFields, typecast: true);
@@ -148,14 +147,13 @@ order by video_group -- use group to randomize the order
         log.Information("Airtable - created {Rows} in {Airtable}, batch {Batch}", createFields.Length, airTableName, i + 1);
       });
 
-      if (op.Mode.In(AtUpdateMode.CreateAndUpdate)) {
+      if (op.Mode.In(AtUpdateMode.CreateAndUpdate))
         await update.Batch(AtBatchSize).BlockDo(async (rows, i) => {
           var updateFields = rows.Select(u => new IdFields(airRows[u.Key].Id) {FieldsCollection = u.AirFields.FieldsCollection}).ToArray();
           var res = await airTable.UpdateMultipleRecords(airTableName, updateFields, typecast: true);
           res.EnsureSuccess(log, airTableName);
           log.Information("Airtable - updated {Rows} rows in {Airtable}, batch {Batch}", updateFields.Length, airTableName, i + 1);
         });
-      }
     }
   }
 

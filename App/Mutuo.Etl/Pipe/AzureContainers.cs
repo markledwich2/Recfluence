@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +20,6 @@ using SysExtensions.Build;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
-using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace Mutuo.Etl.Pipe {
   public class AzureContainers : IPipeWorkerStartable, IContainerLauncher {
@@ -32,7 +32,7 @@ namespace Mutuo.Etl.Pipe {
       Version = version;
       RegistryClient = registryClient;
       ContainerCfg = containerCfg;
-      Az = new (azureCfg.GetAzure);
+      Az = new(azureCfg.GetAzure);
     }
 
     public static readonly string ContainerNameEnv = $"{nameof(AzureContainers)}_Container";
@@ -44,7 +44,7 @@ namespace Mutuo.Etl.Pipe {
     Lazy<IAzure> Az { get; }
 
     public Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) =>
-      Launch(ctx, ids, returnOnRunning: false, exclusive: false, log: log, cancel: cancel);
+      Launch(ctx, ids, returnOnRunning: false, exclusive: false, log, cancel);
 
     /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
     ///   returns the status.</summary>
@@ -89,7 +89,7 @@ namespace Mutuo.Etl.Pipe {
           md.Save(ctx.Store, pipeLog));
 
         // delete succeeded non-exclusive containers. Failed, and rutned on running will be cleaned up by another process
-        if (group.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0)) 
+        if (group.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0))
           await DeleteContainer(containerGroup, log);
 
         return md;
@@ -133,7 +133,8 @@ namespace Mutuo.Etl.Pipe {
     }
 
     public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars,
-      string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ContainerCfg cfg = null, ILogger log = null, CancellationToken cancel = default) {
+      string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ContainerCfg cfg = null, ILogger log = null,
+      CancellationToken cancel = default) {
       groupName ??= containerName;
       cfg ??= ContainerCfg;
       var sw = Stopwatch.StartNew();
@@ -141,7 +142,7 @@ namespace Mutuo.Etl.Pipe {
         returnOnStart, log: log, cancel: cancel);
       await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
       log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());
-      if(!returnOnStart && group.State() == ContainerState.Succeeded)
+      if (!returnOnStart && group.State() == ContainerState.Succeeded)
         await DeleteContainer(groupName, log);
     }
 
@@ -191,7 +192,7 @@ namespace Mutuo.Etl.Pipe {
       var findTags = Version.Prerelease.HasValue() ? new[] {Version.PipeTag(), Version.MajorMinorPatch()} : new[] {Version.MajorMinorPatch()};
       var existingTags = (await RegistryClient.TagList(imageName)).Tags.ToHashSet();
       var tag = findTags.Select(t => existingTags.Contains(t) ? t : null).NotNull().FirstOrDefault()
-                ?? throw new InvalidOperationException($"Could not find any of tags {findTags.Join("|")}");
+        ?? throw new InvalidOperationException($"Could not find any of tags {findTags.Join("|")}");
       return tag;
     }
 
@@ -240,7 +241,7 @@ namespace Mutuo.Etl.Pipe {
         var exitCode = group.Containers[containerName].InstanceView?.CurrentState.ExitCode;
         Log.Warning("Container {Container} not in a successful state ({State}), ExitCode ({ErrorCode}), Logs: {Logs}",
           group.Name, group.State, exitCode, content);
-        throw new CommandException($"Container {group.Name} did not succeed ({group.State}), exit code ({exitCode}). Logs: {content}", exitCode: exitCode ?? 0);
+        throw new CommandException($"Container {group.Name} did not succeed ({group.State}), exit code ({exitCode}). Logs: {content}", exitCode ?? 0);
       }
     }
   }

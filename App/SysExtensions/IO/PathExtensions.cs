@@ -24,7 +24,7 @@ namespace SysExtensions.IO {
     }
 
     public static FPath Files(this FPath p, string searchPattern) =>
-      p.Files(searchPattern, false);
+      p.Files(searchPattern, recursive: false);
 
     public static bool IsEmtpy(this FPath path) => path == null || path.ToStringArray().Length == 0;
     public static bool HasValue(this FPath path) => !IsEmtpy(path);
@@ -50,13 +50,13 @@ namespace SysExtensions.IO {
       path.Parent(p => p.Tokens.Last() == directoryName);
 
     public static FPath FileOfParent(this FPath path, string searchPattern, bool includeIfDir = false) =>
-      path.EnumerateParents(includeIfDir).Select(p => p.Files(searchPattern, false)).FirstOrDefault(f => !f.IsEmtpy());
+      path.EnumerateParents(includeIfDir).Select(p => p.Files(searchPattern, recursive: false)).FirstOrDefault(f => !f.IsEmtpy());
 
     public static FPath DirOfParent(this FPath path, string searchPattern, bool includeIfDir = false) =>
-      path.EnumerateParents(includeIfDir).Select(p => p.Directories(searchPattern, false)).FirstOrDefault(d => !d.IsEmtpy());
+      path.EnumerateParents(includeIfDir).Select(p => p.Directories(searchPattern, recursive: false)).FirstOrDefault(d => !d.IsEmtpy());
 
     public static FPath ParentWithFile(this FPath path, string filePattern, bool includeIfDir = false) =>
-      path.EnumerateParents(includeIfDir).FirstOrDefault(p => p.Files(filePattern, false).HasValue());
+      path.EnumerateParents(includeIfDir).FirstOrDefault(p => p.Files(filePattern, recursive: false).HasValue());
 
     /// <summary>Finds the first parent that satisfies the predicate</summary>
     public static FPath Parent(this FPath path, Predicate<FPath> predicate) =>
@@ -75,7 +75,7 @@ namespace SysExtensions.IO {
       dirQueue.Enqueue(p);
       while (dirQueue.Count > 0) {
         var dir = dirQueue.Dequeue();
-        foreach (var childDir in dir.Directories(predicate, false)) {
+        foreach (var childDir in dir.Directories(predicate, recursive: false)) {
           dirQueue.Enqueue(childDir);
           result = result.Add(childDir);
         }
@@ -101,7 +101,7 @@ namespace SysExtensions.IO {
     public static FPath LocalAssemblyPath(this Type type)
       => new Uri(type.GetTypeInfo().Assembly.Location).LocalPath.AsPath();
 
-    static FPath Directories(this FPath p, string searchPattern) => p.Directories(searchPattern, false);
+    static FPath Directories(this FPath p, string searchPattern) => p.Directories(searchPattern, recursive: false);
 
     public static void ExtractZip(this FPath zipFile, FPath dir) => ZipFile.ExtractToDirectory(zipFile.FullPath, dir.FullPath);
 

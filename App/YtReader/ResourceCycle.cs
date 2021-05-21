@@ -10,7 +10,7 @@ namespace YtReader {
     readonly Func<TCfg, Task<T>> Create;
     readonly TCfg[]              _configs;
     (T Resource, TCfg Cfg)?      _current;
-    readonly SemaphoreSlim       _lock = new SemaphoreSlim(1, 1);
+    readonly SemaphoreSlim       _lock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
 
     public ResourceCycle(TCfg[] cfg, Func<TCfg, Task<T>> create, int index = 0) {
       Create = create;

@@ -20,7 +20,7 @@ namespace SysExtensions.Serialization {
 
       // by default only writable properties should be serialized
       if (!prop.Writable && !prop.PropertyType.IsCollection()
-                         && member.GetCustomAttribute<JsonPropertyAttribute>(true) == null)
+        && member.GetCustomAttribute<JsonPropertyAttribute>(true) == null)
         return null;
       return prop;
     }
@@ -33,7 +33,7 @@ namespace SysExtensions.Serialization {
 
       // by default a type that can convert to string and that is also an enum will have an array contract, but serialize to a string!. fix  this
       if (contract is JsonArrayContract && typeof(IEnumerable).IsAssignableFrom(objectType) &&
-          CanNonSystemTypeDescriptorConvertString(objectType, out var converter))
+        CanNonSystemTypeDescriptorConvertString(objectType, out var converter))
         contract = CreateStringContract(objectType);
       return contract;
     }

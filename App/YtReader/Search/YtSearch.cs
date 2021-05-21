@@ -31,13 +31,12 @@ using Policy = Polly.Policy;
 
 // ReSharper disable InconsistentNaming
 namespace YtReader.Search {
-
   public enum SearchMode {
     Incremental,
     UpdateAll,
     FullLoad
   }
-  
+
   public class YtSearch {
     readonly SnowflakeConnectionProvider Db;
     readonly ElasticClient               Es;
@@ -103,10 +102,10 @@ from video_latest l
       where TEs : class, IHasUpdated where TDb : class {
       var alias = Es.GetIndexFor<TEs>() ?? throw new InvalidOperationException("The ElasticClient must have default indexes created for types used");
       var existingIndex = (await Es.GetIndicesPointingToAliasAsync(alias)).FirstOrDefault();
-      
+
       var existingIndexCheck = (await Es.Indices.GetAsync(alias)).Indices.FirstOrDefault();
       if (existingIndexCheck.Key == alias) throw new InvalidOperationException($"Existing index with the alias {alias}. Not supported for update");
-      
+
       // full load into random indexes and use aliases. This is to avoid downtime on full loads
       var lastUpdate = existingIndex != null ? await Es.MaxDateField<TEs>(m => m.Field(p => p.updated)) : null;
       var newIndex = mode == FullLoad || existingIndex == null || lastUpdate == null ? $"{alias}-{ShortGuid.Create(5).ToLower()}" : null;
@@ -115,7 +114,7 @@ from video_latest l
         await Es.Indices.CreateAsync(newIndex, c => c.Map<TEs>(m => m.AutoMap()));
         log.Information("Search - Created new ElasticSearch Index {Index} ({Alias})", newIndex, alias);
       }
-      
+
       var sql = CreateSql(selectSql, mode, lastUpdate, conditions, incrementalCondition);
 
       using var conn = await OpenConnection(log);
@@ -164,9 +163,9 @@ from video_latest l
       channel_title = c.CHANNEL_TITLE,
       age = c.AGE,
       avg_minutes = c.AVG_MINUTES,
-      channel_lifetime_daily_views = (decimal?)c.CHANNEL_LIFETIME_DAILY_VIEWS,
-      channel_lifetime_daily_views_relevant = (decimal?)c.CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT,
-      channel_video_views = (decimal?)c.CHANNEL_VIDEO_VIEWS,
+      channel_lifetime_daily_views = (decimal?) c.CHANNEL_LIFETIME_DAILY_VIEWS,
+      channel_lifetime_daily_views_relevant = (decimal?) c.CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT,
+      channel_video_views = (decimal?) c.CHANNEL_VIDEO_VIEWS,
       channel_views = c.CHANNEL_VIEWS,
       country = c.COUNTRY,
       day_range = c.DAY_RANGE,
@@ -228,8 +227,8 @@ order by updated"; // always order by updated so that if sync fails, we can resu
       where T : class => (await enumerable
       .Batch(Cfg.BatchSize).WithIndex()
       .BlockFunc(b => BatchToEs(indexName, b.item, b.index, esPolicy, log),
-        parallel: Cfg.Parallel, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
-        capacity: Cfg.Parallel,
+        Cfg.Parallel, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
+        Cfg.Parallel,
         cancel: cancel)).Sum();
 
     async Task<int> BatchToEs<T>(string indexName, IReadOnlyCollection<T> items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {
@@ -262,7 +261,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     public static AsyncRetryPolicy<BulkResponse> EsPolicy(ILogger log, int retries) => Policy
       .HandleResult<BulkResponse>(r =>
         r.ItemsWithErrors.Any(i => i.Status == 429) || r.ServerError?.Status == 429 || r.OriginalException is OperationCanceledException)
-      .RetryAsync(retryCount: retries, async (r, i) => {
+      .RetryAsync(retries, async (r, i) => {
         var delay = i.ExponentialBackoff(5.Seconds());
         log?.Information("Retryable error indexing captions: Retrying in {Duration}, attempt {Attempt}/{Total}",
           delay, i, retries);
@@ -341,15 +340,15 @@ order by updated"; // always order by updated so that if sync fails, we can resu
   }
 
   public abstract class VideoCaptionCommon : IHasUpdated {
-    [Keyword] public string   video_id      { get; set; }
-    [Keyword] public string   channel_id    { get; set; }
-    public           string   video_title   { get; set; }
-    public           string   channel_title { get; set; }
+    [Keyword] public string    video_id      { get; set; }
+    [Keyword] public string    channel_id    { get; set; }
+    public           string    video_title   { get; set; }
+    public           string    channel_title { get; set; }
     public           DateTime? upload_date   { get; set; }
-    public           DateTime updated       { get; set; }
-    public           long?    views         { get; set; }
-    [Keyword] public string   lr            { get; set; }
-    [Keyword] public string[] tags          { get; set; }
+    public           DateTime  updated       { get; set; }
+    public           long?     views         { get; set; }
+    [Keyword] public string    lr            { get; set; }
+    [Keyword] public string[]  tags          { get; set; }
   }
 
   [ElasticsearchType(IdProperty = nameof(video_id))]

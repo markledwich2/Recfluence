@@ -133,8 +133,6 @@ qualify row_number() over (partition by channel_id order by random() desc)<=:max
                     and channel_id in ({SqlList(channels)})
                 ");
 
-    
-
     public static async Task<ChannelUpdatePlan[]> ChannelsToDiscover(this YtCollectDbCtx ctx) {
       var toAdd = await ctx.Db.Query<(string channel_id, string channel_title, string source)>("channels to classify",
         @"with review_channels as (

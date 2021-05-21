@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using AngleSharp;
 using AngleSharp.Dom;
-using AngleSharp.Io;
-using Flurl.Http;
-using Serilog;
-using SysExtensions.Collections;
 using SysExtensions.Net;
 
 namespace YtReader.Web {
@@ -24,11 +19,8 @@ namespace YtReader.Web {
 
     public static IConfiguration WithProxyRequester(this IConfiguration angleCfg, FlurlProxyClient proxyClient
       , ProxyType proxyType = default) {
-      
-      
       var proxy = proxyClient.UseProxy ? proxyClient.Cfg.Proxy(proxyType)?.CreateWebProxy() : null;
-      var handler = new HttpClientHandler()
-      {
+      var handler = new HttpClientHandler {
         Proxy = proxy,
         PreAuthenticate = true,
         UseDefaultCredentials = false,
@@ -36,7 +28,7 @@ namespace YtReader.Web {
         UseProxy = true,
         AutomaticDecompression = DecompressionMethods.All
       };
-      
+
       /*var requester = new DefaultHttpRequester("PostmanRuntime/7.26.10", request => {
         var proxy = proxyClient.UseProxy ? proxyClient.Cfg.Proxy(proxyType)?.CreateWebProxy() : null;
         if (proxy != null) request.Proxy = proxy;

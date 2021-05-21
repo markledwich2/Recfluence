@@ -36,7 +36,7 @@ namespace SysExtensions.Reflection {
         if (!toProp.PropertyType.GetTypeInfo().IsGenericType || !typeof(ICollection<>).IsAssignableFrom(toProp.PropertyType
           .GetGenericTypeDefinition()) || !typeof(IEnumerable).IsAssignableFrom(fromProp.PropertyType)) continue;
 
-        var toCollection = toProp.GetValue(to, null) ?? throw new InvalidOperationException("collection not set-able or ad-able");
+        var toCollection = toProp.GetValue(to, index: null) ?? throw new InvalidOperationException("collection not set-able or ad-able");
         var addMethod = toCollection.GetType().GetMethod("Add") ?? throw new InvalidOperationException("collection not set-able or ad-able");
         foreach (var item in (IEnumerable) fromProp.GetValue(from, index: null) ?? new object[] { })
           addMethod.Invoke(toCollection, new[] {item});
@@ -56,7 +56,7 @@ namespace SysExtensions.Reflection {
       return clone;
     }
 
-    public static bool NullOrDefault<T>(this T value) => EqualityComparer<T>.Default.Equals(value, default);
+    public static bool NullOrDefault<T>(this T value) => EqualityComparer<T>.Default.Equals(value, y: default);
 
     public static object DefaultForType(this Type type) => type.GetTypeInfo().IsValueType ? Activator.CreateInstance(type) : null;
 
@@ -118,8 +118,8 @@ namespace SysExtensions.Reflection {
 
     public static async Task<TOut> CallStaticGenericTask<TOut>(this MethodInfo methodInfo, Type[] generics, params object[] args) {
       var loadInStateMethod = methodInfo?.MakeGenericMethod(generics)
-                              ?? throw new InvalidOperationException($"{nameof(methodInfo)}<{generics.Join(", ", g => g.Name)}> method not found ");
-      dynamic task = loadInStateMethod.Invoke(null, args);
+        ?? throw new InvalidOperationException($"{nameof(methodInfo)}<{generics.Join(", ", g => g.Name)}> method not found ");
+      dynamic task = loadInStateMethod.Invoke(obj: null, args);
       return (TOut) await task;
     }
 

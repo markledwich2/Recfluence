@@ -59,7 +59,7 @@ namespace SysExtensions.Collections {
       Expression<Func<V, K>> getKey) => new KeyedCollection<K, V>(getKey, list.Select(getValue));
 
     public static IReadOnlyCollection<T> ToReadOnly<T>(this IEnumerable<T> items) => items.ToList();
-    
+
     public static IEnumerable<(string Name, string Value)> ToTuples(this NameValueCollection items) =>
       from key in items.Cast<string>()
       from value in items.GetValues(key)

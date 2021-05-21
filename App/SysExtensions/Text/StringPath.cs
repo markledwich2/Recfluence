@@ -53,7 +53,7 @@ namespace SysExtensions.Text {
     public bool HasTailSeparator => Tokens.Count > 0 && Tokens.Last() == "";
 
     public string StringValue {
-      get => (IsAbsolute ? Seperator.ToString() : "") + Tokens.Join(Seperator.ToString(), null, EscapeChar);
+      get => (IsAbsolute ? Seperator.ToString() : "") + Tokens.Join(Seperator.ToString(), format: null, EscapeChar);
 
       // don't call this directly. Just for serialization and testing
       set {
@@ -64,7 +64,7 @@ namespace SysExtensions.Text {
 
         if (value.StartsWith(Seperator.ToString())) {
           IsAbsolute = true;
-          value = value.Substring(1, value.Length - 1);
+          value = value.Substring(startIndex: 1, value.Length - 1);
         }
 
         if (value.HasValue())
@@ -93,8 +93,8 @@ namespace SysExtensions.Text {
     public override bool Equals(object obj) => obj?.ToString() == ToString();
 
     public static bool operator ==(StringPath a, StringPath b) {
-      if (ReferenceEquals(a, null) && ReferenceEquals(b, null)) return true;
-      if (ReferenceEquals(a, null) || ReferenceEquals(b, null)) return false;
+      if (ReferenceEquals(a, objB: null) && ReferenceEquals(b, objB: null)) return true;
+      if (ReferenceEquals(a, objB: null) || ReferenceEquals(b, objB: null)) return false;
       return a.Equals(b);
     }
 

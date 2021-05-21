@@ -54,7 +54,7 @@ namespace SysExtensions.Build {
 
     public static SemVersion RuntimeSemVer(Type type) =>
       SemVersion.Parse(type.Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ??
-                       throw new InvalidOperationException($"Can't find {type.Assembly.GetName().Name} InformationalVersion"));
+        throw new InvalidOperationException($"Can't find {type.Assembly.GetName().Name} InformationalVersion"));
   }
 
   public static class SemVerEx {

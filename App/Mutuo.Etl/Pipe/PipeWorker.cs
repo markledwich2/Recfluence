@@ -27,7 +27,7 @@ namespace Mutuo.Etl.Pipe {
     Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning, bool exclusive, ILogger log,
       CancellationToken cancel);
   }
-  
+
   public enum ContainerState {
     Unknown,
     Pending,
@@ -54,7 +54,7 @@ namespace Mutuo.Etl.Pipe {
     public static string[] PipeArgs(this PipeRunId runId) => new[] {"pipe", "-r", runId.ToString()};
 
     public static async Task Save(this PipeRunMetadata md, ISimpleFileStore store, ILogger log) =>
-      await store.Set($"{md.Id.StatePath()}.RunMetadata", md, false, log);
+      await store.Set($"{md.Id.StatePath()}.RunMetadata", md, zip: false, log);
 
     public static ContainerState State(this IContainerGroup group) => group.State.ParseEnum<ContainerState>(false);
 

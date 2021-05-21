@@ -13,13 +13,14 @@ using static YtReader.ContainerCommand.Options;
 
 namespace YtReader {
   public record YtContainerRunner(AzureContainers Az, ContainerCfg ContainerCfg, PipeAppCtx Ctx, CliEntry Cli, ILogger Log) {
-    public async Task Run(string groupName, string fullImageName = null, CancellationToken cancel = default, bool returnOnStart = false, string[] args = null) =>
+    public async Task Run(string groupName, string fullImageName = null, CancellationToken cancel = default, bool returnOnStart = false,
+      string[] args = null) =>
       await Az.RunContainer(groupName, fullImageName ?? ContainerCfg.FullContainerImageName(await Az.FindImageTag(ContainerCfg.ImageName)),
         Ctx.EnvironmentVariables, args ?? LocalArgs(), returnOnStart, "./recfluence", log: Log, cancel: cancel);
 
     string[] LocalArgs() {
       bool ShouldStrip(string arg, string prev) => AllArgs.Contains(arg) || AllFlags.Contains(arg) ||
-                                                   !arg.StartsWith("-") && AllArgs.Contains(prev); // remove values subsequent to the args
+        !arg.StartsWith("-") && AllArgs.Contains(prev); // remove values subsequent to the args
 
       return Cli.Args?.Select((a, i) => (a, prev: i > 0 ? Cli.Args[i - 1] : null))
         .Where(a => !ShouldStrip(a.a, a.prev))
@@ -40,8 +41,8 @@ namespace YtReader {
     }
 
     [CommandOption(RunInContainer, IsRequired = false, Description = "If specified, will run the tool in an azure container and return after launch")]
-    public bool RunOnContainer { get;                      set; }
-    [CommandOption(Tag, Description = "Specify a container tag (e.g.. latest or 0.5.6). Use if you need to run a specific version")] 
+    public bool RunOnContainer { get; set; }
+    [CommandOption(Tag, Description = "Specify a container tag (e.g.. latest or 0.5.6). Use if you need to run a specific version")]
     public string ContainerTag { get; set; }
     [CommandOption(Options.GroupName, Description = "customize a group name. Useful when you need to run the same command concurrently")]
     public string ContainerName { get; set; }

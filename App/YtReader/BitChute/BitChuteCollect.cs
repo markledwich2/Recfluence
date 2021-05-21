@@ -10,7 +10,7 @@ namespace YtReader.BitChute {
       log = log.ForContext("Function", nameof(BitChuteCollect));
       options = options with {Platform = Platform.BitChute};
       var plan = await Collector.PlanSimpleCollect(options, log, cancel);
-      await Collector.CollectChannelAndVideos(plan, log, cancel);
+      await Collector.Discover(plan, log, cancel);
     }
   }
 }

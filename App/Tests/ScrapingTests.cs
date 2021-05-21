@@ -6,6 +6,7 @@ using Flurl.Http.Testing;
 using Humanizer;
 using LtGt;
 using NUnit.Framework;
+using SysExtensions.Collections;
 using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Threading;
@@ -130,14 +131,14 @@ namespace Tests {
     public static async Task TestRumbleVideo() {
       using var ctx = await TestSetup.TextCtx();
       var web = ctx.Resolve<RumbleWeb>();
-      var video = await web.Video("vfn79l", ctx.Log);
+      var video = await web.VideoAndExtra("vfn79l", ctx.Log);
     }
 
     [Test]
     public static async Task TestBitChuteVideo() {
       using var ctx = await TestSetup.TextCtx();
       var web = ctx.Resolve<BitChuteScraper>();
-      var video = await web.Video("yjoS3BV8CLs0", ctx.Log);
+      var (video, comments) = await web.VideoAndExtra("4KzcvUhGHFSS", ctx.Log);
     }
   }
 }

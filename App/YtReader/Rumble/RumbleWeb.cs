@@ -58,7 +58,7 @@ namespace YtReader.Rumble {
       };
 
       async IAsyncEnumerable<Video[]> Videos() {
-        Video[] ParseVideos(IDocument d) => d.QuerySelectorAll(".video-listing-entry").Select(e => ParseVideo(e, chan)).ToArray();
+        Video[] ParseVideos(IDocument d) => d.QuerySelectorAll(".video-listing-entry").Select(e => ParseChannelVideo(e, chan)).ToArray();
         string NextUrl(IDocument d) => d.El<IHtmlLinkElement>("link[rel=next]")?.Href;
 
         yield return ParseVideos(doc);
@@ -93,25 +93,14 @@ namespace YtReader.Rumble {
       return j;
     }
 
-    public async Task<VideoExtra> Video(string sourceId, ILogger log) {
+    public async Task<(VideoExtra Video, VideoComment[] Comments)> VideoAndExtra(string sourceId, ILogger log) {
       var bc = BrowsingContext.New(AngleCfg);
-      
-      var retryTransient = Policy
-        .HandleResult<(bool finished, IDocument doc)>(
-          d => { // todo make this re-usable. Needed a higher level than http send for handling bot errors
-            var (finished, document) = d;
-            if (!finished) return true; // retry on timeout
-            if (document == null) throw new("doc null, usually this means anglesharp is misconfigured");
-            if (document.StatusCode == HttpStatusCode.TooManyRequests) throw new("ruble is blocking us. implement proxy fallback");
-            return document.StatusCode.IsTransientError() || document.Body?.Children.Length <= 0;
-          }).RetryWithBackoff("Rumble Video", Cfg.Retries, (_, attempt, delay) =>
-          log.Debug("Rumble - Retrying in {Duration}, attempt {Attempt}/{Total}", delay.HumanizeShort(), attempt, Cfg.Retries), log);
 
       var vid = this.NewVidExtra(sourceId);
-      var (_, doc) = await retryTransient.ExecuteAsync(() => bc.OpenAsync(VideoUrl(sourceId)).WithTimeout(30.Seconds()));
+      var (_, doc) = await Open(VideoUrl(sourceId), log, bc);
       if (doc == null) throw new("doc null after retries");
       if (doc.StatusCode == HttpStatusCode.NotFound)
-        return vid with {Status = VideoStatus.NotFound};
+        return (vid with {Status = VideoStatus.NotFound}, null);
       doc.EnsureSuccess();
 
       string MetaProp(string prop) => MetaProps(prop).FirstOrDefault();
@@ -143,8 +132,20 @@ namespace YtReader.Rumble {
         Earned = mediaByDiv?.QuerySelector(".media-earnings")?.TextContent.Match(EarnedRe)?.Groups["earned"].Value.NullIfEmpty()?.ParseDecimal(),
         MediaUrl = vidEmbed.Str("u.mp4.url")
       };
-      return vid;
+      return (vid, null);
     }
+
+    async Task<(bool finished, IDocument doc)> Open(Url url, ILogger log, IBrowsingContext bc) =>
+      await Policy.HandleResult<(bool finished, IDocument doc)>(
+          d => { // todo make this re-usable. Needed a higher level than http send for handling bot errors
+            var (finished, document) = d;
+            if (!finished) return true; // retry on timeout
+            if (document == null) throw new("doc null, usually this means anglesharp is misconfigured");
+            if (document.StatusCode == HttpStatusCode.TooManyRequests) throw new("ruble is blocking us. implement proxy fallback");
+            return document.StatusCode.IsTransientError() || document.Body?.Children.Length <= 0;
+          }).RetryWithBackoff("Rumble Video", Cfg.Retries, (_, attempt, delay) =>
+          log.Debug("Rumble - Retrying in {Duration}, attempt {Attempt}/{Total}", delay.HumanizeShort(), attempt, Cfg.Retries), log)
+        .ExecuteAsync(() => bc.OpenAsync(url).WithTimeout(30.Seconds()));
 
     public string SourceToFullId(string sourceId, LinkType type) => type switch {
       LinkType.Channel => ChannelUrl(sourceId),
@@ -152,11 +153,13 @@ namespace YtReader.Rumble {
       _ => throw new ArgumentOutOfRangeException(nameof(type), type, message: null)
     };
 
-    public          int      CollectParallel => Cfg.CollectParallel;
-    public          Platform Platform        => Platform.Rumble;
-    static readonly Regex    VideoIdRe = new(@"(?<id>v\w{5})-.*");
+    public int      CollectParallel => Cfg.CollectParallel;
+    public Platform Platform        => Platform.Rumble;
+    public IAsyncEnumerable<Video[]> HomeVideos(ILogger log) => throw new NotImplementedException();
 
-    Video ParseVideo(IElement e, Channel chan) {
+    static readonly Regex VideoIdRe = new(@"(?<id>v\w{5})-.*");
+
+    Video ParseChannelVideo(IElement e, Channel chan) {
       var url = e.El<IHtmlAnchorElement>(".video-item--a")?.Href?.AsUrl();
       var sourceId = url?.Path.Match(VideoIdRe).Groups["id"].Value.NullIfEmpty();
 
@@ -164,8 +167,27 @@ namespace YtReader.Rumble {
 
       var video = this.NewVid(sourceId) with {
         ChannelId = chan.ChannelId,
-        ChannelTitle = chan.ChannelTitle,
+        ChannelTitle = chan?.ChannelTitle,
         Title = e.QuerySelector(".video-item--title")?.TextContent,
+        Thumb = e.El<IHtmlImageElement>("img.video-item--img")?.Source,
+        Statistics = new(Data("views")?.ParseULong()),
+        UploadDate = e.El<IHtmlTimeElement>(".video-item--time")?.DateTime.ParseDate(style: DateTimeStyles.AssumeUniversal),
+        Duration = Data("duration")?.TryParseTimeSpanExact(@"h\:m\:s", @"m\:s"),
+        Earned = Data("earned")?.TryParseDecimal()
+      };
+      return video;
+    }
+
+    Video ParseVideoTile(IElement e, Channel chan) {
+      var url = e.Children.OfType<IHtmlAnchorElement>().FirstOrDefault()?.Href?.AsUrl();
+      var sourceId = url?.Path.Match(VideoIdRe).Groups["id"].Value.NullIfEmpty();
+
+      string Data(string name) => e.El<IHtmlSpanElement>($".video-item--{name}")?.Dataset["value"];
+
+      var video = this.NewVid(sourceId) with {
+        ChannelId = chan.ChannelId,
+        ChannelTitle = chan?.ChannelTitle,
+        Title = e.QuerySelector(".video-card-title")?.TextContent,
         Thumb = e.El<IHtmlImageElement>("img.video-item--img")?.Source,
         Statistics = new(Data("views")?.ParseULong()),
         UploadDate = e.El<IHtmlTimeElement>(".video-item--time")?.DateTime.ParseDate(style: DateTimeStyles.AssumeUniversal),

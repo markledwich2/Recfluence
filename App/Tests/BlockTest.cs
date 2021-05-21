@@ -9,7 +9,6 @@ using Serilog;
 using SysExtensions;
 using SysExtensions.Text;
 using SysExtensions.Threading;
-using YtReader;
 
 namespace Tests {
   public class BlockTest {
@@ -29,7 +28,7 @@ namespace Tests {
           await 1.Seconds().Delay();
           ctx.Log.Debug("batch {Batch} processed", i);
           return b.Count;
-        }, 100_000, 8).WithDuration();
+        }, batchSize: 100_000, parallel: 8).WithDuration();
       ctx.Log.Information("Processing {Items} took {Duration} {Speed}",
         numItems, dur.HumanizeShort(), (numItems / 1000).Speed("K items", dur).Humanize());
       res.Sum().Should().Be(numItems);

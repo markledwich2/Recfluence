@@ -4,7 +4,7 @@
     <LangVersion>9</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="27.0.2" />
+    <PackageReference Include="CsvHelper" Version="27.0.4" />
     <PackageReference Include="Humanizer.Core" Version="2.10.1" />
     <PackageReference Include="MedallionShell" Version="1.6.2" />
     <PackageReference Include="Microsoft.Net.Http.Headers" Version="2.2.8" />

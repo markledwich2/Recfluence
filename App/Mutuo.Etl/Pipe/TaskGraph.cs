@@ -48,7 +48,7 @@ namespace Mutuo.Etl.Pipe {
     public TimeSpan        Duration    { get; set; } = TimeSpan.Zero;
 
     public override string ToString() => $"{Name} ({FinalStatus}) in {Duration.HumanizeShort()}"
-                                         + (Exception != null ? $". Error: {Exception.Message}" : "");
+      + (Exception != null ? $". Error: {Exception.Message}" : "");
   }
 
   public static class JobProcessStatusExtensions {
@@ -110,13 +110,12 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public static class TaskGraphEx {
-
     public static void IgnoreNotIncluded(this TaskGraph graph, IReadOnlyCollection<string> included) {
       if (included.None()) return;
       foreach (var m in graph.All.Where(m => !included.Contains(m.Name)))
         m.Status = Ignored;
     }
-    
+
     public static Task<IReadOnlyCollection<GraphTaskResult>> Run(this IEnumerable<GraphTask> tasks, int parallel, ILogger log, CancellationToken cancel) =>
       Run(new TaskGraph(tasks), parallel, log, cancel);
 
@@ -139,7 +138,7 @@ namespace Mutuo.Etl.Pipe {
           }
           task.Status = Running;
           log = log.ForContext("Task", task.Name);
-          
+
           await task.Run(log, cancel);
           if (cancel.IsCancellationRequested)
             task.Status = Cancelled;

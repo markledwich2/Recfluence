@@ -14,10 +14,10 @@ using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
 using Polly;
 using Serilog;
+using SysExtensions.Collections;
 using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
-using SysExtensions.Collections;
 
 namespace SysExtensions.Net {
   public static class HttpClientExtensions {
@@ -74,8 +74,8 @@ namespace SysExtensions.Net {
       client.BaseAddress = baseUrl;
       return client;
     }
-    
-    public static string FormatCurl(this  HttpWebRequest req, HttpMethod verb = null, string content = null) {
+
+    public static string FormatCurl(this HttpWebRequest req, HttpMethod verb = null, string content = null) {
       verb ??= HttpMethod.Get;
       var args = Array.Empty<string>()
         .Concat(req.RequestUri.ToString(), "-X", verb.Method.ToUpper())
@@ -84,7 +84,7 @@ namespace SysExtensions.Net {
       var cookies = req.CookieContainer?.GetCookieHeader(req.Address);
       if (cookies.HasValue())
         args = args.Concat($"--cookie {cookies}");
-      
+
       if (content != null) args = args.Concat("-d", $"'{content}'");
       var curl = $"curl {args.NotNull().Join(" ")}";
       return curl;
@@ -92,10 +92,10 @@ namespace SysExtensions.Net {
 
     public static string FormatAsCurl(this HttpRequestMessage request, string content = null) {
       var curl = $"curl -X {request.Method.ToString().ToUpper()} "
-                 // headers can have mutliple values. Spec is to repeat them
-                 + request.Headers.Concat(request.Content?.Headers.ToArray() ?? new KeyValuePair<string, IEnumerable<string>>[] { })
-                   .SelectMany(h => h.Value, (h, v) => new {Name = h.Key, Value = v})
-                   .Join("", h => $" -H \"{h.Name}:{h.Value}\"");
+        // headers can have mutliple values. Spec is to repeat them
+        + request.Headers.Concat(request.Content?.Headers.ToArray() ?? new KeyValuePair<string, IEnumerable<string>>[] { })
+          .SelectMany(h => h.Value, (h, v) => new {Name = h.Key, Value = v})
+          .Join("", h => $" -H \"{h.Name}:{h.Value}\"");
 
       if (content != null)
         curl += $" -d '{content.Replace("'", @"\u0027")}'";

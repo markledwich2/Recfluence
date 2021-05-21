@@ -68,7 +68,8 @@ namespace YtReader.Reddit {
         sort_type = "created_utc",
         sort = "asc",
         size = 100,
-        after =new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero).ToUnixTimeSeconds() //latestFile?.Ts.ParseLong() ?? 
+        after = new DateTimeOffset(year: 2020, month: 1, day: 1, hour: 0, minute: 0, second: 0, TimeSpan.Zero)
+          .ToUnixTimeSeconds() //latestFile?.Ts.ParseLong() ?? 
       }, log);
 
       await subs.Batch(10).ForEachAsync(async r => {

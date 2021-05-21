@@ -12,7 +12,7 @@ namespace SysExtensions.Configuration {
   ///   https://github.com/reustmd/DataAnnotationsValidatorRecursive/blob/master/DataAnnotationsValidator/DataAnnotationsValidator/DataAnnotationsValidator.cs</summary>
   public class DataAnnotationsValidator {
     public bool TryValidateObject(object obj, ICollection<ValidationResult> results, IDictionary<object, object> validationContextItems = null) =>
-      Validator.TryValidateObject(obj, new ValidationContext(obj, null, validationContextItems), results, true);
+      Validator.TryValidateObject(obj, new ValidationContext(obj, serviceProvider: null, validationContextItems), results, validateAllProperties: true);
 
     public (bool valid, ValidationResult[] results) TryValidateObjectRecursive<T>(T obj, IDictionary<object, object> validationContextItems = null) {
       var results = new List<ValidationResult>();
@@ -29,8 +29,8 @@ namespace SysExtensions.Configuration {
       var result = TryValidateObject(obj, results, validationContextItems);
 
       var properties = obj.GetType().GetProperties().Where(prop => prop.CanRead
-                                                                   && !prop.GetCustomAttributes(typeof(SkipRecursiveValidation), false).Any()
-                                                                   && prop.GetIndexParameters().Length == 0).ToList();
+        && !prop.GetCustomAttributes(typeof(SkipRecursiveValidation), inherit: false).Any()
+        && prop.GetIndexParameters().Length == 0).ToList();
 
       foreach (var property in properties) {
         if (property.PropertyType == typeof(string) || property.PropertyType.IsValueType) continue;

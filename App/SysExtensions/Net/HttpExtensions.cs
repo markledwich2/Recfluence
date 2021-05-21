@@ -8,7 +8,7 @@ namespace SysExtensions.Net {
     public static Uri AsUri(this string url) => new(url);
 
     public static void EnsureSuccess(int status, string url) {
-      if (!IsSuccess(status)) throw new HttpRequestException($"{url} failed with  '{status}'", null, (HttpStatusCode) status);
+      if (!IsSuccess(status)) throw new HttpRequestException($"{url} failed with  '{status}'", inner: null, (HttpStatusCode) status);
     }
 
     public static void EnsureSuccess(this HttpStatusCode status, string url) => EnsureSuccess((int) status, url);

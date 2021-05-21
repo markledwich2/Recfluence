@@ -88,8 +88,6 @@ namespace YtReader.Store {
       Store = store;
       UserScrapeCfg = userScrapeCfg;
     }
-    
- 
 
     public async Task SaveBlobResults(ILogger log, IReadOnlyCollection<string> queryNames = null, CancellationToken cancel = default) {
       using var db = await Sf.Open(log);
@@ -98,8 +96,6 @@ namespace YtReader.Store {
       var now = DateTime.Now;
       var dateRangeParams = new {from = "2019-11-01", to = now.ToString("yyyy-MM-01")};
 
-
-      
 
       /*const string classChannelsSelect = @"
 select c.*
@@ -137,7 +133,7 @@ order by channel_views desc
             "aggregated recommendations between channels (scraped form the YouTube website)", dateRangeParams, inSharedZip: true),
 
           new FileQuery("channel_review", "sql/channel_review.sql",
-            desc: "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip: true),
+            "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip: true),
 
           new FileQuery("channel_review_lists", @"sql/channel_review_lists.sql", parameters: new {limit = 100},
             fileType: Json, jsonNaming: Camel),
@@ -222,10 +218,10 @@ order by month
 select *
 from g", fileType: Json, jsonNaming: Camel),
 
-          new ResQuery("narrative_vaccine_personal_highlight", Narrative.VaccinePersonalHighlight, fileType:Json, jsonNaming:Camel),
-          
-          new ResQuery("narrative_vaccine_dna_highlight", Narrative.VaccineDnaHighlight, fileType:Json, jsonNaming:Camel)
-          
+          new ResQuery("narrative_vaccine_personal_highlight", Narrative.VaccinePersonalHighlight, fileType: Json, jsonNaming: Camel),
+
+          new ResQuery("narrative_vaccine_dna_highlight", Narrative.VaccineDnaHighlight, fileType: Json, jsonNaming: Camel)
+
           /*new ResQuery("sam_vid", @$"
 with sam_vids_raw as ({samVidsSelect})
 select e.*
@@ -438,6 +434,6 @@ group by channel_id",
       return j;
     }
 
-    static IEnumerable<int> FieldRange(this IDataRecord reader) => Enumerable.Range(0, reader.FieldCount);
+    static IEnumerable<int> FieldRange(this IDataRecord reader) => Enumerable.Range(start: 0, reader.FieldCount);
   }
 }

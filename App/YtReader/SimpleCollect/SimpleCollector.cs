@@ -55,13 +55,13 @@ namespace YtReader.SimpleCollect {
       WithUp("explicit",
         plan.ExplicitChannels.NotNull().Select(c => scraper.NewChan(c) with {DiscoverSource = new(Manual, c)}).ToArray());
 
-      if (!parts.ShouldRunAny(Discover, DiscoverFromVideo) || plan.ExplicitChannels?.Any() == true) return plan;
+      if (!parts.ShouldRunAny(DiscoverLink, DiscoverVideo) || plan.ExplicitChannels?.Any() == true) return plan;
       var discovered = await dbCtx.DiscoverChannelsAndVideos();
-      if (parts.ShouldRun(Discover))
+      if (parts.ShouldRun(DiscoverLink))
         WithUp("discovered", discovered.Where(d => d.LinkType == LinkType.Channel)
           .Select(selector: l => scraper.NewChan(l.LinkId) with {DiscoverSource = l.ToDiscoverSource()}).ToArray());
 
-      if (!parts.ShouldRun(DiscoverFromVideo)) return plan;
+      if (!parts.ShouldRun(DiscoverVideo)) return plan;
 
       plan = plan with {
         VideosToCrawl = discovered.Where(d => d.LinkType == LinkType.Video)
@@ -71,33 +71,55 @@ namespace YtReader.SimpleCollect {
       return plan;
     }
 
+    public async ValueTask<SimpleCollectPlan> Discover(SimpleCollectPlan plan, ILogger log, CancellationToken cancel = default) {
+      if (plan.Parts.ShouldRun(DiscoverVideo))
+        plan = await CrawlVideoLinks(plan, log);
+      if (plan.Parts.ShouldRun(DiscoverHome)) {
+        var platform = plan.Platform;
+        var chans = await Scraper(plan.Platform).HomeVideos(log).BlockMap(async b => {
+            var videos = b.NotNull().Select(v => (discover: new DiscoverSource(Home), video: v)).ToArray();
+            await Store.Videos.Append(videos.Select(v => v.video).ToArray(), log);
+            //log.Information("Collect {Platform} - crawled {Videos} home videos", platform, videos.Length);
+            return CrawledChannels(platform, videos);
+          }, cancel: cancel)
+          .SelectMany().Distinct().ToListAsync();
+        plan = plan.WithForUpdate("video crawled channels", chans, log);
+      }
+      return plan;
+    }
+
     /// <summary>Scrape videos from the plan, save to the store, and append new channels to the plan</summary>
-    public async ValueTask<SimpleCollectPlan> CrawlVideoLinksToFindNewChannels(SimpleCollectPlan plan, ILogger log) {
+    public async ValueTask<SimpleCollectPlan> CrawlVideoLinks(SimpleCollectPlan plan, ILogger log) {
       var scraper = Scraper(plan.Platform);
       var crawledVideos = await plan.VideosToCrawl.BlockMap(async (discover, i) => {
-        var video = await scraper.Video(discover.LinkId, log)
+        var video = await scraper.VideoAndExtra(discover.LinkId, log)
           .Swallow(e => log.Warning(e, "Collect {Platform} - error crawling video {Video}: {Error}", plan.Platform, discover.LinkId, e.Message));
-        log.Debug("Collect {Platform} - crawled video {VideoId} {Vid}/{Total}", plan.Platform, video?.VideoId, i, plan.VideosToCrawl.Count);
+        log.Debug("Collect {Platform} - crawled video {VideoId} {Vid}/{Total}", plan.Platform, video.Video?.VideoId, i, plan.VideosToCrawl.Count);
         return (discover, video);
       }, scraper.CollectParallel).ToListAsync();
 
-      await Store.VideoExtra.Append(crawledVideos.Select(r => r.video).NotNull().ToArray());
+      await Store.VideoExtra.Append(crawledVideos.Select(r => r.video.Video).NotNull().ToArray());
+      await Store.Comments.Append(crawledVideos.SelectMany(r => r.video.Comments).NotNull().ToArray());
       log.Information("Collect {Platform} - saved {Videos} videos", plan.Platform, crawledVideos.Count);
+      var crawledChannels = CrawledChannels(plan.Platform, crawledVideos.Select(v => (v.discover, v.video.Video)));
+      return plan.WithForUpdate("video crawled channels", crawledChannels, log);
+    }
 
+    static Channel[] CrawledChannels<T>(Platform platform, IEnumerable<(DiscoverSource discover, T video)> crawledVideos) where T : Video {
       var crawledChannels = crawledVideos.Where(v => v.video?.ChannelId.HasValue() == true)
-        .Select(v => new Channel(plan.Platform, v.video.ChannelId, v.video.ChannelSourceId) {
+        .Select(v => new Channel(platform, v.video.ChannelId, v.video.ChannelSourceId) {
           ChannelTitle = v.video.ChannelTitle,
           DiscoverSource = v.discover
         }).Distinct().ToArray();
-
-      return plan.WithForUpdate("video crawled channels", crawledChannels, log);
+      return crawledChannels;
     }
 
     public async ValueTask<SimpleCollectPlan> CollectChannelAndVideos(SimpleCollectPlan plan, ILogger log, CancellationToken cancel) {
       var scraper = Scraper(plan.Platform);
       if (plan.ExplicitVideos != null) {
-        var videos = await plan.ExplicitVideos.BlockMap(v => scraper.Video(v, log)).ToListAsync();
-        await Store.Videos.Append(videos);
+        var videos = await plan.ExplicitVideos.BlockMap(v => scraper.VideoAndExtra(v, log)).ToListAsync();
+        await Store.Videos.Append(videos.Select(v => v.Video).NotNull().ToArray());
+        await Store.Comments.Append(videos.SelectMany(v => v.Comments).NotNull().ToArray());
       }
 
       await plan.ToUpdate.Process(PipeCtx,
@@ -188,13 +210,16 @@ namespace YtReader.SimpleCollect {
       var scraper = Scraper(platform);
       if (c != null && c.Platform != platform) throw new($"platform '{c.Platform}' of channel `{c.ChannelId}` doesn't match provided '{platform}'");
       var extras = await planedExtras.WithPart(EExtra).BlockMap(v => {
-          return scraper.Video(v.ForUpdate.SourceId, log)
+          return scraper.VideoAndExtra(v.ForUpdate.SourceId, log)
             .Swallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", platform, v.VideoId, e.Message));
         }, CollectCfg.WebParallel
       ).NotNull().ToArrayAsync();
-      await Store.VideoExtra.Append(extras, log);
+      var vids = extras.Select(r => r.Video).NotNull().ToArray();
+      await Store.VideoExtra.Append(vids);
+      var comments = extras.SelectMany(r => r.Comments).NotNull().ToArray();
+      await Store.Comments.Append(comments);
       log.Debug("Collect {Platform} - saved {Videos} video extras for {Channel}", platform, extras.Length, c?.ToString() ?? "");
-      return (extras, Empty<Rec>(), Empty<VideoComment>(), Empty<VideoCaption>());
+      return (vids, Empty<Rec>(), comments, Empty<VideoCaption>());
     }
   }
 }

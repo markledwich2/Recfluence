@@ -19,7 +19,9 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
 using YtReader.Store;
+using YtReader.Web;
 using YtReader.Yt;
+using static System.Net.Http.HttpCompletionOption;
 using static Amazon.TranscribeService.TranscriptionJobStatus;
 
 // ReSharper disable InconsistentNaming
@@ -30,19 +32,20 @@ namespace YtReader.Transcribe {
     readonly S3Store                       StoreMedia  = new(Aws.S3, "media");
     readonly S3Store                       StoreTrans  = new(Aws.S3, "transcripts");
 
+    /*
     MediaFormat Extension(Platform? platform) => platform switch {
       Platform.Rumble => "mp4",
       _ => throw new($"Platform {platform} not supported for media transcription")
     };
+    */
 
     static readonly Regex SafeNameRe = new("[^\\w0-9]", RegexOptions.Compiled);
     string SafeName(string name) => SafeNameRe.Replace(name, "");
 
-    StringPath BlobPath(Platform? platform, string sourceId) {
-      var extension = Extension(platform);
-      return StringPath.Relative(
+    StringPath BlobPath(Platform? platform, string sourceId, string extension) =>
+      //var extension = Extension(platform);
+      StringPath.Relative(
         platform.EnumString(), $"{SafeName(sourceId)}.{extension}");
-    }
 
     record VideoData(string video_id, string source_id, string media_url, string channel_id, Platform platform);
 
@@ -60,17 +63,15 @@ order by views desc
 ").ToListAsync();
 
       await videos
-        .BlockMap(async v => (mediaPath: await CopyVideo(log, v, platform, tempDir), v)
+        .BlockMap(async v => (mediaPath: await CopyVideo(log, v, platform, tempDir, cancel), v)
           , parallel: 4, cancel: cancel)
         .BlockMap(async p => {
-          var (mediaPath, v) = p;
-          var (transPath, job, trans) = await StartTrans(platform, mediaPath, log);
-          return (transPath, job, trans, v);
-        })
+          var (transPath, job, trans) = await StartTrans(p.mediaPath, log);
+          return (transPath, job, trans, p.v);
+        }, parallel: 4)
         .BlockMap(async r => {
-          var (transPath, startJob, trans, v) = r;
-          var job = await WaitForCompletedTrans(log, startJob);
-          return (transPath, job, v, trans: trans ?? await LoadTrans(transPath, log));
+          var job = await WaitForCompletedTrans(log, r.job);
+          return (r.transPath, job, r.v, trans: r.trans ?? await LoadTrans(r.transPath, log));
         }, parallel: 4, cancel: cancel)
         .Select(r => r.trans.AwsToVideoCaption(r.job, r.v.video_id, r.v.channel_id, r.v.platform))
         .Batch(10)
@@ -82,30 +83,33 @@ order by views desc
       log.Information("Transcribe - completed transcribing");
     }
 
-    async Task<StringPath> CopyVideo(ILogger log, VideoData v, Platform? platform, FPath tempDir) {
-      var blobPath = BlobPath(platform, v.source_id);
+    async Task<StringPath> CopyVideo(ILogger log, VideoData v, Platform? platform, FPath tempDir, CancellationToken cancel) {
+      var mediaUrl = v.media_url.AsUrl();
+      var ext = mediaUrl.PathSegments.LastOrDefault()?.Split(".").LastOrDefault() ?? throw new("not implemented. Currently relying on extension in url");
+      var blobPath = BlobPath(platform, v.source_id, ext);
       var existing = await StoreMedia.Info(blobPath);
       if (existing != null) {
-        log.Debug("Transcribe - {File} exists, ignoring", blobPath);
+        log.Debug("Transcribe - {BlobPath} exists, ignoring", blobPath);
         return blobPath;
       }
-      log.Debug("Transcribe - loading media {File}", blobPath);
+      log.Debug("Transcribe - loading media from {Url} to {BlobPath}", mediaUrl, blobPath);
 
       var localFile = tempDir.Combine(blobPath.Tokens.ToArray());
       localFile.EnsureDirectoryExists();
 
-      using (var rs = await v.media_url.GetStreamAsync()) {
+      using (var res = await v.media_url.WithTimeout(30.Minutes()).SendWithRetry("get media", log: log, completionOption: ResponseHeadersRead))
+      using (var rs = await res.GetStreamAsync()) {
         using var ws = localFile.Open(FileMode.Create);
-        await rs.CopyToAsync(ws);
+        await rs.CopyToAsync(ws, cancel);
       }
 
       await StoreMedia.Save(blobPath, localFile, log);
-      log.Debug("Transcribe - saved media {File}", blobPath);
+      log.Debug("Transcribe - saved media {BlobPath}", blobPath);
       localFile.Delete();
       return blobPath;
     }
 
-    async Task<(StringPath path, TranscriptionJob job, TransRoot trans)> StartTrans(Platform? platform, StringPath p, ILogger log) {
+    async Task<(StringPath path, TranscriptionJob job, TransRoot trans)> StartTrans(StringPath p, ILogger log) {
       var transPath = p.WithExtension(".json");
       if (await StoreTrans.Exists(transPath)) {
         var trans = await LoadTrans(transPath, log);
@@ -113,8 +117,8 @@ order by views desc
         return (transPath, job.TranscriptionJob, trans);
       }
       var res = await TransClient.StartTranscriptionJobAsync(new() {
-        LanguageCode = LanguageCode.EnUS,
-        MediaFormat = Extension(platform),
+        IdentifyLanguage = true,
+        MediaFormat = p.ExtensionsString,
         Media = new() {
           MediaFileUri = StoreMedia.S3Uri(p).ToString()
         },

@@ -10,10 +10,10 @@
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.0.0-alpha-844" />
     <PackageReference Include="Autofac" Version="6.2.0" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.0.21" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.0.25" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.8.3" />
     <PackageReference Include="CliFx" Version="2.0.4" />
-    <PackageReference Include="CsvHelper" Version="27.0.2" />
+    <PackageReference Include="CsvHelper" Version="27.0.4" />
     <PackageReference Include="Dapper" Version="2.0.90" />
     <PackageReference Include="MedallionShell" Version="1.6.2" />
     <PackageReference Include="Microsoft.Azure.Management.ContainerInstance.Fluent" Version="1.37.1" />

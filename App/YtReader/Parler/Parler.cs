@@ -18,9 +18,9 @@ using File = Google.Apis.Drive.v3.Data.File;
 
 namespace YtReader {
   public class Parler {
-    readonly ILogger            Log;
-    readonly GoogleCfg          Cfg;
-    readonly FPath              Dir;
+    readonly ILogger          Log;
+    readonly GoogleCfg        Cfg;
+    readonly FPath            Dir;
     readonly ISimpleFileStore Db;
 
     public Parler(ILogger log, BlobStores stores, GoogleCfg Cfg) {

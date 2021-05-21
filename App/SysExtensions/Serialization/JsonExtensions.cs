@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Globalization;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -96,7 +93,7 @@ namespace SysExtensions.Serialization {
       using (var sw = new StreamWriter(ms, leaveOpen: true, encoding: encoding ?? Encoding.UTF8))
       using (var jw = new JsonTextWriter(sw))
         settings.Serializer().Serialize(jw, o);
-      ms.Seek(0, SeekOrigin.Begin);
+      ms.Seek(offset: 0, SeekOrigin.Begin);
       return ms;
     }
 
@@ -165,10 +162,9 @@ namespace SysExtensions.Serialization {
         _ => original.DeepClone()
       };
 
-    /// <summary>
-    /// Shorthand for t.Value<string>()
-    /// </summary>
+    /// <summary>Shorthand for t.Value<string>()</summary>
     public static string Str(this JToken t, string path = null) => (path == null ? t : t.Token(path))?.Value<string>();
+
     public static JToken Token(this JToken t, string path) => t.SelectToken(path);
     public static IEnumerable<JToken> Tokens(this JToken t, string path) => t.SelectTokens(path);
   }

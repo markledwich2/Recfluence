@@ -28,9 +28,7 @@ namespace YtReader.Store {
       Log = log;
     }
 
-    public Task UpgradeIfNeeded() {
-      throw new NotImplementedException("this is untested/not finished. Complete next time we need to upgrade");
-    }
+    public Task UpgradeIfNeeded() => throw new NotImplementedException("this is untested/not finished. Complete next time we need to upgrade");
 
     async Task Upgrade() {
       var versionFile = await Store.Info(VersionFile);
@@ -59,13 +57,11 @@ namespace YtReader.Store {
 
     Task Save(StoreMd md) => Store.Set(VersionFile, md);
 
-    [Upgrade("0.1")]
-    Task AddVersionFile() {
-      return Task.CompletedTask; }
+    [Upgrade("0.1")] Task AddVersionFile() => Task.CompletedTask;
 
     [Upgrade("0")]
     async Task UpdateVids_0to1() {
-      var filesToUpgrade = await FilesToUpgrade("videos", 0);
+      var filesToUpgrade = await FilesToUpgrade("videos", fromVersion: 0);
       await filesToUpgrade.BlockDo(async f => {
         var existingJs = await Jsonl(f);
         var upgradedJs = existingJs.Select(j => {
@@ -73,14 +69,14 @@ namespace YtReader.Store {
           newJ["Updated"] = V0UpdateTime;
           return newJ;
         }).ToList();
-        var newPath = NewFilePath(f, 1);
+        var newPath = NewFilePath(f, version: 1);
         await ReplaceJsonLFile(f, newPath, upgradedJs);
       }, Cfg.DefaultParallel);
     }
 
     [Upgrade("0")]
     async Task UpdateRecs_0to1() {
-      var toUpgrade = await FilesToUpgrade("recs", 0);
+      var toUpgrade = await FilesToUpgrade("recs", fromVersion: 0);
       V0UpdateTime = DateTime.Parse("2019-11-02T13:50:00Z").ToUniversalTime();
       await toUpgrade.BlockDo(async f => {
         var existingJs = await Jsonl(f);
@@ -99,12 +95,12 @@ namespace YtReader.Store {
 
     [Upgrade("0")]
     async Task UpdateCaptions_0to1() {
-      var toUpgrade = await FilesToUpgrade("captions", 0);
+      var toUpgrade = await FilesToUpgrade("captions", fromVersion: 0);
       await toUpgrade.BlockDo(async f => {
         var js = await Jsonl(f);
         foreach (var j in js) j["Updated"] = V0UpdateTime;
-        await ReplaceJsonLFile(f, NewFilePath(f, 1), js);
-      }, 4);
+        await ReplaceJsonLFile(f, NewFilePath(f, version: 1), js);
+      }, parallel: 4);
     }
 
     static StringPath NewFilePath(StoreFileMd f, int version) =>
@@ -117,7 +113,7 @@ namespace YtReader.Store {
     }
 
     async Task<List<StoreFileMd>> FilesToUpgrade(StringPath path, int fromVersion) {
-      var files = (await Store.List(path, true).SelectManyList()).Select(StoreFileMd.FromFileItem).ToList();
+      var files = (await Store.List(path, allDirectories: true).SelectManyList()).Select(StoreFileMd.FromFileItem).ToList();
       var toUpgrade = files.Where(f => (f.Version ?? "0").ParseInt() == fromVersion).ToList();
       return toUpgrade;
     }

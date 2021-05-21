@@ -22,8 +22,8 @@ namespace YtReader {
       var destPath = StringPath.Relative("db2", DateTime.UtcNow.FileSafeTimestamp());
       log.Information("Backup {Path} - started", destPath);
 
-      var source = (AzureBlobFileStore)Stores.Store(DataStoreType.DbStage);
-      var dest = (AzureBlobFileStore)Stores.Store(DataStoreType.Backup);
+      var source = (AzureBlobFileStore) Stores.Store(DataStoreType.DbStage);
+      var dest = (AzureBlobFileStore) Stores.Store(DataStoreType.Backup);
       if (dest == null) {
         log.Information("not running backup. Normal for pre-release");
         return;

@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Prod - Collect List" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.exe" />
-    <option name="PROGRAM_PARAMETERS" value="collect-list VideoPath &quot;import/narratives/covid_vaccine_dna.vid_ids.tsv.gz&quot; -z -p video -e extra|caption" />
+    <option name="PROGRAM_PARAMETERS" value="collect-list Named stale_extra -z -p video -e extra -a &quot;{ &quot;&quot;older_than_days&quot;&quot;: 10, &quot;&quot;limit&quot;&quot;:2000, &quot;&quot;platform&quot;&quot;:&quot;&quot;BitChute&quot;&quot; }&quot;" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>

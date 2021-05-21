@@ -24,12 +24,11 @@ namespace YtReader {
 
   public record DataScriptRunState(string[] Parts, string[] VideoPaths);
   public record DataScriptOptions(string RunId, string[] Parts, string VideosView);
-  
+
   record EntityVideoRow(string video_id);
 
   public record DataScripts(DataScriptsCfg ScriptsCfg, BlobStores Stores, SnowflakeConnectionProvider Db, AzureContainers containers, SemVersion Version,
     RootCfg RootCfg, ContainerCfg ContainerCfg, AppCfg AppCfg) {
-    
     public async Task Run(ILogger log, CancellationToken cancel, DataScriptOptions opts) {
       var store = Stores.Store(DataStoreType.Root);
       var env = new (string name, string value)[] {
@@ -45,9 +44,10 @@ namespace YtReader {
 
       async Task<List<StringPath>> LoadNewEntityFiles() {
         using var db = await Db.Open(log);
-        return await db.QueryBlocking<EntityVideoRow>("new entities", 
-            opts.VideosView != null ? $"select video_id from {opts.VideosView}"
-        : @$"
+        return await db.QueryBlocking<EntityVideoRow>("new entities",
+            opts.VideosView != null
+              ? $"select video_id from {opts.VideosView}"
+              : @$"
 with ents as (
   select video_id, max(updated) updated
   from video_entity_stage_view

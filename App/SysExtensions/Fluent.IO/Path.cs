@@ -35,12 +35,12 @@ namespace SysExtensions.Fluent.IO {
 
     /// <summary>Creates a collection of paths from a list of path strings.</summary>
     /// <param name="paths">The list of path strings.</param>
-    public FPath(IEnumerable<string> paths) : this(paths, null) { }
+    public FPath(IEnumerable<string> paths) : this(paths, previousPaths: null) { }
 
     /// <summary>Creates a collection of paths from a list of paths.</summary>
     /// <param name="paths">The list of paths.</param>
     public FPath(IEnumerable<FPath> paths)
-      : this(paths.SelectMany(p => p._paths), null) { }
+      : this(paths.SelectMany(p => p._paths), previousPaths: null) { }
 
     /// <summary>Creates a collection of paths from a list of path strings and a previous list of path strings.</summary>
     /// <param name="path">A path string.</param>
@@ -58,9 +58,9 @@ namespace SysExtensions.Fluent.IO {
       _paths = paths
         .Where(s => !string.IsNullOrWhiteSpace(s))
         .Select(s => s[s.Length - 1] == SystemPath.DirectorySeparatorChar &&
-                     SystemPath.GetPathRoot(s) != s
-          ? s.Substring(0, s.Length - 1)
-          : s)
+          SystemPath.GetPathRoot(s) != s
+            ? s.Substring(startIndex: 0, s.Length - 1)
+            : s)
         .Distinct(StringComparer.CurrentCultureIgnoreCase);
       _previousPaths = previousPaths;
     }
@@ -141,7 +141,7 @@ namespace SysExtensions.Fluent.IO {
 
     public string StringValue {
       get => _paths.Join(",", escapeCharacter: '$');
-      set => _paths = value.UnJoin(',', '$');
+      set => _paths = value.UnJoin(separator: ',', escapeCharacter: '$');
     }
 
     public override string ToString() => StringValue;
@@ -189,7 +189,7 @@ namespace SysExtensions.Fluent.IO {
       return !enumerator.MoveNext();
     }
 
-    public override int GetHashCode() => _paths.Aggregate(17, (h, p) => 23 * h + (p ?? "").GetHashCode());
+    public override int GetHashCode() => _paths.Aggregate(seed: 17, (h, p) => 23 * h + (p ?? "").GetHashCode());
 
     /// <summary>The parent paths for the paths in the collection.</summary>
     public FPath Parent() => First().Up();
@@ -241,7 +241,7 @@ namespace SysExtensions.Fluent.IO {
       if (pathTokens.Length == 1) return Combine(p => pathTokens[0]);
       var result = new HashSet<string>();
       var concatenated = new string[pathTokens.Length + 1];
-      pathTokens.CopyTo(concatenated, 1);
+      pathTokens.CopyTo(concatenated, index: 1);
       foreach (var path in _paths) {
         concatenated[0] = path;
         result.Add(SystemPath.Combine(concatenated));
@@ -254,13 +254,13 @@ namespace SysExtensions.Fluent.IO {
     ///   be overwritten.</summary>
     /// <param name="destination">The destination path.</param>
     /// <returns>The destination path.</returns>
-    public FPath Copy(FPath destination) => Copy(p => destination, Overwrite.Never, false);
+    public FPath Copy(FPath destination) => Copy(p => destination, Overwrite.Never, recursive: false);
 
     /// <summary>Copies the file or folder for this path to another location. The copy is not recursive.</summary>
     /// <param name="destination">The destination path.</param>
     /// <param name="overwrite">Overwriting policy. Default is never.</param>
     /// <returns>The destination path.</returns>
-    public FPath Copy(FPath destination, Overwrite overwrite) => Copy(p => destination, overwrite, false);
+    public FPath Copy(FPath destination, Overwrite overwrite) => Copy(p => destination, overwrite, recursive: false);
 
     /// <summary>Copies the file or folder for this path to another location.</summary>
     /// <param name="destination">The destination path.</param>
@@ -273,13 +273,13 @@ namespace SysExtensions.Fluent.IO {
     ///   be overwritten.</summary>
     /// <param name="destination">The destination path string.</param>
     /// <returns>The destination path.</returns>
-    public FPath Copy(string destination) => Copy(p => Create(destination, this), Overwrite.Never, false);
+    public FPath Copy(string destination) => Copy(p => Create(destination, this), Overwrite.Never, recursive: false);
 
     /// <summary>Copies the file or folder for this path to another location. The copy is not recursive.</summary>
     /// <param name="destination">The destination path string.</param>
     /// <param name="overwrite">Overwriting policy. Default is never.</param>
     /// <returns>The destination path.</returns>
-    public FPath Copy(string destination, Overwrite overwrite) => Copy(p => Create(destination, this), overwrite, false);
+    public FPath Copy(string destination, Overwrite overwrite) => Copy(p => Create(destination, this), overwrite, recursive: false);
 
     /// <summary>Copies the file or folder for this path to another location.</summary>
     /// <param name="destination">The destination path string.</param>
@@ -292,7 +292,7 @@ namespace SysExtensions.Fluent.IO {
     /// <param name="pathMapping">A function that determines the destination path for each source path. If the function returns
     ///   a null path, the file or directory is not copied.</param>
     /// <returns>The set</returns>
-    public FPath Copy(Func<FPath, FPath> pathMapping) => Copy(pathMapping, Overwrite.Never, false);
+    public FPath Copy(Func<FPath, FPath> pathMapping) => Copy(pathMapping, Overwrite.Never, recursive: false);
 
     /// <summary>Does a copy of all files and directories in the set.</summary>
     /// <param name="pathMapping">A function that determines the destination path for each source path. If the function returns
@@ -499,7 +499,7 @@ namespace SysExtensions.Fluent.IO {
         p => {
           var ext = p.Extension;
           return extensions.Contains(ext) ||
-                 ext.Length > 0 && extensions.Contains(ext.Substring(1));
+            ext.Length > 0 && extensions.Contains(ext.Substring(1));
         });
 
     /// <summary>Executes an action for each file or folder in the set.</summary>
@@ -512,7 +512,7 @@ namespace SysExtensions.Fluent.IO {
 
     /// <summary>Gets the subdirectories of folders in the set.</summary>
     /// <returns>The set of matching subdirectories.</returns>
-    public FPath Directories() => Directories(p => true, "*", false);
+    public FPath Directories() => Directories(p => true, "*", recursive: false);
 
     /// <summary>Gets all the subdirectories of folders in the set that match the provided pattern and using the provided
     ///   options.</summary>
@@ -524,7 +524,7 @@ namespace SysExtensions.Fluent.IO {
     /// <summary>Creates a set from all the subdirectories that satisfy the specified predicate.</summary>
     /// <param name="predicate">A function that returns true if the directory should be included.</param>
     /// <returns>The set of directories that satisfy the predicate.</returns>
-    public FPath Directories(Predicate<FPath> predicate) => Directories(predicate, "*", false);
+    public FPath Directories(Predicate<FPath> predicate) => Directories(predicate, "*", recursive: false);
 
     /// <summary>Creates a set from all the subdirectories that satisfy the specified predicate.</summary>
     /// <param name="predicate">A function that returns true if the directory should be included.</param>
@@ -548,7 +548,7 @@ namespace SysExtensions.Fluent.IO {
 
     /// <summary>Gets all the files under the directories of the set.</summary>
     /// <returns>The set of files.</returns>
-    public FPath Files() => Files(p => true, "*", false);
+    public FPath Files() => Files(p => true, "*", recursive: false);
 
     /// <summary>Gets all the files under the directories of the set that match the pattern, going recursively into
     ///   subdirectories if recursive is set to true.</summary>
@@ -560,7 +560,7 @@ namespace SysExtensions.Fluent.IO {
     /// <summary>Creates a set from all the files under the path that satisfy the specified predicate.</summary>
     /// <param name="predicate">A function that returns true if the path should be included.</param>
     /// <returns>The set of paths that satisfy the predicate.</returns>
-    public FPath Files(Predicate<FPath> predicate) => Files(predicate, "*", false);
+    public FPath Files(Predicate<FPath> predicate) => Files(predicate, "*", recursive: false);
 
     /// <summary>Creates a set from all the files under the path that satisfy the specified predicate.</summary>
     /// <param name="predicate">A function that returns true if the path should be included.</param>
@@ -584,7 +584,7 @@ namespace SysExtensions.Fluent.IO {
 
     /// <summary>Gets all the files and subdirectories under the directories of the set.</summary>
     /// <returns>The set of files and folders.</returns>
-    public FPath FileSystemEntries() => FileSystemEntries(p => true, "*", false);
+    public FPath FileSystemEntries() => FileSystemEntries(p => true, "*", recursive: false);
 
     /// <summary>Gets all the files and subdirectories under the directories of the set that match the pattern, going
     ///   recursively into subdirectories if recursive is set to true.</summary>
@@ -596,7 +596,7 @@ namespace SysExtensions.Fluent.IO {
     /// <summary>Creates a set from all the files and subdirectories under the path that satisfy the specified predicate.</summary>
     /// <param name="predicate">A function that returns true if the path should be included.</param>
     /// <returns>The set of fils and subdirectories that satisfy the predicate.</returns>
-    public FPath FileSystemEntries(Predicate<FPath> predicate) => FileSystemEntries(predicate, "*", false);
+    public FPath FileSystemEntries(Predicate<FPath> predicate) => FileSystemEntries(predicate, "*", recursive: false);
 
     /// <summary>Creates a set from all the files and subdirectories under the path that satisfy the specified predicate.</summary>
     /// <param name="predicate">A function that returns true if the path should be included.</param>
@@ -913,7 +913,7 @@ namespace SysExtensions.Fluent.IO {
       ).ToList();
       if (!bytes.Any()) return new byte[] { };
       if (bytes.Count() == 1) return bytes.First();
-      var result = new byte[bytes.Aggregate(0, (i, b) => i + b.Length)];
+      var result = new byte[bytes.Aggregate(seed: 0, (i, b) => i + b.Length)];
       var offset = 0;
       foreach (var b in bytes) {
         b.CopyTo(result, offset);
@@ -950,7 +950,7 @@ namespace SysExtensions.Fluent.IO {
 
     /// <summary>Gets all files under this path.</summary>
     /// <returns>The collection of file paths.</returns>
-    public FPath AllFiles() => Files("*", true);
+    public FPath AllFiles() => Files("*", recursive: true);
 
     /// <summary>The attributes for the file for the first path in the collection.</summary>
     /// <returns>The attributes</returns>
@@ -1170,7 +1170,7 @@ namespace SysExtensions.Fluent.IO {
     /// <summary>Writes to all files in the set using UTF8.</summary>
     /// <param name="text">The text to write.</param>
     /// <returns>The set</returns>
-    public FPath Write(string text) => Write(p => text, false);
+    public FPath Write(string text) => Write(p => text, append: false);
 
     /// <summary>Writes to all files in the set using UTF8.</summary>
     /// <param name="text">The text to write.</param>
@@ -1182,7 +1182,7 @@ namespace SysExtensions.Fluent.IO {
     /// <param name="text">The text to write.</param>
     /// <param name="encoding">The encoding to use.</param>
     /// <returns>The set</returns>
-    public FPath Write(string text, Encoding encoding) => Write(p => text, encoding, false);
+    public FPath Write(string text, Encoding encoding) => Write(p => text, encoding, append: false);
 
     /// <summary>Writes to all files in the set.</summary>
     /// <param name="text">The text to write.</param>
@@ -1231,9 +1231,9 @@ namespace SysExtensions.Fluent.IO {
 
     protected static FPath Create(IEnumerable<string> paths, FPath previousPaths) => new FPath {_paths = paths, _previousPaths = previousPaths};
 
-    protected static FPath Create(IEnumerable<FPath> paths) => Create(paths.SelectMany(p => p._paths), null);
+    protected static FPath Create(IEnumerable<FPath> paths) => Create(paths.SelectMany(p => p._paths), previousPaths: null);
 
-    protected static FPath Create(IEnumerable<string> paths) => Create(paths, null);
+    protected static FPath Create(IEnumerable<string> paths) => Create(paths, previousPaths: null);
 
     protected static FPath Create(params string[] paths) => Create((IEnumerable<string>) paths);
 
@@ -1271,13 +1271,13 @@ namespace SysExtensions.Fluent.IO {
     static void CopyFile(string srcPath, string destPath, Overwrite overwrite) {
       if (overwrite == Overwrite.Throw && File.Exists(destPath)) throw new InvalidOperationException($"File {destPath} already exists.");
       if (overwrite != Overwrite.Always &&
-          (overwrite != Overwrite.Never || File.Exists(destPath)) &&
-          (overwrite != Overwrite.IfNewer || File.Exists(destPath) &&
-            File.GetLastWriteTime(srcPath) <= File.GetLastWriteTime(destPath))) return;
+        (overwrite != Overwrite.Never || File.Exists(destPath)) &&
+        (overwrite != Overwrite.IfNewer || File.Exists(destPath) &&
+          File.GetLastWriteTime(srcPath) <= File.GetLastWriteTime(destPath))) return;
       var dir = SystemPath.GetDirectoryName(destPath);
       if (dir == null) throw new InvalidOperationException($"Directory {destPath} not found.");
       if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-      File.Copy(srcPath, destPath, true);
+      File.Copy(srcPath, destPath, overwrite: true);
     }
 
     static void CopyDirectory(
@@ -1291,7 +1291,7 @@ namespace SysExtensions.Fluent.IO {
             SystemPath.Combine(
               destination,
               SystemPath.GetFileName(subdirectory)),
-            overwrite, true);
+            overwrite, recursive: true);
         }
 
       foreach (var file in Directory.GetFiles(source)) {
@@ -1305,8 +1305,8 @@ namespace SysExtensions.Fluent.IO {
     static bool MoveFile(string srcPath, string destPath, Overwrite overwrite) {
       if (overwrite == Overwrite.Throw && File.Exists(destPath)) throw new InvalidOperationException($"File {destPath} already exists.");
       if (overwrite != Overwrite.Always && (overwrite != Overwrite.Never || File.Exists(destPath)) &&
-          (overwrite != Overwrite.IfNewer ||
-           File.Exists(destPath) && File.GetLastWriteTime(srcPath) <= File.GetLastWriteTime(destPath)))
+        (overwrite != Overwrite.IfNewer ||
+          File.Exists(destPath) && File.GetLastWriteTime(srcPath) <= File.GetLastWriteTime(destPath)))
         return false;
       EnsureDirectoryExists(destPath);
       File.Delete(destPath);

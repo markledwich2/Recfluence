@@ -11,14 +11,14 @@ using SysExtensions.Reflection;
 
 namespace SysExtensions {
   public static class EnumExtensions {
-    static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, Enum>> StringToEnumCache = new ();
+    static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, Enum>> StringToEnumCache = new();
 
     static readonly ConcurrentDictionary<Type, ConcurrentDictionary<Enum, string>> EnumExplicitNameCache =
       new();
 
     public static string EnumExplicitName<T>(this T value) where T : IConvertible {
       var fieldInfo = value.GetType().GetTypeInfo().GetField(value.ToString(CultureInfo.InvariantCulture));
-      var enumMember = (EnumMemberAttribute) fieldInfo.GetCustomAttributes(typeof(EnumMemberAttribute), false).FirstOrDefault();
+      var enumMember = (EnumMemberAttribute) fieldInfo.GetCustomAttributes(typeof(EnumMemberAttribute), inherit: false).FirstOrDefault();
       return enumMember?.Value;
     }
 
@@ -30,7 +30,7 @@ namespace SysExtensions {
     }
 
     static EnumMemberAttribute EnumMemberAttribute(Enum value, Type t) =>
-      (EnumMemberAttribute) t.GetField(value.ToString()).GetCustomAttribute(typeof(EnumMemberAttribute), false);
+      (EnumMemberAttribute) t.GetField(value.ToString()).GetCustomAttribute(typeof(EnumMemberAttribute), inherit: false);
 
     /// <summary>Converts the enum value to a string, taking into account the EnumMember attribute. Uses convertible because
     ///   that is the closes type that can be used to Enum and don't want too many extensions on object</summary>
@@ -41,7 +41,7 @@ namespace SysExtensions {
 
     public static bool TryParseEnum<T>(this string s, out T value) where T : Enum {
       var (found, enumValue) = InnerParseEnum(s, typeof(T));
-      value = found ? (T)enumValue : default;
+      value = found ? (T) enumValue : default;
       return found;
     }
 
@@ -63,7 +63,7 @@ namespace SysExtensions {
 
       // initialize if missing (not just if first cache miss) because there may be different defaultEnumString() functions depending on the context (e.g. serialization settings)
       if (found) return (true, enumValue);
-      
+
       foreach (var e in Enum.GetValues(t).Cast<Enum>())
         enumCache.GetOrAdd(e.EnumExplicitName() ?? defaultEnumString(e), key => e);
       found = enumCache.TryGetValue(s, out enumValue);

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Flurl;
@@ -10,8 +11,10 @@ using Flurl.Http.Content;
 using Flurl.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Polly;
 using Serilog;
 using SysExtensions.Collections;
+using SysExtensions.Net;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using static SysExtensions.Net.HttpExtensions;
@@ -24,7 +27,7 @@ namespace YtReader.Web {
 
     public static T QueryObject<T>(this Uri uri) => QueryObject<T>(uri.Query);
     public static T QueryObject<T>(this Url url) => QueryObject<T>(url.Query);
-    
+
     static T QueryObject<T>(string queryString) {
       var dict = HttpUtility.ParseQueryString(queryString);
       var json = JsonConvert.SerializeObject(dict.Cast<string>().ToDictionary(k => k, v => dict[v]));
@@ -52,6 +55,9 @@ namespace YtReader.Web {
       return url;
     }
 
+    /// <summary>Same as AppendPathSegment, but doesn't mutate the original</summary>
+    public static Url WithPathAdded(this Url url, string path) => new Url(url).AppendPathSegment(path);
+
     public static void EnsureSuccess(ILogger log, string desc, Url url, int? statusCode, Exception ex = null) {
       if (statusCode != null && IsSuccess(statusCode.Value)) return;
       var error = statusCode?.ToString() ?? ex?.Message ?? "unknown";
@@ -65,7 +71,8 @@ namespace YtReader.Web {
       var error = res?.StatusCode.ToString() ?? ex?.Message ?? "unknown";
       var curl = request.FormatCurl(verb, content);
       log?.Warning(ex, "Flurl {Desc} - failed {Status}: {Curl}", desc, error, curl);
-      throw new($"Flurl '{desc}' failed ({error})", ex);
+      var msg = $"Flurl '{desc}' failed ({error})";
+      throw ex == null ? new (msg) : new(msg, ex);
     }
 
     public static CapturedUrlEncodedContent FormUrlContent(this IFlurlRequest req, object data) =>
@@ -80,5 +87,14 @@ namespace YtReader.Web {
       var curl = $"curl {args.NotNull().Join(" ")}";
       return curl;
     }
+
+    public static async Task<IFlurlResponse> SendWithRetry(this IFlurlRequest request, string desc, HttpMethod verb = null, HttpContent content = null,
+      Func<IFlurlResponse, bool> isTransient = null, ILogger log = null, CancellationToken cancel = default,
+      int retries = 3, HttpCompletionOption completionOption = default) =>
+      await Policy.HandleResult(isTransient ?? (s => IsTransientError(s.StatusCode)))
+        .RetryWithBackoff("BcWeb flurl transient error", retries,
+          (r, i, _) => log?.Debug("retryable error with {Desc}: '{Error}'. Attempt {Attempt}/{Total}\n{Curl}",
+            desc, r.Result?.StatusCode.ToString() ?? r.Exception?.Message ?? "Unknown error", i, retries, request.FormatCurl())
+          , log).ExecuteAsync(() => request.AllowAnyHttpStatus().SendAsync(verb ?? HttpMethod.Get, content, cancel, completionOption));
   }
 }

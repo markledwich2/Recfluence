@@ -65,10 +65,10 @@ where not exists (select * from link_meta_stage s where s.v:SourceUrl = l.url)
       IReadOnlyCollection<string> urls;
       using (var db = await Conn.Open(log))
         urls = await db.QueryAsync<UrlRow>("amazon links", sql).Select(l => l.url).ToListAsync();
-      if(forceLocal)
+      if (forceLocal)
         await ProcessLinks(urls, log, cancel);
       else
-        await urls.Process(Pipe, b => ProcessLinks(b, PipeArg.Inject<ILogger>(), PipeArg.Inject<CancellationToken>()), cancel:cancel);
+        await urls.Process(Pipe, b => ProcessLinks(b, PipeArg.Inject<ILogger>(), PipeArg.Inject<CancellationToken>()), cancel: cancel);
     }
 
     public record LoadFromUrlRes(AmazonLink Link, HttpStatusCode Status = HttpStatusCode.OK, string ErrorMsg = null);
@@ -103,7 +103,7 @@ where not exists (select * from link_meta_stage s where s.v:SourceUrl = l.url)
           }
           urlLog.Debug(ex, "Amazon - unhandled error: {Error}", ex.Message);
           return null;
-        }, Cfg.WebParallel, cancel:cancel)
+        }, Cfg.WebParallel, cancel: cancel)
         .Batch(Cfg.BatchSize)
         .BlockMap(async (b, i) => {
           log.Debug("Aamazon - about to save batch {Batch}", i + 1);
@@ -125,7 +125,7 @@ where not exists (select * from link_meta_stage s where s.v:SourceUrl = l.url)
         .WithDefaultLoader()
         .WithTemporaryCookies()
         .Browser();
-      
+
       var refreshAttempts = 0;
       var requestUrl = url;
       while (refreshAttempts < 3) {
@@ -136,7 +136,7 @@ where not exists (select * from link_meta_stage s where s.v:SourceUrl = l.url)
 
         if (doc.Source.Text == "")
           status = (HttpStatusCode.TooManyRequests, "emtpy response, treating as 429");
-        if (doc.Head.Children.None()) 
+        if (doc.Head.Children.None())
           status = (HttpStatusCode.TooManyRequests, "response was unable to be decoded, treating as 429");
         else if (doc.El("head > title")?.TextContent == "Sorry! Something went wrong!")
           status = (HttpStatusCode.TooManyRequests, "response was typical for a bot error, treating as 429");
