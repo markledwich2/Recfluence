@@ -28,12 +28,13 @@ using static YtReader.Yt.YtCollectDb;
 namespace YtReader.Yt {
   public record CollectListOptions {
     public CollectListPart[]                    Parts         { get; init; }
-    public ExtraPart[]                          ExtraParts    { get; set; }
+    public ExtraPart[]                          ExtraParts    { get; init; }
     public (CollectFromType Type, string Value) CollectFrom   { get; init; }
     public string[]                             LimitChannels { get; init; }
     public TimeSpan                             StaleAgo      { get; init; }
-    public JObject                              Args          { get; set; }
-    public Platform[]                           Platforms     { get; set; }
+    public JObject                              Args          { get; init; }
+    public Platform[]                           Platforms     { get; init; }
+    public int?                                 Limit         { get; init; }
   }
 
   public enum CollectFromType {
@@ -198,8 +199,11 @@ namespace YtReader.Yt {
       Platform[] platforms = null) =>
       db.Db.Query<string>("distinct channels", $@"
 with raw_channels as (select distinct channel_id from ({select.Sql})  where channel_id is not null)
-select channel_id, platform from raw_channels r
-left join channel_latest c on c.channel_id = r.channel_id
+, s as (
+  select r.channel_id, c.platform from raw_channels r
+  left join channel_latest c on c.channel_id = r.channel_id
+)
+select * from s
 {CommonWhereStatements(channels, platforms).Do(w => $"where {w.Join(" and ")}")}
 ", ToDapperArgs(select.Args));
 

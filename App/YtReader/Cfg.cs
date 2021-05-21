@@ -168,7 +168,7 @@ namespace YtReader {
 
     /// <summary>These thresholds shortcut the collection for channels to save costs. Bellow the analysis thresholds because we
     ///   want to collect ones that might tip over</summary>
-    public ulong MinChannelSubs { get;  set; } = 8000;
+    public ulong MinChannelSubs { get;  set; } = 1000;
     public ulong MinChannelViews { get; set; } = 1_000_000; // some channels don't have subs, so we fallback to a minimum views for the channels. 
 
     /// <summary>Number of video extra's to collect that are missing per channel. Since YT removed a nice endpoint, we need to

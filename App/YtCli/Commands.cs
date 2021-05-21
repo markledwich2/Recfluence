@@ -303,7 +303,7 @@ namespace YtCli {
   [Command("collect-list", Description = "Refresh video/channel information for a given list")]
   public record CollectListCmd(YtCollectList Col, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
-    [CommandParameter(0, Description = "The type of list to run (i.e. channel-path, video-path, view, named)")]
+    [CommandParameter(0, Description = "The type of list to run (i.e. ChannelPath, VideoPath, View, Named)")]
     public CollectFromType Mode { get; set; }
 
     [CommandParameter(1, Description = @"The path/name of the list.
@@ -318,7 +318,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
       Description = "| delimited list of channels (source id's) to collect. This is an additional filter to the list given")]
     public string Channels { get; set; }
 
-    [CommandOption("parts", shortName: 'p', IsRequired = false, Description = @"| list of parts to collect (e.g. video|channel)")]
+    [CommandOption("parts", shortName: 'p', IsRequired = false, Description = @"| list of parts to collect (e.g. video|channel|channel-video)")]
     public string Parts { get; set; }
 
     [CommandOption("extra-parts", shortName: 'e', IsRequired = false, Description = @"| delimited list of extra parts to run (e.g. extra|comment|rec|caption)")]
