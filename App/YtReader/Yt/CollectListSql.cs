@@ -88,6 +88,27 @@ qualify ROW_NUMBER() over (partition by r.channel_id order by v.views desc nulls
 order by 1,2
 "
       }
+      ,
+      {
+        "qanon_dx_expansion_users",
+        @"
+  with channels as (
+    select $1 channel_id
+    from @yt_data/import/channels/qanon_dx_expansion_channels_20210520.txt.gz (file_format => tsv)
+    limit 1
+  )
+    , channel_users as (
+    select s.author_channel_id user_id, r.channel_id, count(*) user_comments
+    from comment s
+           join video_latest v on v.video_id=s.video_id
+           join channels r on r.channel_id=v.channel_id
+    group by 1,2
+  )
+  select distinct user_id
+  from channel_users
+  qualify row_number() over (partition by channel_id order by user_comments desc) < 50 -- top commenter's form each channel
+"
+      }
     };
   }
 }

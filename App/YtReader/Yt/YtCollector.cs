@@ -91,7 +91,7 @@ namespace YtReader.Yt {
     }
 
     [Pipe]
-    async Task<int> CollectUserChannels(IReadOnlyCollection<string> channelIds, ILogger log, CancellationToken cancel) {
+    public async Task<int> CollectUserChannels(IReadOnlyCollection<string> channelIds, ILogger log, CancellationToken cancel) {
       log.Information("Collect - started scraping user channels {Total}", channelIds.Count);
       var batchTotal = channelIds.Count / RCfg.UserBatchSize;
       var start = Stopwatch.StartNew();

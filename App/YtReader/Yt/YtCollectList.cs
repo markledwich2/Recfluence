@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
+using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Serilog;
@@ -39,9 +41,10 @@ namespace YtReader.Yt {
 
   public enum CollectFromType {
     VideoPath,
-    View,
+    VideoChannelView,
     ChannelPath,
-    Named
+    VideoChannelNamed,
+    UserNamed
   }
 
   public enum CollectListPart {
@@ -76,11 +79,12 @@ namespace YtReader.Yt {
 
       log.Information("YtCollect - Special Collect from {CollectFrom} started", opts.CollectFrom);
 
-      // sometimes updates fail. When re-running this, we should refresh channels that are missing videos or have a portion of captions not attempted
-      // NOTE: core warehouse table must be updated (not just staging tables) to take into account previously successful loads.
-      var vidChanSelect = VideoChannelSelect(opts);
+
       var videosProcessed = Array.Empty<VideoProcessResult>();
       if (parts.ShouldRun(LVideo)) {
+        // sometimes updates fail. When re-running this, we should refresh channels that are missing videos or have a portion of captions not attempted
+        // NOTE: core warehouse table must be updated (not just staging tables) to take into account previously successful loads.
+        var vidChanSelect = VideoChannelSelect(opts);
         IReadOnlyCollection<VideoListStats> videos;
         using (var db = await YtCollector.Db(log)) // videos sans extra update
           videos = await VideoStats(db, vidChanSelect, opts.LimitChannels, opts.Platforms);
@@ -89,11 +93,15 @@ namespace YtReader.Yt {
           .Then(r => r.Select(p => p.OutState).SelectMany().ToArray());
       }
 
+      if (parts.ShouldRun(LUser)) {
+        await ProcessUsers(log, opts, cancel);
+      }
+
       IReadOnlyCollection<string> channelIds = Array.Empty<string>();
       if (parts.ShouldRunAny(LChannelVideo, LChannel)) {
         // channels explicitly listed in the query
         using (var db = await YtCollector.Db(log))
-          channelIds = await ChannelIds(db, vidChanSelect, opts.LimitChannels, opts.Platforms);
+          channelIds = await ChannelIds(db, VideoChannelSelect(opts), opts.LimitChannels, opts.Platforms);
 
         // channels found from processing videos
         if (parts.ShouldRun(LDiscoveredChannel))
@@ -185,19 +193,48 @@ namespace YtReader.Yt {
 
       return res;
     }
+    
+    async Task ProcessUsers(ILogger log, CollectListOptions opts, CancellationToken cancel = default) {
+      var userSelect = UserSelect(opts);
+      var sql = $@"with q as ({userSelect.Sql})
+select user_id
+from q
+where not exists (select * from user u where u.user_id = q.user_id)
+";
+      IReadOnlyCollection<string> users;
+      using (var db = await YtCollector.Db(log))
+        users = await db.Db.Query<string>("CollectList - users", sql, userSelect.Args);
 
+      var sw = Stopwatch.StartNew();
+      var total = await users.Process(PipeCtx,
+          b => YtCollector.CollectUserChannels(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
+        .Then(r => r.Sum(i => i.OutState));
+      log.Information("Collect - completed scraping all user channels {Total} in {Duration}", total, sw.Elapsed.HumanizeShort());
+    }
+
+    /// <summary>
+    /// returns a query with results in the schema video_id::string, channel_id::string
+    /// </summary>
     static (string Sql, JObject Args) VideoChannelSelect(CollectListOptions opts) {
       var (type, value) = opts.CollectFrom;
       var select = type switch {
         ChannelPath => ($"select null video_id, $1::string channel_id from @public.yt_data/{value} (file_format => tsv)", null),
         VideoPath =>
           ($"select $1::string video_id, $2::string channel_id  from @public.yt_data/{value} (file_format => tsv)", null),
-        View => ($"select video_id, channel_id from {value}", null),
-        Named => CollectListSql.NamedQuery(value, opts.Args),
-        _ => throw new($"CollectFrom {opts.CollectFrom} not supported")
+        VideoChannelView => ($"select video_id, channel_id from {value}", null),
+        VideoChannelNamed => CollectListSql.NamedQuery(value, opts.Args),
+        _ => throw new($"VideoChannelSelect - CollectFrom {opts.CollectFrom} not supported")
       };
       return select;
     }
+
+    /// <summary>
+    /// returns a query with results in the schema user_id::string
+    /// </summary>
+    static (string Sql, JObject Args) UserSelect(CollectListOptions opts) => opts.CollectFrom.Type switch {
+        UserNamed => CollectListSql.NamedQuery(opts.CollectFrom.Value, opts.Args),
+        _ => throw new($"UserSelect - CollectFrom {opts.CollectFrom} not supported")
+      };
 
     static Task<IReadOnlyCollection<string>> ChannelIds(YtCollectDbCtx db, (string Sql, JObject Args) select, string[] channels = null,
       Platform[] platforms = null) =>
