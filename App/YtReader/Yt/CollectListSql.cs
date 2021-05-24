@@ -52,6 +52,42 @@ order by views desc nulls last
 limit :limit
 "
       }
+      ,
+      {
+        "qanon_dx_expansion_sans_comments",
+        @"
+with channels as (
+  select $1 channel_id from @yt_data/import/channels/qanon_dx_expansion_channels_20210520.txt.gz (file_format => tsv)
+)
+, channel_users as (
+  select v.channel_id, count(distinct u.user_id) commentors_with_subs
+  from comment s
+  join video_latest v on v.video_id = s.video_id
+  join user u on u.user_id = s.author_channel_id
+  where array_size(u.subscriptions) > 0
+  group by channel_id
+)
+, channel_stats as (
+  select v.channel_id, count(distinct s.video_id) videos_with_comments
+  from comment s
+  join video_latest v on v.video_id = s.video_id
+  group by channel_id
+)
+, load_stats as (
+  select r.channel_id, c.channel_title, u.commentors_with_subs, s.videos_with_comments
+  from channels r
+  left join channel_latest c on c.channel_id = r.channel_id
+  left join channel_users u on u.channel_id = r.channel_id
+  left join channel_stats s on s.channel_id = r.channel_id
+)
+select r.channel_id, v.video_id
+from channels r
+join channel_latest c on c.channel_id = r.channel_id
+join video_latest v on v.channel_id = r.channel_id
+qualify ROW_NUMBER() over (partition by r.channel_id order by v.views desc nulls last) <= 10
+order by 1,2
+"
+      }
     };
   }
 }

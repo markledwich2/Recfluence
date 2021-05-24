@@ -303,11 +303,9 @@ namespace YtReader {
       R<YtConvertWatchTimeFiles>();
       R<YtIndexResults>();
       R<BitChuteScraper>();
-      R<BitChuteCollect>();
       R<Parler>();
       R<YtContainerRunner>();
-      R<RumbleWeb>();
-      R<RumbleCollect>();
+      R<RumbleScraper>();
       R<Pushshift>();
       R<AtLabel>();
       R<DataScripts>();

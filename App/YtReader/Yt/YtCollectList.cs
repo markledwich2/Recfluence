@@ -50,6 +50,9 @@ namespace YtReader.Yt {
     /// <summary>Videos explicitly listed</summary>
     [EnumMember(Value = "video")] LVideo,
 
+    /// <summary>users explicitly listed</summary>
+    [EnumMember(Value = "user")] LUser,
+
     /// <summary>Channels found from refreshing videos</summary>
     [EnumMember(Value = "discovered-channel")] [CollectPart(Explicit = true)]
     LDiscoveredChannel,
@@ -170,10 +173,11 @@ namespace YtReader.Yt {
 
         var planBatches = plans.Batch(batchSize).ToArray();
         var extra = await planBatches
-          .BlockMap(async (planBatch, i) => {
-            var (e, _, _, _) = await collector.SaveExtraAndParts(platform, c: null, parts, log, new(planBatch));
-            log.Information("ProcessVideos - saved extra {Videos}/{TotalBatches} ", i * batchSize + e.Length, planBatches.Length);
-            return e;
+          .BlockMap(async (planBatch, batchNum) => {
+            var (extras, _, comments, captions) = await collector.SaveExtraAndParts(platform, c: null, parts, log, new(planBatch));
+            log.Information("ProcessVideos - saved extra {Videos} extras, {Captions} captions {Comments} comments. Progress {AllVideos}/{TotalVideos}"
+              , extras.Length, captions.Length, comments.Length, batchNum * batchSize + extras.Length, plans.Count);
+            return extras;
           }, Cfg.Collect.ParallelChannels, cancel: cancel)
           .SelectManyList();
         return extra.Select(e => new VideoProcessResult(e.VideoId, e.ChannelId)).ToArray();

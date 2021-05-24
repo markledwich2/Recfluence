@@ -17,6 +17,9 @@ namespace SysExtensions.Collections {
     public static MultiValueDictionary<TKey, T> ToMultiValueDictionary<TKey, T>(this IEnumerable<T> items, Func<T, TKey> keySelector) =>
       items.ToMultiValueDictionary(keySelector, v => v);
 
+    public static MultiValueDictionary<TKey, T> ToMultiValueDictionary<TKey, T>(this IEnumerable<(TKey, T)> items) =>
+      items.ToMultiValueDictionary(i => i.Item1, i => i.Item2);
+
     public static TValue TryGet<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue defaultValue = default) =>
       dictionary.TryGetValue(key, out var value) ? value : defaultValue;
 
@@ -46,5 +49,14 @@ namespace SysExtensions.Collections {
 
     public static IDictionary<TKey, TValue> ToDictionary<TKey, TValue>(this IEnumerable<ValueTuple<TKey, TValue>> items) =>
       items.ToDictionary(i => i.Item1, i => i.Item2);
+
+    /// <summary>De-duplicates keys by taking first.</summary>
+    public static IDictionary<TKey, TValue> ToDictionarySafe<T, TKey, TValue>(this IEnumerable<T> items, Func<T, TKey> keySelector,
+      Func<T, TValue> valueSelector) =>
+      items.GroupBy(keySelector).ToDictionary(g => g.Key, g => valueSelector(g.First()));
+
+    /// <summary>De-duplicates keys by taking first.</summary>
+    public static IDictionary<TKey, T> ToDictionarySafe<T, TKey>(this IEnumerable<T> items, Func<T, TKey> keySelector) =>
+      items.GroupBy(keySelector).ToDictionary(g => g.Key, g => g.First());
   }
 }

@@ -42,23 +42,8 @@ namespace YtReader.Yt {
   }
 
   /// <summary>User activity statistics.</summary>
-  public class Statistics {
-    /// <summary>View count.</summary>
-    public ulong? ViewCount { get; set; }
-
-    /// <summary>Like count.</summary>
-    public ulong? LikeCount { get; set; }
-
-    /// <summary>Dislike count.</summary>
-    public ulong? DislikeCount { get; set; }
-
-    /// <summary>Initializes an instance of <see cref="Statistics" />.</summary>
-    public Statistics(ulong? viewCount, ulong? likeCount = null, ulong? dislikeCount = null) {
-      ViewCount = viewCount;
-      LikeCount = likeCount;
-      DislikeCount = dislikeCount;
-    }
-
+  public record Statistics(ulong? ViewCount, ulong? LikeCount = null, ulong? DislikeCount = null) {
+    public ulong? Rumbles { get; init; }
     public override string ToString() => $"{ViewCount} Views";
   }
 

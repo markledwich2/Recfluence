@@ -51,16 +51,15 @@ namespace YtReader {
   ///   caption search. Many missing features (resume, better recording of tasks etc..). I intend to replace with dagster or
   ///   make Mutuo.Etl into a data application runner once I have evaluated it.</summary>
   public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, Stage _stage, YtSearch _search,
-    YtResults _results, YtDataform YtDataform, YtBackup _backup, UserScrape _userScrape, YtIndexResults _index, BitChuteCollect _bitChuteCollect,
-    RumbleCollect _rumbleCollect, DataScripts _dataScripts) {
+    YtResults _results, YtDataform YtDataform, YtBackup _backup, UserScrape _userScrape, YtIndexResults _index, SimpleCollector Collector, DataScripts _dataScripts) {
     Task Collect(CollectOptions options, ILogger logger, CancellationToken cancel) =>
       YtCollect.Collect(logger, options, cancel);
 
     Task BitChuteCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
-      _bitChuteCollect.Collect(options, logger, cancel);
+      Collector.Collect(options with { Platform = Platform.BitChute}, logger, cancel);
 
     Task RumbleCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
-      _rumbleCollect.Collect(options, logger, cancel);
+      Collector.Collect(options with { Platform = Platform.Rumble}, logger, cancel);
 
     [GraphTask(nameof(Collect), nameof(BitChuteCollect), nameof(RumbleCollect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>

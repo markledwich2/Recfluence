@@ -25,8 +25,16 @@ using static YtReader.Yt.ExtraPart;
 
 namespace YtReader.SimpleCollect {
   /// <summary>Collector for sources that are simple enough to use the same basic planning and execution of a scrape</summary>
-  public record SimpleCollector(SnowflakeConnectionProvider Sf, RumbleWeb Rumble, BitChuteScraper BitChute, YtStore Store, IPipeCtx PipeCtx,
+  public record SimpleCollector(SnowflakeConnectionProvider Sf, RumbleScraper Rumble, BitChuteScraper BitChute, YtStore Store, IPipeCtx PipeCtx,
     YtCollectCfg CollectCfg) : ICollector {
+    
+    public async Task Collect(SimpleCollectOptions options, ILogger log, CancellationToken cancel) {
+      log = log.ForContext("Function", nameof(Collect));
+      var plan = await PlanSimpleCollect(options, log, cancel);
+      await Discover(plan, log, cancel);
+      await CollectChannelAndVideos(plan, log, cancel);
+    }
+
     public IScraper Scraper(Platform platform) => platform switch {
       Platform.Rumble => Rumble,
       Platform.BitChute => BitChute,
@@ -85,7 +93,7 @@ namespace YtReader.SimpleCollect {
           .SelectMany().Distinct().ToListAsync();
         plan = plan.WithForUpdate("video crawled channels", chans, log);
       }
-      return plan;
+      return plan;  
     }
 
     /// <summary>Scrape videos from the plan, save to the store, and append new channels to the plan</summary>
@@ -122,9 +130,10 @@ namespace YtReader.SimpleCollect {
         await Store.Comments.Append(videos.SelectMany(v => v.Comments).NotNull().ToArray());
       }
 
-      await plan.ToUpdate.Process(PipeCtx,
-        b => SimpleCollectChannels(b, plan.Options, Inject<ILogger>(), Inject<CancellationToken>()),
-        log: log, cancel: cancel);
+      if(plan.Parts.ShouldRun(StandardCollectPart.Channel))
+        await plan.ToUpdate.Process(PipeCtx,
+          b => SimpleCollectChannels(b, plan.Options, Inject<ILogger>(), Inject<CancellationToken>()),
+          log: log, cancel: cancel);
 
       return plan;
     }

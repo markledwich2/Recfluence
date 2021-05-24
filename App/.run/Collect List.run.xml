@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Collect List" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.exe" />
-    <option name="PROGRAM_PARAMETERS" value="collect-list ChannelPath import/channels/qanon_dx_expansion_channels_20210520.txt.gz -p channel|channel-video  -e extra|caption -c UCSMoMeWw82u9ScfwvDq1u2w|UCFPqgyjqVSxSwHTtQolh6Lw" />
+    <option name="PROGRAM_PARAMETERS" value="collect-list Named qanon_dx_expansion_sans_comments -p video  -e comment -c UC2_TYHh8uvtJdKGVukenLDg" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <option name="USE_EXTERNAL_CONSOLE" value="0" />

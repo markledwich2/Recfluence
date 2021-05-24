@@ -113,6 +113,8 @@ namespace YtReader.Yt {
         SetPart(v, EExtra);
     }
 
+    public int Count => _c.Count;
+
     public VideoExtraPlans(IEnumerable<VideoPlan> plans) => _c.AddRange(plans);
 
     public VideoPlan GetOrAdd(string videoId) => _c.GetOrAdd(videoId, () => new(videoId));
