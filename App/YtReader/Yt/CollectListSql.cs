@@ -95,7 +95,6 @@ order by 1,2
   with channels as (
     select $1 channel_id
     from @yt_data/import/channels/qanon_dx_expansion_channels_20210520.txt.gz (file_format => tsv)
-    limit 1
   )
     , channel_users as (
     select s.author_channel_id user_id, r.channel_id, count(*) user_comments

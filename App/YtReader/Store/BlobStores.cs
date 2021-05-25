@@ -129,6 +129,7 @@ namespace YtReader.Store {
     public Platform                                 Platform      { get; init; }
     public string                                   ProfileUrl    { get; init; }
     public IReadOnlyCollection<ChannelSubscription> Subscriptions { get; init; }
+    public long?                                    SubscriberCount    { get; init; }
   }
 
   public record Channel : WithUpdatedItem {

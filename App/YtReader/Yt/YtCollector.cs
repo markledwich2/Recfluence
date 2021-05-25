@@ -106,7 +106,8 @@ namespace YtReader.Yt {
                 Name = u.Title,
                 ProfileUrl = u.LogoUrl,
                 Updated = DateTime.UtcNow,
-                Subscriptions = subs
+                Subscriptions = subs,
+                SubscriberCount = u.Subs,
               };
             }, RCfg.WebParallel, cancel: cancel)
             .NotNull().ToListAsync();
