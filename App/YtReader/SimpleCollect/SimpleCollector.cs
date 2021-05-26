@@ -82,8 +82,8 @@ namespace YtReader.SimpleCollect {
     public async ValueTask<SimpleCollectPlan> Discover(SimpleCollectPlan plan, ILogger log, CancellationToken cancel = default) {
       if (plan.Parts.ShouldRun(DiscoverVideo))
         plan = await CrawlVideoLinks(plan, log);
+      var platform = plan.Platform;
       if (plan.Parts.ShouldRun(DiscoverHome)) {
-        var platform = plan.Platform;
         var chans = await Scraper(plan.Platform).HomeVideos(log).BlockMap(async b => {
             var videos = b.NotNull().Select(v => v with { Source = new(Home)}).ToArray();
             await Store.Videos.Append(videos, log);

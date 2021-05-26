@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using AngleSharp;
 using AngleSharp.Css.Dom;
@@ -42,13 +43,18 @@ namespace YtReader.Rumble {
     public async IAsyncEnumerable<Video[]> HomeVideos(ILogger log) {
       var home = await Bc().OpenAsync(RumbleDotCom);
       home.EnsureSuccess();
+      var vidsCollected = 0;
       await foreach (var b in home
         .QuerySelectorAll<IHtmlAnchorElement>(".mediaList-link-more > a").Select(a => a.Href).NotNull().ToArray()
         .BlockMap(async catUrl => {
           var bc = Bc(); // not sure if bc is thread safe to make separate contexts
           var catDoc = await bc.OpenAsync(catUrl);
           var catName = catUrl.AsUrl().Path.LastInPath();
-          var videos = await Videos(catDoc).Select((b, i) => {
+          var videos = await Videos(catDoc).TakeWhile(b => {
+            var more = Cfg.HomeVidLimit == null || Cfg.HomeVidLimit > vidsCollected;
+            Interlocked.Add(ref vidsCollected, b.Length);
+            return more;
+          }).Select((b, i) => {
             log.Information("Collect {Platform} - crawled {Videos} videos on page {Page} in category {Category}",
               Platform, b.Length, i + 1, catName);
             return b.Select(v => v with {Tags = new[] {("Category", catName)}.ToMultiValueDictionary()});

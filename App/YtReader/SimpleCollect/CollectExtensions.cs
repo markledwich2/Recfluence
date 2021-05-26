@@ -34,10 +34,10 @@ namespace YtReader.SimpleCollect {
   public record DiscoverChannelOrVid(LinkType LinkType, string LinkId, Platform FromPlatform);
 
   public record SimpleCollectOptions {
-    public string[]              ExplicitVideos   { get; set; }
-    public string[]              ExplicitChannels { get; init; }
-    public StandardCollectPart[] Parts            { get; init; }
-    public Platform              Platform         { get; set; }
+    public string[]              ExplicitVideos    { get; init; }
+    public string[]              ExplicitChannels  { get; init; }
+    public StandardCollectPart[] Parts             { get; init; }
+    public Platform              Platform          { get; init; }
   }
 
   /// <summary>State & services for performing a collection of data from a video platform. Not serializable</summary>
