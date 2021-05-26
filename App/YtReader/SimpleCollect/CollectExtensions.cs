@@ -7,7 +7,7 @@ using SysExtensions;
 using SysExtensions.Collections;
 using YtReader.Store;
 using static System.Array;
-using static YtReader.Store.ChannelSourceType;
+using static YtReader.Store.DiscoverSourceType;
 using ChanById = SysExtensions.Collections.IKeyedCollection<string, YtReader.Store.Channel>;
 
 namespace YtReader.SimpleCollect {

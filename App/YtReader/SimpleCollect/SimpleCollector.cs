@@ -17,7 +17,7 @@ using YtReader.Store;
 using YtReader.Yt;
 using static System.Array;
 using static YtReader.SimpleCollect.StandardCollectPart;
-using static YtReader.Store.ChannelSourceType;
+using static YtReader.Store.DiscoverSourceType;
 using ChanById = SysExtensions.Collections.IKeyedCollection<string, YtReader.Store.Channel>;
 using static Mutuo.Etl.Pipe.PipeArg;
 using static Newtonsoft.Json.Linq.MergeNullValueHandling;
@@ -85,8 +85,8 @@ namespace YtReader.SimpleCollect {
       if (plan.Parts.ShouldRun(DiscoverHome)) {
         var platform = plan.Platform;
         var chans = await Scraper(plan.Platform).HomeVideos(log).BlockMap(async b => {
-            var videos = b.NotNull().Select(v => (discover: new DiscoverSource(Home), video: v)).ToArray();
-            await Store.Videos.Append(videos.Select(v => v.video).ToArray(), log);
+            var videos = b.NotNull().Select(v => v with { Source = new(Home)}).ToArray();
+            await Store.Videos.Append(videos, log);
             //log.Information("Collect {Platform} - crawled {Videos} home videos", platform, videos.Length);
             return CrawledChannels(platform, videos);
           }, cancel: cancel)
@@ -109,15 +109,15 @@ namespace YtReader.SimpleCollect {
       await Store.VideoExtra.Append(crawledVideos.Select(r => r.video.Video).NotNull().ToArray());
       await Store.Comments.Append(crawledVideos.SelectMany(r => r.video.Comments).NotNull().ToArray());
       log.Information("Collect {Platform} - saved {Videos} videos", plan.Platform, crawledVideos.Count);
-      var crawledChannels = CrawledChannels(plan.Platform, crawledVideos.Select(v => (v.discover, v.video.Video)));
+      var crawledChannels = CrawledChannels(plan.Platform, crawledVideos.Select(v =>  v.video.Video));
       return plan.WithForUpdate("video crawled channels", crawledChannels, log);
     }
 
-    static Channel[] CrawledChannels<T>(Platform platform, IEnumerable<(DiscoverSource discover, T video)> crawledVideos) where T : Video {
-      var crawledChannels = crawledVideos.Where(v => v.video?.ChannelId.HasValue() == true)
-        .Select(v => new Channel(platform, v.video.ChannelId, v.video.ChannelSourceId) {
-          ChannelTitle = v.video.ChannelTitle,
-          DiscoverSource = v.discover
+    static Channel[] CrawledChannels<T>(Platform platform, IEnumerable<T> videos) where T : Video {
+      var crawledChannels = videos.Where(v => v?.ChannelId.HasValue() == true)
+        .Select(v => new Channel(platform, v.ChannelId, v.ChannelSourceId) {
+          ChannelTitle = v.ChannelTitle,
+          DiscoverSource = v.Source
         }).Distinct().ToArray();
       return crawledChannels;
     }

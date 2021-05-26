@@ -31,6 +31,7 @@ namespace YtReader.Rumble {
   public record RumbleScraper(RumbleCfg Cfg, FlurlProxyClient Http) : IScraper {
     public const    string         RumbleDotCom = "https://rumble.com/";
     static readonly IConfiguration AngleCfg     = Configuration.Default.WithDefaultLoader();
+    
     public          int            CollectParallel => Cfg.CollectParallel;
     public          Platform       Platform        => Platform.Rumble;
 
@@ -44,7 +45,7 @@ namespace YtReader.Rumble {
       await foreach (var b in home
         .QuerySelectorAll<IHtmlAnchorElement>(".mediaList-link-more > a").Select(a => a.Href).NotNull().ToArray()
         .BlockMap(async catUrl => {
-          var bc = Bc(); // not sure if bc is thread safe to make seperate contexts
+          var bc = Bc(); // not sure if bc is thread safe to make separate contexts
           var catDoc = await bc.OpenAsync(catUrl);
           var catName = catUrl.AsUrl().Path.LastInPath();
           var videos = await Videos(catDoc).Select((b, i) => {

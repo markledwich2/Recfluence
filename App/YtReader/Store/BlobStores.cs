@@ -111,7 +111,7 @@ namespace YtReader.Store {
     Blocked
   }
 
-  public enum ChannelSourceType {
+  public enum DiscoverSourceType {
     [Obsolete] YouTubeChannelLink,
     /// <summary>Link to a channel</summary>
     ChannelLink,
@@ -121,7 +121,7 @@ namespace YtReader.Store {
     Manual
   }
 
-  public record DiscoverSource(ChannelSourceType? Type, string LinkId = null, Platform? FromPlatform = null);
+  public record DiscoverSource(DiscoverSourceType? Type, string LinkId = null, Platform? FromPlatform = null);
 
   public record User : WithUpdatedItem {
     public string                                   UserId        { get; init; }
@@ -247,6 +247,7 @@ namespace YtReader.Store {
     public decimal?                             Earned      { get; set; }
     public VideoStatus?                         Status      { get; set; }
     public MultiValueDictionary<string, string> Tags        { get; set; }
+    public DiscoverSource                   Source        { get; set; }
 
     public override string ToString() => $"{Title}";
   }
