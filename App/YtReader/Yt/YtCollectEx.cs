@@ -74,9 +74,10 @@ namespace YtReader.Yt {
   }
 
   public record CollectOptions {
-    public string[]      LimitChannels { get; init; }
-    public CollectPart[] Parts         { get; init; }
-    public ExtraPart[]   ExtraParts    { get; init; }
+    public string[]          LimitChannels { get; init; }
+    public CollectPart[]     Parts         { get; init; }
+    public ExtraPart[]       ExtraParts    { get; init; }
+    public SimpleCollectMode CollectMode   { get; set; }
   }
 
   public record ExtraAndParts(VideoExtra Extra) {
@@ -155,8 +156,9 @@ namespace YtReader.Yt {
     public DateTime  Updated      { get; init; }
     public DateTime? UploadDate   { get; init; }
     public DateTime? ExtraUpdated { get; init; }
+    public bool      HasComment   { get; set; }
     public string    SourceId     { get; init; }
-    public Platform  Platform     { get; set; }
+    public Platform  Platform     { get; init; }
   }
 
   public record VideoPlan {
@@ -165,6 +167,8 @@ namespace YtReader.Yt {
     public string         VideoId   { get; set; }
     public ExtraPart[]    Parts     { get; set; } = Array.Empty<ExtraPart>();
     public VideoForUpdate ForUpdate { get; set; }
+
+    public void SetPart(params ExtraPart[] parts) => Parts = Parts.Union(parts).ToArray();
 
     public override string ToString() => $"{VideoId} ({Parts.Join("|")}): {ForUpdate}";
   }

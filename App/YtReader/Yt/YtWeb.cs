@@ -352,7 +352,7 @@ namespace YtReader.Yt {
         var contSection = ytInitialData?.Tokens("$.contents.twoColumnWatchNextResults.results.results.contents[*].itemSectionRenderer")
           .FirstOrDefault(c => c.Str("sectionIdentifier") == "comment-item-section");
         var cToken = contSection?.Token("continuations[*].nextContinuationData.continuation")?.Str();
-        var resCookies = page.Headers.Cookies().ToKeyedCollection(c => c.Name);
+        var resCookies = page.Headers.Cookies().KeyBy(c => c.Name);
         var jCfg = await JsonFromScript(log, page.Html, page.Url, ClientObject.Cfg);
         if (jCfg == null) throw new InvalidOperationException("Can't load comments because no ytcfg was found on video page");
         var xsrfToken = jCfg.Value<string>("XSRF_TOKEN");

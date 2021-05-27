@@ -108,7 +108,8 @@ namespace YtReader.Store {
     Alive,
     Dead,
     NotFound,
-    Blocked
+    Blocked,
+    Dupe
   }
 
   public enum DiscoverSourceType {
@@ -124,12 +125,12 @@ namespace YtReader.Store {
   public record DiscoverSource(DiscoverSourceType? Type, string LinkId = null, Platform? FromPlatform = null);
 
   public record User : WithUpdatedItem {
-    public string                                   UserId        { get; init; }
-    public string                                   Name          { get; init; }
-    public Platform                                 Platform      { get; init; }
-    public string                                   ProfileUrl    { get; init; }
-    public IReadOnlyCollection<ChannelSubscription> Subscriptions { get; init; }
-    public long?                                    SubscriberCount    { get; init; }
+    public string                                   UserId          { get; init; }
+    public string                                   Name            { get; init; }
+    public Platform                                 Platform        { get; init; }
+    public string                                   ProfileUrl      { get; init; }
+    public IReadOnlyCollection<ChannelSubscription> Subscriptions   { get; init; }
+    public long?                                    SubscriberCount { get; init; }
   }
 
   public record Channel : WithUpdatedItem {
@@ -223,45 +224,44 @@ namespace YtReader.Store {
       SourceId = sourceId;
     }
 
-    public Platform Platform { get; set; }
+    public Platform Platform { get; init; }
 
     /// <summary>Globally unique id for the video. Using a canonical url is best</summary>
-    public string VideoId { get; set; }
+    public string VideoId { get; init; }
 
     /// <summary>Id native to the originating platform, doesn't need to be gloablly unique.</summary>
-    public string SourceId { get; set; }
+    public string SourceId { get; init; }
 
-    public string Title           { get; set; }
-    public string ChannelId       { get; set; }
-    public string ChannelSourceId { get; set; }
-    public string ChannelTitle    { get; set; }
+    public string Title           { get; init; }
+    public string ChannelId       { get; init; }
+    public string ChannelSourceId { get; init; }
+    public string ChannelTitle    { get; init; }
 
     /// <summary>The date the video was uploaded. This is the primary record for this. AddedDate is a fallback with YouTube</summary>
-    public DateTime? UploadDate { get;                             set; }
-    public DateTime?                            AddedDate   { get; set; }
-    public string                               Description { get; set; }
-    public TimeSpan?                            Duration    { get; set; }
-    public IReadOnlyList<string>                Keywords    { get; set; }
-    public Statistics                           Statistics  { get; set; }
-    public string                               Thumb       { get; set; }
-    public decimal?                             Earned      { get; set; }
-    public VideoStatus?                         Status      { get; set; }
-    public MultiValueDictionary<string, string> Tags        { get; set; }
-    public DiscoverSource                   Source        { get; set; }
-
+    public DateTime? UploadDate { get;                                init; }
+    public DateTime?                            AddedDate      { get; init; }
+    public string                               Description    { get; init; }
+    public TimeSpan?                            Duration       { get; init; }
+    public IReadOnlyList<string>                Keywords       { get; init; }
+    public Statistics                           Statistics     { get; init; }
+    public string                               Thumb          { get; init; }
+    public decimal?                             Earned         { get; init; }
+    public VideoStatus?                         Status         { get; init; }
+    public MultiValueDictionary<string, string> Tags           { get; init; }
+    public DiscoverSource                       DiscoverSource { get; init; }
+    public ScrapeSource                         Source         { get; init; }
     public override string ToString() => $"{Title}";
   }
 
   public record VideoExtra : Video {
     public VideoExtra() { }
     public VideoExtra(Platform platform, string id, string sourceId) : base(platform, id, sourceId) { }
-    public bool?        HasAd       { get; init; }
-    public string       Error       { get; set; }
-    public string       SubError    { get; set; }
-    public string       Ad          { get; init; }
-    public string       CommentsMsg { get; init; }
-    public ScrapeSource Source      { get; init; }
-    public string       MediaUrl    { get; init; }
+    public bool?  HasAd       { get; init; }
+    public string Error       { get; set; }
+    public string SubError    { get; set; }
+    public string Ad          { get; init; }
+    public string CommentsMsg { get; init; }
+    public string MediaUrl    { get; init; }
   }
 
   public record VideoComment : IHasUpdated {

@@ -6,7 +6,6 @@ using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
-using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Serilog;
@@ -23,7 +22,6 @@ using static YtReader.Yt.UpdateChannelType;
 using static YtReader.Yt.CollectListPart;
 using static YtReader.Yt.CollectPart;
 using static YtReader.Yt.ExtraPart;
-using static YtReader.Yt.YtCollectDb;
 
 // ReSharper disable InconsistentNaming
 
@@ -79,7 +77,6 @@ namespace YtReader.Yt {
 
       log.Information("YtCollect - Special Collect from {CollectFrom} started", opts.CollectFrom);
 
-
       var videosProcessed = Array.Empty<VideoProcessResult>();
       if (parts.ShouldRun(LVideo)) {
         // sometimes updates fail. When re-running this, we should refresh channels that are missing videos or have a portion of captions not attempted
@@ -93,9 +90,7 @@ namespace YtReader.Yt {
           .Then(r => r.Select(p => p.OutState).SelectMany().ToArray());
       }
 
-      if (parts.ShouldRun(LUser)) {
-        await ProcessUsers(log, opts, cancel);
-      }
+      if (parts.ShouldRun(LUser)) await ProcessUsers(log, opts, cancel);
 
       IReadOnlyCollection<string> channelIds = Array.Empty<string>();
       if (parts.ShouldRunAny(LChannelVideo, LChannel)) {
@@ -124,9 +119,7 @@ namespace YtReader.Yt {
                   log: log, cancel: cancel);
               else if (collector is SimpleCollector sc)
                 await g.Randomize().Process(PipeCtx, b =>
-                    sc.SimpleCollectChannels(g.Select(c => c.Channel).ToArray(),
-                      new() {Platform = platform, Parts = StandardToSimpleParts(parts, extraParts)},
-                      Inject<ILogger>(), Inject<CancellationToken>()),
+                    sc.SimpleCollectChannels(g.ToArray(), platform, StandardToSimpleParts(parts, extraParts), Inject<ILogger>(), Inject<CancellationToken>()),
                   log: log, cancel: cancel);
             });
         }
@@ -140,8 +133,7 @@ namespace YtReader.Yt {
       .Select(p => p switch {
         LChannel => StandardCollectPart.Channel,
         LVideo => (StandardCollectPart?) null, // explicit videos are done above.. This is just for the channels & channel-videos
-        LDiscoveredChannel => StandardCollectPart.DiscoverLink,
-        LChannelVideo => StandardCollectPart.Video,
+        LChannelVideo => StandardCollectPart.ChannelVideo,
         _ => null
       }).Concat(extraParts.ShouldRun(EExtra) ? StandardCollectPart.Extra : null)
       .NotNull().ToArray();
@@ -193,7 +185,7 @@ namespace YtReader.Yt {
 
       return res;
     }
-    
+
     async Task ProcessUsers(ILogger log, CollectListOptions opts, CancellationToken cancel = default) {
       var userSelect = UserSelect(opts);
       var sql = $@"with q as ({userSelect.Sql})
@@ -212,9 +204,7 @@ where not exists (select * from user u where u.user_id = q.user_id)
       log.Information("Collect - completed scraping all user channels {Total} in {Duration}", total, sw.Elapsed.HumanizeShort());
     }
 
-    /// <summary>
-    /// returns a query with results in the schema video_id::string, channel_id::string
-    /// </summary>
+    /// <summary>returns a query with results in the schema video_id::string, channel_id::string</summary>
     static (string Sql, JObject Args) VideoChannelSelect(CollectListOptions opts) {
       var (type, value) = opts.CollectFrom;
       var select = type switch {
@@ -228,13 +218,11 @@ where not exists (select * from user u where u.user_id = q.user_id)
       return select;
     }
 
-    /// <summary>
-    /// returns a query with results in the schema user_id::string
-    /// </summary>
+    /// <summary>returns a query with results in the schema user_id::string</summary>
     static (string Sql, JObject Args) UserSelect(CollectListOptions opts) => opts.CollectFrom.Type switch {
-        UserNamed => CollectListSql.NamedQuery(opts.CollectFrom.Value, opts.Args),
-        _ => throw new($"UserSelect - CollectFrom {opts.CollectFrom} not supported")
-      };
+      UserNamed => CollectListSql.NamedQuery(opts.CollectFrom.Value, opts.Args),
+      _ => throw new($"UserSelect - CollectFrom {opts.CollectFrom} not supported")
+    };
 
     static Task<IReadOnlyCollection<string>> ChannelIds(YtCollectDbCtx db, (string Sql, JObject Args) select, string[] channels = null,
       Platform[] platforms = null) =>
@@ -273,8 +261,8 @@ select * from s
 
     static string[] CommonWhereStatements(string[] channels, Platform[] platforms) {
       var whereStatements = new[] {
-        channels.Do(c => $"channel_id in ({SqlList(c)})"),
-        platforms.Do(p => $"platform in ({SqlList(p)})")
+        channels.Do(c => $"channel_id in ({c.SqlList()})"),
+        platforms.Do(p => $"platform in ({p.SqlList()})")
       }.NotNull().ToArray();
       return whereStatements;
     }

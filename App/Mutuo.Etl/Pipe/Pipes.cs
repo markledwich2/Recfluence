@@ -242,7 +242,7 @@ namespace Mutuo.Etl.Pipe {
     public static IKeyedCollection<string, (Type Type, MethodInfo Method)> PipeMethods(this IPipeCtx ctx) =>
       ctx.AppCtx.Assemblies.SelectMany(a => a.GetLoadableTypes())
         .SelectMany(t => t.GetRuntimeMethods().Where(m => m.GetCustomAttribute<PipeAttribute>() != null).Select(m => (Type: t, Method: m)))
-        .ToKeyedCollection(m => m.Method.Name);
+        .KeyBy(m => m.Method.Name);
 
     #region State
 
@@ -332,7 +332,7 @@ namespace Mutuo.Etl.Pipe {
     static PipeArg[] ResolveArgs(this MethodCallExpression methodCall) {
       if (methodCall.Method.GetCustomAttribute<PipeAttribute>() == null)
         throw new InvalidOperationException($"given transform '{methodCall.Method.Name}' must have a Pipe attribute");
-      var byPosition = methodCall.Method.GetParameters().ToKeyedCollection(p => p.Position);
+      var byPosition = methodCall.Method.GetParameters().KeyBy(p => p.Position);
       var res = methodCall.Arguments.Select((a, i) => {
         var name = byPosition[i]?.Name;
         var arg = a switch {

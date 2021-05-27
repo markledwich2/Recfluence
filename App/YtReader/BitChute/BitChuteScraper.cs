@@ -32,15 +32,15 @@ using static SysExtensions.Threading.Def;
 using Url = Flurl.Url;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Local
-
 // ReSharper disable InconsistentNaming
 
 namespace YtReader.BitChute {
   public record BitChuteScraper(FlurlProxyClient FlurlClient, BitChuteCfg Cfg, ProxyCfg ProxyCfg) : IScraper {
-    static readonly string         Domain   = "https://www.bitchute.com";
-    static readonly IConfiguration AngleCfg = Configuration.Default.WithDefaultLoader().WithDefaultCookies();
-    public          Platform       Platform        => Platform.BitChute;
-    public          int            CollectParallel => Cfg.CollectParallel;
+    static readonly string            Domain   = "https://www.bitchute.com";
+    static readonly IConfiguration    AngleCfg = Configuration.Default.WithDefaultLoader().WithDefaultCookies();
+    public          Platform          Platform        => Platform.BitChute;
+    public          int               CollectParallel => Cfg.WebParallel;
+    public          ICommonCollectCfg CollectCfg      => Cfg;
 
     static string FullId(string sourceId) => Platform.BitChute.FullId(sourceId);
     public string SourceToFullId(string sourceId, LinkType type) => FullId(sourceId);
@@ -97,7 +97,7 @@ namespace YtReader.BitChute {
         ChannelViews = aboutViewCount.TryParseNumberWithUnits()?.RoundToULong()
       };
 
-      var videoList = chanDoc.QuerySelector(".channel-videos") ?? throw new("Can't find video tab");
+      var videoList = chanDoc.QuerySelector(".channel-videos-list") ?? throw new("Can't find video tab");
       var videos = Videos(log, chanDoc, videoList, VideoListType.ChannelVideos)
         .Select(b => b.Select(v => v with {ChannelId = chan.ChannelId, ChannelTitle = chan.ChannelTitle}).ToArray());
       return (Channel: chan, Videos: videos);
@@ -137,7 +137,7 @@ namespace YtReader.BitChute {
 
     public async IAsyncEnumerable<Video[]> HomeVideos(ILogger log) {
       var categories = new[] {"vlogging", "health", "news", "science", "spirituality", "family", "education"};
-      var videos = new[] {(category:"", path:"")}.Concat(categories.Select(c => (category: c, path: $"category/{c}")))
+      var videos = new[] {(category: "", path: "")}.Concat(categories.Select(c => (category: c, path: $"category/{c}")))
         .BlockMap(async c => {
           var (category, path) = c;
           var doc = await Open($"page list {path}", Domain.AppendPathSegment(path), (b, url) => b.OpenAsync(url), log);
@@ -148,7 +148,7 @@ namespace YtReader.BitChute {
             var listType = tabName.In("trending") ? VideoListType.Results : VideoListType.Cards;
             return (doc, category, path, tab, listType, tabName);
           });
-        }, Cfg.CollectParallel).SelectMany().NotNull().BlockMap(async t => {
+        }, Cfg.WebParallel).SelectMany().NotNull().BlockMap(async t => {
           var pageVids = await Videos(log, t.doc, t.tab, t.listType, t.tabName).NotNull().Select((b, i) => {
             log.Information("Collect {Platform} - crawled {Videos} videos on page {Page} from {Path} > {Tab} videos",
               Platform, b.Length, i + 1, t.path.NullOrEmpty() ? "Home" : t.path, t.tabName);
@@ -160,7 +160,7 @@ namespace YtReader.BitChute {
             });
           }).SelectMany().ToArrayAsync();
           return pageVids;
-        }, Cfg.CollectParallel);
+        }, Cfg.WebParallel);
 
       await foreach (var vids in videos)
         yield return vids;

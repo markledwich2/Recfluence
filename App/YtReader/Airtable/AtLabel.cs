@@ -133,7 +133,7 @@ order by video_group -- use group to randomize the order
       using var airTable = new AirtableBase(AirCfg.ApiKey, op.BaseId);
       var keyFields = typeof(TKey).GetProperties().Select(p => p.Name).ToArray();
       var airRows = await airTable.Rows<TKey>(airTableName, keyFields, log).ToListAsync()
-        .Then(rows => rows.ToKeyedCollection(r => r.Fields));
+        .Then(rows => rows.KeyBy(r => r.Fields));
 
       var (update, create) = await sourceRows
         .Select(v => v.ToCamelCase())

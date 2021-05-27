@@ -227,6 +227,8 @@ namespace YtCli {
     [CommandOption("extra-parts", shortName: 'e', Description = "| delimited list of extra parts to run (e.g. extra|comment|rec|caption)")]
     public string ExtraParts { get; set; }
 
+    [CommandOption("collect-mode")] public SimpleCollectMode CollectMode { get; set; }
+
     [CommandOption("us-init", Description = "Run userscrape in init mode (additional seed videos)")]
     public bool UserScrapeInit { get; set; }
 
@@ -270,7 +272,8 @@ namespace YtCli {
         Collect = new() {
           LimitChannels = Channels?.UnJoin('|'),
           Parts = ParseEnums<CollectPart>(Parts),
-          ExtraParts = ParseEnums<ExtraPart>(ExtraParts)
+          ExtraParts = ParseEnums<ExtraPart>(ExtraParts),
+          CollectMode = CollectMode
         },
         Videos = Videos?.UnJoin('|'),
         StandardParts = ParseEnums<StandardCollectPart>(Parts),

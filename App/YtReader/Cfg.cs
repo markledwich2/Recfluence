@@ -74,10 +74,6 @@ namespace YtReader {
     public                           string  Test  { get; set; }
   }
 
-  public record RumbleCfg(int CollectParallel = 16, int Retries = 4, int? HomeVidLimit = null);
-
-  public record BitChuteCfg(int CollectParallel = 16);
-
   public class YtApiCfg {
     [Required] public ICollection<string> Keys { get; set; } = new List<string>();
   }
@@ -128,7 +124,26 @@ namespace YtReader {
     public            ProxyType  Type  { get; set; }
   }
 
-  public class YtCollectCfg {
+  public interface ICommonCollectCfg {
+    int WebParallel          { get; }
+    int MaxChannelFullVideos { get; set; }
+    int MaxChannelComments   { get; set; }
+  }
+
+  public record SimpleCollectCfg : ICommonCollectCfg {
+    public int      WebParallel          { get; set; } = 16; // parallelism for plain html scraping of video's, recs
+    public int      MaxChannelFullVideos { get; set; } = 40_000;
+    public int?     HomeVidLimit         { get; init; }
+    public string[] HomeCats             { get; init; }
+    public int      Retries              { get; init; } = 4;
+    public int      MaxChannelComments   { get; set; }  = 4;
+  }
+
+  public record RumbleCfg : SimpleCollectCfg { }
+
+  public record BitChuteCfg : SimpleCollectCfg { }
+
+  public record YtCollectCfg : ICommonCollectCfg {
     public DateTime? To { get; set; }
 
     /// <summary>How old a video before we stop collecting video stats. This is cheap, due to video stats being returned in a
@@ -159,9 +174,8 @@ namespace YtReader {
     public int DiscoverChannelVids { get; set; } = 3;
 
     public int ParallelChannels { get; set; } = 4;
-
-    public int WebParallel     { get; set; } = 6; // parallelism for plain html scraping of video's, recs
-    public int CaptionParallel { get; set; } = 3; // smaller than Web to try and reduce changes of out-of-mem failures
+    public int WebParallel      { get; set; } = 6; // parallelism for plain html scraping of video's, recs
+    public int CaptionParallel  { get; set; } = 3; // smaller than Web to try and reduce changes of out-of-mem failures
 
     /// <summary>maximum number of videos to load when updating a channel.</summary>
     public int MaxChannelComments { get; set; } = 4;
@@ -175,7 +189,8 @@ namespace YtReader {
     ///   go and backfill information from the video itself</summary>
     public int ChannelBatchSize { get;      set; } = 100;
     public int MaxChannelDailyVideos { get; set; } = 10_000;
-    public int MaxChannelFullVideos  { get; set; } = 40_000;
+
+    public int MaxChannelFullVideos { get; set; } = 40_000;
 
     public int  UserBatchSize           { get; set; } = 1000;
     public int? MaxMissingUsers         { get; set; } = 100_000;

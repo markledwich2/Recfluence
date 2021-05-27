@@ -31,8 +31,6 @@ namespace SysExtensions.Collections {
     public static IEnumerable<T> NotNull<T>(this IEnumerable<T?> items) where T : struct
       => items?.Where(i => i.HasValue).Select(i => i.Value) ?? Array.Empty<T>();
 
-    public static IAsyncEnumerable<T> NotNull<T>(this IAsyncEnumerable<T> items) => items.Where(i => !i.NullOrDefault());
-
     public static IEnumerable<T> Randomize<T>(this IEnumerable<T> source) {
       var rnd = new Random();
       return source.OrderBy(_ => rnd.Next());
@@ -41,12 +39,6 @@ namespace SysExtensions.Collections {
     public static bool None<T>(this IEnumerable<T> items) => items?.Any() != true;
 
     public static IEnumerable<T> SelectMany<T>(this IEnumerable<IEnumerable<T>> items) => items.SelectMany(i => i);
-
-    public static async IAsyncEnumerable<T> SelectMany<T>(this IAsyncEnumerable<IEnumerable<T>> items) {
-      await foreach (var g in items)
-      foreach (var i in g)
-        yield return i;
-    }
 
     public static IEnumerable<T> WithDescendants<T>(this IEnumerable<T> items, Func<T, IEnumerable<T>> children) {
       var toRecurse = new Queue<T>(items);
@@ -99,20 +91,6 @@ namespace SysExtensions.Collections {
         yield return b;
     }
 
-    /// <summary>Batch into size chunks lazily</summary>
-    public static async IAsyncEnumerable<T[]> Batch<T>(this IAsyncEnumerable<T> items, int size) {
-      var batch = new List<T>();
-      await foreach (var item in items) {
-        batch.Add(item);
-        if (batch.Count < size) continue;
-        yield return batch.ToArray();
-        batch.Clear();
-      }
-      if (batch.Count > 0)
-        yield return batch.ToArray();
-    }
-
-    public static IAsyncEnumerable<(T item, int index)> WithIndex<T>(this IAsyncEnumerable<T> items) => items.Select((item, index) => (item, index));
     public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> items) => items.Select((item, index) => (item, index));
 
     public static IEnumerable<TResult> WithPrevious<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TSource, TResult> map) {

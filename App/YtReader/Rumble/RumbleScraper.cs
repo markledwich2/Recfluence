@@ -12,6 +12,7 @@ using AngleSharp.Css.Dom;
 using AngleSharp.Css.Parser;
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
+using AngleSharp.Text;
 using Flurl;
 using Humanizer;
 using Newtonsoft.Json.Linq;
@@ -30,15 +31,16 @@ using Url = Flurl.Url;
 
 namespace YtReader.Rumble {
   public record RumbleScraper(RumbleCfg Cfg, FlurlProxyClient Http) : IScraper {
-    public const    string         RumbleDotCom = "https://rumble.com/";
-    static readonly IConfiguration AngleCfg     = Configuration.Default.WithDefaultLoader();
-    
-    public          int            CollectParallel => Cfg.CollectParallel;
-    public          Platform       Platform        => Platform.Rumble;
+    public const    string            RumbleDotCom = "https://rumble.com/";
+    static readonly IConfiguration    AngleCfg     = Configuration.Default.WithDefaultLoader();
+    public          ICommonCollectCfg CollectCfg { get; } = Cfg;
+
+    public int      CollectParallel => Cfg.WebParallel;
+    public Platform Platform        => Platform.Rumble;
 
     #region Discover & Video Lists
 
-    IBrowsingContext Bc() => BrowsingContext.New(AngleCfg);
+    static IBrowsingContext Bc() => BrowsingContext.New(AngleCfg);
 
     public async IAsyncEnumerable<Video[]> HomeVideos(ILogger log) {
       var home = await Bc().OpenAsync(RumbleDotCom);
@@ -50,6 +52,7 @@ namespace YtReader.Rumble {
           var bc = Bc(); // not sure if bc is thread safe to make separate contexts
           var catDoc = await bc.OpenAsync(catUrl);
           var catName = catUrl.AsUrl().Path.LastInPath();
+          if (Cfg.HomeCats != null && !Cfg.HomeCats.Contains(catName)) return null;
           var videos = await Videos(catDoc).TakeWhile(b => {
             var more = Cfg.HomeVidLimit == null || Cfg.HomeVidLimit > vidsCollected;
             Interlocked.Add(ref vidsCollected, b.Length);
@@ -60,7 +63,7 @@ namespace YtReader.Rumble {
             return b.Select(v => v with {Tags = new[] {("Category", catName)}.ToMultiValueDictionary()});
           }).SelectMany().ToArrayAsync();
           return videos;
-        }, Cfg.CollectParallel))
+        }, Cfg.WebParallel).NotNull())
         yield return b;
     }
 
@@ -80,15 +83,14 @@ namespace YtReader.Rumble {
       }
     }
 
-    static readonly Regex VideoIdRe      = new(@"(?<id>v\w{5})-.*");
-    static readonly Regex ChannelClassId = new(@"video-item--by-a--c(?<channelNum>\d+)");
+    static readonly Regex VideoIdRe = new(@"(?<id>v\w{5})-.*");
 
     Video ParseVideo(IElement e) {
       var url = e.El<IHtmlAnchorElement>(".video-item--a")?.Href?.AsUrl();
       var sourceId = url?.Path.Match(VideoIdRe).Groups["id"].Value.NullIfEmpty();
       string Data(string name) => e.El<IHtmlSpanElement>($".video-item--{name}")?.Dataset["value"];
       var chanEl = e.El<IHtmlAnchorElement>(".video-item--by > a[rel='author']");
-      var chanSourceId = $"c-{chanEl?.GetAttribute("class").Match(ChannelClassId)?.Groups["channelNum"].Value}";
+      var chanSourceId = chanEl?.Href.AsUrl().Path.TrimPath();
       var chanTitle = chanEl?.TextContent.Trim();
 
       var video = this.NewVid(sourceId) with {
@@ -115,7 +117,7 @@ namespace YtReader.Rumble {
 
     public async Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log) {
       var bc = BrowsingContext.New(AngleCfg);
-      var channelUrl = ChannelUrl(sourceId);
+      var channelUrl = ChannelUrl(sourceId); // for rumble, the url path is the channel's source id.
       var doc = await bc.OpenAsync(channelUrl);
       var chan = this.NewChan(sourceId);
       if (doc.StatusCode == HttpStatusCode.NotFound)

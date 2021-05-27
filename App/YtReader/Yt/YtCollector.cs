@@ -17,6 +17,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Db;
+using YtReader.SimpleCollect;
 using YtReader.Store;
 using static Mutuo.Etl.Pipe.PipeArg;
 using static YtReader.Yt.UpdateChannelType;
@@ -136,14 +137,13 @@ namespace YtReader.Yt {
       IKeyedCollection<string, ChannelUpdatePlan> existingChannels;
       using (var db = await Db(log)) {
         // retrieve previous channel state to update with new classification (algos and human) and stats form the API
-        existingChannels = await db.ChannelUpdateStats(explicitChannels).Then(r => r.ToKeyedCollection(c => c.Channel.ChannelId));
-
+        existingChannels = await db.ChannelUpdateStats(explicitChannels).Then(r => r.KeyBy(c => c.Channel.ChannelId));
         if (limitChannels != null) // discover channels specified in limit if they aren't in our dataset
           explicitMissing.AddRange(limitChannels.Where(c => !existingChannels.ContainsKey(c))
             .Select(c => new ChannelUpdatePlan {Channel = new() {ChannelId = c}, Update = Discover}));
 
         if (parts.ShouldRun(PDiscover))
-          toDiscover.AddRange(await db.ChannelsToDiscover());
+          toDiscover.AddRange(await db.DiscoverChannelsViaRecs());
       }
 
       // perform full update on channels with a last full update older than 90 days (max X at a time because of quota limit).
@@ -333,7 +333,7 @@ namespace YtReader.Yt {
 
         if (parts.ShouldRun(EExtra)) {
           // add videos that seem missing given the current update
-          var videoItemsKey = videoItems.ToKeyedCollection(v => v.Id);
+          var videoItemsKey = videoItems.KeyBy(v => v.Id);
           var oldestUpdate = videoItems.Min(v => v.UploadDate);
 
           var suspectMissingFresh = plans
@@ -444,14 +444,13 @@ namespace YtReader.Yt {
       Platform platform, Channel c, ExtraPart[] parts,
       ILogger log, VideoExtraPlans planedExtras) {
       var extrasAndParts = await GetExtras(planedExtras, log, c?.ChannelId, c?.ChannelTitle).NotNull().ToListAsync();
-      foreach (var e in extrasAndParts) {
-        e.Extra.ChannelId ??= c?.ChannelId; // if the video has an error, it may not have picked up the channel
-        e.Extra.ChannelTitle ??= c?.ChannelTitle;
-      }
-
       var s = extrasAndParts.Split();
       var updated = DateTime.UtcNow;
-      if (parts.ShouldRun(EExtra)) await DbStore.VideoExtra.Append(s.Extras, log);
+      if (parts.ShouldRun(EExtra)) {
+        // provide channel if it is missing 
+        var extras = s.Extras.Select(e => e with {ChannelId = e.ChannelId ?? c?.ChannelId, ChannelTitle = c?.ChannelTitle}).ToArray();
+        await DbStore.VideoExtra.Append(extras, log);
+      }
       if (parts.ShouldRun(ERec)) await DbStore.Recs.Append(ToRecStored(extrasAndParts, updated), log);
       if (parts.ShouldRun(EComment)) await DbStore.Comments.Append(s.Comments, log);
       if (parts.ShouldRun(ECaption)) await DbStore.Captions.Append(s.Captions, log);

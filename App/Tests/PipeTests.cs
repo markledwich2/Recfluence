@@ -100,7 +100,7 @@ namespace Tests {
           (l, c) => NotDependent(l))
         .Run(parallel: 2, ctx.Log, CancellationToken.None);
 
-      var resByName = res.ToKeyedCollection(r => r.Name);
+      var resByName = res.KeyBy(r => r.Name);
       resByName[nameof(Generate)].FinalStatus.Should().Be(GraphTaskStatus.Error);
       resByName[nameof(Shorten)].FinalStatus.Should().Be(GraphTaskStatus.Cancelled);
       resByName[nameof(NotDependent)].FinalStatus.Should().Be(GraphTaskStatus.Success);
