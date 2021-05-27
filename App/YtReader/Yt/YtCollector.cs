@@ -169,7 +169,7 @@ namespace YtReader.Yt {
 
       var (updatedChannels, duration) = await channels
         .Where(c => c.Update != StandardNoChannel)
-        .BlockFunc(async c => await UpdateChannelDetail(c, log), Cfg.DefaultParallel, cancel: cancel)
+        .BlockMapList(async c => await UpdateChannelDetail(c, log), Cfg.DefaultParallel, cancel: cancel)
         .WithDuration();
       if (cancel.IsCancellationRequested) return updatedChannels;
 

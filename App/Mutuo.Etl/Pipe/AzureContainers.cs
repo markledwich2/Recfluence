@@ -50,7 +50,7 @@ namespace Mutuo.Etl.Pipe {
     ///   returns the status.</summary>
     public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning,
       bool exclusive, ILogger log, CancellationToken cancel) {
-      var res = await ids.BlockFunc(async runId => {
+      var res = await ids.BlockMap(async runId => {
         var runCfg = runId.PipeCfg(ctx.PipeCfg); // id is for the sub-pipe, ctx is for the root
 
         var tag = await FindImageTag(runCfg.Container.ImageName);
@@ -93,7 +93,7 @@ namespace Mutuo.Etl.Pipe {
           await DeleteContainer(containerGroup, log);
 
         return md;
-      }, returnOnRunning ? ctx.PipeCfg.Azure.Parallel : ids.Count);
+      }, returnOnRunning ? ctx.PipeCfg.Azure.Parallel : ids.Count).ToListAsync();
 
       return res;
     }

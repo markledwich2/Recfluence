@@ -84,7 +84,7 @@ namespace YtReader {
       }
       else {
         var blobs = await Store.List("userscrape/run/incomplete_trial", allDirectories: false, log).SelectManyList();
-        var incompleteTrials = (await blobs.BlockFunc(f => Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip: false)))
+        var incompleteTrials = (await blobs.BlockMapList(f => Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip: false)))
           .Where(t => limitAccounts == null || limitAccounts.Any(a => t.accounts?.Contains(a) == true)).ToArray();
 
         log.Information("UserScrape - about to run {Trials} incomplete trials", incompleteTrials.Length);

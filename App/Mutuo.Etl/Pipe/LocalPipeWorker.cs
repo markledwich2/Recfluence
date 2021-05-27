@@ -17,7 +17,7 @@ namespace Mutuo.Etl.Pipe {
     public LocalPipeWorker(SemVersion version) => Version = version;
 
     public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) =>
-      await ids.BlockFunc(async id => {
+      await ids.BlockMap(async id => {
         var runCfg = id.PipeCfg(ctx.PipeCfg);
         var image = runCfg.Container.FullContainerImageName(Version.PipeTag());
         var args = new[] {"run"}
@@ -36,7 +36,7 @@ namespace Mutuo.Etl.Pipe {
           };
         await md.Save(ctx.Store, log);
         return md;
-      });
+      }).ToArrayAsync();
 
     public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars, string[] args = null,
       bool returnOnStart = false, string exe = null,

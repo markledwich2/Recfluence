@@ -2,13 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Humanizer;
 using NUnit.Framework;
 using Serilog;
 using SysExtensions;
-using SysExtensions.Text;
+using SysExtensions.Collections;
 using SysExtensions.Threading;
+using static SysExtensions.Threading.Def;
+using static Tests.TestSetup;
+using SysExtensions.Text;
 
 namespace Tests {
   public class BlockTest {
@@ -19,22 +21,25 @@ namespace Tests {
     }
 
     [Test]
-    public static async Task TestBatchBlock() {
-      var ctx = await TestSetup.TextCtx();
-      ctx.Log.Information("TestBatchBlock started");
-      var numItems = 10_000_000;
-      var (res, dur) = await MakeItems(numItems, ctx.Log)
-        .BlockBatch(async (b, i) => {
+    public static async Task TestFlatMap() {
+      var ctx = await TextCtx();
+      var log = ctx.Log;
+      log.Information("TestBatchBlock started");
+
+      async IAsyncEnumerable<string> AsyncItems(int count, string desc) {
+        await foreach (var i in Enumerable.Range(start: 0, count).Batch(4).BlockMap(async b => {
           await 1.Seconds().Delay();
-          ctx.Log.Debug("batch {Batch} processed", i);
-          return b.Count;
-        }, batchSize: 100_000, parallel: 8).WithDuration();
-      ctx.Log.Information("Processing {Items} took {Duration} {Speed}",
-        numItems, dur.HumanizeShort(), (numItems / 1000).Speed("K items", dur).Humanize());
-      res.Sum().Should().Be(numItems);
+          return b;
+        })) {
+          await 1.Seconds().Delay();
+          yield return $"{desc} says hello {i.Join(",")}";
+        }
+      }
+      await foreach (var s in new[] {"a", "b"}.Select(s => AsyncItems(int.MaxValue - 5, s)).ToArray().BlockFlatMap(Task.FromResult, parallel: 4))
+        log.Information(s);
     }
 
-    static readonly Random Rand = new Random();
+    static readonly Random Rand = new ();
 
     class Item {
       public string Id  { get; set; }

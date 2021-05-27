@@ -69,17 +69,17 @@ namespace YtReader.SimpleCollect {
     }
 
     public async ValueTask<SimpleCollectPlan> Discover(SimpleCollectPlan plan, ILogger log, CancellationToken cancel = default) {
-      /*if (plan.Parts.ShouldRun(DiscoverVideo))
-        plan = await CrawlVideoLinks(plan, log);*/
       var platform = plan.Platform;
       if (plan.Parts.ShouldRun(DiscoverHome)) {
-        var chans = await Scraper(plan.Platform).HomeVideos(log).BlockMap(async b => {
-            var videos = b.NotNull().Select(v => v with {DiscoverSource = new(Home)}).ToArray();
+        var chans = await Scraper(platform).HomeVideos(log).NotNull().SelectMany()
+          .Select(v => v with {DiscoverSource = new(Home)})
+          .Batch(1000)
+          .BlockMap(async b => {
+            var videos = b.ToArray();
             await Store.Videos.Append(videos, log);
-            //log.Information("Collect {Platform} - crawled {Videos} home videos", platform, videos.Length);
             return CrawledChannels(platform, videos);
           }, cancel: cancel)
-          .SelectMany().Distinct().ToListAsync();
+          .SelectMany().Distinct().ToListAsync(cancellationToken: cancel);
         plan = plan.WithAddedChannels("video crawled channels", chans, log);
       }
       return plan;

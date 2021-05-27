@@ -46,40 +46,53 @@ namespace YtReader.Rumble {
       var home = await Bc().OpenAsync(RumbleDotCom);
       home.EnsureSuccess();
       var vidsCollected = 0;
-      await foreach (var b in home
-        .QuerySelectorAll<IHtmlAnchorElement>(".mediaList-link-more > a").Select(a => a.Href).NotNull().ToArray()
+
+      var catVideos = await home
+        .QuerySelectorAll<IHtmlAnchorElement>(".mediaList-link-more > a").Select(a => a.Href).NotNull()
         .BlockMap(async catUrl => {
-          var bc = Bc(); // not sure if bc is thread safe to make separate contexts
-          var catDoc = await bc.OpenAsync(catUrl);
-          var catName = catUrl.AsUrl().Path.LastInPath();
-          if (Cfg.HomeCats != null && !Cfg.HomeCats.Contains(catName)) return null;
-          var videos = await Videos(catDoc).TakeWhile(b => {
-            var more = Cfg.HomeVidLimit == null || Cfg.HomeVidLimit > vidsCollected;
-            Interlocked.Add(ref vidsCollected, b.Length);
-            return more;
-          }).Select((b, i) => {
-            log.Information("Collect {Platform} - crawled {Videos} videos on page {Page} in category {Category}",
-              Platform, b.Length, i + 1, catName);
-            return b.Select(v => v with {Tags = new[] {("Category", catName)}.ToMultiValueDictionary()});
-          }).SelectMany().ToArrayAsync();
-          return videos;
-        }, Cfg.WebParallel).NotNull())
-        yield return b;
+          var cat = catUrl.AsUrl().Path.LastInPath();
+          if (Cfg.HomeCats != null && !Cfg.HomeCats.Contains(cat)) return null;
+          var doc = await Bc().OpenAsync(catUrl);
+          return Videos(doc, log).Select(v => (page: v.Page, vids: v.Videos, cat));
+        }, Cfg.WebParallel).NotNull().ToArrayAsync();
+
+      //var vidSources = catVideos.Select(c => c.vids.Select(v => )).ToArray(); // create our async sources (doesn't start executing yet)
+      await foreach (var b in catVideos.BlockFlatMap((v, _) => Task.FromResult(v), parallel: 2).TakeWhileInclusive(b => {
+        var more = Cfg.HomeVidLimit == null || Cfg.HomeVidLimit > vidsCollected;
+        Interlocked.Add(ref vidsCollected, b.vids.Length);
+        return more;
+      }).ConfigureAwait(false)) {
+        var (page, vids, cat) = b;
+        log.Information("{Platform} -  crawled {Videos} videos on page {Page} in category {Category}",
+          Platform, vids.Length, page, cat);
+        yield return vids.Select(v => v with {Tags = new[] {("Category", cat)}.ToMultiValueDictionary()}).ToArray();
+      }
     }
 
     static readonly CssParser Css = new(new());
 
-    async IAsyncEnumerable<Video[]> Videos(IDocument doc) {
+    async IAsyncEnumerable<(Video[] Videos, int Page)> Videos(IDocument doc, ILogger log) {
       Video[] ParseVideos(IDocument d) => d.QuerySelectorAll(".video-listing-entry").Select(ParseVideo).ToArray();
 
-      string NextUrl(IDocument d) => d.El<IHtmlLinkElement>("link[rel=next]")?.Href;
-      yield return ParseVideos(doc);
-      var next = NextUrl(doc);
-      while (next.HasValue()) {
-        var page = await doc.Context.OpenAsync(next);
-        page.EnsureSuccess();
-        yield return ParseVideos(page);
-        next = NextUrl(page);
+      Url PageUrl(int page) => doc.Url.SetQueryParam("page", page);
+      yield return (ParseVideos(doc), 1);
+
+      var pageNum = 2;
+      while (true) {
+        var bRes = await pageNum.RangeTo(Cfg.PageParallel).BlockMap(async p => {
+          var page = await doc.Context.OpenAsync(PageUrl(p));
+          if (page.StatusCode == HttpStatusCode.NotFound) return default; // missing page
+          if (!page.StatusCode.IsSuccess())
+            log.Warning("Failed to get video page {Url}", page.Url);
+          var res = (Videos: ParseVideos(page), Page: p);
+          return res;
+        }, Cfg.PageParallel).ToListAsync();
+        var vids = bRes.Where(b => b.Videos != null).ToArray();
+        if (vids.IsEmpty())
+          break;
+        foreach (var v in vids)
+          yield return v;
+        pageNum += Cfg.PageParallel;
       }
     }
 
@@ -141,7 +154,7 @@ namespace YtReader.Rumble {
         Subs = doc.QuerySelector(".subscribe-button-count")?.TextContent.TryParseNumberWithUnits()?.RoundToULong(),
         LogoUrl = doc.El<IHtmlImageElement>(".listing-header--thumb")?.Source,
         Status = ChannelStatus.Alive
-      }, Videos: Videos(doc).Select(b => b.Select(v => v with {
+      }, Videos: Videos(doc, log).Select(b => b.Videos.Select(v => v with {
         ChannelId = chan.ChannelId,
         ChannelTitle = chan?.ChannelTitle,
         ChannelSourceId = chan.SourceId

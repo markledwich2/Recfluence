@@ -94,7 +94,7 @@ namespace Tests {
       using var ctx = await TestSetup.TextCtx();
       var api = ctx.Resolve<YtClient>();
       var data = await new[] {"UCMDxbhGcsE7EnknxPEzC_Iw", "UCHEf6T_gVq4tlW5i91ESiWg", "UCYeF244yNGuFefuFKqxIAXw"}
-        .BlockFunc(c => api.ChannelData(c, full: true));
+        .BlockMapList(c => api.ChannelData(c, full: true));
     }
 
     [Test]

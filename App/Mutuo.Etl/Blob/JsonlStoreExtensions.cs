@@ -59,7 +59,7 @@ namespace Mutuo.Etl.Blob {
       log?.Debug("Optimise {Path} - read {Files} files across {Partitions} partitions in {Duration}",
         rootPath, byDir.Sum(p => p.Count()), byDir.Length, duration.HumanizeShort());
 
-      var optimiseRes = await byDir.BlockFunc(p => Optimise(store, p.Key, p, cfg, log), cfg.ParallelFiles);
+      var optimiseRes = await byDir.BlockMap(p => Optimise(store, p.Key, p, cfg, log), cfg.ParallelFiles).ToArrayAsync();
       var optimiseIn = optimiseRes.Sum(r => r.optimisedIn);
       var optimiseOut = optimiseRes.Sum(r => r.optimisedOut);
 
@@ -149,12 +149,12 @@ namespace Mutuo.Etl.Blob {
 
       localTmpDir.EnsureDirectoryExists();
 
-      var inFiles = await toOptimise.BlockFunc(async s => {
+      var inFiles = await toOptimise.BlockMap(async s => {
         var inPath = localTmpDir.Combine($"{ShortGuid.Create(6)}.{s.Path.Name}"); // flatten dir structure locally. ensure unique with GUID
         var dur = await store.LoadToFile(s.Path, inPath, log).WithDuration();
         log.Debug("Optimise {Path} - loaded file {SourceFile} for optimisation in {Duration}", destPath, s.Path, dur.HumanizeShort());
         return inPath;
-      }, parallel);
+      }, parallel).ToListAsync();
 
       var outFile = localTmpDir.Combine($"out.{optimisedFileName.Name}");
 

@@ -116,10 +116,10 @@ namespace Mutuo.Etl.Pipe {
 
       var batches = await items.Batch(runCfg.MinWorkItems, runCfg.MaxParallel)
         .Select((g, i) => (Id: new PipeRunId(pipeName, groupRunId.GroupId, i), In: g.ToArray()))
-        .BlockFunc(async b => {
+        .BlockMap(async b => {
           await ctx.SaveInRows(b.In, b.Id, log);
           return b.Id;
-        }, ctx.PipeCfg.Store.Parallel);
+        }, ctx.PipeCfg.Store.Parallel).ToListAsync();
 
       var pipeWorker =
         PipeWorker(ctx,
@@ -148,7 +148,7 @@ namespace Mutuo.Etl.Pipe {
       return outState;
 
       async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> GetOutState() =>
-        await res.BlockFunc(async b => await GetOutState<TOut>(ctx, log, b, runCfg.ReturnOnStart), ctx.PipeCfg.Store.Parallel);
+        await res.BlockMap(async b => await GetOutState<TOut>(ctx, log, b, runCfg.ReturnOnStart), ctx.PipeCfg.Store.Parallel).ToArrayAsync();
     }
 
     static async Task<(PipeRunMetadata Metadata, TOut OutState)> GetOutState<TOut>(IPipeCtx ctx, ILogger log, PipeRunMetadata b, bool returnOnStart) {
@@ -193,7 +193,7 @@ namespace Mutuo.Etl.Pipe {
         ?? throw new($"Expecting arg method {pipeType.Type}.{method.Name} parameter {parameterInfo.Name} to be IEnumerable<Type>");
 
       // Find the pipe parameters to invoke by name. In the future we can support easier backwards compatibility by also looking for a position/type match.
-      var pipeParamValues = await method.GetParameters().Where(p => p.Name != null).BlockFunc(async p => {
+      var pipeParamValues = await method.GetParameters().Where(p => p.Name != null).BlockMap(async p => {
         if (args.TryGetValue(p.Name ?? throw new("parameters must have names"), out var arg))
           return arg.ArgMode switch {
             ArgMode.SerializableValue => ChangeToType(arg.Value, p.ParameterType),
@@ -202,7 +202,7 @@ namespace Mutuo.Etl.Pipe {
             _ => p.ParameterType == typeof(CancellationToken) ? cancel : ctx.Scope.Resolve(p.ParameterType)
           };
         throw new($"no InArgs for parameter {p.Name}");
-      }, cancel: cancel);
+      }, cancel: cancel).ToArrayAsync();
 
       try {
         dynamic task = method.Invoke(pipeInstance, pipeParamValues.ToArray()) ??

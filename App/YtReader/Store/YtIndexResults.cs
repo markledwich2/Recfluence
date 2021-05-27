@@ -50,7 +50,7 @@ namespace YtReader.Store {
         .Select(t => t with {Name = t.Name.Underscore()}) // we are building this for javascript land. So snake case everything
         .Where(t => names?.Contains(t.Name) != false && tags?.Intersect(t.Tags.NotNull()).Any() != false).ToArray();
 
-      var (res, indexDuration) = await toRun.BlockFunc(async t => {
+      var (res, indexDuration) = await toRun.BlockMapList(async t => {
         var work = await IndexWork(log, t);
 
         return await BlobIndex.SaveIndexedJsonl(work, log, cancel);

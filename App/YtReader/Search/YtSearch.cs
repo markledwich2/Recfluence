@@ -226,7 +226,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     async Task<int> BatchToEs<T>(string indexName, ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy, CancellationToken cancel)
       where T : class => (await enumerable
       .Batch(Cfg.BatchSize).WithIndex()
-      .BlockFunc(b => BatchToEs(indexName, b.item, b.index, esPolicy, log),
+      .BlockMapList(b => BatchToEs(indexName, b.item, b.index, esPolicy, log),
         Cfg.Parallel, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
         Cfg.Parallel,
         cancel: cancel)).Sum();

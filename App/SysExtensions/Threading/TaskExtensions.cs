@@ -106,6 +106,12 @@ namespace SysExtensions.Threading {
       if (r is IDisposable d) d.Dispose();
       return res;
     }
+    
+    public static async Task Then<T>(this Task<T> task, Action<T> then) {
+      var r = await task;
+      then(r);
+      if (r is IDisposable d) d.Dispose();
+    }
 
     public static async Task<TR> Then<T, TR>(this Task<T> task, Func<T, TR> then) {
       var r = await task;

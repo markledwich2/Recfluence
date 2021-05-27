@@ -54,7 +54,7 @@ namespace YtReader {
         using var csvReader = new CsvReader(csvStream, CsvExtensions.DefaultConfig);
 
         var records = csvReader.GetRecords<TrafficSourceExportRow>().ToList();
-        var rows = (await records.BlockFunc(ToTrafficSourceRow, parallel: 4,
+        var rows = (await records.BlockMapList(ToTrafficSourceRow, parallel: 4,
             progressUpdate: p => log.Debug("Processing traffic sources for {Path}: {Rows}/{TotalRows}", b.Path, p.Completed, records.Count)))
           .NotNull().ToList();
 

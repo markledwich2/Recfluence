@@ -83,14 +83,14 @@ namespace Mutuo.Etl.Pipe {
 
   public class ThreadPipeWorker : IPipeWorker {
     public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) {
-      var res = await ids.BlockFunc(async id => {
+      var res = await ids.BlockMap(async id => {
         await ctx.DoPipeWork(id, cancel);
         var md = new PipeRunMetadata {
           Id = id
         };
         await md.Save(ctx.Store, log);
         return md;
-      });
+      }).ToArrayAsync();
       return res;
     }
   }

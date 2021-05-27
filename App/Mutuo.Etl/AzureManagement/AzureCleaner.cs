@@ -53,11 +53,11 @@ namespace Mutuo.Etl.AzureManagement {
         var tags = await RegistryClient.TagList(name);
         var images = (await tags.Tags
             .Where(t => t.Contains("-"))
-            .BlockFunc(async tag => {
+            .BlockMap(async tag => {
               var manifest = await RegistryClient.Manifest(name, tag);
               var created = manifest.TagCreated();
               return (tag, manifest, created);
-            }, Cfg.Parallel))
+            }, Cfg.Parallel).ToArrayAsync())
           .NotNull().ToArray();
 
         var expired = images.Where(i => DateTime.UtcNow - i.created > Cfg.Expires).ToArray();

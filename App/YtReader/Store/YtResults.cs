@@ -303,7 +303,7 @@ group by channel_id",
 
       var tmpDir = TempDir();
 
-      var results = await queries.BlockFunc(async q => (file: await SaveResult(log, db, tmpDir, q), query: q), ResCfg.Parallel, cancel: cancel);
+      var results = await queries.BlockMapList(async q => (file: await SaveResult(log, db, tmpDir, q), query: q), ResCfg.Parallel, cancel: cancel);
 
       if (queryNames?.Any() != true) await SaveResultsZip(log, results);
     }
