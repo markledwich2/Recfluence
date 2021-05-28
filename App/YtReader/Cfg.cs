@@ -131,8 +131,8 @@ namespace YtReader {
   }
 
   public record SimpleCollectCfg : ICommonCollectCfg {
-    public int      WebParallel          { get; set; } = 16; // parallelism for plain html scraping of video's, recs
-    public int      PageParallel         { get; set; } = 4;
+    public int      WebParallel          { get; set; } = 24; // parallelism for plain html scraping of video's, recs
+    public int      OuterParallel         { get; set; } = 4; // default parallelism for something the partitions other async work
     public int      MaxChannelFullVideos { get; set; } = 40_000;
     public int?     HomeVidLimit         { get; init; }
     public string[] HomeCats             { get; init; }

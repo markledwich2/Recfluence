@@ -5,8 +5,10 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using AngleSharp;
 using AngleSharp.Dom;
@@ -135,7 +137,7 @@ namespace YtReader.BitChute {
       ChannelVideos
     }
 
-    public async IAsyncEnumerable<Video[]> HomeVideos(ILogger log) {
+    public async IAsyncEnumerable<Video[]> HomeVideos(ILogger log, [EnumeratorCancellation] CancellationToken cancel) {
       var categories = new[] {"vlogging", "health", "news", "science", "spirituality", "family", "education"};
       var videos = new[] {(category: "", path: "")}.Concat(categories.Select(c => (category: c, path: $"category/{c}")))
         .BlockMap(async c => {
@@ -148,7 +150,7 @@ namespace YtReader.BitChute {
             var listType = tabName.In("trending") ? VideoListType.Results : VideoListType.Cards;
             return (doc, category, path, tab, listType, tabName);
           });
-        }, Cfg.WebParallel).SelectMany().NotNull().BlockMap(async t => {
+        }, Cfg.WebParallel, cancel:cancel).SelectMany().NotNull().BlockMap(async t => {
           var pageVids = await Videos(log, t.doc, t.tab, t.listType, t.tabName).NotNull().Select((b, i) => {
             log.Information("Collect {Platform} - crawled {Videos} videos on page {Page} from {Path} > {Tab} videos",
               Platform, b.Length, i + 1, t.path.NullOrEmpty() ? "Home" : t.path, t.tabName);
@@ -160,7 +162,7 @@ namespace YtReader.BitChute {
             });
           }).SelectMany().ToArrayAsync();
           return pageVids;
-        }, Cfg.WebParallel);
+        }, Cfg.WebParallel, cancel:cancel);
 
       await foreach (var vids in videos)
         yield return vids;

@@ -71,7 +71,7 @@ namespace YtReader.SimpleCollect {
     public async ValueTask<SimpleCollectPlan> Discover(SimpleCollectPlan plan, ILogger log, CancellationToken cancel = default) {
       var platform = plan.Platform;
       if (plan.Parts.ShouldRun(DiscoverHome)) {
-        var chans = await Scraper(platform).HomeVideos(log).NotNull().SelectMany()
+        var chans = await Scraper(platform).HomeVideos(log, cancel).NotNull().SelectMany()
           .Select(v => v with {DiscoverSource = new(Home)})
           .Batch(1000)
           .BlockMap(async b => {

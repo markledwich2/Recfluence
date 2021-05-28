@@ -16,6 +16,7 @@ namespace Tests {
     static readonly AsyncLazy<TestCtx> Ctx = new(async () => {
       var (cfg, rootCfg, version) = await Setup.LoadCfg(basePath: Setup.SolutionDir.Combine("YtCli").FullPath);
       var log = Setup.CreateLogger(rootCfg.Env, "Recfluence.Tests", version, cfg);
+      Log.Logger = log;
       var appCtx = Setup.PipeAppCtxEmptyScope(rootCfg, cfg, version.Version);
       return new(Setup.MainScope(rootCfg, cfg, appCtx, version, log), log, cfg, rootCfg);
     });

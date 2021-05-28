@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Humanizer;
+using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 
@@ -43,7 +44,7 @@ namespace SysExtensions.Threading {
       if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
       return options;
     }
-    
+
     public static async IAsyncEnumerable<R> BlockMap<T, R>(this IEnumerable<T> source,
       Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
@@ -56,7 +57,8 @@ namespace SysExtensions.Threading {
         if (!await block.OutputAvailableAsync()) break;
         yield return await block.ReceiveAsync();
       }
-      await Task.WhenAll(produceTask, block.Completion);
+      await block.Completion;
+      await produceTask;
     }
 
     public static IAsyncEnumerable<R> BlockMap<T, R>(this IEnumerable<T> source,
@@ -68,23 +70,40 @@ namespace SysExtensions.Threading {
       source.BlockMap((r, _) => func(r), parallel, capacity, cancel);
 
     public static IAsyncEnumerable<R> BlockFlatMap<T, R>(this IAsyncEnumerable<T>[] sources,
+      Func<T, R> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
+      sources.BlockFlatMap((r, _) => Task.FromResult(func(r)), parallel, capacity, cancel);
+
+    public static IAsyncEnumerable<R> BlockFlatMap<T, R>(this IAsyncEnumerable<T>[] sources,
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
       sources.BlockFlatMap((r, _) => func(r), parallel, capacity, cancel);
 
     public static async IAsyncEnumerable<R> BlockFlatMap<T, R>(this IAsyncEnumerable<T>[] sources,
       Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
-      var produce = sources.BlockDo(s => ProduceAsync(s, block, cancel, complete: false), parallel).Then(_ => block.Complete());
+      var log = Log.Logger.ForContext("instance", ShortGuid.Create(3));
+
+      async Task ProduceAll() {
+        try {
+          await sources.BlockDo(s => ProduceAsync(s, block, cancel, complete: false, log), parallel);
+        }
+        finally {
+          {
+            block.Complete();
+          }
+        }
+      }
+
+      var produceTask = ProduceAll();
       while (true) {
-        if (produce.IsFaulted) {
+        if (produceTask.IsFaulted) {
           block.Complete();
           break;
         }
-        if (!await block.OutputAvailableAsync().ConfigureAwait(false))
-          break;
-        yield return await block.ReceiveAsync().ConfigureAwait(false);
+        if (!await block.OutputAvailableAsync()) break;
+        yield return await block.ReceiveAsync();
       }
-      await Task.WhenAll(produce, block.Completion).ConfigureAwait(false);
+      await block.Completion;
+      await produceTask;
     }
 
     public static async IAsyncEnumerable<R> BlockMap<T, R>(this IAsyncEnumerable<T> source,
@@ -107,7 +126,42 @@ namespace SysExtensions.Threading {
       await foreach (var i in (await source).BlockMap(func, parallel, capacity, cancel))
         yield return i;
     }
-    
+
+    static TransformBlock<(T, int), R> GetBlock<T, R>(Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) {
+      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
+      if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
+      var indexTupleFunc = new Func<(T, int), Task<R>>(t => func(t.Item1, t.Item2));
+      return new(indexTupleFunc, options);
+    }
+
+    static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<(T, int)> block, CancellationToken cancel = default,
+      bool complete = true, ILogger log = null) {
+      var produced = 0;
+      await foreach (var item in source.Select((r, i) => (r, i)).WithCancellation(cancel)) {
+        if (cancel.IsCancellationRequested) return produced;
+        await block.SendAsync(item).ConfigureAwait(false);
+        produced++;
+      }
+      if (complete)
+        block.Complete();
+      return produced;
+    }
+
+    static async Task<long> ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block, bool complete = true) {
+      var produced = 0;
+      try {
+        foreach (var item in source) {
+          await block.SendAsync(item);
+          produced++;
+        }
+      }
+      finally {
+        if (complete)
+          block.Complete();
+      }
+      return produced;
+    }
+
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
     public static async Task<IReadOnlyCollection<R>> BlockMapList<T, R>(this IEnumerable<T> source,
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null,
@@ -150,37 +204,6 @@ namespace SysExtensions.Threading {
       await block.Completion;
 
       return result;
-    }
-
-    static TransformBlock<(T, int), R> GetBlock<T, R>(Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) {
-      var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
-      if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
-      var indexTupleFunc = new Func<(T, int), Task<R>>(t => func(t.Item1, t.Item2));
-      return new(indexTupleFunc, options);
-    }
-
-    static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<(T, int)> block, CancellationToken cancel = default,
-      bool complete = true) {
-      var produced = 0;
-      await foreach (var item in source.Select((r, i) => (r, i)).WithCancellation(cancel).ConfigureAwait(false)) {
-        if (cancel.IsCancellationRequested) return produced;
-        await block.SendAsync(item).ConfigureAwait(false);
-        produced++;
-      }
-      if (complete)
-        block.Complete();
-      return produced;
-    }
-
-    static async Task<long> ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block, bool complete = true) {
-      var produced = 0;
-      foreach (var item in source) {
-        await block.SendAsync(item).ConfigureAwait(false);
-        produced++;
-      }
-      if (complete)
-        block.Complete();
-      return produced;
     }
   }
 

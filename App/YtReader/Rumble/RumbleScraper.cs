@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,7 +43,7 @@ namespace YtReader.Rumble {
 
     static IBrowsingContext Bc() => BrowsingContext.New(AngleCfg);
 
-    public async IAsyncEnumerable<Video[]> HomeVideos(ILogger log) {
+    public async IAsyncEnumerable<Video[]> HomeVideos(ILogger log, [EnumeratorCancellation] CancellationToken cancel) {
       var home = await Bc().OpenAsync(RumbleDotCom);
       home.EnsureSuccess();
       var vidsCollected = 0;
@@ -57,11 +58,11 @@ namespace YtReader.Rumble {
         }, Cfg.WebParallel).NotNull().ToArrayAsync();
 
       //var vidSources = catVideos.Select(c => c.vids.Select(v => )).ToArray(); // create our async sources (doesn't start executing yet)
-      await foreach (var b in catVideos.BlockFlatMap((v, _) => Task.FromResult(v), parallel: 2).TakeWhileInclusive(b => {
+      await foreach (var b in catVideos.BlockFlatMap(r => r, Cfg.OuterParallel, cancel:cancel).TakeWhileInclusive(b => {
         var more = Cfg.HomeVidLimit == null || Cfg.HomeVidLimit > vidsCollected;
         Interlocked.Add(ref vidsCollected, b.vids.Length);
         return more;
-      }).ConfigureAwait(false)) {
+      })) {
         var (page, vids, cat) = b;
         log.Information("{Platform} -  crawled {Videos} videos on page {Page} in category {Category}",
           Platform, vids.Length, page, cat);
@@ -79,20 +80,21 @@ namespace YtReader.Rumble {
 
       var pageNum = 2;
       while (true) {
-        var bRes = await pageNum.RangeTo(Cfg.PageParallel).BlockMap(async p => {
+        // load a batch of pages each iteration of this loop. Can't use regular flow because the # of pages is not known and can't be iterated using this technique
+        var bRes = await pageNum.RangeTo(Cfg.OuterParallel).BlockMap(async p => {
           var page = await doc.Context.OpenAsync(PageUrl(p));
           if (page.StatusCode == HttpStatusCode.NotFound) return default; // missing page
           if (!page.StatusCode.IsSuccess())
             log.Warning("Failed to get video page {Url}", page.Url);
           var res = (Videos: ParseVideos(page), Page: p);
           return res;
-        }, Cfg.PageParallel).ToListAsync();
+        }, Cfg.OuterParallel).ToListAsync();
         var vids = bRes.Where(b => b.Videos != null).ToArray();
         if (vids.IsEmpty())
           break;
         foreach (var v in vids)
           yield return v;
-        pageNum += Cfg.PageParallel;
+        pageNum += Cfg.OuterParallel;
       }
     }
 

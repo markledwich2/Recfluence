@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 using SysExtensions;
@@ -60,7 +61,7 @@ namespace YtReader.SimpleCollect {
     string SourceToFullId(string sourceId, LinkType type);
     int      CollectParallel { get; }
     Platform Platform        { get; }
-    IAsyncEnumerable<Video[]> HomeVideos(ILogger log);
+    IAsyncEnumerable<Video[]> HomeVideos(ILogger log, CancellationToken cancel);
   }
 
   public static class CollectExtensions {
