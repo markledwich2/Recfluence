@@ -68,7 +68,7 @@ namespace YtReader.Yt {
     bool caption_exists, bool comment_exists,
     Platform platform);
 
-  public record YtCollectList(YtCollector YtCollector, SimpleCollector SimpleCollector, IPipeCtx PipeCtx, AppCfg Cfg) {
+  public record CollectList(YtCollector YtCollector, SimpleCollector SimpleCollector, IPipeCtx PipeCtx, AppCfg Cfg) {
     /// <summary>Collect extra & parts from an imported list of channels and or videos. Use instead of update to process
     ///   arbitrary lists and ad-hoc fixes</summary>
     public async Task Run(CollectListOptions opts, ILogger log, CancellationToken cancel = default) {
@@ -84,7 +84,7 @@ namespace YtReader.Yt {
         var vidChanSelect = VideoChannelSelect(opts);
         IReadOnlyCollection<VideoListStats> videos;
         using (var db = await YtCollector.Db(log)) // videos sans extra update
-          videos = await VideoStats(db, vidChanSelect, opts.LimitChannels, opts.Platforms);
+          videos = await VideoStats(db, vidChanSelect, opts.LimitChannels, opts.Platforms, opts.Limit);
         videosProcessed = await videos
           .Process(PipeCtx, b => ProcessVideos(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
           .Then(r => r.Select(p => p.OutState).SelectMany().ToArray());
@@ -137,8 +137,6 @@ namespace YtReader.Yt {
         _ => null
       }).Concat(extraParts.ShouldRun(EExtra) ? StandardCollectPart.Extra : null)
       .NotNull().ToArray();
-
-    public record VideoProcessResult(string VideoId, string ChannelId);
 
     ICollector Collector(Platform platform) => platform switch {
       Platform.YouTube => YtCollector,
@@ -238,7 +236,7 @@ select * from s
 
     /// <summary>Find videos from the given select that are missing one of the required parts</summary>
     static Task<IReadOnlyCollection<VideoListStats>> VideoStats(YtCollectDbCtx db, (string Sql, dynamic Args) select,
-      string[] channels = null, Platform[] platforms = null) =>
+      string[] channels = null, Platform[] platforms = null, int? limit = null) =>
       db.Db.Query<VideoListStats>("collect list videos", @$"
 with raw_vids as ({select.Sql})
 , s as (
@@ -254,6 +252,7 @@ with raw_vids as ({select.Sql})
   from raw_vids r
          left join video_latest v on v.video_id=r.video_id
   where r.video_id is not null
+  {limit.Do(l => $"limit {l}")}
 )
 select * from s
 {CommonWhereStatements(channels, platforms).Do(w => $"where {w.Join(" and ")}")}
@@ -273,5 +272,7 @@ select * from s
       var p = new DynamicParameters(kvp);
       return p;
     }
+
+    public record VideoProcessResult(string VideoId, string ChannelId);
   }
 }

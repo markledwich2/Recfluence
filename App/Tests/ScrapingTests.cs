@@ -6,7 +6,6 @@ using Flurl.Http.Testing;
 using Humanizer;
 using LtGt;
 using NUnit.Framework;
-using SysExtensions.Collections;
 using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Threading;
@@ -31,7 +30,7 @@ namespace Tests {
     public static async Task WebRecsAndExtra() {
       using var ctx = await TestSetup.TextCtx();
       var plans = new VideoExtraPlans(new[] {
-        "Su1FQUkMojU", // JP video with lots of comments
+        "Su1FQUkMojU" // JP video with lots of comments
         //"V8kxdw0UASE", // should work. looks like ti was errored and then re-instated
         //"XztR0CnVKNo", // normal
         // "JPiiySjShng", //nbc suspected parsing problem
@@ -73,7 +72,7 @@ namespace Tests {
       using var x = await TestSetup.TextCtx();
       var ws = x.Scope.Resolve<YtWeb>();
       var chans = await new[] {
-        "UCROjSBCTEqNRLFeAIAOyWLA", // failed not sure why
+        "UCROjSBCTEqNRLFeAIAOyWLA" // failed not sure why
         /*"UCdfQFG50Hu88-1CpRmPDA2A", // user channel with pagination of subs
         "UChN7H3JFqeFC-WB8NCxhn7g", // error - unavaialbe
         "UCaJ8FsMMnefU7NXdMaXW8WQ", // error - terminated
@@ -116,7 +115,7 @@ namespace Tests {
       var aw = x.Scope.Resolve<AmazonWeb>();
       aw.FlurlClient.UseProxy = true;
       var links = new[] {
-        "https://www.amazon.com/shop/sadiealdis", // unable to be decoded
+        "https://www.amazon.com/shop/sadiealdis" // unable to be decoded
         //"https://amzn.to/2DGXN96", // empty response
         //"https://amzn.to/39tl3nX", // empty response
         //"https://www.amazon.com/Manfrotto-MKCOMPACTACN-BK-Compact-Action-Tripod/dp/B07JMQJKC8?th=1", // comments leaking into props
@@ -131,14 +130,14 @@ namespace Tests {
     public static async Task TestRumbleVideo() {
       using var ctx = await TestSetup.TextCtx();
       var web = ctx.Resolve<RumbleScraper>();
-      var video = await web.VideoAndExtra("vhh2sj", ctx.Log);
+      var video = await web.VideoAndExtra("vhh2sj", parts: null, ctx.Log);
     }
 
     [Test]
     public static async Task TestBitChuteVideo() {
       using var ctx = await TestSetup.TextCtx();
       var web = ctx.Resolve<BitChuteScraper>();
-      var (video, comments) = await web.VideoAndExtra("4KzcvUhGHFSS", ctx.Log);
+      var (video, comments) = await web.VideoAndExtra("Q5pxQK7Tdo1P", parts: null, ctx.Log);
     }
   }
 }

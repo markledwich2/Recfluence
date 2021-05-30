@@ -28,6 +28,25 @@ namespace YtReader.SimpleCollect {
   /// <summary>Collector for sources that are simple enough to use the same basic planning and execution of a scrape</summary>
   public record SimpleCollector(SnowflakeConnectionProvider Sf, RumbleScraper Rumble, BitChuteScraper BitChute, YtStore Store, IPipeCtx PipeCtx,
     YtCollectCfg YtCollectCfg) : ICollector {
+    public async Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(
+      Platform platform, Channel c, ExtraPart[] parts, ILogger log, VideoExtraPlans planedExtras) {
+      var scraper = Scraper(platform);
+      if (c != null && c.Platform != platform) throw new($"platform '{c.Platform}' of channel `{c.ChannelId}` doesn't match provided '{platform}'");
+      var extras = await planedExtras.WithPart(EExtra).BlockMap(v => {
+          return scraper.VideoAndExtra(v.ForUpdate.SourceId, parts, log, c)
+            .Swallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", platform, v.VideoId, e.Message));
+        }, scraper.CollectCfg.WebParallel
+      ).NotNull().ToArrayAsync();
+      var vids = extras.Select(r => r.Video).NotNull().ToArray();
+      if (parts.ShouldRun(EExtra))
+        await Store.VideoExtra.Append(vids);
+      var comments = extras.SelectMany(r => r.Comments.NotNull()).NotNull().ToArray();
+      if (parts.ShouldRun(EComment))
+        await Store.Comments.Append(comments);
+      log.Debug("Collect {Platform} - saved {Videos} video extras for {Channel}", platform, extras.Length, c?.ToString() ?? "");
+      return (vids, Empty<Rec>(), comments, Empty<VideoCaption>());
+    }
+
     public async Task Collect(SimpleCollectOptions options, ILogger log, CancellationToken cancel) {
       log = log.ForContext("Function", nameof(Collect));
       if (options.Mode == SimpleCollectMode.Dedupe) {
@@ -86,10 +105,10 @@ namespace YtReader.SimpleCollect {
     }
 
     /// <summary>Scrape videos from the plan, save to the store, and append new channels to the plan</summary>
-    public async ValueTask<SimpleCollectPlan> CrawlVideoLinks(SimpleCollectPlan plan, ILogger log) {
+    public async ValueTask<SimpleCollectPlan> CrawlVideoLinks(SimpleCollectPlan plan, ExtraPart[] parts, ILogger log) {
       var scraper = Scraper(plan.Platform);
       var crawledVideos = await plan.VideosToCrawl.BlockMap(async (discover, i) => {
-        var video = await scraper.VideoAndExtra(discover.LinkId, log)
+        var video = await scraper.VideoAndExtra(discover.LinkId, parts, log)
           .Swallow(e => log.Warning(e, "Collect {Platform} - error crawling video {Video}: {Error}", plan.Platform, discover.LinkId, e.Message));
         log.Debug("Collect {Platform} - crawled video {VideoId} {Vid}/{Total}", plan.Platform, video.Video?.VideoId, i, plan.VideosToCrawl.Count);
         return (discover, video);
@@ -195,26 +214,6 @@ namespace YtReader.SimpleCollect {
         if (parts.ShouldRun(Extra))
           await SaveExtraAndParts(platform, c.Channel, parts: null, log, plans);
       }
-    }
-
-    public async Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(
-      Platform platform, Channel c, ExtraPart[] parts,
-      ILogger log, VideoExtraPlans planedExtras) {
-      var scraper = Scraper(platform);
-      if (c != null && c.Platform != platform) throw new($"platform '{c.Platform}' of channel `{c.ChannelId}` doesn't match provided '{platform}'");
-      var extras = await planedExtras.WithPart(EExtra).BlockMap(v => {
-          return scraper.VideoAndExtra(v.ForUpdate.SourceId, log)
-            .Swallow(e => log.Error(e, "Collect {Platform} - error crawling video {Video}: {Error}", platform, v.VideoId, e.Message));
-        }, scraper.CollectCfg.WebParallel
-      ).NotNull().ToArrayAsync();
-      var vids = extras.Select(r => r.Video).NotNull().ToArray();
-      if (parts.ShouldRun(EExtra))
-        await Store.VideoExtra.Append(vids);
-      var comments = extras.SelectMany(r => r.Comments.NotNull()).NotNull().ToArray();
-      if (parts.ShouldRun(EComment))
-        await Store.Comments.Append(comments);
-      log.Debug("Collect {Platform} - saved {Videos} video extras for {Channel}", platform, extras.Length, c?.ToString() ?? "");
-      return (vids, Empty<Rec>(), comments, Empty<VideoCaption>());
     }
   }
 }

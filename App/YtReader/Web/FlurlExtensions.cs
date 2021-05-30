@@ -72,7 +72,7 @@ namespace YtReader.Web {
       var curl = request.FormatCurl(verb, content);
       log?.Warning(ex, "Flurl {Desc} - failed {Status}: {Curl}", desc, error, curl);
       var msg = $"Flurl '{desc}' failed ({error})";
-      throw ex == null ? new (msg) : new(msg, ex);
+      throw ex == null ? new(msg) : new(msg, ex);
     }
 
     public static CapturedUrlEncodedContent FormUrlContent(this IFlurlRequest req, object data) =>
@@ -90,11 +90,13 @@ namespace YtReader.Web {
 
     public static async Task<IFlurlResponse> SendWithRetry(this IFlurlRequest request, string desc, HttpMethod verb = null, HttpContent content = null,
       Func<IFlurlResponse, bool> isTransient = null, ILogger log = null, CancellationToken cancel = default,
-      int retries = 3, HttpCompletionOption completionOption = default) =>
-      await Policy.HandleResult(isTransient ?? (s => IsTransientError(s.StatusCode)))
+      int retries = 3, HttpCompletionOption completionOption = default) {
+      var curl = request.FormatCurl(verb); // the request will be dispose come retry
+      return await Policy.HandleResult(isTransient ?? (s => IsTransientError(s.StatusCode)))
         .RetryWithBackoff("BcWeb flurl transient error", retries,
           (r, i, _) => log?.Debug("retryable error with {Desc}: '{Error}'. Attempt {Attempt}/{Total}\n{Curl}",
-            desc, r.Result?.StatusCode.ToString() ?? r.Exception?.Message ?? "Unknown error", i, retries, request.FormatCurl())
+            desc, r.Result?.StatusCode.ToString() ?? r.Exception?.Message ?? "Unknown error", i, retries, curl)
           , log).ExecuteAsync(() => request.AllowAnyHttpStatus().SendAsync(verb ?? HttpMethod.Get, content, cancel, completionOption));
+    }
   }
 }

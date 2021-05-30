@@ -28,6 +28,7 @@ using SysExtensions.Threading;
 using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Web;
+using YtReader.Yt;
 using Url = Flurl.Url;
 
 namespace YtReader.Rumble {
@@ -58,7 +59,7 @@ namespace YtReader.Rumble {
         }, Cfg.WebParallel).NotNull().ToArrayAsync();
 
       //var vidSources = catVideos.Select(c => c.vids.Select(v => )).ToArray(); // create our async sources (doesn't start executing yet)
-      await foreach (var b in catVideos.BlockFlatMap(r => r, Cfg.OuterParallel, cancel:cancel).TakeWhileInclusive(b => {
+      await foreach (var b in catVideos.BlockFlatMap(r => r, Cfg.OuterParallel, cancel: cancel).TakeWhileInclusive(b => {
         var more = Cfg.HomeVidLimit == null || Cfg.HomeVidLimit > vidsCollected;
         Interlocked.Add(ref vidsCollected, b.vids.Length);
         return more;
@@ -181,7 +182,7 @@ namespace YtReader.Rumble {
     static Url VideoUrl(string path) => path == null ? null : RumbleDotCom.AppendPathSegments(path);
     static readonly Regex EarnedRe = new(@"\$(?<earned>[\d.\d]+) earned", RegexOptions.Compiled);
 
-    public async Task<(VideoExtra Video, VideoComment[] Comments)> VideoAndExtra(string sourceId, ILogger log) {
+    public async Task<(VideoExtra Video, VideoComment[] Comments)> VideoAndExtra(string sourceId, ExtraPart[] parts, ILogger log, Channel channel = null) {
       var bc = BrowsingContext.New(AngleCfg);
 
       var vid = this.NewVidExtra(sourceId);

@@ -28,10 +28,6 @@ using static Amazon.TranscribeService.TranscriptionJobStatus;
 
 namespace YtReader.Transcribe {
   public record Transcriber(BlobStores Stores, SnowflakeConnectionProvider Sf, AwsCfg Aws, YtStore StoreDb, Stage Stage) {
-    readonly AmazonTranscribeServiceClient TransClient = new(Aws.CredsBasic, Aws.RegionEndpoint);
-    readonly S3Store                       StoreMedia  = new(Aws.S3, "media");
-    readonly S3Store                       StoreTrans  = new(Aws.S3, "transcripts");
-
     /*
     MediaFormat Extension(Platform? platform) => platform switch {
       Platform.Rumble => "mp4",
@@ -39,7 +35,10 @@ namespace YtReader.Transcribe {
     };
     */
 
-    static readonly Regex SafeNameRe = new("[^\\w0-9]", RegexOptions.Compiled);
+    static readonly Regex                         SafeNameRe  = new("[^\\w0-9]", RegexOptions.Compiled);
+    readonly        S3Store                       StoreMedia  = new(Aws.S3, "media");
+    readonly        S3Store                       StoreTrans  = new(Aws.S3, "transcripts");
+    readonly        AmazonTranscribeServiceClient TransClient = new(Aws.CredsBasic, Aws.RegionEndpoint);
     string SafeName(string name) => SafeNameRe.Replace(name, "");
 
     StringPath BlobPath(Platform? platform, string sourceId, string extension) =>
@@ -47,15 +46,16 @@ namespace YtReader.Transcribe {
       StringPath.Relative(
         platform.EnumString(), $"{SafeName(sourceId)}.{extension}");
 
-    record VideoData(string video_id, string source_id, string media_url, string channel_id, Platform platform);
-
-    public async Task TranscribeVideos(ILogger log, CancellationToken cancel = default, Platform? platform = null, int? limit = null) {
+    public async Task TranscribeVideos(ILogger log, CancellationToken cancel = default, Platform? platform = null, int? limit = null, string queryName = null) {
       log = log.ForContext("Function", nameof(TranscribeVideos));
       using var db = await Sf.Open(log);
       var tempDir = YtResults.TempDir();
+
       var videos = await db.QueryAsync<VideoData>("video media_url", $@"
-select video_id, source_id, media_url, channel_id, platform
-from video_extra
+with vids as ({(queryName == null ? "select * from video_extra" : TranscribeSql.Sql[queryName])})
+select q.video_id, e.source_id, e.media_url, e.channel_id, e.platform
+from vids q
+join video_extra e on e.video_id = q.video_id 
 where media_url is not null {platform.Do(p => $"and platform = {p.EnumString().SingleQuote()}")}
 and source_id not in ('vgiqjx') -- TODO remove. Taking too long. Might need to use lower quality video to reduce download size.
 order by views desc
@@ -149,5 +149,7 @@ order by views desc
         await 10.Seconds().Delay();
       }
     }
+
+    record VideoData(string video_id, string source_id, string media_url, string channel_id, Platform platform);
   }
 }

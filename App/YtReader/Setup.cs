@@ -309,7 +309,7 @@ namespace YtReader {
       R<Pushshift>();
       R<AtLabel>();
       R<DataScripts>();
-      R<YtCollectList>();
+      R<CollectList>();
       R<FlurlProxyClient>();
       R<AmazonWeb>();
       R<SimpleCollector>();

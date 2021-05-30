@@ -86,7 +86,8 @@ namespace Mutuo.Etl.Pipe {
       var res = await ids.BlockMap(async id => {
         await ctx.DoPipeWork(id, cancel);
         var md = new PipeRunMetadata {
-          Id = id
+          Id = id,
+          State = ContainerState.Succeeded
         };
         await md.Save(ctx.Store, log);
         return md;

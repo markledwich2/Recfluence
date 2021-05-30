@@ -55,12 +55,12 @@ namespace YtReader.SimpleCollect {
   }
 
   public interface IScraper {
-    ICommonCollectCfg CollectCfg { get; }
+    ICommonCollectCfg CollectCfg      { get; }
+    int               CollectParallel { get; }
+    Platform          Platform        { get; }
     Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log);
-    Task<(VideoExtra Video, VideoComment[] Comments)> VideoAndExtra(string sourceId, ILogger log);
+    Task<(VideoExtra Video, VideoComment[] Comments)> VideoAndExtra(string sourceId, ExtraPart[] parts, ILogger log, Channel channel = null);
     string SourceToFullId(string sourceId, LinkType type);
-    int      CollectParallel { get; }
-    Platform Platform        { get; }
     IAsyncEnumerable<Video[]> HomeVideos(ILogger log, CancellationToken cancel);
   }
 

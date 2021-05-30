@@ -43,16 +43,17 @@ namespace YtReader.BitChute {
     public          Platform          Platform        => Platform.BitChute;
     public          int               CollectParallel => Cfg.WebParallel;
     public          ICommonCollectCfg CollectCfg      => Cfg;
+    public string SourceToFullId(string sourceId, LinkType type) => FullId(sourceId);
 
     static string FullId(string sourceId) => Platform.BitChute.FullId(sourceId);
-    public string SourceToFullId(string sourceId, LinkType type) => FullId(sourceId);
 
     #region IO
 
     static bool IsBcTransient(HttpStatusCode code) => code.IsTransientError() || code.In(HttpStatusCode.Forbidden);
 
     /// <summary>Executes the given function with retries and proxy fallback. Returns document in non-transient error states</summary>
-    async Task<IDocument> Open(string desc, Url url, Func<IBrowsingContext, Url, Task<IDocument>> getDoc, ILogger log) {
+    async Task<IDocument> Open(string desc, ILogger log, Url url, Func<IBrowsingContext, Url, Task<IDocument>> getDoc = null) {
+      getDoc ??= (b, u) => b.OpenAsync(u);
       var browser = AngleCfg.Browser();
       var retryTransient = Policy.HandleResult<IDocument>(d => {
         if (!IsBcTransient(d.StatusCode)) return false;
@@ -84,28 +85,34 @@ namespace YtReader.BitChute {
 
     public async Task<(Channel Channel, IAsyncEnumerable<Video[]> Videos)> ChannelAndVideos(string sourceId, ILogger log) {
       var chanUrl = Domain.AppendPathSegment($"channel/{sourceId}");
-      var chanDoc = await Open("channel", chanUrl, (b, url) => b.OpenAsync(url), log);
-      if (chanDoc.StatusCode == HttpStatusCode.NotFound)
-        return (this.NewChan(sourceId) with {Status = ChannelStatus.NotFound, Updated = DateTime.UtcNow}, null);
-      chanDoc.EnsureSuccess();
-
-      var chan = ParseChannel(chanDoc, sourceId);
-      if (chan.Status != ChannelStatus.Alive)
-        return (chan, null);
-
-      var (subscriberCount, aboutViewCount) = await SubPost<ChanCountResponse>(chanDoc, chanUrl.WithPathAdded("counts/"), log);
-      chan = chan with {
-        Subs = subscriberCount,
-        ChannelViews = aboutViewCount.TryParseNumberWithUnits()?.RoundToULong()
-      };
-
+      var (chan, chanDoc) = await LoadChannel(chanUrl, log);
       var videoList = chanDoc.QuerySelector(".channel-videos-list") ?? throw new("Can't find video tab");
       var videos = Videos(log, chanDoc, videoList, VideoListType.ChannelVideos)
         .Select(b => b.Select(v => v with {ChannelId = chan.ChannelId, ChannelTitle = chan.ChannelTitle}).ToArray());
       return (Channel: chan, Videos: videos);
     }
 
-    Channel ParseChannel(IDocument doc, string idOrName) {
+    async Task<(Channel, IDocument doc)> LoadChannel(string chanUrl, ILogger log, bool loadStats = true) {
+      var chanDoc = await Open("channel", log, chanUrl, (b, url) => b.OpenAsync(url));
+      if (chanDoc.StatusCode == HttpStatusCode.NotFound) {
+        var sourceId = chanUrl.AsUrl().Path.LastInPath();
+        return (this.NewChan(sourceId) with {Status = ChannelStatus.NotFound, Updated = DateTime.UtcNow}, chanDoc);
+      }
+      chanDoc.EnsureSuccess();
+
+      var chan = ParseChannel(chanDoc);
+      if (chan.Status != ChannelStatus.Alive || !loadStats)
+        return (chan, chanDoc);
+
+      var (subscriberCount, aboutViewCount) = await SubPost<ChanCountResponse>(chanDoc, chanDoc.Url.AppendPathSegments("counts/"), log);
+      chan = chan with {
+        Subs = subscriberCount,
+        ChannelViews = aboutViewCount.TryParseNumberWithUnits()?.RoundToULong()
+      };
+      return (chan, chanDoc);
+    }
+
+    Channel ParseChannel(IDocument doc, string idOrName = null) {
       IElement Qs(string s) => doc.Body.QuerySelector(s);
 
       var profileA = doc.El<IHtmlAnchorElement>(".channel-banner .details .name > a");
@@ -142,7 +149,7 @@ namespace YtReader.BitChute {
       var videos = new[] {(category: "", path: "")}.Concat(categories.Select(c => (category: c, path: $"category/{c}")))
         .BlockMap(async c => {
           var (category, path) = c;
-          var doc = await Open($"page list {path}", Domain.AppendPathSegment(path), (b, url) => b.OpenAsync(url), log);
+          var doc = await Open($"page list {path}", log, Domain.AppendPathSegment(path), (b, url) => b.OpenAsync(url));
           doc.EnsureSuccess();
           return doc.QuerySelectorAll("#listing-tabs .tab-pane").Select(tab => {
             var tabName = tab.Id?.Split("-").LastOrDefault();
@@ -150,7 +157,7 @@ namespace YtReader.BitChute {
             var listType = tabName.In("trending") ? VideoListType.Results : VideoListType.Cards;
             return (doc, category, path, tab, listType, tabName);
           });
-        }, Cfg.WebParallel, cancel:cancel).SelectMany().NotNull().BlockMap(async t => {
+        }, Cfg.WebParallel, cancel: cancel).SelectMany().NotNull().BlockMap(async t => {
           var pageVids = await Videos(log, t.doc, t.tab, t.listType, t.tabName).NotNull().Select((b, i) => {
             log.Information("Collect {Platform} - crawled {Videos} videos on page {Page} from {Path} > {Tab} videos",
               Platform, b.Length, i + 1, t.path.NullOrEmpty() ? "Home" : t.path, t.tabName);
@@ -162,7 +169,7 @@ namespace YtReader.BitChute {
             });
           }).SelectMany().ToArrayAsync();
           return pageVids;
-        }, Cfg.WebParallel, cancel:cancel);
+        }, Cfg.WebParallel, cancel: cancel);
 
       await foreach (var vids in videos)
         yield return vids;
@@ -220,7 +227,7 @@ namespace YtReader.BitChute {
         Description = e.El(".channel-videos-text")?.InnerHtml,
         Duration = ParseVidDuration(e),
         Statistics = ParseVidStats(e),
-        Thumb = e.El<IHtmlImageElement>("img[alt=\"video image\"]")?.Dataset["src"],
+        Thumb = e.El<IHtmlImageElement>("img[alt=\"video image\"]")?.Dataset["src"]
       };
     }
 
@@ -275,16 +282,16 @@ namespace YtReader.BitChute {
     static readonly Regex RDate = new(@"(?<time>\d{2}:\d{2}) UTC on (?<month>\w*)\s+(?<day>\d+)\w*\, (?<year>\d*)", Compiled);
     record VidCountResponse(bool success, ulong view_count, ulong like_count, ulong dislike_count, ulong subscriber_count);
 
-    public async Task<(VideoExtra Video, VideoComment[] Comments)> VideoAndExtra(string sourceId, ILogger log) {
+    public async Task<(VideoExtra Video, VideoComment[] Comments)> VideoAndExtra(string sourceId, ExtraPart[] parts, ILogger log, Channel channel = null) {
       var videoUrl = Domain.AppendPathSegment($"video/{sourceId}/");
-      var doc = await Open("video", videoUrl, (b, url) => b.OpenAsync(url), log);
+      var doc = await Open("video", log, videoUrl, (b, url) => b.OpenAsync(url));
 
       var vid = this.NewVidExtra(sourceId);
 
       if (doc.StatusCode == HttpStatusCode.NotFound)
         return (vid with {Status = VideoStatus.NotFound}, null);
       doc.EnsureSuccess();
-      var counts = await SubPost<VidCountResponse>(doc, videoUrl.AppendPathSegment("counts/"), log);
+      var counts = await SubPost<VidCountResponse>(doc, videoUrl.WithPathAdded("counts/"), log);
 
       var chanA = doc.El<IHtmlAnchorElement>(".channel-banner .details .name > a.spa");
       var dateMatch = doc.QuerySelector(".video-publish-date")?.TextContent?.Match(RDate);
@@ -329,8 +336,8 @@ namespace YtReader.BitChute {
         Statistics = new(counts.view_count, counts.like_count, counts.dislike_count),
         MediaUrl = mediaUrl,
         ChannelTitle = chanA?.TextContent,
-        ChannelId = FullId(chanA?.Href?.LastInPath()),
-        ChannelSourceId = chanA?.Href?.LastInPath(),
+        ChannelId = channel?.ChannelId,
+        ChannelSourceId = channel?.SourceId,
         UploadDate = created,
         Description = doc.QuerySelector("#video-description .full")?.InnerHtml,
         Keywords = doc.QuerySelectorAll<IHtmlAnchorElement>("#video-hashtags ul li a.spa").Select(a => a.Href?.LastInPath()).NotNull().ToArray(),
@@ -340,8 +347,18 @@ namespace YtReader.BitChute {
         Tags = tags
       };
 
-      var comments = await Comments(doc, log);
-      comments = comments.Select(c => c with {VideoId = vid.VideoId}).ToArray();
+      if (vid.ChannelId == null && chanA?.Href != null) {
+        // bitchute doesn't use the channel's the canon url in links from videos, so we need to look up the real id.
+        var (chan, _) = await LoadChannel(chanA.Href, log, loadStats: false);
+        vid = vid with {
+          ChannelId = chan.ChannelId,
+          ChannelSourceId = chan.SourceId
+        };
+      }
+
+      var comments = parts.ShouldRun(ExtraPart.EComment)
+        ? await Comments(doc, log).Then(c => c.Select(s => s with {VideoId = vid.VideoId}).ToArray())
+        : Array.Empty<VideoComment>();
       return (vid, comments);
     }
 
@@ -391,6 +408,8 @@ namespace YtReader.BitChute {
   }
 
   public static class BcExtensions {
+    static readonly Regex CreatedRe = new(@"(?<num>\d+)\s(?<unit>day|week|month|year)[s]?", Compiled | IgnoreCase);
+
     public static async Task<IFlurlResponse> BcPost(this IFlurlRequest req, string csrf, object formValues = null) =>
       await req.AllowAnyHttpStatus()
         .PostUrlEncodedAsync(MergeDynamics(new {csrfmiddlewaretoken = csrf}, formValues ?? new ExpandoObject()));
@@ -411,8 +430,6 @@ namespace YtReader.BitChute {
     }
 
     public static Cookie GetCookie(this IDocument doc, string name) => doc.GetCookies().FirstOrDefault(c => c.Name == name);
-
-    static readonly Regex CreatedRe = new(@"(?<num>\d+)\s(?<unit>day|week|month|year)[s]?", Compiled | IgnoreCase);
 
     public static DateTime? ParseCreated(this string s) {
       if (s == null) return null;

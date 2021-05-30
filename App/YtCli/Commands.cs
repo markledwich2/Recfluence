@@ -35,8 +35,8 @@ using static YtCli.UpdateCmd;
 namespace YtCli {
   [Command("channel-info", Description = "Show channel information (ID,Name) given a video ID")]
   public class ChannelInfoCmd : ICommand {
-    readonly YtClient YtClient;
     readonly ILogger  Log;
+    readonly YtClient YtClient;
 
     public ChannelInfoCmd(YtClient ytClient, ILogger log) {
       YtClient = ytClient;
@@ -66,14 +66,11 @@ namespace YtCli {
 
   [Command("upgrade-partitions")]
   public class UpgradePartitionsCmd : ICommand {
-    readonly BlobStores   Stores;
-    readonly ILogger      Log;
     readonly WarehouseCfg Cfg;
-    readonly Stage        Stage;
     readonly IPipeCtx     Ctx;
-
-    [CommandOption('d', Description = "| delimited list of dirs that have partitions that are to be removed")]
-    public string Dirs { get; set; }
+    readonly ILogger      Log;
+    readonly Stage        Stage;
+    readonly BlobStores   Stores;
 
     public UpgradePartitionsCmd(BlobStores stores, ILogger log, WarehouseCfg cfg, Stage stage, IPipeCtx ctx) {
       Stores = stores;
@@ -82,6 +79,9 @@ namespace YtCli {
       Stage = stage;
       Ctx = ctx;
     }
+
+    [CommandOption('d', Description = "| delimited list of dirs that have partitions that are to be removed")]
+    public string Dirs { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) {
       var includedDirs = Dirs?.UnJoin('|');
@@ -108,27 +108,28 @@ namespace YtCli {
 
   [Command("stage", Description = "creates/updates the staging data in snowflake from blob storage")]
   public class StageCmd : ICommand {
-    readonly Stage   Stage;
     readonly ILogger Log;
-    [CommandOption('t', Description = "| delimited list of tables to restrict warehouse update to")]
-    public string Tables { get; set; }
-
-    [CommandOption('f', Description = "if true, will clear and load data")]
-    public bool FullLoad { get; set; }
+    readonly Stage   Stage;
 
     public StageCmd(Stage stage, ILogger log) {
       Stage = stage;
       Log = log;
     }
 
+    [CommandOption('t', Description = "| delimited list of tables to restrict warehouse update to")]
+    public string Tables { get; set; }
+
+    [CommandOption('f', Description = "if true, will clear and load data")]
+    public bool FullLoad { get; set; }
+
     public async ValueTask ExecuteAsync(IConsole console) => await Stage.StageUpdate(Log, FullLoad, Tables?.Split('|').ToArray());
   }
 
   [Command("traffic", Description = "Process source traffic data for comparison")]
   public class TrafficCmd : ICommand {
-    readonly BlobStores Stores;
-    readonly YtWeb      Scraper;
     readonly ILogger    Log;
+    readonly YtWeb      Scraper;
+    readonly BlobStores Stores;
 
     public TrafficCmd(BlobStores stores, YtWeb scraper, ILogger log) {
       Stores = stores;
@@ -160,13 +161,13 @@ namespace YtCli {
     readonly AzureCleaner Cleaner;
     readonly ILogger      Log;
 
-    [CommandOption("mode", Description = "the cleaning behavior. Standard, DeleteCompleted or DeleteAll")]
-    public CleanContainerMode Mode { get; set; }
-
     public CleanCmd(AzureCleaner cleaner, ILogger log) {
       Cleaner = cleaner;
       Log = log;
     }
+
+    [CommandOption("mode", Description = "the cleaning behavior. Standard, DeleteCompleted or DeleteAll")]
+    public CleanContainerMode Mode { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) => await Cleaner.DeleteExpiredResources(Mode, Log);
   }
@@ -176,16 +177,16 @@ namespace YtCli {
     readonly BranchEnvCreator Creator;
     readonly ILogger          Log;
 
+    public CreateEnvCmd(BranchEnvCreator creator, ILogger log) {
+      Creator = creator;
+      Log = log;
+    }
+
     [CommandOption('m', Description = "the mode to copy the database Fresh|Clone|CloneDb")]
     public BranchState Mode { get; set; }
 
     [CommandOption('p', Description = "| separated list of staging db paths to copy")]
     public string StagePaths { get; set; }
-
-    public CreateEnvCmd(BranchEnvCreator creator, ILogger log) {
-      Creator = creator;
-      Log = log;
-    }
 
     public async ValueTask ExecuteAsync(IConsole console) =>
       await Creator.Create(Mode, StagePaths.UnJoin('|'), Log);
@@ -304,7 +305,7 @@ namespace YtCli {
   }
 
   [Command("collect-list", Description = "Refresh video/channel information for a given list")]
-  public record CollectListCmd(YtCollectList Col, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log)
+  public record CollectListCmd(CollectList Col, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
     [CommandParameter(0, Description = "The type of list to run (i.e. ChannelPath, VideoPath, View, Named)")]
     public CollectFromType Mode { get; set; }
@@ -338,6 +339,9 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     [CommandOption("platform", Description = "| delimited list of platforms to restrict collection to")]
     public string Platforms { get; set; }
 
+    [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
+    public int? Limit { get; set; }
+
     protected override string GroupName => "collect-list";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
@@ -348,7 +352,8 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
         LimitChannels = Channels?.UnJoin('|'),
         StaleAgo = StaleHrs?.Hours() ?? 2.Days(),
         Args = Args.Do(JObject.Parse),
-        Platforms = ParseEnums<Platform>(Platforms)
+        Platforms = ParseEnums<Platform>(Platforms),
+        Limit = Limit
       };
       await Col.Run(opts, Log, console.RegisterCancellationHandler());
     }
@@ -356,11 +361,9 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
 
   [Command("build-container", Description = "build the recfluence docker container")]
   public class BuildContainerCmd : ICommand {
-    readonly SemVersion   Version;
     readonly ContainerCfg Cfg;
     readonly ILogger      Log;
-    [CommandOption('p', Description = "Publish to registry, otherwise a local build only")]
-    public bool PublishToRegistry { get; set; }
+    readonly SemVersion   Version;
 
     public BuildContainerCmd(SemVersion version, ContainerCfg cfg, ILogger log) {
       Version = version;
@@ -368,24 +371,8 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
       Log = log;
     }
 
-    static async Task<Command> RunShell(Shell shell, ILogger log, string cmd, params object[] args) {
-      var process = await StartShell(shell, log, cmd, args);
-      return await EnsureComplete(cmd, process);
-    }
-
-    static async Task<Command> EnsureComplete(string cmd, Command process) {
-      var res = await process.Task;
-      if (res.Success) return process;
-      await Console.Error.WriteLineAsync($"command failed with exit code {res.ExitCode}: {res.StandardError}");
-      throw new CommandException($"command ({cmd}) failed");
-    }
-
-    static async Task<Command> StartShell(Shell shell, ILogger log, string cmd, params object[] args) {
-      log.Information($"Running command: {cmd} {args.Select(a => a.ToString()).Join(" ")}");
-      var process = shell.Run(cmd, args);
-      await process.StandardOutput.PipeToAsync(Console.Out);
-      return process;
-    }
+    [CommandOption('p', Description = "Publish to registry, otherwise a local build only")]
+    public bool PublishToRegistry { get; set; }
 
     public async ValueTask ExecuteAsync(IConsole console) {
       var sw = Stopwatch.StartNew();
@@ -415,6 +402,25 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
           await RunShell(shell, Log, "docker", "push", $"{image}:{t}");
 
       Log.Information("Completed building docker image {Image} in {Duration}", image, sw.Elapsed.HumanizeShort());
+    }
+
+    static async Task<Command> RunShell(Shell shell, ILogger log, string cmd, params object[] args) {
+      var process = await StartShell(shell, log, cmd, args);
+      return await EnsureComplete(cmd, process);
+    }
+
+    static async Task<Command> EnsureComplete(string cmd, Command process) {
+      var res = await process.Task;
+      if (res.Success) return process;
+      await Console.Error.WriteLineAsync($"command failed with exit code {res.ExitCode}: {res.StandardError}");
+      throw new CommandException($"command ({cmd}) failed");
+    }
+
+    static async Task<Command> StartShell(Shell shell, ILogger log, string cmd, params object[] args) {
+      log.Information($"Running command: {cmd} {args.Select(a => a.ToString()).Join(" ")}");
+      var process = shell.Run(cmd, args);
+      await process.StandardOutput.PipeToAsync(Console.Out);
+      return process;
     }
   }
 
@@ -491,10 +497,13 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     [CommandOption("limit", shortName: 'l')]
     public int? Limit { get; set; }
 
+    [CommandOption("query", shortName: 'q')]
+    public string QueryName { get; set; }
+
     protected override string GroupName => "transcribe";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
-      await Transcriber.TranscribeVideos(Log, console.RegisterCancellationHandler(), Platform, Limit);
+      await Transcriber.TranscribeVideos(Log, console.RegisterCancellationHandler(), Platform, Limit, QueryName);
       Log.Information("Completed downloading videos");
     }
   }

@@ -4,9 +4,6 @@ using SysExtensions.Collections;
 
 namespace YtReader.Yt {
   public static class CollectListSql {
-    public static (string Sql, JObject args) NamedQuery(string name, JObject args) =>
-      (NamedSql.TryGet(name) ?? throw new($"no sql called {name}"), args);
-
     public static readonly Dictionary<string, string> NamedSql = new() {
       {
         "sans_comment", @"
@@ -51,9 +48,7 @@ where platform = :platform and (extra_updated is null or extra_updated < current
 order by views desc nulls last
 limit :limit
 "
-      }
-      ,
-      {
+      }, {
         "qanon_dx_expansion_sans_comments",
         @"
 with channels as (
@@ -87,9 +82,7 @@ join video_latest v on v.channel_id = r.channel_id
 qualify ROW_NUMBER() over (partition by r.channel_id order by v.views desc nulls last) <= 10
 order by 1,2
 "
-      }
-      ,
-      {
+      }, {
         "qanon_dx_expansion_users",
         @"
   with channels as (
@@ -107,7 +100,18 @@ order by 1,2
   from channel_users
   qualify row_number() over (partition by channel_id order by user_comments desc) < 50 -- top commenter's form each channel
 "
+      }, {
+        "bitchute_extra_broken_chan", @"
+  select e.video_id, null as channel_id
+  from video_extra e
+         left join channel_latest c on c.channel_id=e.channel_id
+  where c.channel_id is null and e.platform in ('BitChute') and error is null
+  order by views nulls last
+"
       }
     };
+
+    public static (string Sql, JObject args) NamedQuery(string name, JObject args) =>
+      (NamedSql.TryGet(name) ?? throw new($"no sql called {name}"), args);
   }
 }
