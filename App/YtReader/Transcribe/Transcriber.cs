@@ -63,36 +63,12 @@ namespace YtReader.Transcribe {
 
     SPath BlobPath(Platform? platform, string sourceId, string extension) => SPath.Relative(platform.EnumString(), $"{SafeName(sourceId)}.{extension}");
 
-    public async Task TranscribeVideos(TranscribeOptions options, ILogger log, CancellationToken cancel = default) {
-      log = log.ForContext("Function", nameof(TranscribeVideos));
+    public async Task Transcribe(TranscribeOptions options, ILogger log, CancellationToken cancel = default) {
+      log = log.ForContext("Function", nameof(Transcribe));
       if (options.Parts.ShouldRun(PTranscribe))
-        await LoadVideoMedia(options, log, cancel)
-          .BlockMap(async v => {
-            var detectLanguage = true;
-            TransRoot transResult = null;
-            var transPath = v.media_path.WithExtension(".json");
-            if (await StoreTrans.Exists(transPath)) {
-              transResult = await LoadTrans(transPath, log);
-              log.Debug("Transcribe - loaded existing result {TransUrl}", StoreTrans.S3Uri(transPath));
-            }
-            else {
-              TranscriptionJob job;
-              while (true) {
-                var startTrans = await GetOrStartTrans(v.media_path, detectLanguage, log);
-                if (startTrans == default) return default;
-                job = await WaitForCompletedTrans(log, startTrans);
-                if (job.TranscriptionJobStatus == FAILED && job.FailureReason.StartsWith("Your audio file must have a speech segment long") && detectLanguage) {
-                  detectLanguage = false;
-                  continue;
-                }
-                break;
-              }
-              if (job.TranscriptionJobStatus == COMPLETED)
-                transResult = await LoadTrans(transPath, log);
-            }
-            var vidCaption = transResult?.AwsToVideoCaption(v.video_id, v.channel_id, v.platform);
-            return vidCaption;
-          }, Cfg.ParallelTranscribe)
+        await LoadMedia(options, log, cancel)
+          .BlockMap(async v => await Transcribe(v, log).Swallow(e => log.Error(e, "Transcribe - unhandled error transcribing: {Error}", e.Message)),
+            Cfg.ParallelTranscribe)
           .NotNull()
           .BlockDo(async caption => {
             await StoreDb.Captions.Append(caption, log);
@@ -104,7 +80,36 @@ namespace YtReader.Transcribe {
       log.Information("Transcribe - completed transcribing");
     }
 
-    async IAsyncEnumerable<VideoData> LoadVideoMedia(TranscribeOptions options, ILogger log, [EnumeratorCancellation] CancellationToken cancel) {
+    async Task<VideoCaption> Transcribe(VideoData v, ILogger log) {
+      var detectLanguage = true;
+      TransRoot transResult = null;
+      var transPath = v.media_path.WithExtension(".json");
+      if (await StoreTrans.Exists(transPath)) {
+        transResult = await LoadTrans(transPath, log);
+        log.Debug("Transcribe - loaded existing result {TransUrl}", StoreTrans.S3Uri(transPath));
+      }
+      else {
+        TranscriptionJob job;
+        while (true) {
+          var startTrans = await GetOrStartTrans(v.media_path, detectLanguage, log);
+          if (startTrans == default) return default;
+          job = await WaitForCompletedTrans(log, startTrans);
+          if (job.TranscriptionJobStatus == FAILED && job.FailureReason.StartsWith("Your audio file must have a speech segment long") && detectLanguage) {
+            detectLanguage = false;
+            continue;
+          }
+          break;
+        }
+        if (job.TranscriptionJobStatus == COMPLETED)
+          transResult = await LoadTrans(transPath, log)
+            .Swallow(e => log.Warning(e, "Transcribe - can't load completed transcription file {TransUrl}. Error: {Error}", StoreTrans.S3Uri(transPath),
+              e.Message));
+      }
+      var vidCaption = transResult?.AwsToVideoCaption(v.video_id, v.channel_id, v.platform);
+      return vidCaption;
+    }
+
+    async IAsyncEnumerable<VideoData> LoadMedia(TranscribeOptions options, ILogger log, [EnumeratorCancellation] CancellationToken cancel) {
       using var db = await Sf.Open(log);
       if (options.Mode == TranscribeMode.Query) {
         var tempDir = YtResults.TempDir();
@@ -117,7 +122,7 @@ where media_url is not null {options.Platform.Do(p => $"and platform = {p.EnumSt
 and not exists (select * from caption s where s.video_id = q.video_id)
 order by views desc nulls last
 {options.Limit.Do(l => $"limit {l}")}
-").BlockMap(async v => v with {media_path = await CopyVideo(log, v, tempDir, cancel)}, Cfg.Parallel, cancel: cancel))
+").BlockMap(async v => v with {media_path = await CopyMedia(log, v, tempDir, cancel)}, Cfg.Parallel, cancel: cancel))
           yield return v;
       }
       else {
@@ -154,7 +159,7 @@ order by e.views desc nulls last
       }
     }
 
-    async Task<SPath> CopyVideo(ILogger log, VideoData v, FPath tempDir, CancellationToken cancel) {
+    async Task<SPath> CopyMedia(ILogger log, VideoData v, FPath tempDir, CancellationToken cancel) {
       var mediaUrl = v.media_url.AsUrl();
       var ext = mediaUrl.PathSegments.LastOrDefault()?.Split(".").LastOrDefault() ?? throw new("not implemented. Currently relying on extension in url");
       var blobPath = BlobPath(v.platform, v.source_id, ext);
