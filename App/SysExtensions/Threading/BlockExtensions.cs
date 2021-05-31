@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Humanizer;
-using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 
@@ -19,7 +18,7 @@ namespace SysExtensions.Threading {
       CancellationToken cancel = default) {
       var options = ActionOptions(parallel, capacity, cancel);
       var block = new ActionBlock<(T, int)>(i => action(i.Item1, i.Item2), options);
-      var produced = await ProduceAsync(source.WithIndex(), block);
+      var produced = await ProduceAsync(source.WithIndex(), block, cancel: cancel);
       await block.Completion;
       return produced;
     }
@@ -48,7 +47,7 @@ namespace SysExtensions.Threading {
     public static async IAsyncEnumerable<R> BlockMap<T, R>(this IEnumerable<T> source,
       Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
-      var produceTask = ProduceAsync(source.WithIndex(), block);
+      var produceTask = ProduceAsync(source.WithIndex(), block, cancel: cancel);
       while (true) {
         if (produceTask.IsFaulted) {
           block.Complete();
@@ -80,16 +79,13 @@ namespace SysExtensions.Threading {
     public static async IAsyncEnumerable<R> BlockFlatMap<T, R>(this IAsyncEnumerable<T>[] sources,
       Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
       var block = GetBlock(func, parallel, capacity, cancel);
-      var log = Log.Logger.ForContext("instance", ShortGuid.Create(3));
 
       async Task ProduceAll() {
         try {
-          await sources.BlockDo(s => ProduceAsync(s, block, cancel, complete: false, log), parallel);
+          await sources.BlockDo(s => ProduceAsync(s, block, cancel, complete: false), parallel, cancel: cancel);
         }
         finally {
-          {
-            block.Complete();
-          }
+          block.Complete();
         }
       }
 
@@ -135,11 +131,11 @@ namespace SysExtensions.Threading {
     }
 
     static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<(T, int)> block, CancellationToken cancel = default,
-      bool complete = true, ILogger log = null) {
+      bool complete = true) {
       var produced = 0;
       try {
         await foreach (var item in source.Select((r, i) => (r, i)).WithCancellation(cancel)) {
-          if (cancel.IsCancellationRequested) return produced;
+          if (cancel.IsCancellationRequested || block.Completion.IsFaulted) return produced;
           await block.SendAsync(item).ConfigureAwait(false);
           produced++;
         }
@@ -151,11 +147,13 @@ namespace SysExtensions.Threading {
       return produced;
     }
 
-    static async Task<long> ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block, bool complete = true) {
+    static async Task<long> ProduceAsync<T>(this IEnumerable<T> source, ITargetBlock<T> block, bool complete = true, CancellationToken cancel = default) {
       var produced = 0;
       try {
         foreach (var item in source) {
-          await block.SendAsync(item);
+          if (cancel.IsCancellationRequested || block.Completion.IsFaulted) return produced;
+          await block.SendAsync(item).ConfigureAwait(false);
+          ;
           produced++;
         }
       }
@@ -178,7 +176,7 @@ namespace SysExtensions.Threading {
       var swProgress = Stopwatch.StartNew();
 
       // by producing asynchronously and using SendAsync we can throttle how much we can form the source and consume at the same time
-      var produceTask = ProduceAsync(source, block);
+      var produceTask = ProduceAsync(source, block, cancel: cancel);
       var result = new List<R>();
       var newResults = new List<R>();
       while (true) {

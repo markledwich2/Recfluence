@@ -502,10 +502,17 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     [CommandOption("parts", shortName: 'p')]
     public string Parts { get; set; }
 
+    [CommandOption("mode", shortName: 'm', Description = "| separated videos to limit update to")]
+    public TranscribeMode Mode { get; set; }
+
+    [CommandOption("source-ids", Description = "| seperated list of video source_id's to update")]
+    public string SourceIds { get; set; }
+
     protected override string GroupName => "transcribe";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
-      await Transcriber.TranscribeVideos(Log, console.RegisterCancellationHandler(), Platform, Limit, QueryName, ParseEnums<TranscribeParts>(Parts));
+      await Transcriber.TranscribeVideos(Log, console.RegisterCancellationHandler(), Platform, Limit, QueryName, ParseEnums<TranscribeParts>(Parts),
+        Mode, SourceIds?.UnJoin('|'));
       Log.Information("Completed downloading videos");
     }
   }

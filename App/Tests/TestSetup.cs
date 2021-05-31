@@ -8,7 +8,11 @@ using YtReader;
 
 namespace Tests {
   public record TestCtx(ILifetimeScope Scope, ILogger Log, AppCfg App, RootCfg Root) : IDisposable {
-    public void Dispose() => Scope?.Dispose();
+    public void Dispose() {
+      if (Log is IDisposable d) d.Dispose();
+      Scope?.Dispose();
+    }
+
     public T Resolve<T>() => Scope.Resolve<T>();
   }
 

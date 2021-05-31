@@ -5,12 +5,14 @@ using System.Threading.Tasks;
 using Humanizer;
 using NUnit.Framework;
 using SysExtensions.Collections;
+using SysExtensions.Text;
 using SysExtensions.Threading;
 using static Tests.TestSetup;
-using SysExtensions.Text;
 
 namespace Tests {
   public class BlockTest {
+    static readonly Random Rand = new();
+
     [Test]
     public static async Task TestFlatMap() {
       var ctx = await TextCtx();
@@ -18,7 +20,7 @@ namespace Tests {
       log.Information("TestBatchBlock started");
 
       async IAsyncEnumerable<string> AsyncItems(int count, string desc) {
-        await foreach (var i in Enumerable.Range(start: 0, count).Batch(4).BlockMap(async (b,i) => {
+        await foreach (var i in Enumerable.Range(start: 0, count).Batch(4).BlockMap(async (b, i) => {
           await 1.Seconds().Delay();
           if (i == 3 && desc == "a") {
             log.Debug("error thrown");
@@ -36,7 +38,30 @@ namespace Tests {
       var res = await list.ToListAsync();
     }
 
-    static readonly Random Rand = new ();
+    [Test]
+    public static async Task TestChainedBlocks() {
+      using var ctx = await TextCtx();
+      var log = ctx.Log;
+
+      var res = await Enumerable.Range(start: 0, count: 100).BlockMap(async i => {
+          await 1.Seconds().Delay();
+          log.Information("{i}a", i);
+          return $"{i}a";
+        }, parallel: 4).BlockMap(async a => {
+          await 1.Seconds().Delay();
+          log.Information("{a}b", a);
+          if (a == "20a") {
+            log.Information("b is throws error now");
+            throw new("b error");
+          }
+          return $"{a}b";
+        }, parallel: 4).Batch(10)
+        .Select(g => g.Select(b => $"{b}c").ToArray())
+        .BlockDo(async g => {
+          await 1.Seconds().Delay();
+          log.Information("Batch {Res}", g.Join("|"));
+        });
+    }
 
     class Item {
       public string Id  { get; set; }
