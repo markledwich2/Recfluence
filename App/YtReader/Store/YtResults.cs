@@ -68,17 +68,17 @@ namespace YtReader.Store {
   }
 
   class FileQuery : ResQuery {
-    public FileQuery(string name, StringPath path, string desc = null, object parameters = null, bool inSharedZip = false,
+    public FileQuery(string name, SPath path, string desc = null, object parameters = null, bool inSharedZip = false,
       ResFilType fileType = Csv, JsonCasingStrategy jsonNaming = default)
       : base(name, desc: desc, parameters: parameters, inSharedZip: inSharedZip, fileType: fileType, jsonNaming: jsonNaming) =>
       Path = path;
 
-    public StringPath Path { get; set; }
+    public SPath Path { get; set; }
   }
 
   public class YtResults {
-    readonly SnowflakeConnectionProvider Sf;
     readonly ResultsCfg                  ResCfg;
+    readonly SnowflakeConnectionProvider Sf;
     readonly ISimpleFileStore            Store;
     readonly UserScrapeCfg               UserScrapeCfg;
 

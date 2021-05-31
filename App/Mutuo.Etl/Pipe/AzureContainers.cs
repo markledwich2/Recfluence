@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,12 +19,14 @@ using SysExtensions.Build;
 using SysExtensions.Collections;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace Mutuo.Etl.Pipe {
   public class AzureContainers : IPipeWorkerStartable, IContainerLauncher {
-    readonly SemVersion     Version;
-    readonly RegistryClient RegistryClient;
-    readonly ContainerCfg   ContainerCfg;
+    public static readonly string         ContainerNameEnv = $"{nameof(AzureContainers)}_Container";
+    readonly               ContainerCfg   ContainerCfg;
+    readonly               RegistryClient RegistryClient;
+    readonly               SemVersion     Version;
 
     public AzureContainers(PipeAzureCfg azureCfg, SemVersion version, RegistryClient registryClient, ContainerCfg containerCfg) {
       AzureCfg = azureCfg;
@@ -35,13 +36,23 @@ namespace Mutuo.Etl.Pipe {
       Az = new(azureCfg.GetAzure);
     }
 
-    public static readonly string ContainerNameEnv = $"{nameof(AzureContainers)}_Container";
-    public static string GetContainerEnv() => Environment.GetEnvironmentVariable(ContainerNameEnv);
-    public static ILogger Enrich(ILogger log) => log.ForContext("Container", GetContainerEnv());
-
     public PipeAzureCfg AzureCfg { get; }
 
     Lazy<IAzure> Az { get; }
+
+    public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars,
+      string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ContainerCfg cfg = null, ILogger log = null,
+      CancellationToken cancel = default) {
+      groupName ??= containerName;
+      cfg ??= ContainerCfg;
+      var sw = Stopwatch.StartNew();
+      var group = await Launch(cfg with {Exe = exe}, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
+        returnOnStart, log: log, cancel: cancel);
+      await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
+      log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());
+      if (!returnOnStart && group.State() == ContainerState.Succeeded)
+        await DeleteContainer(groupName, log);
+    }
 
     public Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) =>
       Launch(ctx, ids, returnOnRunning: false, exclusive: false, log, cancel);
@@ -65,7 +76,7 @@ namespace Mutuo.Etl.Pipe {
           runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog, cancel).WithDuration();
 
         var (logTxt, _) = await group.GetLogContentAsync(containerName).Try("");
-        var logPath = new StringPath($"{runId.StatePath()}.log.txt");
+        var logPath = new SPath($"{runId.StatePath()}.log.txt");
 
         var launchState = group.State();
 
@@ -97,6 +108,9 @@ namespace Mutuo.Etl.Pipe {
 
       return res;
     }
+
+    public static string GetContainerEnv() => Environment.GetEnvironmentVariable(ContainerNameEnv);
+    public static ILogger Enrich(ILogger log) => log.ForContext("Container", GetContainerEnv());
 
     public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string containerName, string fullImageName,
       (string name, string value)[] envVars, string[] args,
@@ -130,20 +144,6 @@ namespace Mutuo.Etl.Pipe {
     static async Task<IContainerGroup> Create(IWithCreate groupDef, ILogger log) {
       var group = await groupDef.CreateAsync().WithDuration();
       return group.Result;
-    }
-
-    public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars,
-      string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ContainerCfg cfg = null, ILogger log = null,
-      CancellationToken cancel = default) {
-      groupName ??= containerName;
-      cfg ??= ContainerCfg;
-      var sw = Stopwatch.StartNew();
-      var group = await Launch(cfg with {Exe = exe}, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
-        returnOnStart, log: log, cancel: cancel);
-      await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
-      log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());
-      if (!returnOnStart && group.State() == ContainerState.Succeeded)
-        await DeleteContainer(groupName, log);
     }
 
     public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {
@@ -196,17 +196,6 @@ namespace Mutuo.Etl.Pipe {
       return tag;
     }
 
-    class GroupOptions {
-      public string                     Region        { get; set; }
-      public int                        Cores         { get; set; }
-      public double                     Mem           { get; set; }
-      public Dictionary<string, string> Env           { get; set; }
-      public string                     Image         { get; set; }
-      public string                     ContainerName { get; set; }
-      public string                     Exe           { get; set; }
-      public string[]                   Args          { get; set; }
-    }
-
     IWithCreate ContainerGroup(ContainerCfg container, string groupName, GroupOptions options) {
       var rg = AzureCfg.ResourceGroup;
       var registryCreds = container.RegistryCreds ?? throw new InvalidOperationException("no registry credentials");
@@ -231,6 +220,17 @@ namespace Mutuo.Etl.Pipe {
         .WithTag("expire", (DateTime.UtcNow + 2.Days()).ToString("o"));
 
       return createGroup;
+    }
+
+    class GroupOptions {
+      public string                     Region        { get; set; }
+      public int                        Cores         { get; set; }
+      public double                     Mem           { get; set; }
+      public Dictionary<string, string> Env           { get; set; }
+      public string                     Image         { get; set; }
+      public string                     ContainerName { get; set; }
+      public string                     Exe           { get; set; }
+      public string[]                   Args          { get; set; }
     }
   }
 

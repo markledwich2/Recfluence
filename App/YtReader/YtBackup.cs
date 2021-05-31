@@ -19,7 +19,7 @@ namespace YtReader {
     public YtBackup(BlobStores stores) => Stores = stores;
 
     public async Task Backup(ILogger log) {
-      var destPath = StringPath.Relative("db2", DateTime.UtcNow.FileSafeTimestamp());
+      var destPath = SPath.Relative("db2", DateTime.UtcNow.FileSafeTimestamp());
       log.Information("Backup {Path} - started", destPath);
 
       var source = (AzureBlobFileStore) Stores.Store(DataStoreType.DbStage);

@@ -511,8 +511,9 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     protected override string GroupName => "transcribe";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
-      await Transcriber.TranscribeVideos(Log, console.RegisterCancellationHandler(), Platform, Limit, QueryName, ParseEnums<TranscribeParts>(Parts),
-        Mode, SourceIds?.UnJoin('|'));
+      await Transcriber.TranscribeVideos(
+        new(Platform, Limit, QueryName, ParseEnums<TranscribeParts>(Parts), Mode, SourceIds?.UnJoin('|')),
+        Log, console.RegisterCancellationHandler());
       Log.Information("Completed downloading videos");
     }
   }

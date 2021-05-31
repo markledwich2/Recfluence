@@ -17,7 +17,7 @@ namespace YtReader.Store {
   public class StoreUpgrader {
     static DateTime V0UpdateTime;
 
-    public static readonly StringPath       VersionFile = new StringPath("_version.json");
+    public static readonly SPath            VersionFile = new("_version.json");
     readonly               AppCfg           Cfg;
     readonly               ILogger          Log;
     readonly               ISimpleFileStore Store;
@@ -32,7 +32,7 @@ namespace YtReader.Store {
 
     async Task Upgrade() {
       var versionFile = await Store.Info(VersionFile);
-      var md = versionFile == null ? new StoreMd {Version = new SemVersion(0)} : await Store.Get<StoreMd>(VersionFile);
+      var md = versionFile == null ? new() {Version = new(0)} : await Store.Get<StoreMd>(VersionFile);
 
       var upgradeMethods = GetType().GetMethods()
         .Select(m => (m, a: m.GetCustomAttribute<UpgradeAttribute>())).Where(m => m.a != null)
@@ -103,7 +103,7 @@ namespace YtReader.Store {
       }, parallel: 4);
     }
 
-    static StringPath NewFilePath(StoreFileMd f, int version) =>
+    static SPath NewFilePath(StoreFileMd f, int version) =>
       JsonlStoreExtensions.FilePath(f.Path.Parent, StoreFileMd.GetTs(f.Path), version.ToString());
 
     async Task<IReadOnlyCollection<JObject>> Jsonl(StoreFileMd f) {
@@ -112,13 +112,13 @@ namespace YtReader.Store {
       return existingJs;
     }
 
-    async Task<List<StoreFileMd>> FilesToUpgrade(StringPath path, int fromVersion) {
+    async Task<List<StoreFileMd>> FilesToUpgrade(SPath path, int fromVersion) {
       var files = (await Store.List(path, allDirectories: true).SelectManyList()).Select(StoreFileMd.FromFileItem).ToList();
       var toUpgrade = files.Where(f => (f.Version ?? "0").ParseInt() == fromVersion).ToList();
       return toUpgrade;
     }
 
-    async Task ReplaceJsonLFile(StoreFileMd f, StringPath newPath, IEnumerable<JToken> upgradedJs) {
+    async Task ReplaceJsonLFile(StoreFileMd f, SPath newPath, IEnumerable<JToken> upgradedJs) {
       using var stream = await upgradedJs.ToJsonlGzStream();
       await Store.Save(newPath, stream);
       var deleted = await Store.Delete(f.Path);
@@ -136,6 +136,6 @@ namespace YtReader.Store {
 
   public class StoreMd {
     public SemVersion      Version { get; set; }
-    public HashSet<string> Ran     { get; set; } = new HashSet<string>();
+    public HashSet<string> Ran     { get; set; } = new();
   }
 }

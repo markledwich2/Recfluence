@@ -28,9 +28,9 @@ namespace YtReader {
   }
 
   public class BranchEnvCreator {
+    readonly BlobStores       Stores;
     readonly VersionInfo      VersionInfo;
     readonly WarehouseCreator WhCreator;
-    readonly BlobStores       Stores;
 
     public BranchEnvCreator(VersionInfo versionInfo, WarehouseCreator whCreator, BlobStores stores) {
       VersionInfo = versionInfo;
@@ -62,7 +62,7 @@ namespace YtReader {
     async Task PopulateContainer(StoreTier tier, BranchState state, string[] paths, ILogger log) {
       if (state.In(CloneDb, Fresh)) return;
 
-      async Task<(AzureBlobFileStore container, CloudBlobContainer legacy, StringPath[] rooDirs)> GetStorePrep(SemVersion version) {
+      async Task<(AzureBlobFileStore container, CloudBlobContainer legacy, SPath[] rooDirs)> GetStorePrep(SemVersion version) {
         var container = (AzureBlobFileStore) Stores.Store(tier: tier, version: version);
         var legacy = container.LegacyContainer();
         var rooDirs = await container.ListDirs("").ToArrayAsync();

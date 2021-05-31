@@ -14,6 +14,7 @@ using SysExtensions.Security;
 using YtReader.Airtable;
 using YtReader.AmazonSite;
 using YtReader.Db;
+using YtReader.Transcribe;
 
 namespace YtReader {
   public class RootCfg {
@@ -67,6 +68,7 @@ namespace YtReader {
     [Required] public DataScriptsCfg  DataScripts           { get; set; } = new();
     [Required] public AmazonCfg       Amazon                { get; set; } = new();
     [Required] public AwsCfg          Aws                   { get; set; } = new();
+    [Required] public TranscribeCfg   Transcribe            { get; set; } = new();
   }
 
   public class GoogleCfg {
@@ -131,12 +133,12 @@ namespace YtReader {
   }
 
   public record SimpleCollectCfg : ICommonCollectCfg {
-    public int      WebParallel          { get; set; } = 24; // parallelism for plain html scraping of video's, recs
-    public int      OuterParallel         { get; set; } = 4; // default parallelism for something the partitions other async work
-    public int      MaxChannelFullVideos { get; set; } = 40_000;
+    public int      OuterParallel        { get; set; } = 4; // default parallelism for something the partitions other async work
     public int?     HomeVidLimit         { get; init; }
     public string[] HomeCats             { get; init; }
     public int      Retries              { get; init; } = 4;
+    public int      WebParallel          { get; set; }  = 24; // parallelism for plain html scraping of video's, recs
+    public int      MaxChannelFullVideos { get; set; }  = 40_000;
     public int      MaxChannelComments   { get; set; }  = 4;
   }
 
@@ -175,11 +177,7 @@ namespace YtReader {
     public int DiscoverChannelVids { get; set; } = 3;
 
     public int ParallelChannels { get; set; } = 4;
-    public int WebParallel      { get; set; } = 6; // parallelism for plain html scraping of video's, recs
     public int CaptionParallel  { get; set; } = 3; // smaller than Web to try and reduce changes of out-of-mem failures
-
-    /// <summary>maximum number of videos to load when updating a channel.</summary>
-    public int MaxChannelComments { get; set; } = 4;
 
     /// <summary>These thresholds shortcut the collection for channels to save costs. Bellow the analysis thresholds because we
     ///   want to collect ones that might tip over</summary>
@@ -191,11 +189,15 @@ namespace YtReader {
     public int ChannelBatchSize { get;      set; } = 100;
     public int MaxChannelDailyVideos { get; set; } = 10_000;
 
-    public int MaxChannelFullVideos { get; set; } = 40_000;
-
     public int  UserBatchSize           { get; set; } = 1000;
     public int? MaxMissingUsers         { get; set; } = 100_000;
     public int? MaxExtraErrorsInChannel { get; set; } = 10;
+    public int  WebParallel             { get; set; } = 6; // parallelism for plain html scraping of video's, recs
+
+    /// <summary>maximum number of videos to load when updating a channel.</summary>
+    public int MaxChannelComments { get; set; } = 4;
+
+    public int MaxChannelFullVideos { get; set; } = 40_000;
   }
 
   public class StorageCfg {

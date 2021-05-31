@@ -23,9 +23,9 @@ namespace Mutuo.Etl.Blob {
     public string DbName        { get; set; }
   }
 
-  public record BlobIndexResult(BlobIndexMeta Index, StringPath IndexPath, StringPath IndexFilesPath, StringPath[] ToDelete);
+  public record BlobIndexResult(BlobIndexMeta Index, SPath IndexPath, SPath IndexFilesPath, SPath[] ToDelete);
 
-  public record BlobIndexWork(StringPath Path, IndexCol[] Cols, IAsyncEnumerable<JObject> Rows, ByteSize Size,
+  public record BlobIndexWork(SPath Path, IndexCol[] Cols, IAsyncEnumerable<JObject> Rows, ByteSize Size,
     NullValueHandling NullHandling = NullValueHandling.Include, Action<JObject> OnProcessed = null);
 
   public record BlobIndex(ISimpleFileStore Store) {
@@ -48,7 +48,7 @@ namespace Mutuo.Etl.Blob {
         .Select((b, i) => (b.first, b.last, b.stream, i))
         .BlockMap(async b => {
           if (cancel.IsCancellationRequested) return null;
-          var file = new StringPath($"{runId}/{b.i:000000}.{JValueString(b.first)}.{JValueString(b.last)}.jsonl.gz");
+          var file = new SPath($"{runId}/{b.i:000000}.{JValueString(b.first)}.{JValueString(b.last)}.jsonl.gz");
           await Store.Save(work.Path.Add(file), b.stream);
           return new BlobIndexFileMeta {
             File = file,

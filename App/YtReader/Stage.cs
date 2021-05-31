@@ -33,10 +33,10 @@ namespace YtReader {
   }
 
   public class Stage {
-    readonly BlobStores                  Stores;
-    readonly SnowflakeConnectionProvider Conn;
     readonly WarehouseCfg                Cfg;
+    readonly SnowflakeConnectionProvider Conn;
     readonly IPipeCtx                    PipeCtx;
+    readonly BlobStores                  Stores;
 
     public Stage(BlobStores stores, SnowflakeConnectionProvider conn, WarehouseCfg cfg, IPipeCtx pipeCtx) {
       Stores = stores;
@@ -130,11 +130,6 @@ namespace YtReader {
   }
 
   public static class YtWarehouse {
-    public static string DbName(this SnowflakeCfg cfg) => cfg.DbSuffix.HasValue() ? $"{cfg.Db}_{cfg.DbSuffix}" : cfg.Db;
-
-    static StageTableCfg UsTable(string name) =>
-      new($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, "updated");
-
     public static readonly StageTableCfg[] AllTables = {
       UsTable("rec"),
       UsTable("feed"),
@@ -157,6 +152,10 @@ namespace YtReader {
       new("video_entities", "video_entity_stage", tsCol: "updated"),
       new("link_meta", "link_meta_stage")
     };
+    public static string DbName(this SnowflakeCfg cfg) => cfg.DbSuffix.HasValue() ? $"{cfg.Db}_{cfg.DbSuffix}" : cfg.Db;
+
+    static StageTableCfg UsTable(string name) =>
+      new($"userscrape/results/{name}", $"us_{name}_stage", isNativeStore: false, "updated");
   }
 
   public class StageTableCfg {
@@ -168,7 +167,7 @@ namespace YtReader {
       TsCol = tsCol ?? (isNativeStore ? "Updated" : null);
     }
 
-    public StringPath    Dir           { get; }
+    public SPath         Dir           { get; }
     public string        Table         { get; }
     public bool          IsNativeStore { get; }
     public DataStoreType StoreType     { get; }

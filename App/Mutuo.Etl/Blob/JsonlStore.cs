@@ -12,16 +12,6 @@ using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Blob {
   public interface IJsonlStore {
-    StringPath       Path  { get; }
-    ISimpleFileStore Store { get; }
-
-    /// <summary>returns the latest file (either in landing or staging) within the given partition</summary>
-    /// <param name="partition"></param>
-    /// <returns></returns>
-    Task<StoreFileMd> LatestFile(StringPath path = null);
-
-    IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false);
-
     public static readonly JsonSerializerSettings JCfg = new() {
       NullValueHandling = NullValueHandling.Ignore,
       DefaultValueHandling = DefaultValueHandling.Include,
@@ -30,6 +20,15 @@ namespace Mutuo.Etl.Blob {
         new StringEnumConverter()
       }
     };
+    SPath            Path  { get; }
+    ISimpleFileStore Store { get; }
+
+    /// <summary>returns the latest file (either in landing or staging) within the given partition</summary>
+    /// <param name="partition"></param>
+    /// <returns></returns>
+    Task<StoreFileMd> LatestFile(SPath path = null);
+
+    IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(SPath path, bool allDirectories = false);
   }
 
   /// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl</summary>
@@ -37,17 +36,14 @@ namespace Mutuo.Etl.Blob {
     readonly Func<T, string> GetPartition;
     readonly Func<T, string> GetTs;
 
-    readonly ILogger          Log;
-    readonly int              Parallel;
-    public   ISimpleFileStore Store { get; }
-    readonly string           Version;
-
-    public StringPath Path { get; }
+    readonly ILogger Log;
+    readonly int     Parallel;
+    readonly string  Version;
 
     /// <summary></summary>
     /// <param name="getTs">A function to get a timestamp for this file. This must always be greater for new records using an
     ///   invariant string comparer</param>
-    public JsonlStore(ISimpleFileStore store, StringPath path, Func<T, string> getTs,
+    public JsonlStore(ISimpleFileStore store, SPath path, Func<T, string> getTs,
       ILogger log, string version = "", Func<T, string> getPartition = null, int parallel = 8) {
       Store = store;
       Path = path;
@@ -58,21 +54,25 @@ namespace Mutuo.Etl.Blob {
       Version = version;
     }
 
-    string Partition(T item) => GetPartition?.Invoke(item);
+    public ISimpleFileStore Store { get; }
 
-    /// <summary>The land path for a given partition is where files are first put before being optimised. Default -
-    ///   [Path]/[Partition], LandAndStage - [Path]/land/[partition]</summary>
-    StringPath FilePath(string partition = null) => partition.NullOrEmpty() ? Path : Path.Add(partition);
+    public SPath Path { get; }
 
     /// <summary>Returns the most recent file within this path (any child directories)</summary>
-    public async Task<StoreFileMd> LatestFile(StringPath path = null) {
+    public async Task<StoreFileMd> LatestFile(SPath path = null) {
       var files = await Files(path, allDirectories: true).SelectManyList();
       var latest = files.OrderByDescending(f => StoreFileMd.GetTs(f.Path)).FirstOrDefault();
       return latest;
     }
 
-    public IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(StringPath path, bool allDirectories = false) =>
+    public IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(SPath path, bool allDirectories = false) =>
       Store.Files(FilePath(path), allDirectories);
+
+    string Partition(T item) => GetPartition?.Invoke(item);
+
+    /// <summary>The land path for a given partition is where files are first put before being optimised. Default -
+    ///   [Path]/[Partition], LandAndStage - [Path]/land/[partition]</summary>
+    SPath FilePath(string partition = null) => partition.NullOrEmpty() ? Path : Path.Add(partition);
 
     public Task Append(T item, ILogger log = null) => Append(item.InArray(), log);
 
@@ -93,7 +93,7 @@ namespace Mutuo.Etl.Blob {
         yield return item;
     }
 
-    async Task<IReadOnlyCollection<T>> LoadJsonl(StringPath path) {
+    async Task<IReadOnlyCollection<T>> LoadJsonl(SPath path) {
       await using var stream = await Store.Load(path);
       return stream.LoadJsonlGz<T>(IJsonlStore.JCfg);
     }
@@ -102,7 +102,7 @@ namespace Mutuo.Etl.Blob {
   public record StoreFileMd {
     public StoreFileMd() { }
 
-    public StoreFileMd(StringPath path, string ts, DateTime modified, long? bytes, string version = null) {
+    public StoreFileMd(SPath path, string ts, DateTime modified, long? bytes, string version = null) {
       Path = path;
       Ts = ts;
       Modified = modified;
@@ -110,11 +110,11 @@ namespace Mutuo.Etl.Blob {
       Version = version;
     }
 
-    public StringPath Path     { get; set; }
-    public string     Ts       { get; set; }
-    public DateTime   Modified { get; set; }
-    public string     Version  { get; set; }
-    public long?      Bytes    { get; set; }
+    public SPath    Path     { get; set; }
+    public string   Ts       { get; set; }
+    public DateTime Modified { get; set; }
+    public string   Version  { get; set; }
+    public long?    Bytes    { get; set; }
 
     public static StoreFileMd FromFileItem(FileListItem file) {
       var tokens = file.Path.Name.Split(".");
@@ -123,6 +123,6 @@ namespace Mutuo.Etl.Blob {
       return new(file.Path, ts, file.Modified?.UtcDateTime ?? DateTime.MinValue, file.Bytes, version);
     }
 
-    public static string GetTs(StringPath path) => path.Name.Split(".").FirstOrDefault();
+    public static string GetTs(SPath path) => path.Name.Split(".").FirstOrDefault();
   }
 }

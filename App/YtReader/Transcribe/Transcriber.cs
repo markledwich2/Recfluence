@@ -42,7 +42,15 @@ namespace YtReader.Transcribe {
     Media
   }
 
-  public record Transcriber(BlobStores Stores, SnowflakeConnectionProvider Sf, AwsCfg Aws, YtStore StoreDb, Stage Stage) {
+  public record TranscribeCfg {
+    public int ParallelTranscribe { get; init; } = 80; // service limit is 100, so leave some room
+    public int Parallel           { get; init; } = 8;
+  }
+
+  public record TranscribeOptions(Platform? Platform = null, int? Limit = null, string QueryName = null, TranscribeParts[] Parts = null,
+    TranscribeMode Mode = default, string[] SourceIds = null);
+
+  public record Transcriber(TranscribeCfg Cfg, BlobStores Stores, SnowflakeConnectionProvider Sf, AwsCfg Aws, YtStore StoreDb, Stage Stage) {
     static readonly Regex                         SafeNameRe   = new("[^\\w0-9]", RegexOptions.Compiled);
     readonly        ISimpleFileStore              StoreForLoad = Stores.Store("import/temp");
     readonly        S3Store                       StoreMedia   = new(Aws.S3, "media");
@@ -51,48 +59,83 @@ namespace YtReader.Transcribe {
 
     string SafeName(string name) => SafeNameRe.Replace(name, "");
 
-    StringPath BlobPath(Platform? platform, string sourceId, string extension) =>
-      //var extension = Extension(platform);
-      StringPath.Relative(
-        platform.EnumString(), $"{SafeName(sourceId)}.{extension}");
+    SPath BlobPath(Platform? platform, string sourceId, string extension) => SPath.Relative(platform.EnumString(), $"{SafeName(sourceId)}.{extension}");
 
-    public async Task TranscribeVideos(ILogger log, CancellationToken cancel = default, Platform? platform = null,
-      int? limit = null, string queryName = null, TranscribeParts[] parts = null, TranscribeMode mode = default, string[] sourceIds = null) {
+    public async Task TranscribeVideos(TranscribeOptions options, ILogger log, CancellationToken cancel = default) {
       log = log.ForContext("Function", nameof(TranscribeVideos));
+      if (options.Parts.ShouldRun(PTranscribe)) {
+        var videos = await LoadVideoMedia(options, log, cancel);
+        await videos
+          .BlockMap(async v => {
+            var detectLanguage = true;
+            TransRoot transResult = null;
+            var transPath = v.media_path.WithExtension(".json");
+            if (await StoreTrans.Exists(transPath)) {
+              transResult = await LoadTrans(transPath, log);
+              log.Debug("Transcribe - loaded existing result {TransUrl}", StoreTrans.S3Uri(transPath));
+            }
+            else {
+              TranscriptionJob job;
+              while (true) {
+                var startTrans = await GetOrStartTrans(v.media_path, detectLanguage, log);
+                if (startTrans == default) return default;
+                job = await WaitForCompletedTrans(log, startTrans);
+                if (job.TranscriptionJobStatus == FAILED && job.FailureReason.StartsWith("Your audio file must have a speech segment long") && detectLanguage) {
+                  detectLanguage = false;
+                  continue;
+                }
+                break;
+              }
+              if (job.TranscriptionJobStatus == COMPLETED)
+                transResult = await LoadTrans(transPath, log);
+            }
+            var vidCaption = transResult?.AwsToVideoCaption(v.video_id, v.channel_id, v.platform);
+            return vidCaption;
+          }, Cfg.ParallelTranscribe)
+          .NotNull()
+          .BlockDo(async caption => {
+            await StoreDb.Captions.Append(caption, log);
+            // transcribing is expensive and slow, save each one rather than batching
+            log.Information("Transcribe - saved caption for video: {Videos}", caption.VideoId);
+          });
+      }
 
-      if (parts.ShouldRun(PTranscribe)) {
-        using var db = await Sf.Open(log);
+      if (options.Parts.ShouldRun(PStage)) await Stage.StageUpdate(log, tableNames: new[] {"caption_stage"});
+      log.Information("Transcribe - completed transcribing");
+    }
+
+    async Task<VideoData[]> LoadVideoMedia(TranscribeOptions options, ILogger log, CancellationToken cancel) {
+      using var db = await Sf.Open(log);
+      if (options.Mode == TranscribeMode.Query) {
         var tempDir = YtResults.TempDir();
-        VideoData[] videos;
-        if (mode == TranscribeMode.Query) {
-          videos = await db.QueryAsync<VideoData>("video media_url", $@"
-with vids as ({(queryName == null ? "select * from video_extra" : TranscribeSql.Sql[queryName])})
+        return await db.QueryAsync<VideoData>("video media_url", $@"
+with vids as ({(options.QueryName == null ? "select * from video_extra" : TranscribeSql.Sql[options.QueryName])})
 select q.video_id, e.source_id, e.media_url, e.channel_id, e.platform
 from vids q
 join video_extra e on e.video_id = q.video_id 
-where media_url is not null {platform.Do(p => $"and platform = {p.EnumString().SingleQuote()}")}
+where media_url is not null {options.Platform.Do(p => $"and platform = {p.EnumString().SingleQuote()}")}
 and not exists (select * from caption s where s.video_id = q.video_id)
 order by views desc nulls last
-{limit.Do(l => $"limit {l}")}
-").BlockMap(async v => v with {media_path = await CopyVideo(log, v, tempDir, cancel)}, parallel: 8, cancel: cancel).ToArrayAsync();
-        }
-        else {
-          var mediaLoadPath = $"media-load/{ShortGuid.Create(6)}";
-          var mediaLoadFiles = await StoreMedia.List("", allDirectories: true)
-            .SelectMany()
-            .Select(f => new {
-              Platform = f.Path.Tokens.First().ParseEnum<Platform>(),
-              SourceId = f.Path.NameSansExtension,
-              MediaPath = f.Path
-            })
-            .Where(v => sourceIds == null || sourceIds.Contains(v.SourceId))
-            .Batch(10000)
-            .BlockMap(async (b, i) => {
-              StringPath path = $"{mediaLoadPath}/{i}.jsonl.gz";
-              await StoreForLoad.Save(path, await b.ToJsonlGzStream(IJsonlStore.JCfg), log);
-              return path;
-            }).ToArrayAsync();
-          videos = await db.QueryAsync<VideoData>("media-loaded-sans-caption", $@"
+{options.Limit.Do(l => $"limit {l}")}
+").BlockMap(async v => v with {media_path = await CopyVideo(log, v, tempDir, cancel)}, Cfg.Parallel, cancel: cancel).ToArrayAsync();
+      }
+
+      var mediaLoadPath = $"media-load/{ShortGuid.Create(6)}";
+      var mediaLoadFiles = await StoreMedia.List("", allDirectories: true)
+        .SelectMany()
+        .Select(f => new {
+          Platform = f.Path.Tokens.First().ParseEnum<Platform>(),
+          SourceId = f.Path.NameSansExtension,
+          MediaPath = f.Path
+        })
+        .Where(v => options.SourceIds == null || options.SourceIds.Contains(v.SourceId))
+        .Batch(10000)
+        .BlockMap(async (b, i) => {
+          SPath path = $"{mediaLoadPath}/{i}.jsonl.gz";
+          await StoreForLoad.Save(path, await b.ToJsonlGzStream(IJsonlStore.JCfg), log);
+          return path;
+        }).ToArrayAsync();
+      var videos = await db.QueryAsync<VideoData>("media-loaded-sans-caption", $@"
 with media as (
   with raw as (select $1::object v from @yt_data/{StoreForLoad.BasePathSansContainer()}/{mediaLoadPath}/)
   select v:Platform::string platform, v:SourceId::string source_id, v:MediaPath::string media_path from raw
@@ -103,44 +146,11 @@ join video_extra e on e.source_id = q.source_id and e.platform = q.platform
 where not exists (select * from caption s where s.video_id = e.video_id)
 order by e.views desc nulls last
 ").ToArrayAsync();
-          await mediaLoadFiles.BlockDo(f => StoreForLoad.Delete(f), parallel: 8);
-        }
-
-        await videos
-          .BlockMap(async v => {
-            var detectLanguage = true;
-            TranscriptionJob job;
-            while (true) {
-              var startTrans = await GetOrStartTrans(v.media_path, detectLanguage, log);
-              if (startTrans == default) return default;
-              job = await WaitForCompletedTrans(log, startTrans);
-              if (job.TranscriptionJobStatus == FAILED && job.FailureReason.StartsWith("Your audio file must have a speech segment long enough") &&
-                detectLanguage) {
-                detectLanguage = false;
-                continue;
-              }
-              break;
-            }
-            var transPath = job.Transcript.TranscriptFileUri?.AsUrl().PathSegments.Skip(2).Do(s => new StringPath(s));
-            var trans = job.TranscriptionJobStatus == COMPLETED ? await LoadTrans(transPath, log) : default;
-            var vidCaption = trans?.AwsToVideoCaption(job, v.video_id, v.channel_id, v.platform);
-            return vidCaption;
-          }, parallel: 20)
-          .NotNull()
-          .BlockDo(async caption => {
-            await StoreDb.Captions.Append(caption, log);
-            // transcribing is expensive and slow, save each one rather than batching
-            log.Information("Transcribe - saved caption for video: {Videos}", caption.VideoId);
-          });
-      }
-
-      if (parts.ShouldRun(PStage)) await Stage.StageUpdate(log, tableNames: new[] {"caption_stage"});
-      // TODO use dataform API to quickly also update the caption table
-
-      log.Information("Transcribe - completed transcribing");
+      await mediaLoadFiles.BlockDo(f => StoreForLoad.Delete(f), Cfg.Parallel, cancel: cancel);
+      return videos;
     }
 
-    async Task<StringPath> CopyVideo(ILogger log, VideoData v, FPath tempDir, CancellationToken cancel) {
+    async Task<SPath> CopyVideo(ILogger log, VideoData v, FPath tempDir, CancellationToken cancel) {
       var mediaUrl = v.media_url.AsUrl();
       var ext = mediaUrl.PathSegments.LastOrDefault()?.Split(".").LastOrDefault() ?? throw new("not implemented. Currently relying on extension in url");
       var blobPath = BlobPath(v.platform, v.source_id, ext);
@@ -176,10 +186,9 @@ order by e.views desc nulls last
       return blobPath;
     }
 
-    async Task<TranscriptionJob> GetOrStartTrans(StringPath p, bool identifyLanguage, ILogger log) {
-      var transPath = p.WithExtension(".json");
-      var mediaUrl = StoreMedia.S3Uri(p).ToString();
-      var existingJobs = await TransClient.ListTranscriptionJobsAsync(new() {JobNameContains = p.NameSansExtension, MaxResults = 100});
+    async Task<TranscriptionJob> GetOrStartTrans(SPath transPath, bool identifyLanguage, ILogger log) {
+      var mediaUrl = StoreMedia.S3Uri(transPath).ToString();
+      var existingJobs = await TransClient.ListTranscriptionJobsAsync(new() {JobNameContains = transPath.NameSansExtension, MaxResults = 100});
       var existingJob = await existingJobs.TranscriptionJobSummaries
         .BlockMap(j => TransClient.GetTranscriptionJobAsync(new() {TranscriptionJobName = j.TranscriptionJobName}))
         .Where(j => j.TranscriptionJob.Media.MediaFileUri == mediaUrl)
@@ -199,11 +208,11 @@ order by e.views desc nulls last
       StartTranscriptionJobRequest req = new() {
         IdentifyLanguage = identifyLanguage,
         LanguageCode = identifyLanguage ? null : LanguageCode.EnUS,
-        MediaFormat = p.ExtensionsString,
+        MediaFormat = transPath.ExtensionsString,
         Media = new() {
           MediaFileUri = mediaUrl
         },
-        TranscriptionJobName = $"{SafeName(p.NameSansExtension)}-{ShortGuid.Create(6)}",
+        TranscriptionJobName = $"{SafeName(transPath.NameSansExtension)}-{ShortGuid.Create(6)}",
         OutputBucketName = StoreTrans.Cfg.Bucket,
         OutputKey = StoreTrans.BasePath.Add(transPath),
         Settings = new() {
@@ -212,10 +221,10 @@ order by e.views desc nulls last
         }
       };
 
-      var retry = Policy.Handle<LimitExceededException>().RetryBackoff("start job", retryCount: 5, log);
+      var retry = Policy.Handle<LimitExceededException>().RetryBackoff("start job", retryCount: 4, 10.Seconds(), log);
       var (res, ex) = await retry.ExecuteAsync(() => TransClient.StartTranscriptionJobAsync(req)).Try();
       if (ex != null) {
-        log.Error(ex, "Transcribe unable to start transcription - {@Job}: {Error}", req, ex.Message);
+        log.Warning(ex, "Transcribe unable to start transcription - {@Job}: {Error}", req, ex.Message);
         return default;
       }
       log.Debug("Transcribe - started transcription {MediaUrl}", res.TranscriptionJob?.Media?.MediaFileUri);
@@ -223,14 +232,14 @@ order by e.views desc nulls last
     }
 
     //static readonly JsonSerializerSettings JSettings = TransRoot.JsonSettings();
-    async Task<TransRoot> LoadTrans(StringPath path, ILogger log) => await StoreTrans.Load(path, log).Then(s => s.ToObject<TransRoot>());
+    async Task<TransRoot> LoadTrans(SPath path, ILogger log) => await StoreTrans.Load(path, log).Then(s => s.ToObject<TransRoot>());
 
     async Task<TranscriptionJob> WaitForCompletedTrans(ILogger log, TranscriptionJob startJob) {
       var lastLog = DateTime.UtcNow;
       while (true) {
         var job = await TransClient.GetTranscriptionJobAsync(new() {TranscriptionJobName = startJob.TranscriptionJobName});
         var tj = job.TranscriptionJob;
-        if (tj.TranscriptionJobStatus == IN_PROGRESS && lastLog.OlderThan(1.Minutes())) {
+        if (tj.TranscriptionJobStatus == IN_PROGRESS && lastLog.OlderThan(2.Minutes())) {
           log.Debug("Transcribe - waiting on transcription job '{Job}' to complete (Age {Duration})",
             tj.TranscriptionJobName, (DateTime.UtcNow - tj.StartTime).HumanizeShort());
           lastLog = DateTime.UtcNow;
@@ -250,7 +259,7 @@ order by e.views desc nulls last
       public string   media_url  { get; init; }
       public string   channel_id { get; init; }
       public Platform platform   { get; init; }
-      public string   media_path { get; init; }
+      public SPath    media_path { get; init; }
     }
   }
 }

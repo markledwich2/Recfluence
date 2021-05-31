@@ -10,7 +10,7 @@ using SystemIO = System.IO;
 
 namespace SysExtensions.IO {
   public static class PathExtensions {
-    public static FPath AsPath(this string path) => new FPath(path);
+    public static FPath AsPath(this string path) => new(path);
 
     public static IEnumerable<FPath> EnumerateParents(this FPath path, bool includeIfDir) {
       if (path.IsDirectory && includeIfDir)
@@ -96,7 +96,7 @@ namespace SysExtensions.IO {
 
     public static FPath PathWithoutExtension(this FPath pathToMsql) => pathToMsql.Parent().Combine(pathToMsql.FileNameWithoutExtension);
 
-    public static SystemIO.FileInfo FileInfo(this FPath path) => new SystemIO.FileInfo(path.FullPath);
+    public static SystemIO.FileInfo FileInfo(this FPath path) => new(path.FullPath);
 
     public static FPath LocalAssemblyPath(this Type type)
       => new Uri(type.GetTypeInfo().Assembly.Location).LocalPath.AsPath();
@@ -105,6 +105,6 @@ namespace SysExtensions.IO {
 
     public static void ExtractZip(this FPath zipFile, FPath dir) => ZipFile.ExtractToDirectory(zipFile.FullPath, dir.FullPath);
 
-    public static StringPath ToStringPath(this FPath path) => path.IsRooted ? StringPath.Absolute(path.Tokens) : StringPath.Relative(path.Tokens);
+    public static SPath ToStringPath(this FPath path) => path.IsRooted ? SPath.Absolute(path.Tokens) : SPath.Relative(path.Tokens);
   }
 }

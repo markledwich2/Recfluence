@@ -42,7 +42,7 @@ namespace YtReader {
 
       log.Information("DataScripts - runId {runId} ({existing})", runId, existingFiles ? "existing" : "new");
 
-      async Task<List<StringPath>> LoadNewEntityFiles() {
+      async Task<List<SPath>> LoadNewEntityFiles() {
         using var db = await Db.Open(log);
         return await db.QueryBlocking<EntityVideoRow>("new entities",
             opts.VideosView != null
@@ -85,7 +85,7 @@ where e.video_id is null {(ScriptsCfg.Stale == null ? "" : "or e.updated < :stal
         }, ScriptsCfg.Containers, cancel: cancel);
     }
 
-    static StringPath RunPath(string runId) => $"pipe/DataScripts/video_entities/{runId}";
+    static SPath RunPath(string runId) => $"pipe/DataScripts/video_entities/{runId}";
 
     string GetAppCfgSas() {
       var container = new BlobServiceClient(RootCfg.AppStoreCs).GetBlobContainerClient(Setup.CfgContainer);

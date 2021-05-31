@@ -332,7 +332,7 @@ namespace YtReader {
     public static Task<IContainerGroup> SeqGroup(this IAzure azure, SeqCfg seqCfg, PipeAzureCfg azureCfg) =>
       azure.ContainerGroups.GetByResourceGroupAsync(azureCfg.ResourceGroup, seqCfg.ContainerGroupName);
 
-    public static ISimpleFileStore DataStore(this AppCfg cfg, ILogger log, StringPath path) =>
+    public static ISimpleFileStore DataStore(this AppCfg cfg, ILogger log, SPath path) =>
       new AzureBlobFileStore(cfg.Storage.DataStorageCs, path, log);
 
     public static bool IsProd(this RootCfg root) => root.Env?.ToLowerInvariant() == "prod";

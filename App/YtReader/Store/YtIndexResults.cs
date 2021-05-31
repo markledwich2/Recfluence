@@ -21,8 +21,9 @@ namespace YtReader.Store {
     NullValueHandling NullHandling = NullValueHandling.Include, string[] Tags = null);
 
   public class YtIndexResults {
-    readonly SnowflakeConnectionProvider Sf;
-    readonly BlobIndex                   BlobIndex;
+    public static string                      IndexVersion = "v2";
+    readonly      BlobIndex                   BlobIndex;
+    readonly      SnowflakeConnectionProvider Sf;
 
     public YtIndexResults(BlobStores stores, SnowflakeConnectionProvider sf) {
       Sf = sf;
@@ -65,8 +66,6 @@ namespace YtReader.Store {
       log.Information("Committed indexes {Indexes}", res.Select(i => i.IndexPath));
     }
 
-    public static string IndexVersion = "v2";
-
     async Task<BlobIndexWork> IndexWork(ILogger log, WorkCfg work, Action<JObject> onProcessed = null) {
       using var con = await Sf.Open(log);
 
@@ -77,7 +76,7 @@ namespace YtReader.Store {
           yield return reader.ToSnowflakeJObject().ToCamelCase();
       }
 
-      var path = StringPath.Relative("index", work.Name, work.Version ?? IndexVersion);
+      var path = SPath.Relative("index", work.Name, work.Version ?? IndexVersion);
       return new(path, work.Cols, GetRows(), work.Size ?? 200.Kilobytes(), work.NullHandling, onProcessed);
     }
 

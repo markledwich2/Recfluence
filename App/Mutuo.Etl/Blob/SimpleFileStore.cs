@@ -13,26 +13,26 @@ using SysExtensions.Text;
 
 namespace Mutuo.Etl.Blob {
   public interface ISimpleFileStore {
-    Task Save(StringPath path, FPath file, ILogger log = null);
-    Task Save(StringPath path, Stream contents, ILogger log = null);
-    Task<Stream> Load(StringPath path, ILogger log = null);
-    Task LoadToFile(StringPath path, FPath file, ILogger log = null);
-    IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(StringPath path, bool allDirectories = false, ILogger log = null);
-    Task<bool> Delete(StringPath path, ILogger log = null);
-    Task<FileListItem> Info(StringPath path);
-    public Uri Url(StringPath path);
-    Task<bool> Exists(StringPath path);
     /// <summary>the Working directory of this storage wrapper. The first part of the path is the container</summary>
-    StringPath BasePath { get; }
+    SPath BasePath { get; }
+    Task Save(SPath path, FPath file, ILogger log = null);
+    Task Save(SPath path, Stream contents, ILogger log = null);
+    Task<Stream> Load(SPath path, ILogger log = null);
+    Task LoadToFile(SPath path, FPath file, ILogger log = null);
+    IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(SPath path, bool allDirectories = false, ILogger log = null);
+    Task<bool> Delete(SPath path, ILogger log = null);
+    Task<FileListItem> Info(SPath path);
+    public Uri Url(SPath path);
+    Task<bool> Exists(SPath path);
   }
 
   public static class SimpleStoreExtensions {
-    public static StringPath BasePathSansContainer(this ISimpleFileStore store) => new(store.BasePath.Tokens.Skip(1));
+    public static SPath BasePathSansContainer(this ISimpleFileStore store) => new(store.BasePath.Tokens.Skip(1));
 
-    public static StringPath AddJsonExtention(this StringPath path, bool zip = true) =>
+    public static SPath AddJsonExtention(this SPath path, bool zip = true) =>
       new(path + (zip ? ".json.gz" : ".json"));
 
-    public static async Task<T> GetOrCreate<T>(this ISimpleFileStore store, StringPath path, Func<T> create = null) where T : class, new() {
+    public static async Task<T> GetOrCreate<T>(this ISimpleFileStore store, SPath path, Func<T> create = null) where T : class, new() {
       var o = await store.Get<T>(path);
       if (o == null) {
         o = create == null ? new() : create();
@@ -41,7 +41,7 @@ namespace Mutuo.Etl.Blob {
       return o;
     }
 
-    public static async Task<T> Get<T>(this ISimpleFileStore store, StringPath path, bool zip = true, ILogger log = null) {
+    public static async Task<T> Get<T>(this ISimpleFileStore store, SPath path, bool zip = true, ILogger log = null) {
       using var stream = await store.Load(path.AddJsonExtention(zip), log);
       if (!zip) return stream.ToObject<T>();
       await using var zr = new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
@@ -50,7 +50,7 @@ namespace Mutuo.Etl.Blob {
 
     /// <summary>Serializes item into the object store</summary>
     /// <param name="path">The path to the object (no extensions)</param>
-    public static async Task Set<T>(this ISimpleFileStore store, StringPath path, T item, bool zip = true, ILogger log = default,
+    public static async Task Set<T>(this ISimpleFileStore store, SPath path, T item, bool zip = true, ILogger log = default,
       JsonSerializerSettings jCfg = default) {
       await using var memStream = new MemoryStream();
 

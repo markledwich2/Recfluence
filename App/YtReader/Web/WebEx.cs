@@ -27,13 +27,13 @@ namespace YtReader.Web {
         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         UseCookies = false,
         Proxy = proxy.Url == null ? null : proxy.CreateWebProxy(),
-        UseProxy = proxy.Url != null,
+        UseProxy = proxy.Url != null
       }) {
         Timeout = timeout ?? 30.Seconds()
       };
 
     public static async Task LogParseError(this ISimpleFileStore logStore, string msg, Exception ex, Url url, string content, ILogger log) {
-      var path = StringPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), url.Path);
+      var path = SPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), url.Path);
       var logUrl = logStore.Url(path);
       await logStore.Save(path, content.AsStream(), log);
       log.Warning(ex, "Parsing Diagnostics - Saved content from {Url} to {LogUrl}: {Msg}", url, logUrl, msg);

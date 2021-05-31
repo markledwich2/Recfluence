@@ -37,8 +37,8 @@ namespace YtReader.Store {
 
   /// <summary>Access to any of the stores</summary>
   public record BlobStores(StorageCfg Cfg, S3Cfg S3Cfg, SemVersion Version, ILogger Log) {
-    public ISimpleFileStore Store(StringPath path = null, StoreTier tier = Premium, SemVersion version = null) {
-      var p = new StringPath(Cfg.RootPath(version ?? Version));
+    public ISimpleFileStore Store(SPath path = null, StoreTier tier = Premium, SemVersion version = null) {
+      var p = new SPath(Cfg.RootPath(version ?? Version));
       if (path != null) p = p.Add(path);
       var store = new AzureBlobFileStore(tier switch {
         StoreTier.Backup => Cfg.BackupCs,
@@ -186,8 +186,8 @@ namespace YtReader.Store {
     public string                      Notes               { get; set; }
     public string                      PublicReviewerNotes { get; set; }
     public string                      PublicCreatorNotes  { get; set; }
-    public DateTime                    Updated             { get; set; }
     public string                      MainChannelId       { get; set; }
+    public DateTime                    Updated             { get; set; }
   }
 
   public class UserChannelReview : UserChannelReviewCommon {
@@ -276,9 +276,9 @@ namespace YtReader.Store {
     public DateTime? Created          { get; init; }
     public int?      Likes            { get; init; }
     public bool      IsChannelOwner   { get; init; }
-    public DateTime  Updated          { get; init; }
     public DateTime? Modified         { get; init; }
     public Platform  Platform         { get; init; }
+    public DateTime  Updated          { get; init; }
   }
 
   public record RecStored : Rec, IHasUpdated {

@@ -46,8 +46,8 @@ namespace Mutuo.Etl.Pipe {
   }
 
   public class PipeAppStorageCfg {
-    [Required] public string     Cs   { get; set; } = "UseDevelopmentStorage=true";
-    [Required] public StringPath Path { get; set; } = "pipe";
+    [Required] public string Cs   { get; set; } = "UseDevelopmentStorage=true";
+    [Required] public SPath  Path { get; set; } = "pipe";
 
     /// <summary>The default parallelism when working with pipe storage</summary>
     [Required]
