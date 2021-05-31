@@ -38,28 +38,35 @@ namespace Tests {
       var res = await list.ToListAsync();
     }
 
+    static async IAsyncEnumerable<int> AsyncRange(int count) {
+      foreach (var i in Enumerable.Range(start: 0, count: 100)) yield return i;
+    }
+
     [Test]
     public static async Task TestChainedBlocks() {
       using var ctx = await TextCtx();
       var log = ctx.Log;
 
-      var res = await Enumerable.Range(start: 0, count: 100).BlockMap(async i => {
+      var res = await AsyncRange(100).BlockMap(async i => {
           await 1.Seconds().Delay();
           log.Information("{i}a", i);
+          if (i == 10) throw new("a block error");
           return $"{i}a";
         }, parallel: 4).BlockMap(async a => {
           await 1.Seconds().Delay();
           log.Information("{a}b", a);
-          if (a == "20a") {
+          /*if (a == "20a") {
             log.Information("b is throws error now");
             throw new("b error");
-          }
+          }*/
           return $"{a}b";
-        }, parallel: 4).Batch(10)
-        .Select(g => g.Select(b => $"{b}c").ToArray())
-        .BlockDo(async g => {
+        }, parallel: 4)
+        .NotNull()
+        //.Batch(10)
+        //.Select(g => g.Select(b => $"{b}c").ToArray())
+        .BlockDo(async s => {
           await 1.Seconds().Delay();
-          log.Information("Batch {Res}", g.Join("|"));
+          log.Information("Batch {Res}", s);
         });
     }
 

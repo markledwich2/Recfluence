@@ -33,9 +33,10 @@ namespace SysExtensions.Threading {
       CancellationToken cancel = default) {
       var options = ActionOptions(parallel, capacity, cancel);
       var block = new ActionBlock<(T, int)>(i => action(i.Item1, i.Item2), options);
-      var produced = await ProduceAsync(source, block);
-      await block.Completion;
-      return produced;
+      var produceTask = await ProduceAsync(source, block);
+      if (block.Completion.IsFaulted)
+        await block.Completion;
+      return produceTask;
     }
 
     static ExecutionDataflowBlockOptions ActionOptions(int parallel, int? capacity, CancellationToken cancel) {
@@ -56,7 +57,8 @@ namespace SysExtensions.Threading {
         if (!await block.OutputAvailableAsync()) break;
         yield return await block.ReceiveAsync();
       }
-      await block.Completion;
+      if (block.Completion.IsFaulted)
+        await block.Completion;
       await produceTask;
     }
 
@@ -114,7 +116,9 @@ namespace SysExtensions.Threading {
         if (!await block.OutputAvailableAsync()) break;
         yield return await block.ReceiveAsync();
       }
-      await Task.WhenAll(produceTask, block.Completion);
+      if (block.Completion.IsFaulted)
+        await block.Completion;
+      await produceTask;
     }
 
     public static async IAsyncEnumerable<R> BlockMap<T, R>(this Task<IAsyncEnumerable<T>> source,
@@ -153,7 +157,6 @@ namespace SysExtensions.Threading {
         foreach (var item in source) {
           if (cancel.IsCancellationRequested || block.Completion.IsFaulted) return produced;
           await block.SendAsync(item).ConfigureAwait(false);
-          ;
           produced++;
         }
       }
@@ -164,7 +167,8 @@ namespace SysExtensions.Threading {
       return produced;
     }
 
-    /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory</summary>
+    /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory.
+    ///   Deprecated</summary>
     public static async Task<IReadOnlyCollection<R>> BlockMapList<T, R>(this IEnumerable<T> source,
       Func<T, Task<R>> func, int parallel = 1, int? capacity = null,
       Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default, CancellationToken cancel = default) {

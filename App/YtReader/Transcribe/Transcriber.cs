@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -103,7 +104,7 @@ namespace YtReader.Transcribe {
       log.Information("Transcribe - completed transcribing");
     }
 
-    async IAsyncEnumerable<VideoData> LoadVideoMedia(TranscribeOptions options, ILogger log, CancellationToken cancel) {
+    async IAsyncEnumerable<VideoData> LoadVideoMedia(TranscribeOptions options, ILogger log, [EnumeratorCancellation] CancellationToken cancel) {
       using var db = await Sf.Open(log);
       if (options.Mode == TranscribeMode.Query) {
         var tempDir = YtResults.TempDir();
@@ -135,7 +136,7 @@ order by views desc nulls last
             SPath path = $"{mediaLoadPath}/{i}.jsonl.gz";
             await StoreForLoad.Save(path, await b.ToJsonlGzStream(IJsonlStore.JCfg), log);
             return path;
-          }).ToArrayAsync();
+          }).ToArrayAsync(cancellationToken: cancel);
         await foreach (var v in db.QueryAsync<VideoData>("media-loaded-sans-caption", $@"
 with media as (
   with raw as (select $1::object v from @yt_data/{StoreForLoad.BasePathSansContainer()}/{mediaLoadPath}/)
