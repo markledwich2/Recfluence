@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -63,9 +64,8 @@ namespace YtReader.Transcribe {
 
     public async Task TranscribeVideos(TranscribeOptions options, ILogger log, CancellationToken cancel = default) {
       log = log.ForContext("Function", nameof(TranscribeVideos));
-      if (options.Parts.ShouldRun(PTranscribe)) {
-        var videos = await LoadVideoMedia(options, log, cancel);
-        await videos
+      if (options.Parts.ShouldRun(PTranscribe))
+        await LoadVideoMedia(options, log, cancel)
           .BlockMap(async v => {
             var detectLanguage = true;
             TransRoot transResult = null;
@@ -95,20 +95,19 @@ namespace YtReader.Transcribe {
           .NotNull()
           .BlockDo(async caption => {
             await StoreDb.Captions.Append(caption, log);
-            // transcribing is expensive and slow, save each one rather than batching
+            // transcribing is expensive and slow, save each one immediately rather than batching
             log.Information("Transcribe - saved caption for video: {Videos}", caption.VideoId);
           });
-      }
 
       if (options.Parts.ShouldRun(PStage)) await Stage.StageUpdate(log, tableNames: new[] {"caption_stage"});
       log.Information("Transcribe - completed transcribing");
     }
 
-    async Task<VideoData[]> LoadVideoMedia(TranscribeOptions options, ILogger log, CancellationToken cancel) {
+    async IAsyncEnumerable<VideoData> LoadVideoMedia(TranscribeOptions options, ILogger log, CancellationToken cancel) {
       using var db = await Sf.Open(log);
       if (options.Mode == TranscribeMode.Query) {
         var tempDir = YtResults.TempDir();
-        return await db.QueryAsync<VideoData>("video media_url", $@"
+        await foreach (var v in db.QueryAsync<VideoData>("video media_url", $@"
 with vids as ({(options.QueryName == null ? "select * from video_extra" : TranscribeSql.Sql[options.QueryName])})
 select q.video_id, e.source_id, e.media_url, e.channel_id, e.platform
 from vids q
@@ -117,25 +116,27 @@ where media_url is not null {options.Platform.Do(p => $"and platform = {p.EnumSt
 and not exists (select * from caption s where s.video_id = q.video_id)
 order by views desc nulls last
 {options.Limit.Do(l => $"limit {l}")}
-").BlockMap(async v => v with {media_path = await CopyVideo(log, v, tempDir, cancel)}, Cfg.Parallel, cancel: cancel).ToArrayAsync();
+").BlockMap(async v => v with {media_path = await CopyVideo(log, v, tempDir, cancel)}, Cfg.Parallel, cancel: cancel))
+          yield return v;
       }
-
-      var mediaLoadPath = $"media-load/{ShortGuid.Create(6)}";
-      var mediaLoadFiles = await StoreMedia.List("", allDirectories: true)
-        .SelectMany()
-        .Select(f => new {
-          Platform = f.Path.Tokens.First().ParseEnum<Platform>(),
-          SourceId = f.Path.NameSansExtension,
-          MediaPath = f.Path
-        })
-        .Where(v => options.SourceIds == null || options.SourceIds.Contains(v.SourceId))
-        .Batch(10000)
-        .BlockMap(async (b, i) => {
-          SPath path = $"{mediaLoadPath}/{i}.jsonl.gz";
-          await StoreForLoad.Save(path, await b.ToJsonlGzStream(IJsonlStore.JCfg), log);
-          return path;
-        }).ToArrayAsync();
-      var videos = await db.QueryAsync<VideoData>("media-loaded-sans-caption", $@"
+      else {
+        // load allrady downloaded media that doesn't exist in the warehouse
+        var mediaLoadPath = $"media-load/{ShortGuid.Create(6)}";
+        var mediaLoadFiles = await StoreMedia.List("", allDirectories: true)
+          .SelectMany()
+          .Select(f => new {
+            Platform = f.Path.Tokens.First().ParseEnum<Platform>(),
+            SourceId = f.Path.NameSansExtension,
+            MediaPath = f.Path
+          })
+          .Where(v => options.SourceIds == null || options.SourceIds.Contains(v.SourceId))
+          .Batch(10000)
+          .BlockMap(async (b, i) => {
+            SPath path = $"{mediaLoadPath}/{i}.jsonl.gz";
+            await StoreForLoad.Save(path, await b.ToJsonlGzStream(IJsonlStore.JCfg), log);
+            return path;
+          }).ToArrayAsync();
+        await foreach (var v in db.QueryAsync<VideoData>("media-loaded-sans-caption", $@"
 with media as (
   with raw as (select $1::object v from @yt_data/{StoreForLoad.BasePathSansContainer()}/{mediaLoadPath}/)
   select v:Platform::string platform, v:SourceId::string source_id, v:MediaPath::string media_path from raw
@@ -145,9 +146,11 @@ from media q
 join video_extra e on e.source_id = q.source_id and e.platform = q.platform 
 where not exists (select * from caption s where s.video_id = e.video_id)
 order by e.views desc nulls last
-").ToArrayAsync();
-      await mediaLoadFiles.BlockDo(f => StoreForLoad.Delete(f), Cfg.Parallel, cancel: cancel);
-      return videos;
+{options.Limit.Do(l => $"limit {l}")}
+").WithCancellation(cancel))
+          yield return v;
+        await mediaLoadFiles.BlockDo(f => StoreForLoad.Delete(f), Cfg.Parallel, cancel: cancel); // delete files used for load
+      }
     }
 
     async Task<SPath> CopyVideo(ILogger log, VideoData v, FPath tempDir, CancellationToken cancel) {
