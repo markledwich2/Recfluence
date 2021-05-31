@@ -491,8 +491,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
   [Command("transcribe", Description = "download videos and transcribe them. maybe should be part of update cmd once done")]
   public record TranscribeCmd(ILogger Log, Transcriber Transcriber, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
-    [CommandOption("platform", shortName: 'p')]
-    public Platform? Platform { get; set; }
+    [CommandOption("platform")] public Platform? Platform { get; set; }
 
     [CommandOption("limit", shortName: 'l')]
     public int? Limit { get; set; }
@@ -500,10 +499,13 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     [CommandOption("query", shortName: 'q')]
     public string QueryName { get; set; }
 
+    [CommandOption("parts", shortName: 'p')]
+    public string Parts { get; set; }
+
     protected override string GroupName => "transcribe";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
-      await Transcriber.TranscribeVideos(Log, console.RegisterCancellationHandler(), Platform, Limit, QueryName);
+      await Transcriber.TranscribeVideos(Log, console.RegisterCancellationHandler(), Platform, Limit, QueryName, ParseEnums<TranscribeParts>(Parts));
       Log.Information("Completed downloading videos");
     }
   }

@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Prod - Collect List" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.exe" />
-    <option name="PROGRAM_PARAMETERS" value="collect-list ChannelPath import/channels/qanon_dx_expansion_channels_20210520.txt.gz -z -p channel|channel-video  -e extra|caption" />
+    <option name="PROGRAM_PARAMETERS" value="collect-list VideoChannelNamed bitchute_extra_broken_chan -z --container-name bitchute -p video -e extra " />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>

@@ -31,7 +31,7 @@ namespace SysExtensions.Threading {
       }
     }
 
-    public static Task Delay(this TimeSpan timespan) => Task.Delay(timespan);
+    public static Task Delay(this TimeSpan timespan, CancellationToken cancel = default) => Task.Delay(timespan, cancel);
 
     /// <summary>Executes the tasks in order. Completing tasks trigger the next one to start</summary>
     public static IEnumerable<Task<T>> Interleaved<T>(this IEnumerable<Task<T>> tasks) {
@@ -106,7 +106,7 @@ namespace SysExtensions.Threading {
       if (r is IDisposable d) d.Dispose();
       return res;
     }
-    
+
     public static async Task Then<T>(this Task<T> task, Action<T> then) {
       var r = await task;
       then(r);

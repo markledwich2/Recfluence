@@ -137,13 +137,17 @@ namespace SysExtensions.Threading {
     static async Task<long> ProduceAsync<T>(this IAsyncEnumerable<T> source, ITargetBlock<(T, int)> block, CancellationToken cancel = default,
       bool complete = true, ILogger log = null) {
       var produced = 0;
-      await foreach (var item in source.Select((r, i) => (r, i)).WithCancellation(cancel)) {
-        if (cancel.IsCancellationRequested) return produced;
-        await block.SendAsync(item).ConfigureAwait(false);
-        produced++;
+      try {
+        await foreach (var item in source.Select((r, i) => (r, i)).WithCancellation(cancel)) {
+          if (cancel.IsCancellationRequested) return produced;
+          await block.SendAsync(item).ConfigureAwait(false);
+          produced++;
+        }
       }
-      if (complete)
-        block.Complete();
+      finally {
+        if (complete)
+          block.Complete();
+      }
       return produced;
     }
 

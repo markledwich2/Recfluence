@@ -130,7 +130,7 @@ namespace Mutuo.Etl.Pipe {
         : await pipeWorker.Launch(ctx, batches, log, cancel);
 
       var hasOutState = typeof(TOut) != typeof(object) && !runCfg.ReturnOnStart;
-      var outState = hasOutState ? await GetOutState() : res.Select(r => (Metadata: r, OutState: (TOut) default)).ToArray();
+      var outState = hasOutState ? await GetOutStateInner() : res.Select(r => (Metadata: r, OutState: (TOut) default)).ToArray();
       var batchId = $"{pipeName}|{groupRunId.GroupId}";
 
       if (runCfg.ReturnOnStart)
@@ -147,12 +147,15 @@ namespace Mutuo.Etl.Pipe {
 
       return outState;
 
-      async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> GetOutState() =>
+      async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> GetOutStateInner() =>
         await res.BlockMap(async b => await GetOutState<TOut>(ctx, log, b, runCfg.ReturnOnStart), ctx.PipeCfg.Store.Parallel).ToArrayAsync();
     }
 
     static async Task<(PipeRunMetadata Metadata, TOut OutState)> GetOutState<TOut>(IPipeCtx ctx, ILogger log, PipeRunMetadata b, bool returnOnStart) {
-      var state = !returnOnStart && !b.Error && typeof(TOut) != typeof(object) ? await GetOutState<TOut>(ctx, b.Id, log) : default;
+      var (state, ex) = !returnOnStart && !b.Error && typeof(TOut) != typeof(object)
+        ? await GetOutState<TOut>(ctx, b.Id, log).Try()
+        : default;
+      if (ex != null) log.Warning("Pipe - couldn't get state for pipe {Pipe}", b.Id);
       return (b, state);
     }
 
@@ -243,6 +246,8 @@ namespace Mutuo.Etl.Pipe {
       ctx.AppCtx.Assemblies.SelectMany(a => a.GetLoadableTypes())
         .SelectMany(t => t.GetRuntimeMethods().Where(m => m.GetCustomAttribute<PipeAttribute>() != null).Select(m => (Type: t, Method: m)))
         .KeyBy(m => m.Method.Name);
+
+    public static string PipeTag(this SemVersion version) => version.ToString();
 
     #region State
 
@@ -363,8 +368,6 @@ namespace Mutuo.Etl.Pipe {
       expression.Body as MethodCallExpression ?? throw new InvalidOperationException("The expression must be a call to a pipe method");
 
     #endregion
-
-    public static string PipeTag(this SemVersion version) => version.ToString();
   }
 
   public record PipeArgs(PipeArg[] Values, string Version = PipeArgs.Versions.V1) {

@@ -107,6 +107,15 @@ namespace SysExtensions {
       }
     }
 
+    public static async Task Swallow(this Task task, Action<Exception> onError = null) {
+      try {
+        await task;
+      }
+      catch (Exception ex) {
+        onError?.Invoke(ex);
+      }
+    }
+
     public static async Task<(T, Exception)> Try<T>(this Task<T> task, T defaultValue = default) {
       try {
         return (await task, default);
