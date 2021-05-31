@@ -36,13 +36,6 @@ namespace YtReader.Transcribe {
   }
 
   public record Transcriber(BlobStores Stores, SnowflakeConnectionProvider Sf, AwsCfg Aws, YtStore StoreDb, Stage Stage) {
-    /*
-    MediaFormat Extension(Platform? platform) => platform switch {
-      Platform.Rumble => "mp4",
-      _ => throw new($"Platform {platform} not supported for media transcription")
-    };
-    */
-
     static readonly Regex                         SafeNameRe  = new("[^\\w0-9]", RegexOptions.Compiled);
     readonly        S3Store                       StoreMedia  = new(Aws.S3, "media");
     readonly        S3Store                       StoreTrans  = new(Aws.S3, "transcripts");
@@ -70,7 +63,7 @@ from vids q
 join video_extra e on e.video_id = q.video_id 
 where media_url is not null {platform.Do(p => $"and platform = {p.EnumString().SingleQuote()}")}
 and not exists (select * from caption s where s.video_id = q.video_id)
-order by views desc
+order by views desc nulls last
 {limit.Do(l => $"limit {l}")}
 ").ToListAsync();
 
