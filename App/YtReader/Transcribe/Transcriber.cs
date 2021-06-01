@@ -92,7 +92,7 @@ namespace YtReader.Transcribe {
       else {
         TranscriptionJob job;
         while (true) {
-          var startTrans = await GetOrStartTrans(transPath, detectLanguage, log);
+          var startTrans = await GetOrStartTrans(v.media_path, transPath, detectLanguage, log);
           if (startTrans == default) return default;
           job = await WaitForCompletedTrans(log, startTrans);
           if (job.TranscriptionJobStatus == FAILED && job.FailureReason.StartsWith("Your audio file must have a speech segment long") && detectLanguage) {
@@ -196,8 +196,8 @@ order by e.views desc nulls last
       return blobPath;
     }
 
-    async Task<TranscriptionJob> GetOrStartTrans(SPath transPath, bool identifyLanguage, ILogger log) {
-      var mediaUrl = StoreMedia.S3Uri(transPath).ToString();
+    async Task<TranscriptionJob> GetOrStartTrans(SPath mediaPath, SPath transPath, bool identifyLanguage, ILogger log) {
+      var mediaUrl = StoreMedia.S3Uri(mediaPath).ToString();
       var existingJobs = await TransClient.ListTranscriptionJobsAsync(new() {JobNameContains = transPath.NameSansExtension, MaxResults = 100});
       var existingJob = await existingJobs.TranscriptionJobSummaries
         .BlockMap(j => TransClient.GetTranscriptionJobAsync(new() {TranscriptionJobName = j.TranscriptionJobName}))
@@ -218,7 +218,7 @@ order by e.views desc nulls last
       StartTranscriptionJobRequest req = new() {
         IdentifyLanguage = identifyLanguage,
         LanguageCode = identifyLanguage ? null : LanguageCode.EnUS,
-        MediaFormat = transPath.ExtensionsString,
+        MediaFormat = mediaPath.ExtensionsString,
         Media = new() {
           MediaFileUri = mediaUrl
         },
