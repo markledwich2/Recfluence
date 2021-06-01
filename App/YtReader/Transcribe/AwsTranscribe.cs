@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Amazon.TranscribeService;
+using Amazon.TranscribeService.Model;
 using Humanizer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -66,6 +68,15 @@ namespace YtReader.Transcribe {
   }
 
   public static class AwsTranscribe {
+    public static async IAsyncEnumerable<TranscriptionJobSummary[]> Jobs(this AmazonTranscribeServiceClient client) {
+      string next = null;
+      do {
+        var res = await client.ListTranscriptionJobsAsync(new() {NextToken = next, MaxResults = 100});
+        yield return res.TranscriptionJobSummaries.ToArray();
+        next = res.NextToken;
+      } while (next != null);
+    }
+
     public static (TimeSpan Start, TimeSpan End) Period(this RTransPeriod p) => (ParseTs(p.start_time), ParseTs(p.end_time));
 
     static TimeSpan ParseTs(string p) => p.TryParseDouble().Do(TimeSpan.FromSeconds);

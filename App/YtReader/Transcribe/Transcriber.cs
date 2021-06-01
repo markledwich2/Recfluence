@@ -14,6 +14,7 @@ using Humanizer;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Polly;
+using Polly.Retry;
 using Serilog;
 using SysExtensions;
 using SysExtensions.Collections;
@@ -65,13 +66,12 @@ namespace YtReader.Transcribe {
 
     public async Task Transcribe(TranscribeOptions options, ILogger log, CancellationToken cancel = default) {
       log = log.ForContext("Function", nameof(Transcribe));
-
       var errors = 0;
-
-      if (options.Parts.ShouldRun(PTranscribe))
+      if (options.Parts.ShouldRun(PTranscribe)) {
+        var existingJobs = await TransClient.Jobs().SelectMany().ToArrayAsync();
         await LoadMedia(options, log, cancel)
           .BlockMap(async v => {
-              var (res, ex) = await Transcribe(v, log).Try();
+              var (res, ex) = await Transcribe(v, existingJobs, log).Try();
               if (ex == null) return res;
               log.Warning(ex, "Transcribe - unhandled error transcribing: {Error}", ex.Message);
               if (Interlocked.Increment(ref errors) > 20) throw new("Transcribe - too many errors, probably a bug");
@@ -84,12 +84,13 @@ namespace YtReader.Transcribe {
             // transcribing is expensive and slow, save each one immediately rather than batching
             log.Information("Transcribe - saved caption for video: {Videos}", caption.VideoId);
           });
+      }
 
       if (options.Parts.ShouldRun(PStage)) await Stage.StageUpdate(log, tableNames: new[] {"caption_stage"});
       log.Information("Transcribe - completed transcribing");
     }
 
-    async Task<VideoCaption> Transcribe(VideoData v, ILogger log) {
+    async Task<VideoCaption> Transcribe(VideoData v, TranscriptionJobSummary[] existingJobs, ILogger log) {
       var detectLanguage = true;
       TransRoot transResult = null;
       var transPath = v.media_path.WithExtension("json");
@@ -100,7 +101,7 @@ namespace YtReader.Transcribe {
       else {
         TranscriptionJob job;
         while (true) {
-          var startTrans = await GetOrStartTrans(v.media_path, transPath, detectLanguage, log);
+          var startTrans = await GetOrStartTrans(existingJobs, v.media_path, transPath, detectLanguage, log);
           if (startTrans == default) return default;
           job = await WaitForCompletedTrans(log, startTrans);
           if (job.TranscriptionJobStatus == FAILED && job.FailureReason.StartsWith("Your audio file must have a speech segment long") && detectLanguage) {
@@ -204,11 +205,19 @@ order by e.views desc nulls last
       return blobPath;
     }
 
-    async Task<TranscriptionJob> GetOrStartTrans(SPath mediaPath, SPath transPath, bool identifyLanguage, ILogger log) {
+    /// <summary>Policy for using the AWS transcription service. It has its own retry, but still gives by rate exceeded errors</summary>
+    static AsyncRetryPolicy AwsRetry(ILogger log) =>
+      Policy
+        .Handle<AmazonTranscribeServiceException>(e => e.Message == "Rate exceeded" || e.Retryable != null)
+        .RetryBackoff("start job", retryCount: 4, 10.Seconds(), log);
+
+    async Task<TranscriptionJob> GetOrStartTrans(TranscriptionJobSummary[] existingJobs, SPath mediaPath, SPath transPath, bool identifyLanguage,
+      ILogger log) {
       var mediaUrl = StoreMedia.S3Uri(mediaPath).ToString();
-      var existingJobs = await TransClient.ListTranscriptionJobsAsync(new() {JobNameContains = transPath.NameSansExtension, MaxResults = 100});
-      var existingJob = await existingJobs.TranscriptionJobSummaries
-        .BlockMap(j => TransClient.GetTranscriptionJobAsync(new() {TranscriptionJobName = j.TranscriptionJobName}))
+
+      var existingJob = await existingJobs
+        .Where(j => j.TranscriptionJobName.StartsWith(transPath.NameSansExtension))
+        .BlockMap(j => AwsRetry(log).ExecuteAsync(() => TransClient.GetTranscriptionJobAsync(new() {TranscriptionJobName = j.TranscriptionJobName})))
         .Where(j => j.TranscriptionJob.Media.MediaFileUri == mediaUrl)
         .OrderBy(j => j.TranscriptionJob.TranscriptionJobStatus.Value switch {
           nameof(COMPLETED) => 0,
@@ -239,10 +248,8 @@ order by e.views desc nulls last
         }
       };
 
-      var retry = Policy
-        .Handle<AmazonTranscribeServiceException>(e => e.Message == "Rate exceeded" || e.Retryable != null)
-        .RetryBackoff("start job", retryCount: 4, 10.Seconds(), log);
-      var (res, ex) = await retry.ExecuteAsync(() => TransClient.StartTranscriptionJobAsync(req)).Try();
+
+      var (res, ex) = await AwsRetry(log).ExecuteAsync(() => TransClient.StartTranscriptionJobAsync(req)).Try();
       if (ex != null) {
         log.Warning(ex, "Transcribe unable to start transcription - {@Job}: {Error}", req, ex.Message);
         return default;
