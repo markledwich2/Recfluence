@@ -65,6 +65,7 @@ namespace YtReader.Transcribe {
 
     public async Task Transcribe(TranscribeOptions options, ILogger log, CancellationToken cancel = default) {
       log = log.ForContext("Function", nameof(Transcribe));
+
       if (options.Parts.ShouldRun(PTranscribe))
         await LoadMedia(options, log, cancel)
           .BlockMap(async v => await Transcribe(v, log).Swallow(e => log.Error(e, "Transcribe - unhandled error transcribing: {Error}", e.Message)),
@@ -83,7 +84,7 @@ namespace YtReader.Transcribe {
     async Task<VideoCaption> Transcribe(VideoData v, ILogger log) {
       var detectLanguage = true;
       TransRoot transResult = null;
-      var transPath = v.media_path.WithExtension(".json");
+      var transPath = v.media_path.WithExtension("json");
       if (await StoreTrans.Exists(transPath)) {
         transResult = await LoadTrans(transPath, log);
         log.Debug("Transcribe - loaded existing result {TransUrl}", StoreTrans.S3Uri(transPath));
@@ -91,7 +92,7 @@ namespace YtReader.Transcribe {
       else {
         TranscriptionJob job;
         while (true) {
-          var startTrans = await GetOrStartTrans(v.media_path, detectLanguage, log);
+          var startTrans = await GetOrStartTrans(transPath, detectLanguage, log);
           if (startTrans == default) return default;
           job = await WaitForCompletedTrans(log, startTrans);
           if (job.TranscriptionJobStatus == FAILED && job.FailureReason.StartsWith("Your audio file must have a speech segment long") && detectLanguage) {
@@ -230,7 +231,7 @@ order by e.views desc nulls last
         }
       };
 
-      var retry = Policy.Handle<LimitExceededException>().RetryBackoff("start job", retryCount: 4, 10.Seconds(), log);
+      var retry = Policy.Handle<AmazonTranscribeServiceException>(e => e.Retryable != null).RetryBackoff("start job", retryCount: 4, 10.Seconds(), log);
       var (res, ex) = await retry.ExecuteAsync(() => TransClient.StartTranscriptionJobAsync(req)).Try();
       if (ex != null) {
         log.Warning(ex, "Transcribe unable to start transcription - {@Job}: {Error}", req, ex.Message);

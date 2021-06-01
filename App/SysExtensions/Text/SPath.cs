@@ -74,7 +74,7 @@ namespace SysExtensions.Text {
 
     public override string ToString() => StringValue;
 
-    public SPath WithExtension(string extension) => Parent.Add(NameSansExtension + extension);
+    public SPath WithExtension(string extension) => Parent.Add($"{NameSansExtension}.{extension}");
     public SPath WithoutExtension() => Parent.Add(NameSansExtension);
 
     public SPath ToAbsolute() => IsAbsolute ? this : Absolute(Tokens);

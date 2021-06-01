@@ -33,10 +33,9 @@ namespace SysExtensions.Threading {
       CancellationToken cancel = default) {
       var options = ActionOptions(parallel, capacity, cancel);
       var block = new ActionBlock<(T, int)>(i => action(i.Item1, i.Item2), options);
-      var produceTask = await ProduceAsync(source, block);
-      if (block.Completion.IsFaulted)
-        await block.Completion;
-      return produceTask;
+      var produced = await ProduceAsync(source, block);
+      await WaitForComplete(block);
+      return produced;
     }
 
     static ExecutionDataflowBlockOptions ActionOptions(int parallel, int? capacity, CancellationToken cancel) {
@@ -57,8 +56,7 @@ namespace SysExtensions.Threading {
         if (!await block.OutputAvailableAsync()) break;
         yield return await block.ReceiveAsync();
       }
-      if (block.Completion.IsFaulted)
-        await block.Completion;
+      await WaitForComplete(block);
       await produceTask;
     }
 
@@ -100,7 +98,7 @@ namespace SysExtensions.Threading {
         if (!await block.OutputAvailableAsync()) break;
         yield return await block.ReceiveAsync();
       }
-      await block.Completion;
+      await WaitForComplete(block);
       await produceTask;
     }
 
@@ -116,8 +114,7 @@ namespace SysExtensions.Threading {
         if (!await block.OutputAvailableAsync()) break;
         yield return await block.ReceiveAsync();
       }
-      if (block.Completion.IsFaulted)
-        await block.Completion;
+      await WaitForComplete(block);
       await produceTask;
     }
 
@@ -165,6 +162,18 @@ namespace SysExtensions.Threading {
           block.Complete();
       }
       return produced;
+    }
+
+    static async Task WaitForComplete<T>(ActionBlock<(T, int)> block) {
+      // if the producer errors before anything is added, we can't wait on completion
+      if (block.Completion.Status.In(TaskStatus.WaitingForActivation, TaskStatus.WaitingToRun) && block.InputCount == 0) return;
+      await block.Completion;
+    }
+
+    static async Task WaitForComplete<T, R>(TransformBlock<(T, int), R> block) {
+      // if the producer errors before anything is added, we can't wait on completion
+      if (block.Completion.Status.In(TaskStatus.WaitingForActivation, TaskStatus.WaitingToRun) && block.InputCount == 0) return;
+      await block.Completion;
     }
 
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory.

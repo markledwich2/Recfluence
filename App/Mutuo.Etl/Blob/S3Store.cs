@@ -67,6 +67,11 @@ namespace Mutuo.Etl.Blob {
       }
     }
 
+    public async Task Rename(SPath from, SPath to) {
+      await S3.CopyObjectAsync(Cfg.Bucket, Key(from), Cfg.Bucket, Key(to));
+      await S3.DeleteObjectAsync(Cfg.Bucket, Key(from));
+    }
+
     public Task<Stream> OpenForWrite(SPath path, ILogger log = null) => throw new NotImplementedException();
 
     public Uri S3Uri(SPath path) => $"s3://{Cfg.Bucket}/{Key(path)}".AsUri();
