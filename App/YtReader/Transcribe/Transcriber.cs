@@ -66,9 +66,17 @@ namespace YtReader.Transcribe {
     public async Task Transcribe(TranscribeOptions options, ILogger log, CancellationToken cancel = default) {
       log = log.ForContext("Function", nameof(Transcribe));
 
+      var errors = 0;
+
       if (options.Parts.ShouldRun(PTranscribe))
         await LoadMedia(options, log, cancel)
-          .BlockMap(async v => await Transcribe(v, log).Swallow(e => log.Error(e, "Transcribe - unhandled error transcribing: {Error}", e.Message)),
+          .BlockMap(async v => {
+              var (res, ex) = await Transcribe(v, log).Try();
+              if (ex == null) return res;
+              log.Warning(ex, "Transcribe - unhandled error transcribing: {Error}", ex.Message);
+              if (Interlocked.Increment(ref errors) > 20) throw new("Transcribe - too many errors, probably a bug");
+              return res;
+            },
             Cfg.ParallelTranscribe)
           .NotNull()
           .BlockDo(async caption => {
@@ -231,7 +239,9 @@ order by e.views desc nulls last
         }
       };
 
-      var retry = Policy.Handle<AmazonTranscribeServiceException>(e => e.Retryable != null).RetryBackoff("start job", retryCount: 4, 10.Seconds(), log);
+      var retry = Policy
+        .Handle<AmazonTranscribeServiceException>(e => e.Message == "Rate exceeded" || e.Retryable != null)
+        .RetryBackoff("start job", retryCount: 4, 10.Seconds(), log);
       var (res, ex) = await retry.ExecuteAsync(() => TransClient.StartTranscriptionJobAsync(req)).Try();
       if (ex != null) {
         log.Warning(ex, "Transcribe unable to start transcription - {@Job}: {Error}", req, ex.Message);
