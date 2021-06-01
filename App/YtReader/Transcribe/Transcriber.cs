@@ -128,7 +128,7 @@ with vids as ({(options.QueryName == null ? "select * from video_extra" : Transc
 select q.video_id, e.source_id, e.media_url, e.channel_id, e.platform
 from vids q
 join video_extra e on e.video_id = q.video_id 
-where media_url is not null {options.Platform.Do(p => $"and platform = {p.EnumString().SingleQuote()}")}
+where e.media_url is not null {options.Platform.Do(p => $"and platform = {p.EnumString().SingleQuote()}")}
 and not exists (select * from caption s where s.video_id = q.video_id)
 order by views desc nulls last
 {options.Limit.Do(l => $"limit {l}")}
@@ -170,15 +170,15 @@ order by e.views desc nulls last
     }
 
     async Task<SPath> CopyMedia(ILogger log, VideoData v, FPath tempDir, CancellationToken cancel) {
-      var mediaUrl = v.media_url.AsUrl();
-      var ext = mediaUrl.PathSegments.LastOrDefault()?.Split(".").LastOrDefault() ?? throw new("not implemented. Currently relying on extension in url");
+      var sourceMediaUrl = v.media_url.AsUrl();
+      var ext = sourceMediaUrl.PathSegments.LastOrDefault()?.Split(".").LastOrDefault() ?? throw new("not implemented. Currently relying on extension in url");
       var blobPath = BlobPath(v.platform, v.source_id, ext);
       var existing = await StoreMedia.Info(blobPath);
       if (existing != null) {
         log.Debug("Transcribe - using existing media {MediaUrl}", StoreMedia.S3Uri(blobPath));
         return blobPath;
       }
-      log.Debug("Transcribe - loading media from {Url} to {MediaUrl}", mediaUrl, StoreMedia.S3Uri(blobPath));
+      log.Debug("Transcribe - loading media from {Url} to {MediaUrl}", sourceMediaUrl, StoreMedia.S3Uri(blobPath));
 
       var localFile = tempDir.Combine(blobPath.Tokens.ToArray());
       localFile.EnsureDirectoryExists();
@@ -190,17 +190,18 @@ order by e.views desc nulls last
         using (var ws = localFile.Open(FileMode.Create)) {
           var totalBytes = res.Headers.TryGetFirst("Content-Length", out var l) ? l.TryParseInt() : null;
           await rs.CopyToAsync(ws, b => log.Debug("Transcribe - loading {Url} - {Transferred}/{Total}",
-              mediaUrl, b.Bytes().Humanize("#.#"), totalBytes?.Bytes().Humanize("#.#") ?? "unknown bytes"),
+              sourceMediaUrl, b.Bytes().Humanize("#.#"), totalBytes?.Bytes().Humanize("#.#") ?? "unknown bytes"),
             cancel, 100.Kilobytes(), 10.Seconds());
         }
       }
       catch (Exception ex) {
-        log.Error(ex, "Transcribe - failed loading {Url}", mediaUrl);
+        log.Error(ex, "Transcribe - failed loading {MediaUrl}", sourceMediaUrl);
         throw;
       }
 
-      await StoreMedia.Save(blobPath, localFile, log);
-      log.Debug("Transcribe - saved media {MediaUrl}", StoreMedia.S3Uri(blobPath).ToString());
+      var mediaUrl = StoreMedia.S3Uri(blobPath).ToString();
+      var dur = await StoreMedia.Save(blobPath, localFile, log).WithDuration();
+      log.Debug("Transcribe - saved media {MediaUrl} in {Dur}", mediaUrl, dur.HumanizeShort());
       localFile.Delete();
       return blobPath;
     }
