@@ -79,10 +79,10 @@ namespace YtReader.Transcribe {
             },
             Cfg.ParallelTranscribe)
           .NotNull()
-          .BlockDo(async caption => {
+          .BlockDo(async (caption, i) => {
             await StoreDb.Captions.Append(caption, log);
             // transcribing is expensive and slow, save each one immediately rather than batching
-            log.Information("Transcribe - saved caption for video: {Videos}", caption.VideoId);
+            log.Information("Transcribe - saved caption for video {Video} ({Num})", caption.VideoId, i);
           });
       }
 
@@ -259,13 +259,12 @@ order by e.views desc nulls last
       return res.TranscriptionJob;
     }
 
-    //static readonly JsonSerializerSettings JSettings = TransRoot.JsonSettings();
     async Task<TransRoot> LoadTrans(SPath path, ILogger log) => await StoreTrans.Load(path, log).Then(s => s.ToObject<TransRoot>());
 
     async Task<TranscriptionJob> WaitForCompletedTrans(ILogger log, TranscriptionJob startJob) {
       var lastLog = DateTime.UtcNow;
       while (true) {
-        var job = await TransClient.GetTranscriptionJobAsync(new() {TranscriptionJobName = startJob.TranscriptionJobName});
+        var job = await AwsRetry(log).ExecuteAsync(() => TransClient.GetTranscriptionJobAsync(new() {TranscriptionJobName = startJob.TranscriptionJobName}));
         var tj = job.TranscriptionJob;
         if (tj.TranscriptionJobStatus == IN_PROGRESS && lastLog.OlderThan(2.Minutes())) {
           log.Debug("Transcribe - waiting on transcription job '{Job}' to complete (Age {Duration})",
@@ -274,7 +273,7 @@ order by e.views desc nulls last
         }
         if (tj.TranscriptionJobStatus.Value.In(COMPLETED.Value, FAILED.Value) || tj.StartTime.OlderThan(2.Hours())) {
           if (tj.TranscriptionJobStatus == FAILED) log.Warning("Transcribe - failed: {@Job}", tj);
-          else log.Information("Transcribe - {Url} - {Status}", tj.Transcript.TranscriptFileUri, tj.TranscriptionJobStatus);
+          else log.Debug("Transcribe - {Url} - {Status}", tj.Transcript.TranscriptFileUri, tj.TranscriptionJobStatus);
           return tj;
         }
         await 10.Seconds().Delay();
