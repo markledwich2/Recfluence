@@ -314,6 +314,7 @@ namespace YtReader {
       R<AmazonWeb>();
       R<SimpleCollector>();
       R<Transcriber>();
+      R<DataformDescriptions>();
 
       b.Register(_ => pipeAppCtx);
       R<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();

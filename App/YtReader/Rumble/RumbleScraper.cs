@@ -58,7 +58,6 @@ namespace YtReader.Rumble {
           return Videos(doc, log).Select(v => (page: v.Page, vids: v.Videos, cat));
         }, Cfg.WebParallel).NotNull().ToArrayAsync();
 
-      //var vidSources = catVideos.Select(c => c.vids.Select(v => )).ToArray(); // create our async sources (doesn't start executing yet)
       await foreach (var b in catVideos.BlockFlatMap(r => r, Cfg.OuterParallel, cancel: cancel).TakeWhileInclusive(b => {
         var more = Cfg.HomeVidLimit == null || Cfg.HomeVidLimit > vidsCollected;
         Interlocked.Add(ref vidsCollected, b.vids.Length);
@@ -78,6 +77,8 @@ namespace YtReader.Rumble {
 
       Url PageUrl(int page) => doc.Url.SetQueryParam("page", page);
       yield return (ParseVideos(doc), 1);
+
+      if (doc.QuerySelector(".paginator") == null) yield break; // only page if there is a paginator
 
       var pageNum = 2;
       while (true) {

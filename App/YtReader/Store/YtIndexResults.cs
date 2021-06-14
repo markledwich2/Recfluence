@@ -249,6 +249,7 @@ s as (
          , logo_url
          , subs
          , substr(cl.description, 0, 301) description
+          , cl.platform
   from by_channel n
            left join channel_latest cl on n.channel_id=cl.channel_id
 )
@@ -280,6 +281,7 @@ with s as (
        , timediff(seconds,'0'::time,v.duration) duration_secs
        --, n.captions
        , ve.last_seen
+      , e.thumb
   from video_narrative2 n
          left join video_latest v on n.video_id=v.video_id
          left join video_extra e on e.video_id=v.video_id

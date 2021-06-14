@@ -114,9 +114,18 @@ namespace YtReader.Yt {
         SetPart(v, EExtra);
     }
 
-    public int Count => _c.Count;
-
     public VideoExtraPlans(IEnumerable<VideoPlan> plans) => _c.AddRange(plans);
+
+    public int Count => _c.Count;
+    public VideoPlan this[string videoId] => _c[videoId];
+
+    public VideoPlan[] SerializableItems {
+      get => _c.ToArray();
+      set => _c.AddRange(value);
+    }
+
+    public IEnumerator<VideoPlan> GetEnumerator() => _c.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable) _c).GetEnumerator();
 
     public VideoPlan GetOrAdd(string videoId) => _c.GetOrAdd(videoId, () => new(videoId));
 
@@ -136,18 +145,9 @@ namespace YtReader.Yt {
       plan.ForUpdate = forUpdate;
     }
 
-    public IEnumerator<VideoPlan> GetEnumerator() => _c.GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable) _c).GetEnumerator();
-    public VideoPlan this[string videoId] => _c[videoId];
-
     public bool ContainsVideo(string videoId) => this[videoId] != null;
 
     public IEnumerable<VideoPlan> WithPart(ExtraPart part) => this.Where(p => p.Parts.Contains(part));
-
-    public VideoPlan[] SerializableItems {
-      get => _c.ToArray();
-      set => _c.AddRange(value);
-    }
   }
 
   public record VideoForUpdate {

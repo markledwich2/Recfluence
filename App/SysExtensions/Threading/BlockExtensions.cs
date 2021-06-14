@@ -164,17 +164,16 @@ namespace SysExtensions.Threading {
       return produced;
     }
 
-    static async Task WaitForComplete<T>(ActionBlock<(T, int)> block) {
-      // if the producer errors before anything is added, we can't wait on completion
-      if (block.Completion.Status.In(TaskStatus.WaitingForActivation, TaskStatus.WaitingToRun) && block.InputCount == 0) return;
+    static async Task WaitForComplete<T>(ActionBlock<(T, int)> block) =>
+      // we can get blocked when the produce errors before ocmpletion. Shortuctitng here is not the way (single items can get through without being processed)
+      // make sure the producer errors the block.
+      //if (block.Completion.Status.In(TaskStatus.WaitingForActivation, TaskStatus.WaitingToRun) && block.InputCount == 0) return;
       await block.Completion;
-    }
 
-    static async Task WaitForComplete<T, R>(TransformBlock<(T, int), R> block) {
+    static async Task WaitForComplete<T, R>(TransformBlock<(T, int), R> block) =>
       // if the producer errors before anything is added, we can't wait on completion
-      if (block.Completion.Status.In(TaskStatus.WaitingForActivation, TaskStatus.WaitingToRun) && block.InputCount == 0) return;
+      //if (block.Completion.Status.In(TaskStatus.WaitingForActivation, TaskStatus.WaitingToRun) && block.InputCount == 0) return;
       await block.Completion;
-    }
 
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory.
     ///   Deprecated</summary>

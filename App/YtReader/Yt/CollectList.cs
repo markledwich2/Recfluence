@@ -90,20 +90,21 @@ namespace YtReader.Yt {
           .Then(r => r.Select(p => p.OutState).SelectMany().ToArray());
       }
 
-      if (parts.ShouldRun(LUser)) await ProcessUsers(log, opts, cancel);
+      if (opts.CollectFrom.Type == UserNamed && parts.ShouldRun(LUser)) await ProcessUsers(log, opts, cancel);
 
-      IReadOnlyCollection<string> channelIds = Array.Empty<string>();
+      IReadOnlyCollection<(string ChannelId, Platform Platform)> channelIds = Array.Empty<(string, Platform)>();
       if (parts.ShouldRunAny(LChannelVideo, LChannel)) {
         // channels explicitly listed in the query
         using (var db = await YtCollector.Db(log))
-          channelIds = await ChannelIds(db, VideoChannelSelect(opts), opts.LimitChannels, opts.Platforms);
+          channelIds = await ChannelIds(db, VideoChannelSelect(opts), opts.LimitChannels, opts.Platforms, opts.Limit);
 
         // channels found from processing videos
         if (parts.ShouldRun(LDiscoveredChannel))
-          channelIds = channelIds.Concat(videosProcessed.Select(e => e.ChannelId)).NotNull().Distinct().ToArray();
+          channelIds = channelIds.Concat(videosProcessed.Select(e => (e.ChannelId, e.Platform))).NotNull().Distinct().ToArray();
 
         if (channelIds.Any()) {
-          var channels = await YtCollector.PlanAndUpdateChannelStats(new[] {PChannel, PChannelVideos}, channelIds, log, cancel)
+          var channels = await YtCollector
+            .PlanAndUpdateChannelStats(new[] {PChannel, PChannelVideos}, channelIds.Select(c => c.ChannelId).ToArray(), log, cancel)
             .Then(chans => chans
               .Where(c => c.LastVideoUpdate.OlderThanOrNull(opts.StaleAgo)) // filter to channels we haven't updated video's in recently
               .Select(c => c with {Update = c.Update == Discover ? Standard : c.Update})); // revert to standard update for channels detected as discover
@@ -178,7 +179,7 @@ namespace YtReader.Yt {
             return extras;
           }, Cfg.Collect.ParallelChannels, cancel: cancel)
           .SelectManyList();
-        return extra.Select(e => new VideoProcessResult(e.VideoId, e.ChannelId)).ToArray();
+        return extra.Select(e => new VideoProcessResult(e.VideoId, e.ChannelId, platform)).ToArray();
       }).SelectMany().ToArrayAsync();
 
       return res;
@@ -222,17 +223,24 @@ where not exists (select * from user u where u.user_id = q.user_id)
       _ => throw new($"UserSelect - CollectFrom {opts.CollectFrom} not supported")
     };
 
-    static Task<IReadOnlyCollection<string>> ChannelIds(YtCollectDbCtx db, (string Sql, JObject Args) select, string[] channels = null,
-      Platform[] platforms = null) =>
-      db.Db.Query<string>("distinct channels", $@"
-with raw_channels as (select distinct channel_id from ({select.Sql})  where channel_id is not null)
+    static async Task<IReadOnlyCollection<(string ChannelId, Platform Platform)>> ChannelIds(YtCollectDbCtx db, (string Sql, JObject Args) select,
+      string[] channels = null,
+      Platform[] platforms = null, int? limit = null) {
+      var chans = await db.Db.Query<(string ChannelId, Platform Platform)>("distinct channels", $@"
+with raw_channels as (
+  select distinct channel_id, platform from ({select.Sql})
+  where channel_id is not null
+  {limit.Do(l => $"limit {l}")}
+)
 , s as (
-  select r.channel_id, c.platform from raw_channels r
+  select r.channel_id, coalesce(r.platform, c.platform) platform from raw_channels r
   left join channel_latest c on c.channel_id = r.channel_id
 )
 select * from s
 {CommonWhereStatements(channels, platforms).Do(w => $"where {w.Join(" and ")}")}
 ", ToDapperArgs(select.Args));
+      return chans;
+    }
 
     /// <summary>Find videos from the given select that are missing one of the required parts</summary>
     static Task<IReadOnlyCollection<VideoListStats>> VideoStats(YtCollectDbCtx db, (string Sql, dynamic Args) select,
@@ -273,6 +281,6 @@ select * from s
       return p;
     }
 
-    public record VideoProcessResult(string VideoId, string ChannelId);
+    public record VideoProcessResult(string VideoId, string ChannelId, Platform Platform);
   }
 }

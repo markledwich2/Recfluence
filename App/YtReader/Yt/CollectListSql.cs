@@ -108,6 +108,15 @@ order by 1,2
   where c.channel_id is null and e.platform in ('BitChute') and error is null
   order by views nulls last
 "
+      }, {
+        "rumble_discover_channels", @"
+select null video_id, v:ChannelId::string channel_id, v:Platform::string platform
+from video_stage vs
+where v:Platform='Rumble'
+  and v:DiscoverSource:Type='Home'
+  and not exists(select * from channel_latest c where c.channel_id=vs.v:ChannelId and meets_review_criteria)
+qualify row_number() over (partition by v:VideoId order by v:Updated desc) = 1
+"
       }
     };
 

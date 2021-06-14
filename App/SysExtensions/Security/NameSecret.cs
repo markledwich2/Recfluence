@@ -10,6 +10,12 @@ namespace SysExtensions.Security {
   public sealed class NameSecret : IStringConvertableWithPattern {
     public NameSecret() { }
 
+    public NameSecret(string encodedValue) {
+      var (name, secret) = Parse(encodedValue);
+      Name = name;
+      Secret = secret;
+    }
+
     public NameSecret(string name, string secret) {
       Name = name;
       Secret = secret;
@@ -21,15 +27,22 @@ namespace SysExtensions.Security {
     public string StringValue {
       get => $"{Name}:{Secret}";
       set {
-        var tokens = value.UnJoin(':').ToQueue();
-        Name = tokens.TryDequeue();
-        Secret = tokens.TryDequeue();
+        var (name, secret) = Parse(value);
+        Name = name;
+        Secret = secret;
       }
     }
 
     public string Pattern => @"([^:\n]+):([^:\n]+)";
 
     public override string ToString() => StringValue;
+
+    static (string name, string secret) Parse(string value) {
+      var tokens = value.UnJoin(':').ToQueue();
+      var name = tokens.TryDequeue();
+      var secret = tokens.TryDequeue();
+      return (name, secret);
+    }
 
     public SecureString SecureString() {
       var ss = new SecureString();

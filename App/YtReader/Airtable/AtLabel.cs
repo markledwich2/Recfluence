@@ -37,10 +37,8 @@ namespace YtReader.Airtable {
   public record AtOps(string BaseId, string Name, int? Limit, AtLabelPart[] Parts = null, string[] Videos = null, AtUpdateMode Mode = AtUpdateMode.Create);
 
   public static class AtLabelSql {
-    public static string NamedQuery(string name) => NamedSql.TryGet(name) ?? throw new($"no sql called {name}");
-
     public static readonly Dictionary<string, string> NamedSql = new() {
-      {
+      /*{
         "Activewear", @"
   select n.video_id, part, context, offset_seconds, m.value::string keyword
   from mention_activewear n
@@ -58,12 +56,25 @@ where v.views > 10000 and v.upload_date >= '2021-04-13'
 "
       }, {
         "vaccine-personal",
-        @"select n.video_id, 'cation' as part, caption as context, offset_seconds, '' keyword from mention_vaccine_personal n"
+        @"select n.video_id, 'caption' as part, caption as context, offset_seconds, '' keyword from mention_vaccine_personal n"
+      },*/ {
+        "domestic-extremism",
+        @"
+      select n.video_id, part, context, offset_seconds, matches
+      from mention_domestic n
+             join video_latest v on v.video_id=n.video_id
+      where v.platform in ('BitChute', 'Rumble') and upload_date > '2021-01-01'
+      order by views desc nulls last
+      limit 200
+"
       }
     };
+    public static string NamedQuery(string name) => NamedSql.TryGet(name) ?? throw new($"no sql called {name}");
   }
 
   public record AtLabel(AirtableCfg AirCfg, SnowflakeConnectionProvider Sf) {
+    const int AtBatchSize = 10;
+
     public async Task MargeIntoAirtable(AtOps op, ILogger log) {
       using var db = await Sf.Open(log);
 
@@ -101,19 +112,20 @@ from channel_latest c
         await Sync<MentionRowKey>(op, "Mentions", db.ReadAsJson("narrative mentions", @$"
   with mention as ({mentionSql})
   select 
-  n.video_id||'|'||n.part||'|'||n.keyword||coalesce('|'||n.offset_seconds, '') as mention_id
+  n.video_id||'|'||n.part||'|'||coalesce('|'||n.offset_seconds, '') as mention_id
   , n.video_id
        , n.part
        , '['||iff(n.offset_seconds is null,n.part,to_varchar(to_time(n.offset_seconds::string),'HH24:MI:SS'))
   ||'](https://youtube.com/watch?v='||n.video_id||iff(n.offset_seconds is null,'','&t='||n.offset_seconds)||')'
   ||' '||n.context context
   , n.offset_seconds
-       , n.keyword
+       , n.matches
        , v.channel_id
        , v.views::int views
        , v.description
        , v.upload_date
        , v.error_type
+       , v.platform
   , substr(md5(n.video_id), 0, 5) || ' - ' || v.channel_title || ' - ' || v.video_title as video_group
   from mention n
          join video_latest v on v.video_id=n.video_id
@@ -126,8 +138,6 @@ order by video_group -- use group to randomize the order
           return r;
         }), log);
     }
-
-    const int AtBatchSize = 10;
 
     public async Task Sync<TKey>(AtOps op, string airTableName, IAsyncEnumerable<JObject> sourceRows, ILogger log) where TKey : class {
       using var airTable = new AirtableBase(AirCfg.ApiKey, op.BaseId);

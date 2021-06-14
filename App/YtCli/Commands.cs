@@ -24,6 +24,7 @@ using SysExtensions.Text;
 using YtReader;
 using YtReader.Airtable;
 using YtReader.AmazonSite;
+using YtReader.Db;
 using YtReader.Reddit;
 using YtReader.Search;
 using YtReader.SimpleCollect;
@@ -446,7 +447,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
   }
 
   [Command("airtable", Description = "Merge rows matching a filter into an airtable sheet for manual labeling")]
-  public record NarrativeCmd(ILogger Log, AtLabel Covid) : ICommand {
+  public record AirtableCmd(ILogger Log, AtLabel Covid) : ICommand {
     [CommandParameter(0, Description = "The name of the narrative to sync with airtable. e.g. (Activewear|Vaccine)")]
     public string QueryName { get; set; }
 
@@ -515,6 +516,18 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
         new(Platform, Limit, QueryName, ParseEnums<TranscribeParts>(Parts), Mode, SourceIds?.UnJoin('|')),
         Log, console.RegisterCancellationHandler());
       Log.Information("Completed downloading videos");
+    }
+  }
+
+  [Command("sync-description", Description = "read descriptions from a dataform project and update tables & views to add those")]
+  public record SyncDescription(ILogger Log, DataformDescriptions Desc) : ICommand {
+    [CommandOption("tables", shortName: 't', Description = "| separated list of table names to update descriptions for")]
+    public string TableNames { get; set; }
+
+    public async ValueTask ExecuteAsync(IConsole console) {
+      await console.Output.WriteLineAsync("enter a personal access token for GitHub:");
+      var token = await console.Input.ReadLineAsync();
+      await Desc.Sync(new() {AccessToken = token, TableNames = TableNames?.UnJoin('|')}, Log).Swallow(e => Log.Error(e, "unhandled error"));
     }
   }
 }
