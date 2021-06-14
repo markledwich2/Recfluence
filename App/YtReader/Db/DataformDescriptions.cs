@@ -37,7 +37,7 @@ namespace YtReader.Db {
         var sql = $@"select table_name, table_type, comment
 from information_schema.tables
 where table_schema = '{sf.Cfg.Schema.ToUpperInvariant()}' and table_catalog = '{sf.Cfg.DbName().ToUpperInvariant()}'";
-        tableMd = await db.QueryAsync<(string table, string tableType, string dscription)>("table schema", sql, log)
+        tableMd = await db.QueryAsync<(string table, string tableType, string dscription)>("table schema", sql)
           .ToArrayAsync().Then(r => r.KeyBy(a => a.table.ToLowerInvariant()));
       }
 
@@ -58,7 +58,7 @@ where table_schema = '{sf.Cfg.Schema.ToUpperInvariant()}' and table_catalog = '{
             if (desc == md.dscription) log.Information("DataformDescriptions - {Table} up to date", md.table);
             var tableType = md.tableType == "VIEW" ? "view" : "table";
             await db.Execute("update comment",
-              @$"comment on {tableType} {md.table.InDoubleQuote()} is {desc.SingleQuote()}", log);
+              @$"comment on {tableType} {md.table.InDoubleQuote()} is {desc.SingleQuote()}");
             log.Information("DataformDescriptions - Updated comment on {Table}: {Comment}", md.table, desc);
           }
         }, parallel: 4);
