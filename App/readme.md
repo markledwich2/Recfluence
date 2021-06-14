@@ -42,16 +42,43 @@ Command line tool for performing all back-end operations.
 
 ```bash
 dotnet run #see the list of possible commands
-dotnet run -- update -help #see help for the update command
+dotnet run -- update --help #see help for the update command
 ```
 
+![image](https://user-images.githubusercontent.com/17095341/121848256-22713900-cd2d-11eb-9c4b-0d307e599a23.png)
+
+The commonly-used commands are **update** and **collect-list** which are documented below, for the rest use the `--help` option.
+
+### > recfluence update
+![image](https://user-images.githubusercontent.com/17095341/121848927-1174f780-cd2e-11eb-9b46-4b97bd38a0a5.png)
+
 ### Examples:
-dotnet run --
-- `update -a Collect -c UCWVMHyIWEvAWv3Lc1C5icVA -p channel|extra`
+```bash
+dotnet run -- update -z
+```
+Launches a container (`-z`) to form the default update (same as what is triggered daily) . It will peform all actions and run in dependency order
+- **Collect**: scrapes data from YouTube
+- **BitchuteCollect**: scrapes bichute
+- **RumbleCollect**: scapes rumble
+- **Stage**: optimizes josnl in blob storage that hasn't yet been loaded (combining them into ~200MB files), then loads them onto `*_stage` tables in snowflake.
+- **Dataform**: runs the `standard` tag action in the dataform project
+- **Search**: updates the elastic search data with new or updated channels, videos and captions
+- **Result**: saves files to blob storage that are used by front-end's or 3rd parties
+- **Index**: saves indexed files blob storage that are used by front-end's or 3rd parties
+- **DataScripts**: executes all python data scripts (currently just named entity recognition).
 
-refreshes channel and video data for a specific channel
+<br /><br />
+```bash
+dotnet run -- update -a Collect -c UCWVMHyIWEvAWv3Lc1C5icVA -p channel|extra
+```
+Perofrm's a YouTube collect for a specific channel (`-c UCWVMHyIWEvAWv3Lc1C5icVA`). It will scrape the channel stats and video extras (skipping transcriptions, comments and recommendations `-p channel|extra`). Only collection is performed, it will remain in blob storage un-optimized and not loaded into the warehouse (`a Collect`)
+<br /><br />
 
-TODO: more examples
+```bash
+dotnet run -- update -a Index -t narrative2
+```
+Updates all index resuts taggs narrative2 (`-t narrative2`). Index results are compress json optimized for a specific front-end vizualisation. They are usually partitioned by a time range or filter, and aggregated to the granularity used by a viz/list.
+
 
 
 ## YtFunctions
