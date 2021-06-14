@@ -10,7 +10,6 @@ using CliFx.Infrastructure;
 using Humanizer;
 using Medallion.Shell;
 using Mutuo.Etl.AzureManagement;
-using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Semver;
@@ -62,85 +61,6 @@ namespace YtCli {
 
       if (VideoId.NullOrEmpty() && ChannelId.NullOrEmpty())
         throw new CommandException("you must provide a channel ID or video ID");
-    }
-  }
-
-  [Command("upgrade-partitions")]
-  public class UpgradePartitionsCmd : ICommand {
-    readonly WarehouseCfg Cfg;
-    readonly IPipeCtx     Ctx;
-    readonly ILogger      Log;
-    readonly Stage        Stage;
-    readonly BlobStores   Stores;
-
-    public UpgradePartitionsCmd(BlobStores stores, ILogger log, WarehouseCfg cfg, Stage stage, IPipeCtx ctx) {
-      Stores = stores;
-      Log = log;
-      Cfg = cfg;
-      Stage = stage;
-      Ctx = ctx;
-    }
-
-    [CommandOption('d', Description = "| delimited list of dirs that have partitions that are to be removed")]
-    public string Dirs { get; set; }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      var includedDirs = Dirs?.UnJoin('|');
-      var dirs = new[] {"videos", "recs", "captions"}.Where(d => includedDirs == null || includedDirs.Contains(d));
-      var store = Stores.Store(DataStoreType.DbStage);
-      foreach (var dir in dirs) {
-        Log.Information("upgrade-partitions - {Dir} started", dir);
-        var files = await store.Files(dir, allDirectories: true).SelectMany()
-          .Where(f => f.Path.Tokens.Count == 3) // only optimise from within partitions
-          .ToListAsync();
-
-        var plan = JsonlStoreExtensions.OptimisePlan(dir, files, Cfg.Optimise, Log);
-
-        if (plan.Count < 10) // if the plan is small, run locally, otherwise on many machines
-          await store.Optimise(Cfg.Optimise, plan, Log);
-        else
-          await plan.Process(Ctx,
-            b => Stage.ProcessOptimisePlan(b, DataStoreType.DbStage, PipeArg.Inject<ILogger>()),
-            new() {MaxParallel = 12, MinWorkItems = 1},
-            Log, console.RegisterCancellationHandler());
-      }
-    }
-  }
-
-  [Command("stage", Description = "creates/updates the staging data in snowflake from blob storage")]
-  public class StageCmd : ICommand {
-    readonly ILogger Log;
-    readonly Stage   Stage;
-
-    public StageCmd(Stage stage, ILogger log) {
-      Stage = stage;
-      Log = log;
-    }
-
-    [CommandOption('t', Description = "| delimited list of tables to restrict warehouse update to")]
-    public string Tables { get; set; }
-
-    [CommandOption('f', Description = "if true, will clear and load data")]
-    public bool FullLoad { get; set; }
-
-    public async ValueTask ExecuteAsync(IConsole console) => await Stage.StageUpdate(Log, FullLoad, Tables?.Split('|').ToArray());
-  }
-
-  [Command("traffic", Description = "Process source traffic data for comparison")]
-  public class TrafficCmd : ICommand {
-    readonly ILogger    Log;
-    readonly YtWeb      Scraper;
-    readonly BlobStores Stores;
-
-    public TrafficCmd(BlobStores stores, YtWeb scraper, ILogger log) {
-      Stores = stores;
-      Scraper = scraper;
-      Log = log;
-    }
-
-    public async ValueTask ExecuteAsync(IConsole console) {
-      var privateStore = Stores.Store(DataStoreType.Private);
-      await TrafficSourceExports.Process(privateStore, Scraper, Log);
     }
   }
 
@@ -196,31 +116,34 @@ namespace YtCli {
   [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]
   public record UpdateCmd(YtUpdater Updater, IPipeCtx PipeCtx, YtContainerRunner ContainerRunner, AzureContainers Az, ContainerCfg ContainerCfg, ILogger Log)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
-    [CommandOption('a', Description = "| delimited list of action to run (empty for all)")]
+    [CommandOption("actions", shortName: 'a', Description = @"| delimited list of action to run. If not specified all action are run. 
+Available actions:  Collect|BitChuteCollect|RumbleCollect|Stage|Dataform|Search|Result|Index|DataScripts", IsRequired = false)]
     public string Actions { get; set; }
 
-    [CommandOption('f', Description = "will force a refresh of collect, and full load of staging files + warehouse. Does not impact search")]
+    [CommandOption("full", shortName: 'f', Description = "will force a refresh of collect, and full load of staging files + warehouse. Does not impact search")]
     public bool FullLoad { get; set; }
 
-    [CommandOption('w', Description = "| delimited list of warehouse tables to restrict updates to")]
+    [CommandOption("dataform-tables", shortName: 'w', Description = "| delimited list of warehouse tables to restrict dataform updates to (e.g. video_latest)")]
     public string WarehouseTables { get; set; }
 
-    [CommandOption('t', Description = "| delimited list of tags to restrict updates to Currently applies to Index updates, but will be all.")]
+    [CommandOption("tags", shortName: 't', Description = "| delimited list of tags to restrict updates to. Note: Currently applies only to Index action.")]
     public string Tags { get; set; }
 
-    [CommandOption('s', Description = "| delimited list of staging tables to restrict updates to")]
+    [CommandOption("staging-tables", shortName: 's', Description = "| delimited list of staging tables to restrict updates to (e.g. video_stage|user_stage)")]
     public string StageTables { get; set; }
 
-    [CommandOption('r', Description = "| delimited list of query names to restrict results to")]
+    [CommandOption("results", shortName: 'r',
+      Description = "| delimited list of query names to restrict results to (e.g. ttube_channels). See YtReader/Store/YtResults.cs for full list")]
     public string Results { get; set; }
 
-    [CommandOption('i', Description = "| delimited list of indexes to limit indexing to")]
+    [CommandOption("indexes", shortName: 'i',
+      Description = "| delimited list of indexes to limit indexing to (e.g. video_removed). See YtReader/Store/YtIndexResults.cs for full list")]
     public string Indexes { get; set; }
 
-    [CommandOption('c', Description = "| delimited list of channels (source id's) to collect")]
+    [CommandOption("channels", shortName: 'c', Description = "| delimited list of channels (source id's) to collect (e.g. UCJm5yR1KFcysl_0I3x-iReg)")]
     public string Channels { get; set; }
 
-    [CommandOption('v', Description = "| delimited list of videos (source id's)")]
+    [CommandOption("videos", shortName: 'v', Description = "| delimited list of videos (source id's)")]
     public string Videos { get; set; }
 
     [CommandOption("collect-parts", shortName: 'p', Description = "| delimited list of collect parts to run (e.g. channel|channel-video|user|extra)")]
@@ -425,19 +348,6 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     }
   }
 
-  [Command("parler", Description = "load data from leaked parler posts")]
-  public record ParlerCmd(ILogger Log, Parler Parler, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg)
-    : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
-    [CommandOption('f')] public string Folder { get; set; }
-
-    protected override string GroupName => "parler";
-
-    protected override async ValueTask ExecuteLocal(IConsole console) {
-      await Parler.LoadFromGoogleDrive(Folder, "posts", Log);
-      Log.Information("Completed load parler data");
-    }
-  }
-
   [Command("pushshift", Description = "Loads data from pushshift. A fee elastic search database for reddit")]
   public record PushshiftCmd(ILogger Log, Pushshift Push) : ICommand {
     public async ValueTask ExecuteAsync(IConsole console) {
@@ -472,7 +382,7 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     }
   }
 
-  [Command("amazon")]
+  [Command("amazon", Description = "Scrapes amazon product link information")]
   public record AmazonCmd(ILogger Log, AmazonWeb Amazon) : ICommand {
     [CommandOption("query", shortName: 'q', Description = "The name of the query to sync with airtable")]
     public string MentionQuery { get; set; }

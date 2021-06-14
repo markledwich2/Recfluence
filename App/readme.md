@@ -2,27 +2,44 @@
 
 .NET solution to perform all back-end recfluence tasks.
 
-
-## Dev Configuration
-
-
-In `/YtCli` create a `local.rootcfg.json` file. This includes the bare minimum information to give access to the variety of cloud services used by recfluence. The &lt;values&gt;should be provided to you. It would be possible to create the required resources (eg.. snowflake, azure blob storage etc..) but that is not currently automated/documented.
-```json
-{
-  "env": "dev",
-  "appStoreCs": "<a connection string to the blob container containing futher settings. This will be given to you>",
-  "branchEnv": "<a short suffix to use with a variety of cloud resource to make your dev environment unique>"
-}
-```
-
 ## Dev Setup 
-Rider is the recommended way to develop in this solution
 
+### Dev Tooling
+Rider is the recommended way to develop in this solution
 - Install [Rider](https://www.jetbrains.com/rider/)
 - Install [.NET 5 SDK](https://dotnet.microsoft.com/download/dotnet/5.0)
 - `dotnet tool restore` (installs GitVersion)
 - Open **Recfluence.sln** in rider
 A variety of pre-configured debugging
+
+
+### Minimal Configuration
+In `/YtCli` create a `local.rootcfg.json` file. This includes the bare minimum information to give access to the variety of cloud services used by recfluence. The &lt;values&gt;should be provided to you. 
+```json
+{
+  "env": "dev",
+  "appStoreCs": "<a connection string to the blob container containing further settings. This will be given to you>",
+  "branchEnv": "<a short suffix to use with a variety of cloud resource to make your dev environment unique>"
+}
+```
+
+### Environment setup and configuration
+The cloud services used have configuration that has been created by hand (i.e. snowflake instance, blob storage, elastic search). However, a "branch environment" can be created for development and testing which has a separate copy of staging, warehouse, results and search.
+
+The recommended development setup is to by default have a branchEnv configured for you personally, and use the production environment case-by case with the branchEnv environment variable.
+
+To create a new branch environment:
+1. in `/YtCli/local.rootcfg.json` set "branchEnv" to something small and alpha-number (e.g. test)
+2. creates an empty new storage container and clone of the current prod warehouse (reconfigured to point to this new storage)
+```bash
+dot run -- branch-env -m CloneDb
+```
+
+To test, connect to snowflake with DataGrip and switch to your new warehouse YT_TEST. If you are developing a new feature that is used by front-ends, they will have a separate configuration to use a branch environment.
+
+NOTE:
+- Re-running this will override you test environment with the latest from production. 
+- use `-m Clone` if you also want a clone of blob storage from production. This will take some time and is not usually needed.
 
 ## YtCli (recfluence.exe command line tool)
 Command line tool for performing all back-end operations. 
@@ -54,7 +71,7 @@ dotnet run -- update -z
 ```
 Performs the default update (same as what is triggered daily). All actions are run in dependency order (See [YtUpdater.cs](YtReader/YtUpdater.cs) for up-to-date actions and dependencies).
 - **Collect**: scrapes data from YouTube
-- **BitchuteCollect**: scrapes bichute
+- **BitchuteCollect**: scrapes BitChute
 - **RumbleCollect**: scapes rumble
 - **Stage**: optimizes josnl in blob storage that hasn't yet been loaded (combining them into ~200MB files), then loads them onto `*_stage` tables in snowflake.
 - **Dataform**: runs the `standard` tag action in the dataform project
@@ -72,25 +89,23 @@ dotnet run -- update -a Collect -c UCWVMHyIWEvAWv3Lc1C5icVA -p channel
  # scrape video details and missing captions for videos in two channels
 dotnet run -- update -a Collect -c UCWVMHyIWEvAWv3Lc1C5icVA|UCJm5yR1KFcysl_0I3x-iReg -p channel-video|extra -e extra|caption
 ```
-Perform's a YouTube collect for a specific channel (`-c UCWVMHyIWEvAWv3Lc1C5icVA`). It will scrape the channel stats and video extras (skipping transcriptions, comments and recommendations `-p channel|extra`). Only collection is performed, it will remain in blob storage un-optimized and not loaded into the warehouse (`a Collect`)
+Performs a YouTube collect for a specific channel (`-c UCWVMHyIWEvAWv3Lc1C5icVA`). It will scrape the channel stats and video extras (skipping transcriptions, comments and recommendations `-p channel|extra`). Only collection is performed, it will remain in blob storage un-optimized and not loaded into the warehouse (`a Collect`)
 <br /><br />
 
 ### update index/result
 Often when developing in a test environment, you will make data updates directly in DataForm. To see the new data in front-end tools, you will need to update the Index or Result.
 ```bash
-# Update all index resuts taggs narrative2
+# Update all index resuts tagged narrative2
 dotnet run -- update -a Index -t narrative2 
 
 # Update political channel list (used by transparency tube)
 dotnet run -- update -a Result -r ttube_channels
 ```
- (`-t narrative2`). Index results are compress json optimized for a specific front-end vizualisation. They are usually partitioned by a time range or filter, and aggregated to the granularity used by a viz/list.
+ (`-t narrative2`). Index results are compress json optimized for a specific front-end visualization. They are usually partitioned by a time range or filter, and aggregated to the granularity used by a viz/list.
 
 
 
 ## YtFunctions
-An Azure function for triggering daily updates, and as the clinet API for websites.
+An Azure function for triggering daily updates, and as the client API for websites.
 
 TODO: how to debug
-
-## Warehouse

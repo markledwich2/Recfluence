@@ -7,7 +7,9 @@
     "azureFunctions.preDeployTask": "publish",
     "cSpell.words": [
         "Jsonl",
-        "Mutuo"
+        "Mutuo",
+        "dataform",
+        "josnl"
     ],
     "files.exclude": {
         "**/bin": true,
