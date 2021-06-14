@@ -28,8 +28,8 @@ dotnet run -- create-env
 *TODO: this should provide information about how to connect via other tooling to those things.*
 
 
-## Dev Setup (rider)
-Best editing experience.
+## Dev Setup (JetBrains Rider)
+Rider is the recommended way to develop in this solution. It contains automatic code style configuration and easy access to common commands.
 
 - Install [Rider](https://www.jetbrains.com/rider/)
 - Install [.NET 5 SDK](https://dotnet.microsoft.com/download/dotnet/5.0)
