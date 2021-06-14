@@ -11,25 +11,12 @@ In `/YtCli` create a `local.rootcfg.json` file. This includes the bare minimum i
 {
   "env": "dev",
   "appStoreCs": "<a connection string to the blob container containing futher settings. This will be given to you>",
-  "branchEnv": "<a short suffix to use with a variety of cloud resource to make you dev environment unique. e.g.>"
+  "branchEnv": "<a short suffix to use with a variety of cloud resource to make your dev environment unique>"
 }
 ```
 
-## Casual Development Setup (vscode)
-
-In VSCode launch the dev container. Command: `Remote Containers - Reopen in container`
-
-To create your development environment (blob containers and warehouse).
-
-```bash
-cd /YtCli
-dotnet run -- create-env
-```
-*TODO: this should provide information about how to connect via other tooling to those things.*
-
-
-## Dev Setup (JetBrains Rider)
-Rider is the recommended way to develop in this solution. It contains automatic code style configuration and easy access to common commands.
+## Dev Setup 
+Rider is the recommended way to develop in this solution
 
 - Install [Rider](https://www.jetbrains.com/rider/)
 - Install [.NET 5 SDK](https://dotnet.microsoft.com/download/dotnet/5.0)
@@ -37,26 +24,35 @@ Rider is the recommended way to develop in this solution. It contains automatic 
 - Open **Recfluence.sln** in rider
 A variety of pre-configured debugging
 
-## YtCli
+## YtCli (recfluence.exe command line tool)
 Command line tool for performing all back-end operations. 
 
 ```bash
-dotnet run #see the list of possible commands
-dotnet run -- update --help #see help for the update command
+dotnet run
 ```
+![image](https://user-images.githubusercontent.com/17095341/121965628-a7e9fd00-cdb0-11eb-95fc-503fc0874398.png)
 
-![image](https://user-images.githubusercontent.com/17095341/121848256-22713900-cd2d-11eb-9c4b-0d307e599a23.png)
 
-The commonly-used commands are **update** and **collect-list** which are documented below, for the rest use the `--help` option.
+The commonly-used commands are **update** and **collect-list** which have some common use cases bellow. For help on each option  documented below, for the rest use the `--help` option.
 
-### > recfluence update
-![image](https://user-images.githubusercontent.com/17095341/121848927-1174f780-cd2e-11eb-9b46-4b97bd38a0a5.png)
+### update
+Performs a regular daily update i.e. data scraping > warehouse update > results/search/index. The long list of options allow you to narrow down the update just to what you need for debugging/development.
 
-### Examples:
 ```bash
+dotnet run -- update --help
+```
+![image](https://user-images.githubusercontent.com/17095341/121965000-bab00200-cdaf-11eb-8773-74192e53a944.png)
+
+
+### default update
+```bash
+# run a default update on this machine
+dotnet run -- update
+
+# launch a container to run the default update
 dotnet run -- update -z
 ```
-Launches a container (`-z`) to form the default update (same as what is triggered daily) . It will peform all actions and run in dependency order
+Performs the default update (same as what is triggered daily). All actions are run in dependency order (See [YtUpdater.cs](YtReader/YtUpdater.cs) for up-to-date actions and dependencies).
 - **Collect**: scrapes data from YouTube
 - **BitchuteCollect**: scrapes bichute
 - **RumbleCollect**: scapes rumble
@@ -68,16 +64,27 @@ Launches a container (`-z`) to form the default update (same as what is triggere
 - **DataScripts**: executes all python data scripts (currently just named entity recognition).
 
 <br /><br />
+### scrape subset of channels/parts
 ```bash
-dotnet run -- update -a Collect -c UCWVMHyIWEvAWv3Lc1C5icVA -p channel|extra
+# scrape only the channel info for one channel
+dotnet run -- update -a Collect -c UCWVMHyIWEvAWv3Lc1C5icVA -p channel
+
+ # scrape video details and missing captions for videos in two channels
+dotnet run -- update -a Collect -c UCWVMHyIWEvAWv3Lc1C5icVA|UCJm5yR1KFcysl_0I3x-iReg -p channel-video|extra -e extra|caption
 ```
-Perofrm's a YouTube collect for a specific channel (`-c UCWVMHyIWEvAWv3Lc1C5icVA`). It will scrape the channel stats and video extras (skipping transcriptions, comments and recommendations `-p channel|extra`). Only collection is performed, it will remain in blob storage un-optimized and not loaded into the warehouse (`a Collect`)
+Perform's a YouTube collect for a specific channel (`-c UCWVMHyIWEvAWv3Lc1C5icVA`). It will scrape the channel stats and video extras (skipping transcriptions, comments and recommendations `-p channel|extra`). Only collection is performed, it will remain in blob storage un-optimized and not loaded into the warehouse (`a Collect`)
 <br /><br />
 
+### update index/result
+Often when developing in a test environment, you will make data updates directly in DataForm. To see the new data in front-end tools, you will need to update the Index or Result.
 ```bash
-dotnet run -- update -a Index -t narrative2
+# Update all index resuts taggs narrative2
+dotnet run -- update -a Index -t narrative2 
+
+# Update political channel list (used by transparency tube)
+dotnet run -- update -a Result -r ttube_channels
 ```
-Updates all index resuts taggs narrative2 (`-t narrative2`). Index results are compress json optimized for a specific front-end vizualisation. They are usually partitioned by a time range or filter, and aggregated to the granularity used by a viz/list.
+ (`-t narrative2`). Index results are compress json optimized for a specific front-end vizualisation. They are usually partitioned by a time range or filter, and aggregated to the granularity used by a viz/list.
 
 
 
