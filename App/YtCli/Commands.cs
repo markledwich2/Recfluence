@@ -231,7 +231,7 @@ Available actions:  Collect|BitChuteCollect|RumbleCollect|Stage|Dataform|Search|
   [Command("collect-list", Description = "Refresh video/channel information for a given list")]
   public record CollectListCmd(CollectList Col, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg, ILogger Log)
     : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
-    [CommandParameter(0, Description = "The type of list to run (i.e. ChannelPath, VideoPath, View, Named)")]
+    [CommandParameter(0, Description = "The type of list to run")]
     public CollectFromType Mode { get; set; }
 
     [CommandParameter(1, Description = @"The path/name of the list.
@@ -249,7 +249,8 @@ VideoChannelNamed: name of an sql statement in CollectListSql.cs
     [CommandOption("parts", shortName: 'p', IsRequired = false, Description = @"| list of parts to collect (e.g. video|channel|channel-video)")]
     public string Parts { get; set; }
 
-    [CommandOption("extra-parts", shortName: 'e', IsRequired = false, Description = @"| delimited list of extra parts to run (e.g. extra|comment|rec|caption)")]
+    [CommandOption("extra-parts", shortName: 'e', IsRequired = false,
+      Description = @"| delimited list of extra parts to run (e.g. extra|comment|rec|caption|transcribe)")]
     public string ExtraParts { get; set; }
 
     [CommandOption("stale-hrs", shortName: 'f', IsRequired = false,
