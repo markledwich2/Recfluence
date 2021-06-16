@@ -66,7 +66,7 @@ namespace Mutuo.Etl.Pipe {
 
     /// <summary>Launches a child pipe that works on a list of items</summary>
     /// <param name="expression">a call to a pipe method. The arguments will be resolved and serialized</param>
-    public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> Process<TIn, TOut>(this IEnumerable<TIn> items, IPipeCtx ctx,
+    public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> Pipe<TIn, TOut>(this IEnumerable<TIn> items, IPipeCtx ctx,
       Expression<Func<TIn[], Task<TOut>>> expression, PipeRunCfg runCfg = null, ILogger log = null, CancellationToken cancel = default) {
       var pipeCall = expression.Body as MethodCallExpression ?? throw new InvalidOperationException("The expression must be a call to a pipe method");
       if (pipeCall.Method.GetCustomAttribute<PipeAttribute>() == null)
@@ -75,7 +75,7 @@ namespace Mutuo.Etl.Pipe {
     }
 
     /// <summary>Launches a pipe that works on a batch of items</summary>
-    public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, object OutState)>> Process<TIn>(this IEnumerable<TIn> items,
+    public static async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, object OutState)>> Pipe<TIn>(this IEnumerable<TIn> items,
       IPipeCtx ctx, string pipeName, (string Name, object Value)[] args, PipeRunCfg runCfg = null, ILogger log = null) =>
       await RunItemPipe<object, object>(items.Cast<object>().ToArray(), ctx, pipeName, SerializableArgs(args), runCfg, log);
 

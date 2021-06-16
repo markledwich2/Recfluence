@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Collect List" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0/recfluence.exe" />
-    <option name="PROGRAM_PARAMETERS" value="collect-list VideoChannelNamed rumble_discover_channels  -platform Rumble -l 2 " />
+    <option name="PROGRAM_PARAMETERS" value="collect-list VideoChannelNamed sans_comment -p video -e comment  --sql-args  &quot;{&quot;&quot;vids_per_chan&quot;&quot;: 2, &quot;&quot;min_subs&quot;&quot;: 1000000 }&quot; -l 10" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net5.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <option name="USE_EXTERNAL_CONSOLE" value="0" />

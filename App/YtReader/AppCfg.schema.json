@@ -35,8 +35,14 @@
     "AwsCfg": {
       "type": "object",
       "properties": {
+        "region": {
+          "type": "string"
+        },
         "s3": {
           "$ref": "#/definitions/S3Cfg"
+        },
+        "creds": {
+          "type": "string"
         }
       }
     },
@@ -54,7 +60,28 @@
     "BitChuteCfg": {
       "type": "object",
       "properties": {
-        "collectParallel": {
+        "outerParallel": {
+          "type": "integer"
+        },
+        "homeVidLimit": {
+          "type": "integer"
+        },
+        "homeCats": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "retries": {
+          "type": "integer"
+        },
+        "webParallel": {
+          "type": "integer"
+        },
+        "maxChannelFullVideos": {
+          "type": "integer"
+        },
+        "maxChannelComments": {
           "type": "integer"
         }
       }
@@ -319,10 +346,28 @@
     "RumbleCfg": {
       "type": "object",
       "properties": {
-        "collectParallel": {
+        "outerParallel": {
           "type": "integer"
         },
+        "homeVidLimit": {
+          "type": "integer"
+        },
+        "homeCats": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "retries": {
+          "type": "integer"
+        },
+        "webParallel": {
+          "type": "integer"
+        },
+        "maxChannelFullVideos": {
+          "type": "integer"
+        },
+        "maxChannelComments": {
           "type": "integer"
         }
       }
@@ -433,6 +478,17 @@
         }
       }
     },
+    "TranscribeCfg": {
+      "type": "object",
+      "properties": {
+        "parallelTranscribe": {
+          "type": "integer"
+        },
+        "parallel": {
+          "type": "integer"
+        }
+      }
+    },
     "UserScrapeCfg": {
       "type": "object",
       "properties": {
@@ -518,6 +574,9 @@
         "refreshChannelDetailDebounce": {
           "type": "string"
         },
+        "refreshExtraDebounce": {
+          "type": "string"
+        },
         "refreshRecsMin": {
           "type": "integer"
         },
@@ -539,13 +598,7 @@
         "parallelChannels": {
           "type": "integer"
         },
-        "webParallel": {
-          "type": "integer"
-        },
         "captionParallel": {
-          "type": "integer"
-        },
-        "maxChannelComments": {
           "type": "integer"
         },
         "minChannelSubs": {
@@ -560,9 +613,6 @@
         "maxChannelDailyVideos": {
           "type": "integer"
         },
-        "maxChannelFullVideos": {
-          "type": "integer"
-        },
         "userBatchSize": {
           "type": "integer"
         },
@@ -570,6 +620,15 @@
           "type": "integer"
         },
         "maxExtraErrorsInChannel": {
+          "type": "integer"
+        },
+        "webParallel": {
+          "type": "integer"
+        },
+        "maxChannelComments": {
+          "type": "integer"
+        },
+        "maxChannelFullVideos": {
           "type": "integer"
         }
       }
@@ -679,6 +738,9 @@
     },
     "aws": {
       "$ref": "#/definitions/AwsCfg"
+    },
+    "transcribe": {
+      "$ref": "#/definitions/TranscribeCfg"
     }
   }
 }

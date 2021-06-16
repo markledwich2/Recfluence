@@ -38,7 +38,9 @@ namespace Tests {
       var res = await list.ToListAsync();
     }
 
+#pragma warning disable 1998
     static async IAsyncEnumerable<int> AsyncRange(int count) {
+#pragma warning restore 1998
       foreach (var i in Enumerable.Range(start: 0, count: 100)) yield return i;
     }
 

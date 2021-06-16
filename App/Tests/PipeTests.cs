@@ -122,7 +122,7 @@ namespace Tests {
     public async Task<int[]> MakeAndSum(int size, int shift, DataStoreType dataStoreType) {
       Log.Information("MakeAndSum Started - {Size} - Enum Parameter {DataStoreType}", size, dataStoreType);
       var things = (0 + shift).RangeTo(size + shift).Select(i => new Thing {Number = i});
-      var res = await things.Process(Ctx, b => CountThings(b), new() {MaxParallel = 2});
+      var res = await things.Pipe(Ctx, b => CountThings(b), new() {MaxParallel = 2});
       Log.Information("MakeAndSum Complete {Batches}", res.Count);
       return res.Select(r => r.OutState).ToArray();
     }

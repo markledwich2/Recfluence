@@ -68,7 +68,7 @@ where not exists (select * from link_meta_stage s where s.v:SourceUrl = l.url)
       if (forceLocal)
         await ProcessLinks(urls, log, cancel);
       else
-        await urls.Process(Pipe, b => ProcessLinks(b, PipeArg.Inject<ILogger>(), PipeArg.Inject<CancellationToken>()), cancel: cancel);
+        await urls.Pipe(Pipe, b => ProcessLinks(b, PipeArg.Inject<ILogger>(), PipeArg.Inject<CancellationToken>()), cancel: cancel);
     }
 
     public record LoadFromUrlRes(AmazonLink Link, HttpStatusCode Status = HttpStatusCode.OK, string ErrorMsg = null);

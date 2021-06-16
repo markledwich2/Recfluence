@@ -21,5 +21,19 @@
             "activityBar.background": "#302230",
             "statusBar.background": "#974597"
         }
-    }
+    },
+    "json.schemas": [
+        {
+            "fileMatch": [
+                "*.appcfg.json"
+            ],
+            "url": "./YtReader/AppCfg.schema.json"
+        },
+        {
+            "fileMatch": [
+                "*.rootcfg.json"
+            ],
+            "url": "./YtReader/RootCfg.schema.json"
+        }
+    ],
 }

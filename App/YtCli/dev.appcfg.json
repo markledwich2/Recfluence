@@ -1,5 +1,4 @@
 ﻿{
-  "$schema": "https://raw.githubusercontent.com/markledwich2/Recfluence/master/App/YtReader/AppCfg.schema.json",
   "storage": {
     "backupRootPath": "backuptest"
   },

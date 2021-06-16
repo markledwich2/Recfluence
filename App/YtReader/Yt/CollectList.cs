@@ -86,7 +86,7 @@ namespace YtReader.Yt {
         using (var db = await YtCollector.Db(log)) // videos sans extra update
           videos = await VideoStats(db, vidChanSelect, opts.LimitChannels, opts.Platforms, opts.Limit);
         videosProcessed = await videos
-          .Process(PipeCtx, b => ProcessVideos(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
+          .Pipe(PipeCtx, b => ProcessVideos(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
           .Then(r => r.Select(p => p.OutState).SelectMany().ToArray());
       }
 
@@ -116,10 +116,10 @@ namespace YtReader.Yt {
               DateTime? fromDate = new DateTime(year: 2020, month: 1, day: 1);
 
               if (collector is YtCollector yt)
-                await g.Randomize().Process(PipeCtx, b => yt.ProcessChannels(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>(), fromDate),
+                await g.Randomize().Pipe(PipeCtx, b => yt.ProcessChannels(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>(), fromDate),
                   log: log, cancel: cancel);
               else if (collector is SimpleCollector sc)
-                await g.Randomize().Process(PipeCtx, b =>
+                await g.Randomize().Pipe(PipeCtx, b =>
                     sc.SimpleCollectChannels(g.ToArray(), platform, StandardToSimpleParts(parts, extraParts), Inject<ILogger>(), Inject<CancellationToken>()),
                   log: log, cancel: cancel);
             });
@@ -197,7 +197,7 @@ where not exists (select * from user u where u.user_id = q.user_id)
         users = await db.Db.Query<string>("CollectList - users", sql, userSelect.Args);
 
       var sw = Stopwatch.StartNew();
-      var total = await users.Process(PipeCtx,
+      var total = await users.Pipe(PipeCtx,
           b => YtCollector.CollectUserChannels(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
         .Then(r => r.Sum(i => i.OutState));
       log.Information("Collect - completed scraping all user channels {Total} in {Duration}", total, sw.Elapsed.HumanizeShort());

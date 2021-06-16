@@ -20,7 +20,7 @@ with chans as (
 select video_id, v.channel_id
 from chans c
        join video_latest v on v.channel_id=c.channel_id
-  qualify row_number() over (partition by c.channel_id order by random())<:chan_per_vid
+  qualify row_number() over (partition by c.channel_id order by random())<:vids_per_chan
 "
       }, {
         "fashion", @"

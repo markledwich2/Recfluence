@@ -96,7 +96,7 @@ namespace YtReader {
         if (plan.Count < 10) // if the plan is small, run locally, otherwise on many machines
           await store.Optimise(Cfg.Optimise, plan, db.Log);
         else
-          await plan.Process(PipeCtx, b => ProcessOptimisePlan(b, t.StoreType, Inject<ILogger>())
+          await plan.Pipe(PipeCtx, b => ProcessOptimisePlan(b, t.StoreType, Inject<ILogger>())
             , new() {MaxParallel = 8, MinWorkItems = 1}, db.Log, cancel);
       }
       await db.Execute("truncate table", $"truncate table {table}"); // no transaction, stage tables aren't reported on so don't need to be available

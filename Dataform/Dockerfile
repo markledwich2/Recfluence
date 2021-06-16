@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM alpine:3.13
 
 RUN apk add --no-cache --update nodejs nodejs-npm git 
 RUN npm i -g @dataform/cli typescript ts-node

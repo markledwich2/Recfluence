@@ -7,6 +7,9 @@ using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon;
+using Amazon.Internal;
+using Amazon.Runtime;
 using Amazon.TranscribeService;
 using Amazon.TranscribeService.Model;
 using Flurl.Http;
@@ -21,6 +24,7 @@ using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Net;
+using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
@@ -50,6 +54,11 @@ namespace YtReader.Transcribe {
     public int Parallel           { get; init; } = 8;
   }
 
+  public static class AwsCfgExtensions {
+    public static BasicAWSCredentials Creds(this AwsCfg cfg) => new(cfg.Creds.Name, cfg.Creds.Secret);
+    public static RegionEndpoint Region(this AwsCfg cfg) => RegionEndpoint.GetBySystemName(cfg.Region);
+  }
+
   public record TranscribeOptions(Platform? Platform = null, int? Limit = null, string QueryName = null, TranscribeParts[] Parts = null,
     TranscribeMode Mode = default, string[] SourceIds = null);
 
@@ -58,7 +67,7 @@ namespace YtReader.Transcribe {
     readonly        ISimpleFileStore              StoreForLoad = Stores.Store("import/temp");
     readonly        S3Store                       StoreMedia   = new(Aws.S3, "media");
     readonly        S3Store                       StoreTrans   = new(Aws.S3, "transcripts");
-    readonly        AmazonTranscribeServiceClient TransClient  = new(Aws.CredsBasic, Aws.RegionEndpoint);
+    readonly        AmazonTranscribeServiceClient TransClient  = new(Aws.Creds(), Aws.Region());
 
     string SafeName(string name) => SafeNameRe.Replace(name, "");
 

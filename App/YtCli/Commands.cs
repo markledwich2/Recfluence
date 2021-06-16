@@ -235,10 +235,10 @@ Available actions:  Collect|BitChuteCollect|RumbleCollect|Stage|Dataform|Search|
     public CollectFromType Mode { get; set; }
 
     [CommandParameter(1, Description = @"The path/name of the list.
-channel-path: path in the data blob container a file with newline separated channel id's. e.g. import/channels/full_12M_chan_info.txt.gz
-video-path: path in the data blob container a file with newline separated channel id's. e.g. import/channels/full_12M_chan_info.txt.gz
-view: name of a view in the warehouse that has a column video_id, channel_id videos or channels to collect data for e.g. collect_video_sans_extra
-named: name of an sql statement CollectListSql. This will use parameters if specified
+VideoPath: path in @yt_data to a tsv.gz video_id's only (e.g. import/narratives/covid_vaccine_dna.vid_ids.tsv.gz)
+ChannelPath: path in  @yt_data a tsv.gz with channel_id's only (e.g. import/channels/pop_all_1m_plus_chans.non_tt.txt)
+VideoChannelView: name of a view that with video_id, channel_id columns (e.g. collect_video_sans_extra)
+VideoChannelNamed: name of an sql statement in CollectListSql.cs
  ")]
     public string Value { get; set; }
 
@@ -257,13 +257,13 @@ named: name of an sql statement CollectListSql. This will use parameters if spec
     public int? StaleHrs { get; set; }
 
     [CommandOption("sql-args", shortName: 'a', IsRequired = false,
-      Description = "Json object representing params to pass to the query. Check yu query for what it needs. e.g. \"{\"\"older_than_days\"\": 10 }")]
+      Description = "Json object representing params to pass to the query. Check yu query for what it needs. e.g. \"{\"\"older_than_days\"\": 10 }\"")]
     public string Args { get; set; }
 
     [CommandOption("platform", Description = "| delimited list of platforms to restrict collection to")]
     public string Platforms { get; set; }
 
-    [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
+    [CommandOption("limit", shortName: 'l', Description = "Max videos/channels to collect")]
     public int? Limit { get; set; }
 
     protected override string GroupName => "collect-list";

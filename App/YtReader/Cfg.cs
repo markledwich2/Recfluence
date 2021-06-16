@@ -82,10 +82,9 @@ namespace YtReader {
 
   public record AwsCfg {
     public string              Region         { get; set; }
-    public RegionEndpoint      RegionEndpoint => RegionEndpoint.GetBySystemName(Region);
     public S3Cfg               S3             { get; init; }
     public NameSecret          Creds          { get; set; }
-    public BasicAWSCredentials CredsBasic     => new(Creds.Name, Creds.Secret);
+    
   }
 
   public class ElasticCfg {

@@ -71,7 +71,7 @@ namespace YtReader.Yt {
         return true;
       var (result, dur) = await channels
         .Randomize() // randomize to even the load
-        .Process(PipeCtx,
+        .Pipe(PipeCtx,
           b => ProcessChannels(b, options.ExtraParts, Inject<ILogger>(), Inject<CancellationToken>(), null), log: log, cancel: cancel)
         .WithDuration();
 
@@ -85,7 +85,7 @@ namespace YtReader.Yt {
       var sw = Stopwatch.StartNew();
       using var db = await Db(log);
       var missing = await db.MissingUsers();
-      var total = await missing.Process(PipeCtx,
+      var total = await missing.Pipe(PipeCtx,
           b => CollectUserChannels(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
         .Then(r => r.Sum(i => i.OutState));
       log.Information("Collect - completed scraping all user channels {Total} in {Duration}", total, sw.Elapsed.HumanizeShort());

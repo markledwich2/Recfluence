@@ -56,7 +56,7 @@ namespace YtReader.SimpleCollect {
       var plan = await PlanSimpleCollect(options, log, cancel);
       plan = await Discover(plan, log, cancel);
       if (plan.Parts.ShouldRunAny(StandardCollectPart.Channel, ChannelVideo, Extra))
-        await plan.ChannelPlans.Process(PipeCtx,
+        await plan.ChannelPlans.Pipe(PipeCtx,
           b => SimpleCollectChannels(b, options.Platform, options.Parts, Inject<ILogger>(), Inject<CancellationToken>()),
           log: log, cancel: cancel);
     }
