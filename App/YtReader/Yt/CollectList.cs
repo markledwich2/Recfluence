@@ -16,6 +16,7 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.SimpleCollect;
 using YtReader.Store;
+using YtReader.Transcribe;
 using static Mutuo.Etl.Pipe.PipeArg;
 using static YtReader.Yt.CollectFromType;
 using static YtReader.Yt.UpdateChannelType;
@@ -65,10 +66,9 @@ namespace YtReader.Yt {
   }
 
   public record VideoListStats(string video_id, string source_id, string channel_id, DateTime? extra_updated, DateTime upload_date, DateTime updated,
-    bool caption_exists, bool comment_exists,
-    Platform platform);
+    bool caption_exists, bool comment_exists, Platform platform, string media_url);
 
-  public record CollectList(YtCollector YtCollector, SimpleCollector SimpleCollector, IPipeCtx PipeCtx, AppCfg Cfg) {
+  public record CollectList(YtCollector YtCollector, SimpleCollector SimpleCollector, IPipeCtx PipeCtx, AppCfg Cfg, Transcriber Transcriber) {
     /// <summary>Collect extra & parts from an imported list of channels and or videos. Use instead of update to process
     ///   arbitrary lists and ad-hoc fixes</summary>
     public async Task Run(CollectListOptions opts, ILogger log, CancellationToken cancel = default) {
@@ -166,23 +166,43 @@ namespace YtReader.Yt {
       if (parts.ShouldRun(EComment))
         plans.SetPart(videos.Where(v => !v.comment_exists).Select(v => v.video_id), EComment);
 
-      var res = await videos.GroupBy(v => v.platform).BlockMap(async g => {
+      // process planned extra parts (except transcribe)
+      var extraPartsRes = await videos.GroupBy(v => v.platform).BlockMap(async g => {
         var platform = g.Key;
         var collector = Collector(platform);
-
-        var planBatches = plans.Batch(batchSize).ToArray();
-        var extra = await planBatches
+        var extra = await plans
+          .Where(p => p.Parts.Any(e => e.In(EExtra, EComment, ERec, ECaption)))
+          .Batch(batchSize)
           .BlockMap(async (planBatch, batchNum) => {
             var (extras, _, comments, captions) = await collector.SaveExtraAndParts(platform, c: null, parts, log, new(planBatch));
             log.Information("ProcessVideos - saved extra {Videos} extras, {Captions} captions {Comments} comments. Progress {AllVideos}/{TotalVideos}"
               , extras.Length, captions.Length, comments.Length, batchNum * batchSize + extras.Length, plans.Count);
-            return extras;
+            var captionVideoIds = captions.NotNull().Select(c => c.VideoId).ToHashSet();
+            return extras.Select(e => (e, captionLoaded: captionVideoIds.Contains(e.VideoId), parts)).ToArray();
           }, Cfg.Collect.ParallelChannels, cancel: cancel)
           .SelectManyList();
-        return extra.Select(e => new VideoProcessResult(e.VideoId, e.ChannelId, platform)).ToArray();
+        return extra.Select(e => new VideoProcessResult(e.e.VideoId, e.e.ChannelId, platform, e.captionLoaded, e.parts)).ToArray();
       }).SelectMany().ToArrayAsync();
 
-      return res;
+      // process transcriptions. Supplemental to SaveExtraAndParts because this depends on if we can get captions from the source
+      if (parts.ShouldRun(ETranscribe)) {
+        var keyedRes = extraPartsRes.KeyBy(v => v.VideoId);
+        var videosToTranscribe = videos.Where(v => v.media_url.HasValue() && !v.caption_exists)
+          .Select(v => (v, res: keyedRes[v.video_id]))
+          .Where(v => v.res?.captionLoaded != true).ToArray();
+        /*foreach (var v in videosToTranscribe)
+          transcribeRes.Add(v.res with {Parts = v.res.Parts.Concat(ETranscribe).ToArray()});*/
+        log.Information("ProcessVideos - starting transcription of {Videos} videos", videosToTranscribe.Length);
+        await Transcriber.TranscribeVideos(videosToTranscribe.Select(v => new VideoToTranscribe {
+          video_id = v.v.video_id,
+          channel_id = v.v.channel_id,
+          platform = v.v.platform,
+          media_url = v.v.media_url,
+          source_id = v.v.source_id
+        }).ToAsyncEnumerable(), log);
+      }
+
+      return extraPartsRes.ToArray();
     }
 
     async Task ProcessUsers(ILogger log, CollectListOptions opts, CancellationToken cancel = default) {
@@ -257,8 +277,10 @@ with raw_vids as ({select.Sql})
        , exists(select * from caption s where s.video_id=r.video_id) caption_exists
        , exists(select * from comment t where t.video_id=r.video_id) comment_exists
        , v.platform
+      , e.media_url
   from raw_vids r
-         left join video_latest v on v.video_id=r.video_id
+      left join video_latest v on v.video_id=r.video_id
+      left join video_extra e on e.video_id=r.video_id
   where r.video_id is not null
   {limit.Do(l => $"limit {l}")}
 )
@@ -281,6 +303,6 @@ select * from s
       return p;
     }
 
-    public record VideoProcessResult(string VideoId, string ChannelId, Platform Platform);
+    public record VideoProcessResult(string VideoId, string ChannelId, Platform Platform, bool captionLoaded, ExtraPart[] Parts);
   }
 }

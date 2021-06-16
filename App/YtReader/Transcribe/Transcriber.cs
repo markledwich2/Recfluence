@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
-using Amazon.Internal;
 using Amazon.Runtime;
 using Amazon.TranscribeService;
 using Amazon.TranscribeService.Model;
@@ -24,7 +23,6 @@ using SysExtensions.Collections;
 using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Net;
-using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
@@ -75,31 +73,39 @@ namespace YtReader.Transcribe {
 
     public async Task Transcribe(TranscribeOptions options, ILogger log, CancellationToken cancel = default) {
       log = log.ForContext("Function", nameof(Transcribe));
-      var errors = 0;
-      if (options.Parts.ShouldRun(PTranscribe)) {
-        var existingJobs = await TransClient.Jobs().SelectMany().ToArrayAsync();
-        await LoadMedia(options, log, cancel)
-          .BlockMap(async v => {
-              var (res, ex) = await Transcribe(v, existingJobs, log).Try();
-              if (ex == null) return res;
-              log.Warning(ex, "Transcribe - unhandled error transcribing: {Error}", ex.Message);
-              if (Interlocked.Increment(ref errors) > 20) throw new("Transcribe - too many errors, probably a bug");
-              return res;
-            },
-            Cfg.ParallelTranscribe)
-          .NotNull()
-          .BlockDo(async (caption, i) => {
-            await StoreDb.Captions.Append(caption, log);
-            // transcribing is expensive and slow, save each one immediately rather than batching
-            log.Information("Transcribe - saved caption for video {Video} ({Num})", caption.VideoId, i);
-          });
-      }
-
+      if (options.Parts.ShouldRun(PTranscribe)) await TranscribeVideos(LoadMedia(options, log, cancel), log);
       if (options.Parts.ShouldRun(PStage)) await Stage.StageUpdate(log, tableNames: new[] {"caption_stage"});
       log.Information("Transcribe - completed transcribing");
     }
 
-    async Task<VideoCaption> Transcribe(VideoData v, TranscriptionJobSummary[] existingJobs, ILogger log) {
+    public async Task TranscribeVideos(IAsyncEnumerable<VideoToTranscribe> videos, ILogger log, CancellationToken cancel = default) {
+      var jobs = await ExistingJobs();
+      var errors = 0;
+      var tempDir = YtResults.TempDir();
+      await videos.BlockMap(async v => {
+          // the media might be downloaded or not. Load it as required
+          if (v.media_path == null) return v with {media_path = await CopyMedia(log, v, tempDir, cancel)};
+          return v;
+        })
+        .BlockMap(async v => {
+            var (res, ex) = await Transcribe(v, jobs, log).Try();
+            if (ex == null) return res;
+            log.Warning(ex, "Transcribe - unhandled error transcribing: {Error}", ex.Message);
+            if (Interlocked.Increment(ref errors) > 20) throw new("Transcribe - too many errors, probably a bug");
+            return res;
+          },
+          Cfg.ParallelTranscribe)
+        .NotNull()
+        .BlockDo(async (caption, i) => {
+          await StoreDb.Captions.Append(caption, log);
+          // transcribing is expensive and slow, save each one immediately rather than batching
+          log.Information("Transcribe - saved caption for video {Video} ({Num})", caption.VideoId, i);
+        });
+    }
+
+    public async Task<TranscriptionJobSummary[]> ExistingJobs() => await TransClient.Jobs().SelectMany().ToArrayAsync();
+
+    async Task<VideoCaption> Transcribe(VideoToTranscribe v, TranscriptionJobSummary[] existingJobs, ILogger log) {
       var detectLanguage = true;
       TransRoot transResult = null;
       var transPath = v.media_path.WithExtension("json");
@@ -128,11 +134,11 @@ namespace YtReader.Transcribe {
       return vidCaption;
     }
 
-    async IAsyncEnumerable<VideoData> LoadMedia(TranscribeOptions options, ILogger log, [EnumeratorCancellation] CancellationToken cancel) {
+    async IAsyncEnumerable<VideoToTranscribe> LoadMedia(TranscribeOptions options, ILogger log, [EnumeratorCancellation] CancellationToken cancel) {
       using var db = await Sf.Open(log);
       if (options.Mode == TranscribeMode.Query) {
         var tempDir = YtResults.TempDir();
-        await foreach (var v in db.QueryAsync<VideoData>("video media_url", $@"
+        await foreach (var v in db.QueryAsync<VideoToTranscribe>("video media_url", $@"
 with vids as ({(options.QueryName == null ? "select * from video_extra" : TranscribeSql.Sql[options.QueryName])})
 select q.video_id, e.source_id, e.media_url, e.channel_id, e.platform
 from vids q
@@ -161,7 +167,7 @@ order by views desc nulls last
             await StoreForLoad.Save(path, await b.ToJsonlGzStream(IJsonlStore.JCfg), log);
             return path;
           }).ToArrayAsync(cancellationToken: cancel);
-        await foreach (var v in db.QueryAsync<VideoData>("media-loaded-sans-caption", $@"
+        await foreach (var v in db.QueryAsync<VideoToTranscribe>("media-loaded-sans-caption", $@"
 with media as (
   with raw as (select $1::object v from @yt_data/{StoreForLoad.BasePathSansContainer()}/{mediaLoadPath}/)
   select v:Platform::string platform, v:SourceId::string source_id, v:MediaPath::string media_path from raw
@@ -178,7 +184,7 @@ order by e.views desc nulls last
       }
     }
 
-    async Task<SPath> CopyMedia(ILogger log, VideoData v, FPath tempDir, CancellationToken cancel) {
+    async Task<SPath> CopyMedia(ILogger log, VideoToTranscribe v, FPath tempDir, CancellationToken cancel) {
       var sourceMediaUrl = v.media_url.AsUrl();
       var ext = sourceMediaUrl.PathSegments.LastOrDefault()?.Split(".").LastOrDefault() ?? throw new("not implemented. Currently relying on extension in url");
       var blobPath = BlobPath(v.platform, v.source_id, ext);
@@ -288,14 +294,14 @@ order by e.views desc nulls last
         await 10.Seconds().Delay();
       }
     }
+  }
 
-    record VideoData {
-      public string   video_id   { get; init; }
-      public string   source_id  { get; init; }
-      public string   media_url  { get; init; }
-      public string   channel_id { get; init; }
-      public Platform platform   { get; init; }
-      public SPath    media_path { get; init; }
-    }
+  public record VideoToTranscribe {
+    public string   video_id   { get; init; }
+    public string   source_id  { get; init; }
+    public string   media_url  { get; init; }
+    public string   channel_id { get; init; }
+    public Platform platform   { get; init; }
+    public SPath    media_path { get; init; }
   }
 }

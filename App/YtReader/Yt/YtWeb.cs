@@ -23,6 +23,7 @@ using SysExtensions.Net;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
+using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Web;
 using static System.StringComparison;
@@ -630,6 +631,9 @@ namespace YtReader.Yt {
     [EnumMember(Value = "extra")]   EExtra,
     [EnumMember(Value = "rec")]     ERec,
     [EnumMember(Value = "comment")] EComment,
-    [EnumMember(Value = "caption")] ECaption
+    [EnumMember(Value = "caption")] ECaption,
+    /// <summary> If specified will perform transcription ourselves if needed </summary>
+    [EnumMember(Value = "transcribe")] [CollectPart(Explicit = true)]
+    ETranscribe
   }
 }

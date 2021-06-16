@@ -117,6 +117,15 @@ where v:Platform='Rumble'
   and not exists(select * from channel_latest c where c.channel_id=vs.v:ChannelId and meets_review_criteria)
 qualify row_number() over (partition by v:VideoId order by v:Updated desc) = 1
 "
+      }, {
+        "q_alt_sans_caps", @"
+select e.video_id, e.channel_id
+from video_extra e
+join channel_latest c on c.channel_id = e.channel_id
+where array_contains('QAnon'::variant, tags) and e.platform in ('BitChute', 'Rumble') and e.media_url is not null
+and not exists(select * from caption s where s.video_id = e.video_id)
+order by e.views desc nulls last
+"
       }
     };
 
