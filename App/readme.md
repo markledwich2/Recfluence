@@ -61,7 +61,7 @@ dotnet run -- update --help
 ![image](https://user-images.githubusercontent.com/17095341/121965000-bab00200-cdaf-11eb-8773-74192e53a944.png)
 
 
-### default update
+**default update**
 ```bash
 # run a default update on this machine
 dotnet run -- update
