@@ -85,7 +85,7 @@ namespace YtReader.Store {
     static readonly IndexCol[] PeriodCols = new[] {"period"}.Select(c => Col(c, distinct: true)).ToArray();
 
     static IndexCol Col(string dbName, bool inIndex = true, bool distinct = false, bool minMax = false) {
-      var meta = new[] {distinct ? ColMeta.Distinct : null, minMax ? ColMeta.MinMax : null}.NotNull().ToArray();
+      var meta = new ColMeta?[] {distinct ? ColMeta.Distinct : null, minMax ? ColMeta.MinMax : null}.NotNull().ToArray();
       return new() {
         Name = dbName.ToCamelCase(),
         DbName = dbName,
