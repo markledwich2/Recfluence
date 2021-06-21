@@ -305,7 +305,7 @@ order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
 select narrative, v.upload_date, n.video_id, v.channel_id, n.captions
 from video_narrative2 n
 left join video_latest v on v.video_id = n.video_id
-order by {NarrativeCaptionCols.DbNames().Join(",")}",
+order by {Narrative2CaptionCols.DbNames().Join(",")}",
       50.Kilobytes(), // small because the UI loads these on demand
       "v2.2",
       Tags: new[] {"narrative2"});
