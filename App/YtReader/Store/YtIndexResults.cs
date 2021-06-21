@@ -259,6 +259,7 @@ select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
     readonly WorkCfg Narrative2Videos = new(nameof(Narrative2Videos), NarrativeVideoCols, $@"
 with s as (
   select n.narrative
+       , n.mentions
        , n.keywords
        , n.tags
        , n.tags_meta
