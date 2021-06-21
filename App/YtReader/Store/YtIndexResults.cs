@@ -82,14 +82,17 @@ namespace YtReader.Store {
 
     #region Channels & Videos
 
-    static readonly IndexCol[] PeriodCols = new[] {"period"}.Select(c => Col(c, writeDistinct: true)).ToArray();
+    static readonly IndexCol[] PeriodCols = new[] {"period"}.Select(c => Col(c, distinct: true)).ToArray();
 
-    static IndexCol Col(string dbName, bool inIndex = true, bool writeDistinct = false) => new() {
-      Name = dbName.ToCamelCase(),
-      DbName = dbName,
-      InIndex = inIndex,
-      WriteDistinct = writeDistinct
-    };
+    static IndexCol Col(string dbName, bool inIndex = true, bool distinct = false, bool minMax = false) {
+      var meta = new[] {distinct ? ColMeta.Distinct : null, minMax ? ColMeta.MinMax : null}.NotNull().ToArray();
+      return new() {
+        Name = dbName.ToCamelCase(),
+        DbName = dbName,
+        InIndex = inIndex,
+        ExtraMeta = meta
+      };
+    }
 
     /// <summary>Top videos for all channels for a given time period</summary>
     WorkCfg TopVideos(int topPerPeriod) => new(nameof(TopVideos), PeriodCols, TopVideoResSql(topPerPeriod, PeriodCols));
@@ -146,7 +149,7 @@ from by_channel t
 order by {orderCols.DbNames().Join(",")}";
 
     WorkCfg VideoRemoved =
-      new(nameof(VideoRemoved), new[] {Col("last_seen"), Col("error_type", inIndex: false, writeDistinct: true)}, @"
+      new(nameof(VideoRemoved), new[] {Col("last_seen"), Col("error_type", inIndex: false, distinct: true)}, @"
 select e.*
      , exists(select c.video_id from caption c where e.video_id=c.video_id) has_captions
 from video_error e
@@ -167,7 +170,7 @@ order by video_id, offset_seconds", 100.Kilobytes());
 
     #region Narrative
 
-    static readonly IndexCol[] NarrativeChannelsCols = {Col("narrative", writeDistinct: true)};
+    static readonly IndexCol[] NarrativeChannelsCols = {Col("narrative", distinct: true)};
 
     readonly WorkCfg NarrativeChannels = new(nameof(NarrativeChannels), NarrativeChannelsCols, $@"
 with by_channel as (
@@ -190,7 +193,7 @@ s as (
 select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
       Tags: new[] {"narrative"});
 
-    static readonly IndexCol[] NarrativeVideoCols = {Col("narrative", writeDistinct: true), Col("upload_date")};
+    static readonly IndexCol[] NarrativeVideoCols = {Col("narrative", distinct: true), Col("upload_date", minMax: true)};
 
     readonly WorkCfg NarrativeVideos = new(nameof(NarrativeVideos), NarrativeVideoCols, $@"
 with s as (
@@ -292,16 +295,19 @@ select *
 from s
 order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
       500.Kilobytes(), // big because the UI loads most/all of it
-      "v2.1",
+      "v2.2",
       NullValueHandling.Ignore,
       new[] {"narrative2"});
 
-    WorkCfg Narrative2Captions = new(nameof(Narrative2Captions), NarrativeCaptionCols, @$"
-select narrative, n.video_id, v.channel_id, n.captions
+    static readonly IndexCol[] Narrative2CaptionCols = {Col("narrative"), Col("upload_date")};
+
+    WorkCfg Narrative2Captions = new(nameof(Narrative2Captions), Narrative2CaptionCols, @$"
+select narrative, v.upload_date, n.video_id, v.channel_id, n.captions
 from video_narrative2 n
 left join video_latest v on v.video_id = n.video_id
 order by {NarrativeCaptionCols.DbNames().Join(",")}",
       50.Kilobytes(), // small because the UI loads these on demand
+      "v2.2",
       Tags: new[] {"narrative2"});
 
     #endregion
@@ -309,8 +315,8 @@ order by {NarrativeCaptionCols.DbNames().Join(",")}",
     #region Recs
 
     static readonly IndexCol[] UsRecCols = {
-      Col("label", writeDistinct: true),
-      Col("from_channel_id", writeDistinct: true)
+      Col("label", distinct: true),
+      Col("from_channel_id", distinct: true)
     };
 
     WorkCfg UsRecs = new(nameof(UsRecs), UsRecCols, @$"
@@ -361,7 +367,7 @@ select *
 from sets
 order by {UsRecCols.DbNames().Join(",")}", 200.Kilobytes(), Tags: new[] {"us"});
 
-    static readonly IndexCol[] VideoSeenCols = {Col("part"), Col("account", writeDistinct: true)};
+    static readonly IndexCol[] VideoSeenCols = {Col("part"), Col("account", distinct: true)};
 
     static string GetVideoSeen(string table, bool titleInSeen = false) =>
       $@"

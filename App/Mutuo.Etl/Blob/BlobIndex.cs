@@ -16,11 +16,16 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 
 namespace Mutuo.Etl.Blob {
+  public enum ColMeta {
+    Distinct,
+    MinMax
+  }
+
   public record IndexCol {
-    public string Name          { get; set; }
-    public bool   InIndex       { get; set; }
-    public bool   WriteDistinct { get; set; }
-    public string DbName        { get; set; }
+    public string    Name      { get; init; }
+    public string    DbName    { get; init; }
+    public bool      InIndex   { get; init; }
+    public ColMeta[] ExtraMeta { get; init; }
   }
 
   public record BlobIndexResult(BlobIndexMeta Index, SPath IndexPath, SPath IndexFilesPath, SPath[] ToDelete);
@@ -37,11 +42,17 @@ namespace Mutuo.Etl.Blob {
 
       var runId = DateTime.UtcNow.FileSafeTimestamp();
 
-      IDictionary<string, HashSet<string>> colDistinctValues = work.Cols.Where(c => c.WriteDistinct).ToDictionary(c => c.Name, c => new HashSet<string>());
+      var colMeta = work.Cols.Select(c => (Meta: new BlobIndexColMeta {
+        Name = c.Name,
+        DbName = c.DbName,
+        InIndex = c.InIndex,
+        Distinct = c.ExtraMeta?.Contains(ColMeta.Distinct) == true ? new HashSet<string>() : null
+      }, Col: c)).ToArray();
+
 
       void OnProcessed(JObject j) {
         work.OnProcessed?.Invoke(j);
-        RecordColDistinct(j, colDistinctValues);
+        RecordColMeta(j, colMeta);
       }
 
       var files = (await IndexFiles(work.Rows, work.Cols, work.Size, work.NullHandling, log, OnProcessed)
@@ -57,15 +68,6 @@ namespace Mutuo.Etl.Blob {
           };
         }, parallel: 16, cancel: cancel).ToListAsync()).NotNull();
 
-      var colMd = work.Cols
-        .Where(c => c.WriteDistinct)
-        .Select(c => new BlobIndexColMeta {
-          Name = c.Name,
-          DbName = c.DbName,
-          InIndex = c.InIndex,
-          Distinct = colDistinctValues.TryGet(c.Name)?.ToArray() ?? new string[] { }
-        }).ToArray();
-
       var toDelete = oldIndex.RunIds
         .OrderByDescending(r => r.Created).Skip(1) // leave latest
         .Where(r => DateTime.UtcNow - r.Created > 12.Hours()) // 1 older than latest if its old enough
@@ -75,7 +77,7 @@ namespace Mutuo.Etl.Blob {
         KeyFiles = files.ToArray(),
         RunIds = oldIndex.RunIds.Where(r => toDelete.All(d => d.Id != r.Id))
           .Concat(new RunId {Id = runId, Created = DateTime.UtcNow}).ToArray(),
-        Cols = colMd
+        Cols = colMeta.Select(c => c.Meta).ToArray()
       };
 
       var indexFilesPath = work.Path.Add(runId);
@@ -128,11 +130,19 @@ namespace Mutuo.Etl.Blob {
       JObject JCopy(JObject j) => j.JCloneProps(cols.Where(c => c.InIndex).Select(c => c.Name).ToArray());
     }
 
-    static void RecordColDistinct(JObject r, IDictionary<string, HashSet<string>> colDistinctValues) {
-      foreach (var (colName, values) in colDistinctValues) {
-        var s = r[colName]?.Value<string>();
-        if (s != null)
-          values.Add(s);
+    static void RecordColMeta(JObject r, (BlobIndexColMeta Meta, IndexCol Col)[] cols) {
+      foreach (var (m, c) in cols) {
+        if (c.ExtraMeta.Contains(ColMeta.Distinct)) {
+          var s = r[m.Name]?.Value<string>();
+          if (s != null)
+            m.Distinct.Add(s);
+        }
+
+        if (c.ExtraMeta.Contains(ColMeta.MinMax))
+          if (r[m.Name] is JValue {Value: IComparable v} j) {
+            if (m.Min == null || v.CompareTo(m.Min?.Value) < 0) m.Min = j;
+            if (v.CompareTo(m.Max?.Value) > 0) m.Max = j;
+          }
       }
     }
   }
@@ -165,8 +175,13 @@ namespace Mutuo.Etl.Blob {
     public BlobIndexColMeta[]  Cols     { get; init; }
   }
 
-  public record BlobIndexColMeta : IndexCol {
-    public string[] Distinct { get; init; }
+  public record BlobIndexColMeta {
+    public string          Name     { get; init; }
+    public string          DbName   { get; init; }
+    public bool            InIndex  { get; set; }
+    public HashSet<string> Distinct { get; init; }
+    public JValue          Min      { get; set; }
+    public JValue          Max      { get; set; }
   }
 
   public record RunId {
@@ -175,8 +190,9 @@ namespace Mutuo.Etl.Blob {
   }
 
   public record BlobIndexFileMeta {
-    public string  File  { get; init; }
-    public JObject First { get; init; }
-    public JObject Last  { get; init; }
+    public string             File  { get; init; }
+    public JObject            First { get; init; }
+    public JObject            Last  { get; init; }
+    public BlobIndexColMeta[] Cols  { get; init; }
   }
 }
