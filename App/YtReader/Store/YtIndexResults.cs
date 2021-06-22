@@ -237,6 +237,8 @@ order by {NarrativeCaptionCols.DbNames().Join(",")}",
       50.Kilobytes(), // small because the UI loads these on demand
       Tags: new[] {"narrative"});
 
+    const string Narrative2Version = "v2.3";
+
     readonly WorkCfg Narrative2Channels = new(nameof(Narrative2Channels), NarrativeChannelsCols, $@"
 with by_channel as (
   select n.narrative, v.channel_id, sum(v.views) views
@@ -257,7 +259,7 @@ s as (
            left join channel_latest cl on n.channel_id=cl.channel_id
 )
 select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
-      Tags: new[] {"narrative2"});
+      Tags: new[] {"narrative2"}, Version: Narrative2Version);
 
     readonly WorkCfg Narrative2Videos = new(nameof(Narrative2Videos), NarrativeVideoCols, $@"
 with s as (
@@ -295,7 +297,7 @@ select *
 from s
 order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
       500.Kilobytes(), // big because the UI loads most/all of it
-      "v2.2",
+      Narrative2Version,
       NullValueHandling.Ignore,
       new[] {"narrative2"});
 
@@ -307,7 +309,7 @@ from video_narrative2 n
 left join video_latest v on v.video_id = n.video_id
 order by {Narrative2CaptionCols.DbNames().Join(",")}",
       50.Kilobytes(), // small because the UI loads these on demand
-      "v2.2",
+      Narrative2Version,
       Tags: new[] {"narrative2"});
 
     #endregion
