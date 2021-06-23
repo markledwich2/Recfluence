@@ -296,7 +296,7 @@ with s as (
 select *
 from s
 order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
-      500.Kilobytes(), // big because the UI loads most/all of it
+      200.Kilobytes(), // bigish because some charts need to load alot of these
       Narrative2Version,
       NullValueHandling.Ignore,
       new[] {"narrative2"});
@@ -304,7 +304,7 @@ order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
     static readonly IndexCol[] Narrative2CaptionCols = {Col("narrative"), Col("upload_date")};
 
     WorkCfg Narrative2Captions = new(nameof(Narrative2Captions), Narrative2CaptionCols, @$"
-select narrative, v.upload_date, n.video_id, v.channel_id, n.captions
+select narrative, v.upload_date::dat upload_date, n.video_id, v.channel_id, n.captions
 from video_narrative2 n
 left join video_latest v on v.video_id = n.video_id
 order by {Narrative2CaptionCols.DbNames().Join(",")}",
