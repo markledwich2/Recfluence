@@ -304,7 +304,7 @@ order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
     static readonly IndexCol[] Narrative2CaptionCols = {Col("narrative"), Col("upload_date")};
 
     WorkCfg Narrative2Captions = new(nameof(Narrative2Captions), Narrative2CaptionCols, @$"
-select narrative, v.upload_date::dat upload_date, n.video_id, v.channel_id, n.captions
+select narrative, v.upload_date::date upload_date, n.video_id, v.channel_id, n.captions
 from video_narrative2 n
 left join video_latest v on v.video_id = n.video_id
 order by {Narrative2CaptionCols.DbNames().Join(",")}",
