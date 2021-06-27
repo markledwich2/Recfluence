@@ -32,9 +32,6 @@ namespace YtReader.Store {
 
     public async Task Run(string[] names, string[] tags, ILogger log, CancellationToken cancel = default) {
       var toRun = new[] {
-          NarrativeChannels,
-          NarrativeVideos,
-          NarrativeCaptions,
           Narrative2Channels,
           Narrative2Videos,
           Narrative2Captions,
@@ -170,74 +167,9 @@ order by video_id, offset_seconds", 100.Kilobytes());
 
     #region Narrative
 
-    static readonly IndexCol[] NarrativeChannelsCols = {Col("narrative", distinct: true)};
-
-    readonly WorkCfg NarrativeChannels = new(nameof(NarrativeChannels), NarrativeChannelsCols, $@"
-with by_channel as (
-  select n.channel_id, n.narrative, sum(v.views) views
-  from video_narrative n
-         left join video_latest v on v.video_id=n.video_id
-  group by n.narrative, n.channel_id
-),
-s as (
-  select n.*
-          , cl.channel_title
-         , arrayExclude(cl.tags, array_construct('MissingLinkMedia', 'OrganizedReligion', 'Educational', 'Black', 'LGBT')) tags
-         , cl.lr
-         , logo_url
-         , subs
-         , substr(cl.description, 0, 301) description
-  from by_channel n
-           left join channel_latest cl on n.channel_id=cl.channel_id
-)
-select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
-      Tags: new[] {"narrative"});
-
-    static readonly IndexCol[] NarrativeVideoCols = {Col("narrative", distinct: true), Col("upload_date", minMax: true)};
-
-    readonly WorkCfg NarrativeVideos = new(nameof(NarrativeVideos), NarrativeVideoCols, $@"
-with s as (
-  select n.narrative
-       , n.video_id
-       , n.video_title
-       , n.channel_id
-       , n.support
-       , n.supplement
-       , v.views::int video_views
-       , case
-           when n.supplement='manual' then 1
-           when n.support='support' then iff(v.upload_date<'2020-12-09 ',0.84/0.96,0.68/0.97)
-           when n.support='dispute' then iff(v.upload_date<'2020-12-09 ',0.84/0.94,0.80/0.97)
-           else 1
-         end * v.views::int as video_views_adjusted
-       , v.upload_date::date upload_date
-       , ve.error_type
-       , timediff(seconds,'0'::time,v.duration) duration_secs
-       --, n.captions
-       , ve.last_seen
-  from video_narrative n
-         left join video_latest v on n.video_id=v.video_id
-         left join video_extra e on e.video_id=v.video_id
-         left join video_error ve on ve.video_id=n.video_id
-)
-select *
-from s
-order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
-      Version: "v2.1",
-      Size: 500.Kilobytes(), // big because the UI loads most/all of it
-      NullHandling: NullValueHandling.Ignore,
-      Tags: new[] {"narrative"});
-
-    static readonly IndexCol[] NarrativeCaptionCols = {Col("narrative"), Col("channel_id"), Col("video_id")};
-
-    WorkCfg NarrativeCaptions = new(nameof(NarrativeCaptions), NarrativeCaptionCols, @$"
-select narrative, video_id, n.channel_id, n.captions
-from video_narrative n
-order by {NarrativeCaptionCols.DbNames().Join(",")}",
-      50.Kilobytes(), // small because the UI loads these on demand
-      Tags: new[] {"narrative"});
-
     const string Narrative2Version = "v2.3";
+
+    static readonly IndexCol[] NarrativeChannelsCols = {Col("narrative", distinct: true)};
 
     readonly WorkCfg Narrative2Channels = new(nameof(Narrative2Channels), NarrativeChannelsCols, $@"
 with by_channel as (
@@ -260,6 +192,8 @@ s as (
 )
 select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
       Tags: new[] {"narrative2"}, Version: Narrative2Version);
+
+    static readonly IndexCol[] NarrativeVideoCols = {Col("narrative", distinct: true), Col("upload_date", minMax: true)};
 
     readonly WorkCfg Narrative2Videos = new(nameof(Narrative2Videos), NarrativeVideoCols, $@"
 with s as (
