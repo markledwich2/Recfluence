@@ -546,10 +546,21 @@ namespace YtReader.Yt {
         if (trail != "") yield return trail;
       }
 
-      // This parameter does magic and a lot of videos don't work without it
+      // see this codebase for the latest on using get_video_info https://github.com/Tyrrrz/YoutubeExplode/blob/b09f65dcc0498da90b09bcd33a9c8e639876f3b7/YoutubeExplode/Bridge/YoutubeController.cs#L128
+      // it looks like it might dissapear any moment now that the YouTube website doesn't use it.
       var eurl = $"https://youtube.googleapis.com/v/{videoId}".UrlEncode();
-      var res = await GetHttp($"https://youtube.com/get_video_info?video_id={videoId}&el=embedded&eurl={eurl}&hl=en&html5=1", "video dictionary",
-        log, new[] {404}); // unusual, but get_video_info has been returning 404 intermittently and doesn't mean that the video is missing
+      var url =
+        "https://www.youtube.com/get_video_info" +
+        $"?video_id={videoId}" +
+        "&html5=1" +
+        "&el=embedded" +
+        //$"&sts={signatureTimestamp}" +
+        $"&eurl={eurl}" +
+        "&hl=en" +
+        "&c=TVHTML5" +
+        "&cver=6.20180913";
+
+      var res = await GetHttp(url, "video dictionary", log);
       using var sr = await res.ContentAsStream();
       var result = SplitQuery(sr);
       return result;

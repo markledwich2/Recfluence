@@ -41,7 +41,7 @@ namespace Tests {
 #pragma warning disable 1998
     static async IAsyncEnumerable<int> AsyncRange(int count) {
 #pragma warning restore 1998
-      foreach (var i in Enumerable.Range(start: 0, count: 100)) yield return i;
+      foreach (var i in Enumerable.Range(start: 0, count)) yield return i;
     }
 
     [Test]
@@ -49,10 +49,10 @@ namespace Tests {
       using var ctx = await TextCtx();
       var log = ctx.Log;
 
-      var res = await AsyncRange(100).BlockMap(async i => {
+      var res = await AsyncRange(10).BlockMap(async i => {
           await 1.Seconds().Delay();
           log.Information("{i}a", i);
-          if (i == 10) throw new("a block error");
+          if (i == 2) throw new("a block error");
           return $"{i}a";
         }, parallel: 4).BlockMap(async a => {
           await 1.Seconds().Delay();

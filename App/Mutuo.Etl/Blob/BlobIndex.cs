@@ -86,10 +86,11 @@ namespace Mutuo.Etl.Blob {
     }
 
     public async Task CommitIndexJson(BlobIndexResult indexWork, ILogger log) {
+      log.Debug("deleted expired starting - {Files}", indexWork.ToDelete);
       await indexWork.ToDelete.BlockDo(async deletePath => {
-        await Store.List(deletePath).SelectMany().BlockMap(f => Store.Delete(f.Path, log)).ToListAsync();
+        await Store.List(deletePath).SelectMany().BlockMap(f => Store.Delete(f.Path, log), parallel: 16).ToListAsync();
       });
-      log.Debug("deleted expired {Files}", indexWork.ToDelete);
+      log.Debug("deleted expired complete - {Files}", indexWork.ToDelete);
       await Store.Set(indexWork.IndexPath, indexWork.Index);
       log.Information("Committed index {Index}", indexWork.IndexPath);
     }
@@ -153,7 +154,7 @@ namespace Mutuo.Etl.Blob {
 
     public static JObject JCloneProps(this JObject j, params string[] props) {
       var k = new JObject();
-      foreach (var p in props)
+      foreach (var p in props.NotNull())
         k[p] = j[p];
       return k;
     }

@@ -9,6 +9,7 @@ using System.Threading.Tasks.Dataflow;
 using Humanizer;
 using SysExtensions.Collections;
 using SysExtensions.Text;
+using static System.Threading.Tasks.TaskStatus;
 
 // ReSharper disable InconsistentNaming
 
@@ -18,8 +19,8 @@ namespace SysExtensions.Threading {
       CancellationToken cancel = default) {
       var options = ActionOptions(parallel, capacity, cancel);
       var block = new ActionBlock<(T, int)>(i => action(i.Item1, i.Item2), options);
-      var produced = await ProduceAsync(source.WithIndex(), block, cancel: cancel);
-      await block.Completion;
+      var produced = await ProduceAsync(source.WithIndex(), block, cancel: cancel).ConfigureAwait(false);
+      await block.Completion.ConfigureAwait(false);
       return produced;
     }
 
@@ -34,7 +35,7 @@ namespace SysExtensions.Threading {
       var options = ActionOptions(parallel, capacity, cancel);
       var block = new ActionBlock<(T, int)>(i => action(i.Item1, i.Item2), options);
       var produced = await ProduceAsync(source, block);
-      await WaitForComplete(block);
+      await block.Completion.ConfigureAwait(false);
       return produced;
     }
 
@@ -53,11 +54,11 @@ namespace SysExtensions.Threading {
           block.Complete();
           break;
         }
-        if (!await block.OutputAvailableAsync()) break;
-        yield return await block.ReceiveAsync();
+        if (!await block.OutputAvailableAsync().ConfigureAwait(false)) break;
+        yield return await block.ReceiveAsync().ConfigureAwait(false);
       }
-      await WaitForComplete(block);
-      await produceTask;
+      await block.Completion.ConfigureAwait(false);
+      await produceTask.ConfigureAwait(false);
     }
 
     public static IAsyncEnumerable<R> BlockMap<T, R>(this IEnumerable<T> source,
@@ -82,7 +83,7 @@ namespace SysExtensions.Threading {
 
       async Task ProduceAll() {
         try {
-          await sources.BlockDo(s => ProduceAsync(s, block, cancel, complete: false), parallel, cancel: cancel);
+          await sources.BlockDo(s => ProduceAsync(s, block, cancel, complete: false), parallel, cancel: cancel).ConfigureAwait(false);
         }
         finally {
           block.Complete();
@@ -95,11 +96,11 @@ namespace SysExtensions.Threading {
           block.Complete();
           break;
         }
-        if (!await block.OutputAvailableAsync()) break;
-        yield return await block.ReceiveAsync();
+        if (!await block.OutputAvailableAsync().ConfigureAwait(false)) break;
+        yield return await block.ReceiveAsync().ConfigureAwait(false);
       }
-      await WaitForComplete(block);
-      await produceTask;
+      await block.Completion.ConfigureAwait(false);
+      await produceTask.ConfigureAwait(false);
     }
 
     public static async IAsyncEnumerable<R> BlockMap<T, R>(this IAsyncEnumerable<T> source,
@@ -111,11 +112,11 @@ namespace SysExtensions.Threading {
           block.Complete();
           break;
         }
-        if (!await block.OutputAvailableAsync()) break;
-        yield return await block.ReceiveAsync();
+        if (!await block.OutputAvailableAsync().ConfigureAwait(false)) break;
+        yield return await block.ReceiveAsync().ConfigureAwait(false);
       }
-      await WaitForComplete(block);
-      await produceTask;
+      await block.Completion.ConfigureAwait(false);
+      await produceTask.ConfigureAwait(false);
     }
 
     public static async IAsyncEnumerable<R> BlockMap<T, R>(this Task<IAsyncEnumerable<T>> source,
@@ -142,8 +143,12 @@ namespace SysExtensions.Threading {
         }
       }
       finally {
-        if (complete)
+        if (complete) {
+          var sw = Stopwatch.StartNew();
+          while (block.Completion.Status.In(Created, WaitingForActivation, WaitingToRun) && sw.Elapsed < 5.Seconds())
+            await 10.Milliseconds().Delay().ConfigureAwait(false);
           block.Complete();
+        }
       }
       return produced;
     }
@@ -158,22 +163,15 @@ namespace SysExtensions.Threading {
         }
       }
       finally {
-        if (complete)
+        if (complete) {
+          var sw = Stopwatch.StartNew();
+          while (block.Completion.Status.In(Created, WaitingForActivation, WaitingToRun) && sw.Elapsed < 5.Seconds())
+            await 10.Milliseconds().Delay().ConfigureAwait(false);
           block.Complete();
+        }
       }
       return produced;
     }
-
-    static async Task WaitForComplete<T>(ActionBlock<(T, int)> block) =>
-      // we can get blocked when the produce errors before ocmpletion. Shortuctitng here is not the way (single items can get through without being processed)
-      // make sure the producer errors the block.
-      //if (block.Completion.Status.In(TaskStatus.WaitingForActivation, TaskStatus.WaitingToRun) && block.InputCount == 0) return;
-      await block.Completion;
-
-    static async Task WaitForComplete<T, R>(TransformBlock<(T, int), R> block) =>
-      // if the producer errors before anything is added, we can't wait on completion
-      //if (block.Completion.Status.In(TaskStatus.WaitingForActivation, TaskStatus.WaitingToRun) && block.InputCount == 0) return;
-      await block.Completion;
 
     /// <summary>Simplified method for async operations that don't need to be chained, and when the result can fit in memory.
     ///   Deprecated</summary>
@@ -196,12 +194,12 @@ namespace SysExtensions.Threading {
           break;
 
         var outputAvailableTask = block.OutputAvailableAsync();
-        var completedTask = await Task.WhenAny(outputAvailableTask, Task.Delay(progressPeriod));
+        var completedTask = await Task.WhenAny(outputAvailableTask, Task.Delay(progressPeriod)).ConfigureAwait(false);
         if (completedTask == outputAvailableTask) {
-          var available = await outputAvailableTask;
+          var available = await outputAvailableTask.ConfigureAwait(false);
           if (!available)
             break;
-          var item = await block.ReceiveAsync();
+          var item = await block.ReceiveAsync().ConfigureAwait(false);
           newResults.Add(item);
           result.Add(item);
         }
@@ -214,8 +212,8 @@ namespace SysExtensions.Threading {
         }
       }
 
-      await produceTask;
-      await block.Completion;
+      await produceTask.ConfigureAwait(false);
+      await block.Completion.ConfigureAwait(false);
 
       return result;
     }
