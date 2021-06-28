@@ -137,7 +137,7 @@ namespace Tests {
     public static async Task TestBitChuteVideo() {
       using var ctx = await TestSetup.TextCtx();
       var web = ctx.Resolve<BitChuteScraper>();
-      var (video, comments) = await web.VideoAndExtra("Q5pxQK7Tdo1P", parts: null, ctx.Log);
+      var (video, comments) = await web.VideoAndExtra("D8o6e7MIcjw", parts: null, ctx.Log);
     }
   }
 }

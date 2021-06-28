@@ -66,7 +66,7 @@ namespace YtReader.Web {
     }
 
     public static void EnsureSuccess(this IFlurlResponse res, ILogger log, string desc, IFlurlRequest request, Exception ex = null, HttpMethod verb = null,
-      string content = null) {
+      Func<HttpContent> content = null) {
       if (res != null && IsSuccess(res.StatusCode)) return;
       var error = res?.StatusCode.ToString() ?? ex?.Message ?? "unknown";
       var curl = request.FormatCurl(verb, content);
@@ -78,12 +78,12 @@ namespace YtReader.Web {
     public static CapturedUrlEncodedContent FormUrlContent(this IFlurlRequest req, object data) =>
       new(req.Settings.UrlEncodedSerializer.Serialize(data));
 
-    public static string FormatCurl(this IFlurlRequest req, HttpMethod verb = null, string content = null) {
+    public static async Task<string> FormatCurl(this IFlurlRequest req, HttpMethod verb = null, Func<HttpContent> content = null) {
       verb ??= HttpMethod.Get;
       var args = Array.Empty<string>()
         .Concat(req.Url.ToString(), "-X", verb.Method.ToUpper())
         .Concat(req.Headers.SelectMany(h => new[] {"-H", $"'{h.Name}:{h.Value}'"}));
-      if (content != null) args = args.Concat("-d", $"'{content}'");
+      if (content != null) args = args.Concat("-d", $"'{await content().ReadAsStringAsync()}'");
       var curl = $"curl {args.NotNull().Join(" ")}";
       return curl;
     }

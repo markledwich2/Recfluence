@@ -73,7 +73,7 @@ namespace YtReader.BitChute {
       var csrf = doc.CsrfToken();
       var req = url.WithBcHeaders(doc, csrf);
       return await FlurlClient.Send(typeof(T).Name, req, HttpMethod.Post,
-          req.FormUrlContent(MergeDynamics(new {csrfmiddlewaretoken = csrf}, data ?? new ExpandoObject())), log: log)
+          () => req.FormUrlContent(MergeDynamics(new {csrfmiddlewaretoken = csrf}, data ?? new ExpandoObject())), log: log)
         .ReceiveJson<T>();
     }
 
@@ -371,7 +371,7 @@ namespace YtReader.BitChute {
       //var content = req.FormUrlContent(MergeDynamics(new {crf_auth = auth}, data ?? new ExpandoObject()));
       var formData = new[] {(name: "cf_auth", value: auth)}.Concat(data.NotNull());
       var content = formData.Join("&", d => $"{d.name}={d.value}");
-      return FlurlClient.Send(typeof(T).Name, req, HttpMethod.Post, new StringContent(content, Encoding.UTF8), log: log, logRequests: true)
+      return FlurlClient.Send(typeof(T).Name, req, HttpMethod.Post, () => new StringContent(content, Encoding.UTF8), log: log, logRequests: true)
         .ReceiveJson<T>();
     }
 

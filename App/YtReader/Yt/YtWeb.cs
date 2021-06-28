@@ -36,7 +36,7 @@ using static YtReader.Yt.YtWebExtensions;
 
 namespace YtReader.Yt {
   public record YtWeb(FlurlProxyClient Client, ISimpleFileStore LogStore) {
-    public Task<IFlurlResponse> Send(ILogger log, string desc, IFlurlRequest req, HttpMethod verb = null, HttpContent content = null,
+    public Task<IFlurlResponse> Send(ILogger log, string desc, IFlurlRequest req, HttpMethod verb = null, Func<HttpContent> content = null,
       Func<IFlurlResponse, bool> isTransient = null) =>
       Client.Send(desc, req, verb, content, isTransient, log);
 
@@ -124,7 +124,7 @@ namespace YtReader.Yt {
       while (true) {
         object token = continueToken == null ? new BpFirst(page.ChannelId, browse.Param) : new BpContinue(continueToken);
         var req = YtUrl.AppendPathSegments(BrowsePath).SetQueryParam("key", page.InnertubeKey).AsRequest();
-        var j = await Send(log, $"browse {pathSuffix}", req, HttpMethod.Post, new CapturedJsonContent(token.ToJson())).Then(r => r.JsonObject());
+        var j = await Send(log, $"browse {pathSuffix}", req, HttpMethod.Post, () => new CapturedJsonContent(token.ToJson())).Then(r => r.JsonObject());
         continueToken = j.SelectToken("..continuationCommand.token").Str();
         yield return j;
         if (continueToken == null) break;
@@ -382,7 +382,7 @@ namespace YtReader.Yt {
           .WithHeader("x-youtube-client-name", "1")
           .WithHeader("x-youtube-client-version", cfg.ClientVersion)
           .WithCookies(cfg.Cookies);
-        var res = await Send(log, "get comments", req, HttpMethod.Post, req.FormUrlContent(new {session_token = cfg.Xsrf}),
+        var res = await Send(log, "get comments", req, HttpMethod.Post, () => req.FormUrlContent(new {session_token = cfg.Xsrf}),
           r => HttpExtensions.IsTransientError(r.StatusCode) || r.StatusCode.In(400));
         return (res, req);
       }
