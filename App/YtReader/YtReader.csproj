@@ -39,7 +39,7 @@
     <PackageReference Include="Serilog.Sinks.Seq" Version="5.0.1" />
     <PackageReference Include="Serilog.Sinks.Trace" Version="2.1.0" />
     <PackageReference Include="Serilog.Sinks.Debug" Version="2.0.0" />
-    <PackageReference Include="Snowflake.Data" Version="2.0.0" />
+    <PackageReference Include="Snowflake.Data" Version="2.0.3" />
     <PackageReference Include="System.Linq.Async" Version="5.0.0" />
     <PackageReference Include="Troschuetz.Random" Version="5.0.1" />
     <PackageReference Include="UriBuilder.Fluent" Version="1.5.2" />

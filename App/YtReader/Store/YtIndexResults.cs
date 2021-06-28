@@ -148,7 +148,7 @@ order by {orderCols.DbNames().Join(",")}";
     WorkCfg VideoRemoved =
       new(nameof(VideoRemoved), new[] {Col("last_seen", minMax: true), Col("error_type", inIndex: false, distinct: true)}, @"
 select e.*
-     , exists(select c.video_id from caption c where e.video_id=c.video_id) has_captions
+     , exists(select s.video_id from caption s where e.video_id=s.video_id) has_captions
 from video_error e
 join channel_accepted c on e.channel_id = c.channel_id
 where e.platform = 'YouTube'
@@ -159,7 +159,7 @@ select e.video_id, s.caption, s.offset_seconds
 from video_error e
 join caption s on e.video_id = s.video_id
 join video_latest v on v.video_id = s.video_id
-join channel_accepted c on c.channel_id = v.channel_id
+join channel_accepted c on c.channel_id = v.channel_id  
 where v.platform = 'YouTube'
 order by video_id, offset_seconds", 100.Kilobytes());
 
