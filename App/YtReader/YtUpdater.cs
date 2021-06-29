@@ -107,7 +107,7 @@ namespace YtReader {
 
       var actionMethods = TaskGraph.FromMethods(
         (l, c) => Collect(options.Collect, l, c),
-        (l, c) => BitChuteCollect(collectOptions, l, c),
+        //(l, c) => BitChuteCollect(collectOptions, l, c), // as of 2021-06-30, all /count POST's are being blocked by cloudflare. Re-enable when resolved 
         (l, c) => RumbleCollect(collectOptions, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),
         (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
