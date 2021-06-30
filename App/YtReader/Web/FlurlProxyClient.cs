@@ -37,10 +37,13 @@ namespace YtReader.Web {
       if (logRequests) log?.Debug("Flurl {desc}: {Curl}", desc, await Curl());
       Task<IFlurlResponse> GetRes() => request.WithClient(UseProxy ? Proxy : Direct).AllowAnyHttpStatus().SendAsync(verb, content?.Invoke());
       void ThrowIfError(IFlurlResponse r, Exception e) => r.EnsureSuccess(log, desc, request, e, verb, content);
-      var retry = Policy.HandleResult(isTransient).RetryWithBackoff("Flurl transient error", Cfg.Retry,
-        async (r, i, _) => log?.Debug("retryable error with {Desc}: '{Error}'. Attempt {Attempt}/{Total}\n{Curl}",
-          desc, r.Result?.StatusCode.ToString() ?? r.Exception?.Message ?? "Unknown error", i, Cfg.Retry, await Curl())
-        , log);
+      var retry = Policy
+        .Handle<FlurlHttpTimeoutException>()
+        .OrResult(isTransient)
+        .RetryWithBackoff("Flurl transient error", Cfg.Retry,
+          async (r, i, _) => log?.Debug("retryable error with {Desc}: '{Error}'. Attempt {Attempt}/{Total}\n{Curl}",
+            desc, r.Result?.StatusCode.ToString() ?? r.Exception?.Message ?? "Unknown error", i, Cfg.Retry, await Curl())
+          , log);
 
       var (res, ex) = await Def.Fun(() => retry.ExecuteAsync(GetRes)).Try();
       if (res != null && HttpExtensions.IsSuccess(res.StatusCode)) return res; // return on success

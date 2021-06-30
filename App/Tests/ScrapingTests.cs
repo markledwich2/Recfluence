@@ -72,7 +72,8 @@ namespace Tests {
       using var x = await TestSetup.TextCtx();
       var ws = x.Scope.Resolve<YtWeb>();
       var chans = await new[] {
-        "UCROjSBCTEqNRLFeAIAOyWLA" // failed not sure why
+        "UCnxuOd8obvLLtf5_-YKFbiQ" // timed out once
+        //"UCROjSBCTEqNRLFeAIAOyWLA". // failed not sure why
         /*"UCdfQFG50Hu88-1CpRmPDA2A", // user channel with pagination of subs
         "UChN7H3JFqeFC-WB8NCxhn7g", // error - unavaialbe
         "UCaJ8FsMMnefU7NXdMaXW8WQ", // error - terminated
