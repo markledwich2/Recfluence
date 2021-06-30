@@ -130,7 +130,7 @@ namespace Tests {
     public static async Task TestRumbleVideo() {
       using var ctx = await TestSetup.TextCtx();
       var web = ctx.Resolve<RumbleScraper>();
-      var video = await web.VideoAndExtra("vhh2sj", parts: null, ctx.Log);
+      var video = await web.VideoAndExtra("vei8ed", parts: null, ctx.Log); // "vei8ed" - private video
     }
 
     [Test]

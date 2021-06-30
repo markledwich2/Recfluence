@@ -191,6 +191,8 @@ namespace YtReader.Rumble {
       if (doc == null) throw new("doc null after retries");
       if (doc.StatusCode == HttpStatusCode.NotFound)
         return (vid with {Status = VideoStatus.NotFound}, null);
+      if (doc.Title == "Private video")
+        return (vid with {Status = VideoStatus.Private}, null);
       doc.EnsureSuccess();
 
       string MetaProp(string prop) => MetaProps(prop).FirstOrDefault();

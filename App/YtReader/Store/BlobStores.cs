@@ -212,7 +212,8 @@ namespace YtReader.Store {
   public enum VideoStatus {
     NotFound,
     Removed,
-    Restricted
+    Restricted,
+    Private
   }
 
   public record Video : WithUpdatedItem {
