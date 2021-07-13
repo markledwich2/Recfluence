@@ -141,8 +141,6 @@ namespace YtReader.Yt {
 
     ICollector Collector(Platform platform) => platform switch {
       Platform.YouTube => YtCollector,
-      Platform.BitChute => SimpleCollector,
-      Platform.Rumble => SimpleCollector,
       _ => throw new($"platform {platform} not supported")
     };
 

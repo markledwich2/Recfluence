@@ -11,8 +11,6 @@ using SysExtensions.Serialization;
 using SysExtensions.Threading;
 using YtReader;
 using YtReader.AmazonSite;
-using YtReader.BitChute;
-using YtReader.Rumble;
 using YtReader.Yt;
 
 namespace Tests {
@@ -125,20 +123,6 @@ namespace Tests {
         //"https://amzn.to/2ZMojrd"
       };
       var completed = await aw.ProcessLinks(links, x.Log, cancel: default);
-    }
-
-    [Test]
-    public static async Task TestRumbleVideo() {
-      using var ctx = await TestSetup.TextCtx();
-      var web = ctx.Resolve<RumbleScraper>();
-      var video = await web.VideoAndExtra("vei8ed", parts: null, ctx.Log); // "vei8ed" - private video
-    }
-
-    [Test]
-    public static async Task TestBitChuteVideo() {
-      using var ctx = await TestSetup.TextCtx();
-      var web = ctx.Resolve<BitChuteScraper>();
-      var (video, comments) = await web.VideoAndExtra("D8o6e7MIcjw", parts: null, ctx.Log);
     }
   }
 }

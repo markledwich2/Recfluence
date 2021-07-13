@@ -115,7 +115,7 @@ namespace YtReader {
       };
 
       var sql =
-        $"copy into {table} from @{new string[] {stage, store.BasePathSansContainer()}.Concat(t.Dir.Tokens).NotNull().Join("/")}/ file_format=(type=json)";
+        $"copy into {table} from @{stage.InArray().Concat(store.BasePath.Tokens.Skip(1).ToArray()).Concat(t.Dir.Tokens).NotNull().Join("/")}/ file_format=(type=json)";
       await db.Execute("copy into", sql);
 
       // sf should return this info form copy_into (its in their UI, but not in .net or jdbc drivers)

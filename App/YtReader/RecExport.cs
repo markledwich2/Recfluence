@@ -5,6 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using CliFx;
+using CliFx.Attributes;
+using CliFx.Infrastructure;
 using CsvHelper;
 using CsvHelper.Configuration.Attributes;
 using Mutuo.Etl.Blob;
@@ -13,10 +16,16 @@ using SysExtensions;
 using SysExtensions.Collections;
 using SysExtensions.IO;
 using SysExtensions.Threading;
+using YtReader.Store;
 using YtReader.Yt;
 
 namespace YtReader {
-  public static class TrafficSourceExports {
+  [Command("rec-export", Description = "Process recommendation exports")]
+  public record RecExportCmd(ILogger Log, BlobStores Stores, YtWeb Yt) : ICommand {
+    public async ValueTask ExecuteAsync(IConsole console) => await RecExport.Process(Stores.Store(DataStoreType.Private), Yt, Log);
+  }
+
+  public static class RecExport {
     public static async Task Process(ISimpleFileStore store, YtWeb ytWeb, ILogger log) {
       var blobs = await store.List("rec_exports").SelectManyList();
       //blobs = blobs.Where(b => b.Path == "rec_exports/Traffic source 2019-07-01_2019-08-01 David Pakman Show.zip").ToList();

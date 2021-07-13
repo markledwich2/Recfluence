@@ -54,13 +54,7 @@ namespace YtReader {
     Task Collect(CollectOptions options, ILogger logger, CancellationToken cancel) =>
       YtCollect.Collect(logger, options, cancel);
 
-    Task BitChuteCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
-      Collector.Collect(options with {Platform = Platform.BitChute}, logger, cancel);
-
-    Task RumbleCollect(SimpleCollectOptions options, ILogger logger, CancellationToken cancel) =>
-      Collector.Collect(options with {Platform = Platform.Rumble}, logger, cancel);
-
-    [GraphTask(nameof(Collect), nameof(BitChuteCollect), nameof(RumbleCollect))]
+    [GraphTask(nameof(Collect))]
     Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
       _stage.StageUpdate(logger, fullLoad, tables);
 
@@ -107,8 +101,6 @@ namespace YtReader {
 
       var actionMethods = TaskGraph.FromMethods(
         (l, c) => Collect(options.Collect, l, c),
-        //(l, c) => BitChuteCollect(collectOptions, l, c), // as of 2021-06-30, all /count POST's are being blocked by cloudflare. Re-enable when resolved 
-        (l, c) => RumbleCollect(collectOptions, l, c),
         (l, c) => Stage(fullLoad, options.StageTables, l),
         (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
         (l, c) => Result(options.Results, l, c),

@@ -34,10 +34,8 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using YtReader.Airtable;
 using YtReader.AmazonSite;
-using YtReader.BitChute;
 using YtReader.Db;
 using YtReader.Reddit;
-using YtReader.Rumble;
 using YtReader.Search;
 using YtReader.SimpleCollect;
 using YtReader.Store;
@@ -98,15 +96,6 @@ namespace YtReader {
       var resCfg = loggerCfg.WriteTo.Seq(seqCfg.SeqUrl.OriginalString, cfg.LogLevel);
       return resCfg;
     }
-
-    /*public static Logger CreateTestLogger() {
-      var log = new LoggerConfiguration()
-        .WriteTo.Seq("http://localhost:5341", Debug).MinimumLevel.Debug()
-        .WriteTo.Console().MinimumLevel.Debug()
-        .CreateLogger();
-      ConfigureFlurlLogging(log);
-      return log;
-    }*/
 
     public static ILogger ConsoleLogger(LogEventLevel level = Information) =>
       new LoggerConfiguration()
@@ -302,10 +291,8 @@ namespace YtReader {
       R<UserScrape>();
       R<YtConvertWatchTimeFiles>();
       R<YtIndexResults>();
-      R<BitChuteScraper>();
       R<Parler>();
       R<YtContainerRunner>();
-      R<RumbleScraper>();
       R<Pushshift>();
       R<AtLabel>();
       R<DataScripts>();

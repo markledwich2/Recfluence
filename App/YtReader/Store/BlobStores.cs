@@ -53,7 +53,7 @@ namespace YtReader.Store {
       Results => Store("results"),
       Pipe => Store("pipe"),
       DbStage => Store("db2"),
-      Private => Store("private"),
+      Private => new AzureBlobFileStore(Cfg.DataStorageCs, StoreEx.RootPath("private", Version.Prerelease), Log),
       Logs => Store("logs"),
       Root => Store(tier: Premium),
       RootS3 => new S3Store(S3Cfg, "media"),
@@ -63,7 +63,8 @@ namespace YtReader.Store {
 
   public static class StoreEx {
     public static string RootPath(this StorageCfg cfg, SemVersion version) => cfg.RootPath(version.Prerelease);
-    public static string RootPath(this StorageCfg cfg, string prefix) => prefix.HasValue() ? $"{cfg.Container}-{prefix}" : cfg.Container;
+    public static string RootPath(this StorageCfg cfg, string prefix) => RootPath(cfg.Container, prefix);
+    public static string RootPath(string container, string prefix) => prefix.HasValue() ? $"{container}-{prefix}" : container;
   }
 
   /// <summary>Typed access to jsonl blob collections</summary>
@@ -197,8 +198,6 @@ namespace YtReader.Store {
 
   public enum Platform {
     YouTube,
-    BitChute,
-    Rumble,
     Parler
   }
 

@@ -11,9 +11,7 @@ using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
-using YtReader.BitChute;
 using YtReader.Db;
-using YtReader.Rumble;
 using YtReader.Store;
 using YtReader.Yt;
 using static System.Array;
@@ -26,7 +24,7 @@ using static YtReader.Yt.ExtraPart;
 
 namespace YtReader.SimpleCollect {
   /// <summary>Collector for sources that are simple enough to use the same basic planning and execution of a scrape</summary>
-  public record SimpleCollector(SnowflakeConnectionProvider Sf, RumbleScraper Rumble, BitChuteScraper BitChute, YtStore Store, IPipeCtx PipeCtx,
+  public record SimpleCollector(SnowflakeConnectionProvider Sf, YtStore Store, IPipeCtx PipeCtx,
     YtCollectCfg YtCollectCfg) : ICollector {
     public async Task<(VideoExtra[] Extras, Rec[] Recs, VideoComment[] Comments, VideoCaption[] Captions)> SaveExtraAndParts(
       Platform platform, Channel c, ExtraPart[] parts, ILogger log, VideoExtraPlans planedExtras) {
@@ -72,8 +70,6 @@ namespace YtReader.SimpleCollect {
     }
 
     public IScraper Scraper(Platform platform) => platform switch {
-      Platform.Rumble => Rumble,
-      Platform.BitChute => BitChute,
       _ => throw new($"Platform {platform} not supported")
     };
 
