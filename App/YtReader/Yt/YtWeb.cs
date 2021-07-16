@@ -348,68 +348,102 @@ namespace YtReader.Yt {
       }
     }
 
+    string GetCToken(JToken continueSection) => continueSection?.Str("continuations[0].nextContinuationData.continuation")
+      ?? continueSection?.Str("contents[*].continuationItemRenderer.continuationEndpoint.continuationCommand.token");
+
     async Task<IReadOnlyCollection<VideoComment>> GetComments(ILogger log, string videoId, JObject ytInitialData, YtHtmlPage page) {
-      async Task<(InnerTubeCfg Cfg, string CToken)> CommentCfgFromVideoPage() {
+      var jCfg = await JsonFromScript(log, page.Html, page.Url, ClientObject.Cfg);
+
+      CommentsCfg CommentCfgFromVideoPage() {
         var contSection = ytInitialData?.Tokens("$.contents.twoColumnWatchNextResults.results.results.contents[*].itemSectionRenderer")
           .FirstOrDefault(c => c.Str("sectionIdentifier") == "comment-item-section");
-        var cToken = contSection?.Token("continuations[*].nextContinuationData.continuation")?.Str();
+        var contEndpoint = contSection?.Token("");
+        var cToken = GetCToken(contSection);
+        var apiUrl = contEndpoint?.Str("contents[*].continuationItemRenderer.continuationEndpoint.commandMetadata.webCommandMetadata.apiUrl");
         var resCookies = page.Headers.Cookies().KeyBy(c => c.Name);
-        var jCfg = await JsonFromScript(log, page.Html, page.Url, ClientObject.Cfg);
         if (jCfg == null) throw new InvalidOperationException("Can't load comments because no ytcfg was found on video page");
-        var xsrfToken = jCfg.Value<string>("XSRF_TOKEN");
-        var clientVersion = jCfg.Token("INNERTUBE_CONTEXT.client")?.Str("clientVersion");
-        var innerTube = new InnerTubeCfg(xsrfToken, clientVersion,
-          new {YSC = resCookies["YSC"].Value, VISITOR_INFO1_LIVE = resCookies["VISITOR_INFO1_LIVE"].Value});
-        return (innerTube, cToken);
+        return new(new() {
+          Xsrf = jCfg.Value<string>("XSRF_TOKEN"),
+          ClientVersion = jCfg.Token("INNERTUBE_CONTEXT.client")?.Str("clientVersion"),
+          Cookies = new {YSC = resCookies["YSC"].Value, VISITOR_INFO1_LIVE = resCookies["VISITOR_INFO1_LIVE"].Value},
+          ApiKey = jCfg.Str("INNERTUBE_API_KEY")
+        }, cToken, apiUrl);
       }
 
-      var cfg = await CommentCfgFromVideoPage();
-      var comments = await Comments(videoId, cfg.CToken, cfg.Cfg, log).SelectManyList();
+      var comments = await Comments(videoId, CommentCfgFromVideoPage(), log).SelectManyList();
       log.Debug("YtWeb - loaded {Comments} comments for video {VideoId}", comments.Count, videoId);
       return comments;
     }
 
     #region Comments
 
-    record InnerTubeCfg(string Xsrf, string ClientVersion, object Cookies);
+    record CommentsCfg (InnerTubeCfg InnerTube, string CToken, string ApiUrl);
+
+    record InnerTubeCfg {
+      public string Xsrf          { get; init; }
+      public string ClientVersion { get; init; }
+      public object Cookies       { get; init; }
+      public string ApiKey        { get; init; }
+    }
+
     record CommentResult(VideoComment Comment, string ReplyContinuation = null);
 
-    async IAsyncEnumerable<VideoComment[]> Comments(string videoId, string mainContinuation, InnerTubeCfg cfg, ILogger log) {
+    //const string YtUrl = $"https://www.youtube.com";
+
+    async IAsyncEnumerable<VideoComment[]> Comments(string videoId, CommentsCfg cfg, ILogger log) {
       log = log.ForContext("VideoId", videoId);
 
       async Task<(IFlurlResponse, IFlurlRequest req)> CommentRequest(CommentAction action, string continuation) {
         var req = $"https://www.youtube.com/comment_service_ajax?{action.EnumString()}=1&ctoken={continuation}&type=next".AsUrl()
           .WithHeader("x-youtube-client-name", "1")
-          .WithHeader("x-youtube-client-version", cfg.ClientVersion)
-          .WithCookies(cfg.Cookies);
-        var res = await Send(log, "get comments", req, HttpMethod.Post, () => req.FormUrlContent(new {session_token = cfg.Xsrf}),
+          .WithHeader("x-youtube-client-version", cfg.InnerTube.ClientVersion)
+          .WithCookies(cfg.InnerTube.Cookies);
+        var res = await Send(log, "get comments", req, HttpMethod.Post, () => req.FormUrlContent(new {session_token = cfg.InnerTube.Xsrf}),
           r => HttpExtensions.IsTransientError(r.StatusCode) || r.StatusCode.In(400));
+        return (res, req);
+      }
+
+      async Task<(IFlurlResponse, IFlurlRequest req)> CommentRequestV2(string cToken) {
+        var req = YtUrl.AppendPathSegment(cfg.ApiUrl)
+          .WithHeader("x-youtube-client-name", "1")
+          .WithHeader("x-youtube-client-version", cfg.InnerTube.ClientVersion)
+          .SetQueryParam("key", cfg.InnerTube.ApiKey)
+          .WithCookies(cfg.InnerTube.Cookies);
+        var res = await Send(log, "get comments", req, HttpMethod.Post, () => new StringContent(new {
+          context = new {
+            client = new {clientName = "WEB", clientVersion = cfg.InnerTube.ClientVersion}
+          },
+          continuation = cToken
+        }.ToJson(new())));
         return (res, req);
       }
 
       async Task<(CommentResult[] Comments, string Continuation)> RequestComments(string continuation, VideoComment parent = null) {
         var action = parent == null ? AComments : AReplies;
-        var (res, req) = await CommentRequest(action, continuation);
-        var getRootJ = action switch {
-          AComments => res.JsonObject(),
-          AReplies => res.JsonArray().Then(a => a.Children<JObject>().FirstOrDefault(j => j["response"] != null)),
-          _ => throw new NotImplementedException()
-        };
+        var (res, req) = cfg.ApiUrl.HasValue() ? await CommentRequestV2(continuation) : await CommentRequest(action, continuation);
+        var getRootJ = cfg.ApiUrl.HasValue()
+          ? res.JsonObject()
+          : action switch {
+            AComments => res.JsonObject(),
+            AReplies => res.JsonArray().Then(a => a.Children<JObject>().FirstOrDefault(j => j["response"] != null)),
+            _ => throw new NotImplementedException()
+          };
         var rootJ = await getRootJ.Swallow(e => log.Warning(e, "YtWeb - couldn't load comments. {Curl}: {Error}", req.FormatCurl(), e.Message)) ??
           new JObject();
-        var comments = action switch {
+        var comments = (action switch {
           AComments => from t in rootJ.Tokens("$..commentThreadRenderer")
-            let c = t.SelectToken("comment.commentRenderer")
+            let c = t.Token("comment.commentRenderer")
+            let r = t.Token("replies.commentRepliesRenderer")
             where c != null
-            select new CommentResult(ParseComment(videoId, c, parent),
-              t.Token("replies.commentRepliesRenderer.continuations[0].nextContinuationData.continuation")?.Str()),
+            select new CommentResult(ParseComment(videoId, c, parent), GetCToken(r)), // as of 15 july returns different format
           AReplies => rootJ.Tokens("$..commentRenderer").Select(c => new CommentResult(ParseComment(videoId, c, parent))),
           _ => throw new NotImplementedException()
-        };
-        var nextContinue = rootJ.Token("response.continuationContents.itemSectionContinuation.continuations[0].nextContinuationData.continuation")?.Str();
-        return (comments.ToArray(), nextContinue);
+        }).ToArray();
+        var nextContinue = rootJ.Str("response.continuationContents.itemSectionContinuation.continuations[0].nextContinuationData.continuation")
+          ?? rootJ.Str("onResponseReceivedEndpoints[*].reloadContinuationItemsCommand.continuationItems[*].continuationItemRenderer..continuationCommand.token")
+          ?? rootJ.Str("onResponseReceivedEndpoints[*].appendContinuationItemsAction.continuationItems[*].continuationItemRenderer..continuationCommand.token");
+        return (comments, nextContinue);
       }
-
 
       async IAsyncEnumerable<(CommentResult[] Comments, string Continuation)> AllComments(string continuation, VideoComment parent = null) {
         while (continuation != null) {
@@ -420,7 +454,7 @@ namespace YtReader.Yt {
         }
       }
 
-      await foreach (var ((comments, _), batch) in AllComments(mainContinuation).Select((b, i) => (b, i))) {
+      await foreach (var ((comments, _), batch) in AllComments(cfg.CToken).Select((b, i) => (b, i))) {
         var threads = comments.Select(c => c.Comment).ToArray();
         log.Verbose("YtWeb - loaded {Threads} threads in batch {Batch} for video {Video}", threads.Length, batch, videoId);
         yield return threads;
@@ -639,8 +673,9 @@ namespace YtReader.Yt {
   }
 
   public enum ExtraPart {
-    [EnumMember(Value = "extra")]   EExtra,
-    [EnumMember(Value = "rec")]     ERec,
+    [EnumMember(Value = "extra")] EExtra,
+    [EnumMember(Value = "rec")] [CollectPart(Explicit = true)]
+    ERec,
     [EnumMember(Value = "comment")] EComment,
     [EnumMember(Value = "caption")] ECaption,
     /// <summary> If specified will perform transcription ourselves if needed </summary>
