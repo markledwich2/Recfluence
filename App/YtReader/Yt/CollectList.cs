@@ -36,6 +36,7 @@ namespace YtReader.Yt {
     public JObject                              Args          { get; init; }
     public Platform[]                           Platforms     { get; init; }
     public int?                                 Limit         { get; init; }
+    public DateTime?                            From          { get; set; }
   }
 
   public enum CollectFromType {
@@ -43,7 +44,8 @@ namespace YtReader.Yt {
     VideoChannelView,
     ChannelPath,
     VideoChannelNamed,
-    UserNamed
+    UserNamed,
+    ChannelInline
   }
 
   public enum CollectListPart {
@@ -82,21 +84,29 @@ namespace YtReader.Yt {
         // sometimes updates fail. When re-running this, we should refresh channels that are missing videos or have a portion of captions not attempted
         // NOTE: core warehouse table must be updated (not just staging tables) to take into account previously successful loads.
         var vidChanSelect = VideoChannelSelect(opts);
-        IReadOnlyCollection<VideoListStats> videos;
-        using (var db = await YtCollector.Db(log)) // videos sans extra update
-          videos = await VideoStats(db, vidChanSelect, opts.LimitChannels, opts.Platforms, opts.Limit);
-        videosProcessed = await videos
-          .Pipe(PipeCtx, b => ProcessVideos(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
-          .Then(r => r.Select(p => p.OutState).SelectMany().ToArray());
+        if (vidChanSelect != default) {
+          IReadOnlyCollection<VideoListStats> videos;
+          using (var db = await YtCollector.Db(log)) // videos sans extra update
+            videos = await VideoStats(db, vidChanSelect, opts.LimitChannels, opts.Platforms, opts.Limit);
+          videosProcessed = await videos
+            .Pipe(PipeCtx, b => ProcessVideos(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
+            .Then(r => r.Select(p => p.OutState).SelectMany().ToArray());
+        }
       }
 
       if (opts.CollectFrom.Type == UserNamed && parts.ShouldRun(LUser)) await ProcessUsers(log, opts, cancel);
 
       IReadOnlyCollection<(string ChannelId, Platform Platform)> channelIds = Array.Empty<(string, Platform)>();
       if (parts.ShouldRunAny(LChannelVideo, LChannel)) {
-        // channels explicitly listed in the query
-        using (var db = await YtCollector.Db(log))
-          channelIds = await ChannelIds(db, VideoChannelSelect(opts), opts.LimitChannels, opts.Platforms, opts.Limit);
+        var videoChannelSelect = VideoChannelSelect(opts);
+        if (videoChannelSelect != default) {
+          // channels explicitly listed in the query
+          using (var db = await YtCollector.Db(log)) channelIds = await ChannelIds(db, videoChannelSelect, opts.LimitChannels, opts.Platforms, opts.Limit);
+        }
+        else if (opts.CollectFrom.Type == ChannelInline) {
+          var platform = opts.Platforms?.FirstOrDefault() ?? Platform.YouTube;
+          channelIds = opts.CollectFrom.Value.UnJoin('|').Select(c => (c, platform)).ToArray();
+        }
 
         // channels found from processing videos
         if (parts.ShouldRun(LDiscoveredChannel))
@@ -113,7 +123,7 @@ namespace YtReader.Yt {
             await channels.GroupBy(c => c.Channel.Platform).BlockDo(async g => {
               var platform = g.Key;
               var collector = Collector(g.Key);
-              DateTime? fromDate = new DateTime(year: 2020, month: 1, day: 1);
+              var fromDate = opts.From ?? new DateTime(year: 2020, month: 1, day: 1);
 
               if (collector is YtCollector yt)
                 await g.Randomize().Pipe(PipeCtx, b => yt.ProcessChannels(b, extraParts, Inject<ILogger>(), Inject<CancellationToken>(), fromDate),
@@ -230,6 +240,7 @@ where not exists (select * from user u where u.user_id = q.user_id)
           ($"select $1::string video_id, $2::string channel_id  from @public.yt_data/{value} (file_format => tsv)", null),
         VideoChannelView => ($"select video_id, channel_id from {value}", null),
         VideoChannelNamed => CollectListSql.NamedQuery(value, opts.Args),
+        ChannelInline => default,
         _ => throw new($"VideoChannelSelect - CollectFrom {opts.CollectFrom} not supported")
       };
       return select;

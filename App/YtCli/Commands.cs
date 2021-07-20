@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using CliFx;
@@ -267,6 +268,9 @@ VideoChannelNamed: name of an sql statement in CollectListSql.cs
     [CommandOption("limit", shortName: 'l', Description = "Max videos/channels to collect")]
     public int? Limit { get; set; }
 
+    [CommandOption("from", Description = "yyyy-MM-dd date to collect videos back to (e.g. 2010-01-01")]
+    public string From { get; set; }
+
     protected override string GroupName => "collect-list";
 
     protected override async ValueTask ExecuteLocal(IConsole console) {
@@ -278,7 +282,8 @@ VideoChannelNamed: name of an sql statement in CollectListSql.cs
         StaleAgo = StaleHrs?.Hours() ?? 2.Days(),
         Args = Args.Do(JObject.Parse),
         Platforms = ParseEnums<Platform>(Platforms),
-        Limit = Limit
+        Limit = Limit,
+        From = From?.TryParseDateExact("yyyy-MM-dd", DateTimeStyles.AssumeUniversal)?.ToUniversalTime()
       };
       await Col.Run(opts, Log, console.RegisterCancellationHandler());
     }

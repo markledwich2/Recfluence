@@ -8,6 +8,7 @@ using System.Net.Http.Headers;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 using Flurl;
 using Flurl.Http;
@@ -189,18 +190,10 @@ namespace YtReader.Yt {
       log = log.ForContext("VideoId", videoId);
       var watchPage = await GetVideoWatchPageHtmlAsync(videoId, log);
       var html = watchPage.Html;
-      var ytInitialData = await JsonFromScript(log, html, videoId, ClientObject.InitialData);
-      var infoDic = await GetVideoInfoDicAsync(videoId, log);
-      var videoItem = GetVideo(videoId, infoDic);
-      var extra = VideoItemToExtra(videoId, channelId, channelTitle, videoItem);
-      var ytInitPr = await JsonFromScript(log, html, videoId, ClientObject.PlayerResponse);
-      if (ytInitPr != null && ytInitPr.Value<string>("status") != "OK") {
-        var playerError = ytInitPr.SelectToken("playabilityStatus.errorScreen.playerErrorMessageRenderer");
-        extra.Error = playerError?.SelectToken("reason.simpleText")?.Value<string>();
-        extra.SubError = (playerError?.SelectToken("subreason.simpleText") ??
-            playerError?.SelectTokens("subreason.runs[*].text").Join(""))
-          ?.Value<string>();
-      }
+      var initialData = await JsonFromScript(log, html, videoId, ClientObject.InitialData);
+      var playerResponse = await JsonFromScript(log, html, videoId, ClientObject.PlayerResponse);
+      var videoItem2 = GetVideo(videoId, html, playerResponse, initialData);
+      var extra = VideoItemToExtra(videoId, channelId, channelTitle, videoItem2);
       if (extra.Error == null) {
         var restrictedMode = html.QueryElements("head > meta[property=\"og:restrictions:age\"]").FirstOrDefault()?.GetAttribute("content")?.Value == "18+";
         if (restrictedMode) {
@@ -216,7 +209,7 @@ namespace YtReader.Yt {
       }
       if (extra.Error == null) {
         var badgeLabels =
-          ytInitialData?.SelectTokens(
+          initialData?.SelectTokens(
             "contents.twoColumnWatchNextResults.results.results.contents[*].videoPrimaryInfoRenderer.badges[*].metadataBadgeRenderer.label");
         if (badgeLabels?.Any(b => b.Value<string>() == "Unlisted") == true)
           extra.Error = "Unlisted";
@@ -228,11 +221,11 @@ namespace YtReader.Yt {
         recs = await GetRecs2(log, html, videoId);
       var comments = Array.Empty<VideoComment>();
       if (parts.Contains(ExtraPart.EComment))
-        comments = await GetComments(log, videoId, ytInitialData, watchPage).Then(c => c.ToArray());
+        comments = await GetComments(log, videoId, initialData, watchPage).Then(c => c.ToArray());
 
       VideoCaption caption = null;
       if (parts.Contains(ExtraPart.ECaption))
-        caption = await GetCaption(channelId, videoId, infoDic, log);
+        caption = await GetCaption(channelId, videoId, playerResponse, log);
 
       return new(extra) {
         Caption = caption,
@@ -320,32 +313,6 @@ namespace YtReader.Yt {
       if (jObj == null)
         await LogStore.LogParseError($"Unable to parse {clientObjectName} json from watch page", ex: null, url, html.ToHtml(), log);
       return jObj;
-    }
-
-    async Task<VideoCaption> GetCaption(string channelId, string videoId, IReadOnlyDictionary<string, string> videoInfoDic, ILogger log) {
-      var videoLog = log.ForContext("VideoId", videoId);
-      VideoCaption caption = new() {
-        ChannelId = channelId,
-        VideoId = videoId,
-        Updated = DateTime.Now
-      };
-      try {
-        var playerResponseJson = JToken.Parse(videoInfoDic["player_response"]);
-        var tracks = GetCaptionTracks(playerResponseJson);
-        var enInfo = tracks.FirstOrDefault(t => t.Language.Code == "en");
-        if (enInfo == null)
-          return caption;
-        var track = await GetClosedCaptionTrackAsync(enInfo, videoLog);
-        return caption with {
-          Info = track.Info,
-          Captions = track.Captions
-        };
-      }
-      catch (Exception ex) {
-        ex.ThrowIfUnrecoverable();
-        videoLog.Warning(ex, "Unable to get captions for {VideoID}: {Error}", videoId, ex.Message);
-        return null;
-      }
     }
 
     string GetCToken(JToken continueSection) => continueSection?.Str("continuations[0].nextContinuationData.continuation")
@@ -486,47 +453,50 @@ namespace YtReader.Yt {
 
     static readonly Regex LikeDislikeRe = new(@"(?<num>[\d,]+)\s*(?<type>like|dislike)");
 
-    static YtVideo GetVideo(string videoId, IReadOnlyDictionary<string, string> videoInfoDic, JObject ytInitialData = null) {
-      if (!videoInfoDic.ContainsKey("player_response"))
-        return null;
-
-      var responseJson = JToken.Parse(videoInfoDic["player_response"]);
-      var renderer = responseJson.SelectToken("microformat.playerMicroformatRenderer");
-
-      var video = new YtVideo {
-        Id = videoId
-      };
-
-      var playability = responseJson["playabilityStatus"];
-      if (playability?.Str("status")?.ToLowerInvariant() == "error")
-        return video with {
-          Error = playability.Str("reason"),
-          SubError = playability.SelectToken("errorScreen.playerErrorMessageRenderer.subreason.simpleText")?.Str()
+    /// <summary>gets video data from the video watch page</summary>
+    /// <returns></returns>
+    static YtVideo GetVideo(string videoId, HtmlDocument html, JObject playerResponse, JObject ytInit) {
+      var video = new YtVideo {Id = videoId};
+      var status = playerResponse?.Str("playabilityStatus.status");
+      if (status != null && status != "OK") {
+        var p = playerResponse["playabilityStatus"];
+        var errorVid = video with {
+          Error = p?.Str("reason"),
+          SubError = p?.Token("errorScreen.playerErrorMessageRenderer.subreason")?.YtTxt()
         };
+        return errorVid;
+      }
 
-      T Val<T>(string propName) {
-        var token = responseJson.SelectToken($"videoDetails.{propName}");
+      var metaDic = html.Els("head > div[itemtype=\"http://schema.org/VideoObject\"] > *[itemprop]")
+        .Select(a => new {prop = a.Str("itemprop"), val = a.Str("content"), node = a})
+        .KeyBy(a => a.prop);
+      string MetaTag(string prop) => metaDic[prop]?.val;
+
+      var videoDetails = playerResponse.Token("videoDetails");
+
+      T VideoDetail<T>(string propName) {
+        var token = videoDetails?.Token(propName);
         return token == null ? default : token.Value<T>();
       }
 
-      var likeDislikeMatches = ytInitialData?.SelectTokens("$..topLevelButtons[*].toggleButtonRenderer.defaultText..label")
+      var author = metaDic["author"]?.node.El("link[itemprop=\"name\"]")?.Str("content") ?? VideoDetail<string>("author");
+
+      var likeDislikeMatches = ytInit?.SelectTokens("$..topLevelButtons[*].toggleButtonRenderer.defaultText..label")
         .Select(t => t.Value<string>().Match(LikeDislikeRe)).ToArray();
       ulong? LikeDislikeVal(string type) => likeDislikeMatches?.FirstOrDefault(t => t.Groups["type"].Value == type)?.Groups["num"].Value.TryParseULong();
-      var like = LikeDislikeVal("like");
-      var dislike = LikeDislikeVal("dislike");
 
-      return video with {
-        ChannelId = Val<string>("channelId"),
-        ChannelTitle = Val<string>("author"),
-        Author = Val<string>("author"),
-        UploadDate = renderer?.SelectToken("uploadDate")?.Value<string>().ParseExact("yyyy-MM-dd", style: DateTimeStyles.AssumeUniversal).ToUniversalTime() ??
-        default,
-        Title = Val<string>("title"),
-        Description = Val<string>("shortDescription"),
-        Duration = TimeSpan.FromSeconds(Val<double>("lengthSeconds")),
-        Keywords = responseJson.SelectToken("videoDetails.keywords").NotNull().Values<string>().ToArray(),
-        Statistics = new(Val<ulong>("viewCount"), like, dislike)
+      var res = video with {
+        Title = MetaTag("name"),
+        ChannelId = MetaTag("channelId"),
+        ChannelTitle = author,
+        Author = author,
+        UploadDate = MetaTag("uploadDate")?.TryParseDateExact("yyyy-MM-dd", DateTimeStyles.AssumeUniversal)?.ToUniversalTime(),
+        Description = VideoDetail<string>("shortDescription"),
+        Duration = MetaTag("duration").Do(XmlConvert.ToTimeSpan), // 8061 standard timespan
+        Statistics = new(VideoDetail<ulong>("viewCount"), LikeDislikeVal("like"), LikeDislikeVal("dislike")),
+        Keywords = videoDetails?.Token("keywords").NotNull().Values<string>().ToArray()
       };
+      return res;
     }
 
     static IReadOnlyCollection<ClosedCaptionTrackInfo> GetCaptionTracks(JToken playerResponseJson) =>
@@ -603,6 +573,31 @@ namespace YtReader.Yt {
     #endregion
 
     #region Captions
+
+    async Task<VideoCaption> GetCaption(string channelId, string videoId, JObject playerResponse, ILogger log) {
+      var videoLog = log.ForContext("VideoId", videoId);
+      VideoCaption caption = new() {
+        ChannelId = channelId,
+        VideoId = videoId,
+        Updated = DateTime.Now
+      };
+      try {
+        var tracks = GetCaptionTracks(playerResponse);
+        var enInfo = tracks.FirstOrDefault(t => t.Language.Code == "en");
+        if (enInfo == null)
+          return caption;
+        var track = await GetClosedCaptionTrackAsync(enInfo, videoLog);
+        return caption with {
+          Info = track.Info,
+          Captions = track.Captions
+        };
+      }
+      catch (Exception ex) {
+        ex.ThrowIfUnrecoverable();
+        videoLog.Warning(ex, "Unable to get captions for {VideoID}: {Error}", videoId, ex.Message);
+        return null;
+      }
+    }
 
     public async Task<ClosedCaptionTrack> GetClosedCaptionTrackAsync(ClosedCaptionTrackInfo info, ILogger log) {
       var trackXml = await GetClosedCaptionTrackXmlAsync(info.Url, log);
