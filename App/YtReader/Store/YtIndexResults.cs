@@ -272,7 +272,13 @@ with video_date_accounts as (
   from g
 )
   , videos_top as (
-  with g as (select from_video_id, count(*) viewed from video_date_accounts group by 1)
+  with g as (
+    select from_video_id, count(*) viewed
+    from video_date_accounts
+           join video_latest v on v.video_id=from_video_id
+           join channel_accepted c on c.channel_id=v.channel_id
+    group by 1
+  )
   select from_video_id
        , row_number() over (order by viewed desc nulls last) viewed_rank
   from g
@@ -280,7 +286,7 @@ with video_date_accounts as (
   , full_account_recs as (
   select r.account
        , r.updated::date day
-       , coalesce(m.label,iff(t.viewed_rank<100,'Top Viewed',null)) label
+       , coalesce(m.label,iff(t.viewed_rank<30,'Top Viewed',null)) label
        , r.from_video_id
        , r.to_video_id
        , r.from_channel_id
