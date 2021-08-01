@@ -257,20 +257,30 @@ order by {Narrative2CaptionCols.DbNames().Join(",")}",
 
     WorkCfg UsRecs = new(nameof(UsRecs), UsRecCols, @$"
 with video_date_accounts as (
-  select from_video_id, day, count(distinct account) accounts_total
-  from (
-         select from_video_id, updated::date day, account
-         from us_rec
-         group by 1, 2, 3
-         having max(rank)>5 -- at least x videos per account
-       )
-  group by 1, 2
-  having accounts_total>=12 -- at least x accounts watched the same vid
+  with g as (
+    select from_video_id, day, count(distinct account) accounts_total --, count(*) over (partition by from_video_id) days_viewed
+    from (
+      select from_video_id, updated::date day, account
+      from us_rec
+      group by 1, 2, 3
+      having max(rank)>5 -- at least x videos per account
+    )
+    group by 1, 2
+    having accounts_total>=12 -- at least x accounts watched the same vid
+  )
+  select * --, row_number() over (partition by from_video_id order by days_viewed desc nulls last) days_viewed_rank
+  from g
 )
-   , full_account_recs as (
+  , videos_top as (
+  with g as (select from_video_id, count(*) viewed from video_date_accounts group by 1)
+  select from_video_id
+       , row_number() over (order by viewed desc nulls last) viewed_rank
+  from g
+)
+  , full_account_recs as (
   select r.account
        , r.updated::date day
-       , m.label
+       , coalesce(m.label,iff(t.viewed_rank<100,'Top Viewed',null)) label
        , r.from_video_id
        , r.to_video_id
        , r.from_channel_id
@@ -283,9 +293,10 @@ with video_date_accounts as (
   from us_rec r
          left join us_test_manual m on m.video_id=r.from_video_id
          inner join video_date_accounts d on d.from_video_id=r.from_video_id and d.day=r.updated::date
+         left join videos_top t on t.from_video_id=r.from_video_id
   where account<>'Black'
 )
-   , sets as (
+  , sets as (
   select from_video_id
        , to_video_id
        , day
@@ -301,7 +312,7 @@ with video_date_accounts as (
 )
 select *
 from sets
-order by {UsRecCols.DbNames().Join(",")}", 200.Kilobytes(), Tags: new[] {"us"});
+order by {UsRecCols.DbNames().Join(",")}", 100.Kilobytes(), Tags: new[] {"us"});
 
     static readonly IndexCol[] VideoSeenCols = {Col("part"), Col("account", distinct: true)};
 
