@@ -145,79 +145,93 @@ order by channel_views desc
           /*new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
             parameters: new {from_date = "2020-11-03", to_date = "2021-03-12"}),*/
 
-          new ResQuery("us_rec_stats", @"
-with r1 as (
-  select r.account
-       , trunc(r.updated, 'month') month
-       , tc.tags to_tags
-       , fc.tags from_tags
-       , UUID_STRING() rec_id
-  from us_rec r
-         left join channel_latest tc on r.to_channel_id=tc.channel_id
-         left join channel_latest fc on r.from_channel_id=fc.channel_id
-)
-   , r2 as (
-  select account
-       , month
-       , ft.value::string from_tag
-       , tt.value::string to_tag
-       , count(*) over (partition by rec_id) rec_duplicates
-  from r1 as r
-     , table ( flatten(from_tags, outer => true) ) ft
-     , table ( flatten(to_tags, outer => true) ) tt
-)
-   , g as (
-  select account, month, from_tag, to_tag, count(*) recs, sum(1/rec_duplicates) recs_portion
-  from r2
+          new ResQuery("us_rec_stats_v2", @"
+with all_rows as (
+  with feed as (
+    select r.account
+        , v.channel_id
+         , concat_ws('|',account,r.video_id,r.updated) rec_id
+    from us_feed r
+           left join video_latest v on v.video_id=r.video_id
+  )
+    , recs as (
+    select r.account
+         , r.to_channel_id
+         , concat_ws('|',account,from_video_id,rank,r.updated) rec_id
+    from us_rec r
+  )
+    , u as (
+    select 'feed' source, *
+    from feed
+    union all
+    select 'rec' source, *
+    from recs
+  )
+    -- only unique recs
+  select u.source, account, rec_id, tc.tags
+  from u
+         left join channel_latest tc on u.channel_id=tc.channel_id
   group by 1, 2, 3, 4
 )
+  , account_stats as (
+  select source, account, count(*) recs, count_if(tags is not null and array_size(tags) > 0) political_recs
+  from all_rows
+  group by 1, 2
+)
+  , political_views as (
+  select v.views, v.channel_id
+  from video_stats_daily v
+         join channel_latest c on c.channel_id=v.channel_id
+  where array_size(tags)>0
+    and date between (select min(updated) from us_feed) and (select max(updated) from us_feed)
+)
+  , tag_view_stats as (select tt.value::string tag, sum(views) tag_views, tag_views/(select sum(views) from political_views) pct_of_political_views
+                       from political_views m
+                              join channel_latest c on c.channel_id=m.channel_id
+                         , table ( flatten(c.tags,outer => true) ) tt
+                       group by tag
+)
+  , tag_stats as (
+  with tag_group as (
+    select source, account, coalesce(t.value::string,'Non-political') to_tag, count(*) recs
+    from all_rows
+    , table ( flatten(tags, outer => true) ) t
+    group by 1, 2, 3
+  )
+    , tag_totals as (
+    select t.*
+         , t.recs/a.recs pct_of_account_recs
+         , a.political_recs
+         , iff(to_tag='Non-political',null,coalesce(t.recs/a.political_recs,0)) pct_of_account_political_recs
+    from tag_group t
+           left join account_stats a on a.source=t.source and a.account=t.account
+  )
+  select g.account
+       , g.to_tag
+       , g.source
+       , g.recs
+       , g.pct_of_account_recs -- % of recs vs all in the account
+       , g.pct_of_account_political_recs -- % of recs in the accounts vs all that are to political tags
+       --, t.pct_of_political_views tag_pct_of_political_views
+       , g.pct_of_account_political_recs-coalesce(t.pct_of_political_views,0) vs_political_views_pp -- percentage point diff of political cs vs the percent of political views
+       , coalesce(f.pct_of_account_recs,0) fresh_pct_of_account
+       , iff(g.account='Fresh',null,g.pct_of_account_recs-coalesce(fresh_pct_of_account,0)) vs_fresh_pp
+  from tag_totals g
+         left join tag_totals f on f.source=g.source and f.to_tag=g.to_tag and f.account='Fresh'
+         join account_stats a on a.source=g.source and a.account=g.account
+         left join tag_view_stats t on t.tag=g.to_tag
+)
+  , s as (
+  select *
+  from tag_stats
+  where to_tag not in ('Black','Educational','LGBT','MissingLinkMedia','StateFunded','Politician','StateFunded', 'OrganizedReligion')
+  and account not in ('Black')
+  order by account, source, pct_of_account_political_recs desc
+)
 select *
-from g;
+from s
 ", fileType: Json, jsonNaming: Camel),
-
-          new ResQuery("us_rec_tag", @"
- select t.value::string tag, month, sum(views) views
- from video_stats_monthly v
-        left join channel_latest c on v.channel_id=c.channel_id
-    , table ( flatten(c.tags) ) t
- where v.month>=(select min(trunc(updated, 'month')) from us_rec)
- group by tag, month
-order by tag, month
-", fileType: Json, jsonNaming: Camel),
-
-          new ResQuery("us_rec_month", @"
-select month, sum(views) as views
-from video_stats_monthly v
-where v.month>=(select min(trunc(updated, 'month')) from us_rec)
-group by month
-order by month
-", fileType: Json, jsonNaming: Camel),
-
-          new ResQuery("us_feed_stats", @"with r1 as (
-  select r.account
-       , trunc(r.updated, 'month') month
-       , c.tags to_tags
-       , UUID_STRING() rec_id
-  from us_feed r
-         left join video_latest v on v.video_id=r.video_id
-         left join channel_latest c on v.channel_id=c.channel_id
-)
-   , r2 as (
-  select account
-       , month
-       , tt.value::string to_tag
-       , count(*) over (partition by rec_id) rec_duplicates
-  from r1 as r
-     , table ( flatten(to_tags, outer => true) ) tt
-)
-   , g as (
-  select account, month, to_tag, count(*) recs, sum(1/rec_duplicates) recs_portion
-  from r2
-  group by 1, 2, 3
-)
-select *
-from g", fileType: Json, jsonNaming: Camel),
-
+          
           new ResQuery("narrative_vaccine_personal_highlight", Narrative.VaccinePersonalHighlight, fileType: Json, jsonNaming: Camel),
 
           new ResQuery("narrative_vaccine_dna_highlight", Narrative.VaccineDnaHighlight, fileType: Json, jsonNaming: Camel)
