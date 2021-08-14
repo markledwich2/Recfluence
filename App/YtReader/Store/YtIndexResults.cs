@@ -271,22 +271,10 @@ with video_date_accounts as (
   select * --, row_number() over (partition by from_video_id order by days_viewed desc nulls last) days_viewed_rank
   from g
 )
-  , videos_top as (
-  with g as (
-    select from_video_id, count(*) viewed
-    from video_date_accounts
-           join video_latest v on v.video_id=from_video_id
-           join channel_accepted c on c.channel_id=v.channel_id
-    group by 1
-  )
-  select from_video_id
-       , row_number() over (order by viewed desc nulls last) viewed_rank
-  from g
-)
   , full_account_recs as (
   select r.account
        , r.updated::date day
-       , coalesce(m.label,iff(t.viewed_rank<30,'Top Viewed',null)) label
+       , coalesce(m.label, 'Other') label
        , r.from_video_id
        , r.to_video_id
        , r.from_channel_id
@@ -299,7 +287,6 @@ with video_date_accounts as (
   from us_rec r
          left join us_test_manual m on m.video_id=r.from_video_id
          inner join video_date_accounts d on d.from_video_id=r.from_video_id and d.day=r.updated::date
-         left join videos_top t on t.from_video_id=r.from_video_id
   where account<>'Black'
 )
   , sets as (
