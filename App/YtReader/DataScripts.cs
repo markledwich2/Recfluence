@@ -18,36 +18,37 @@ using YtReader.Store;
 
 // ReSharper disable InconsistentNaming
 
-namespace YtReader {
-  public record DataScriptsCfg(int Containers = 24, int VideosPerFile = 50_000, int Cores = 4, int Mem = 8, int SpacyBatchSize = 800,
-    int? VideoLimit = null, DateTime? Stale = null);
+namespace YtReader; 
 
-  public record DataScriptRunState(string[] Parts, string[] VideoPaths);
-  public record DataScriptOptions(string RunId, string[] Parts, string VideosView);
+public record DataScriptsCfg(int Containers = 24, int VideosPerFile = 50_000, int Cores = 4, int Mem = 8, int SpacyBatchSize = 800,
+  int? VideoLimit = null, DateTime? Stale = null);
 
-  record EntityVideoRow(string video_id);
+public record DataScriptRunState(string[] Parts, string[] VideoPaths);
+public record DataScriptOptions(string RunId, string[] Parts, string VideosView);
 
-  public record DataScripts(DataScriptsCfg ScriptsCfg, BlobStores Stores, SnowflakeConnectionProvider Db, AzureContainers containers, SemVersion Version,
-    RootCfg RootCfg, ContainerCfg ContainerCfg, AppCfg AppCfg) {
-    public async Task Run(ILogger log, CancellationToken cancel, DataScriptOptions opts) {
-      var store = Stores.Store(DataStoreType.Root);
-      var env = new (string name, string value)[] {
-        ("cfg_sas", GetAppCfgSas()),
-        ("env", RootCfg.Env),
-        ("branch_env", Version.Prerelease)
-      };
+record EntityVideoRow(string video_id);
 
-      var existingFiles = opts.RunId != null;
-      var runId = opts.RunId ?? $"{DateTime.UtcNow.FileSafeTimestamp()}.{ShortGuid.Create(5)}";
+public record DataScripts(DataScriptsCfg ScriptsCfg, BlobStores Stores, SnowflakeConnectionProvider Db, AzureContainers containers, SemVersion Version,
+  RootCfg RootCfg, ContainerCfg ContainerCfg, AppCfg AppCfg) {
+  public async Task Run(ILogger log, CancellationToken cancel, DataScriptOptions opts) {
+    var store = Stores.Store(DataStoreType.Root);
+    var env = new (string name, string value)[] {
+      ("cfg_sas", GetAppCfgSas()),
+      ("env", RootCfg.Env),
+      ("branch_env", Version.Prerelease)
+    };
 
-      log.Information("DataScripts - runId {runId} ({existing})", runId, existingFiles ? "existing" : "new");
+    var existingFiles = opts.RunId != null;
+    var runId = opts.RunId ?? $"{DateTime.UtcNow.FileSafeTimestamp()}.{ShortGuid.Create(5)}";
 
-      async Task<List<SPath>> LoadNewEntityFiles() {
-        using var db = await Db.Open(log);
-        return await db.QueryBlocking<EntityVideoRow>("new entities",
-            opts.VideosView != null
-              ? $"select video_id from {opts.VideosView}"
-              : @$"
+    log.Information("DataScripts - runId {runId} ({existing})", runId, existingFiles ? "existing" : "new");
+
+    async Task<List<SPath>> LoadNewEntityFiles() {
+      using var db = await Db.Open(log);
+      return await db.QueryBlocking<EntityVideoRow>("new entities",
+          opts.VideosView != null
+            ? $"select video_id from {opts.VideosView}"
+            : @$"
 with ents as (
   select video_id, max(updated) updated
   from video_entity_stage_view
@@ -59,41 +60,40 @@ from video_latest v
 where e.video_id is null {(ScriptsCfg.Stale == null ? "" : "or e.updated < :stale")}
 {(ScriptsCfg.VideoLimit == null ? "" : $"limit {ScriptsCfg.VideoLimit}")}
 ", new {stale = ScriptsCfg.Stale})
-          .Batch(ScriptsCfg.VideosPerFile)
-          .BlockMap(async (vids, i) => {
-            var path = RunPath(runId).Add($"videos.{i:00000}.jsonl.gz");
-            await store.Save(path, await vids.ToJsonlGzStream());
-            return path;
-          }, AppCfg.DefaultParallel, cancel: cancel).ToListAsync();
-      }
-
-      var filesToProcess = existingFiles
-        ? await store.List(RunPath(runId), allDirectories: false, log).SelectMany().Select(f => f.Path).ToListAsync()
-        : await LoadNewEntityFiles();
-
-      var batches = filesToProcess.Batch(batchSize: 1, ScriptsCfg.Containers).ToArray();
-      await batches
-        .BlockDo(async (paths, i) => {
-          var containerCfg = ContainerCfg with {Cores = ScriptsCfg.Cores, Mem = ScriptsCfg.Mem, ImageName = "datascripts"};
-          await containers.RunContainer(
-            $"{containerCfg.ImageName}-{DateTime.UtcNow:yyyy-MM-dd-hh-mm}-{i:00}-{ShortGuid.Create(3).Replace("_", "-")}".ToLowerInvariant(),
-            containerCfg.FullContainerImageName("latest"),
-            env.Concat(("run_state", new DataScriptRunState(opts.Parts, paths.Select(p => p.ToString()).ToArray()).ToJson())).ToArray(),
-            returnOnStart: false,
-            cfg: containerCfg, log: log, cancel: cancel);
-          await paths.BlockDo(async p => await store.Delete(p), AppCfg.DefaultParallel);
-        }, ScriptsCfg.Containers, cancel: cancel);
+        .Batch(ScriptsCfg.VideosPerFile)
+        .BlockMap(async (vids, i) => {
+          var path = RunPath(runId).Add($"videos.{i:00000}.jsonl.gz");
+          await store.Save(path, await vids.ToJsonlGzStream());
+          return path;
+        }, AppCfg.DefaultParallel, cancel: cancel).ToListAsync();
     }
 
-    static SPath RunPath(string runId) => $"pipe/DataScripts/video_entities/{runId}";
+    var filesToProcess = existingFiles
+      ? await store.List(RunPath(runId), allDirectories: false, log).SelectMany().Select(f => f.Path).ToListAsync()
+      : await LoadNewEntityFiles();
 
-    string GetAppCfgSas() {
-      var container = new BlobServiceClient(RootCfg.AppStoreCs).GetBlobContainerClient(Setup.CfgContainer);
-      var blob = container.GetBlobClient($"{RootCfg.Env}.appcfg.json");
-      var sas = container.GenerateSasUri(new(BlobContainerSasPermissions.Read, DateTimeOffset.UtcNow.AddDays(2)) {
-        BlobContainerName = blob.BlobContainerName
-      });
-      return $"{blob.Uri}{sas.Query}";
-    }
+    var batches = filesToProcess.Batch(batchSize: 1, ScriptsCfg.Containers).ToArray();
+    await batches
+      .BlockDo(async (paths, i) => {
+        var containerCfg = ContainerCfg with {Cores = ScriptsCfg.Cores, Mem = ScriptsCfg.Mem, ImageName = "datascripts"};
+        await containers.RunContainer(
+          $"{containerCfg.ImageName}-{DateTime.UtcNow:yyyy-MM-dd-hh-mm}-{i:00}-{ShortGuid.Create(3).Replace("_", "-")}".ToLowerInvariant(),
+          containerCfg.FullContainerImageName("latest"),
+          env.Concat(("run_state", new DataScriptRunState(opts.Parts, paths.Select(p => p.ToString()).ToArray()).ToJson())).ToArray(),
+          returnOnStart: false,
+          cfg: containerCfg, log: log, cancel: cancel);
+        await paths.BlockDo(async p => await store.Delete(p), AppCfg.DefaultParallel);
+      }, ScriptsCfg.Containers, cancel: cancel);
+  }
+
+  static SPath RunPath(string runId) => $"pipe/DataScripts/video_entities/{runId}";
+
+  string GetAppCfgSas() {
+    var container = new BlobServiceClient(RootCfg.AppStoreCs).GetBlobContainerClient(Setup.CfgContainer);
+    var blob = container.GetBlobClient($"{RootCfg.Env}.appcfg.json");
+    var sas = container.GenerateSasUri(new(BlobContainerSasPermissions.Read, DateTimeOffset.UtcNow.AddDays(2)) {
+      BlobContainerName = blob.BlobContainerName
+    });
+    return $"{blob.Uri}{sas.Query}";
   }
 }

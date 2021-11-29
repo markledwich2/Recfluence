@@ -12,52 +12,52 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader.Store;
 
-namespace YtReader {
-  public class YtBackup {
-    readonly BlobStores Stores;
+namespace YtReader; 
 
-    public YtBackup(BlobStores stores) => Stores = stores;
+public class YtBackup {
+  readonly BlobStores Stores;
 
-    public async Task Backup(ILogger log) {
-      var destPath = SPath.Relative("db2", DateTime.UtcNow.FileSafeTimestamp());
-      log.Information("Backup {Path} - started", destPath);
+  public YtBackup(BlobStores stores) => Stores = stores;
 
-      var source = (AzureBlobFileStore) Stores.Store(DataStoreType.DbStage);
-      var dest = (AzureBlobFileStore) Stores.Store(DataStoreType.Backup);
-      if (dest == null) {
-        log.Information("not running backup. Normal for pre-release");
-        return;
-      }
+  public async Task Backup(ILogger log) {
+    var destPath = SPath.Relative("db2", DateTime.UtcNow.FileSafeTimestamp());
+    log.Information("Backup {Path} - started", destPath);
 
-      var sourceContainer = source.LegacyContainer();
-      var desContainer = dest.LegacyContainer();
-      var sourceBlob = sourceContainer.GetDirectoryReference(source.BasePathSansContainer());
-      var destBlob = desContainer.GetDirectoryReference(dest.BasePathSansContainer().Add(destPath));
-      await CopyBlobs(destPath, sourceBlob, destBlob, log);
+    var source = (AzureBlobFileStore) Stores.Store(DataStoreType.DbStage);
+    var dest = (AzureBlobFileStore) Stores.Store(DataStoreType.Backup);
+    if (dest == null) {
+      log.Information("not running backup. Normal for pre-release");
+      return;
     }
 
-    public static async Task CopyBlobs(string opName, CloudBlobDirectory sourceBlob, CloudBlobDirectory destBlob, ILogger log) {
-      var destUrl = destBlob.Uri;
-      var sw = Stopwatch.StartNew();
-      var logInterval = 5.Seconds();
-      var context = new DirectoryTransferContext {
-        ProgressHandler = new Progress<TransferStatus>(p => {
-          if (sw.Elapsed < logInterval) return;
-          sw.Restart();
-          log.Debug("{OpName} {Url} - {Size} copied: {Files} files {Skipped} skipped {Failed} failed",
-            opName, destUrl, p.BytesTransferred.Bytes().Humanize("#,#.#"), p.NumberOfFilesTransferred, p.NumberOfFilesSkipped, p.NumberOfFilesFailed);
-        })
-      };
+    var sourceContainer = source.LegacyContainer();
+    var desContainer = dest.LegacyContainer();
+    var sourceBlob = sourceContainer.GetDirectoryReference(source.BasePathSansContainer());
+    var destBlob = desContainer.GetDirectoryReference(dest.BasePathSansContainer().Add(destPath));
+    await CopyBlobs(destPath, sourceBlob, destBlob, log);
+  }
 
-      var (res, dur) = await TransferManager.CopyDirectoryAsync(sourceBlob, destBlob,
-        CopyMethod.ServiceSideSyncCopy, new() {Recursive = true},
-        context, CancellationToken.None).WithDuration();
+  public static async Task CopyBlobs(string opName, CloudBlobDirectory sourceBlob, CloudBlobDirectory destBlob, ILogger log) {
+    var destUrl = destBlob.Uri;
+    var sw = Stopwatch.StartNew();
+    var logInterval = 5.Seconds();
+    var context = new DirectoryTransferContext {
+      ProgressHandler = new Progress<TransferStatus>(p => {
+        if (sw.Elapsed < logInterval) return;
+        sw.Restart();
+        log.Debug("{OpName} {Url} - {Size} copied: {Files} files {Skipped} skipped {Failed} failed",
+          opName, destUrl, p.BytesTransferred.Bytes().Humanize("#,#.#"), p.NumberOfFilesTransferred, p.NumberOfFilesSkipped, p.NumberOfFilesFailed);
+      })
+    };
 
-      if (res.NumberOfFilesFailed > 0)
-        log.Error("{OpName} {Url} -  {Files} files failed to copy",
-          opName, destUrl, res.NumberOfFilesFailed);
-      log.Information("{OpName} {Url} -  {Size} of {Files} files copied in {Duration}",
-        opName, destUrl, res.BytesTransferred.Bytes().Humanize("#,#.#"), res.NumberOfFilesTransferred, dur.HumanizeShort());
-    }
+    var (res, dur) = await TransferManager.CopyDirectoryAsync(sourceBlob, destBlob,
+      CopyMethod.ServiceSideSyncCopy, new() {Recursive = true},
+      context, CancellationToken.None).WithDuration();
+
+    if (res.NumberOfFilesFailed > 0)
+      log.Error("{OpName} {Url} -  {Files} files failed to copy",
+        opName, destUrl, res.NumberOfFilesFailed);
+    log.Information("{OpName} {Url} -  {Size} of {Files} files copied in {Duration}",
+      opName, destUrl, res.BytesTransferred.Bytes().Humanize("#,#.#"), res.NumberOfFilesTransferred, dur.HumanizeShort());
   }
 }

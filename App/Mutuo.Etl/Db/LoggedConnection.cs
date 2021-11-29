@@ -11,110 +11,110 @@ using SysExtensions;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
-namespace Mutuo.Etl.Db {
-  public interface ILoggedConnection<out TC> : IDisposable where TC : IDbConnection {
-    TC      Conn { get; }
-    ILogger Log  { get; }
-    Task<long> Execute(string desc, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
+namespace Mutuo.Etl.Db; 
 
-    /// <summary>Like the dapper Query function. use when you need to stream the rows non-greedily</summary>
-    IEnumerable<T> QueryBlocking<T>(string operation, string sql,
-      object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = false);
+public interface ILoggedConnection<out TC> : IDisposable where TC : IDbConnection {
+  TC      Conn { get; }
+  ILogger Log  { get; }
+  Task<long> Execute(string desc, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
 
-    Task<IReadOnlyCollection<T>> Query<T>(string desc, string sql,
-      object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
+  /// <summary>Like the dapper Query function. use when you need to stream the rows non-greedily</summary>
+  IEnumerable<T> QueryBlocking<T>(string operation, string sql,
+    object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = false);
 
-    /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
-    /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>
-    Task<T> ExecuteScalar<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
+  Task<IReadOnlyCollection<T>> Query<T>(string desc, string sql,
+    object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
 
-    Task<DbDataReader> ExecuteReader(string operation, string sql, object param = null, DbTransaction transaction = null);
-    IAsyncEnumerable<T> QueryAsync<T>(string desc, string sql, object param = null, DbTransaction transaction = null);
+  /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
+  /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>
+  Task<T> ExecuteScalar<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null);
+
+  Task<DbDataReader> ExecuteReader(string operation, string sql, object param = null, DbTransaction transaction = null);
+  IAsyncEnumerable<T> QueryAsync<T>(string desc, string sql, object param = null, DbTransaction transaction = null);
+}
+
+public class LoggedConnection<TC> : ILoggedConnection<TC> where TC : IDbConnection {
+  readonly bool CloseConnection;
+
+  /// <summary>Wraps a connection with logging.</summary>
+  public LoggedConnection(TC conn, ILogger log, bool closeConnection = true) {
+    CloseConnection = closeConnection;
+    Conn = conn;
+    Log = log;
   }
 
-  public class LoggedConnection<TC> : ILoggedConnection<TC> where TC : IDbConnection {
-    readonly bool CloseConnection;
+  public TC      Conn { get; }
+  public ILogger Log  { get; }
 
-    /// <summary>Wraps a connection with logging.</summary>
-    public LoggedConnection(TC conn, ILogger log, bool closeConnection = true) {
-      CloseConnection = closeConnection;
-      Conn = conn;
-      Log = log;
-    }
-
-    public TC      Conn { get; }
-    public ILogger Log  { get; }
-
-    public void Dispose() {
-      if (CloseConnection) Conn?.Dispose();
-    }
-
-    public async Task<long> Execute(string desc, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
-      await ExecWithLog(() => Conn.ExecuteAsync(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, desc, param);
-
-    /// <summary>Like the dapper Query function. use when you need to stream the rows non-greedily</summary>
-    public IEnumerable<T> QueryBlocking<T>(string operation, string sql,
-      object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = false) =>
-      ExecWithLog(() => Conn.Query<T>(sql, param, transaction,
-        commandTimeout: timeout?.TotalSeconds.RoundToInt(), buffered: buffered), sql, operation, param);
-
-    public async Task<IReadOnlyCollection<T>> Query<T>(string desc, string sql,
-      object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
-      (await ExecWithLog(() => Conn.QueryAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, desc, param))
-      .ToArray(); // make greedy load explicit load because that is what dapper does under the covers for async anyway.
-
-    public async IAsyncEnumerable<T> QueryAsync<T>(string desc, string sql, object param = null, DbTransaction transaction = null) {
-      using var reader = await ExecuteReader(desc, sql, param, transaction);
-      var rowParser = reader.GetRowParser<T>();
-      while (await reader.ReadAsync())
-        yield return rowParser(reader);
-    }
-
-    /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
-    /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>
-    public async Task<T> ExecuteScalar<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
-      await ExecWithLog(() => Conn.ExecuteScalarAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation, param);
-
-    public async Task<DbDataReader> ExecuteReader(string operation, string sql, object param, DbTransaction transaction = null) =>
-      await ExecWithLog(() => (Conn as DbConnection).ExecuteReaderAsync(sql, param, transaction), sql, operation, param);
-
-    T ExecWithLog<T>(Func<T> exec, string sql, string operation, object param) {
-      T res;
-      var sw = Stopwatch.StartNew();
-      try {
-        res = exec();
-      }
-      catch (Exception ex) {
-        Log.Error(ex, "{Operation} - Error ({Error}) with sql: {Sql}", operation, ex.Message, sql);
-        throw;
-      }
-
-      Log.Debug("{Operation} - completed in {Duration}: {Sql}\nparams:{@Params}", operation, sw.Elapsed.HumanizeShort(), sql, ParametersForLog(param));
-      return res;
-    }
-
-    /// <summary>Dapper DynamicParameters</summary>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    static object ParametersForLog(object o) => o is DynamicParameters p ? p.ParameterNames.Select(n => (n, p.Get<object>(n))).ToArray() : o;
-
-    async Task<T> ExecWithLog<T>(Func<Task<T>> exec, string sql, string operation, object param) {
-      T res;
-      TimeSpan duration;
-      try {
-        Log.Debug("{Operation} - started: {Sql}\nparams:{@Params}", operation, sql, ParametersForLog(param));
-        (res, duration) = await exec().WithDuration();
-      }
-      catch (Exception ex) {
-        Log.Error(ex, "{Operation} - Error ({Error}) with sql: {Sql}", operation, ex.Message, sql);
-        throw;
-      }
-      Log.Debug("{Operation} - completed in {Duration}: {Sql}\nparams:{@Params}", operation, duration.HumanizeShort(), sql, ParametersForLog(param));
-      return res;
-    }
+  public void Dispose() {
+    if (CloseConnection) Conn?.Dispose();
   }
 
-  public static class LoggedConnectionEx {
-    public static ILoggedConnection<T> AsLogged<T>(this T conn, ILogger log) where T : DbConnection => new LoggedConnection<T>(conn, log);
+  public async Task<long> Execute(string desc, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
+    await ExecWithLog(() => Conn.ExecuteAsync(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, desc, param);
+
+  /// <summary>Like the dapper Query function. use when you need to stream the rows non-greedily</summary>
+  public IEnumerable<T> QueryBlocking<T>(string operation, string sql,
+    object param = null, DbTransaction transaction = null, TimeSpan? timeout = null, bool buffered = false) =>
+    ExecWithLog(() => Conn.Query<T>(sql, param, transaction,
+      commandTimeout: timeout?.TotalSeconds.RoundToInt(), buffered: buffered), sql, operation, param);
+
+  public async Task<IReadOnlyCollection<T>> Query<T>(string desc, string sql,
+    object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
+    (await ExecWithLog(() => Conn.QueryAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, desc, param))
+    .ToArray(); // make greedy load explicit load because that is what dapper does under the covers for async anyway.
+
+  public async IAsyncEnumerable<T> QueryAsync<T>(string desc, string sql, object param = null, DbTransaction transaction = null) {
+    using var reader = await ExecuteReader(desc, sql, param, transaction);
+    var rowParser = reader.GetRowParser<T>();
+    while (await reader.ReadAsync())
+      yield return rowParser(reader);
   }
+
+  /// <summary>Wrapper for dappers ExecuteScalarAsync</summary>
+  /// <param name="operation">a descriptoin of the operation (for logging/correlation purposes)</param>
+  public async Task<T> ExecuteScalar<T>(string operation, string sql, object param = null, DbTransaction transaction = null, TimeSpan? timeout = null) =>
+    await ExecWithLog(() => Conn.ExecuteScalarAsync<T>(sql, param, transaction, timeout?.TotalSeconds.RoundToInt()), sql, operation, param);
+
+  public async Task<DbDataReader> ExecuteReader(string operation, string sql, object param, DbTransaction transaction = null) =>
+    await ExecWithLog(() => (Conn as DbConnection).ExecuteReaderAsync(sql, param, transaction), sql, operation, param);
+
+  T ExecWithLog<T>(Func<T> exec, string sql, string operation, object param) {
+    T res;
+    var sw = Stopwatch.StartNew();
+    try {
+      res = exec();
+    }
+    catch (Exception ex) {
+      Log.Error(ex, "{Operation} - Error ({Error}) with sql: {Sql}", operation, ex.Message, sql);
+      throw;
+    }
+
+    Log.Debug("{Operation} - completed in {Duration}: {Sql}\nparams:{@Params}", operation, sw.Elapsed.HumanizeShort(), sql, ParametersForLog(param));
+    return res;
+  }
+
+  /// <summary>Dapper DynamicParameters</summary>
+  /// <param name="o"></param>
+  /// <returns></returns>
+  static object ParametersForLog(object o) => o is DynamicParameters p ? p.ParameterNames.Select(n => (n, p.Get<object>(n))).ToArray() : o;
+
+  async Task<T> ExecWithLog<T>(Func<Task<T>> exec, string sql, string operation, object param) {
+    T res;
+    TimeSpan duration;
+    try {
+      Log.Debug("{Operation} - started: {Sql}\nparams:{@Params}", operation, sql, ParametersForLog(param));
+      (res, duration) = await exec().WithDuration();
+    }
+    catch (Exception ex) {
+      Log.Error(ex, "{Operation} - Error ({Error}) with sql: {Sql}", operation, ex.Message, sql);
+      throw;
+    }
+    Log.Debug("{Operation} - completed in {Duration}: {Sql}\nparams:{@Params}", operation, duration.HumanizeShort(), sql, ParametersForLog(param));
+    return res;
+  }
+}
+
+public static class LoggedConnectionEx {
+  public static ILoggedConnection<T> AsLogged<T>(this T conn, ILogger log) where T : DbConnection => new LoggedConnection<T>(conn, log);
 }

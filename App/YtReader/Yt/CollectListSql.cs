@@ -2,11 +2,12 @@
 using Newtonsoft.Json.Linq;
 using SysExtensions.Collections;
 
-namespace YtReader.Yt {
-  public static class CollectListSql {
-    public static readonly Dictionary<string, string> NamedSql = new() {
-      {
-        "sans_comment", @"
+namespace YtReader.Yt; 
+
+public static class CollectListSql {
+  public static readonly Dictionary<string, string> NamedSql = new() {
+    {
+      "sans_comment", @"
 -- comments on a sample of videos from highly subscribed channels that are missing comments
 with chans as (
   select channel_id
@@ -22,16 +23,16 @@ from chans c
        join video_latest v on v.channel_id=c.channel_id
   qualify row_number() over (partition by c.channel_id order by random())<:vids_per_chan
 "
-      }, {
-        "fashion", @"
+    }, {
+      "fashion", @"
 select channel_id
 from channel_latest c
 where array_contains('Fashion'::variant, topics)
 and not exists(select * from video_latest v where v.channel_id=c.channel_id)
 and subs > :min_subs
 "
-      }, {
-        "collect_covid", @"
+    }, {
+      "collect_covid", @"
 select v.video_id, c.channel_id
 from collect_covid m
 join video_latest v on v.video_id = m.video_id
@@ -40,17 +41,17 @@ where v.upload_date > '2020-01-01'
   and c.subs > 10000
   and c.meets_review_criteria is null or not c.meets_review_criteria
 qualify max(v.updated) over (partition by m.video_id) < current_date()-2"
-      }, {
-        "stale_extra",
-        @"
+    }, {
+      "stale_extra",
+      @"
 select video_id, channel_id from video_latest 
 where platform = :platform and (extra_updated is null or extra_updated < current_date() - :older_than_days)
 order by views desc nulls last
 limit :limit
 "
-      }, {
-        "qanon_dx_expansion_sans_comments",
-        @"
+    }, {
+      "qanon_dx_expansion_sans_comments",
+      @"
 with channels as (
   select $1 channel_id from @yt_data/import/channels/qanon_dx_expansion_channels_20210520.txt.gz (file_format => tsv)
 )
@@ -82,9 +83,9 @@ join video_latest v on v.channel_id = r.channel_id
 qualify ROW_NUMBER() over (partition by r.channel_id order by v.views desc nulls last) <= 10
 order by 1,2
 "
-      }, {
-        "qanon_dx_expansion_users",
-        @"
+    }, {
+      "qanon_dx_expansion_users",
+      @"
   with channels as (
     select $1 channel_id
     from @yt_data/import/channels/qanon_dx_expansion_channels_20210520.txt.gz (file_format => tsv)
@@ -100,16 +101,16 @@ order by 1,2
   from channel_users
   qualify row_number() over (partition by channel_id order by user_comments desc) < 50 -- top commenter's form each channel
 "
-      }, {
-        "bitchute_extra_broken_chan", @"
+    }, {
+      "bitchute_extra_broken_chan", @"
   select e.video_id, null as channel_id
   from video_extra e
          left join channel_latest c on c.channel_id=e.channel_id
   where c.channel_id is null and e.platform in ('BitChute') and error is null
   order by views nulls last
 "
-      }, {
-        "rumble_discover_channels", @"
+    }, {
+      "rumble_discover_channels", @"
 select null video_id, v:ChannelId::string channel_id, v:Platform::string platform
 from video_stage vs
 where v:Platform='Rumble'
@@ -117,8 +118,8 @@ where v:Platform='Rumble'
   and not exists(select * from channel_latest c where c.channel_id=vs.v:ChannelId and meets_review_criteria)
 qualify row_number() over (partition by v:VideoId order by v:Updated desc) = 1
 "
-      }, {
-        "q_alt_sans_caps", @"
+    }, {
+      "q_alt_sans_caps", @"
 select e.video_id, e.channel_id
 from video_extra e
 join channel_latest c on c.channel_id = e.channel_id
@@ -126,10 +127,9 @@ where array_contains('QAnon'::variant, tags) and e.platform in ('BitChute', 'Rum
 and not exists(select * from caption s where s.video_id = e.video_id)
 order by e.views desc nulls last
 "
-      }
-    };
+    }
+  };
 
-    public static (string Sql, JObject args) NamedQuery(string name, JObject args) =>
-      (NamedSql.TryGet(name) ?? throw new($"no sql called {name}"), args);
-  }
+  public static (string Sql, JObject args) NamedQuery(string name, JObject args) =>
+    (NamedSql.TryGet(name) ?? throw new($"no sql called {name}"), args);
 }

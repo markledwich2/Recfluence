@@ -11,24 +11,25 @@ using YtReader.Store;
 
 // ReSharper disable InconsistentNaming
 
-namespace YtReader.Yt {
-  public record YtCollectDbCtx(YtCollectCfg YtCfg, ILoggedConnection<IDbConnection> Db, ILogger Log) : CollectDbCtx(Db, Platform.YouTube, YtCfg);
+namespace YtReader.Yt; 
 
-  public record ChannelUpdatePlan {
-    public Channel           Channel           { get; set; }
-    public UpdateChannelType Update            { get; set; }
-    public DateTime?         VideosFrom        { get; set; }
-    public DateTime?         LastVideoUpdate   { get; set; }
-    public DateTime?         LastCaptionUpdate { get; set; }
-    public DateTime?         LastCommentUpdate { get; set; }
-    public DateTime?         LastRecUpdate     { get; set; }
+public record YtCollectDbCtx(YtCollectCfg YtCfg, ILoggedConnection<IDbConnection> Db, ILogger Log) : CollectDbCtx(Db, Platform.YouTube, YtCfg);
 
-    public string ChannelId => Channel.ChannelId;
-  }
+public record ChannelUpdatePlan {
+  public Channel           Channel           { get; set; }
+  public UpdateChannelType Update            { get; set; }
+  public DateTime?         VideosFrom        { get; set; }
+  public DateTime?         LastVideoUpdate   { get; set; }
+  public DateTime?         LastCaptionUpdate { get; set; }
+  public DateTime?         LastCommentUpdate { get; set; }
+  public DateTime?         LastRecUpdate     { get; set; }
 
-  public static class YtCollectDb {
-    public static Task<IReadOnlyCollection<string>> MissingUsers(this YtCollectDbCtx ctx) =>
-      ctx.Db.Query<string>("missing users", @$"
+  public string ChannelId => Channel.ChannelId;
+}
+
+public static class YtCollectDb {
+  public static Task<IReadOnlyCollection<string>> MissingUsers(this YtCollectDbCtx ctx) =>
+    ctx.Db.Query<string>("missing users", @$"
 select distinct author_channel_id
 from comment t
 join video_latest v on v.video_id = t.video_id
@@ -38,9 +39,9 @@ where
 {ctx.YtCfg.MaxMissingUsers.Do(i => $"limit {i}")}
 ");
 
-    public static async Task<ChannelUpdatePlan[]> DiscoverChannelsViaRecs(this YtCollectDbCtx ctx) {
-      var toAdd = await ctx.Db.Query<(string channel_id, string channel_title, string source)>("channels to classify",
-        @"with review_channels as (
+  public static async Task<ChannelUpdatePlan[]> DiscoverChannelsViaRecs(this YtCollectDbCtx ctx) {
+    var toAdd = await ctx.Db.Query<(string channel_id, string channel_title, string source)>("channels to classify",
+      @"with review_channels as (
   select channel_id
        , channel_title -- probably missing values. reviews without channels don't have titles
   from channel_review r
@@ -64,19 +65,18 @@ select *
 from s
 limit :remaining", new {remaining = ctx.YtCfg.DiscoverChannels});
 
-      ctx.Log.Debug("Collect - found {Channels} new channels for discovery", toAdd.Count);
+    ctx.Log.Debug("Collect - found {Channels} new channels for discovery", toAdd.Count);
 
-      var toDiscover = toAdd
-        .Select(c => new ChannelUpdatePlan {
-          Channel = new() {
-            ChannelId = c.channel_id,
-            ChannelTitle = c.channel_title
-          },
-          Update = c.source == "review" ? UpdateChannelType.Standard : UpdateChannelType.Discover
-        })
-        .ToArray();
+    var toDiscover = toAdd
+      .Select(c => new ChannelUpdatePlan {
+        Channel = new() {
+          ChannelId = c.channel_id,
+          ChannelTitle = c.channel_title
+        },
+        Update = c.source == "review" ? UpdateChannelType.Standard : UpdateChannelType.Discover
+      })
+      .ToArray();
 
-      return toDiscover;
-    }
+    return toDiscover;
   }
 }

@@ -4,23 +4,23 @@ using CliFx;
 using Serilog;
 using Serilog.Events;
 
-namespace Mutuo.Tools {
-  class Program {
-    static async Task<int> Main(string[] args) {
-      var log = new LoggerConfiguration()
-        .WriteTo.Console(LogEventLevel.Information).CreateLogger();
-      var cb = new ContainerBuilder();
-      cb.Register(_ => log);
-      cb.RegisterAssemblyTypes(typeof(Program).Assembly).AssignableTo<ICommand>();
-      using var scope = cb.Build();
+namespace Mutuo.Tools; 
 
-      var app = new CliApplicationBuilder()
-        .AddCommandsFromThisAssembly()
-        .UseTypeActivator(t => scope.Resolve(t))
-        .SetTitle("Mutuo Tools")
-        .Build();
+class Program {
+  static async Task<int> Main(string[] args) {
+    var log = new LoggerConfiguration()
+      .WriteTo.Console(LogEventLevel.Information).CreateLogger();
+    var cb = new ContainerBuilder();
+    cb.Register(_ => log);
+    cb.RegisterAssemblyTypes(typeof(Program).Assembly).AssignableTo<ICommand>();
+    using var scope = cb.Build();
 
-      return await app.RunAsync(args);
-    }
+    var app = new CliApplicationBuilder()
+      .AddCommandsFromThisAssembly()
+      .UseTypeActivator(t => scope.Resolve(t))
+      .SetTitle("Mutuo Tools")
+      .Build();
+
+    return await app.RunAsync(args);
   }
 }

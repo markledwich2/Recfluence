@@ -1,12 +1,13 @@
 ﻿using Mutuo.Etl.Db;
 using SysExtensions.Text;
 
-namespace YtReader.Store {
-  public static class YtResultsSql {
-    public static class Narrative {
-      public static readonly string[] FilterTags = {"MissingLinkMedia", "OrganizedReligion", "Educational", "Black", "LGBT"};
+namespace YtReader.Store; 
 
-      public static readonly string VaccinePersonalHighlight = $@"
+public static class YtResultsSql {
+  public static class Narrative {
+    public static readonly string[] FilterTags = {"MissingLinkMedia", "OrganizedReligion", "Educational", "Black", "LGBT"};
+
+    public static readonly string VaccinePersonalHighlight = $@"
 with channel_highlights as (
     with h1 as (select $1::string channel_id
        --, $7::string video_url
@@ -46,7 +47,7 @@ with channel_highlights as (
 select *
 from h1";
 
-      public static readonly string VaccineDnaHighlight = $@"
+    public static readonly string VaccineDnaHighlight = $@"
 with highlights as (
   with raw as (
     select $1::object v
@@ -66,6 +67,5 @@ from highlights h
        left join video_latest v on v.video_id=h.video_id
        left join channel_latest c on c.channel_id=v.channel_id
 ";
-    }
   }
 }

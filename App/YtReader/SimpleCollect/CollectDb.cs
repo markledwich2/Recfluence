@@ -13,29 +13,30 @@ using SysExtensions.Text;
 using YtReader.Store;
 using YtReader.Yt;
 
-namespace YtReader.SimpleCollect {
-  public record CollectDbCtx(ILoggedConnection<IDbConnection> Db, Platform Platform, ICommonCollectCfg Cfg) : IDisposable {
-    public void Dispose() => Db?.Dispose();
-  }
+namespace YtReader.SimpleCollect; 
 
-  public static class CollectDb {
-    public static string SqlList<T>(this IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
-    static string SqlList(this IReadOnlyCollection<Channel> channels) => channels.Join(",", c => c.ChannelId.SingleQuote());
+public record CollectDbCtx(ILoggedConnection<IDbConnection> Db, Platform Platform, ICommonCollectCfg Cfg) : IDisposable {
+  public void Dispose() => Db?.Dispose();
+}
 
-    /// <summary>Existing reviewed channels with information on the last updates to extra parts.
-    ///   <param name="channelSelect">By default will return channels that meet review criteria. To override, specify a select
-    ///     query that returns rows with a column named channel_id</param>
-    /// </summary>
-    public static async Task<IReadOnlyCollection<ChannelUpdatePlan>> ChannelUpdateStats(this CollectDbCtx ctx,
-      IReadOnlyCollection<string> chans = null, string channelSelect = null) {
-      channelSelect ??= @$"
+public static class CollectDb {
+  public static string SqlList<T>(this IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
+  static string SqlList(this IReadOnlyCollection<Channel> channels) => channels.Join(",", c => c.ChannelId.SingleQuote());
+
+  /// <summary>Existing reviewed channels with information on the last updates to extra parts.
+  ///   <param name="channelSelect">By default will return channels that meet review criteria. To override, specify a select
+  ///     query that returns rows with a column named channel_id</param>
+  /// </summary>
+  public static async Task<IReadOnlyCollection<ChannelUpdatePlan>> ChannelUpdateStats(this CollectDbCtx ctx,
+    IReadOnlyCollection<string> chans = null, string channelSelect = null) {
+    channelSelect ??= @$"
 select channel_id from channel_latest  
 where platform = '{ctx.Platform.EnumString()}' and status <> 'Dupe' and {(chans.None() ? "meets_review_criteria" : $"channel_id in ({SqlList(chans)})")}";
 
-      var channels = await ctx.Db.Query<(string j, long? daysBack,
-        DateTime? lastVideoUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate, DateTime? lastCommentUpdate)>(
-        "channels - previous",
-        $@"
+    var channels = await ctx.Db.Query<(string j, long? daysBack,
+      DateTime? lastVideoUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate, DateTime? lastCommentUpdate)>(
+      "channels - previous",
+      $@"
 with channels_raw as (
   select distinct channel_id from ({channelSelect})
   where channel_id is not null
@@ -56,21 +57,21 @@ from channels_raw r
        left join stage_latest on v:ChannelId=r.channel_id
        left join channel_collection_days_back b on b.channel_id=v:ChannelId
 ");
-      return channels.Select(r => new ChannelUpdatePlan {
-        Channel = r.j.ToObject<Channel>(IJsonlStore.JCfg),
-        VideosFrom = r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : null,
-        LastVideoUpdate = r.lastVideoUpdate,
-        LastCaptionUpdate = r.lastCaptionUpdate,
-        LastRecUpdate = r.lastRecUpdate,
-        LastCommentUpdate = r.lastCommentUpdate
-      }).ToArray();
-    }
+    return channels.Select(r => new ChannelUpdatePlan {
+      Channel = r.j.ToObject<Channel>(IJsonlStore.JCfg),
+      VideosFrom = r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : null,
+      LastVideoUpdate = r.lastVideoUpdate,
+      LastCaptionUpdate = r.lastCaptionUpdate,
+      LastRecUpdate = r.lastRecUpdate,
+      LastCommentUpdate = r.lastCommentUpdate
+    }).ToArray();
+  }
 
-    /// <summary>Videos to help plan which to refresh extra for (we don't actualy refresh every one of these). We detect dead
-    ///   videos by having all non dead video's at hand since daily_update_days_back, and the date extra was last refreshed for
-    ///   it</summary>
-    public static async Task<IReadOnlyCollection<VideoForUpdate>> VideosForUpdate(this CollectDbCtx ctx, IReadOnlyCollection<Channel> channels) {
-      var ids = await ctx.Db.Query<VideoForUpdate>("videos for update", $@"
+  /// <summary>Videos to help plan which to refresh extra for (we don't actualy refresh every one of these). We detect dead
+  ///   videos by having all non dead video's at hand since daily_update_days_back, and the date extra was last refreshed for
+  ///   it</summary>
+  public static async Task<IReadOnlyCollection<VideoForUpdate>> VideosForUpdate(this CollectDbCtx ctx, IReadOnlyCollection<Channel> channels) {
+    var ids = await ctx.Db.Query<VideoForUpdate>("videos for update", $@"
 with chans as (
   select channel_id
   from channel_latest
@@ -91,12 +92,12 @@ where v.error_type is null -- removed video's updated separately
 and platform = :platform
 qualify row_number() over (partition by v.channel_id order by upload_date desc) <= :videosPerChannel
 ", new {platform = ctx.Platform.EnumString(), videosPerChannel = ctx.Cfg.MaxChannelFullVideos});
-      return ids;
-    }
+    return ids;
+  }
 
-    public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingComments(this CollectDbCtx ctx,
-      IReadOnlyCollection<Channel> channels) =>
-      await ctx.Db.Query<(string ChannelId, string VideoId)>("missing comments", $@"
+  public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingComments(this CollectDbCtx ctx,
+    IReadOnlyCollection<Channel> channels) =>
+    await ctx.Db.Query<(string ChannelId, string VideoId)>("missing comments", $@"
 select channel_id, video_id
 from video_latest v
 where not exists(select * from comment_stage c where c.v:VideoId=v.video_id) and error_type is null
@@ -104,14 +105,13 @@ qualify row_number() over (partition by channel_id order by random() desc)<=:max
   and channel_id in ({SqlList(channels)})
                 ", new {max_comments = ctx.Cfg.MaxChannelComments});
 
-    public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingCaptions(this CollectDbCtx ctx,
-      IReadOnlyCollection<Channel> channels) =>
-      await ctx.Db.Query<(string ChannelId, string VideoId)>("missing captions", $@"
+  public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingCaptions(this CollectDbCtx ctx,
+    IReadOnlyCollection<Channel> channels) =>
+    await ctx.Db.Query<(string ChannelId, string VideoId)>("missing captions", $@"
                 select channel_id, video_id
                 from video_latest v
                 where not exists(select * from caption_stage c where c.v:VideoId=v.video_id)
                   qualify row_number() over (partition by channel_id order by views desc)<=400
                     and channel_id in ({SqlList(channels)})
                 ");
-  }
 }

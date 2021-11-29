@@ -16,50 +16,51 @@ using YtReader.Store;
 
 // ReSharper disable InconsistentNaming
 
-namespace YtReader.Airtable {
-  public record AirtableCfg(string ApiKey = null);
-  public record MentionRowKey(string mentionId);
-  public record ChannelRowKey(string channelId);
-  public record VideoRowKey(string videoId);
+namespace YtReader.Airtable; 
 
-  public enum AtLabelPart {
-    Mention,
-    Channel,
-    Video
-  }
+public record AirtableCfg(string ApiKey = null);
+public record MentionRowKey(string mentionId);
+public record ChannelRowKey(string channelId);
+public record VideoRowKey(string videoId);
 
-  public enum AtUpdateMode {
-    Create,
-    CreateAndUpdate
-  }
+public enum AtLabelPart {
+  Mention,
+  Channel,
+  Video
+}
 
-  //"appwfe3XfYqxn7v7I"
-  public record AtOps(string BaseId, string Name, int? Limit, AtLabelPart[] Parts = null, string[] Videos = null, AtUpdateMode Mode = AtUpdateMode.Create);
+public enum AtUpdateMode {
+  Create,
+  CreateAndUpdate
+}
 
-  public static class AtLabelSql {
-    public static readonly Dictionary<string, string> NamedSql = new() {
-      /*{
-        "Activewear", @"
-  select n.video_id, part, context, offset_seconds, m.value::string keyword
-  from mention_activewear n
-  join video_latest v on v.video_id = n.video_id
-  , table (flatten(matches)) m
-  where keyword in ('lululemon')
+//"appwfe3XfYqxn7v7I"
+public record AtOps(string BaseId, string Name, int? Limit, AtLabelPart[] Parts = null, string[] Videos = null, AtUpdateMode Mode = AtUpdateMode.Create);
+
+public static class AtLabelSql {
+  public static readonly Dictionary<string, string> NamedSql = new() {
+    /*{
+      "Activewear", @"
+select n.video_id, part, context, offset_seconds, m.value::string keyword
+from mention_activewear n
+join video_latest v on v.video_id = n.video_id
+, table (flatten(matches)) m
+where keyword in ('lululemon')
 "
-      }, {
-        "Vaccine", @"
-  select n.video_id, part, context, offset_seconds, m.value::string keyword
+    }, {
+      "Vaccine", @"
+select n.video_id, part, context, offset_seconds, m.value::string keyword
 from mention_vaccine n
 join video_latest v on v.video_id = n.video_id
 , table (flatten(matches)) m
 where v.views > 10000 and v.upload_date >= '2021-04-13'
 "
-      }, {
-        "vaccine-personal",
-        @"select n.video_id, 'caption' as part, caption as context, offset_seconds, '' keyword from mention_vaccine_personal n"
-      },*/ {
-        "domestic-extremism",
-        @"
+    }, {
+      "vaccine-personal",
+      @"select n.video_id, 'caption' as part, caption as context, offset_seconds, '' keyword from mention_vaccine_personal n"
+    },*/ {
+      "domestic-extremism",
+      @"
       select n.video_id, part, context, offset_seconds, matches
       from mention_domestic n
              join video_latest v on v.video_id=n.video_id
@@ -67,18 +68,18 @@ where v.views > 10000 and v.upload_date >= '2021-04-13'
       order by views desc nulls last
       limit 200
 "
-      }
-    };
-    public static string NamedQuery(string name) => NamedSql.TryGet(name) ?? throw new($"no sql called {name}");
-  }
+    }
+  };
+  public static string NamedQuery(string name) => NamedSql.TryGet(name) ?? throw new($"no sql called {name}");
+}
 
-  public record AtLabel(AirtableCfg AirCfg, SnowflakeConnectionProvider Sf) {
-    const int AtBatchSize = 10;
+public record AtLabel(AirtableCfg AirCfg, SnowflakeConnectionProvider Sf) {
+  const int AtBatchSize = 10;
 
-    public async Task MargeIntoAirtable(AtOps op, ILogger log) {
-      using var db = await Sf.Open(log);
+  public async Task MargeIntoAirtable(AtOps op, ILogger log) {
+    using var db = await Sf.Open(log);
 
-      await db.Execute("create tmp mentions table", $@"
+    await db.Execute("create tmp mentions table", $@"
 create or replace temporary table _mentions as 
 (
   with q as ({AtLabelSql.NamedQuery(op.Name)}) 
@@ -87,29 +88,29 @@ create or replace temporary table _mentions as
   {op.Limit.Do(l => $"limit {l}")}
 )");
 
-      var mentionSql = "select * from _mentions";
+    var mentionSql = "select * from _mentions";
 
-      if (op.Parts.ShouldRun(AtLabelPart.Channel))
-        await Sync<ChannelRowKey>(op, "Channels", db.ReadAsJson("narrative channels", @$"
+    if (op.Parts.ShouldRun(AtLabelPart.Channel))
+      await Sync<ChannelRowKey>(op, "Channels", db.ReadAsJson("narrative channels", @$"
   with mention as ({mentionSql})
   select c.channel_id, c.channel_title, c.subs, c.channel_views , c.tags
 from channel_latest c
     where exists(select * from mention n join video_latest v on v.video_id = n.video_id where v.channel_id = c.channel_id)
   "), log);
 
-      if (op.Parts.ShouldRun(AtLabelPart.Video))
-        await Sync<VideoRowKey>(op, "Videos", db.ReadAsJson("narrative channels", @$"
+    if (op.Parts.ShouldRun(AtLabelPart.Video))
+      await Sync<VideoRowKey>(op, "Videos", db.ReadAsJson("narrative channels", @$"
   with mention as ({mentionSql})
   select video_id, video_title, views, channel_id from video_latest v
     where exists(select * from mention m where m.video_id = v.video_id)
   ").Select(r => {
-          // linking records need to ba an array
-          r["CHANNEL_ID"] = new JArray(r["CHANNEL_ID"]);
-          return r;
-        }), log);
+        // linking records need to ba an array
+        r["CHANNEL_ID"] = new JArray(r["CHANNEL_ID"]);
+        return r;
+      }), log);
 
-      if (op.Parts.ShouldRun(AtLabelPart.Mention))
-        await Sync<MentionRowKey>(op, "Mentions", db.ReadAsJson("narrative mentions", @$"
+    if (op.Parts.ShouldRun(AtLabelPart.Mention))
+      await Sync<MentionRowKey>(op, "Mentions", db.ReadAsJson("narrative mentions", @$"
   with mention as ({mentionSql})
   select 
   n.video_id||'|'||n.part||'|'||coalesce('|'||n.offset_seconds, '') as mention_id
@@ -132,89 +133,88 @@ from channel_latest c
 qualify row_number() over (partition by mention_id order by 1) = 1
 order by video_group -- use group to randomize the order
   ").Select(r => {
-          // linking records need to ba an array
-          r["CHANNEL_ID"] = new JArray(r["CHANNEL_ID"]);
-          r["VIDEO_ID"] = new JArray(r["VIDEO_ID"]);
-          return r;
-        }), log);
-    }
+        // linking records need to ba an array
+        r["CHANNEL_ID"] = new JArray(r["CHANNEL_ID"]);
+        r["VIDEO_ID"] = new JArray(r["VIDEO_ID"]);
+        return r;
+      }), log);
+  }
 
-    public async Task Sync<TKey>(AtOps op, string airTableName, IAsyncEnumerable<JObject> sourceRows, ILogger log) where TKey : class {
-      using var airTable = new AirtableBase(AirCfg.ApiKey, op.BaseId);
-      var keyFields = typeof(TKey).GetProperties().Select(p => p.Name).ToArray();
-      var airRows = await airTable.Rows<TKey>(airTableName, keyFields, log).ToListAsync()
-        .Then(rows => rows.KeyBy(r => r.Fields));
+  public async Task Sync<TKey>(AtOps op, string airTableName, IAsyncEnumerable<JObject> sourceRows, ILogger log) where TKey : class {
+    using var airTable = new AirtableBase(AirCfg.ApiKey, op.BaseId);
+    var keyFields = typeof(TKey).GetProperties().Select(p => p.Name).ToArray();
+    var airRows = await airTable.Rows<TKey>(airTableName, keyFields, log).ToListAsync()
+      .Then(rows => rows.KeyBy(r => r.Fields));
 
-      var (update, create) = await sourceRows
-        .Select(v => v.ToCamelCase())
-        .Select(r => new {Key = r.ToObject<TKey>(), Row = r, AirFields = r.ToAirFields()})
-        .Split(r => airRows.ContainsKey(r.Key));
+    var (update, create) = await sourceRows
+      .Select(v => v.ToCamelCase())
+      .Select(r => new {Key = r.ToObject<TKey>(), Row = r, AirFields = r.ToAirFields()})
+      .Split(r => airRows.ContainsKey(r.Key));
 
-      await create.Batch(AtBatchSize).BlockDo(async (rows, i) => {
-        var createFields = rows.Select(r => r.AirFields).ToArray();
-        var res = await airTable.CreateMultipleRecords(airTableName, createFields, typecast: true);
+    await create.Batch(AtBatchSize).BlockDo(async (rows, i) => {
+      var createFields = rows.Select(r => r.AirFields).ToArray();
+      var res = await airTable.CreateMultipleRecords(airTableName, createFields, typecast: true);
+      res.EnsureSuccess(log, airTableName);
+      log.Information("Airtable - created {Rows} in {Airtable}, batch {Batch}", createFields.Length, airTableName, i + 1);
+    });
+
+    if (op.Mode.In(AtUpdateMode.CreateAndUpdate))
+      await update.Batch(AtBatchSize).BlockDo(async (rows, i) => {
+        var updateFields = rows.Select(u => new IdFields(airRows[u.Key].Id) {FieldsCollection = u.AirFields.FieldsCollection}).ToArray();
+        var res = await airTable.UpdateMultipleRecords(airTableName, updateFields, typecast: true);
         res.EnsureSuccess(log, airTableName);
-        log.Information("Airtable - created {Rows} in {Airtable}, batch {Batch}", createFields.Length, airTableName, i + 1);
+        log.Information("Airtable - updated {Rows} rows in {Airtable}, batch {Batch}", updateFields.Length, airTableName, i + 1);
       });
+  }
+}
 
-      if (op.Mode.In(AtUpdateMode.CreateAndUpdate))
-        await update.Batch(AtBatchSize).BlockDo(async (rows, i) => {
-          var updateFields = rows.Select(u => new IdFields(airRows[u.Key].Id) {FieldsCollection = u.AirFields.FieldsCollection}).ToArray();
-          var res = await airTable.UpdateMultipleRecords(airTableName, updateFields, typecast: true);
-          res.EnsureSuccess(log, airTableName);
-          log.Information("Airtable - updated {Rows} rows in {Airtable}, batch {Batch}", updateFields.Length, airTableName, i + 1);
-        });
+public static class AirtableExtensions {
+  public static async IAsyncEnumerable<AirtableRecord<T>> Rows<T>(this AirtableBase at, string table, string[] fields = null, ILogger log = null) {
+    string offset = null;
+    while (true) {
+      var res = await at.ListRecords<T>(table, offset, fields);
+      res.EnsureSuccess(log, table);
+      foreach (var r in res.Records)
+        yield return r;
+      offset = res.Offset;
+      if (offset == null) break;
     }
   }
 
-  public static class AirtableExtensions {
-    public static async IAsyncEnumerable<AirtableRecord<T>> Rows<T>(this AirtableBase at, string table, string[] fields = null, ILogger log = null) {
-      string offset = null;
-      while (true) {
-        var res = await at.ListRecords<T>(table, offset, fields);
-        res.EnsureSuccess(log, table);
-        foreach (var r in res.Records)
-          yield return r;
-        offset = res.Offset;
-        if (offset == null) break;
-      }
+  public static async IAsyncEnumerable<AirtableRecord> Rows(this AirtableBase at, string table, string[] fields = null, ILogger log = null) {
+    string offset = null;
+    while (true) {
+      var res = await at.ListRecords(table, offset, fields);
+      res.EnsureSuccess(log, table);
+      foreach (var r in res.Records)
+        yield return r;
+      offset = res.Offset;
+      if (offset == null) break;
     }
+  }
 
-    public static async IAsyncEnumerable<AirtableRecord> Rows(this AirtableBase at, string table, string[] fields = null, ILogger log = null) {
-      string offset = null;
-      while (true) {
-        var res = await at.ListRecords(table, offset, fields);
-        res.EnsureSuccess(log, table);
-        foreach (var r in res.Records)
-          yield return r;
-        offset = res.Offset;
-        if (offset == null) break;
-      }
-    }
+  public static void EnsureSuccess(this AirtableApiResponse res, ILogger log, string desc = null) {
+    if (res.Success) return;
+    var msg = res.AirtableApiError switch {
+      AirtableInvalidRequestException r => r.DetailedErrorMessage ?? r.ErrorMessage,
+      _ => null
+    } ?? res.AirtableApiError.ErrorMessage ?? "not successful";
+    log.Error(res.AirtableApiError, "Airtable {Desc}: {Error}", desc, msg);
+    throw res.AirtableApiError as Exception ?? new(msg);
+  }
 
-    public static void EnsureSuccess(this AirtableApiResponse res, ILogger log, string desc = null) {
-      if (res.Success) return;
-      var msg = res.AirtableApiError switch {
-        AirtableInvalidRequestException r => r.DetailedErrorMessage ?? r.ErrorMessage,
-        _ => null
-      } ?? res.AirtableApiError.ErrorMessage ?? "not successful";
-      log.Error(res.AirtableApiError, "Airtable {Desc}: {Error}", desc, msg);
-      throw res.AirtableApiError as Exception ?? new(msg);
-    }
+  public static Fields ToAirFields(this JObject j) {
+    var dic = j.ToObject<Dictionary<string, object>>();
+    var fields = new Fields {FieldsCollection = dic};
+    return fields;
+  }
 
-    public static Fields ToAirFields(this JObject j) {
-      var dic = j.ToObject<Dictionary<string, object>>();
-      var fields = new Fields {FieldsCollection = dic};
-      return fields;
-    }
+  public static T Value<T>(this Fields fields, string field) => (T) fields.FieldsCollection[field];
 
-    public static T Value<T>(this Fields fields, string field) => (T) fields.FieldsCollection[field];
-
-    public static JObject RecordJObject(this AirtableRecord record) {
-      var j = new JObject(new JProperty("id", record.Id), new JProperty("createdTime", record.CreatedTime));
-      foreach (var field in record.Fields)
-        j.Add(field.Key, JToken.FromObject(field.Value));
-      return j;
-    }
+  public static JObject RecordJObject(this AirtableRecord record) {
+    var j = new JObject(new JProperty("id", record.Id), new JProperty("createdTime", record.CreatedTime));
+    foreach (var field in record.Fields)
+      j.Add(field.Key, JToken.FromObject(field.Value));
+    return j;
   }
 }

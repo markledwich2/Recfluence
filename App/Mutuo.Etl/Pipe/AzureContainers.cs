@@ -21,228 +21,228 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
-namespace Mutuo.Etl.Pipe {
-  public class AzureContainers : IPipeWorkerStartable, IContainerLauncher {
-    public static readonly string         ContainerNameEnv = $"{nameof(AzureContainers)}_Container";
-    readonly               ContainerCfg   ContainerCfg;
-    readonly               RegistryClient RegistryClient;
-    readonly               SemVersion     Version;
+namespace Mutuo.Etl.Pipe; 
 
-    public AzureContainers(PipeAzureCfg azureCfg, SemVersion version, RegistryClient registryClient, ContainerCfg containerCfg) {
-      AzureCfg = azureCfg;
-      Version = version;
-      RegistryClient = registryClient;
-      ContainerCfg = containerCfg;
-      Az = new(azureCfg.GetAzure);
-    }
+public class AzureContainers : IPipeWorkerStartable, IContainerLauncher {
+  public static readonly string         ContainerNameEnv = $"{nameof(AzureContainers)}_Container";
+  readonly               ContainerCfg   ContainerCfg;
+  readonly               RegistryClient RegistryClient;
+  readonly               SemVersion     Version;
 
-    public PipeAzureCfg AzureCfg { get; }
+  public AzureContainers(PipeAzureCfg azureCfg, SemVersion version, RegistryClient registryClient, ContainerCfg containerCfg) {
+    AzureCfg = azureCfg;
+    Version = version;
+    RegistryClient = registryClient;
+    ContainerCfg = containerCfg;
+    Az = new(azureCfg.GetAzure);
+  }
 
-    Lazy<IAzure> Az { get; }
+  public PipeAzureCfg AzureCfg { get; }
 
-    public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars,
-      string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ContainerCfg cfg = null, ILogger log = null,
-      CancellationToken cancel = default) {
-      groupName ??= containerName;
-      cfg ??= ContainerCfg;
-      var sw = Stopwatch.StartNew();
-      var group = await Launch(cfg with {Exe = exe}, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
-        returnOnStart, log: log, cancel: cancel);
-      await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
-      log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());
-      if (!returnOnStart && group.State() == ContainerState.Succeeded)
-        await DeleteContainer(groupName, log);
-    }
+  Lazy<IAzure> Az { get; }
 
-    public Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) =>
-      Launch(ctx, ids, returnOnRunning: false, exclusive: false, log, cancel);
+  public async Task RunContainer(string containerName, string fullImageName, (string name, string value)[] envVars,
+    string[] args = null, bool returnOnStart = false, string exe = null, string groupName = null, ContainerCfg cfg = null, ILogger log = null,
+    CancellationToken cancel = default) {
+    groupName ??= containerName;
+    cfg ??= ContainerCfg;
+    var sw = Stopwatch.StartNew();
+    var group = await Launch(cfg with {Exe = exe}, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
+      returnOnStart, log: log, cancel: cancel);
+    await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
+    log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());
+    if (!returnOnStart && group.State() == ContainerState.Succeeded)
+      await DeleteContainer(groupName, log);
+  }
 
-    /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
-    ///   returns the status.</summary>
-    public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning,
-      bool exclusive, ILogger log, CancellationToken cancel) {
-      var res = await ids.BlockMap(async runId => {
-        var runCfg = runId.PipeCfg(ctx.PipeCfg); // id is for the sub-pipe, ctx is for the root
+  public Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) =>
+    Launch(ctx, ids, returnOnRunning: false, exclusive: false, log, cancel);
 
-        var tag = await FindImageTag(runCfg.Container.ImageName);
-        var fullImageName = runCfg.Container.FullContainerImageName(tag);
-        var pipeLog = log.ForContext("Image", fullImageName).ForContext("Pipe", runId.Name);
+  /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
+  ///   returns the status.</summary>
+  public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning,
+    bool exclusive, ILogger log, CancellationToken cancel) {
+    var res = await ids.BlockMap(async runId => {
+      var runCfg = runId.PipeCfg(ctx.PipeCfg); // id is for the sub-pipe, ctx is for the root
 
-        var containerGroup = runId.ContainerGroupName(exclusive, Version);
-        var containerName = runCfg.Container.ImageName.ToLowerInvariant();
+      var tag = await FindImageTag(runCfg.Container.ImageName);
+      var fullImageName = runCfg.Container.FullContainerImageName(tag);
+      var pipeLog = log.ForContext("Image", fullImageName).ForContext("Pipe", runId.Name);
 
-        var (group, launchDur) = await Launch(runCfg.Container, containerGroup, containerName,
-          fullImageName, ctx.AppCtx.EnvironmentVariables,
-          runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog, cancel).WithDuration();
+      var containerGroup = runId.ContainerGroupName(exclusive, Version);
+      var containerName = runCfg.Container.ImageName.ToLowerInvariant();
 
-        var (logTxt, _) = await group.GetLogContentAsync(containerName).Try("");
-        var logPath = new SPath($"{runId.StatePath()}.log.txt");
+      var (group, launchDur) = await Launch(runCfg.Container, containerGroup, containerName,
+        fullImageName, ctx.AppCtx.EnvironmentVariables,
+        runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog, cancel).WithDuration();
 
-        var launchState = group.State();
+      var (logTxt, _) = await group.GetLogContentAsync(containerName).Try("");
+      var logPath = new SPath($"{runId.StatePath()}.log.txt");
 
-        var errorMsg = launchState.In(ContainerState.Failed, ContainerState.Terminated, ContainerState.Unknown)
-          ? $"The container is in an error state '{group.State}', see {logPath}"
-          : null;
-        if (errorMsg.HasValue())
-          pipeLog.Error("{RunId} - failed: {Log}", runId.ToString(), logTxt);
+      var launchState = group.State();
 
-        var md = new PipeRunMetadata {
-          Id = runId,
-          Duration = launchDur,
-          Containers = group.Containers.Select(c => c.Value).ToArray(),
-          RawState = group.State,
-          State = group.State(),
-          RunCfg = runCfg,
-          ErrorMessage = errorMsg
-        };
-        await Task.WhenAll(
-          ctx.Store.Save(logPath, (logTxt ?? "").AsStream(), pipeLog),
-          md.Save(ctx.Store, pipeLog));
+      var errorMsg = launchState.In(ContainerState.Failed, ContainerState.Terminated, ContainerState.Unknown)
+        ? $"The container is in an error state '{group.State}', see {logPath}"
+        : null;
+      if (errorMsg.HasValue())
+        pipeLog.Error("{RunId} - failed: {Log}", runId.ToString(), logTxt);
 
-        // delete succeeded non-exclusive containers. Failed, and rutned on running will be cleaned up by another process
-        if (group.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0))
-          await DeleteContainer(containerGroup, log);
-
-        return md;
-      }, returnOnRunning ? ctx.PipeCfg.Azure.Parallel : ids.Count).ToListAsync();
-
-      return res;
-    }
-
-    public static string GetContainerEnv() => Environment.GetEnvironmentVariable(ContainerNameEnv);
-    public static ILogger Enrich(ILogger log) => log.ForContext("Container", GetContainerEnv());
-
-    public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string containerName, string fullImageName,
-      (string name, string value)[] envVars, string[] args,
-      bool returnOnStart = false, Func<Region> customRegion = null, ILogger log = null, CancellationToken cancel = default) {
-      var sw = Stopwatch.StartNew();
-      var options = new GroupOptions {
-        ContainerName = containerName,
-        Region = customRegion?.Invoke().Name ?? cfg.Region,
-        Image = fullImageName,
-        Cores = cfg.Cores,
-        Mem = cfg.Mem,
-        Env = envVars.Concat((name: ContainerNameEnv, value: groupName)).ToDictionary(e => e.name, e => e.value),
-        Exe = cfg.Exe,
-        Args = args
+      var md = new PipeRunMetadata {
+        Id = runId,
+        Duration = launchDur,
+        Containers = group.Containers.Select(c => c.Value).ToArray(),
+        RawState = group.State,
+        State = group.State(),
+        RunCfg = runCfg,
+        ErrorMessage = errorMsg
       };
-      await EnsureNotRunning(groupName, options, Az.Value, AzureCfg.ResourceGroup);
+      await Task.WhenAll(
+        ctx.Store.Save(logPath, (logTxt ?? "").AsStream(), pipeLog),
+        md.Save(ctx.Store, pipeLog));
 
-      log?.Information("Launching container group {Container} ({FullImage}), args {Args}, region {Region}",
-        groupName, options.Image, args.Join(" "), options.Region);
-      var groupDef = ContainerGroup(cfg, groupName, options);
-      var group = await Create(groupDef, log);
-      var run = await Run(group, returnOnStart, sw, log, cancel);
-      return run;
-    }
+      // delete succeeded non-exclusive containers. Failed, and rutned on running will be cleaned up by another process
+      if (group.State() == ContainerState.Succeeded && !(exclusive && runId.Num > 0))
+        await DeleteContainer(containerGroup, log);
 
-    async Task DeleteContainer(string groupName, ILogger log) {
-      await Az.Value.ContainerGroups.DeleteByResourceGroupAsync(AzureCfg.ResourceGroup, groupName);
-      log.Debug("Deleted container {Container}", groupName);
-    }
+      return md;
+    }, returnOnRunning ? ctx.PipeCfg.Azure.Parallel : ids.Count).ToListAsync();
 
-    static async Task<IContainerGroup> Create(IWithCreate groupDef, ILogger log) {
-      var group = await groupDef.CreateAsync().WithDuration();
-      return group.Result;
-    }
+    return res;
+  }
 
-    public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {
-      var running = false;
-      var loggedWaiting = Stopwatch.StartNew();
+  public static string GetContainerEnv() => Environment.GetEnvironmentVariable(ContainerNameEnv);
+  public static ILogger Enrich(ILogger log) => log.ForContext("Container", GetContainerEnv());
 
-      while (true) {
-        group = await group.RefreshAsync();
-        var state = group.State();
+  public async Task<IContainerGroup> Launch(ContainerCfg cfg, string groupName, string containerName, string fullImageName,
+    (string name, string value)[] envVars, string[] args,
+    bool returnOnStart = false, Func<Region> customRegion = null, ILogger log = null, CancellationToken cancel = default) {
+    var sw = Stopwatch.StartNew();
+    var options = new GroupOptions {
+      ContainerName = containerName,
+      Region = customRegion?.Invoke().Name ?? cfg.Region,
+      Image = fullImageName,
+      Cores = cfg.Cores,
+      Mem = cfg.Mem,
+      Env = envVars.Concat((name: ContainerNameEnv, value: groupName)).ToDictionary(e => e.name, e => e.value),
+      Exe = cfg.Exe,
+      Args = args
+    };
+    await EnsureNotRunning(groupName, options, Az.Value, AzureCfg.ResourceGroup);
 
-        if (!running && state == ContainerState.Running) {
-          log.Debug("{Container} - container started in {Duration}", group.Name, sw.Elapsed.HumanizeShort());
-          running = true;
-          if (returnOnRunning) return group;
-        }
-        if (!state.IsCompletedState()) {
-          if (cancel.IsCancellationRequested) {
-            log.Information("{Container} - cancellation requested - stopping", group.Name);
-            await group.StopAsync();
-            await group.WaitForState(ContainerState.Stopped, ContainerState.Failed, ContainerState.Terminated);
-            return group;
-          }
-          if (loggedWaiting.Elapsed > 1.Minutes()) {
-            log.Debug("{Container} - waiting to complete. Current state {State}", group.Name, group.State);
-            loggedWaiting.Restart();
-          }
-          await Task.Delay(5.Seconds());
-          continue;
-        }
-        break;
+    log?.Information("Launching container group {Container} ({FullImage}), args {Args}, region {Region}",
+      groupName, options.Image, args.Join(" "), options.Region);
+    var groupDef = ContainerGroup(cfg, groupName, options);
+    var group = await Create(groupDef, log);
+    var run = await Run(group, returnOnStart, sw, log, cancel);
+    return run;
+  }
+
+  async Task DeleteContainer(string groupName, ILogger log) {
+    await Az.Value.ContainerGroups.DeleteByResourceGroupAsync(AzureCfg.ResourceGroup, groupName);
+    log.Debug("Deleted container {Container}", groupName);
+  }
+
+  static async Task<IContainerGroup> Create(IWithCreate groupDef, ILogger log) {
+    var group = await groupDef.CreateAsync().WithDuration();
+    return group.Result;
+  }
+
+  public async Task<IContainerGroup> Run(IContainerGroup group, bool returnOnRunning, Stopwatch sw, ILogger log, CancellationToken cancel = default) {
+    var running = false;
+    var loggedWaiting = Stopwatch.StartNew();
+
+    while (true) {
+      group = await group.RefreshAsync();
+      var state = group.State();
+
+      if (!running && state == ContainerState.Running) {
+        log.Debug("{Container} - container started in {Duration}", group.Name, sw.Elapsed.HumanizeShort());
+        running = true;
+        if (returnOnRunning) return group;
       }
-      log.Information("{Container} - container ({Status}) in {Duration}", group.Name, group.State, sw.Elapsed.HumanizeShort());
-      return group;
-    }
-
-    static async Task EnsureNotRunning(string groupName, GroupOptions options, IAzure azure, string rg) {
-      var group = await azure.ContainerGroups.GetByResourceGroupAsync(rg, groupName);
-      if (group != null) {
-        if (group.State.HasValue() && group.State == "Running")
-          throw new InvalidOperationException("Won't start container - it's not terminated");
-        await azure.ContainerGroups.DeleteByIdAsync(group.Id);
+      if (!state.IsCompletedState()) {
+        if (cancel.IsCancellationRequested) {
+          log.Information("{Container} - cancellation requested - stopping", group.Name);
+          await group.StopAsync();
+          await group.WaitForState(ContainerState.Stopped, ContainerState.Failed, ContainerState.Terminated);
+          return group;
+        }
+        if (loggedWaiting.Elapsed > 1.Minutes()) {
+          log.Debug("{Container} - waiting to complete. Current state {State}", group.Name, group.State);
+          loggedWaiting.Restart();
+        }
+        await Task.Delay(5.Seconds());
+        continue;
       }
+      break;
     }
+    log.Information("{Container} - container ({Status}) in {Duration}", group.Name, group.State, sw.Elapsed.HumanizeShort());
+    return group;
+  }
 
-    public async Task<string> FindImageTag(string imageName) {
-      var findTags = Version.Prerelease.HasValue() ? new[] {Version.PipeTag(), Version.MajorMinorPatch()} : new[] {Version.MajorMinorPatch()};
-      var existingTags = (await RegistryClient.TagList(imageName)).Tags.ToHashSet();
-      var tag = findTags.Select(t => existingTags.Contains(t) ? t : null).NotNull().FirstOrDefault()
-        ?? throw new InvalidOperationException($"Could not find any of tags {findTags.Join("|")}");
-      return tag;
-    }
-
-    IWithCreate ContainerGroup(ContainerCfg container, string groupName, GroupOptions options) {
-      var rg = AzureCfg.ResourceGroup;
-      var registryCreds = container.RegistryCreds ?? throw new InvalidOperationException("no registry credentials");
-      var group = Az.Value.ContainerGroups.Define(groupName)
-        .WithRegion(options.Region)
-        .WithExistingResourceGroup(rg)
-        .WithLinux()
-        .WithPrivateImageRegistry(container.Registry, registryCreds.Name, registryCreds.Secret)
-        .WithoutVolume()
-        .DefineContainerInstance(options.ContainerName)
-        .WithImage(options.Image)
-        .WithoutPorts()
-        .WithCpuCoreCount(options.Cores)
-        .WithMemorySizeInGB(options.Mem)
-        .WithEnvironmentVariables(options.Env);
-
-      if (container.Exe.HasValue())
-        group = group.WithStartingCommandLine(options.Exe, options.Args);
-      var createGroup = group
-        .Attach()
-        .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
-        .WithTag("expire", (DateTime.UtcNow + 2.Days()).ToString("o"));
-
-      return createGroup;
-    }
-
-    class GroupOptions {
-      public string                     Region        { get; set; }
-      public int                        Cores         { get; set; }
-      public double                     Mem           { get; set; }
-      public Dictionary<string, string> Env           { get; set; }
-      public string                     Image         { get; set; }
-      public string                     ContainerName { get; set; }
-      public string                     Exe           { get; set; }
-      public string[]                   Args          { get; set; }
+  static async Task EnsureNotRunning(string groupName, GroupOptions options, IAzure azure, string rg) {
+    var group = await azure.ContainerGroups.GetByResourceGroupAsync(rg, groupName);
+    if (group != null) {
+      if (group.State.HasValue() && group.State == "Running")
+        throw new InvalidOperationException("Won't start container - it's not terminated");
+      await azure.ContainerGroups.DeleteByIdAsync(group.Id);
     }
   }
 
-  public static class AzureContainersEx {
-    public static async Task EnsureSuccess(this IContainerGroup group, string containerName, ILogger log, ContainerState[] allowedStates = null) {
-      if (!group.State().In(allowedStates.NotNull().Concat(ContainerState.Succeeded).Distinct().ToArray())) {
-        var content = await group.GetLogContentAsync(containerName);
-        var exitCode = group.Containers[containerName].InstanceView?.CurrentState.ExitCode;
-        Log.Warning("Container {Container} not in a successful state ({State}), ExitCode ({ErrorCode}), Logs: {Logs}",
-          group.Name, group.State, exitCode, content);
-        throw new CommandException($"Container {group.Name} did not succeed ({group.State}), exit code ({exitCode}). Logs: {content}", exitCode ?? 0);
-      }
+  public async Task<string> FindImageTag(string imageName) {
+    var findTags = Version.Prerelease.HasValue() ? new[] {Version.PipeTag(), Version.MajorMinorPatch()} : new[] {Version.MajorMinorPatch()};
+    var existingTags = (await RegistryClient.TagList(imageName)).Tags.ToHashSet();
+    var tag = findTags.Select(t => existingTags.Contains(t) ? t : null).NotNull().FirstOrDefault()
+      ?? throw new InvalidOperationException($"Could not find any of tags {findTags.Join("|")}");
+    return tag;
+  }
+
+  IWithCreate ContainerGroup(ContainerCfg container, string groupName, GroupOptions options) {
+    var rg = AzureCfg.ResourceGroup;
+    var registryCreds = container.RegistryCreds ?? throw new InvalidOperationException("no registry credentials");
+    var group = Az.Value.ContainerGroups.Define(groupName)
+      .WithRegion(options.Region)
+      .WithExistingResourceGroup(rg)
+      .WithLinux()
+      .WithPrivateImageRegistry(container.Registry, registryCreds.Name, registryCreds.Secret)
+      .WithoutVolume()
+      .DefineContainerInstance(options.ContainerName)
+      .WithImage(options.Image)
+      .WithoutPorts()
+      .WithCpuCoreCount(options.Cores)
+      .WithMemorySizeInGB(options.Mem)
+      .WithEnvironmentVariables(options.Env);
+
+    if (container.Exe.HasValue())
+      group = group.WithStartingCommandLine(options.Exe, options.Args);
+    var createGroup = group
+      .Attach()
+      .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
+      .WithTag("expire", (DateTime.UtcNow + 2.Days()).ToString("o"));
+
+    return createGroup;
+  }
+
+  class GroupOptions {
+    public string                     Region        { get; set; }
+    public int                        Cores         { get; set; }
+    public double                     Mem           { get; set; }
+    public Dictionary<string, string> Env           { get; set; }
+    public string                     Image         { get; set; }
+    public string                     ContainerName { get; set; }
+    public string                     Exe           { get; set; }
+    public string[]                   Args          { get; set; }
+  }
+}
+
+public static class AzureContainersEx {
+  public static async Task EnsureSuccess(this IContainerGroup group, string containerName, ILogger log, ContainerState[] allowedStates = null) {
+    if (!group.State().In(allowedStates.NotNull().Concat(ContainerState.Succeeded).Distinct().ToArray())) {
+      var content = await group.GetLogContentAsync(containerName);
+      var exitCode = group.Containers[containerName].InstanceView?.CurrentState.ExitCode;
+      Log.Warning("Container {Container} not in a successful state ({State}), ExitCode ({ErrorCode}), Logs: {Logs}",
+        group.Name, group.State, exitCode, content);
+      throw new CommandException($"Container {group.Name} did not succeed ({group.State}), exit code ({exitCode}). Logs: {content}", exitCode ?? 0);
     }
   }
 }

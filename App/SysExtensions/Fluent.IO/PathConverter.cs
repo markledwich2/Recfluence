@@ -6,14 +6,14 @@ using System;
 using System.ComponentModel;
 using System.Globalization;
 
-namespace SysExtensions.Fluent.IO {
-  public class PathConverter : TypeConverter {
-    public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) =>
-      sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+namespace SysExtensions.Fluent.IO; 
 
-    public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value) {
-      var valueString = value as string;
-      return valueString != null ? new FPath(valueString) : base.ConvertFrom(context, culture, value);
-    }
+public class PathConverter : TypeConverter {
+  public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) =>
+    sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+
+  public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value) {
+    var valueString = value as string;
+    return valueString != null ? new FPath(valueString) : base.ConvertFrom(context, culture, value);
   }
 }

@@ -6,39 +6,39 @@ using SysExtensions.Build;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 
-namespace YtReader {
-  public class VersionInfo {
-    public VersionInfo(SemVersion version, GitVersionInfo info) {
-      Version = version;
-      Info = info;
-    }
+namespace YtReader; 
 
-    public SemVersion     Version     { get; set; }
-    public GitVersionInfo Info        { get; set; }
-    public SemVersion     ProdVersion => Version.Change(prerelease: "");
+public class VersionInfo {
+  public VersionInfo(SemVersion version, GitVersionInfo info) {
+    Version = version;
+    Info = info;
   }
 
-  public class VersionInfoProvider {
-    readonly Defer<VersionInfo> LazyVersion;
+  public SemVersion     Version     { get; set; }
+  public GitVersionInfo Info        { get; set; }
+  public SemVersion     ProdVersion => Version.Change(prerelease: "");
+}
 
-    public VersionInfoProvider(ILogger log, RootCfg rootCfg) =>
-      LazyVersion = new(async () => {
-        var (version, info) = await GitVersionInfo.DiscoverVersion(typeof(VersionInfo), log);
-        var prefix = GetVersionPrefix(rootCfg, version, info);
-        version = version.Change(prerelease: prefix);
-        return new(version, info);
-      });
+public class VersionInfoProvider {
+  readonly Defer<VersionInfo> LazyVersion;
 
-    static readonly Regex NonAlphaNum = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
+  public VersionInfoProvider(ILogger log, RootCfg rootCfg) =>
+    LazyVersion = new(async () => {
+      var (version, info) = await GitVersionInfo.DiscoverVersion(typeof(VersionInfo), log);
+      var prefix = GetVersionPrefix(rootCfg, version, info);
+      version = version.Change(prerelease: prefix);
+      return new(version, info);
+    });
 
-    public static string GetVersionPrefix(RootCfg rootCfg, SemVersion version, GitVersionInfo info = null) {
-      if (rootCfg.IsProd()) return rootCfg.BranchEnv ?? "";
-      var prerelease = version.Prerelease.HasValue() ? version.Prerelease : null;
-      var prefix = rootCfg.BranchEnv ?? info?.BranchName ?? prerelease ?? rootCfg.Env.ToLower();
-      prefix = NonAlphaNum.Replace(prefix, "");
-      return prefix;
-    }
+  static readonly Regex NonAlphaNum = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
 
-    public Task<VersionInfo> Version() => LazyVersion.GetOrCreate();
+  public static string GetVersionPrefix(RootCfg rootCfg, SemVersion version, GitVersionInfo info = null) {
+    if (rootCfg.IsProd()) return rootCfg.BranchEnv ?? "";
+    var prerelease = version.Prerelease.HasValue() ? version.Prerelease : null;
+    var prefix = rootCfg.BranchEnv ?? info?.BranchName ?? prerelease ?? rootCfg.Env.ToLower();
+    prefix = NonAlphaNum.Replace(prefix, "");
+    return prefix;
   }
+
+  public Task<VersionInfo> Version() => LazyVersion.GetOrCreate();
 }

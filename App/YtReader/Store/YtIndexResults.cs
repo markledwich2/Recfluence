@@ -16,93 +16,94 @@ using SysExtensions.Threading;
 using YtReader.Db;
 using IndexExpression = System.Linq.Expressions.Expression<System.Func<YtReader.Store.WorkCfg>>;
 
-namespace YtReader.Store {
-  record WorkCfg(string Name, IndexCol[] Cols, string Sql, ByteSize? Size = null, string Version = null,
-    NullValueHandling NullHandling = NullValueHandling.Include, string[] Tags = null);
+namespace YtReader.Store; 
 
-  public class YtIndexResults {
-    public static string                      IndexVersion = "v2";
-    readonly      BlobIndex                   BlobIndex;
-    readonly      SnowflakeConnectionProvider Sf;
+record WorkCfg(string Name, IndexCol[] Cols, string Sql, ByteSize? Size = null, string Version = null,
+  NullValueHandling NullHandling = NullValueHandling.Include, string[] Tags = null);
 
-    public YtIndexResults(BlobStores stores, SnowflakeConnectionProvider sf) {
-      Sf = sf;
-      BlobIndex = new(stores.Store(DataStoreType.Results));
-    }
+public class YtIndexResults {
+  public static string                      IndexVersion = "v2";
+  readonly      BlobIndex                   BlobIndex;
+  readonly      SnowflakeConnectionProvider Sf;
 
-    public async Task Run(string[] names, string[] tags, ILogger log, CancellationToken cancel = default) {
-      var toRun = new[] {
-          Narrative2Channels,
-          Narrative2Videos,
-          Narrative2Captions,
-          UsFeed,
-          UsRecs,
-          UsWatch,
-          VideoRemoved,
-          VideoRemovedCaption,
-          ChannelStatsById,
-          ChannelStatsByPeriod,
-          TopVideos(20_000),
-          TopChannelVideos(50)
-        }
-        .Select(t => t with {Name = t.Name.Underscore()}) // we are building this for javascript land. So snake case everything
-        .Where(t => names?.Contains(t.Name) != false && tags?.Intersect(t.Tags.NotNull()).Any() != false).ToArray();
+  public YtIndexResults(BlobStores stores, SnowflakeConnectionProvider sf) {
+    Sf = sf;
+    BlobIndex = new(stores.Store(DataStoreType.Results));
+  }
 
-      var (res, indexDuration) = await toRun.BlockMapList(async t => {
-        var work = await IndexWork(log, t);
-
-        return await BlobIndex.SaveIndexedJsonl(work, log, cancel);
-      }, parallel: 4, cancel: cancel).WithDuration();
-
-      log.Information("Completed writing indexes files {Indexes} in {Duration}. Starting commit.",
-        res.Select(i => i.IndexFilesPath), indexDuration.HumanizeShort());
-
-      if (cancel.IsCancellationRequested) return;
-
-      await res.BlockDo(r => BlobIndex.CommitIndexJson(r, log), parallel: 10, cancel: cancel);
-      log.Information("Committed indexes {Indexes}", res.Select(i => i.IndexPath));
-    }
-
-    async Task<BlobIndexWork> IndexWork(ILogger log, WorkCfg work, Action<JObject> onProcessed = null) {
-      using var con = await Sf.Open(log);
-
-      var reader = await con.ExecuteReader(work.Name, work.Sql);
-
-      async IAsyncEnumerable<JObject> GetRows() {
-        while (await reader.ReadAsync())
-          yield return reader.ToSnowflakeJObject().ToCamelCase();
+  public async Task Run(string[] names, string[] tags, ILogger log, CancellationToken cancel = default) {
+    var toRun = new[] {
+        Narrative2Channels,
+        Narrative2Videos,
+        Narrative2Captions,
+        UsFeed,
+        UsRecs,
+        UsWatch,
+        VideoRemoved,
+        VideoRemovedCaption,
+        ChannelStatsById,
+        ChannelStatsByPeriod,
+        TopVideos(20_000),
+        TopChannelVideos(50)
       }
+      .Select(t => t with {Name = t.Name.Underscore()}) // we are building this for javascript land. So snake case everything
+      .Where(t => names?.Contains(t.Name) != false && tags?.Intersect(t.Tags.NotNull()).Any() != false).ToArray();
 
-      var path = SPath.Relative("index", work.Name, work.Version ?? IndexVersion);
-      return new(path, work.Cols, GetRows(), work.Size ?? 200.Kilobytes(), work.NullHandling, onProcessed);
+    var (res, indexDuration) = await toRun.BlockMapList(async t => {
+      var work = await IndexWork(log, t);
+
+      return await BlobIndex.SaveIndexedJsonl(work, log, cancel);
+    }, parallel: 4, cancel: cancel).WithDuration();
+
+    log.Information("Completed writing indexes files {Indexes} in {Duration}. Starting commit.",
+      res.Select(i => i.IndexFilesPath), indexDuration.HumanizeShort());
+
+    if (cancel.IsCancellationRequested) return;
+
+    await res.BlockDo(r => BlobIndex.CommitIndexJson(r, log), parallel: 10, cancel: cancel);
+    log.Information("Committed indexes {Indexes}", res.Select(i => i.IndexPath));
+  }
+
+  async Task<BlobIndexWork> IndexWork(ILogger log, WorkCfg work, Action<JObject> onProcessed = null) {
+    using var con = await Sf.Open(log);
+
+    var reader = await con.ExecuteReader(work.Name, work.Sql);
+
+    async IAsyncEnumerable<JObject> GetRows() {
+      while (await reader.ReadAsync())
+        yield return reader.ToSnowflakeJObject().ToCamelCase();
     }
 
-    #region Channels & Videos
+    var path = SPath.Relative("index", work.Name, work.Version ?? IndexVersion);
+    return new(path, work.Cols, GetRows(), work.Size ?? 200.Kilobytes(), work.NullHandling, onProcessed);
+  }
 
-    static readonly IndexCol[] PeriodCols = new[] {"period"}.Select(c => Col(c, distinct: true)).ToArray();
+  #region Channels & Videos
 
-    static IndexCol Col(string dbName, bool inIndex = true, bool distinct = false, bool minMax = false) {
-      var meta = new ColMeta?[] {distinct ? ColMeta.Distinct : null, minMax ? ColMeta.MinMax : null}.NotNull().ToArray();
-      return new() {
-        Name = dbName.ToCamelCase(),
-        DbName = dbName,
-        InIndex = inIndex,
-        ExtraMeta = meta
-      };
-    }
+  static readonly IndexCol[] PeriodCols = new[] {"period"}.Select(c => Col(c, distinct: true)).ToArray();
 
-    /// <summary>Top videos for all channels for a given time period</summary>
-    WorkCfg TopVideos(int topPerPeriod) => new(nameof(TopVideos), PeriodCols, TopVideoResSql(topPerPeriod, PeriodCols));
+  static IndexCol Col(string dbName, bool inIndex = true, bool distinct = false, bool minMax = false) {
+    var meta = new ColMeta?[] {distinct ? ColMeta.Distinct : null, minMax ? ColMeta.MinMax : null}.NotNull().ToArray();
+    return new() {
+      Name = dbName.ToCamelCase(),
+      DbName = dbName,
+      InIndex = inIndex,
+      ExtraMeta = meta
+    };
+  }
 
-    /// <summary>Top videos from a channel & time period</summary>
-    WorkCfg TopChannelVideos(int topPerChannel) {
-      var cols = new[] {Col("channel_id")}.Concat(PeriodCols).ToArray();
-      return new(nameof(TopChannelVideos), cols, TopVideoResSql(topPerChannel, cols), 300.Kilobytes());
-    }
+  /// <summary>Top videos for all channels for a given time period</summary>
+  WorkCfg TopVideos(int topPerPeriod) => new(nameof(TopVideos), PeriodCols, TopVideoResSql(topPerPeriod, PeriodCols));
 
-    string TopVideoResSql(int rank, IndexCol[] cols) {
-      var indexColString = cols.DbNames().Join(",");
-      return $@"with video_ex as (
+  /// <summary>Top videos from a channel & time period</summary>
+  WorkCfg TopChannelVideos(int topPerChannel) {
+    var cols = new[] {Col("channel_id")}.Concat(PeriodCols).ToArray();
+    return new(nameof(TopChannelVideos), cols, TopVideoResSql(topPerChannel, cols), 300.Kilobytes());
+  }
+
+  string TopVideoResSql(int rank, IndexCol[] cols) {
+    var indexColString = cols.DbNames().Join(",");
+    return $@"with video_ex as (
   select video_id, video_title, upload_date, views as video_views, duration from video_latest
 )
 select t.video_id
@@ -119,18 +120,18 @@ from ttube_top_videos t
 left join video_ex v on v.video_id = t.video_id
   qualify rank<{rank}
 order by {indexColString}, rank";
-    }
+  }
 
-    /// <summary>Aggregate stats for a channel at a given time period</summary>
-    WorkCfg ChannelStatsByPeriod => new(nameof(ChannelStatsByPeriod), PeriodCols, ChannelStatsSql(PeriodCols), 100.Kilobytes());
+  /// <summary>Aggregate stats for a channel at a given time period</summary>
+  WorkCfg ChannelStatsByPeriod => new(nameof(ChannelStatsByPeriod), PeriodCols, ChannelStatsSql(PeriodCols), 100.Kilobytes());
 
-    static readonly IndexCol[] ByChannelCols = {Col("channel_id")};
+  static readonly IndexCol[] ByChannelCols = {Col("channel_id")};
 
-    /// <summary>Aggregate stats for a channel given a channel</summary>
-    WorkCfg ChannelStatsById => new(nameof(ChannelStatsById), ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes());
+  /// <summary>Aggregate stats for a channel given a channel</summary>
+  WorkCfg ChannelStatsById => new(nameof(ChannelStatsById), ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes());
 
-    static string ChannelStatsSql(IndexCol[] orderCols) =>
-      $@"with by_channel as (
+  static string ChannelStatsSql(IndexCol[] orderCols) =>
+    $@"with by_channel as (
   select t.channel_id
        , concat(t.period_type, '|', t.period_value) period
        , sum(views) views
@@ -145,8 +146,8 @@ from by_channel t
        left join ttube_refresh_stats r on r.channel_id=t.channel_id and concat(r.period_type, '|', r.period_value)=t.period
 order by {orderCols.DbNames().Join(",")}";
 
-    WorkCfg VideoRemoved =
-      new(nameof(VideoRemoved), new[] {Col("last_seen", minMax: true), Col("error_type", inIndex: false, distinct: true)}, @"
+  WorkCfg VideoRemoved =
+    new(nameof(VideoRemoved), new[] {Col("last_seen", minMax: true), Col("error_type", inIndex: false, distinct: true)}, @"
 select e.*
      , exists(select s.video_id from caption s where e.video_id=s.video_id) has_captions
 from video_error e
@@ -154,7 +155,7 @@ join channel_accepted c on e.channel_id = c.channel_id
 where e.platform = 'YouTube'
 order by last_seen", 200.Kilobytes());
 
-    WorkCfg VideoRemovedCaption = new(nameof(VideoRemovedCaption), new[] {Col("video_id")}, @"
+  WorkCfg VideoRemovedCaption = new(nameof(VideoRemovedCaption), new[] {Col("video_id")}, @"
 select e.video_id, s.caption, s.offset_seconds
 from video_error e
 join caption s on e.video_id = s.video_id
@@ -163,15 +164,15 @@ join channel_accepted c on c.channel_id = v.channel_id
 where v.platform = 'YouTube'
 order by video_id, offset_seconds", 100.Kilobytes());
 
-    #endregion
+  #endregion
 
-    #region Narrative
+  #region Narrative
 
-    const string Narrative2Version = "v2.3";
+  const string Narrative2Version = "v2.3";
 
-    static readonly IndexCol[] NarrativeChannelsCols = {Col("narrative", distinct: true)};
+  static readonly IndexCol[] NarrativeChannelsCols = {Col("narrative", distinct: true)};
 
-    readonly WorkCfg Narrative2Channels = new(nameof(Narrative2Channels), NarrativeChannelsCols, $@"
+  readonly WorkCfg Narrative2Channels = new(nameof(Narrative2Channels), NarrativeChannelsCols, $@"
 with by_channel as (
   select n.narrative, v.channel_id, sum(v.views) views
   from video_narrative2 n
@@ -191,11 +192,11 @@ s as (
            left join channel_latest cl on n.channel_id=cl.channel_id
 )
 select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
-      Tags: new[] {"narrative2"}, Version: Narrative2Version);
+    Tags: new[] {"narrative2"}, Version: Narrative2Version);
 
-    static readonly IndexCol[] NarrativeVideoCols = {Col("narrative", distinct: true), Col("upload_date", minMax: true)};
+  static readonly IndexCol[] NarrativeVideoCols = {Col("narrative", distinct: true), Col("upload_date", minMax: true)};
 
-    readonly WorkCfg Narrative2Videos = new(nameof(Narrative2Videos), NarrativeVideoCols, $@"
+  readonly WorkCfg Narrative2Videos = new(nameof(Narrative2Videos), NarrativeVideoCols, $@"
 with s as (
   select n.narrative
        , n.mentions
@@ -230,32 +231,32 @@ with s as (
 select *
 from s
 order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
-      200.Kilobytes(), // bigish because some charts need to load alot of these
-      Narrative2Version,
-      NullValueHandling.Ignore,
-      new[] {"narrative2"});
+    200.Kilobytes(), // bigish because some charts need to load alot of these
+    Narrative2Version,
+    NullValueHandling.Ignore,
+    new[] {"narrative2"});
 
-    static readonly IndexCol[] Narrative2CaptionCols = {Col("narrative"), Col("upload_date")};
+  static readonly IndexCol[] Narrative2CaptionCols = {Col("narrative"), Col("upload_date")};
 
-    WorkCfg Narrative2Captions = new(nameof(Narrative2Captions), Narrative2CaptionCols, @$"
+  WorkCfg Narrative2Captions = new(nameof(Narrative2Captions), Narrative2CaptionCols, @$"
 select narrative, v.upload_date::date upload_date, n.video_id, v.channel_id, n.captions
 from video_narrative2 n
 left join video_latest v on v.video_id = n.video_id
 order by {Narrative2CaptionCols.DbNames().Join(",")}",
-      50.Kilobytes(), // small because the UI loads these on demand
-      Narrative2Version,
-      Tags: new[] {"narrative2"});
+    50.Kilobytes(), // small because the UI loads these on demand
+    Narrative2Version,
+    Tags: new[] {"narrative2"});
 
-    #endregion
+  #endregion
 
-    #region Recs
+  #region Recs
 
-    static readonly IndexCol[] UsRecCols = {
-      Col("label", distinct: true),
-      Col("from_channel_id", distinct: true)
-    };
+  static readonly IndexCol[] UsRecCols = {
+    Col("label", distinct: true),
+    Col("from_channel_id", distinct: true)
+  };
 
-    WorkCfg UsRecs = new(nameof(UsRecs), UsRecCols, @$"
+  WorkCfg UsRecs = new(nameof(UsRecs), UsRecCols, @$"
 with video_date_accounts as (
   with g as (
     select from_video_id, day, count(distinct account) accounts_total --, count(*) over (partition by from_video_id) days_viewed
@@ -307,10 +308,10 @@ select *
 from sets
 order by {UsRecCols.DbNames().Join(",")}", 100.Kilobytes(), Tags: new[] {"us"});
 
-    static readonly IndexCol[] VideoSeenCols = {Col("part"), Col("account", distinct: true)};
+  static readonly IndexCol[] VideoSeenCols = {Col("part"), Col("account", distinct: true)};
 
-    static string GetVideoSeen(string table, bool titleInSeen = false) =>
-      $@"
+  static string GetVideoSeen(string table, bool titleInSeen = false) =>
+    $@"
 with s1 as (
   select w.account
        , w.video_id
@@ -332,9 +333,8 @@ select *
 from s1
 order by {VideoSeenCols.DbNames().Join(",")}, percentile desc";
 
-    WorkCfg UsWatch = new(nameof(UsWatch), VideoSeenCols, GetVideoSeen("us_watch"), 100.Kilobytes(), Tags: new[] {"us"});
-    WorkCfg UsFeed  = new(nameof(UsFeed), VideoSeenCols, GetVideoSeen("us_feed", titleInSeen: true), 100.Kilobytes(), Tags: new[] {"us"});
+  WorkCfg UsWatch = new(nameof(UsWatch), VideoSeenCols, GetVideoSeen("us_watch"), 100.Kilobytes(), Tags: new[] {"us"});
+  WorkCfg UsFeed  = new(nameof(UsFeed), VideoSeenCols, GetVideoSeen("us_feed", titleInSeen: true), 100.Kilobytes(), Tags: new[] {"us"});
 
-    #endregion
-  }
+  #endregion
 }

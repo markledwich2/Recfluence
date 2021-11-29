@@ -1,11 +1,11 @@
-﻿namespace SysExtensions {
-  /// <summary>Use for generic type interence</summary>
-  /// <typeparam name="T">the type of the parameter</typeparam>
-  public static class Typ {
-    public static Of<U> Of<U>() => new Of<U>();
+﻿namespace SysExtensions; 
 
-    public static string Hell() => "string";
-  }
+/// <summary>Use for generic type interence</summary>
+/// <typeparam name="T">the type of the parameter</typeparam>
+public static class Typ {
+  public static Of<U> Of<U>() => new Of<U>();
 
-  public class Of<T> { }
+  public static string Hell() => "string";
 }
+
+public class Of<T> { }
