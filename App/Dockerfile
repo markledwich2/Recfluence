@@ -1,7 +1,7 @@
 ARG SEMVER
 ARG ASSEMBLY_SEMVER
 
-FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:6.0-alpine AS build-env
 
 COPY YtCli YtCli/
 COPY YtReader YtReader/
@@ -17,7 +17,7 @@ WORKDIR /YtCli
 RUN dotnet publish -c Release -o publish /p:Version=${ASSEMBLY_SEMVER} /p:InformationalVersion=${SEMVER}
 
 # build runtime image
-FROM mcr.microsoft.com/dotnet/runtime:5.0-alpine
+FROM mcr.microsoft.com/dotnet/runtime:6.0-alpine
 WORKDIR /app
 COPY --from=build-env YtCli/publish  ./
 
