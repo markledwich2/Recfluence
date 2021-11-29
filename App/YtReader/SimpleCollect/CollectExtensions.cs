@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Collections;
-using YtReader.Store;
+﻿using YtReader.Store;
 using YtReader.Yt;
 using static System.Array;
 using static YtReader.Store.DiscoverSourceType;

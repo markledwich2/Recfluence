@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Data;
 using Mutuo.Etl.Db;
-using Serilog;
-using SysExtensions;
 using YtReader.SimpleCollect;
 using YtReader.Store;
 

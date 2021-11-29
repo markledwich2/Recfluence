@@ -1,9 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.IO;
 using System.Web;
 using Flurl;
 using Flurl.Http;
@@ -12,11 +7,6 @@ using Flurl.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Polly;
-using Serilog;
-using SysExtensions.Collections;
-using SysExtensions.Net;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 using static SysExtensions.Net.HttpExtensions;
 
 namespace YtReader.Web; 

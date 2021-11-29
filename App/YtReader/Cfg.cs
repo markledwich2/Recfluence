@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using Amazon;
-using Amazon.Runtime;
-using Humanizer;
+﻿using System.ComponentModel.DataAnnotations;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;

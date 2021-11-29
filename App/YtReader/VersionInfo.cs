@@ -1,10 +1,5 @@
-﻿using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Semver;
-using Serilog;
+﻿using Semver;
 using SysExtensions.Build;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 
 namespace YtReader; 
 

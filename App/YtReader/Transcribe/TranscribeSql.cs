@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace YtReader.Transcribe; 
+﻿namespace YtReader.Transcribe; 
 
 public static class TranscribeSql {
   public static readonly Dictionary<string, string> Sql = new() {

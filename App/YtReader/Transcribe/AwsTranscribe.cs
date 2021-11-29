@@ -1,15 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Amazon.TranscribeService;
+﻿using Amazon.TranscribeService;
 using Amazon.TranscribeService.Model;
-using Humanizer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.Serialization;
-using SysExtensions.Text;
 using YtReader.Store;
 using YtReader.Yt;
 

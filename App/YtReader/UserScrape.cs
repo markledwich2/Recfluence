@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Text;
 using Azure.Storage.Blobs;
 using Azure.Storage.Sas;
 using CliFx.Exceptions;
@@ -12,12 +7,6 @@ using Mutuo.Etl.Pipe;
 using Newtonsoft.Json;
 using Polly;
 using Semver;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.Serialization;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 using YtReader.Store;
 using YtReader.Yt;
 

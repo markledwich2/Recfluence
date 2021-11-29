@@ -1,19 +1,9 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Concurrent;
 using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
 using Google;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
-using Humanizer;
 using Polly;
-using Serilog;
-using SysExtensions.Collections;
-using SysExtensions.Net;
-using SysExtensions.Text;
 
 namespace YtReader.Yt; 
 

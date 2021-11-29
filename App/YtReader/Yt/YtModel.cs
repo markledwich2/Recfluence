@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.Text;
+﻿
 
 // all of this only minor midifications to https://github.com/Tyrrrz/YoutubeExplode
 

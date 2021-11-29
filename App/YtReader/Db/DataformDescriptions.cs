@@ -1,15 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Mutuo.Etl.Db;
+﻿using Mutuo.Etl.Db;
 using Octokit;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 using static System.Text.RegularExpressions.RegexOptions;
 
 // ReSharper disable InconsistentNaming

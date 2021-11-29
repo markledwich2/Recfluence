@@ -1,13 +1,6 @@
-﻿using System;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Flurl;
+﻿using Flurl;
 using Flurl.Http;
 using Polly;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Net;
-using SysExtensions.Threading;
 
 namespace YtReader.Web; 
 
