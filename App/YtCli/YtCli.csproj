@@ -32,11 +32,11 @@
     </ItemGroup>
     <ItemGroup>
         <None Remove="local.rootcfg.json"/>
-        <Content Include="local.rootcfg.json">
+        <Content Include="local.rootcfg.json" Condition="Exists('local.rootcfg.json')">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
         <None Remove="local.dev.appcfg.json"/>
-        <Content Include="local.dev.appcfg.json">
+        <Content Include="local.dev.appcfg.json" Condition="Exists('local.dev.appcfg.json')">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
     </ItemGroup>
