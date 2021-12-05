@@ -6,7 +6,7 @@ using static Azure.Storage.Sas.BlobContainerSasPermissions;
 using static YtReader.Db.ScriptMode;
 using static YtReader.BranchState;
 
-namespace YtReader.Db; 
+namespace YtReader.Db;
 
 public class WarehouseCreator {
   readonly WarehouseCfg                WhCfg;
@@ -31,7 +31,7 @@ public class WarehouseCreator {
 
     var schema = Sf.Cfg.Schema;
     var store = Stores.Store(DataStoreType.DbStage);
-    var container = ((AzureBlobFileStore) store).Container;
+    var container = ((AzureBlobFileStore)store).Container;
     var sasUri = container.GenerateSasUri(List | Read, DateTimeOffset.UtcNow.AddYears(100));
     var stageUrl = $"azure://{sasUri.Host}{sasUri.AbsolutePath}";
     var sasToken = sasUri.Query;
@@ -45,7 +45,7 @@ public class WarehouseCreator {
     }.ToJson(JCfg);
 
     var scripts = (state.In(Clone, CloneDb)
-        ? new[] {new Script("db copy", @$"create or replace database {db} clone {Sf.Cfg.Db} comment='{dbComment}'")}
+        ? new[] { new Script("db copy", @$"create or replace database {db} clone {Sf.Cfg.Db} comment='{dbComment}'") }
         : new[] {
           new Script("db create", @$"create or replace database {db} comment='{dbComment}'"),
           new Script("schema", $"create schema if not exists {db}.{schema}"),
@@ -83,7 +83,7 @@ public class WarehouseCreator {
         )));
 
     foreach (var s in scripts)
-      await s.Sqls.BlockDo(q => conn.Execute(s.Name, q), s.Mode == Sequential ? 1 : WhCfg.MetadataParallel);
+      await s.Sqls.BlockDo(async q => { await conn.Execute(s.Name, q); }, s.Mode == Sequential ? 1 : WhCfg.MetadataParallel);
 
     log.Information("Create Warehouse - {Db} created/updated in {Duration}", db, sw.Elapsed.HumanizeShort());
   }

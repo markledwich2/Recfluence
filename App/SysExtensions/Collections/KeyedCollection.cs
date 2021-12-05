@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading.Tasks;
 using SysExtensions.Serialization;
 
-namespace SysExtensions.Collections; 
+namespace SysExtensions.Collections;
 
 public interface IKeyedCollection<K, V> : ICollection<V> {
   void SetKey(V item, K value);
@@ -178,8 +174,8 @@ public static class KeyedCollectionExtensions {
 
   /// <summary>Convert a lambda expression for a getter into a setter</summary>
   public static Action<T, TProperty> GetSetter<T, TProperty>(Expression<Func<T, TProperty>> expression) {
-    var memberExpression = (MemberExpression) expression.Body;
-    var property = (PropertyInfo) memberExpression.Member;
+    var memberExpression = (MemberExpression)expression.Body;
+    var property = (PropertyInfo)memberExpression.Member;
     var setMethod = property.GetSetMethod();
 
     var parameterT = Expression.Parameter(typeof(T), "x");

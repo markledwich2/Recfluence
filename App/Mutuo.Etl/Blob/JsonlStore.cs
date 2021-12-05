@@ -1,16 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Serilog;
-using SysExtensions.Collections;
-using SysExtensions.Serialization;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 
-namespace Mutuo.Etl.Blob; 
+namespace Mutuo.Etl.Blob;
 
 public interface IJsonlStore {
   public static readonly JsonSerializerSettings JCfg = new() {
@@ -32,33 +23,7 @@ public interface IJsonlStore {
   IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(SPath path, bool allDirectories = false);
 }
 
-/// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl</summary>
-public class JsonlStore<T> : IJsonlStore {
-  readonly Func<T, string> GetPartition;
-  readonly Func<T, string> GetTs;
-
-  readonly ILogger Log;
-  readonly int     Parallel;
-  readonly string  Version;
-
-  /// <summary></summary>
-  /// <param name="getTs">A function to get a timestamp for this file. This must always be greater for new records using an
-  ///   invariant string comparer</param>
-  public JsonlStore(ISimpleFileStore store, SPath path, Func<T, string> getTs,
-    ILogger log, string version = "", Func<T, string> getPartition = null, int parallel = 8) {
-    Store = store;
-    Path = path;
-    GetTs = getTs;
-    Log = log;
-    GetPartition = getPartition;
-    Parallel = parallel;
-    Version = version;
-  }
-
-  public ISimpleFileStore Store { get; }
-
-  public SPath Path { get; }
-
+public record RawJsonlStore(ISimpleFileStore Store, SPath Path, ILogger Log, string Version = "", int Parallel = 8) : IJsonlStore {
   /// <summary>Returns the most recent file within this path (any child directories)</summary>
   public async Task<StoreFileMd> LatestFile(SPath path = null) {
     var files = await Files(path, allDirectories: true).SelectManyList();
@@ -66,20 +31,34 @@ public class JsonlStore<T> : IJsonlStore {
     return latest;
   }
 
-  public IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(SPath path, bool allDirectories = false) =>
-    Store.Files(FilePath(path), allDirectories);
-
-  string Partition(T item) => GetPartition?.Invoke(item);
+  public IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(SPath path = null, bool allDirectories = false) =>
+    Store.JsonStoreFiles(FilePath(path), allDirectories);
 
   /// <summary>The land path for a given partition is where files are first put before being optimised. Default -
   ///   [Path]/[Partition], LandAndStage - [Path]/land/[partition]</summary>
-  SPath FilePath(string partition = null) => partition.NullOrEmpty() ? Path : Path.Add(partition);
+  protected SPath FilePath(string partition = null) => partition.NullOrEmpty() ? Path : Path.Add(partition);
+}
+
+/// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl</summary>
+public record JsonlStore<T> : RawJsonlStore {
+  readonly Func<T, string> GetPartition;
+  readonly Func<T, string> GetTs;
+
+  /// <summary></summary>
+  /// <param name="getTs">A function to get a timestamp for this file. This must always be greater for new records using an
+  ///   invariant string comparer</param>
+  public JsonlStore(ISimpleFileStore store, SPath path, Func<T, string> getTs,
+    ILogger log, string version = "", Func<T, string> getPartition = null, int parallel = 8) : base(store, path, log, version, parallel) {
+    GetTs = getTs;
+    GetPartition = getPartition;
+  }
+
+  string Partition(T item) => GetPartition?.Invoke(item);
 
   public Task Append(T item, ILogger log = null) => Append(item.InArray(), log);
 
-  public async Task Append(IReadOnlyCollection<T> items, ILogger log = null) {
+  public async Task Append(IEnumerable<T> items, ILogger log = null) {
     log ??= Log;
-    if (items.None()) return;
     await items.GroupBy(Partition).BlockDo(async g => {
       var ts = g.Max(GetTs);
       var path = JsonlStoreExtensions.FilePath(FilePath(g.Key), ts, Version);
@@ -90,7 +69,7 @@ public class JsonlStore<T> : IJsonlStore {
 
   public async IAsyncEnumerable<IReadOnlyCollection<T>> Items(string partition = null) {
     await foreach (var dir in Files(partition, allDirectories: true))
-    await foreach (var item in dir.BlockMap(f => LoadJsonl(f.Path), Parallel, capacity: 10))
+    await foreach (var item in dir.BlockDo(f => LoadJsonl(f.Path), Parallel, capacity: 10))
       yield return item;
   }
 

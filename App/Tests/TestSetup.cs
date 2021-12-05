@@ -1,12 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
-using Autofac;
+﻿using Autofac;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using Serilog;
 using YtReader;
 
-namespace Tests; 
+namespace Tests;
 
 public record TestCtx(ILifetimeScope Scope, ILogger Log, AppCfg App, RootCfg Root) : IDisposable {
   public void Dispose() {

@@ -1,59 +1,97 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using Autofac;
+﻿using Autofac;
 using FluentAssertions;
 using Flurl.Http.Testing;
-using Humanizer;
 using LtGt;
 using NUnit.Framework;
 using SysExtensions.IO;
-using SysExtensions.Serialization;
-using SysExtensions.Threading;
 using YtReader;
-using YtReader.AmazonSite;
+using YtReader.Store;
 using YtReader.Yt;
+using static YtReader.Yt.ExtraPart;
 
-namespace Tests; 
+namespace Tests;
 
-public static class ScrapingTests {
+public static class YtScrapingTests {
   [Test]
   public static async Task VideoComments() {
     // get comments, does watch page html have it
     using var ctx = await TestSetup.TextCtx();
     var ws = ctx.Scope.Resolve<YtWeb>();
-    var video = await ws.GetExtra(ctx.Log, "NjJ2YEBK3Ic", new[] {ExtraPart.EComment});
+    var video = await ws.GetExtraFromWatchPage(ctx.Log, "NjJ2YEBK3Ic", new[] { EComment }, maxComments: 100);
     await video.Comments.ToJsonl("comments.jsonl");
   }
 
   [Test]
-  public static async Task WebRecsAndExtra() {
+  public static async Task ExtraPartsCollect() {
     using var ctx = await TestSetup.TextCtx();
+    var proxyCfg = ctx.Scope.Resolve<ProxyCfg>() with { AlwaysUseProxy = true };
+    var scope = ctx.Scope.BeginLifetimeScope(b => b.RegisterInstance(proxyCfg).SingleInstance());
     var plans = new VideoExtraPlans(new[] {
-      "Su1FQUkMojU" // JP video with lots of comments
-      //"V8kxdw0UASE", // should work. looks like ti was errored and then re-instated
-      //"XztR0CnVKNo", // normal
-      // "JPiiySjShng", //nbc suspected parsing problem
-      //"OijWK4Y6puI", //unlisted
-      //"-sc6JCu5rZk",
-      //"y3oMtX8NyqY", //copyright2
-      //"EqulyMs_M2M", // copyright1
-      //"-6oswxLuRyk",
-      /*
+      "FUqR6KzsPv4", // cnn caption missing
+      //"dICrBvTlqsg", // manually translated en-us captions and auto-generated en. should choose en
+      //"z-hn5YVi2OE" // indian
+      /*"-ryPLVEExA0", // private#1#
+      "Su1FQUkMojU", // JP video with lots of comments
+      "V8kxdw0UASE", // should work. looks like ti was errored and then re-instated
+      "XztR0CnVKNo", // normal
+      "JPiiySjShng", //nbc suspected parsing problem
+      "OijWK4Y6puI", //unlisted
+      "-sc6JCu5rZk",
+      "y3oMtX8NyqY", //copyright2
+      "EqulyMs_M2M", // copyright1
+      "-6oswxLuRyk",
       "tdUxfq6DYXY", // when retreived was var ytInitialData instead of window["ytInitialData"]
       "gRJnTYHID3w", // var ytInitialData instead of window["ytInitialData"]
       "MbXbFchrTgw",
-      "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)*/
-      //"-ryPLVEExA0", // private
-    });
+      "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)#3#*/
+    }, EExtra, ECaption);
+    var collector = scope.Resolve<YtCollector>();
+    var extra = await collector.GetExtras(plans, ctx.Log, "").ToListAsync();
+  }
+
+  [Test]
+  public static async Task ChannelWithExtras() {
+    using var ctx = await TestSetup.TextCtx();
     var collector = ctx.Scope.Resolve<YtCollector>();
-    var extra = await collector.GetExtras(plans, ctx.Log).ToListAsync();
+    var lastUpdate = DateTime.UtcNow - 1.Days();
+    var res = await collector.ProcessChannels(
+      new ChannelUpdatePlan[] {
+        new() {
+          Channel = new(Platform.YouTube, "UC7oPkqeHTwuOZ5CZ-R9f-6w"),
+          ChannelUpdate = ChannelUpdateType.Full, LastExtraUpdate = lastUpdate, LastCaptionUpdate = lastUpdate
+        }
+      },
+      new[] { EExtra, ECaption, EComment, ERec },
+      ctx.Log);
+  }
+
+  [Test]
+  public static async Task ExtraV2Regression() {
+    using var ctx = await TestSetup.TextCtx();
+    var videos = new[] {
+      "7anY3nc3Scw", // no captions 
+      "ETi6oA2GIsg", // with captions
+      "-ryPLVEExA0", // private#1#
+      "y3oMtX8NyqY", //copyright2
+      "rBu0BRTx2x8", // region restricted (not available in AU, but is in US)#3#*/
+      "GHDBG0bHJVQ" // random from recent update
+    };
+    var collector = ctx.Resolve<YtCollector>();
+    var extra1 = await collector.GetExtras(new(videos, EExtra, ECaption), ctx.Log).OrderBy(e => e.Extra.VideoId).ToListAsync();
+    var j1 = extra1.ToJson();
+    var extra2 = await collector.GetExtras(new(videos, EExtra, ECaption, ERec), ctx.Log).OrderBy(e => e.Extra.VideoId).ToListAsync();
+    var j2 = extra2.ToJson();
   }
 
   [Test]
   public static async Task ExtraParts() {
     using var ctx = await TestSetup.TextCtx();
     var scraper = ctx.Scope.Resolve<YtWeb>();
-    var extra = await scraper.GetExtra(ctx.Log, "O63NEnuJupU", new[] {ExtraPart.EComment});
+    //Su1FQUkMojU // JP video with comments
+    // 1LPpwk2Zb24 // video with new style of comment - i.e. youtubei/next
+    // y3oMtX8NyqY // copyright error
+    //vZ5L_Fs2zJg missing upload date
+    var extra = await scraper.GetExtraFromWatchPage(ctx.Log, "Qt3oQSSZv-o", new[] { EExtra }, maxComments: 100);
   }
 
   [Test]
@@ -71,15 +109,21 @@ public static class ScrapingTests {
     using var x = await TestSetup.TextCtx();
     var ws = x.Scope.Resolve<YtWeb>();
     var chans = await new[] {
-      "UCnxuOd8obvLLtf5_-YKFbiQ" // timed out once
-      //"UCROjSBCTEqNRLFeAIAOyWLA". // failed not sure why
+      "UCKZfi_hHY_mwv7ETUj4s1tw", // unable to parse
+      //"UCuxa-jqB3K7vpP-_UOXVrXA", // unable to parse
+      //"UCFQ6Gptuq-sLflbJ4YY3Umw",// working
+      //"UCOpNcN46UbXVtpKMrmU4Abg" // playlist
+      //"UCPCk_8dtVyR1lLHMBEILW4g", // in us restricted audience
+      //"UCbCmjCuTUZos6Inko4u57UQ" // upload date to recent
+      //"UC4WPFQWSvsDuUKsIjXrgCEw", // can't find browse endpoint
+      //"UCROjSBCTEqNRLFeAIAOyWLA" // failed not sure why
       /*"UCdfQFG50Hu88-1CpRmPDA2A", // user channel with pagination of subs
       "UChN7H3JFqeFC-WB8NCxhn7g", // error - unavaialbe
       "UCaJ8FsMMnefU7NXdMaXW8WQ", // error - terminated
-      "UCdQ5jrBSBEOUKr91f6zucag", // user
-      "UCUowFWIWGw6Pv2JqfEj8njQ", // channel*/
-    }.BlockMap(async c => {
-      var chan = await ws.Channel(x.Log, c);
+      "UCdQ5jrBSBEOUKr91f6zucag", // user*/
+      //"UCOpNcN46UbXVtpKMrmU4Abg" // playlist - no channel info
+    }.BlockDo(async c => {
+      var chan = await ws.Channel(x.Log, c, expectingSubs: true);
       return new {
         Chan = chan,
         Subscriptions = await chan.Subscriptions().ToListAsync(),
@@ -89,11 +133,21 @@ public static class ScrapingTests {
   }
 
   [Test]
-  public static async Task ChannelData() {
+  public static async Task ApiChannel() {
     using var ctx = await TestSetup.TextCtx();
     var api = ctx.Resolve<YtClient>();
-    var data = await new[] {"UCMDxbhGcsE7EnknxPEzC_Iw", "UCHEf6T_gVq4tlW5i91ESiWg", "UCYeF244yNGuFefuFKqxIAXw"}
+    var data = await new[] { "UCMDxbhGcsE7EnknxPEzC_Iw", "UCHEf6T_gVq4tlW5i91ESiWg", "UCYeF244yNGuFefuFKqxIAXw" }
       .BlockMapList(c => api.ChannelData(c, full: true));
+  }
+
+  [Test]
+  public static async Task WebChannel() {
+    using var ctx = await TestSetup.TextCtx();
+    var collector = ctx.Resolve<YtCollector>();
+    var data = await new[] { "UCOpNcN46UbXVtpKMrmU4Abg" } // playlist
+      .Select(c => new Channel { ChannelId = c })
+      .BlockDo(c => collector.GetWebChannel(c, ctx.Log, expectingSubs: true))
+      .ToArrayAsync();
   }
 
   [Test]
@@ -102,27 +156,10 @@ public static class ScrapingTests {
     var scraper = x.Scope.Resolve<YtWeb>();
     using var httpTest = new HttpTest();
     var rw = httpTest.ForCallsTo("*youtube.com*").RespondWith("mock too many requests failure", status: 429);
-    var getExtra = scraper.GetExtra(x.Log, "Su1FQUkMojU", new[] {ExtraPart.EComment});
+    var getExtra = scraper.GetExtraFromWatchPage(x.Log, "Su1FQUkMojU", new[] { EComment }, maxComments: 100);
     await 5.Seconds().Delay();
     rw.AllowRealHttp();
     var extra = await getExtra; // this should have fallen back to proxy and retried a once or twice in the 5 seconds.
     scraper.Client.UseProxy.Should().Be(true);
-  }
-
-  [Test]
-  public static async Task TestAmazonProduct() {
-    using var x = await TestSetup.TextCtx();
-    var aw = x.Scope.Resolve<AmazonWeb>();
-    aw.FlurlClient.UseProxy = true;
-    var links = new[] {
-      "https://www.amazon.com/shop/sadiealdis" // unable to be decoded
-      //"https://amzn.to/2DGXN96", // empty response
-      //"https://amzn.to/39tl3nX", // empty response
-      //"https://www.amazon.com/Manfrotto-MKCOMPACTACN-BK-Compact-Action-Tripod/dp/B07JMQJKC8?th=1", // comments leaking into props
-      //"https://www.amazon.com/gp/product/B005VYCFXA", // product details in bullet form
-      //"https://www.amazon.com/gp/product/B07TC76671",
-      //"https://amzn.to/2ZMojrd"
-    };
-    var completed = await aw.ProcessLinks(links, x.Log, cancel: default);
   }
 }

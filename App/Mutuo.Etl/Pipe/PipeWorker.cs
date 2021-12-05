@@ -1,20 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Humanizer;
-using Microsoft.Azure.Management.ContainerInstance.Fluent;
+﻿using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
 using Mutuo.Etl.Blob;
 using Semver;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 
-namespace Mutuo.Etl.Pipe; 
+namespace Mutuo.Etl.Pipe;
 
 public interface IPipeWorker {
   /// <summary>Run a batch of containers. Must have already created state for them. Waits till the batch is complete and
@@ -52,10 +41,10 @@ public static class PipeWorkerEx {
   /// <summary>the container image name, with its registry and tag</summary>
   public static string FullContainerImageName(this ContainerCfg cfg, string tag) => $"{cfg.Registry}/{cfg.ImageName}:{tag}";
 
-  public static string[] PipeArgs(this PipeRunId runId) => new[] {"pipe", "-r", runId.ToString()};
+  public static string[] PipeArgs(this PipeRunId runId) => new[] { "pipe", "-r", runId.ToString() };
 
   public static async Task Save(this PipeRunMetadata md, ISimpleFileStore store, ILogger log) =>
-    await store.Set($"{md.Id.StatePath()}.RunMetadata", md, zip: false, log);
+    await store.SetState($"{md.Id.StatePath()}.RunMetadata", md, zip: false, log);
 
   public static ContainerState State(this IContainerGroup group) => group.State.ParseEnum<ContainerState>(false);
 
@@ -73,18 +62,18 @@ public static class PipeWorkerEx {
 
   /// <summary>Starts some pipe work. Assumes required state has been created</summary>
   public static async Task<PipeRunMetadata> Launch(this IPipeWorker worker, IPipeCtx ctx, PipeRunId runId, ILogger log, CancellationToken cancel = default) =>
-    (await worker.Launch(ctx, new[] {runId}, log, cancel)).First();
+    (await worker.Launch(ctx, new[] { runId }, log, cancel)).First();
 
   /// <summary>Starts some pipe work. Assumes required state has been created</summary>
   public static async Task<PipeRunMetadata> Launch(this IPipeWorkerStartable worker, IPipeCtx ctx, PipeRunId runId, bool returnOnStarting, bool exclusive,
     ILogger log,
     CancellationToken cancel = default) =>
-    (await worker.Launch(ctx, new[] {runId}, returnOnStarting, exclusive, log, cancel)).First();
+    (await worker.Launch(ctx, new[] { runId }, returnOnStarting, exclusive, log, cancel)).First();
 }
 
 public class ThreadPipeWorker : IPipeWorker {
   public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, ILogger log, CancellationToken cancel) {
-    var res = await ids.BlockMap(async id => {
+    var res = await ids.BlockDo(async id => {
       await ctx.DoPipeWork(id, cancel);
       var md = new PipeRunMetadata {
         Id = id,

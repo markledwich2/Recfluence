@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.ComponentModel;
 using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using SysExtensions.Reflection;
 
-namespace SysExtensions.Serialization; 
+namespace SysExtensions.Serialization;
 
 /// <summary>Camel case properties. Also when using OptOut, then only public properties that are writable are serialized by
 ///   default</summary>

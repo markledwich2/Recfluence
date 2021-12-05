@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace SysExtensions.Collections; 
+﻿namespace SysExtensions.Collections;
 
 public static class DictionaryExtensions {
   public static MultiValueDictionary<TKey, TValue> ToMultiValueDictionary<TKey, TValue, T>(this IEnumerable<T> items,

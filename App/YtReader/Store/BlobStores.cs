@@ -1,11 +1,10 @@
 ﻿using Mutuo.Etl.Blob;
 using Semver;
-using YtReader.AmazonSite;
 using YtReader.Yt;
 using static YtReader.Store.DataStoreType;
 using static YtReader.Store.StoreTier;
 
-namespace YtReader.Store; 
+namespace YtReader.Store;
 
 public enum DataStoreType {
   Pipe,
@@ -70,33 +69,40 @@ public class YtStore {
   public YtStore(ISimpleFileStore store, ILogger log) {
     Store = store;
     Log = log;
-    Channels = CreateStore<Channel>("channels");
-    Users = CreateStore<User>("users");
-    Searches = CreateStore<UserSearchWithUpdated>("searches");
-    Videos = CreateStore<Video>("videos");
-    VideoExtra = CreateStore<VideoExtra>("video_extra");
-    Recs = CreateStore<RecStored>("recs");
-    Captions = CreateStore<VideoCaption>("captions");
-    ChannelReviews = CreateStore<UserChannelReview>("channel_reviews", r => r.Email);
-    Comments = CreateStore<VideoComment>("comments");
-    AmazonLink = CreateStore<AmazonLink>("link_meta/amazon");
   }
 
   public ISimpleFileStore Store { get; }
 
-  public JsonlStore<Channel>               Channels       { get; }
-  public JsonlStore<User>                  Users          { get; }
-  public JsonlStore<UserSearchWithUpdated> Searches       { get; }
-  public JsonlStore<Video>                 Videos         { get; }
-  public JsonlStore<VideoExtra>            VideoExtra     { get; }
-  public JsonlStore<RecStored>             Recs           { get; }
-  public JsonlStore<VideoCaption>          Captions       { get; }
-  public JsonlStore<UserChannelReview>     ChannelReviews { get; }
-  public JsonlStore<VideoComment>          Comments       { get; }
-  public JsonlStore<AmazonLink>            AmazonLink     { get; }
+  public JsonlSink<Channel> Channel() => CreateStore<Channel>("channels");
+  public JsonlSink<User> Users() => CreateStore<User>("users");
+  public JsonlSink<Video> Video() => CreateStore<Video>("videos");
+  public JsonlSink<VideoExtra> VideoExtra() => CreateStore<VideoExtra>("video_extra");
+  public JsonlSink<RecStored> Recs() => CreateStore<RecStored>("recs");
+  public JsonlSink<VideoCaption> Caption() => CreateStore<VideoCaption>("captions");
+  public JsonlSink<VideoComment> Comment() => CreateStore<VideoComment>("comments");
+  public JsonlSink<UserSearchWithUpdated> Search() => CreateStore<UserSearchWithUpdated>("searches");
+  public JsonlSink<UserChannelReview> ChannelReview() => CreateStore<UserChannelReview>("channel_reviews");
 
-  JsonlStore<T> CreateStore<T>(string name, Func<T, string> getPartition = null) where T : IHasUpdated =>
-    new(Store, name, c => c.Updated.FileSafeTimestamp(), Log, StoreVersion.ToString(), getPartition);
+  public CollectStores CollectStores() => new(this);
+
+  JsonlSink<T> CreateStore<T>(string name) where T : IHasUpdated {
+    var store = new JsonlSink<T>(Store, name, c => c?.Updated.FileSafeTimestamp() ?? throw new("Can't get timestamp because record is null"), new(), Log);
+    return store;
+  }
+}
+
+public record CollectStores(YtStore Stores) : IAsyncDisposable {
+  public JsonlSink<Channel>      Channel    { get; } = Stores.Channel();
+  public JsonlSink<User>         User       { get; } = Stores.Users();
+  public JsonlSink<Video>        Video      { get; } = Stores.Video();
+  public JsonlSink<VideoExtra>   VideoExtra { get; } = Stores.VideoExtra();
+  public JsonlSink<RecStored>    Rec        { get; } = Stores.Recs();
+  public JsonlSink<VideoCaption> Caption    { get; } = Stores.Caption();
+  public JsonlSink<VideoComment> Comment    { get; } = Stores.Comment();
+
+  IJsonSink[] All => new IJsonSink[] { Channel, User, Video, VideoExtra, Rec, Caption, Comment };
+
+  public async ValueTask DisposeAsync() => await All.BlockDo(async s => await s.DisposeAsync(), parallel: 4);
 }
 
 public enum ChannelStatus {
@@ -126,7 +132,7 @@ public record User : WithUpdatedItem {
   public Platform                                 Platform        { get; init; }
   public string                                   ProfileUrl      { get; init; }
   public IReadOnlyCollection<ChannelSubscription> Subscriptions   { get; init; }
-  public long?                                    SubscriberCount { get; init; }
+  public ulong?                                   SubscriberCount { get; init; }
 }
 
 public record Channel : WithUpdatedItem {
@@ -251,12 +257,15 @@ public record Video : WithUpdatedItem {
 public record VideoExtra : Video {
   public VideoExtra() { }
   public VideoExtra(Platform platform, string id, string sourceId) : base(platform, id, sourceId) { }
-  public bool?  HasAd       { get; init; }
-  public string Error       { get; set; }
-  public string SubError    { get; set; }
-  public string Ad          { get; init; }
-  public string CommentsMsg { get; init; }
-  public string MediaUrl    { get; init; }
+  public bool?              HasAd         { get; init; }
+  public string             Error         { get; set; }
+  public string             SubError      { get; set; }
+  public string             Ad            { get; init; }
+  public string             CommentsMsg   { get; init; }
+  public string             MediaUrl      { get; init; }
+  public string             Category      { get; init; }
+  public bool?              IsLive        { get; init; }
+  public CaptionTrackInfo[] CaptionTracks { get; init; }
 }
 
 public record VideoComment : IHasUpdated {
@@ -274,6 +283,7 @@ public record VideoComment : IHasUpdated {
   public DateTime? Modified         { get; init; }
   public Platform  Platform         { get; init; }
   public DateTime  Updated          { get; init; }
+  public bool      Empty            { get; init; }
 }
 
 public record RecStored : Rec, IHasUpdated {
@@ -286,11 +296,11 @@ public record RecStored : Rec, IHasUpdated {
 }
 
 public record VideoCaption : WithUpdatedItem {
-  public string                             ChannelId { get; set; }
-  public string                             VideoId   { get; set; }
-  public ClosedCaptionTrackInfo             Info      { get; set; }
-  public IReadOnlyCollection<ClosedCaption> Captions  { get; set; } = new List<ClosedCaption>();
-  public Platform                           Platform  { get; set; }
+  public string                           ChannelId { get; set; }
+  public string                           VideoId   { get; set; }
+  public CaptionTrackInfo                 Info      { get; set; }
+  public IReadOnlyCollection<CaptionLine> Captions  { get; set; } = new List<CaptionLine>();
+  public Platform                         Platform  { get; set; }
 }
 
 public interface IHasUpdated {

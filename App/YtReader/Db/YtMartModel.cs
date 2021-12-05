@@ -1,4 +1,4 @@
-﻿namespace YtReader.Db; 
+﻿namespace YtReader.Db;
 /* These are out of date. Update before using again */
 
 public class DbVideo {

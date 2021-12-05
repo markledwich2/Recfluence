@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 using Polly;
 using static SysExtensions.Net.HttpExtensions;
 
-namespace YtReader.Web; 
+namespace YtReader.Web;
 
 public static class FlurlExtensions {
   public static Url AsUrl(this string url) => new(url);
@@ -28,12 +28,12 @@ public static class FlurlExtensions {
   /// <summary>Reads the content as Json (and unzip if required)</summary>
   public static async Task<JObject> JsonObject(this IFlurlResponse response) {
     var stream = await response.GetStreamAsync();
-    return await JObject.LoadAsync(new JsonTextReader(new StreamReader(stream)) {CloseInput = true});
+    return await JObject.LoadAsync(new JsonTextReader(new StreamReader(stream)) { CloseInput = true });
   }
 
   /// <summary>Reads the content as Json (and unzip if required)</summary>
   public static Task<JArray> JsonArray(this IFlurlResponse response) =>
-    response.GetStreamAsync().Then(s => JArray.LoadAsync(new JsonTextReader(new StreamReader(s)) {CloseInput = true}));
+    response.GetStreamAsync().Then(s => JArray.LoadAsync(new JsonTextReader(new StreamReader(s)) { CloseInput = true }));
 
   public static Url SetParams(this Url url, object values, bool isEncoded = false) {
     if (values == null)
@@ -73,7 +73,7 @@ public static class FlurlExtensions {
     verb ??= HttpMethod.Get;
     var args = Array.Empty<string>()
       .Concat(req.Url.ToString(), "-X", verb.Method.ToUpper())
-      .Concat(req.Headers.SelectMany(h => new[] {"-H", $"'{h.Name}:{h.Value}'"}));
+      .Concat(req.Headers.SelectMany(h => new[] { "-H", $"'{h.Name}:{h.Value}'" }));
     if (content != null) args = args.Concat("-d", $"'{await content().ReadAsStringAsync()}'");
     var curl = $"curl {args.NotNull().Join(" ")}";
     return curl;

@@ -4,7 +4,7 @@ using Mutuo.Etl.Db;
 using YtReader.Store;
 using YtReader.Yt;
 
-namespace YtReader.SimpleCollect; 
+namespace YtReader.SimpleCollect;
 
 public record CollectDbCtx(ILoggedConnection<IDbConnection> Db, Platform Platform, ICommonCollectCfg Cfg) : IDisposable {
   public void Dispose() => Db?.Dispose();
@@ -19,13 +19,13 @@ public static class CollectDb {
   ///     query that returns rows with a column named channel_id</param>
   /// </summary>
   public static async Task<IReadOnlyCollection<ChannelUpdatePlan>> ChannelUpdateStats(this CollectDbCtx ctx,
-    IReadOnlyCollection<string> chans = null, string channelSelect = null) {
+    IReadOnlyCollection<string> chans = null, int? limit = null, string channelSelect = null) {
     channelSelect ??= @$"
 select channel_id from channel_latest  
 where platform = '{ctx.Platform.EnumString()}' and status <> 'Dupe' and {(chans.None() ? "meets_review_criteria" : $"channel_id in ({SqlList(chans)})")}";
 
     var channels = await ctx.Db.Query<(string j, long? daysBack,
-      DateTime? lastVideoUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate, DateTime? lastCommentUpdate)>(
+      DateTime? lastVideoUpdate, DateTime? lastExtraUpdate, DateTime? lastCaptionUpdate, DateTime? lastRecUpdate, DateTime? lastCommentUpdate)>(
       "channels - previous",
       $@"
 with channels_raw as (
@@ -41,17 +41,20 @@ with channels_raw as (
 select coalesce(v, object_construct('ChannelId', r.channel_id)) channel_json
      , b.daily_update_days_back
      , (select max(v:Updated::timestamp_ntz) from video_stage where v:ChannelId=r.channel_id) last_video_update
-     , (select max(v:Updated::timestamp_ntz) from caption_stage where v:ChannelId=r.channel_id) last_caption_update
+    , (select max(v:Updated::timestamp_ntz) from video_extra_stage where v:ChannelId=r.channel_id) last_extra_update   
+    , (select max(v:Updated::timestamp_ntz) from caption_stage where v:ChannelId=r.channel_id) last_caption_update
      , (select max(v:Updated::timestamp_ntz) from rec_stage where v:FromChannelId=r.channel_id) last_rec_update
       , (select max(v:Updated::timestamp_ntz) from comment_stage where v:ChannelId=r.channel_id) last_comment_update
 from channels_raw r
        left join stage_latest on v:ChannelId=r.channel_id
        left join channel_collection_days_back b on b.channel_id=v:ChannelId
+{limit.Dot(l => $"limit {l}")}
 ");
     return channels.Select(r => new ChannelUpdatePlan {
       Channel = r.j.ToObject<Channel>(IJsonlStore.JCfg),
       VideosFrom = r.daysBack != null ? DateTime.UtcNow - r.daysBack.Value.Days() : null,
       LastVideoUpdate = r.lastVideoUpdate,
+      LastExtraUpdate = r.lastExtraUpdate,
       LastCaptionUpdate = r.lastCaptionUpdate,
       LastRecUpdate = r.lastRecUpdate,
       LastCommentUpdate = r.lastCommentUpdate
@@ -62,7 +65,7 @@ from channels_raw r
   ///   videos by having all non dead video's at hand since daily_update_days_back, and the date extra was last refreshed for
   ///   it</summary>
   public static async Task<IReadOnlyCollection<VideoForUpdate>> VideosForUpdate(this CollectDbCtx ctx, IReadOnlyCollection<Channel> channels) {
-    var ids = await ctx.Db.Query<VideoForUpdate>("videos for update", $@"
+    var videos = await ctx.Db.Query<VideoForUpdate>("videos for update", $@"
 with chans as (
   select channel_id
   from channel_latest
@@ -82,8 +85,8 @@ join chans c on v.channel_id = c.channel_id
 where v.error_type is null -- removed video's updated separately
 and platform = :platform
 qualify row_number() over (partition by v.channel_id order by upload_date desc) <= :videosPerChannel
-", new {platform = ctx.Platform.EnumString(), videosPerChannel = ctx.Cfg.MaxChannelFullVideos});
-    return ids;
+", new { platform = ctx.Platform.EnumString(), videosPerChannel = ctx.Cfg.MaxChannelFullVideos });
+    return videos;
   }
 
   public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingComments(this CollectDbCtx ctx,
@@ -94,7 +97,7 @@ from video_latest v
 where not exists(select * from comment_stage c where c.v:VideoId=v.video_id) and error_type is null
 qualify row_number() over (partition by channel_id order by random() desc)<=:max_comments
   and channel_id in ({SqlList(channels)})
-                ", new {max_comments = ctx.Cfg.MaxChannelComments});
+                ", new { max_comments = ctx.Cfg.MaxChannelComments });
 
   public static async Task<IReadOnlyCollection<(string ChannelId, string VideoId)>> MissingCaptions(this CollectDbCtx ctx,
     IReadOnlyCollection<Channel> channels) =>

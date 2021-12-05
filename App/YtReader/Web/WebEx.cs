@@ -2,7 +2,7 @@
 using Flurl;
 using Mutuo.Etl.Blob;
 
-namespace YtReader.Web; 
+namespace YtReader.Web;
 
 public static class WebEx {
   public static string LastInPath(this string path) => path?.Split('/').LastOrDefault(t => !t.NullOrEmpty());
@@ -26,10 +26,13 @@ public static class WebEx {
       Timeout = timeout ?? 30.Seconds()
     };
 
-  public static async Task LogParseError(this ISimpleFileStore logStore, string msg, Exception ex, Url url, string content, ILogger log) {
-    var path = SPath.Relative(DateTime.UtcNow.ToString("yyyy-MM-dd"), url.Path);
-    var logUrl = logStore.Url(path);
+  public static async Task LogParseError(this ISimpleFileStore logStore, string msg, Exception ex, Url url, string content, string fileType, ILogger log) {
+    if (content == null) {
+      log.Debug(ex, "Parsing Error {Url} - No content: {Msg}", url, msg);
+      return;
+    }
+    var path = new SPath($"{DateTime.UtcNow:yyyy-MM-dd}/{url.Host}/{url.Path.TrimPath()}.{fileType}");
     await logStore.Save(path, content.AsStream(), log);
-    log.Warning(ex, "Parsing Diagnostics - Saved content from {Url} to {LogUrl}: {Msg}", url, logUrl, msg);
+    log.Debug(ex, "Parsing Error {Url} - Saved content to {LogUrl}: {Msg}", url, logStore.Url(path), msg);
   }
 }

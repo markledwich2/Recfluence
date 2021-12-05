@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 using System.ComponentModel;
 using System.Dynamic;
-using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using SysExtensions.Text;
 
-namespace SysExtensions.Reflection; 
+namespace SysExtensions.Reflection;
 
 public enum CopyPropertiesBehaviour {
   CopyAll,
@@ -39,8 +35,8 @@ public static class ReflectionExtensions {
 
       var toCollection = toProp.GetValue(to, index: null) ?? throw new InvalidOperationException("collection not set-able or ad-able");
       var addMethod = toCollection.GetType().GetMethod("Add") ?? throw new InvalidOperationException("collection not set-able or ad-able");
-      foreach (var item in (IEnumerable) fromProp.GetValue(from, index: null) ?? new object[] { })
-        addMethod.Invoke(toCollection, new[] {item});
+      foreach (var item in (IEnumerable)fromProp.GetValue(from, index: null) ?? new object[] { })
+        addMethod.Invoke(toCollection, new[] { item });
     }
   }
 
@@ -97,7 +93,7 @@ public static class ReflectionExtensions {
 
   public static object GetPropValue(this object o, string propName) => o.GetType().GetProperty(propName).GetValue(o);
 
-  public static T GetPropValue<T>(this object o, string propName) => (T) o.GetPropValue(propName);
+  public static T GetPropValue<T>(this object o, string propName) => (T)o.GetPropValue(propName);
 
   public static void SetPropValue(this object o, string propName, object value) => o.GetType().GetProperty(propName).SetValue(o, value);
 
@@ -121,12 +117,12 @@ public static class ReflectionExtensions {
     var loadInStateMethod = methodInfo?.MakeGenericMethod(generics)
       ?? throw new InvalidOperationException($"{nameof(methodInfo)}<{generics.Join(", ", g => g.Name)}> method not found ");
     dynamic task = loadInStateMethod.Invoke(obj: null, args);
-    return (TOut) await task;
+    return (TOut)await task;
   }
 
   public static object MergeDynamics(object a, object b) {
     var result = new ExpandoObject();
-    var d = (IDictionary<string, object>) result;
+    var d = (IDictionary<string, object>)result;
     foreach (var pair in GetKeyValueMap(a).Concat(GetKeyValueMap(b)))
       d[pair.Key] = pair.Value;
     return result;

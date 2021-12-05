@@ -1,25 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
 using Humanizer;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
 using Polly;
-using Serilog;
 using SysExtensions.Collections;
 using SysExtensions.Security;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 
-namespace SysExtensions.Net; 
+namespace SysExtensions.Net;
 
 public static class HttpClientExtensions {
   public static HttpRequestMessage Post(this Uri uri) => new(HttpMethod.Post, uri.ToString());
@@ -80,7 +74,7 @@ public static class HttpClientExtensions {
     verb ??= HttpMethod.Get;
     var args = Array.Empty<string>()
       .Concat(req.RequestUri.ToString(), "-X", verb.Method.ToUpper())
-      .Concat(req.Headers.ToTuples().SelectMany(h => new[] {"-H", $"'{h.Name}:{h.Value}'"}));
+      .Concat(req.Headers.ToTuples().SelectMany(h => new[] { "-H", $"'{h.Name}:{h.Value}'" }));
 
     var cookies = req.CookieContainer?.GetCookieHeader(req.Address);
     if (cookies.HasValue())
@@ -95,7 +89,7 @@ public static class HttpClientExtensions {
     var curl = $"curl -X {request.Method.ToString().ToUpper()} "
       // headers can have mutliple values. Spec is to repeat them
       + request.Headers.Concat(request.Content?.Headers.ToArray() ?? new KeyValuePair<string, IEnumerable<string>>[] { })
-        .SelectMany(h => h.Value, (h, v) => new {Name = h.Key, Value = v})
+        .SelectMany(h => h.Value, (h, v) => new { Name = h.Key, Value = v })
         .Join("", h => $" -H \"{h.Name}:{h.Value}\"");
 
     if (content != null)
@@ -195,7 +189,7 @@ public static class HttpClientExtensions {
 
   /// <summary>Reads the content as Json (and unzip if required)</summary>
   public static async Task<JsonReader> ContentAsJsonReader(this HttpResponseMessage response) =>
-    new JsonTextReader(await response.ContentAsStream()) {CloseInput = true};
+    new JsonTextReader(await response.ContentAsStream()) { CloseInput = true };
 
   public static async Task EnsureSuccesWithFullError(this HttpResponseMessage response) {
     if (!response.IsSuccessStatusCode) {
@@ -204,7 +198,7 @@ public static class HttpClientExtensions {
     }
   }
 
-  public static bool IsTransientError(this HttpResponseMessage msg) => (int) msg.StatusCode >= 500 || msg.StatusCode == HttpStatusCode.RequestTimeout;
+  public static bool IsTransientError(this HttpResponseMessage msg) => (int)msg.StatusCode >= 500 || msg.StatusCode == HttpStatusCode.RequestTimeout;
 
   static async Task<HttpResponseMessage> InnerSendAsyncWithLog(HttpClient client,
     Func<Task<HttpRequestMessage>> getRequest,

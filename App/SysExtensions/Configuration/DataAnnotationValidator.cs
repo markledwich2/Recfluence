@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using SysExtensions.Reflection;
 
-namespace SysExtensions.Configuration; 
+namespace SysExtensions.Configuration;
 
 public class SkipRecursiveValidation : Attribute { }
 

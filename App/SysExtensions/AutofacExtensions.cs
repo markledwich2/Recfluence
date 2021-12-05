@@ -1,4 +1,4 @@
-﻿namespace SysExtensions; 
+﻿namespace SysExtensions;
 
 /// <summary>Use for generic type interence</summary>
 /// <typeparam name="T">the type of the parameter</typeparam>

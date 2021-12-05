@@ -1,20 +1,18 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
+﻿using System.Diagnostics;
 using Humanizer.Localisation;
 using static Humanizer.Localisation.TimeUnit;
 
-namespace SysExtensions.Text; 
+namespace SysExtensions.Text;
 
 public static class HumanizeExtensions {
   public static Speed Speed(this double amount, string unit, TimeSpan duration) =>
-    new Speed {Amount = amount, Unit = unit, Duration = duration};
+    new Speed { Amount = amount, Unit = unit, Duration = duration };
 
   public static Speed Speed(this int amount, string unit, TimeSpan duration) =>
-    new Speed {Amount = amount, Unit = unit, Duration = duration};
+    new Speed { Amount = amount, Unit = unit, Duration = duration };
 
   public static Speed Speed(this long amount, string unit, TimeSpan duration) =>
-    new Speed {Amount = amount, Unit = unit, Duration = duration};
+    new Speed { Amount = amount, Unit = unit, Duration = duration };
 
   public static string Humanize(this Speed speed, string format = "#.#") {
     if (speed.Amount <= 0 || speed.Duration.TotalSeconds <= 0) return $"0 {speed.Unit}/s";
@@ -33,7 +31,7 @@ public static class HumanizeExtensions {
 
   public static string HumanizeShort(this TimeSpan t) {
     var units = new (int v, string s, TimeUnit u)[]
-      {(t.Days, "d", Day), (t.Hours, "h", Hour), (t.Minutes, "m", Minute), (t.Seconds, "s", Second), (t.Milliseconds, "ms", Millisecond)};
+      { (t.Days, "d", Day), (t.Hours, "h", Hour), (t.Minutes, "m", Minute), (t.Seconds, "s", Second), (t.Milliseconds, "ms", Millisecond) };
     var res = units
       .SkipWhile(s => s.v == 0)
       .Take(2).ToArray();

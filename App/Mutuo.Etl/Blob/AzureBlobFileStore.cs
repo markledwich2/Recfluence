@@ -1,23 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
+﻿using System.IO;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Humanizer;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Fluent.IO;
-using SysExtensions.IO;
-using SysExtensions.Serialization;
-using SysExtensions.Text;
 
-namespace Mutuo.Etl.Blob; 
+namespace Mutuo.Etl.Blob;
 
 public class AzureBlobFileStore : ISimpleFileStore {
   readonly string ContainerName;
@@ -76,7 +64,7 @@ public class AzureBlobFileStore : ISimpleFileStore {
     log ??= Log;
     var blob = BlobClient(path);
     await blob.UploadAsync(contents, DefaultProperties(path));
-    log.Debug("Saved {Path}", blob.Uri);
+    log?.Debug("saved {Path}", blob.Uri);
   }
 
   /// <summary>Gets metadata for the given file. Returns null if it doesn't exist</summary>
@@ -100,9 +88,9 @@ public class AzureBlobFileStore : ISimpleFileStore {
 
   public Uri Url(SPath path) => BlobClient(path).Uri;
 
-  public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(SPath path, bool allDirectories = false, ILogger log = null) {
-    log ??= Log;
-    var p = (path != null ? this.BasePathSansContainer().Add(path) : this.BasePathSansContainer()) + "/";
+  public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(SPath path, bool allDirectories = false) {
+    var p = (path != null ? this.BasePathSansContainer().Add(path) : this.BasePathSansContainer())
+      + (allDirectories ? "" : "/"); // if we are searching hierarchically ensure it ends in a "/", otherwise allow partial names
     if (allDirectories)
       await foreach (var page in Container.GetBlobsAsync(BlobTraits.All, BlobStates.None, p).AsPages())
         yield return page.Values.Select(ToFileItem).ToArray();

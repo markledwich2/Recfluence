@@ -17,7 +17,7 @@ using static YtReader.Search.SearchMode;
 using Policy = Polly.Policy;
 
 // ReSharper disable InconsistentNaming
-namespace YtReader.Search; 
+namespace YtReader.Search;
 
 public enum SearchMode {
   Incremental,
@@ -151,9 +151,9 @@ from video_latest l
     channel_title = c.CHANNEL_TITLE,
     age = c.AGE,
     avg_minutes = c.AVG_MINUTES,
-    channel_lifetime_daily_views = (decimal?) c.CHANNEL_LIFETIME_DAILY_VIEWS,
-    channel_lifetime_daily_views_relevant = (decimal?) c.CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT,
-    channel_video_views = (decimal?) c.CHANNEL_VIDEO_VIEWS,
+    channel_lifetime_daily_views = (decimal?)c.CHANNEL_LIFETIME_DAILY_VIEWS,
+    channel_lifetime_daily_views_relevant = (decimal?)c.CHANNEL_LIFETIME_DAILY_VIEWS_RELEVANT,
+    channel_video_views = (decimal?)c.CHANNEL_VIDEO_VIEWS,
     channel_views = c.CHANNEL_VIEWS,
     country = c.COUNTRY,
     day_range = c.DAY_RANGE,
@@ -201,7 +201,7 @@ from video_latest l
     , string[] conditions = null, string incrementalCondition = null) {
     conditions ??= new string[] { };
 
-    var param = lastUpdate == null || mode != Incremental ? null : new {max_updated = lastUpdate};
+    var param = lastUpdate == null || mode != Incremental ? null : new { max_updated = lastUpdate };
     if (param?.max_updated != null)
       conditions = conditions.Concat(incrementalCondition ?? "updated > :max_updated").ToArray();
     var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
@@ -304,7 +304,7 @@ public static class EsIndex {
   }
 
   public static string IndexPrefix(SemVersion version) => version.Prerelease;
-  static string IndexName(ElasticCfg cfg, IndexType table) => new[] {cfg.IndexPrefix, table.IndexName()}.Where(p => p.HasValue()).Join("-");
+  static string IndexName(ElasticCfg cfg, IndexType table) => new[] { cfg.IndexPrefix, table.IndexName() }.Where(p => p.HasValue()).Join("-");
 }
 
 public interface IHasUpdated {

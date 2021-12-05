@@ -7,7 +7,7 @@ using Mutuo.Etl.Pipe;
 using Serilog;
 using SysExtensions.Text;
 
-namespace YtCli; 
+namespace YtCli;
 
 /// <summary>Generic command for pipe ETL to launch instances to perform any pipe operations</summary>
 [Command("pipe", Description = "Used internally to spawn containers running partitions of work")]
@@ -34,7 +34,7 @@ public class PipeCmd : PipeCmdArgs, ICommand {
       await PipeCtx.DoPipeWork(runId, cancel);
     }
     else {
-      var res = await PipeCtx.Run(runId.Name, new() {Location = Location ?? PipeRunLocation.Local}, log: log, cancel: cancel);
+      var res = await PipeCtx.Run(runId.Name, new() { Location = Location ?? PipeRunLocation.Local }, log: log, cancel: cancel);
       if (res.Error)
         throw new CommandException(res.ErrorMessage);
     }

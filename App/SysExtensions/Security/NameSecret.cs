@@ -4,7 +4,7 @@ using SysExtensions.Collections;
 using SysExtensions.Serialization;
 using SysExtensions.Text;
 
-namespace SysExtensions.Security; 
+namespace SysExtensions.Security;
 
 /// <summary>Credentials for a user (in the format name:secret). Be careful not to serialize this. it is not encrypted</summary>
 [TypeConverter(typeof(StringConverter<NameSecret>))]

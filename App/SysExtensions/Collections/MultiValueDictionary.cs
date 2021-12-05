@@ -1,14 +1,11 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json;
 using SysExtensions.Serialization;
 
-namespace SysExtensions.Collections; 
+namespace SysExtensions.Collections;
 
 /// <summary>A MultiValueDictionary can be viewed as a <see cref="IDictionary" /> that allows multiple values for any given
 ///   unique key. While the MultiValueDictionary API is mostly the same as that of a regular <see cref="IDictionary" />,
@@ -470,7 +467,7 @@ public class MultiValueDictionary<TKey, TValue> :
       throw new InvalidOperationException(Resources.Create_TValueCollectionReadOnly);
 
     var multiValueDictionary = new MultiValueDictionary<TKey, TValue>();
-    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>) (Delegate) collectionFactory;
+    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>)(Delegate)collectionFactory;
     return multiValueDictionary;
   }
 
@@ -499,7 +496,7 @@ public class MultiValueDictionary<TKey, TValue> :
       throw new InvalidOperationException(Resources.Create_TValueCollectionReadOnly);
 
     var multiValueDictionary = new MultiValueDictionary<TKey, TValue>(capacity);
-    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>) (Delegate) collectionFactory;
+    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>)(Delegate)collectionFactory;
     return multiValueDictionary;
   }
 
@@ -527,7 +524,7 @@ public class MultiValueDictionary<TKey, TValue> :
       throw new InvalidOperationException(Resources.Create_TValueCollectionReadOnly);
 
     var multiValueDictionary = new MultiValueDictionary<TKey, TValue>(comparer);
-    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>) (Delegate) collectionFactory;
+    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>)(Delegate)collectionFactory;
     return multiValueDictionary;
   }
 
@@ -560,7 +557,7 @@ public class MultiValueDictionary<TKey, TValue> :
       throw new InvalidOperationException(Resources.Create_TValueCollectionReadOnly);
 
     var multiValueDictionary = new MultiValueDictionary<TKey, TValue>(capacity, comparer);
-    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>) (Delegate) collectionFactory;
+    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>)(Delegate)collectionFactory;
     return multiValueDictionary;
   }
 
@@ -590,7 +587,7 @@ public class MultiValueDictionary<TKey, TValue> :
       throw new InvalidOperationException(Resources.Create_TValueCollectionReadOnly);
 
     var multiValueDictionary = new MultiValueDictionary<TKey, TValue>();
-    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>) (Delegate) collectionFactory;
+    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>)(Delegate)collectionFactory;
     foreach (var pair in enumerable)
       multiValueDictionary.AddRange(pair.Key, pair.Value);
     return multiValueDictionary;
@@ -625,7 +622,7 @@ public class MultiValueDictionary<TKey, TValue> :
       throw new InvalidOperationException(Resources.Create_TValueCollectionReadOnly);
 
     var multiValueDictionary = new MultiValueDictionary<TKey, TValue>(comparer);
-    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>) (Delegate) collectionFactory;
+    multiValueDictionary.NewCollectionFactory = (Func<ICollection<TValue>>)(Delegate)collectionFactory;
     foreach (var pair in enumerable)
       multiValueDictionary.AddRange(pair.Key, pair.Value);
     return multiValueDictionary;
@@ -711,8 +708,8 @@ public class MultiValueDictionary<TKey, TValue> :
   /// <returns><c>true</c> if the removal was successful; otherwise <c>false</c></returns>
   /// <remarks>If the <typeparamref name="TValue" /> being removed is the last one associated with its
   ///   <typeparamref name="TKey" />, then that <typeparamref name="TKey" /> will be removed from the
-  ///   <see cref="MultiValueDictionary{TKey,TValue}" /> and its associated <see cref="IReadOnlyCollection{TValue}" /> will
-  ///   be freed as if a call to <see cref="Remove(TKey)" /> had been made.</remarks>
+  ///   <see cref="MultiValueDictionary{TKey,TValue}" /> and its associated <see cref="IReadOnlyCollection{TValue}" /> will be
+  ///   freed as if a call to <see cref="Remove(TKey)" /> had been made.</remarks>
   public bool Remove(TKey key, TValue value) {
     if (key == null)
       throw new ArgumentNullException(nameof(key));
@@ -784,8 +781,8 @@ public class MultiValueDictionary<TKey, TValue> :
     return dictionary.ContainsKey(key);
   }
 
-  /// <summary>Gets each <typeparamref name="TKey" /> in this <see cref="MultiValueDictionary{TKey,TValue}" /> that has one
-  ///   or more associated <typeparamref name="TValue" />.</summary>
+  /// <summary>Gets each <typeparamref name="TKey" /> in this <see cref="MultiValueDictionary{TKey,TValue}" /> that has one or
+  ///   more associated <typeparamref name="TValue" />.</summary>
   /// <value>An <see cref="IEnumerable{TKey}" /> containing each <typeparamref name="TKey" /> in this
   ///   <see cref="MultiValueDictionary{TKey,TValue}" /> that has one or more associated <typeparamref name="TValue" />.</value>
   public IEnumerable<TKey> Keys => dictionary.Keys;

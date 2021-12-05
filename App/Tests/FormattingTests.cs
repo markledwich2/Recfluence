@@ -1,10 +1,7 @@
-using System;
 using FluentAssertions;
-using Humanizer;
 using NUnit.Framework;
-using SysExtensions.Text;
 
-namespace Tests; 
+namespace Tests;
 
 public static class FormattingTests {
   [Test]

@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using SysExtensions.Collections;
+﻿using System.Linq.Expressions;
 
-namespace Mutuo.Etl.Pipe; 
+namespace Mutuo.Etl.Pipe;
 
 public class DependencyGraph<T> {
   readonly MultiValueDictionary<string, string> DepsByFrom = new MultiValueDictionary<string, string>();

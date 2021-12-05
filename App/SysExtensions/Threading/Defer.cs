@@ -1,10 +1,7 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Nito.AsyncEx;
+﻿using Nito.AsyncEx;
 using SysExtensions.Reflection;
 
-namespace SysExtensions.Threading; 
+namespace SysExtensions.Threading;
 
 public class Defer<T> : IAsyncDisposable {
   readonly SemaphoreSlim _lock = new SemaphoreSlim(initialCount: 1, maxCount: 1);

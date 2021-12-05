@@ -1,8 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Serilog;
-
-namespace SysExtensions; 
+﻿namespace SysExtensions;
 
 public static class ExceptionExtensions {
   public static async Task<T> WithWrappedException<T>(this Task<T> task, Func<Exception, string> getMesage, ILogger log = null) {
@@ -117,12 +113,42 @@ public static class ExceptionExtensions {
     }
   }
 
-  public static async Task<(T, Exception)> Try<T>(this Task<T> task, T defaultValue = default) {
+  public static T Swallow<T>(this Func<T> task, Action<Exception> onError = null) {
     try {
-      return (await task, default);
+      return task();
     }
     catch (Exception ex) {
-      return (defaultValue, ex);
+      onError?.Invoke(ex);
+      return default;
+    }
+  }
+
+  public static Exception Try(this Action action) {
+    try {
+      action();
+      return null;
+    }
+    catch (Exception ex) {
+      return ex;
+    }
+  }
+
+  public static async Task<Exception> Try(this Task task) {
+    try {
+      await task;
+      return null;
+    }
+    catch (Exception ex) {
+      return ex;
+    }
+  }
+
+  public static async Task<Either<T, Exception>> Try<T>(this Task<T> task) {
+    try {
+      return new(await task);
+    }
+    catch (Exception ex) {
+      return ex;
     }
   }
 
@@ -144,8 +170,54 @@ public static class ExceptionExtensions {
     }
   }
 
+  public static async Task Try<T>(this Task<T> task, Action<T> main, Action<Exception> alt) {
+    Either<T, Exception> e;
+    try {
+      e = new(await task);
+    }
+    catch (Exception ex) {
+      e = new(ex);
+    }
+    e.Do(main, alt);
+  }
+
+  public static async Task Try<T>(this Task<T> task, Func<T, Task> main, Func<Exception, Task> alt) {
+    Either<T, Exception> e;
+    try {
+      e = new(await task);
+    }
+    catch (Exception ex) {
+      e = new(ex);
+    }
+    await e.Do(main, alt);
+  }
+
+  public static async Task Try<T>(this Task<T> task, Action<T> main, Func<Exception, Task> alt) {
+    Either<T, Exception> e;
+    try {
+      e = new(await task);
+    }
+    catch (Exception ex) {
+      e = new(ex);
+    }
+    await e.Do(main, alt);
+  }
+
   public static void ThrowIfUnrecoverable(this Exception ex) {
     if (ex is OutOfMemoryException)
       throw ex; // nothing is going to work now
   }
+
+  public static IEnumerable<Exception> InnerExceptions(this Exception ex) {
+    while (ex.InnerException != null) {
+      ex = ex.InnerException;
+      yield return ex;
+    }
+  }
+
+  /// <summary>Unwraps aggregate exceptions if they only have a single inner exception</summary>
+  public static Exception Unwrap(this Exception ex) => ex switch {
+    AggregateException a => a.InnerExceptions.Count > 1 ? a : a.InnerException,
+    _ => ex
+  };
 }

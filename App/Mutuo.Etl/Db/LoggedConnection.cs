@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 using Dapper;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 
-namespace Mutuo.Etl.Db; 
+namespace Mutuo.Etl.Db;
 
 public interface ILoggedConnection<out TC> : IDisposable where TC : IDbConnection {
   TC      Conn { get; }

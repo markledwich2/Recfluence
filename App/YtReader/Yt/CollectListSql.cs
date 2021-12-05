@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace YtReader.Yt; 
+namespace YtReader.Yt;
 
 public static class CollectListSql {
   public static readonly Dictionary<string, string> NamedSql = new() {

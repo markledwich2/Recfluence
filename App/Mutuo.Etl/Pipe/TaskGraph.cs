@@ -1,21 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using Humanizer;
 using Nito.AsyncEx;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.Text;
 using static Mutuo.Etl.Pipe.GraphTaskStatus;
 
-namespace Mutuo.Etl.Pipe; 
+namespace Mutuo.Etl.Pipe;
 
 public class GraphTask {
   public GraphTask(string name, string[] dependsOn, Func<ILogger, CancellationToken, Task> run) {
@@ -155,7 +145,7 @@ public static class TaskGraphEx {
     }
 
     var block = new TransformBlock<GraphTask, GraphTaskResult>(RunTask,
-      new() {MaxDegreeOfParallelism = parallel});
+      new() { MaxDegreeOfParallelism = parallel });
     var newTaskSignal = new AsyncManualResetEvent(true);
 
     async Task Producer() {

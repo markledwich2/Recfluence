@@ -4,7 +4,7 @@ using static System.Text.RegularExpressions.RegexOptions;
 
 // ReSharper disable InconsistentNaming
 
-namespace YtReader.Db; 
+namespace YtReader.Db;
 
 public record RepoCfg {
   public string Owner { get; init; } = "markledwich2";
@@ -21,7 +21,7 @@ public record DataformDescriptions(SnowflakeConnectionProvider sf) {
   readonly Regex DescRe = new(@"\s*config\s*{.*?description:\s*(?>'([^']*)'|`([^`]*)`)", Singleline | Compiled);
 
   public async Task Sync(RepoCfg repo, ILogger log) {
-    repo = repo with {TableNames = repo.TableNames?.Select(t => t.ToLowerInvariant()).ToArray()};
+    repo = repo with { TableNames = repo.TableNames?.Select(t => t.ToLowerInvariant()).ToArray() };
 
     IKeyedCollection<string, (string table, string tableType, string dscription)> tableMd;
     using (var db = await sf.Open(log)) {
@@ -36,7 +36,7 @@ where table_schema = '{sf.Cfg.Schema.ToUpperInvariant()}' and table_catalog = '{
     var gitContent = git.Repository.Content;
 
     await Sqlx(repo, log)
-      .BlockMap(async path => {
+      .BlockDo(async path => {
         var content = await GitRetry(() => gitContent.GetRawContent(repo.Owner, repo.Name, path), log).Then(s => s.ToStringFromUtf8());
         return ParseDataformMd(path, content);
       }, parallel: 8).NotNull()
@@ -62,7 +62,7 @@ where table_schema = '{sf.Cfg.Schema.ToUpperInvariant()}' and table_catalog = '{
   }
 
   static string NameFromPath(string path) => path.Split("/").Last().ToLowerInvariant()
-    .Split(".").Do(s => s.Length > 1 ? s.Take(s.Length - 1) : s).Join(".");
+    .Split(".").Dot(s => s.Length > 1 ? s.Take(s.Length - 1) : s).Join(".");
 
   async Task<TRes> GitRetry<TRes>(Func<Task<TRes>> req, ILogger log) {
     while (true) {
@@ -90,10 +90,10 @@ where table_schema = '{sf.Cfg.Schema.ToUpperInvariant()}' and table_catalog = '{
                && (repo.TableNames == null || repo.TableNames.Contains(NameFromPath(f.Path)))))
       yield return item.Path;
     await foreach (var file in items.Where(f => f.Type == "dir")
-                     .BlockMap(async d => await Sqlx(repo with {Path = d.Path}, log).ToArrayAsync(), parallel: 4)
+                     .BlockDo(async d => await Sqlx(repo with { Path = d.Path }, log).ToArrayAsync(), parallel: 4)
                      .SelectMany())
       yield return file;
   }
 
-  static GitHubClient GitClient(string pat) => new(new ProductHeaderValue("Recfluence")) {Credentials = new(pat)};
+  static GitHubClient GitClient(string pat) => new(new ProductHeaderValue("Recfluence")) { Credentials = new(pat) };
 }

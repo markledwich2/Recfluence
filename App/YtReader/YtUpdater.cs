@@ -8,7 +8,7 @@ using YtReader.Yt;
 
 // ReSharper disable InconsistentNaming
 
-namespace YtReader; 
+namespace YtReader;
 
 public class YtUpdaterCfg {
   public int Parallel { get; set; } = 4;
@@ -43,8 +43,7 @@ public record UpdateOptions {
 ///   caption search. Many missing features (resume, better recording of tasks etc..). I intend to replace with dagster or
 ///   make Mutuo.Etl into a data application runner once I have evaluated it.</summary>
 public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, Stage _stage, YtSearch _search,
-  YtResults _results, YtDataform YtDataform, YtBackup _backup, UserScrape _userScrape, YtIndexResults _index, SimpleCollector Collector,
-  DataScripts _dataScripts) {
+  YtResults _results, YtDataform YtDataform, YtBackup _backup, UserScrape _userScrape, YtIndexResults _index, DataScripts _dataScripts) {
   Task Collect(CollectOptions options, ILogger logger, CancellationToken cancel) =>
     YtCollect.Collect(logger, options, cancel);
 
@@ -91,7 +90,7 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
     var fullLoad = options.FullLoad;
 
     var collectOptions = new SimpleCollectOptions
-      {Parts = options.StandardParts, ExplicitChannels = options.Collect.LimitChannels, Mode = options.Collect.CollectMode};
+      { Parts = options.StandardParts, ExplicitChannels = options.Collect.LimitChannels, Mode = options.Collect.CollectMode };
 
     var actionMethods = TaskGraph.FromMethods(
       (l, c) => Collect(options.Collect, l, c),

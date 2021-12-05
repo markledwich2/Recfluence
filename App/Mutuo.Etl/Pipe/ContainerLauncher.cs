@@ -1,9 +1,6 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Autofac;
-using Serilog;
+﻿using Autofac;
 
-namespace Mutuo.Etl.Pipe; 
+namespace Mutuo.Etl.Pipe;
 
 public interface IContainerLauncher {
   /// <summary>Runs the given container untill completion</summary>

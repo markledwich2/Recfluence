@@ -1,7 +1,6 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 
-namespace SysExtensions; 
+namespace SysExtensions;
 
 public static class DateTimeExtensions {
   public static string FileSafeTimestamp(this DateTime value) => value.ToString("yyyy-MM-dd_HH-mm-ss-fffffff", CultureInfo.InvariantCulture);

@@ -5,7 +5,7 @@ using CsvHelper;
 using Mutuo.Etl.Blob;
 using YtReader.Store;
 
-namespace YtReader; 
+namespace YtReader;
 
 public class YtConvertWatchTimeFiles {
   readonly ISimpleFileStore Store;

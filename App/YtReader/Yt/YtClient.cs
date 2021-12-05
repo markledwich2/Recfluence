@@ -5,7 +5,7 @@ using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using Polly;
 
-namespace YtReader.Yt; 
+namespace YtReader.Yt;
 
 public class YtClient {
   public YtClient(YtApiCfg cfg, ILogger log) {
@@ -164,7 +164,7 @@ public class YtClient {
   }
 
   public async Task<ChannelData> ChannelData(string id, bool full = false) {
-    var channelList = YtService.Channels.List(new[] {"snippet", "statistics"}.Concat(full ? "brandingSettings" : null).NotNull().Join(","));
+    var channelList = YtService.Channels.List(new[] { "snippet", "statistics" }.Concat(full ? "brandingSettings" : null).NotNull().Join(","));
     channelList.Id = id;
     var response = await GetResponse(channelList);
     var c = response.Items?.FirstOrDefault();
@@ -220,7 +220,7 @@ public record ChannelData {
 }
 
 public record ChannelSubscription(string Id, string Title) {
-  public long? Subs { get; init; }
+  public ulong? Subs { get; init; }
 }
 
 public record ChannelStats {

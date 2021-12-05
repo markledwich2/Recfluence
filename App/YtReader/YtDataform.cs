@@ -2,7 +2,7 @@
 using Mutuo.Etl.Pipe;
 using YtReader.Db;
 
-namespace YtReader; 
+namespace YtReader;
 
 public class DataformCfg {
   [Required]

@@ -1,7 +1,7 @@
 ﻿using Semver;
 using SysExtensions.Build;
 
-namespace YtReader; 
+namespace YtReader;
 
 public class VersionInfo {
   public VersionInfo(SemVersion version, GitVersionInfo info) {

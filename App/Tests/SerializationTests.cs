@@ -1,11 +1,9 @@
-﻿using System;
-using FluentAssertions;
+﻿using FluentAssertions;
 using Mutuo.Etl.Blob;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using SysExtensions.Serialization;
 
-namespace Tests; 
+namespace Tests;
 
 public class SerializationTests {
   [Test]

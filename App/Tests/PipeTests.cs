@@ -1,28 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Autofac;
+﻿using Autofac;
 using FluentAssertions;
-using Humanizer;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Pipe;
 using NUnit.Framework;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.Serialization;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 using YtReader.Store;
 
-namespace Tests; 
+namespace Tests;
 
 public class PipeTests {
   [Test]
   public static void TestPipeArgDeserialization() {
-    var jsonV1 = new PipeArgs(new[] {new PipeArg("cancel", ArgMode.Inject, Value: 2)}).ToJson(Pipes.ArgJCfg);
+    var jsonV1 = new PipeArgs(new[] { new PipeArg("cancel", ArgMode.Inject, Value: 2) }).ToJson(Pipes.ArgJCfg);
     var jsonV0 = @"{
   ""$type"": ""Mutuo.Etl.Pipe.PipeArg[], Mutuo.Etl"",
   ""$values"": [
@@ -56,7 +44,7 @@ public class PipeTests {
     // relies on a local dev isntance. use vscode to start an Azurite blob service with a container called pipe
     var store = new AzureBlobFileStore("UseDevelopmentStorage=true", "pipe", ctx.Log);
     var pipeCtx = new PipeCtx(new(), new(scope, typeof(PipeApp)), store, ctx.Log);
-    var res = await pipeCtx.Run((PipeApp app) => app.MakeAndSum((int) 15L, 1.Thousands(), DataStoreType.Backup), new() {Location = PipeRunLocation.Local});
+    var res = await pipeCtx.Run((PipeApp app) => app.MakeAndSum((int)15L, 1.Thousands(), DataStoreType.Backup), new() { Location = PipeRunLocation.Local });
     res.Metadata.Error.Should().BeFalse();
   }
 
@@ -94,7 +82,7 @@ public class PipeTests {
   [Test]
   public async Task TestGraphRunner() {
     var ctx = await TestSetup.TextCtx();
-    
+
     var res = await TaskGraph.FromMethods(
         (l, c) => Shorten(l),
         (l, c) => Generate(l, true),
@@ -122,8 +110,8 @@ public class PipeApp {
   [Pipe]
   public async Task<int[]> MakeAndSum(int size, int shift, DataStoreType dataStoreType) {
     Log.Information("MakeAndSum Started - {Size} - Enum Parameter {DataStoreType}", size, dataStoreType);
-    var things = (0 + shift).RangeTo(size + shift).Select(i => new Thing {Number = i});
-    var res = await things.Pipe(Ctx, b => CountThings(b), new() {MaxParallel = 2});
+    var things = (0 + shift).RangeTo(size + shift).Select(i => new Thing { Number = i });
+    var res = await things.Pipe(Ctx, b => CountThings(b), new() { MaxParallel = 2 });
     Log.Information("MakeAndSum Complete {Batches}", res.Count);
     return res.Select(r => r.OutState).ToArray();
   }

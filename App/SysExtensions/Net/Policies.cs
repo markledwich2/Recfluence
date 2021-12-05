@@ -1,12 +1,9 @@
-﻿using System;
-using System.Threading.Tasks;
-using Humanizer;
+﻿using Humanizer;
 using Polly;
 using Polly.Retry;
-using Serilog;
 using Troschuetz.Random;
 
-namespace SysExtensions.Net; 
+namespace SysExtensions.Net;
 
 public static class Policies {
   const           double   DeviationPercent = 0.2;

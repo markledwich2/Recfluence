@@ -4,7 +4,7 @@ using CliFx;
 using Serilog;
 using Serilog.Events;
 
-namespace Mutuo.Tools; 
+namespace Mutuo.Tools;
 
 class Program {
   static async Task<int> Main(string[] args) {

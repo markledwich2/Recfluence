@@ -6,32 +6,50 @@ using YtReader.SimpleCollect;
 using YtReader.Store;
 using static YtReader.Yt.ExtraPart;
 
-namespace YtReader.Yt; 
+namespace YtReader.Yt;
+
+public record ExtraResultItem(string VideoId, string ChannelId, Platform Platform, ExtraPart Part, string CollectSource, int Count);
+
+public record ExtraResult(ExtraResultItem[] Results) {
+  public static readonly ExtraResult                   Empty   = new(Array.Empty<ExtraResultItem>());
+  public readonly        (ExtraPart Part, int Count)[] Summary = Results.Select(r => (r.Part, r.Count)).Summarise();
+  public override string ToString() => Summary.Humanize();
+}
 
 public static class YtCollectEx {
+  public static ExtraResult AsResult(this ExtraResultItem[] results) => new(results);
+
+  // aggregates counts by part
+  public static (ExtraPart Part, int Count)[] Summarise(this IEnumerable<(ExtraPart Part, int Count)> results) => results
+    .NotNull().GroupBy(r => r.Part).Select(g => (Part: g.Key, Count: g.Sum(r => r.Count))).ToArray();
+
+  public static string Humanize(this (ExtraPart Part, int Count)[] summary) =>
+    summary.Where(s => s.Count > 0).Join(", ", r => $"{r.Part.EnumString()}: {r.Count}");
+
+  public static ExtraResultItem AsResultItem(this VideoExtra e, ExtraPart part, int count = 1, string collectSource = null) =>
+    new(e.VideoId, e.ChannelId, e.Platform, part, collectSource, count);
+
   public static bool OlderThanOrNull(this DateTime? updated, TimeSpan age, DateTime? now = null) =>
     updated == null || updated.Value.OlderThan(age, now);
 
   public static bool OlderThan(this DateTime updated, TimeSpan age, DateTime? now = null) => (now ?? DateTime.UtcNow) - updated > age;
   public static bool YoungerThan(this DateTime updated, TimeSpan age, DateTime? now = null) => !updated.OlderThan(age, now);
 
-  public static RecStored[] ToRecStored(IReadOnlyCollection<ExtraAndParts> allExtra, DateTime updated) =>
-    allExtra
-      .SelectMany(v => v.Recs?.Select(r => new RecStored {
-        FromChannelId = v.Extra.ChannelId,
-        FromVideoId = v.Extra.VideoId,
-        FromVideoTitle = v.Extra.Title,
-        ToChannelTitle = r.ToChannelTitle,
-        ToChannelId = r.ToChannelId,
-        ToVideoId = r.ToVideoId,
-        ToVideoTitle = r.ToVideoTitle,
-        Rank = r.Rank,
-        Source = r.Source,
-        ForYou = r.ForYou,
-        ToViews = r.ToViews,
-        ToUploadDate = r.ToUploadDate,
-        Updated = updated
-      }) ?? Array.Empty<RecStored>()).ToArray();
+  public static RecStored[] ToRecStored(Rec[] recs, VideoExtra extra, DateTime updated) => recs?.Select(r => new RecStored {
+    FromChannelId = extra.ChannelId,
+    FromVideoId = extra.VideoId,
+    FromVideoTitle = extra.Title,
+    ToChannelTitle = r.ToChannelTitle,
+    ToChannelId = r.ToChannelId,
+    ToVideoId = r.ToVideoId,
+    ToVideoTitle = r.ToVideoTitle,
+    Rank = r.Rank,
+    Source = r.Source,
+    ForYou = r.ForYou,
+    ToViews = r.ToViews,
+    ToUploadDate = r.ToUploadDate,
+    Updated = updated
+  }).ToArray() ?? Array.Empty<RecStored>();
 
   public static Video[] ToVidsStored(Channel c, IReadOnlyCollection<YtVideoItem> vids) =>
     vids.Select(v => new Video {
@@ -47,7 +65,7 @@ public static class YtCollectEx {
     }).ToArray();
 }
 
-public enum UpdateChannelType {
+public enum ChannelUpdateType {
   /// <summary>A standard & cheap update to the channel details</summary>
   Standard,
   /// <summary>Don't update the channel details. Has no impact the collection of videos/recs/caption.</summary>
@@ -70,6 +88,7 @@ public enum CollectPart {
 }
 
 public record CollectOptions {
+  public int?              Limit         { get; init; }
   public string[]          LimitChannels { get; init; }
   public CollectPart[]     Parts         { get; init; }
   public ExtraPart[]       ExtraParts    { get; init; }
@@ -77,9 +96,10 @@ public record CollectOptions {
 }
 
 public record ExtraAndParts(VideoExtra Extra) {
-  public Rec[]          Recs     { get; init; } = Array.Empty<Rec>();
-  public VideoComment[] Comments { get; init; } = Array.Empty<VideoComment>();
-  public VideoCaption   Caption  { get; init; }
+  public Rec[]          Recs          { get; init; } = Array.Empty<Rec>();
+  public VideoComment[] Comments      { get; init; } = Array.Empty<VideoComment>();
+  public VideoCaption   Caption       { get; init; }
+  public string         CollectSource { get; init; }
 }
 
 public record ProcessChannelResult {
@@ -93,7 +113,7 @@ public record ProcessChannelResults {
 }
 
 public static class YtCollectorRegion {
-  static readonly Region[] Regions = {Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral};
+  static readonly Region[] Regions = { Region.USEast, Region.USWest, Region.USWest2, Region.USEast2, Region.USSouthCentral };
   static readonly TRandom  Rand    = new();
 
   public static Region RandomUsRegion() => Rand.Choice(Regions);
@@ -105,9 +125,9 @@ public record VideoExtraPlans : IEnumerable<VideoPlan> {
 
   public VideoExtraPlans() { }
 
-  public VideoExtraPlans(IEnumerable<string> videosForExtra) {
+  public VideoExtraPlans(IEnumerable<string> videosForExtra, params ExtraPart[] parts) {
     foreach (var v in videosForExtra)
-      SetPart(v, EExtra);
+      SetPart(v, parts.Any() ? parts : new[] { EExtra });
   }
 
   public VideoExtraPlans(IEnumerable<VideoPlan> plans) => _c.AddRange(plans);
@@ -121,7 +141,7 @@ public record VideoExtraPlans : IEnumerable<VideoPlan> {
   }
 
   public IEnumerator<VideoPlan> GetEnumerator() => _c.GetEnumerator();
-  IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable) _c).GetEnumerator();
+  IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_c).GetEnumerator();
 
   public VideoPlan GetOrAdd(string videoId) => _c.GetOrAdd(videoId, () => new(videoId));
 

@@ -2,7 +2,7 @@
 using Flurl.Http;
 using Polly;
 
-namespace YtReader.Web; 
+namespace YtReader.Web;
 
 public record FlurlProxyClient {
   public readonly ProxyCfg    Cfg;

@@ -1,9 +1,8 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Globalization;
 using Newtonsoft.Json;
 
-namespace SysExtensions.Serialization; 
+namespace SysExtensions.Serialization;
 
 /// <summary>Represents a type that is meant to be converted to and from strings for serialization</summary>
 public interface IStringConvertable {
@@ -21,7 +20,7 @@ public class StringConverter<T> : TypeConverter where T : IStringConvertable, ne
 
   public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value) {
     if (value is string)
-      return new T {StringValue = value.ToString()};
+      return new T { StringValue = value.ToString() };
     return base.ConvertFrom(context, culture, value);
   }
 }
@@ -57,13 +56,13 @@ public class JsonStringConverter : JsonConverter {
     TypeDescriptor.GetConverter(objectType)?.CanConvertTo(typeof(string)) ?? false;
 
   public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) =>
-    reader.Value == null ? null : ConvertFromString((string) reader.Value, objectType);
+    reader.Value == null ? null : ConvertFromString((string)reader.Value, objectType);
 
-  public static T ConvertFromString<T>(string value) => (T) ConvertFromString(value, typeof(T));
+  public static T ConvertFromString<T>(string value) => (T)ConvertFromString(value, typeof(T));
 
   public static object ConvertFromString(string value, Type objectType) {
     if (IsStringConvertable(objectType)) {
-      var o = (IStringConvertable) Activator.CreateInstance(objectType);
+      var o = (IStringConvertable)Activator.CreateInstance(objectType);
       o.StringValue = value;
       return o;
     }

@@ -15,7 +15,7 @@ using SysExtensions.IO;
 using SysExtensions.Serialization;
 using SysExtensions.Threading;
 
-namespace Mutuo.Tools; 
+namespace Mutuo.Tools;
 
 /// <summary>Tool for generating json schemas</summary>
 [Command("schema")]
@@ -38,7 +38,7 @@ public class SchemaCmd : ICommand {
     var res = await run.Task;
     if (!res.Success) throw new InvalidOperationException($"build failed: {res.StandardError}");
 
-    var projPath = Dir.FullName.AsPath();
+    var projPath = Dir.FullName.AsFPath();
     var projFile = projPath.Files("*.csproj", recursive: false).FirstOrDefault() ?? throw new InvalidOperationException("Can't find project");
     var latestAssembly = projPath.Files($"{projFile.FileNameWithoutExtension}.dll", recursive: true)
         .OrderByDescending(f => f.FileInfo().LastWriteTime).FirstOrDefault() ??
@@ -53,7 +53,7 @@ public class SchemaCmd : ICommand {
           new CoreSerializeContractResolver {
             NamingStrategy = new CamelCaseNamingStrategy()
           },
-        GenerationProviders = {new StringEnumGenerationProvider()}
+        GenerationProviders = { new StringEnumGenerationProvider() }
       };
       var schema = g.Generate(t);
       if (IgnoreRequired)

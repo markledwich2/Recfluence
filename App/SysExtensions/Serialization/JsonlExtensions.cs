@@ -1,19 +1,16 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
-namespace SysExtensions.Serialization; 
+namespace SysExtensions.Serialization;
 
 public static class JsonlExtensions {
   public static async Task ToJsonl<T>(this IEnumerable<T> items, TextWriter tw, JsonSerializerSettings settings = null) {
     if (typeof(JObject) is T) {
-      var jw = new JsonTextWriter(tw) {Formatting = Formatting.None}; //ignore settings if it is json allready
+      var jw = new JsonTextWriter(tw) { Formatting = Formatting.None }; //ignore settings if it is json allready
       foreach (var row in items.Cast<JObject>()) {
         row.WriteTo(jw);
         await tw.WriteLineAsync();
@@ -56,8 +53,8 @@ public static class JsonlExtensions {
     NullValueHandling = NullValueHandling.Ignore,
     DefaultValueHandling = DefaultValueHandling.Include,
     Formatting = Formatting.None,
-    Converters = {new StringEnumConverter()},
-    ContractResolver = new DefaultContractResolver {NamingStrategy = new CamelCaseNamingStrategy(processDictionaryKeys: true, overrideSpecifiedNames: true)}
+    Converters = { new StringEnumConverter() },
+    ContractResolver = new DefaultContractResolver { NamingStrategy = new CamelCaseNamingStrategy(processDictionaryKeys: true, overrideSpecifiedNames: true) }
   };
 
   public static IReadOnlyCollection<T> LoadJsonlGz<T>(this Stream stream, JsonSerializerSettings settings = null) {

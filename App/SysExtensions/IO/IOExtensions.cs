@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.IO;
 using Humanizer;
 using Humanizer.Bytes;
 using SysExtensions.Threading;
 
-namespace SysExtensions.IO; 
+namespace SysExtensions.IO;
 
 public static class IOExtensions {
   public static IEnumerable<DirectoryInfo> ParentDirectories(this FileInfo file) {
@@ -31,7 +26,7 @@ public static class IOExtensions {
     bufferBytes ??= 100.Kilobytes();
     progressCadence ??= 1.Seconds();
 
-    var buffer = new byte[(int) bufferBytes.Value.Bytes];
+    var buffer = new byte[(int)bufferBytes.Value.Bytes];
     int count;
     var transferred = 0L;
 

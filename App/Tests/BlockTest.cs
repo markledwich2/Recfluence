@@ -1,15 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Humanizer;
-using NUnit.Framework;
-using SysExtensions.Collections;
-using SysExtensions.Text;
-using SysExtensions.Threading;
+﻿using NUnit.Framework;
 using static Tests.TestSetup;
 
-namespace Tests; 
+namespace Tests;
 
 public class BlockTest {
   static readonly Random Rand = new();
@@ -21,7 +13,7 @@ public class BlockTest {
     log.Information("TestBatchBlock started");
 
     async IAsyncEnumerable<string> AsyncItems(int count, string desc) {
-      await foreach (var i in Enumerable.Range(start: 0, count).Batch(4).BlockMap(async (b, i) => {
+      await foreach (var i in Enumerable.Range(start: 0, count).Batch(4).BlockDo(async (b, i) => {
                        await 1.Seconds().Delay();
                        if (i == 3 && desc == "a") {
                          log.Debug("error thrown");
@@ -35,7 +27,7 @@ public class BlockTest {
     }
 
     //var listA = await AsyncItems(100, "a").ToListAsync();
-    var list = new[] {"a", "b"}.Select(s => AsyncItems(count: 20, s)).ToArray().BlockFlatMap(Task.FromResult, parallel: 4);
+    var list = new[] { "a", "b" }.Select(s => AsyncItems(count: 20, s)).ToArray().BlockFlatMap(Task.FromResult, parallel: 4);
     var res = await list.ToListAsync();
   }
 
@@ -50,12 +42,12 @@ public class BlockTest {
     using var ctx = await TextCtx();
     var log = ctx.Log;
 
-    var res = await AsyncRange(10).BlockMap(async i => {
+    var res = await AsyncRange(10).BlockDo(async i => {
         await 1.Seconds().Delay();
         log.Information("{i}a", i);
         if (i == 2) throw new("a block error");
         return $"{i}a";
-      }, parallel: 4).BlockMap(async a => {
+      }, parallel: 4).BlockDo(async a => {
         await 1.Seconds().Delay();
         log.Information("{a}b", a);
         /*if (a == "20a") {

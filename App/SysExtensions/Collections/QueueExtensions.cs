@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace SysExtensions.Collections; 
+﻿namespace SysExtensions.Collections;
 
 public static class QueueExtensions {
   public static IEnumerable<T> Dequeue<T>(this Queue<T> queue, int number) {

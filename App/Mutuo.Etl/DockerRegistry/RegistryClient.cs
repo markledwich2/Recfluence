@@ -1,12 +1,6 @@
-﻿using System;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
-using SysExtensions.Net;
-using SysExtensions.Security;
-using SysExtensions.Serialization;
+﻿using SysExtensions.Security;
 
-namespace Mutuo.Etl.DockerRegistry; 
+namespace Mutuo.Etl.DockerRegistry;
 
 public class RegistryClient {
   readonly string     Host;

@@ -1,9 +1,8 @@
-﻿using System.Threading.Tasks;
-using Autofac;
+﻿using Autofac;
 using NUnit.Framework;
 using YtReader.Db;
 
-namespace Tests; 
+namespace Tests;
 
 public class DbTests {
   record VideoResult(string video_id);

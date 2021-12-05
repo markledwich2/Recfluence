@@ -1,36 +1,43 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <!-- <PackAsTool>true</PackAsTool>
-    <PackageOutputPath>./publish</PackageOutputPath> -->
-    <AssemblyName>recfluence</AssemblyName>
-    <LangVersion>10</LangVersion>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="CliFx" Version="2.0.4" />
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
-    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\SysExtensions\SysExtensions.csproj" />
-    <ProjectReference Include="..\YtReader\YtReader.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="default.appcfg.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="dev.appcfg.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="local.rootcfg.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="local.appcfg.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="prod.appcfg.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+        <!-- <PackAsTool>true</PackAsTool>
+        <PackageOutputPath>./publish</PackageOutputPath> -->
+        <AssemblyName>recfluence</AssemblyName>
+        <LangVersion>10</LangVersion>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="CliFx" Version="2.0.6"/>
+        <PackageReference Include="Microsoft.ApplicationInsights" Version="2.19.0"/>
+        <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="3.1.0"/>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\SysExtensions\SysExtensions.csproj"/>
+        <ProjectReference Include="..\YtReader\YtReader.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <None Update="default.appcfg.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="dev.appcfg.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="local.appcfg.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="prod.appcfg.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+    <ItemGroup>
+        <None Remove="local.rootcfg.json"/>
+        <Content Include="local.rootcfg.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <None Remove="local.dev.appcfg.json"/>
+        <Content Include="local.dev.appcfg.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
 </Project>

@@ -1,15 +1,10 @@
-﻿using System;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using Autofac;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.Blob;
-using Serilog;
 using Serilog.Core;
-using SysExtensions;
-using SysExtensions.Text;
 
-namespace Mutuo.Etl.Pipe; 
+namespace Mutuo.Etl.Pipe;
 
 /// <summary>Context & Cfg for running a pipe commands</summary>
 public interface IPipeCtx {

@@ -9,35 +9,27 @@ using YtReader.Db;
 using YtReader.Store;
 using static Mutuo.Etl.Pipe.PipeArg;
 
-namespace YtReader; 
+namespace YtReader;
 
 public class WarehouseCfg {
-  [Required] public string      Stage              { get; set; } = "yt_data";
-  [Required] public string      Private            { get; set; } = "yt_private";
-  [Required] public OptimiseCfg Optimise           { get; set; } = new();
-  [Required] public int         LoadTablesParallel { get; set; } = 4;
-  public            string[]    AdminRoles         { get; set; } = {"sysadmin", "recfluence"};
-  public            string[]    ReadRoles          { get; set; } = {"reader"};
-  public            int         MetadataParallel   { get; set; } = 8;
-  public            int         FileMb             { get; set; } = 80;
+  public            WarehouseMode Mode               { get; set; } = WarehouseMode.Branch;
+  [Required] public string        Stage              { get; set; } = "yt_data";
+  [Required] public string        Private            { get; set; } = "yt_private";
+  [Required] public OptimiseCfg   Optimise           { get; set; } = new();
+  [Required] public int           LoadTablesParallel { get; set; } = 4;
+  public            string[]      AdminRoles         { get; set; } = { "sysadmin", "recfluence" };
+  public            string[]      ReadRoles          { get; set; } = { "reader" };
+  public            int           MetadataParallel   { get; set; } = 8;
+  public            int           FileMb             { get; set; } = 80;
 }
 
-public class Stage {
-  readonly WarehouseCfg                Cfg;
-  readonly SnowflakeConnectionProvider Conn;
-  readonly IPipeCtx                    PipeCtx;
-  readonly BlobStores                  Stores;
-
-  public Stage(BlobStores stores, SnowflakeConnectionProvider conn, WarehouseCfg cfg, IPipeCtx pipeCtx) {
-    Stores = stores;
-    Conn = conn;
-    Cfg = cfg;
-    PipeCtx = pipeCtx;
-  }
+public record Stage(BlobStores Stores, SnowflakeConnectionProvider Conn, WarehouseCfg Cfg, IPipeCtx PipeCtx, RootCfg RootCfg) {
 
   public async Task StageUpdate(ILogger log, bool fullLoad = false, string[] tableNames = null) {
     log = log.ForContext("db", Conn.Cfg.DbName());
     log.Information("StageUpdate - started for snowflake host '{Host}', db '{Db}'", Conn.Cfg.Host, Conn.Cfg.DbName());
+    if (Cfg.Mode == WarehouseMode.ProdReadIfDev && !RootCfg.IsProd())
+      throw new("Won't write to stage from a development environment when warehouse in readonly mode");
     var sw = Stopwatch.StartNew();
     var tables = YtWarehouse.AllTables.Where(t => tableNames.None() || tableNames?.Contains(t.Table, StringComparer.OrdinalIgnoreCase) == true).ToArray();
     await tables.BlockDo(async t => { await UpdateTable(t, fullLoad, log); }, Cfg.LoadTablesParallel);
@@ -87,7 +79,7 @@ public class Stage {
         await store.Optimise(Cfg.Optimise, plan, db.Log);
       else
         await plan.Pipe(PipeCtx, b => ProcessOptimisePlan(b, t.StoreType, Inject<ILogger>())
-          , new() {MaxParallel = 8, MinWorkItems = 1}, db.Log, cancel);
+          , new() { MaxParallel = 8, MinWorkItems = 1 }, db.Log, cancel);
     }
     await db.Execute("truncate table", $"truncate table {table}"); // no transaction, stage tables aren't reported on so don't need to be available
     var ((_, rows, size), dur) = await CopyInto(db, table, t).WithDuration();

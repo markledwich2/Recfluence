@@ -11,7 +11,7 @@ using SysExtensions.IO;
 using YtReader.Store;
 using YtReader.Yt;
 
-namespace YtReader; 
+namespace YtReader;
 
 [Command("rec-export", Description = "Process recommendation exports")]
 public record RecExportCmd(ILogger Log, BlobStores Stores, YtWeb Yt) : ICommand {
@@ -55,6 +55,8 @@ public static class RecExport {
         Encoding.UTF8);
       using var csvReader = new CsvReader(csvStream, CsvExtensions.DefaultConfig);
 
+      var innerTube = await ytWeb.Channel(log, exportInfo.Channel).Then(r => r.InnerTubeCfg);
+
       var records = csvReader.GetRecords<TrafficSourceExportRow>().ToList();
       var rows = (await records.BlockMapList(ToTrafficSourceRow, parallel: 4,
           progressUpdate: p => log.Debug("Processing traffic sources for {Path}: {Rows}/{TotalRows}", b.Path, p.Completed, records.Count)))
@@ -68,7 +70,7 @@ public static class RecExport {
         if (source.Length != 2 || source[0] != "YT_RELATED")
           return null; // total at the top or otherwise. not interested
         var videoId = source[1];
-        var fromVideo = await ytWeb.GetExtra(log, videoId, new[] {ExtraPart.EExtra}).Then(r => r.Extra);
+        var fromVideo = await ytWeb.GetExtra(log, innerTube, videoId, new[] { ExtraPart.EExtra }, maxComments: 0).Then(r => r.Extra);
 
         return new() {
           ToChannelTitle = exportInfo.Channel,

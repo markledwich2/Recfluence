@@ -1,16 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using SysExtensions.Collections;
 
-namespace SysExtensions.Threading; 
+namespace SysExtensions.Threading;
 
 public static class Def {
+  public static Action Fun(Action act) => act;
+
   /// <summary>Create a func with type inference</summary>
   public static Func<T> Fun<T>(Func<T> func) => func;
+
+  public static Func<T, R> Fun<T, R>(Func<T, R> func) => func;
 }
 
 public static class TaskExtensions {
@@ -85,6 +84,8 @@ public static class TaskExtensions {
     return (Result: result, Duration: sw.Elapsed);
   }
 
+  public static Task<(T Result, TimeSpan Duration)> WithDuration<T>(this ValueTask<T> task) => task.AsTask().WithDuration();
+
   public static void Wait(this Task task) => task.GetAwaiter().GetResult();
 
   public static async Task<IReadOnlyCollection<T>> SelectManyList<T>(this IAsyncEnumerable<IReadOnlyCollection<T>> items) {
@@ -93,45 +94,81 @@ public static class TaskExtensions {
     return res;
   }
 
-  public static async Task<(bool finished, TResult res)> WithTimeout<TResult>(this Task<TResult> task, TimeSpan timeout) {
-    using var timeoutCancellationTokenSource = new CancellationTokenSource();
-    var completedTask = await Task.WhenAny(task, Task.Delay(timeout, timeoutCancellationTokenSource.Token));
-    if (completedTask != task) return (false, default);
-    timeoutCancellationTokenSource.Cancel();
-    return (true, await task);
+  public static async Task<bool> WithTimeout(this Task task, TimeSpan timeout, CancellationToken cancel = default) =>
+    await WithTimeoutInner(task, timeout, cancel);
+
+  /// <summary>Runs the task that will be abandoned after a given timeout. NOTE: does ot throw any Cancellation/Timeout
+  ///   exception, this info is part of the result</summary>
+  public static async Task<(bool finished, TResult res)> WithTimeout<TResult>(this Task<TResult> task, TimeSpan timeout,
+    CancellationToken cancel = default) {
+    var success = await WithTimeoutInner(task, timeout, cancel);
+    return success ? (true, await task) : (false, default);
   }
 
-  public static async Task<TR> Then<T, TR>(this Task<T> task, Func<T, Task<TR>> then) {
+  static async Task<bool> WithTimeoutInner(Task task, TimeSpan timeout, CancellationToken cancel) {
+    if (timeout <= TimeSpan.Zero) return false; // if the given timeout is 0, return immediately as not complete
+    var delayCancel = CancellationTokenSource.CreateLinkedTokenSource(cancel);
+    var completedTask = await Task.WhenAny(task, timeout.Delay(delayCancel.Token));
+    delayCancel.Cancel();
+    var success = completedTask == task;
+    return success;
+  }
+
+  /// <summary>Waits for `task` to complete, and after than executes `then`. If the result of task is IDisposable, it will
+  ///   call dispose after then is executed. This is nice for things like DB connections</summary>
+  public static async Task<TR> Then<T, TR>(this Task<T> task, Func<T, Task<TR>> then, bool dispose = true) {
     var r = await task;
     var res = await then(r);
-    if (r is IDisposable d) d.Dispose();
+    if (dispose) await r.TryDispose();
     return res;
   }
 
-  public static async Task Then<T>(this Task<T> task, Action<T> then) {
+  /// <summary>Waits for `task` to complete, and after than executes `then`. If the result of task is IDisposable, it will
+  ///   call dispose after then is executed. This is nice for things like DB connections</summary>
+  public static async Task Then<T>(this Task<T> task, Action<T> then, bool dispose = true) {
     var r = await task;
     then(r);
-    if (r is IDisposable d) d.Dispose();
+    if (dispose) await r.TryDispose();
   }
 
-  public static async Task<TR> Then<T, TR>(this Task<T> task, Func<T, TR> then) {
+  /// <summary>Waits for `task` to complete, and after than executes `then`. If the result of task is IDisposable, it will
+  ///   call dispose after then is executed. This is nice for things like DB connections</summary>
+  public static async Task Then<T>(this Task<T> task, Func<T, Task> then, bool dispose = true) {
+    var r = await task;
+    await then(r);
+    if (dispose) await r.TryDispose();
+  }
+
+  /// <summary>Waits for `task` to complete, and after than executes `then`. If the result of task is IDisposable, it will
+  ///   call dispose after then is executed. This is nice for things like DB connections</summary>
+  public static async Task<TR> Then<T, TR>(this Task<T> task, Func<T, TR> then, bool dispose = true) {
     var r = await task;
     var res = then(r);
-    if (r is IDisposable d) d.Dispose();
+    if (res is Task t) await t;
+    if (dispose) await r.TryDispose();
     return res;
   }
 
-  public static async ValueTask<TR> Then<T, TR>(this ValueTask<T> task, Func<T, ValueTask<TR>> then) {
+  /// <summary>Waits for `task` to complete, and after than executes `then`. If the result of task is IDisposable, it will
+  ///   call dispose after then is executed. This is nice for things like DB connections</summary>
+  public static async ValueTask<TR> Then<T, TR>(this ValueTask<T> task, Func<T, ValueTask<TR>> then, bool dispose = true) {
     var r = await task;
     var res = await then(r);
-    if (r is IDisposable d) d.Dispose();
+    if (dispose) await r.TryDispose();
     return res;
   }
 
-  public static async ValueTask<TR> Then<T, TR>(this ValueTask<T> task, Func<T, TR> then) {
+  /// <summary>Waits for `task` to complete, and after than executes `then`. If the result of task is IDisposable, it will
+  ///   call dispose after then is executed. This is nice for things like DB connections</summary>
+  public static async ValueTask<TR> Then<T, TR>(this ValueTask<T> task, Func<T, TR> then, bool dispose = true) {
     var r = await task;
     var res = then(r);
-    if (r is IDisposable d) d.Dispose();
+    if (dispose) await r.TryDispose();
     return res;
+  }
+
+  public static async Task TryDispose<T>(this T r) {
+    if (r is IAsyncDisposable a) await a.DisposeAsync();
+    else if (r is IDisposable d) d.Dispose();
   }
 }

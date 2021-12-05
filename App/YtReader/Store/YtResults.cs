@@ -10,7 +10,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Octokit;
 using Snowflake.Data.Client;
-using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using YtReader.Db;
 using static YtReader.Store.JsonCasingStrategy;
@@ -18,7 +17,7 @@ using static YtReader.Store.ResFilType;
 using static YtReader.Store.YtResultsSql;
 using FileMode = System.IO.FileMode;
 
-namespace YtReader.Store; 
+namespace YtReader.Store;
 
 public enum JsonSource {
   AllColumns,
@@ -85,7 +84,7 @@ public class YtResults {
     queryNames ??= new string[] { };
 
     var now = DateTime.Now;
-    var dateRangeParams = new {from = "2019-11-01", to = now.ToString("yyyy-MM-01")};
+    var dateRangeParams = new { from = "2019-11-01", to = now.ToString("yyyy-MM-01") };
 
 
     /*const string classChannelsSelect = @"
@@ -126,12 +125,12 @@ order by channel_views desc
         new FileQuery("channel_review", "sql/channel_review.sql",
           "each reviewers classifications and the calculated majority view (data entered independently from reviewers)", inSharedZip: true),
 
-        new FileQuery("channel_review_lists", @"sql/channel_review_lists.sql", parameters: new {limit = 100},
+        new FileQuery("channel_review_lists", @"sql/channel_review_lists.sql", parameters: new { limit = 100 },
           fileType: Json, jsonNaming: Camel),
 
         // userscrape data
-        new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new {videos_per_tag = UserScrapeCfg.SeedsPerTag}),
-        new FileQuery("us_tests", "sql/us_tests.sql", parameters: new {videos = UserScrapeCfg.Tests}),
+        new FileQuery("us_seeds", "sql/us_seeds.sql", parameters: new { videos_per_tag = UserScrapeCfg.SeedsPerTag }),
+        new FileQuery("us_tests", "sql/us_tests.sql", parameters: new { videos = UserScrapeCfg.Tests }),
 
         /*new FileQuery("narrative_recs_support", "sql/narrative_recs.sql", fileType: ResFilType.Json, jsonNaming: JsonCasingStrategy.Camel,
           parameters: new {from_date = "2020-11-03", to_date = "2021-03-12"}),*/
@@ -222,7 +221,7 @@ with all_rows as (
 select *
 from s
 ", fileType: Json, jsonNaming: Camel),
-          
+
         new ResQuery("narrative_vaccine_personal_highlight", Narrative.VaccinePersonalHighlight, fileType: Json, jsonNaming: Camel),
 
         new ResQuery("narrative_vaccine_dna_highlight", Narrative.VaccineDnaHighlight, fileType: Json, jsonNaming: Camel)
@@ -317,7 +316,7 @@ group by channel_id",
     var sw = Stopwatch.StartNew();
     var zipPath = results.First().file.Parent().Combine("recfluence_shared_data.zip");
     using (var zipFile = ZipFile.Open(zipPath.FullPath, ZipArchiveMode.Create)) {
-      var readmeFile = TempDir().CreateFile("readme.txt", $@"Recfluence data generated {DateTime.UtcNow:yyyy-MM-dd}
+      var readmeFile = TempDir().Combine("readme.txt").CreateFile($@"Recfluence data generated {DateTime.UtcNow:yyyy-MM-dd}
 
 {results.Join("\n\n", r => $"*{r.query.Name}*\n  {r.query.Desc}")}
         ");
@@ -338,7 +337,7 @@ group by channel_id",
   }
 
   public static FPath TempDir() {
-    var path = Path.GetTempPath().AsPath().Combine(Guid.NewGuid().ToShortString());
+    var path = Path.GetTempPath().AsFPath().Combine(Guid.NewGuid().ToShortString());
     if (!path.Exists)
       path.CreateDirectory();
     return path;

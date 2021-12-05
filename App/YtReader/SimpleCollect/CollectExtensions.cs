@@ -4,7 +4,7 @@ using static System.Array;
 using static YtReader.Store.DiscoverSourceType;
 using ChanById = SysExtensions.Collections.IKeyedCollection<string, YtReader.Store.Channel>;
 
-namespace YtReader.SimpleCollect; 
+namespace YtReader.SimpleCollect;
 
 [AttributeUsage(AttributeTargets.Field)]
 public class CollectPartAttribute : Attribute {
@@ -60,13 +60,13 @@ public interface IScraper {
 public static class CollectExtensions {
   /// <summary>Creates a new channel with ChannelId set according to web's implementation. Also initialises updated</summary>
   public static Channel NewChan(this IScraper web, string sourceId) => new(web.Platform, web.SourceToFullId(sourceId, LinkType.Channel), sourceId)
-    {Updated = DateTime.UtcNow};
+    { Updated = DateTime.UtcNow };
 
   public static Video NewVid(this IScraper web, string sourceId) => new(web.Platform, web.SourceToFullId(sourceId, LinkType.Video), sourceId)
-    {Updated = DateTime.UtcNow};
+    { Updated = DateTime.UtcNow };
 
   public static VideoExtra NewVidExtra(this IScraper web, string sourceId) => new(web.Platform, web.SourceToFullId(sourceId, LinkType.Video), sourceId)
-    {Updated = DateTime.UtcNow};
+    { Updated = DateTime.UtcNow };
 
   public static ChanById ById(this IEnumerable<Channel> channels) => new KeyedCollection<string, Channel>(c => c.ChannelId, channels);
   public static ChanById BySourceId(this IEnumerable<Channel> channels) => new KeyedCollection<string, Channel>(c => c.SourceId, channels);
@@ -84,10 +84,10 @@ public static class CollectExtensions {
     // add to update if it doesn't exist
     var actualNew = newChannels.NotNull().Where(c => !plan.ChannelPlans.ContainsKey(c.ChannelId)).ToArray();
     log.Information("Collect {Platform} - planned {Channels} ({Desc}) channels for update", plan.Platform, actualNew.Length, desc);
-    return plan with {ChannelPlans = plan.ChannelPlans.Concat(actualNew).KeyBy(c => c.Channel.ChannelId)};
+    return plan with { ChannelPlans = plan.ChannelPlans.Concat(actualNew).KeyBy(c => c.Channel.ChannelId) };
   }
 
-  public static ChannelUpdatePlan AsPlan(this Channel c) => new() {Channel = c};
+  public static ChannelUpdatePlan AsPlan(this Channel c) => new() { Channel = c };
 
   public static bool ForUpdate(this Channel c, string[] explicitSourceIds = null) {
     var sourceIds = explicitSourceIds?.ToHashSet();

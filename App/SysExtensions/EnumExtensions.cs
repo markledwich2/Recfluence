@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using SysExtensions.Reflection;
 
 //using Mutuo.SystemExtensions.Collections;
 
-namespace SysExtensions; 
+namespace SysExtensions;
 
 public static class EnumExtensions {
   static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, Enum>> StringToEnumCache = new();
@@ -19,7 +16,7 @@ public static class EnumExtensions {
 
   public static string EnumExplicitName<T>(this T value) where T : IConvertible {
     var fieldInfo = value.GetType().GetTypeInfo().GetField(value.ToString(CultureInfo.InvariantCulture));
-    var enumMember = (EnumMemberAttribute) fieldInfo.GetCustomAttributes(typeof(EnumMemberAttribute), inherit: false).FirstOrDefault();
+    var enumMember = (EnumMemberAttribute)fieldInfo.GetCustomAttributes(typeof(EnumMemberAttribute), inherit: false).FirstOrDefault();
     return enumMember?.Value;
   }
 
@@ -31,7 +28,7 @@ public static class EnumExtensions {
   }
 
   static EnumMemberAttribute EnumMemberAttribute(Enum value, Type t) =>
-    (EnumMemberAttribute) t.GetField(value.ToString()).GetCustomAttribute(typeof(EnumMemberAttribute), inherit: false);
+    (EnumMemberAttribute)t.GetField(value.ToString()).GetCustomAttribute(typeof(EnumMemberAttribute), inherit: false);
 
   /// <summary>Converts the enum value to a string, taking into account the EnumMember attribute. Uses convertible because
   ///   that is the closes type that can be used to Enum and don't want too many extensions on object</summary>
@@ -42,19 +39,19 @@ public static class EnumExtensions {
 
   public static bool TryParseEnum<T>(this string s, out T value) where T : Enum {
     var (found, enumValue) = InnerParseEnum(s, typeof(T));
-    value = found ? (T) enumValue : default;
+    value = found ? (T)enumValue : default;
     return found;
   }
 
   public static T ParseEnum<T>(this string s, bool ensureFound = true, Type t = null, Func<Enum, string> defaultEnumString = null) where T : Enum {
     t ??= typeof(T);
-    return (T) ParseEnum(s, t, ensureFound, defaultEnumString);
+    return (T)ParseEnum(s, t, ensureFound, defaultEnumString);
   }
 
   public static object ParseEnum(this string s, Type t, bool ensureFound = true, Func<Enum, string> defaultEnumString = null) {
     var (found, enumValue) = InnerParseEnum(s, t, defaultEnumString);
     if (ensureFound && !found) throw new InvalidCastException($"Unable to cast ({s}) to {t.Name}");
-    return enumValue ?? (Enum) t.DefaultForType();
+    return enumValue ?? (Enum)t.DefaultForType();
   }
 
   static (bool found, Enum value) InnerParseEnum(string s, Type t, Func<Enum, string> defaultEnumString = null) {

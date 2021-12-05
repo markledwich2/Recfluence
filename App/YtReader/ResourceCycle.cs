@@ -1,6 +1,6 @@
 ﻿using Nito.AsyncEx;
 
-namespace YtReader; 
+namespace YtReader;
 
 class ResourceCycle<T, TCfg> : IAsyncDisposable
   where TCfg : class

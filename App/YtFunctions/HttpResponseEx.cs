@@ -8,7 +8,7 @@ using SysExtensions;
 using SysExtensions.Serialization;
 using static System.Net.HttpStatusCode;
 
-namespace YtFunctions; 
+namespace YtFunctions;
 
 public static class HttpResponseEx {
   public static HttpResponseData JsonResponse(this HttpRequestData req, object data, HttpStatusCode status = OK,

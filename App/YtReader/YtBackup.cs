@@ -4,7 +4,7 @@ using Microsoft.Azure.Storage.DataMovement;
 using Mutuo.Etl.Blob;
 using YtReader.Store;
 
-namespace YtReader; 
+namespace YtReader;
 
 public class YtBackup {
   readonly BlobStores Stores;
@@ -15,8 +15,8 @@ public class YtBackup {
     var destPath = SPath.Relative("db2", DateTime.UtcNow.FileSafeTimestamp());
     log.Information("Backup {Path} - started", destPath);
 
-    var source = (AzureBlobFileStore) Stores.Store(DataStoreType.DbStage);
-    var dest = (AzureBlobFileStore) Stores.Store(DataStoreType.Backup);
+    var source = (AzureBlobFileStore)Stores.Store(DataStoreType.DbStage);
+    var dest = (AzureBlobFileStore)Stores.Store(DataStoreType.Backup);
     if (dest == null) {
       log.Information("not running backup. Normal for pre-release");
       return;
@@ -43,7 +43,7 @@ public class YtBackup {
     };
 
     var (res, dur) = await TransferManager.CopyDirectoryAsync(sourceBlob, destBlob,
-      CopyMethod.ServiceSideSyncCopy, new() {Recursive = true},
+      CopyMethod.ServiceSideSyncCopy, new() { Recursive = true },
       context, CancellationToken.None).WithDuration();
 
     if (res.NumberOfFilesFailed > 0)

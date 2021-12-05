@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace SysExtensions.Text; 
+﻿namespace SysExtensions.Text;
 // Wrote by Alois de Gouvello https://github.com/aloisdg
 
 // The MIT License (MIT)
@@ -36,15 +32,15 @@ public static class MetricNumeralExtensions {
 
   /// <summary>Symbols is a list of every symbols for the Metric system.</summary>
   static readonly List<char>[] Symbols = {
-    new List<char> {'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'},
-    new List<char> {'m', 'μ', 'n', 'p', 'f', 'a', 'z', 'y'}
+    new List<char> { 'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y' },
+    new List<char> { 'm', 'μ', 'n', 'p', 'f', 'a', 'z', 'y' }
   };
 
   /// <summary>Names link a Metric symbol (as key) to its name (as value).</summary>
   /// <remarks>We dont support : {'h', "hecto"}, {'da', "deca" }, // !string {'d', "deci" }, {'c', "centi"},</remarks>
   static readonly Dictionary<char, string> Names = new Dictionary<char, string> {
-    {'Y', "yotta"}, {'Z', "zetta"}, {'E', "exa"}, {'P', "peta"}, {'T', "tera"}, {'G', "giga"}, {'M', "mega"}, {'k', "kilo"},
-    {'m', "milli"}, {'μ', "micro"}, {'n', "nano"}, {'p', "pico"}, {'f', "femto"}, {'a', "atto"}, {'z', "zepto"}, {'y', "yocto"}
+    { 'Y', "yotta" }, { 'Z', "zetta" }, { 'E', "exa" }, { 'P', "peta" }, { 'T', "tera" }, { 'G', "giga" }, { 'M', "mega" }, { 'k', "kilo" },
+    { 'm', "milli" }, { 'μ', "micro" }, { 'n', "nano" }, { 'p', "pico" }, { 'f', "femto" }, { 'a', "atto" }, { 'z', "zepto" }, { 'y', "yocto" }
   };
 
   static MetricNumeralExtensions() {
@@ -72,8 +68,7 @@ public static class MetricNumeralExtensions {
 
   /// <summary>Converts a number into a valid and Human-readable Metric representation.</summary>
   /// <remarks>Inspired by a snippet from Thom Smith. See
-  ///   <a href="http://stackoverflow.com/questions/12181024/formatting-a-number-with-a-metric-prefix">this link</a> for
-  ///   more.</remarks>
+  ///   <a href="http://stackoverflow.com/questions/12181024/formatting-a-number-with-a-metric-prefix">this link</a> for more.</remarks>
   /// <param name="input">Number to convert to a Metric representation.</param>
   /// <param name="hasSpace">True will split the number and the symbol with a whitespace.</param>
   /// <param name="useSymbol">True will use symbol instead of name</param>
@@ -86,12 +81,11 @@ public static class MetricNumeralExtensions {
   /// </example>
   /// <returns>A valid Metric representation</returns>
   public static string ToMetric(this int input, string format = null, bool hasSpace = false, bool useSymbol = true) =>
-    ((double) input).ToMetric(format, hasSpace, useSymbol);
+    ((double)input).ToMetric(format, hasSpace, useSymbol);
 
   /// <summary>Converts a number into a valid and Human-readable Metric representation.</summary>
   /// <remarks>Inspired by a snippet from Thom Smith. See
-  ///   <a href="http://stackoverflow.com/questions/12181024/formatting-a-number-with-a-metric-prefix">this link</a> for
-  ///   more.</remarks>
+  ///   <a href="http://stackoverflow.com/questions/12181024/formatting-a-number-with-a-metric-prefix">this link</a> for more.</remarks>
   /// <param name="input">Number to convert to a Metric representation.</param>
   /// <param name="hasSpace">True will split the number and the symbol with a whitespace.</param>
   /// <param name="useSymbol">True will use symbol instead of name</param>
@@ -162,7 +156,7 @@ public static class MetricNumeralExtensions {
   /// <param name="useSymbol">True will use symbol instead of name</param>
   /// <returns>A number in a Metric representation</returns>
   static string BuildRepresentation(double input, bool hasSpace, bool useSymbol, string format) {
-    var exponent = (int) Math.Floor(Math.Log10(Math.Abs(input)) / 3);
+    var exponent = (int)Math.Floor(Math.Log10(Math.Abs(input)) / 3);
     return exponent.Equals(0)
       ? format == null ? input.ToString() : input.ToString(format)
       : BuildMetricRepresentation(input, exponent, hasSpace, useSymbol, format);

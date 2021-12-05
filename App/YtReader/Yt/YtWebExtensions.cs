@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using YtReader.Store;
 
-namespace YtReader.Yt; 
+namespace YtReader.Yt;
 
 public enum AgoUnit {
   Minute,
@@ -45,7 +45,7 @@ public static class YtWebExtensions {
 
   static readonly Regex SubRegex = new("(?'num'\\d+\\.?\\d*)(?'unit'[BMK]?)", RegexOptions.Compiled);
 
-  public static long? ParseSubs(this string s) {
+  public static ulong? ParseSubs(this string s) {
     if (s.NullOrEmpty()) return null;
     var m = SubRegex.Match(s);
     var subs = m.Groups["num"].Value.ParseDecimal();
@@ -55,7 +55,7 @@ public static class YtWebExtensions {
       "B" => 1_000_000_000,
       _ => 1
     };
-    return (long) Math.Round(subs * multiplier);
+    return (ulong)Math.Round(subs * multiplier);
   }
 
   /// <summary>Finds the text for a path. Either from simpleText or runs[0].text</summary>

@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO.Compression;
-using System.Linq;
+﻿using System.IO.Compression;
 using System.Reflection;
-using System.Threading.Tasks;
-using SysExtensions.Fluent.IO;
+using System.Text;
+using SysExtensions.Collections;
 using SysExtensions.Text;
+using static System.Environment.SpecialFolder;
+using static System.Environment.SpecialFolderOption;
 using SystemIO = System.IO;
 
-namespace SysExtensions.IO; 
+namespace SysExtensions.IO;
 
 public static class PathExtensions {
-  public static FPath AsPath(this string path) => new(path);
+  public static FPath AsFPath(this string path) => new(path);
 
   public static IEnumerable<FPath> EnumerateParents(this FPath path, bool includeIfDir) {
     if (path.IsDirectory && includeIfDir)
@@ -24,14 +23,12 @@ public static class PathExtensions {
     }
   }
 
-  public static FPath Files(this FPath p, string searchPattern) =>
-    p.Files(searchPattern, recursive: false);
-
-  public static bool IsEmtpy(this FPath path) => path == null || path.ToStringArray().Length == 0;
-  public static bool HasValue(this FPath path) => !IsEmtpy(path);
+  public static bool IsEmpty(this FPath path) => path == null || path.Tokens.None();
+  public static bool HasValue(this FPath path) => !IsEmpty(path);
 
   public static async Task<string> ReadTextAsync(this FPath path) {
-    using (var sr = path.OpenText()) return await sr.ReadToEndAsync();
+    using var sr = path.OpenText();
+    return await sr.ReadToEndAsync();
   }
 
   public static async Task<byte[]> ReadBytesAsync(this FPath path) {
@@ -51,13 +48,13 @@ public static class PathExtensions {
     path.Parent(p => p.Tokens.Last() == directoryName);
 
   public static FPath FileOfParent(this FPath path, string searchPattern, bool includeIfDir = false) =>
-    path.EnumerateParents(includeIfDir).Select(p => p.Files(searchPattern, recursive: false)).FirstOrDefault(f => !f.IsEmtpy());
+    path.EnumerateParents(includeIfDir).SelectMany(p => p.Files(searchPattern)).FirstOrDefault(f => !f.IsEmpty());
 
   public static FPath DirOfParent(this FPath path, string searchPattern, bool includeIfDir = false) =>
-    path.EnumerateParents(includeIfDir).Select(p => p.Directories(searchPattern, recursive: false)).FirstOrDefault(d => !d.IsEmtpy());
+    path.EnumerateParents(includeIfDir).SelectMany(p => p.Directories(searchPattern)).FirstOrDefault(d => !d.IsEmpty());
 
   public static FPath ParentWithFile(this FPath path, string filePattern, bool includeIfDir = false) =>
-    path.EnumerateParents(includeIfDir).FirstOrDefault(p => p.Files(filePattern, recursive: false).HasValue());
+    path.EnumerateParents(includeIfDir).FirstOrDefault(p => p.Files(filePattern).Any());
 
   /// <summary>Finds the first parent that satisfies the predicate</summary>
   public static FPath Parent(this FPath path, Predicate<FPath> predicate) =>
@@ -66,23 +63,7 @@ public static class PathExtensions {
   /// <summary>Finds the child directory of the given name within any of the parent directories (e.g. like node_modules
   ///   resolution)</summary>
   public static IEnumerable<FPath> SubDirectoriesOfParent(this FPath path, string directoryName, bool includeIfDir) =>
-    path.EnumerateParents(includeIfDir).Select(p => p.Directories(directoryName)).Where(p => !p.IsEmtpy());
-
-  public static FPath Directories(this FPath p, Predicate<FPath> predicate, bool recursive, bool shortcutRecursion) {
-    if (!recursive || !shortcutRecursion) return p.Directories(predicate, recursive);
-
-    var result = new FPath();
-    var dirQueue = new Queue<FPath>();
-    dirQueue.Enqueue(p);
-    while (dirQueue.Count > 0) {
-      var dir = dirQueue.Dequeue();
-      foreach (var childDir in dir.Directories(predicate, recursive: false)) {
-        dirQueue.Enqueue(childDir);
-        result = result.Add(childDir);
-      }
-    }
-    return result;
-  }
+    path.EnumerateParents(includeIfDir).SelectMany(p => p.Directories(directoryName)).Where(p => !p.IsEmpty());
 
   /// <summary>Returns an absolute path with the given one inside the app data folder with the given app name</summary>
   /// <param name="relativePath"></param>
@@ -91,8 +72,7 @@ public static class PathExtensions {
   public static FPath InAppData(this FPath relativePath, string appName) {
     if (relativePath.IsRooted)
       throw new InvalidOperationException("The given path must be relative");
-
-    return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData).AsPath().Combine(appName).Combine(relativePath);
+    return Environment.GetFolderPath(LocalApplicationData, DoNotVerify).AsFPath().Combine(appName).Combine(relativePath);
   }
 
   public static FPath PathWithoutExtension(this FPath pathToMsql) => pathToMsql.Parent().Combine(pathToMsql.FileNameWithoutExtension);
@@ -100,11 +80,18 @@ public static class PathExtensions {
   public static SystemIO.FileInfo FileInfo(this FPath path) => new(path.FullPath);
 
   public static FPath LocalAssemblyPath(this Type type)
-    => new Uri(type.GetTypeInfo().Assembly.Location).LocalPath.AsPath();
+    => new Uri(type.GetTypeInfo().Assembly.Location).LocalPath.AsFPath();
 
-  static FPath Directories(this FPath p, string searchPattern) => p.Directories(searchPattern, recursive: false);
+  static IEnumerable<FPath> Directories(this FPath p, string searchPattern) => p.Directories(searchPattern: searchPattern);
 
   public static void ExtractZip(this FPath zipFile, FPath dir) => ZipFile.ExtractToDirectory(zipFile.FullPath, dir.FullPath);
 
   public static SPath ToStringPath(this FPath path) => path.IsRooted ? SPath.Absolute(path.Tokens) : SPath.Relative(path.Tokens);
+
+  public static FPath CreateFile(this FPath file, string content, Encoding encoding = default) {
+    encoding ??= Encoding.UTF8;
+    using var st = file.Open(SystemIO.FileMode.Create, SystemIO.FileAccess.Write);
+    st.Write(encoding.GetBytes(content));
+    return file;
+  }
 }

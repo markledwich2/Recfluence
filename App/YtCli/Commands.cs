@@ -18,22 +18,17 @@ using Serilog;
 using SysExtensions;
 using SysExtensions.Build;
 using SysExtensions.Collections;
-using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
-using YtReader.Airtable;
-using YtReader.AmazonSite;
 using YtReader.Db;
-using YtReader.Reddit;
 using YtReader.Search;
 using YtReader.SimpleCollect;
 using YtReader.Store;
-using YtReader.Transcribe;
 using YtReader.Yt;
 using static YtCli.UpdateCmd;
 
-namespace YtCli; 
+namespace YtCli;
 
 [Command("channel-info", Description = "Show channel information (ID,Name) given a video ID")]
 public class ChannelInfoCmd : ICommand {
@@ -189,6 +184,9 @@ Available actions:  Collect|BitChuteCollect|RumbleCollect|Stage|Dataform|Search|
   [CommandOption("ds-video-view", Description = "a view name to get a custom list of videos to update")]
   public string DataScriptVideosView { get; set; }
 
+  [CommandOption("limit", shortName: 'l', Description = "limits the number of items processed if applicable the task. E.g. this limits channels collected")]
+  public int? Limit { get; set; }
+
   protected override string GroupName => "update";
 
   protected override async ValueTask ExecuteLocal(IConsole console) {
@@ -197,6 +195,7 @@ Available actions:  Collect|BitChuteCollect|RumbleCollect|Stage|Dataform|Search|
     var options = new UpdateOptions {
       Actions = Actions?.UnJoin('|'),
       Collect = new() {
+        Limit = Limit,
         LimitChannels = Channels?.UnJoin('|'),
         Parts = ParseEnums<CollectPart>(Parts),
         ExtraParts = ParseEnums<ExtraPart>(ExtraParts),
@@ -281,7 +280,7 @@ VideoChannelNamed: name of an sql statement in CollectListSql.cs
       ExtraParts = ParseEnums<ExtraPart>(ExtraParts),
       LimitChannels = Channels?.UnJoin('|'),
       StaleAgo = StaleHrs?.Hours() ?? 2.Days(),
-      Args = Args.Do(JObject.Parse),
+      Args = Args.Dot(JObject.Parse),
       Platforms = ParseEnums<Platform>(Platforms),
       Limit = Limit,
       From = From?.TryParseDateExact("yyyy-MM-dd", DateTimeStyles.AssumeUniversal)?.ToUniversalTime()
@@ -308,11 +307,11 @@ public class BuildContainerCmd : ICommand {
   public async ValueTask ExecuteAsync(IConsole console) {
     var sw = Stopwatch.StartNew();
     var slnName = "Recfluence.sln";
-    var sln = FPath.Current.ParentWithFile(slnName, includeIfDir: true);
+    var sln = FPath.WorkingDir.ParentWithFile(slnName, includeIfDir: true);
     if (sln == null) throw new CommandException($"Can't find {slnName} file to organize build");
     var image = $"{Cfg.Registry}/{Cfg.ImageName}";
 
-    var tagVersions = new List<string> {Version.ToString()};
+    var tagVersions = new List<string> { Version.ToString() };
     if (Version.Prerelease.NullOrEmpty())
       tagVersions.Add("latest");
 
@@ -322,8 +321,8 @@ public class BuildContainerCmd : ICommand {
     var shell = new Shell(o => o.WorkingDirectory(appDir));
 
     shell.Run("docker", "login", "--username", Cfg.RegistryCreds.Name, "--password", Cfg.RegistryCreds.Secret, Cfg.Registry);
-    List<object> args = new() {"build"};
-    args.AddRange(tagVersions.SelectMany(t => new[] {"-t", $"{image}:{t}"}));
+    List<object> args = new() { "build" };
+    args.AddRange(tagVersions.SelectMany(t => new[] { "-t", $"{image}:{t}" }));
     args.AddRange("--build-arg", $"SEMVER={Version}", "--build-arg", $"ASSEMBLY_SEMVER={Version.MajorMinorPatch()}", ".");
     await RunShell(shell, Log, "docker", args.ToArray());
 
@@ -355,87 +354,6 @@ public class BuildContainerCmd : ICommand {
   }
 }
 
-[Command("pushshift", Description = "Loads data from pushshift. A fee elastic search database for reddit")]
-public record PushshiftCmd(ILogger Log, Pushshift Push) : ICommand {
-  public async ValueTask ExecuteAsync(IConsole console) {
-    await Push.Process(Log);
-    Log.Information("Pulling of posts from pushshift complete");
-  }
-}
-
-[Command("airtable", Description = "Merge rows matching a filter into an airtable sheet for manual labeling")]
-public record AirtableCmd(ILogger Log, AtLabel Covid) : ICommand {
-  [CommandParameter(0, Description = "The name of the narrative to sync with airtable. e.g. (Activewear|Vaccine)")]
-  public string QueryName { get; set; }
-
-  [CommandParameter(1, Description = "The base id from airtable. To get this, open https://airtable.com/api and select your base")]
-  public string Base { get; set; }
-
-  [CommandOption("parts", shortName: 'p', Description = "| separated airtable to updated (Mention|Channel|Video)")]
-  public string Parts { get; set; }
-
-  [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
-  public int? Limit { get; set; }
-
-  [CommandOption("videos", shortName: 'v', Description = "| separated videos to limit update to")]
-  public string Videos { get; set; }
-
-  [CommandOption("mode", shortName: 'm', Description = "| separated videos to limit update to")]
-  public AtUpdateMode Mode { get; set; }
-
-  public async ValueTask ExecuteAsync(IConsole console) {
-    await Covid.MargeIntoAirtable(new(Base, QueryName, Limit, ParseEnums<AtLabelPart>(Parts), Videos?.UnJoin('|'), Mode), Log);
-    Log.Information("CovidNarrativeCmd - complete");
-  }
-}
-
-[Command("amazon", Description = "Scrapes amazon product link information")]
-public record AmazonCmd(ILogger Log, AmazonWeb Amazon) : ICommand {
-  [CommandOption("query", shortName: 'q', Description = "The name of the query to sync with airtable")]
-  public string MentionQuery { get; set; }
-
-  [CommandOption("limit", shortName: 'l', Description = "Max rows to update in airtable")]
-  public int? Limit { get; set; }
-
-  [CommandOption("force-local", Description = "if true, won't launch any containers to process")]
-  public bool ForceLocal { get; set; }
-
-  public async ValueTask ExecuteAsync(IConsole console) {
-    await Amazon.GetProductLinkInfo(Log, console.RegisterCancellationHandler(), MentionQuery, Limit, ForceLocal);
-    Log.Information("amazon - complete");
-  }
-}
-
-[Command("transcribe", Description = "download videos and transcribe them. maybe should be part of update cmd once done")]
-public record TranscribeCmd(ILogger Log, Transcriber Transcriber, YtContainerRunner ContainerRunner, ContainerCfg ContainerCfg)
-  : ContainerCommand(ContainerCfg, ContainerRunner, Log) {
-  [CommandOption("platform")] public Platform? Platform { get; set; }
-
-  [CommandOption("limit", shortName: 'l')]
-  public int? Limit { get; set; }
-
-  [CommandOption("query", shortName: 'q')]
-  public string QueryName { get; set; }
-
-  [CommandOption("parts", shortName: 'p')]
-  public string Parts { get; set; }
-
-  [CommandOption("mode", shortName: 'm', Description = "| separated videos to limit update to")]
-  public TranscribeMode Mode { get; set; }
-
-  [CommandOption("source-ids", Description = "| seperated list of video source_id's to update")]
-  public string SourceIds { get; set; }
-
-  protected override string GroupName => "transcribe";
-
-  protected override async ValueTask ExecuteLocal(IConsole console) {
-    await Transcriber.Transcribe(
-      new(Platform, Limit, QueryName, ParseEnums<TranscribeParts>(Parts), Mode, SourceIds?.UnJoin('|')),
-      Log, console.RegisterCancellationHandler());
-    Log.Information("Completed downloading videos");
-  }
-}
-
 [Command("sync-description", Description = "read descriptions from a dataform project and update tables & views to add those")]
 public record SyncDescription(ILogger Log, DataformDescriptions Desc) : ICommand {
   [CommandOption("tables", shortName: 't', Description = "| separated list of table names to update descriptions for")]
@@ -444,6 +362,6 @@ public record SyncDescription(ILogger Log, DataformDescriptions Desc) : ICommand
   public async ValueTask ExecuteAsync(IConsole console) {
     await console.Output.WriteLineAsync("enter a personal access token for GitHub:");
     var token = await console.Input.ReadLineAsync();
-    await Desc.Sync(new() {AccessToken = token, TableNames = TableNames?.UnJoin('|')}, Log).Swallow(e => Log.Error(e, "unhandled error"));
+    await Desc.Sync(new() { AccessToken = token, TableNames = TableNames?.UnJoin('|') }, Log).Swallow(e => Log.Error(e, "unhandled error"));
   }
 }

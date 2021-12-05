@@ -10,7 +10,7 @@ using Semver;
 using YtReader.Store;
 using YtReader.Yt;
 
-namespace YtReader; 
+namespace YtReader;
 
 public class UserScrapeCfg {
   public ContainerCfg Container { get; set; } = new() {
@@ -64,7 +64,7 @@ public class UserScrape {
       ("env", RootCfg.Env),
       ("branch_env", Version.Prerelease)
     };
-    var args = new[] {"app.py"};
+    var args = new[] { "app.py" };
     if (init)
       args = args.Concat("-i").ToArray();
 
@@ -73,8 +73,8 @@ public class UserScrape {
       await RunTrial(cancel, trial, env, args, accounts: null, log);
     }
     else {
-      var blobs = await Store.List("userscrape/run/incomplete_trial", allDirectories: false, log).SelectManyList();
-      var incompleteTrials = (await blobs.BlockMapList(f => Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip: false)))
+      var blobs = await Store.List("userscrape/run/incomplete_trial").SelectManyList();
+      var incompleteTrials = (await blobs.BlockMapList(f => Store.GetState<IncompleteTrial>(f.Path.WithoutExtension(), zip: false)))
         .Where(t => limitAccounts == null || limitAccounts.Any(a => t.accounts?.Contains(a) == true)).ToArray();
 
       log.Information("UserScrape - about to run {Trials} incomplete trials", incompleteTrials.Length);
@@ -124,15 +124,15 @@ public class UserScrape {
   }
 
   public async Task UpgradeIncompleteTrials(ILogger log) {
-    var inCfg = await Store.List("userscrape/run/cfg", allDirectories: true, log).SelectMany()
+    var inCfg = await Store.List("userscrape/run/cfg", allDirectories: true).SelectMany()
       .Where(f => f.Path.Extensions.Last() == "json" && f.Modified > new DateTimeOffset(new DateTime(year: 2020, month: 9, day: 17), TimeSpan.Zero))
-      .SelectAwait(async f => await Store.Get<IncompleteTrial>(f.Path.WithoutExtension(), zip: false))
+      .SelectAwait(async f => await Store.GetState<IncompleteTrial>(f.Path.WithoutExtension(), zip: false))
       .ToListAsync();
 
     await inCfg.BlockDo(async cfg => {
       var name = $"userscrape/run/incomplete_trial/{cfg.trial_id}.json";
       var stream = cfg.ToJsonStream(
-        new() {Formatting = Formatting.None},
+        new() { Formatting = Formatting.None },
         new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: false)); // python library balks at BOM encoding by default
       await Store.Save(name, stream);
       log.Information("upgraded incomplete trial to {File}", name);

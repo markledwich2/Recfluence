@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Collections.Specialized;
-using System.Linq;
 using System.Linq.Expressions;
 
-namespace SysExtensions.Collections; 
+namespace SysExtensions.Collections;
 
 public static class CollectionExtensions {
   public static void AddRange<T>(this ICollection<T> list, IEnumerable<T> items) {
@@ -18,7 +15,7 @@ public static class CollectionExtensions {
       list.TryAdd(item);
   }
 
-  public static void AddRange<T>(this ICollection<T> list, params T[] items) => list.AddRange((IEnumerable<T>) items);
+  public static void AddRange<T>(this ICollection<T> list, params T[] items) => list.AddRange((IEnumerable<T>)items);
 
   public static void AddRange<TKey, TValue>(this IDictionary<TKey, TValue> dic, IEnumerable<ValueTuple<TKey, TValue>> values) {
     foreach (var tuple in values)
@@ -59,7 +56,10 @@ public static class CollectionExtensions {
   public static IKeyedCollection<K, V> KeyBy<K, V, U>(this IEnumerable<U> list, Func<U, V> getValue,
     Expression<Func<V, K>> getKey) => new KeyedCollection<K, V>(getKey, list.Select(getValue));
 
-  public static IReadOnlyCollection<T> ToReadOnly<T>(this IEnumerable<T> items) => items.ToList();
+  public static IReadOnlyCollection<T> AsReadOnly<T>(this IEnumerable<T> items) => items switch {
+    IReadOnlyCollection<T> ro => ro,
+    _ => items.ToArray()
+  };
 
   public static IEnumerable<(string Name, string Value)> ToTuples(this NameValueCollection items) =>
     from key in items.Cast<string>()

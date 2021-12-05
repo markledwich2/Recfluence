@@ -1,10 +1,9 @@
-﻿using System;
-using System.Reflection;
+﻿using System.Reflection;
 using Humanizer;
 using Newtonsoft.Json;
 using SysExtensions.Reflection;
 
-namespace SysExtensions.Serialization; 
+namespace SysExtensions.Serialization;
 
 /// <summary>An alternative string enum converter that ignores explicitly named enums and allows different types of casing</summary>
 public class StringEnumConverterExtended : JsonConverter {
@@ -43,7 +42,7 @@ public class StringEnumConverterExtended : JsonConverter {
       return;
     }
 
-    var e = (Enum) value;
+    var e = (Enum)value;
     var name = e.EnumExplicitName() ?? DefaultEnumString(e);
     writer.WriteValue(name);
   }

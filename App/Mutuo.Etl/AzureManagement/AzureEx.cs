@@ -4,7 +4,7 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Mutuo.Etl.Pipe;
 using Az = Microsoft.Azure.Management.Fluent.Azure;
 
-namespace Mutuo.Etl.AzureManagement; 
+namespace Mutuo.Etl.AzureManagement;
 
 public static class AzureEx {
   public static IAzure GetAzure(this PipeAzureCfg cfg) {

@@ -4,7 +4,7 @@ using CliFx.Infrastructure;
 using Mutuo.Etl.Pipe;
 using static YtReader.ContainerCommand.Options;
 
-namespace YtReader; 
+namespace YtReader;
 
 public record YtContainerRunner(AzureContainers Az, ContainerCfg ContainerCfg, PipeAppCtx Ctx, CliEntry Cli, ILogger Log) {
   public async Task Run(string groupName, string fullImageName = null, CancellationToken cancel = default, bool returnOnStart = false,
@@ -22,16 +22,16 @@ public record YtContainerRunner(AzureContainers Az, ContainerCfg ContainerCfg, P
   }
 }
 
-/// <summary>A command that has the option to run on ACS instead. Nice to get help/configuration context on the command
-///   line than using AzCli</summary>
+/// <summary>A command that has the option to run on ACS instead. Nice to get help/configuration context on the command line
+///   than using AzCli</summary>
 public abstract record ContainerCommand(ContainerCfg ContainerCfg, YtContainerRunner Runner, ILogger Log) : ICommand {
   public static class Options {
     public const char   RunInContainer = 'z';
     public const string Tag            = "container-tag";
     public const string GroupName      = "container-name";
 
-    public static readonly HashSet<string> AllFlags = new[] {RunInContainer}.Select(p => $"-{p}").ToHashSet();
-    public static readonly HashSet<string> AllArgs  = new[] {Tag, GroupName}.Select(p => $"--{p}").ToHashSet();
+    public static readonly HashSet<string> AllFlags = new[] { RunInContainer }.Select(p => $"-{p}").ToHashSet();
+    public static readonly HashSet<string> AllArgs  = new[] { Tag, GroupName }.Select(p => $"--{p}").ToHashSet();
   }
 
   [CommandOption(RunInContainer, IsRequired = false, Description = "If specified, will run the tool in an azure container and return after launch")]

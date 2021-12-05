@@ -1,22 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Threading.Tasks;
-using Humanizer;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.IO;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 
-namespace Mutuo.Etl.Blob; 
+namespace Mutuo.Etl.Blob;
 
 public class OptimiseCfg {
-  public long TargetBytes     { get; set; } = (long) 200.Megabytes().Bytes;
+  public long TargetBytes     { get; set; } = (long)200.Megabytes().Bytes;
   public int  ParallelFiles   { get; set; } = 4;
   public int  ParallelBatches { get; set; } = 3;
 }
@@ -28,6 +17,16 @@ public record OptimiseBatch {
 
 public static class JsonlStoreExtensions {
   public const string Extension = "jsonl.gz";
+
+  public static async IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>>
+    JsonStoreFiles(this ISimpleFileStore store, SPath path, bool allDirectories = false) {
+    var allFiles = await store.List(path, allDirectories).ToArrayAsync();
+    foreach (var b in allFiles.Select(b => b
+                 .Where(p => !p.Path.Name.StartsWith("_") && p.Path.Name.EndsWith(Extension))
+                 .Select(StoreFileMd.FromFileItem).ToArray())
+               .Select(dummy => (IReadOnlyCollection<StoreFileMd>)dummy))
+      yield return b;
+  }
 
   public static async IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(this ISimpleFileStore store, SPath path, bool allDirectories = false) {
     await foreach (var p in store.List(path, allDirectories))
@@ -60,7 +59,7 @@ public static class JsonlStoreExtensions {
     log?.Debug("Optimise {Path} - read {Files} files across {Partitions} partitions in {Duration}",
       rootPath, byDir.Sum(p => p.Count()), byDir.Length, duration.HumanizeShort());
 
-    var optimiseRes = await byDir.BlockMap(p => Optimise(store, p.Key, p, cfg, log), cfg.ParallelFiles).ToArrayAsync();
+    var optimiseRes = await byDir.BlockDo(p => Optimise(store, p.Key, p, cfg, log), cfg.ParallelFiles).ToArrayAsync();
     var optimiseIn = optimiseRes.Sum(r => r.optimisedIn);
     var optimiseOut = optimiseRes.Sum(r => r.optimisedOut);
 
@@ -118,7 +117,7 @@ public static class JsonlStoreExtensions {
       currentBatch.Clear();
     }
 
-    return optimisePlan.Select(p => new OptimiseBatch {Dest = destPath, Files = p}).ToArray();
+    return optimisePlan.Select(p => new OptimiseBatch { Dest = destPath, Files = p }).ToArray();
   }
 
   /// <summary>Join ts (timestamp) contiguous files together until they are > MaxBytes</summary>
@@ -146,11 +145,11 @@ public static class JsonlStoreExtensions {
   static async Task<SPath> JoinFiles(ISimpleFileStore store, IReadOnlyCollection<StoreFileMd> toOptimise, SPath destPath, int parallel,
     ILogger log) {
     var optimisedFileName = FilePath(destPath, toOptimise.Last().Ts);
-    var localTmpDir = Path.GetTempPath().AsPath().Combine("Mutuo.Etl", "JoinFiles", ShortGuid.Create(8));
+    var localTmpDir = Path.GetTempPath().AsFPath().Combine("Mutuo.Etl", "JoinFiles", ShortGuid.Create(8));
 
     localTmpDir.EnsureDirectoryExists();
 
-    var inFiles = await toOptimise.BlockMap(async s => {
+    var inFiles = await toOptimise.BlockDo(async s => {
       var inPath = localTmpDir.Combine($"{ShortGuid.Create(6)}.{s.Path.Name}"); // flatten dir structure locally. ensure unique with GUID
       var dur = await store.LoadToFile(s.Path, inPath, log).WithDuration();
       log.Debug("Optimise {Path} - loaded file {SourceFile} for optimisation in {Duration}", destPath, s.Path, dur.HumanizeShort());
@@ -173,8 +172,8 @@ public static class JsonlStoreExtensions {
 
     // when in-place, this is dirty if we fail now. There is no transaction capability in cloud storage, so downstream process must handle duplicates
     // successfully staged files, delete from land. Incremental using TS will work without delete, but it's more efficient to delete process landed files.
-    await toOptimise.BlockDo(f => store.Delete(f.Path), parallel)
-      .WithWrappedException(e => "Failed to delete optimised files. Duplicate records need to be handled downstream");
+    await toOptimise.BlockDo(async f => { await store.Delete(f.Path); }, parallel)
+      .WithWrappedException(_ => "Failed to delete optimised files. Duplicate records need to be handled downstream");
     log.Debug("Optimise {Path} - deleted {Files} that were optimised into {OptimisedFile}", destPath, toOptimise.Count, optimisedFileName);
 
     localTmpDir.Delete(recursive: true); // delete local tmp files

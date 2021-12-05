@@ -1,6 +1,7 @@
 ﻿## How data is stored in blob storage ##
 
 Example un-partitioned land & stage store
+
 ```
 search
   landing
@@ -11,6 +12,7 @@ search
 ```
 
 Example partitions land & stage store
+
 ```
 captions
   landing
@@ -29,6 +31,7 @@ captions
 ```
 
 Example parititioned store
+
 ```
     ch1
       2020-01-01_14_20_10.jsonl.gz 

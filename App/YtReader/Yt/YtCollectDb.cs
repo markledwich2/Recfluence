@@ -5,15 +5,16 @@ using YtReader.Store;
 
 // ReSharper disable InconsistentNaming
 
-namespace YtReader.Yt; 
+namespace YtReader.Yt;
 
 public record YtCollectDbCtx(YtCollectCfg YtCfg, ILoggedConnection<IDbConnection> Db, ILogger Log) : CollectDbCtx(Db, Platform.YouTube, YtCfg);
 
 public record ChannelUpdatePlan {
   public Channel           Channel           { get; set; }
-  public UpdateChannelType Update            { get; set; }
+  public ChannelUpdateType ChannelUpdate     { get; set; }
   public DateTime?         VideosFrom        { get; set; }
   public DateTime?         LastVideoUpdate   { get; set; }
+  public DateTime?         LastExtraUpdate   { get; set; }
   public DateTime?         LastCaptionUpdate { get; set; }
   public DateTime?         LastCommentUpdate { get; set; }
   public DateTime?         LastRecUpdate     { get; set; }
@@ -30,7 +31,7 @@ join video_latest v on v.video_id = t.video_id
 where
  platform = 'YouTube'
  and not exists(select * from user where user_id = author_channel_id)
-{ctx.YtCfg.MaxMissingUsers.Do(i => $"limit {i}")}
+{ctx.YtCfg.MaxMissingUsers.Dot(i => $"limit {i}")}
 ");
 
   public static async Task<ChannelUpdatePlan[]> DiscoverChannelsViaRecs(this YtCollectDbCtx ctx) {
@@ -57,7 +58,7 @@ where
 )
 select *
 from s
-limit :remaining", new {remaining = ctx.YtCfg.DiscoverChannels});
+limit :remaining", new { remaining = ctx.YtCfg.DiscoverChannels });
 
     ctx.Log.Debug("Collect - found {Channels} new channels for discovery", toAdd.Count);
 
@@ -67,7 +68,7 @@ limit :remaining", new {remaining = ctx.YtCfg.DiscoverChannels});
           ChannelId = c.channel_id,
           ChannelTitle = c.channel_title
         },
-        Update = c.source == "review" ? UpdateChannelType.Standard : UpdateChannelType.Discover
+        ChannelUpdate = c.source == "review" ? ChannelUpdateType.Standard : ChannelUpdateType.Discover
       })
       .ToArray();
 

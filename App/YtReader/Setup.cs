@@ -21,22 +21,16 @@ using Serilog.Core;
 using Serilog.Core.Enrichers;
 using Serilog.Events;
 using SysExtensions.Configuration;
-using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Reflection;
-using YtReader.Airtable;
-using YtReader.AmazonSite;
 using YtReader.Db;
-using YtReader.Reddit;
 using YtReader.Search;
-using YtReader.SimpleCollect;
 using YtReader.Store;
-using YtReader.Transcribe;
 using YtReader.Web;
 using YtReader.Yt;
 using static Serilog.Events.LogEventLevel;
 
-namespace YtReader; 
+namespace YtReader;
 
 public static class Setup {
   public static string AppName      = "YouTubeNetworks";
@@ -44,7 +38,7 @@ public static class Setup {
 
   public static FPath SolutionDir     => typeof(Setup).LocalAssemblyPath().ParentWithFile("Recfluence.sln");
   public static FPath SolutionDataDir => typeof(Setup).LocalAssemblyPath().DirOfParent("Data");
-  public static FPath LocalDataDir    => "Data".AsPath().InAppData(AppName);
+  public static FPath LocalDataDir    => "Data".AsFPath().InAppData(AppName);
 
   public static Logger CreateLogger(string env, string app, VersionInfo version, AppCfg cfg = null) {
     var c = new LoggerConfiguration()
@@ -124,7 +118,7 @@ public static class Setup {
     var version = await versionProvider.Version();
 
     var secretStore = new AzureBlobFileStore(cfgRoot.AppStoreCs, CfgContainer, Logger.None);
-    var secretNames = cfgRoot.IsProd() ? new[] {"prod"} : new[] {"dev", version.Version.Prerelease};
+    var secretNames = cfgRoot.IsProd() ? new[] { "prod" } : new[] { "dev", version.Version.Prerelease };
     var secrets = new List<JObject>();
     foreach (var name in secretNames) {
       var fileName = $"{name}.appcfg.json";
@@ -135,10 +129,10 @@ public static class Setup {
     if (secrets == null) throw new InvalidOperationException("can't find secrets cfg file");
 
     var appJson = new JObject();
-    var mergeSettings = new JsonMergeSettings {MergeNullValueHandling = MergeNullValueHandling.Ignore, MergeArrayHandling = MergeArrayHandling.Concat};
+    var mergeSettings = new JsonMergeSettings { MergeNullValueHandling = MergeNullValueHandling.Ignore, MergeArrayHandling = MergeArrayHandling.Concat };
 
     void MergeAppJson(string path) {
-      var p = (basePath ?? ".").AsPath().Combine(path);
+      var p = (basePath ?? ".").AsFPath().Combine(path);
       if (!p.Exists) return;
       var newCfg = p.Read().ParseJObject();
       appJson.Merge(newCfg, mergeSettings);
@@ -148,7 +142,7 @@ public static class Setup {
     MergeAppJson($"{cfgRoot.Env}.appcfg.json");
     foreach (var j in secrets)
       appJson.Merge(j, mergeSettings);
-    MergeAppJson("local.appcfg.json");
+    MergeAppJson($"local.{cfgRoot.Env}.appcfg.json");
     appJson = appJson.JsonMerge(GetEnvironmentSettings<AppCfg>());
     var appCfg = appJson.ToObject<AppCfg>(JsonExtensions.DefaultSerializer);
 
@@ -187,7 +181,16 @@ public static class Setup {
   }
 
   static void PostLoadConfiguration(AppCfg appCfg, RootCfg cfgRoot, SemVersion version) {
-    appCfg.Snowflake.DbSuffix ??= version.Prerelease;
+    if (appCfg.Warehouse.Mode == WarehouseMode.Branch) {
+      if (cfgRoot.BranchEnv.NullOrEmpty()) throw new("WarehouseMode=Branch but no cfgRoot.BranchEnv set");
+      appCfg.Snowflake.DbSuffix = cfgRoot.BranchEnv;
+      appCfg.Snowflake.Role = appCfg.Warehouse.AdminRoles.First();
+    }
+    else {
+      if (!cfgRoot.IsProd())
+        appCfg.Snowflake.Role = appCfg.Warehouse.ReadRoles.First();
+    }
+    
     appCfg.Elastic.IndexPrefix = EsIndex.IndexPrefix(version);
 
     // override pipe cfg with equivalent global cfg
@@ -284,16 +287,10 @@ public static class Setup {
     R<UserScrape>();
     R<YtConvertWatchTimeFiles>();
     R<YtIndexResults>();
-    R<Parler>();
     R<YtContainerRunner>();
-    R<Pushshift>();
-    R<AtLabel>();
     R<DataScripts>();
     R<CollectList>();
     R<FlurlProxyClient>();
-    R<AmazonWeb>();
-    R<SimpleCollector>();
-    R<Transcriber>();
     R<DataformDescriptions>();
 
     b.Register(_ => pipeAppCtx);
@@ -317,6 +314,7 @@ public static class Setup {
     new AzureBlobFileStore(cfg.Storage.DataStorageCs, path, log);
 
   public static bool IsProd(this RootCfg root) => root.Env?.ToLowerInvariant() == "prod";
+  
 }
 
 public record CliEntry(string[] Args);

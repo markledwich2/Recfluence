@@ -6,12 +6,9 @@ using Newtonsoft.Json.Linq;
 using Serilog.Events;
 using SysExtensions.Configuration;
 using SysExtensions.Security;
-using YtReader.Airtable;
-using YtReader.AmazonSite;
 using YtReader.Db;
-using YtReader.Transcribe;
 
-namespace YtReader; 
+namespace YtReader;
 
 public class RootCfg {
   /*
@@ -33,6 +30,13 @@ public class RootCfg {
 public class Cfg {
   public AppCfg  App  { get; set; }
   public RootCfg Root { get; set; }
+}
+
+public enum WarehouseMode {
+  /// <summary>will connect the development branch warehouse</summary>
+  Branch,
+  /// <summary>In dev environments will connect to prod in read only mode</summary>
+  ProdReadIfDev,
 }
 
 public class AppCfg {
@@ -60,11 +64,8 @@ public class AppCfg {
   [Required] public BitChuteCfg     BitChute              { get; set; } = new();
   [Required] public RumbleCfg       Rumble                { get; set; } = new();
   [Required] public GoogleCfg       Google                { get; set; } = new();
-  [Required] public AirtableCfg     Airtable              { get; set; } = new();
   [Required] public DataScriptsCfg  DataScripts           { get; set; } = new();
-  [Required] public AmazonCfg       Amazon                { get; set; } = new();
   [Required] public AwsCfg          Aws                   { get; set; } = new();
-  [Required] public TranscribeCfg   Transcribe            { get; set; } = new();
 }
 
 public class GoogleCfg {
@@ -80,7 +81,6 @@ public record AwsCfg {
   public string     Region { get; set; }
   public S3Cfg      S3     { get; init; }
   public NameSecret Creds  { get; set; }
-    
 }
 
 public class ElasticCfg {
@@ -138,7 +138,6 @@ public record SimpleCollectCfg : ICommonCollectCfg {
 }
 
 public record RumbleCfg : SimpleCollectCfg { }
-
 public record BitChuteCfg : SimpleCollectCfg { }
 
 public record YtCollectCfg : ICommonCollectCfg {
@@ -190,9 +189,20 @@ public record YtCollectCfg : ICommonCollectCfg {
   public int  WebParallel             { get; set; } = 6; // parallelism for plain html scraping of video's, recs
 
   /// <summary>maximum number of videos to load when updating a channel.</summary>
-  public int MaxChannelComments { get; set; } = 4;
+  public int MaxChannelComments { get; set; } = 1;
 
   public int MaxChannelFullVideos { get; set; } = 40_000;
+
+  /// <summary>This limits how many number of subscriptions to load per user. Some have 100k plus of generated subs which we
+  ///   aren't interested in/summary>
+  public int MaxSubscriptionsToSave { get; set; } = 1_000;
+
+  /// <summary>Number of comments load ot load for a particular video</summary>
+  public int MaxCommentsPerVid { get; set; } = 200;
+
+  /// <summary>This limits how many lines of caption data to find in a single video. Audiobooks and 24hr news or fake videos
+  ///   may become too large to load in our array format</summary>
+  public int MaxCaptionLinesToSave = 50_000;
 }
 
 public class StorageCfg {

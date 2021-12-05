@@ -1,7 +1,7 @@
 ﻿using Flurl;
 using LtGt;
 
-namespace YtReader.Web; 
+namespace YtReader.Web;
 
 public static class YtGtEx {
   public static HtmlElement El(this HtmlContainer e, string selector) => e.QueryElements(selector).FirstOrDefault();

@@ -4,7 +4,7 @@ using Mutuo.Etl.Db;
 using Snowflake.Data.Client;
 using SysExtensions.Security;
 
-namespace YtReader.Db; 
+namespace YtReader.Db;
 
 public class SnowflakeCfg {
   public            NameSecret Creds     { get; set; } = new NameSecret();
@@ -31,7 +31,7 @@ public class SnowflakeConnectionProvider {
 public static class SnowflakeConnectionEx {
   public static SnowflakeDbConnection Connection(this SnowflakeCfg cfg, string db = null, string schema = null, string role = null) =>
     new SnowflakeDbConnection
-      {ConnectionString = cfg.Cs(db, schema, role), Password = cfg.Creds.SecureString()};
+      { ConnectionString = cfg.Cs(db, schema, role), Password = cfg.Creds.SecureString() };
 
   public static string Cs(this SnowflakeCfg cfg, string db = null, string schema = null, string role = null) =>
     Cs(new (string name, string value)[] {

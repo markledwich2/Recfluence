@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using Humanizer;
 using SysExtensions.Collections;
 using static System.Text.RegularExpressions.RegexOptions;
 
-namespace SysExtensions.Text; 
+namespace SysExtensions.Text;
 
 public static class StringExtensions {
   static readonly SHA256 _hash = SHA256.Create();

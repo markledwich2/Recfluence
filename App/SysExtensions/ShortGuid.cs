@@ -1,7 +1,6 @@
-﻿using System;
-using SysExtensions.Text;
+﻿using SysExtensions.Text;
 
-namespace SysExtensions; 
+namespace SysExtensions;
 
 public static class ShortGuid {
   public static string ToShortString(this Guid guid, int? length = null) {

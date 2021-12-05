@@ -1,37 +1,5 @@
 {
   "definitions": {
-    "AirtableCfg": {
-      "type": "object",
-      "properties": {
-        "apiKey": {
-          "type": "string"
-        }
-      }
-    },
-    "AmazonCfg": {
-      "type": "object",
-      "properties": {
-        "webParallel": {
-          "type": "integer"
-        },
-        "batchSize": {
-          "type": "integer"
-        },
-        "retries": {
-          "type": "integer"
-        },
-        "proxyType": {
-          "type": "string",
-          "enum": [
-            "Datacenter",
-            "Residential"
-          ]
-        },
-        "requestTimeout": {
-          "type": "string"
-        }
-      }
-    },
     "AwsCfg": {
       "type": "object",
       "properties": {
@@ -478,17 +446,6 @@
         }
       }
     },
-    "TranscribeCfg": {
-      "type": "object",
-      "properties": {
-        "parallelTranscribe": {
-          "type": "integer"
-        },
-        "parallel": {
-          "type": "integer"
-        }
-      }
-    },
     "UserScrapeCfg": {
       "type": "object",
       "properties": {
@@ -512,6 +469,13 @@
     "WarehouseCfg": {
       "type": "object",
       "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "Branch",
+            "ProdReadIfDev"
+          ]
+        },
         "stage": {
           "type": "string"
         },
@@ -558,6 +522,9 @@
     "YtCollectCfg": {
       "type": "object",
       "properties": {
+        "maxCaptionLinesToSave": {
+          "type": "integer"
+        },
         "to": {
           "type": "string",
           "format": "date-time"
@@ -629,6 +596,12 @@
           "type": "integer"
         },
         "maxChannelFullVideos": {
+          "type": "integer"
+        },
+        "maxSubscriptionsToSave": {
+          "type": "integer"
+        },
+        "maxCommentsPerVid": {
           "type": "integer"
         }
       }
@@ -727,20 +700,11 @@
     "google": {
       "$ref": "#/definitions/GoogleCfg"
     },
-    "airtable": {
-      "$ref": "#/definitions/AirtableCfg"
-    },
     "dataScripts": {
       "$ref": "#/definitions/DataScriptsCfg"
     },
-    "amazon": {
-      "$ref": "#/definitions/AmazonCfg"
-    },
     "aws": {
       "$ref": "#/definitions/AwsCfg"
-    },
-    "transcribe": {
-      "$ref": "#/definitions/TranscribeCfg"
     }
   }
 }

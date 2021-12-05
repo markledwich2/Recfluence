@@ -1,17 +1,14 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using SysExtensions.Collections;
-using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 
-namespace SysExtensions.Serialization; 
+namespace SysExtensions.Serialization;
 
 /// <summary>Provides lean access to serialiation funcitoanlity. Uses a good default's for serialization, but can be
 ///   overriden with any settings</summary>
@@ -27,7 +24,7 @@ public static class JsonExtensions {
     settings.Converters.AddRange(new StringEnumConverter(new CamelCaseNamingStrategy(processDictionaryKeys: false, overrideSpecifiedNames: false),
       allowIntegerValues: false));
     settings.ContractResolver = new CoreSerializeContractResolver
-      {NamingStrategy = new CamelCaseNamingStrategy(processDictionaryKeys: false, overrideSpecifiedNames: false)};
+      { NamingStrategy = new CamelCaseNamingStrategy(processDictionaryKeys: false, overrideSpecifiedNames: false) };
     return settings;
   }
 
@@ -42,7 +39,7 @@ public static class JsonExtensions {
   }
 
   public static T Deserialize<T>(this JsonSerializer serializer, TextReader reader) =>
-    (T) serializer.Deserialize(reader, typeof(T));
+    (T)serializer.Deserialize(reader, typeof(T));
 
   public static bool NullOrEmpty(this JToken token) =>
     token.Type == JTokenType.Null || token.Type == JTokenType.String && token.Value<string>().NullOrEmpty();
@@ -72,13 +69,13 @@ public static class JsonExtensions {
   }
 
   public static JObject ToJObject(this object o, JsonSerializerSettings settings = null)
-    => (JObject) SerializeToJToken(o, settings);
+    => (JObject)SerializeToJToken(o, settings);
 
   /// <summary>Returns a new instance of T with targets values overriden by newValues non-null values Relies entirely on the
   ///   Newtonsoft.Json merging feature</summary>
   public static T JsonMerge<T>(this T target, T newValues, JsonMergeSettings mergeSettings = null, JsonSerializerSettings settings = null) {
     var aJ = target.ToJObject(settings);
-    mergeSettings ??= new() {MergeNullValueHandling = MergeNullValueHandling.Ignore};
+    mergeSettings ??= new() { MergeNullValueHandling = MergeNullValueHandling.Ignore };
     aJ.Merge(newValues.ToJObject(settings), mergeSettings);
     return aJ.ToObject<T>(settings);
   }
@@ -111,7 +108,7 @@ public static class JsonExtensions {
     }
   }
 
-  public static JObject ParseJObject(this string s, JsonLoadSettings loadSettings = null) => (JObject) s.ParseJToken(loadSettings);
+  public static JObject ParseJObject(this string s, JsonLoadSettings loadSettings = null) => (JObject)s.ParseJToken(loadSettings);
   public static JToken ParseJToken(this string s, JsonLoadSettings loadSettings = null) => JToken.Parse(s, loadSettings);
 
   public static JToken SerializeToJToken(this object o, JsonSerializerSettings settings = null) {
@@ -158,8 +155,8 @@ public static class JsonExtensions {
 
   public static JToken ToCamelCaseJToken(this JToken original) =>
     original.Type switch {
-      JTokenType.Object => ((JObject) original).ToCamelCase(),
-      JTokenType.Array => new JArray(((JArray) original).Select(x => x.ToCamelCaseJToken())),
+      JTokenType.Object => ((JObject)original).ToCamelCase(),
+      JTokenType.Array => new JArray(((JArray)original).Select(x => x.ToCamelCaseJToken())),
       _ => original.DeepClone()
     };
 

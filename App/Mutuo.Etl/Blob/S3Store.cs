@@ -1,22 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Net;
-using System.Threading.Tasks;
 using Amazon;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Humanizer;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.Fluent.IO;
-using SysExtensions.Net;
 using SysExtensions.Security;
-using SysExtensions.Text;
 
-namespace Mutuo.Etl.Blob; 
+namespace Mutuo.Etl.Blob;
 
 public record S3Store(S3Cfg Cfg, SPath BasePath) : ISimpleFileStore {
   readonly AmazonS3Client S3 = new(
@@ -32,7 +21,7 @@ public record S3Store(S3Cfg Cfg, SPath BasePath) : ISimpleFileStore {
   public async Task<bool> Exists(SPath path) => await Info(path) != null;
 
   public async Task Save(SPath path, FPath file, ILogger log = default) =>
-    await S3.PutObjectAsync(new() {BucketName = Cfg.Bucket, FilePath = file.FullPath, Key = Key(path)});
+    await S3.PutObjectAsync(new() { BucketName = Cfg.Bucket, FilePath = file.FullPath, Key = Key(path) });
 
   //var tu = new TransferUtility(S3);
   //await tu.UploadAsync(file.FullPath, Cfg.Bucket, BasePath.Add(path));
@@ -50,19 +39,19 @@ public record S3Store(S3Cfg Cfg, SPath BasePath) : ISimpleFileStore {
   public async Task<FileListItem> Info(SPath path) {
     var (res, ex) = await S3.GetObjectMetadataAsync(Cfg.Bucket, Key(path)).Try();
     if (res != null) return new(path, res.LastModified); // todo: get size too
-    if (ex is AmazonS3Exception {StatusCode: HttpStatusCode.NotFound}) return null;
+    if (ex is AmazonS3Exception { StatusCode: HttpStatusCode.NotFound }) return null;
     throw ex;
   }
 
   /// <summary>Full path</summary>
   public Uri Url(SPath path) => throw new NotImplementedException();
 
-  public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(SPath path, bool allDirectories = false, ILogger log = null) {
+  public async IAsyncEnumerable<IReadOnlyCollection<FileListItem>> List(SPath path, bool allDirectories = false) {
     var prefix = Key(path);
-    var request = new ListObjectsV2Request {BucketName = Cfg.Bucket, Prefix = prefix};
+    var request = new ListObjectsV2Request { BucketName = Cfg.Bucket, Prefix = prefix };
     while (true) {
       var response = await S3.ListObjectsV2Async(request);
-      yield return response.S3Objects.Select(f => new FileListItem(new SPath(f.Key).RelativePath(prefix), f.LastModified, f.Size)).ToReadOnly();
+      yield return response.S3Objects.Select(f => new FileListItem(new SPath(f.Key).RelativePath(prefix), f.LastModified, f.Size)).AsReadOnly();
       if (response.IsTruncated) request.ContinuationToken = response.NextContinuationToken;
       else break;
     }

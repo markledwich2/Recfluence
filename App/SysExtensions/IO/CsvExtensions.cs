@@ -1,12 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
-using System.Linq;
 using CsvHelper;
 using CsvHelper.Configuration;
-using SysExtensions.Fluent.IO;
 
-namespace SysExtensions.IO; 
+namespace SysExtensions.IO;
 
 public static class CsvExtensions {
   public static void WriteToCsv<T>(this IEnumerable<T> values, FPath path, CsvConfiguration cfg = null) {
@@ -19,7 +16,7 @@ public static class CsvExtensions {
   }
 
   public static CsvConfiguration DefaultConfig => new CsvConfiguration(CultureInfo.InvariantCulture)
-    {AllowComments = true, IgnoreBlankLines = true, TrimOptions = TrimOptions.Trim, MissingFieldFound = null};
+    { AllowComments = true, IgnoreBlankLines = true, TrimOptions = TrimOptions.Trim, MissingFieldFound = null };
 
   public static ICollection<T> ReadFromCsv<T>(this FPath path, CsvConfiguration cfg = null) {
     cfg ??= DefaultConfig;

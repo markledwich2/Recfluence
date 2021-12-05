@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 using Medallion.Shell;
 using Newtonsoft.Json.Linq;
 using Semver;
-using Serilog;
 using Serilog.Core;
-using SysExtensions.Fluent.IO;
 using SysExtensions.IO;
 using SysExtensions.Text;
 
-namespace SysExtensions.Build; 
+namespace SysExtensions.Build;
 
 public class GitVersionInfo {
   public string SemVer          { get; set; }
@@ -28,7 +23,7 @@ public class GitVersionInfo {
   ///   devVersionInfo will be null when not run in a dev environment </summary>
   public static async Task<(SemVersion version, GitVersionInfo info)> DiscoverVersion(Type typeToDetectVersion, ILogger log = null) {
     log ??= Log.Logger ?? Logger.None;
-    var rootPath = FPath.Current.DirOfParent(".git")?.Parent();
+    var rootPath = FPath.WorkingDir.DirOfParent(".git")?.Parent();
     if (rootPath?.Exists == true) {
       var outputLines = new List<string>();
       var appDir = rootPath.Combine("App");

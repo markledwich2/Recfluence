@@ -1,19 +1,11 @@
-﻿using System;
-using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
-using Humanizer;
+﻿using System.Globalization;
 using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.DockerRegistry;
 using Mutuo.Etl.Pipe;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.Threading;
 using static Mutuo.Etl.AzureManagement.CleanContainerMode;
 
-namespace Mutuo.Etl.AzureManagement; 
+namespace Mutuo.Etl.AzureManagement;
 
 public enum CleanContainerMode {
   Standard,
@@ -54,7 +46,7 @@ public class AzureCleaner {
       var tags = await RegistryClient.TagList(name);
       var images = (await tags.Tags
           .Where(t => t.Contains("-"))
-          .BlockMap(async tag => {
+          .BlockDo(async tag => {
             var manifest = await RegistryClient.Manifest(name, tag);
             var created = manifest.TagCreated();
             return (tag, manifest, created);
@@ -94,12 +86,11 @@ public class AzureCleaner {
 }
 
 public static class AzureCleanerEx {
-  public static DateTime? Expires(this IResource resource) {
-    return resource.Tags.TryGetValue("expire", out var expire)
+  public static DateTime? Expires(this IResource resource) =>
+    resource.Tags.TryGetValue("expire", out var expire)
       ? expire.ParseDate(DateTimeFormatInfo.InvariantInfo, DateTimeStyles.RoundtripKind)
       : null;
-  }
-    
+
   public static bool IsExpired(this IResource resource) {
     var expires = resource.Expires();
     return expires.HasValue && expires < DateTime.UtcNow;

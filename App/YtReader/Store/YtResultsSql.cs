@@ -1,10 +1,10 @@
 ﻿using Mutuo.Etl.Db;
 
-namespace YtReader.Store; 
+namespace YtReader.Store;
 
 public static class YtResultsSql {
   public static class Narrative {
-    public static readonly string[] FilterTags = {"MissingLinkMedia", "OrganizedReligion", "Educational", "Black", "LGBT"};
+    public static readonly string[] FilterTags = { "MissingLinkMedia", "OrganizedReligion", "Educational", "Black", "LGBT" };
 
     public static readonly string VaccinePersonalHighlight = $@"
 with channel_highlights as (

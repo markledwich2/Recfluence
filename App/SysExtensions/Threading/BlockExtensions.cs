@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Humanizer;
 using SysExtensions.Collections;
@@ -13,7 +8,7 @@ using static System.Threading.Tasks.TaskStatus;
 
 // ReSharper disable InconsistentNaming
 
-namespace SysExtensions.Threading; 
+namespace SysExtensions.Threading;
 
 public static class BlockExtensions {
   public static async Task<long> BlockDo<T>(this IEnumerable<T> source, Func<T, int, Task> action, int parallel = 1, int? capacity = null,
@@ -41,12 +36,12 @@ public static class BlockExtensions {
   }
 
   static ExecutionDataflowBlockOptions ActionOptions(int parallel, int? capacity, CancellationToken cancel) {
-    var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
+    var options = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel };
     if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
     return options;
   }
 
-  public static async IAsyncEnumerable<R> BlockMap<T, R>(this IEnumerable<T> source,
+  public static async IAsyncEnumerable<R> BlockDo<T, R>(this IEnumerable<T> source,
     Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
     var block = GetBlock(func, parallel, capacity, cancel);
     var produceTask = ProduceAsync(source.WithIndex(), block, cancel: cancel);
@@ -58,17 +53,30 @@ public static class BlockExtensions {
       if (!await block.OutputAvailableAsync().ConfigureAwait(false)) break;
       yield return await block.ReceiveAsync().ConfigureAwait(false);
     }
-    await block.Completion.ConfigureAwait(false);
+
+    await block.WaitOnCompleted();
     await produceTask.ConfigureAwait(false);
   }
 
-  public static IAsyncEnumerable<R> BlockMap<T, R>(this IEnumerable<T> source,
-    Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
-    BlockMap(source, (o, _) => func(o), parallel, capacity, cancel);
+  static async Task WaitOnCompleted(this IDataflowBlock block) {
+    try {
+      await block.Completion.ConfigureAwait(false);
+    }
+    catch (TaskCanceledException) { } // block.Completion will raise an exception when cancelled, ignore it
+  }
 
-  public static IAsyncEnumerable<R> BlockMap<T, R>(this IAsyncEnumerable<T> source,
+  public static IAsyncEnumerable<R> BlockDo<T, R>(this IEnumerable<T> source,
     Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
-    source.BlockMap((r, _) => func(r), parallel, capacity, cancel);
+    BlockDo(source, (o, _) => func(o), parallel, capacity, cancel);
+
+  public static IAsyncEnumerable<R> BlockDo<T, R>(this IAsyncEnumerable<T> source,
+    Func<T, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
+    source.BlockDo((r, _) => func(r), parallel, capacity, cancel);
+
+  public static async IAsyncEnumerable<R[]> BlockMapBatch<T, R>(this IEnumerable<T> source,
+    Func<T, Task<R>> func, int batchSize, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
+    foreach (var b in source.Batch(batchSize)) yield return await b.BlockDo(func, parallel, capacity, cancel).ToArrayAsync(cancellationToken: cancel);
+  }
 
   public static IAsyncEnumerable<R> BlockFlatMap<T, R>(this IAsyncEnumerable<T>[] sources,
     Func<T, R> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) =>
@@ -84,7 +92,7 @@ public static class BlockExtensions {
 
     async Task ProduceAll() {
       try {
-        await sources.BlockDo(s => ProduceAsync(s, block, cancel, complete: false), parallel, cancel: cancel).ConfigureAwait(false);
+        await sources.BlockDo<IAsyncEnumerable<T>>(s => ProduceAsync(s, block, cancel, complete: false), parallel, cancel: cancel).ConfigureAwait(false);
       }
       finally {
         block.Complete();
@@ -100,12 +108,12 @@ public static class BlockExtensions {
       if (!await block.OutputAvailableAsync().ConfigureAwait(false)) break;
       yield return await block.ReceiveAsync().ConfigureAwait(false);
     }
-    await block.Completion.ConfigureAwait(false);
+    await block.WaitOnCompleted();
     await produceTask.ConfigureAwait(false);
   }
 
-  public static async IAsyncEnumerable<R> BlockMap<T, R>(this IAsyncEnumerable<T> source,
-    Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
+  public static async IAsyncEnumerable<R> BlockDo<T, R>(this IAsyncEnumerable<T> source,
+    Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default, ILogger log = null) {
     var block = GetBlock(func, parallel, capacity, cancel);
     var produceTask = ProduceAsync(source, block, cancel);
     while (true) {
@@ -113,21 +121,29 @@ public static class BlockExtensions {
         block.Complete();
         break;
       }
-      if (!await block.OutputAvailableAsync().ConfigureAwait(false)) break;
-      yield return await block.ReceiveAsync().ConfigureAwait(false);
+      if (!await block.OutputAvailableAsync().ConfigureAwait(false)) break; // return if there will be no more items to receive
+      R res;
+      try {
+        res = await block.ReceiveAsync().ConfigureAwait(false);
+      }
+      catch (Exception ex) { // swallow any errors receiving, these will bubble up via block.Completion or produceTask
+        log?.Scope(nameof(BlockExtensions)).Debug(ex, "BlockMap exception on ReceiveAsync. This will be handled elsewhere.");
+        break;
+      }
+      yield return res;
     }
-    await block.Completion.ConfigureAwait(false);
+    await block.WaitOnCompleted();
     await produceTask.ConfigureAwait(false);
   }
 
-  public static async IAsyncEnumerable<R> BlockMap<T, R>(this Task<IAsyncEnumerable<T>> source,
+  public static async IAsyncEnumerable<R> BlockDo<T, R>(this Task<IAsyncEnumerable<T>> source,
     Func<T, Task<R>> func, int parallel = 1, int? capacity = null, [EnumeratorCancellation] CancellationToken cancel = default) {
-    await foreach (var i in (await source).BlockMap(func, parallel, capacity, cancel))
+    await foreach (var i in (await source).BlockDo(func, parallel, capacity, cancel))
       yield return i;
   }
 
   static TransformBlock<(T, int), R> GetBlock<T, R>(Func<T, int, Task<R>> func, int parallel = 1, int? capacity = null, CancellationToken cancel = default) {
-    var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
+    var options = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel };
     if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
     var indexTupleFunc = new Func<(T, int), Task<R>>(t => func(t.Item1, t.Item2));
     return new(indexTupleFunc, options);
@@ -166,6 +182,7 @@ public static class BlockExtensions {
     finally {
       if (complete) {
         var sw = Stopwatch.StartNew();
+        // wait for block to start before telling it to complete
         while (block.Completion.Status.In(Created, WaitingForActivation, WaitingToRun) && sw.Elapsed < 5.Seconds())
           await 10.Milliseconds().Delay().ConfigureAwait(false);
         block.Complete();
@@ -180,7 +197,7 @@ public static class BlockExtensions {
     Func<T, Task<R>> func, int parallel = 1, int? capacity = null,
     Action<BulkProgressInfo> progressUpdate = null, TimeSpan progressPeriod = default, CancellationToken cancel = default) {
     progressPeriod = progressPeriod == default ? 60.Seconds() : progressPeriod;
-    var options = new ExecutionDataflowBlockOptions {MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel};
+    var options = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = parallel, EnsureOrdered = false, CancellationToken = cancel };
     if (capacity.HasValue) options.BoundedCapacity = capacity.Value;
     var block = new TransformBlock<T, R>(func, options);
 
@@ -214,7 +231,7 @@ public static class BlockExtensions {
     }
 
     await produceTask.ConfigureAwait(false);
-    await block.Completion.ConfigureAwait(false);
+    await block.WaitOnCompleted();
 
     return result;
   }

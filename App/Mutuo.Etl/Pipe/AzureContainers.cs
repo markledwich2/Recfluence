@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using CliFx.Exceptions;
-using Humanizer;
+﻿using CliFx.Exceptions;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.ContainerGroup.Definition;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
@@ -13,15 +7,10 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Mutuo.Etl.AzureManagement;
 using Mutuo.Etl.DockerRegistry;
 using Semver;
-using Serilog;
-using SysExtensions;
 using SysExtensions.Build;
-using SysExtensions.Collections;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 using Stopwatch = System.Diagnostics.Stopwatch;
 
-namespace Mutuo.Etl.Pipe; 
+namespace Mutuo.Etl.Pipe;
 
 public class AzureContainers : IPipeWorkerStartable, IContainerLauncher {
   public static readonly string         ContainerNameEnv = $"{nameof(AzureContainers)}_Container";
@@ -47,9 +36,9 @@ public class AzureContainers : IPipeWorkerStartable, IContainerLauncher {
     groupName ??= containerName;
     cfg ??= ContainerCfg;
     var sw = Stopwatch.StartNew();
-    var group = await Launch(cfg with {Exe = exe}, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
+    var group = await Launch(cfg with { Exe = exe }, groupName, containerName, fullImageName, envVars, args ?? Array.Empty<string>(),
       returnOnStart, log: log, cancel: cancel);
-    await group.EnsureSuccess(containerName, log, returnOnStart ? new[] {ContainerState.Running} : null).WithWrappedException("Container failed");
+    await group.EnsureSuccess(containerName, log, returnOnStart ? new[] { ContainerState.Running } : null).WithWrappedException("Container failed");
     log?.Information($"Container {{Container}} {(returnOnStart ? "started" : "completed")} in {{Duration}}", groupName, sw.Elapsed.HumanizeShort());
     if (!returnOnStart && group.State() == ContainerState.Succeeded)
       await DeleteContainer(groupName, log);
@@ -62,7 +51,7 @@ public class AzureContainers : IPipeWorkerStartable, IContainerLauncher {
   ///   returns the status.</summary>
   public async Task<IReadOnlyCollection<PipeRunMetadata>> Launch(IPipeCtx ctx, IReadOnlyCollection<PipeRunId> ids, bool returnOnRunning,
     bool exclusive, ILogger log, CancellationToken cancel) {
-    var res = await ids.BlockMap(async runId => {
+    var res = await ids.BlockDo(async runId => {
       var runCfg = runId.PipeCfg(ctx.PipeCfg); // id is for the sub-pipe, ctx is for the root
 
       var tag = await FindImageTag(runCfg.Container.ImageName);
@@ -76,7 +65,7 @@ public class AzureContainers : IPipeWorkerStartable, IContainerLauncher {
         fullImageName, ctx.AppCtx.EnvironmentVariables,
         runId.PipeArgs(), returnOnRunning, ctx.AppCtx.CustomRegion, pipeLog, cancel).WithDuration();
 
-      var (logTxt, _) = await group.GetLogContentAsync(containerName).Try("");
+      var (logTxt, _) = await group.GetLogContentAsync(containerName).Try();
       var logPath = new SPath($"{runId.StatePath()}.log.txt");
 
       var launchState = group.State();
@@ -190,7 +179,7 @@ public class AzureContainers : IPipeWorkerStartable, IContainerLauncher {
   }
 
   public async Task<string> FindImageTag(string imageName) {
-    var findTags = Version.Prerelease.HasValue() ? new[] {Version.PipeTag(), Version.MajorMinorPatch()} : new[] {Version.MajorMinorPatch()};
+    var findTags = Version.Prerelease.HasValue() ? new[] { Version.PipeTag(), Version.MajorMinorPatch() } : new[] { Version.MajorMinorPatch() };
     var existingTags = (await RegistryClient.TagList(imageName)).Tags.ToHashSet();
     var tag = findTags.Select(t => existingTags.Contains(t) ? t : null).NotNull().FirstOrDefault()
       ?? throw new InvalidOperationException($"Could not find any of tags {findTags.Join("|")}");

@@ -1,21 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Humanizer;
 using Humanizer.Bytes;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Serilog;
-using SysExtensions;
-using SysExtensions.Collections;
-using SysExtensions.Text;
-using SysExtensions.Threading;
+using static System.Array;
 
-namespace Mutuo.Etl.Blob; 
+namespace Mutuo.Etl.Blob;
 
 public enum ColMeta {
   Distinct,
@@ -38,8 +28,9 @@ public record BlobIndex(ISimpleFileStore Store) {
   /// <summary>Indexes into blob storage the given data. Reader needs to be ordered by the index columns.</summary>
   public async Task<BlobIndexResult> SaveIndexedJsonl(BlobIndexWork work, ILogger log, CancellationToken cancel = default) {
     var indexPath = work.Path.Add("index");
-    var (oldIndex, _) = await Store.Get<BlobIndexMeta>(indexPath).Try(new());
-    if (oldIndex.RunIds == null) oldIndex = oldIndex with {RunIds = Array.Empty<RunId>()};
+    var oldIndex = await Store.GetState<BlobIndexMeta>(indexPath).Try().Do(
+      idx => idx == null ? null : idx with { RunIds = idx.RunIds ?? Empty<RunId>() },
+      _ => null) ?? new() { RunIds = Empty<RunId>() };
 
     var runId = DateTime.UtcNow.FileSafeTimestamp();
 
@@ -58,7 +49,7 @@ public record BlobIndex(ISimpleFileStore Store) {
 
     var files = (await IndexFiles(work.Rows, work.Cols, work.Size, work.NullHandling, log, OnProcessed)
       .Select((b, i) => (b.first, b.last, b.stream, i))
-      .BlockMap(async b => {
+      .BlockDo(async b => {
         if (cancel.IsCancellationRequested) return null;
         var file = new SPath($"{runId}/{b.i:000000}.{JValueString(b.first)}.{JValueString(b.last)}.jsonl.gz");
         await Store.Save(work.Path.Add(file), b.stream);
@@ -77,7 +68,7 @@ public record BlobIndex(ISimpleFileStore Store) {
     var index = new BlobIndexMeta {
       KeyFiles = files.ToArray(),
       RunIds = oldIndex.RunIds.Where(r => toDelete.All(d => d.Id != r.Id))
-        .Concat(new RunId {Id = runId, Created = DateTime.UtcNow}).ToArray(),
+        .Concat(new RunId { Id = runId, Created = DateTime.UtcNow }).ToArray(),
       Cols = colMeta.Select(c => c.Meta).ToArray()
     };
 
@@ -89,10 +80,10 @@ public record BlobIndex(ISimpleFileStore Store) {
   public async Task CommitIndexJson(BlobIndexResult indexWork, ILogger log) {
     log.Debug("deleted expired starting - {Files}", indexWork.ToDelete);
     await indexWork.ToDelete.BlockDo(async deletePath => {
-      await Store.List(deletePath).SelectMany().BlockMap(f => Store.Delete(f.Path, log), parallel: 16).ToListAsync();
+      await Store.List(deletePath).SelectMany().BlockDo(f => Store.Delete(f.Path, log), parallel: 16).ToListAsync();
     });
     log.Debug("deleted expired complete - {Files}", indexWork.ToDelete);
-    await Store.Set(indexWork.IndexPath, indexWork.Index);
+    await Store.SetState(indexWork.IndexPath, indexWork.Index);
     log.Information("Committed index {Index}", indexWork.IndexPath);
   }
 
@@ -141,7 +132,7 @@ public record BlobIndex(ISimpleFileStore Store) {
       }
 
       if (c.ExtraMeta.Contains(ColMeta.MinMax))
-        if (r[m.Name] is JValue {Value: IComparable v} j) {
+        if (r[m.Name] is JValue { Value: IComparable v } j) {
           if (m.Min == null || v.CompareTo(m.Min?.Value) < 0) m.Min = j;
           if (v.CompareTo(m.Max?.Value) > 0) m.Max = j;
         }

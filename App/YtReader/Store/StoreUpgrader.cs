@@ -4,7 +4,7 @@ using Mutuo.Etl.Blob;
 using Newtonsoft.Json.Linq;
 using Semver;
 
-namespace YtReader.Store; 
+namespace YtReader.Store;
 
 public class StoreUpgrader {
   static DateTime V0UpdateTime;
@@ -24,14 +24,14 @@ public class StoreUpgrader {
 
   async Task Upgrade() {
     var versionFile = await Store.Info(VersionFile);
-    var md = versionFile == null ? new() {Version = new(0)} : await Store.Get<StoreMd>(VersionFile);
+    var md = versionFile == null ? new() { Version = new(0) } : await Store.GetState<StoreMd>(VersionFile);
 
     var upgradeMethods = GetType().GetMethods()
       .Select(m => (m, a: m.GetCustomAttribute<UpgradeAttribute>())).Where(m => m.a != null)
       .Select(m => (m.m.Name, Upgrade: new Func<Task>(async () => {
         Log.Information("Upgrade {Name} - started", m.m.Name);
         var sw = Stopwatch.StartNew();
-        await (Task) m.m.Invoke(this, new object[] { });
+        await (Task)m.m.Invoke(this, new object[] { });
         Log.Information("Upgrade {Name} - completed in {Duration}", m.m.Name, sw.Elapsed.HumanizeShort());
       }), Version: SemVersion.Parse(m.a.Version)));
 
@@ -47,7 +47,7 @@ public class StoreUpgrader {
     }
   }
 
-  Task Save(StoreMd md) => Store.Set(VersionFile, md);
+  Task Save(StoreMd md) => Store.SetState(VersionFile, md);
 
   [Upgrade("0.1")] Task AddVersionFile() => Task.CompletedTask;
 

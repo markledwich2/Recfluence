@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
-using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using SysExtensions.Reflection;
-using SysExtensions.Text;
 
-namespace Mutuo.Etl.Db; 
+namespace Mutuo.Etl.Db;
 
 public static class DbExtensions {
   public static string InParentheses(this string name) => $"({name})";

@@ -1,7 +1,6 @@
-﻿using System.Linq;
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
 
-namespace SysExtensions.Serialization; 
+namespace SysExtensions.Serialization;
 
 public static class XmlExtensions {
   public static XElement StripNamespaces(this XElement element) {

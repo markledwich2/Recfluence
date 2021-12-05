@@ -1,8 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using SysExtensions.Security;
-using SysExtensions.Text;
 
-namespace Mutuo.Etl.Pipe; 
+namespace Mutuo.Etl.Pipe;
 
 public enum PipeRunLocation {
   Local,

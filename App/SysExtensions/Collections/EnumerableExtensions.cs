@@ -1,19 +1,15 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Threading.Tasks;
 using SysExtensions.Reflection;
 
-namespace SysExtensions.Collections; 
+namespace SysExtensions.Collections;
 
 public static class EnumerableExtensions {
   /// <summary>Returns a collection if it is already one, or enumerates and creates one. Useful to not iterate multiple times
   ///   and still re-use collections</summary>
   public static ICollection<T> AsCollection<T>(this IEnumerable<T> items) => items as ICollection<T> ?? items.ToList();
 
-  public static T[] InArray<T>(this T o) => new[] {o};
+  public static T[] InArray<T>(this T o) => new[] { o };
 
   /// <summary>Sames as Enumerable.Concat but makes it nicer when you just have a single item</summary>
   /// <typeparam name="T"></typeparam>

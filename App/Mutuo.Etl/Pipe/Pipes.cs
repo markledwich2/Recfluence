@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using Autofac;
 using Autofac.Util;
 using CliFx;
@@ -14,16 +9,10 @@ using Mutuo.Etl.Blob;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Semver;
-using Serilog;
 using Serilog.Core;
-using SysExtensions;
-using SysExtensions.Collections;
 using SysExtensions.Reflection;
-using SysExtensions.Serialization;
-using SysExtensions.Text;
-using SysExtensions.Threading;
 
-namespace Mutuo.Etl.Pipe; 
+namespace Mutuo.Etl.Pipe;
 
 public class PipeRunOptions {
   public bool             ReturnOnStarted { get; set; }
@@ -117,7 +106,7 @@ public static class Pipes {
 
     var batches = await items.Batch(runCfg.MinWorkItems, runCfg.MaxParallel)
       .Select((g, i) => (Id: new PipeRunId(pipeName, groupRunId.GroupId, i), In: g.ToArray()))
-      .BlockMap(async b => {
+      .BlockDo(async b => {
         await ctx.SaveInRows(b.In, b.Id, log);
         return b.Id;
       }, ctx.PipeCfg.Store.Parallel).ToListAsync();
@@ -131,7 +120,7 @@ public static class Pipes {
       : await pipeWorker.Launch(ctx, batches, log, cancel);
 
     var hasOutState = typeof(TOut) != typeof(object) && !runCfg.ReturnOnStart;
-    var outState = hasOutState ? await GetOutStateInner() : res.Select(r => (Metadata: r, OutState: (TOut) default)).ToArray();
+    var outState = hasOutState ? await GetOutStateInner() : res.Select(r => (Metadata: r, OutState: (TOut)default)).ToArray();
     var batchId = $"{pipeName}|{groupRunId.GroupId}";
 
     if (runCfg.ReturnOnStart)
@@ -149,13 +138,13 @@ public static class Pipes {
     return outState;
 
     async Task<IReadOnlyCollection<(PipeRunMetadata Metadata, TOut OutState)>> GetOutStateInner() =>
-      await res.BlockMap(async b => await GetOutState<TOut>(ctx, log, b, runCfg.ReturnOnStart), ctx.PipeCfg.Store.Parallel).ToArrayAsync();
+      await res.BlockDo(async b => await GetOutState<TOut>(ctx, log, b, runCfg.ReturnOnStart), ctx.PipeCfg.Store.Parallel).ToArrayAsync();
   }
 
   static async Task<(PipeRunMetadata Metadata, TOut OutState)> GetOutState<TOut>(IPipeCtx ctx, ILogger log, PipeRunMetadata b, bool returnOnStart) {
-    var (state, ex) = !returnOnStart && !b.Error && typeof(TOut) != typeof(object)
+    var (state, ex) = (!returnOnStart && !b.Error && typeof(TOut) != typeof(object)
       ? await GetOutState<TOut>(ctx, b.Id, log).Try()
-      : default;
+      : default)!;
     if (ex != null) log.Warning("Pipe - couldn't get state for pipe {Pipe}", b.Id);
     return (b, state);
   }
@@ -197,12 +186,12 @@ public static class Pipes {
       ?? throw new($"Expecting arg method {pipeType.Type}.{method.Name} parameter {parameterInfo.Name} to be IEnumerable<Type>");
 
     // Find the pipe parameters to invoke by name. In the future we can support easier backwards compatibility by also looking for a position/type match.
-    var pipeParamValues = await method.GetParameters().Where(p => p.Name != null).BlockMap(async p => {
+    var pipeParamValues = await method.GetParameters().Where(p => p.Name != null).BlockDo(async p => {
       if (args.TryGetValue(p.Name ?? throw new("parameters must have names"), out var arg))
         return arg.ArgMode switch {
           ArgMode.SerializableValue => ChangeToType(arg.Value, p.ParameterType),
-          ArgMode.InRows => await typeof(Pipes).GetMethod(nameof(LoadInRows), new[] {typeof(IPipeCtx), typeof(PipeRunId)})
-            .CallStaticGenericTask<object>(new[] {RowsType(p)}, ctx, id),
+          ArgMode.InRows => await typeof(Pipes).GetMethod(nameof(LoadInRows), new[] { typeof(IPipeCtx), typeof(PipeRunId) })
+            .CallStaticGenericTask<object>(new[] { RowsType(p) }, ctx, id),
           _ => p.ParameterType == typeof(CancellationToken) ? cancel : ctx.Scope.Resolve(p.ParameterType)
         };
       throw new($"no InArgs for parameter {p.Name}");
@@ -259,10 +248,10 @@ public static class Pipes {
   static string InArgPath(this PipeRunId id) => $"{id.Name}/{id.GroupId}/InArgs";
 
   static async Task<T> GetOutState<T>(this IPipeCtx ctx, PipeRunId id, ILogger log) =>
-    await ctx.Store.Get<T>(id.OutStatePath(), log: log);
+    await ctx.Store.GetState<T>(id.OutStatePath(), log: log);
 
   static async Task SetOutState<T>(this IPipeCtx ctx, T state, PipeRunId id, ILogger log) =>
-    await ctx.Store.Set(id.OutStatePath(), state, log: log);
+    await ctx.Store.SetState(id.OutStatePath(), state, log: log);
 
   public static readonly JsonSerializerSettings ArgJCfg = GetArgJCfg();
 
@@ -294,7 +283,7 @@ public static class Pipes {
       foreach (var arg in jValues.Children<JObject>().ToArray()) {
         var jMode = arg["argMode"];
         if (jMode == null) continue;
-        arg["argMode"] = ((ArgMode) jMode.Value<int>()).EnumString().ToCamelCase();
+        arg["argMode"] = ((ArgMode)jMode.Value<int>()).EnumString().ToCamelCase();
       }
 
       // old serialization was an array, now we have a top level object
@@ -326,7 +315,7 @@ public static class Pipes {
     if (pipeCfg == null) return cfg.Default;
 
     var cfgJson = cfg.Default.ToJObject();
-    cfgJson.Merge(pipeCfg.ToJObject(), new() {MergeNullValueHandling = MergeNullValueHandling.Ignore});
+    cfgJson.Merge(pipeCfg.ToJObject(), new() { MergeNullValueHandling = MergeNullValueHandling.Ignore });
     var mergedCfg = cfgJson.ToObject<PipeRunCfg>();
     return mergedCfg;
   }
@@ -349,7 +338,7 @@ public static class Pipes {
         MemberExpression m => new(name, ArgMode.SerializableValue, m.GetValue()),
         // Parameter's are the left side of the lambda (myParam) => myParam.doThing()
         ParameterExpression p => p.Type.IsEnumerable() ? new(name, ArgMode.InRows) : new PipeArg(name, ArgMode.Inject),
-        UnaryExpression {Operand: MemberExpression m} => new(name, ArgMode.SerializableValue, GetValue(m)),
+        UnaryExpression { Operand: MemberExpression m } => new(name, ArgMode.SerializableValue, GetValue(m)),
         _ => throw new($"resolving args through expression {a} not supported")
       };
       return arg;

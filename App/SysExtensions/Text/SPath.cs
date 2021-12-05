@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
+﻿using System.ComponentModel;
 using SysExtensions.Collections;
 using SysExtensions.Serialization;
 
-namespace SysExtensions.Text; 
+namespace SysExtensions.Text;
 
 /// <summary>Represent a path (file systems, navigation) that easily converts to/from a string using the '/' separator</summary>
 [TypeConverter(typeof(StringConverter<SPath>))]
@@ -32,8 +29,8 @@ public class SPath : IStringConvertable {
   public bool IsEmpty    => Tokens.Count == 0;
 
   public SPath Parent => Tokens.Count <= 1
-    ? new() {IsAbsolute = IsAbsolute}
-    : new SPath(Tokens.Take(Tokens.Count - 1)) {IsAbsolute = IsAbsolute};
+    ? new() { IsAbsolute = IsAbsolute }
+    : new SPath(Tokens.Take(Tokens.Count - 1)) { IsAbsolute = IsAbsolute };
 
   public string Name => Tokens.LastOrDefault();
 
@@ -79,15 +76,15 @@ public class SPath : IStringConvertable {
   public SPath WithoutExtension() => Parent.Add(NameSansExtension);
 
   public SPath ToAbsolute() => IsAbsolute ? this : Absolute(Tokens);
-  public static SPath Absolute(IEnumerable<string> tokens) => new(tokens) {IsAbsolute = true};
-  public static SPath Absolute(params string[] tokens) => new(tokens) {IsAbsolute = true};
+  public static SPath Absolute(IEnumerable<string> tokens) => new(tokens) { IsAbsolute = true };
+  public static SPath Absolute(params string[] tokens) => new(tokens) { IsAbsolute = true };
 
   public SPath Clone() => FromString(StringValue);
 
-  public SPath Add(IEnumerable<string> path) => new(Tokens.Concat(path.NotNull())) {IsAbsolute = IsAbsolute};
+  public SPath Add(IEnumerable<string> path) => new(Tokens.Concat(path.NotNull())) { IsAbsolute = IsAbsolute };
   public SPath Add(SPath path) => Add(path.Tokens);
   public SPath Add(string token) => Add(token.InArray());
-  public SPath Add(params string[] path) => Add((IEnumerable<string>) path);
+  public SPath Add(params string[] path) => Add((IEnumerable<string>)path);
   public SPath WithoutTailSeparator() => HasTailSeparator ? new(Tokens.Take(Tokens.Count - 1)) : this;
   public SPath WithTailSeparator() => HasTailSeparator ? this : new(Tokens.Concat(""));
 
@@ -101,7 +98,7 @@ public class SPath : IStringConvertable {
 
   public static bool operator !=(SPath a, SPath b) => !(a == b);
 
-  public static SPath FromString(string path) => new() {StringValue = path};
+  public static SPath FromString(string path) => new() { StringValue = path };
 
   /// <summary>If the path is relative. Then uses the full path context to convert to a full path</summary>
   public SPath FullPath(SPath fullPathContext) {
@@ -126,10 +123,10 @@ public class SPath : IStringConvertable {
   public static implicit operator string(SPath s) => s?.StringValue;
   public static implicit operator SPath(string s) => s == null ? null : new SPath(s);
 
-  public static SPath Relative(params string[] tokens) => new(tokens) {IsAbsolute = false};
+  public static SPath Relative(params string[] tokens) => new(tokens) { IsAbsolute = false };
 
-  /// <summary>Returns a relative path from the given path if one exists, otherwise returns a copy of this. Both paths must
-  ///   be absolute</summary>
+  /// <summary>Returns a relative path from the given path if one exists, otherwise returns a copy of this. Both paths must be
+  ///   absolute</summary>
   /// <param name="from"></param>
   /// <returns></returns>
   public SPath RelativePath(SPath from) {

@@ -2,7 +2,7 @@
 using AngleSharp;
 using AngleSharp.Dom;
 
-namespace YtReader.Web; 
+namespace YtReader.Web;
 
 public static class AngleExtensions {
   public static T El<T>(this IParentNode b, string selector) where T : class, IElement => b.QuerySelector(selector) as T;
