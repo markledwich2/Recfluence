@@ -71,14 +71,6 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
   Task DataScripts(ILogger logger, CancellationToken cancel, DataScriptOptions options) =>
     _dataScripts.Run(logger, cancel, options);
 
-  [GraphTask(nameof(Stage))]
-  Task Backup(ILogger logger) =>
-    _backup.Backup(logger);
-
-  [GraphTask(nameof(Result), nameof(Collect), nameof(Dataform))]
-  Task UserScrape(bool init, string trial, string[] accounts, ILogger logger, CancellationToken cancel) =>
-    _userScrape.Run(logger, init, trial, accounts, cancel);
-
   [Pipe]
   public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
     options ??= new();
@@ -88,20 +80,14 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
     log.Information("Update {RunId} - started", updateId);
 
     var fullLoad = options.FullLoad;
-
-    var collectOptions = new SimpleCollectOptions
-      { Parts = options.StandardParts, ExplicitChannels = options.Collect.LimitChannels, Mode = options.Collect.CollectMode };
-
     var actionMethods = TaskGraph.FromMethods(
       (l, c) => Collect(options.Collect, l, c),
       (l, c) => Stage(fullLoad, options.StageTables, l),
       (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
       (l, c) => Result(options.Results, l, c),
       (l, c) => Index(options.Indexes, options.Tags, l, c),
-      //(l, c) => UserScrape(options.UserScrapeInit, options.UserScrapeTrial, options.UserScrapeAccounts, l, c),
       (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c),
-      (l, c) => DataScripts(l, c, options.DataScript),
-      (l, c) => Backup(l)
+      (l, c) => DataScripts(l, c, options.DataScript)
     );
 
     var actions = options.Actions;
@@ -114,14 +100,8 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
         m.Status = GraphTaskStatus.Ignored;
     }
 
-    // TODO: tasks should have frequencies within a dependency graph. But for now, full backups only on sundays, or if explicit
-    var backup = actionMethods[nameof(Backup)];
-    backup.Status = GraphTaskStatus.Ignored;
-    // too costly. TODO: update to incremtnal backup or de-partition the big db2 directories
-    //if (backup.Status != GraphTaskStatus.Ignored && DateTime.UtcNow.DayOfWeek != DayOfWeek.Sunday)
 
     var res = await actionMethods.Run(Cfg.Parallel, log, cancel);
-
     var errors = res.Where(r => r.Error).ToArray();
     if (errors.Any())
       Log.Error("Update {RunId} - failed in {Duration}: {@TaskResults}", updateId, sw.Elapsed.HumanizeShort(), res.Join("\n"));
