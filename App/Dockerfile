@@ -21,5 +21,8 @@ FROM mcr.microsoft.com/dotnet/runtime:6.0-alpine
 WORKDIR /app
 COPY --from=build-env YtCli/publish  ./
 
+# humanizer and possibly other libraries rely on having a culture
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+
 # it is more flexible to work without the entrypoint. And azure doesn't allow args when entrypoint is used.
 #ENTRYPOINT ["dotnet", "ytnetworks.dll"]
