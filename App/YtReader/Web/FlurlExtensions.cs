@@ -56,11 +56,11 @@ public static class FlurlExtensions {
     throw new($"Flurl '{desc}' failed ({error})", ex);
   }
 
-  public static void EnsureSuccess(this IFlurlResponse res, ILogger log, string desc, IFlurlRequest request, Exception ex = null, HttpMethod verb = null,
+  public static async Task EnsureSuccess(this IFlurlResponse res, ILogger log, string desc, IFlurlRequest request, Exception ex = null, HttpMethod verb = null,
     Func<HttpContent> content = null) {
     if (res != null && IsSuccess(res.StatusCode)) return;
     var error = res?.StatusCode.ToString() ?? ex?.Message ?? "unknown";
-    var curl = request.FormatCurl(verb, content);
+    var curl = await request.FormatCurl(verb, content);
     log?.Warning(ex, "Flurl {Desc} - failed {Status}: {Curl}", desc, error, curl);
     var msg = $"Flurl '{desc}' failed ({error})";
     throw ex == null ? new(msg) : new(msg, ex);

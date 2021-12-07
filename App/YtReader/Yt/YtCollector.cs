@@ -80,33 +80,29 @@ public class YtCollector {
     log.Information("started scraping user channels {Total}", channelIds.Count);
     log = log.Scope($"{nameof(YtCollector)}.{nameof(CollectUserChannels)}");
     await using var dbUser = DbStore.Users();
-    var batchTotal = channelIds.Count / RCfg.UserBatchSize;
     var start = Stopwatch.StartNew();
-    var total = await channelIds.Batch(RCfg.ChannelBatchSize).BlockDo(async (ids, i) => {
-        var userChannels = await ids.BlockDo(async c => {
-            var u = await Scraper.Channel(log, c).Swallow(ex => log.Warning(ex, "error loading channel {Channel}", c));
-            if (u == null) return null;
-            var subs = await u.Subscriptions().Take(Cfg.Collect.MaxSubscriptionsToSave).ToArrayAsync()
-              .Swallow(ex => log.Warning(ex, "error loading subscriptions for user {User}", u.Id));
-            return new User {
-              UserId = u.Id,
-              Platform = Platform.YouTube,
-              Name = u.Title,
-              ProfileUrl = u.LogoUrl,
-              Updated = DateTime.UtcNow,
-              Subscriptions = subs,
-              SubscriberCount = u.Subs,
-            };
-          }, RCfg.WebParallel, cancel: cancel)
-          .NotNull().ToListAsync();
-        log.Debug("Collect - scraped {Users} users. Batch {Batch}/{Total}", userChannels.Count, i, batchTotal);
-        await dbUser.Append(userChannels);
-        return userChannels.Count;
-      }, RCfg.ParallelChannels, cancel: cancel) // mimic parallel settings from channel processing e.g. x4 outer, x6 inner
-      .SumAsync();
+    var usersScraped = await channelIds.BlockDo(async (c, i) => {
+      var u = await Scraper.Channel(log, c).Swallow(ex => log.Warning(ex, "error loading channel {Channel}", c));
+      if (u == null) return 0;
+      var subs = await u.Subscriptions().Take(Cfg.Collect.MaxSubscriptionsToSave).ToArrayAsync()
+        .Swallow(ex => log.Warning(ex, "error loading subscriptions for user {User}", u.Id));
+      var user = new User {
+        UserId = u.Id,
+        Platform = Platform.YouTube,
+        Name = u.Title,
+        ProfileUrl = u.LogoUrl,
+        Updated = DateTime.UtcNow,
+        Subscriptions = subs,
+        SubscriberCount = u.Subs,
+      };
+      await dbUser.Append(user);
+      if (i % 100 == 0)
+        log.Debug("Collect - scraped users progress {Users}/{Total}", i, channelIds.Count);
+      return 1;
+    }, RCfg.WebParallel, cancel: cancel).SumAsync();
     log.Information("Collect - completed scraping user channels {Success}/{Total} in {Duration}",
-      total, channelIds.Count, start.Elapsed.HumanizeShort());
-    return total;
+      usersScraped, channelIds.Count, start.Elapsed.HumanizeShort());
+    return usersScraped;
   }
 
   /// <summary>Update channel data from the YouTube API and determine what type of update should be performed on each channel</summary>

@@ -28,9 +28,9 @@ public record FlurlProxyClient {
 
     Task<string> Curl() => request.FormatCurl(verb, content);
 
-    if (logRequests) log?.Debug("Flurl {desc}: {Curl}", desc, await Curl());
+    if (logRequests) log?.Debug("Flurl {Desc}: {Curl}", desc, await Curl());
     Task<IFlurlResponse> GetRes() => request.WithClient(UseProxy ? Proxy : Direct).AllowAnyHttpStatus().SendAsync(verb, content?.Invoke());
-    void ThrowIfError(IFlurlResponse r, Exception e) => r.EnsureSuccess(log, desc, request, e, verb, content);
+    async Task ThrowIfError(IFlurlResponse r, Exception e) => await r.EnsureSuccess(log, desc, request, e, verb, content);
     var retry = Policy
       .Handle<FlurlHttpTimeoutException>()
       .OrResult(isTransient)
@@ -42,16 +42,16 @@ public record FlurlProxyClient {
     var (res, ex) = await Def.Fun(() => retry.ExecuteAsync(GetRes)).Try();
     if (res != null && HttpExtensions.IsSuccess(res.StatusCode)) return res; // return on success
 
-    if (UseProxy) ThrowIfError(res, ex); // throw if there is an error and we are already using proxy
+    if (UseProxy) await ThrowIfError(res, ex); // throw if there is an error and we are already using proxy
 
     if (res?.StatusCode == 429 && !UseProxy) {
       UseProxy = true;
       log?.Debug("Flurl - switch to proxy service");
       var res2 = await retry.ExecuteAsync(GetRes);
-      ThrowIfError(res2, ex);
+      await ThrowIfError(res2, ex);
       return res2;
     }
-    ThrowIfError(res, ex);
+    await ThrowIfError(res, ex);
     return res;
   }
 

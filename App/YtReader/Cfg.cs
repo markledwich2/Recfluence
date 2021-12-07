@@ -159,10 +159,9 @@ public record YtCollectCfg : ICommonCollectCfg {
   public int RefreshRecsMin { get; set; } = 2;
 
   /// <summary>The maximum number of videos to collect recs from a channel on any given day</summary>
-  public int RefreshRecsMax { get; set; } = 40;
+  public int RefreshRecsMax { get; set; } = 10;
 
   public bool AlwaysUseProxy { get; set; }
-  public bool Headless       { get; set; } = true;
 
   /// <summary>the max number of channels to discover each collect</summary>
   public int DiscoverChannels { get; set; } = 10;
@@ -170,8 +169,9 @@ public record YtCollectCfg : ICommonCollectCfg {
   /// <summary>the number of vids to populate with data when discovering new channels (i.e. preparing data to be classified)</summary>
   public int DiscoverChannelVids { get; set; } = 3;
 
-  public int ParallelChannels { get; set; } = 4;
+  public int ParallelChannels { get; set; } = 12;
   public int CaptionParallel  { get; set; } = 3; // smaller than Web to try and reduce changes of out-of-mem failures
+  public int WebParallel      { get; set; } = 8; // parallelism for plain html scraping of video's, recs
 
   /// <summary>These thresholds shortcut the collection for channels to save costs. Bellow the analysis thresholds because we
   ///   want to collect ones that might tip over</summary>
@@ -186,7 +186,7 @@ public record YtCollectCfg : ICommonCollectCfg {
   public int  UserBatchSize           { get; set; } = 1000;
   public int? MaxMissingUsers         { get; set; } = 100_000;
   public int? MaxExtraErrorsInChannel { get; set; } = 10;
-  public int  WebParallel             { get; set; } = 6; // parallelism for plain html scraping of video's, recs
+  
 
   /// <summary>maximum number of videos to load when updating a channel.</summary>
   public int MaxChannelComments { get; set; } = 1;

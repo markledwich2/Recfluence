@@ -42,10 +42,10 @@
       {
         "pipeName": "ProcessChannels",
         "container": {
-          "mem": 3,
-          "cores": 2
+          "mem": 2,
+          "cores": 1
         },
-        "maxParallel": 12,
+        "maxParallel": 22,
         "minWorkItems": 300
       },
       {
