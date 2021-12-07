@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
     <configuration default="false" name="update (prod)" type="DotNetProject" factoryName=".NET Project">
         <option name="EXE_PATH" value="$PROJECT_DIR$/YtCli/bin/Debug/net6.0/recfluence.exe"/>
-        <option name="PROGRAM_PARAMETERS" value="update -a Stage|Result|index"/>
+        <option name="PROGRAM_PARAMETERS" value="update -z -a Stage|Dataform|Result|index"/>
         <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/YtCli/bin/Debug/net6.0"/>
         <option name="PASS_PARENT_ENVS" value="1"/>
         <envs>
@@ -13,12 +13,12 @@
         <option name="RUNTIME_ARGUMENTS" value=""/>
         <option name="PROJECT_PATH" value="$PROJECT_DIR$/YtCli/YtCli.csproj"/>
         <option name="PROJECT_EXE_PATH_TRACKING" value="1"/>
-    <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />
-    <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="1" />
-    <option name="PROJECT_KIND" value="DotNetCore" />
+        <option name="PROJECT_ARGUMENTS_TRACKING" value="1"/>
+        <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="1"/>
+        <option name="PROJECT_KIND" value="DotNetCore"/>
         <option name="PROJECT_TFM" value="net6.0"/>
-    <method v="2">
-      <option name="Build" />
-    </method>
-  </configuration>
+        <method v="2">
+            <option name="Build"/>
+        </method>
+    </configuration>
 </component>
