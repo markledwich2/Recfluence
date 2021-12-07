@@ -16,7 +16,7 @@ on:
 #
 # 2. Change these variables for your configuration:
 env:
-  AZURE_FUNCTIONAPP_NAME: recfluence  # set this to your application's name
+  AZURE_FUNCTIONAPP_NAME: recfluence2  # set this to your application's name
   AZURE_FUNCTIONAPP_PACKAGE_PATH: './App/YtFunctions'    # set this to the path to your web app project, defaults to the repository root
   DOTNET_VERSION: '6.0.100'              # set this to the dotnet version to use
 
