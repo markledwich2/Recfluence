@@ -8,8 +8,8 @@ namespace YtReader;
 public class DataformCfg {
   [Required]
   public ContainerCfg Container { get; set; } = new() {
-    Cores = 2,
-    Mem = 3,
+    Cores = 1,
+    Mem = 2,
     ImageName = "dataform",
     Exe = ""
   };
