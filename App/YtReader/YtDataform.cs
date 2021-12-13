@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Mutuo.Etl.Pipe;
+using YtReader.Data;
 using YtReader.Db;
 
 namespace YtReader;

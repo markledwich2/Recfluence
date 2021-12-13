@@ -4,15 +4,21 @@ using Mutuo.Etl.Db;
 using YtReader.Store;
 using YtReader.Yt;
 
-namespace YtReader.SimpleCollect;
+namespace YtReader.Collect;
 
 public record CollectDbCtx(ILoggedConnection<IDbConnection> Db, Platform Platform, ICommonCollectCfg Cfg) : IDisposable {
   public void Dispose() => Db?.Dispose();
 }
 
 public static class CollectDb {
+  public static string SqlInList<T>(this IEnumerable<T> items, string col) {
+    var ro = items.AsReadOnly();
+    return ro.None() ? "false" : $"{col} in ({ro.SqlList()})";
+  }
+  
   public static string SqlList<T>(this IEnumerable<T> items) => items.Join(",", i => i.ToString().SingleQuote());
   static string SqlList(this IReadOnlyCollection<Channel> channels) => channels.Join(",", c => c.ChannelId.SingleQuote());
+  
 
   /// <summary>Existing reviewed channels with information on the last updates to extra parts.
   ///   <param name="channelSelect">By default will return channels that meet review criteria. To override, specify a select

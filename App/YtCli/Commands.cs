@@ -21,9 +21,9 @@ using SysExtensions.Collections;
 using SysExtensions.IO;
 using SysExtensions.Text;
 using YtReader;
+using YtReader.Collect;
 using YtReader.Db;
 using YtReader.Search;
-using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Yt;
 using static YtCli.UpdateCmd;
@@ -61,19 +61,6 @@ public class ChannelInfoCmd : ICommand {
   }
 }
 
-[Command("backup", Description = "Backup database")]
-public class BackupCmd : ICommand {
-  readonly YtBackup Backup;
-  readonly ILogger  Log;
-
-  public BackupCmd(YtBackup backup, ILogger log) {
-    Backup = backup;
-    Log = log;
-  }
-
-  public async ValueTask ExecuteAsync(IConsole console) => await Backup.Backup(Log);
-}
-
 [Command("clean", Description = "Clean expired resources")]
 public class CleanCmd : ICommand {
   readonly AzureCleaner Cleaner;
@@ -88,26 +75,6 @@ public class CleanCmd : ICommand {
   public CleanContainerMode Mode { get; set; }
 
   public async ValueTask ExecuteAsync(IConsole console) => await Cleaner.DeleteExpiredResources(Mode, Log);
-}
-
-[Command("create-env", Description = "Create a branch environment for testing")]
-public class CreateEnvCmd : ICommand {
-  readonly BranchEnvCreator Creator;
-  readonly ILogger          Log;
-
-  public CreateEnvCmd(BranchEnvCreator creator, ILogger log) {
-    Creator = creator;
-    Log = log;
-  }
-
-  [CommandOption('m', Description = "the mode to copy the database Fresh|Clone|CloneDb")]
-  public BranchState Mode { get; set; }
-
-  [CommandOption('p', Description = "| separated list of staging db paths to copy")]
-  public string StagePaths { get; set; }
-
-  public async ValueTask ExecuteAsync(IConsole console) =>
-    await Creator.Create(Mode, StagePaths.UnJoin('|'), Log);
 }
 
 [Command("update", Description = "Update all the data: collect > warehouse > (results, search index, backup etc..)")]

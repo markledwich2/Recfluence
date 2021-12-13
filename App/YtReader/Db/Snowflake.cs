@@ -3,6 +3,7 @@ using System.Runtime.Serialization;
 using Mutuo.Etl.Db;
 using Snowflake.Data.Client;
 using SysExtensions.Security;
+using YtReader.Data;
 
 namespace YtReader.Db;
 
@@ -30,8 +31,7 @@ public class SnowflakeConnectionProvider {
 
 public static class SnowflakeConnectionEx {
   public static SnowflakeDbConnection Connection(this SnowflakeCfg cfg, string db = null, string schema = null, string role = null) =>
-    new SnowflakeDbConnection
-      { ConnectionString = cfg.Cs(db, schema, role), Password = cfg.Creds.SecureString() };
+    new() { ConnectionString = cfg.Cs(db, schema, role), Password = cfg.Creds.SecureString() };
 
   public static string Cs(this SnowflakeCfg cfg, string db = null, string schema = null, string role = null) =>
     Cs(new (string name, string value)[] {

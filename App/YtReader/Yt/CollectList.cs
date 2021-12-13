@@ -4,7 +4,7 @@ using Dapper;
 using Mutuo.Etl.Pipe;
 using Newtonsoft.Json.Linq;
 using Serilog.Core;
-using YtReader.SimpleCollect;
+using YtReader.Collect;
 using YtReader.Store;
 using static Mutuo.Etl.Pipe.PipeArg;
 using static YtReader.Yt.CollectFromType;
@@ -48,12 +48,12 @@ public enum CollectListPart {
   [EnumMember(Value = "user")] LUser,
 
   /// <summary>Channels found from refreshing videos</summary>
-  [EnumMember(Value = "discovered-channel")] [CollectPart(Explicit = true)]
+  [EnumMember(Value = "discovered-channel")] [RunPart(Explicit = true)]
   LDiscoveredChannel,
 
   /// <summary>Process videos in the channels found from the list (via video's or channels) where the most recent video_extra
   ///   is UpdateBefore</summary>
-  [EnumMember(Value = "channel-video")] [CollectPart(Explicit = true)]
+  [EnumMember(Value = "channel-video")] [RunPart(Explicit = true)]
   LChannelVideo
 }
 

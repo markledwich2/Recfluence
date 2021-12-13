@@ -16,49 +16,57 @@ public enum DataStoreType {
   Results,
   /// <summary>Data which is not meant to be shared publicly</summary>
   Private,
-  Backup,
   Logs,
   Root,
-  RootStandard,
-  RootS3
+  RootStandard
 }
 
 public enum StoreTier {
   Standard,
-  Premium,
-  Backup
+  Premium
+}
+
+public enum AccessType {
+  Default,
+  Sensitive,
+  Public
 }
 
 /// <summary>Access to any of the stores</summary>
 public record BlobStores(StorageCfg Cfg, S3Cfg S3Cfg, SemVersion Version, ILogger Log) {
-  public ISimpleFileStore Store(SPath path = null, StoreTier tier = Premium, SemVersion version = null) {
-    var p = new SPath(Cfg.RootPath(version ?? Version));
+  public ISimpleFileStore Store(SPath path = null, ILogger log = null, AccessType access = AccessType.Default, StoreTier tier = Standard,
+    SemVersion version = null) {
+    var p = new SPath(Cfg.RootPath(version ?? Version, access));
     if (path != null) p = p.Add(path);
     var store = new AzureBlobFileStore(tier switch {
-      StoreTier.Backup => Cfg.BackupCs,
       Premium => Cfg.PremiumDataStorageCs,
       _ => Cfg.DataStorageCs
-    }, p, Log);
+    }, p, log ?? Log);
     return store;
   }
 
-  public ISimpleFileStore Store(DataStoreType type) => type switch {
-    DataStoreType.Backup => Store("pipe", StoreTier.Backup),
-    Results => Store("results"),
-    Pipe => Store("pipe"),
-    DbStage => Store("db2"),
-    Private => new AzureBlobFileStore(Cfg.DataStorageCs, StoreEx.RootPath("private", Version.Prerelease), Log),
-    Logs => Store("logs"),
-    Root => Store(tier: Premium),
-    RootS3 => new S3Store(S3Cfg, "media"),
+  public ISimpleFileStore Store(DataStoreType type, ILogger log = null) => type switch {
+    Results => Store("results", log, AccessType.Public),
+    Pipe => Store("pipe", log),
+    DbStage => Store("db2", log),
+    Logs => Store("logs", log),
+    Root => Store(log: log),
+    Private => Store(path: null, log, AccessType.Sensitive),
     _ => throw new NotImplementedException($"No store for type '{type}'")
   };
 }
 
 public static class StoreEx {
-  public static string RootPath(this StorageCfg cfg, SemVersion version) => cfg.RootPath(version.Prerelease);
-  public static string RootPath(this StorageCfg cfg, string prefix) => RootPath(cfg.Container, prefix);
-  public static string RootPath(string container, string prefix) => prefix.HasValue() ? $"{container}-{prefix}" : container;
+  public static string RootPath(this StorageCfg cfg, SemVersion version, AccessType access = AccessType.Default) => cfg.RootPath(version.Prerelease, access);
+
+  public static string RootPath(this StorageCfg cfg, string prefix, AccessType access = AccessType.Default) {
+    var container = access switch {
+      AccessType.Public => cfg.PublicContainer,
+      AccessType.Sensitive => cfg.PrivateContainer,
+      _ => cfg.Container,
+    };
+    return prefix.HasValue() ? $"{container}-{prefix}" : container;
+  }
 }
 
 /// <summary>Typed access to jsonl blob collections</summary>

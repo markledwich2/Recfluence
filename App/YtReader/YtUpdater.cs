@@ -1,8 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using Mutuo.Etl.Pipe;
+using YtReader.Collect;
+using YtReader.Data;
 using YtReader.Search;
-using YtReader.SimpleCollect;
 using YtReader.Store;
 using YtReader.Yt;
 
@@ -115,7 +116,7 @@ public static class YtUpdaterEx {
 
   public static bool ShouldRun<T>(this T[] parts, T part) where T : struct, Enum {
     var name = Enum.GetName(part) ?? part.ToString();
-    var ignore = part.GetType().GetField(name)?.GetCustomAttribute<CollectPartAttribute>()?.Explicit;
+    var ignore = part.GetType().GetField(name)?.GetCustomAttribute<RunPartAttribute>()?.Explicit;
     return ignore == true ? parts?.Contains(part) == true : parts?.Contains(part) != false;
   }
 }

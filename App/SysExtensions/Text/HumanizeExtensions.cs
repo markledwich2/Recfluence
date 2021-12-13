@@ -1,10 +1,16 @@
 ﻿using System.Diagnostics;
+using Humanizer;
+using Humanizer.Bytes;
 using Humanizer.Localisation;
 using static Humanizer.Localisation.TimeUnit;
 
-namespace SysExtensions.Text;
+namespace SysExtensions.Text; 
 
 public static class HumanizeExtensions {
+  public static string ToMetricShort(this int input, MetricNumeralFormats? formats = null, int? decimals = 1) => input.ToMetric(formats, decimals);
+
+  public static string ToMetricShort(this long input, MetricNumeralFormats? formats = null, int? decimals = 1) => ((double)input).ToMetric(formats, decimals);
+
   public static Speed Speed(this double amount, string unit, TimeSpan duration) =>
     new Speed { Amount = amount, Unit = unit, Duration = duration };
 
@@ -14,18 +20,20 @@ public static class HumanizeExtensions {
   public static Speed Speed(this long amount, string unit, TimeSpan duration) =>
     new Speed { Amount = amount, Unit = unit, Duration = duration };
 
-  public static string Humanize(this Speed speed, string format = "#.#") {
+  public static string Humanize(this Speed speed) {
     if (speed.Amount <= 0 || speed.Duration.TotalSeconds <= 0) return $"0 {speed.Unit}/s";
     var timeUnit = speed.AmountPerSecond > 1 ? TimeUnits.Seconds : TimeUnits.Minutes;
     switch (timeUnit) {
       case TimeUnits.Minutes:
-        return $"{speed.AmountPerMinute.ToMetric(format)} {speed.Unit}/min";
+        return $"{speed.AmountPerMinute.ToMetric()} {speed.Unit}/min";
       case TimeUnits.Seconds:
-        return $"{speed.AmountPerSecond.ToMetric(format)} {speed.Unit}/s";
+        return $"{speed.AmountPerSecond.ToMetric()} {speed.Unit}/s";
       default:
         throw new ArgumentOutOfRangeException();
     }
   }
+
+  public static string HumanizeShort(this ByteSize b) => b.Humanize("#,#.#");
 
   public static string HumanizeShort(this Stopwatch sw) => sw.Elapsed.HumanizeShort();
 

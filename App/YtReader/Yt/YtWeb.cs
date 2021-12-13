@@ -10,7 +10,7 @@ using LtGt;
 using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Newtonsoft.Json.Linq;
-using YtReader.SimpleCollect;
+using YtReader.Collect;
 using YtReader.Store;
 using YtReader.Web;
 using static System.Globalization.DateTimeStyles;
@@ -672,6 +672,6 @@ public enum ExtraPart {
   [EnumMember(Value = "comment")] EComment,
   [EnumMember(Value = "caption")] ECaption,
   /// <summary> If specified will perform transcription ourselves if needed </summary>
-  [EnumMember(Value = "transcribe")] [CollectPart(Explicit = true)]
+  [EnumMember(Value = "transcribe")] [RunPart(Explicit = true)]
   ETranscribe
 }

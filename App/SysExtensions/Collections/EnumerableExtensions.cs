@@ -1,8 +1,9 @@
 ﻿using System.Collections;
-using System.Diagnostics.CodeAnalysis;
+using Humanizer.Bytes;
+using JetBrains.Annotations;
 using SysExtensions.Reflection;
 
-namespace SysExtensions.Collections;
+namespace SysExtensions.Collections; 
 
 public static class EnumerableExtensions {
   /// <summary>Returns a collection if it is already one, or enumerates and creates one. Useful to not iterate multiple times
@@ -12,15 +13,19 @@ public static class EnumerableExtensions {
   public static T[] InArray<T>(this T o) => new[] { o };
 
   /// <summary>Sames as Enumerable.Concat but makes it nicer when you just have a single item</summary>
-  /// <typeparam name="T"></typeparam>
-  /// <param name="items"></param>
-  /// <param name="additionalItems"></param>
-  /// <returns></returns>
+  public static IEnumerable<T> ConcatIf<T>(this IEnumerable<T> items, bool predicate, IEnumerable<T> additionalItems) =>
+    predicate ? items.Concat(additionalItems) : items;
+
+  /// <summary>Sames as Enumerable.Concat but makes it nicer when you just have a single item</summary>
+  public static IEnumerable<T> ConcatIf<T>(this IEnumerable<T> items, bool predicate, params T[] additionalItems) =>
+    predicate ? Enumerable.Concat(items, additionalItems) : items;
+
+  /// <summary>Sames as Enumerable.Concat but makes it nicer when you just have a single item</summary>
   public static IEnumerable<T> Concat<T>(this IEnumerable<T> items, params T[] additionalItems) =>
-    Enumerable.Concat(items, additionalItems);
+    additionalItems?.Any() == true ? Enumerable.Concat(items, additionalItems) : items;
 
   /// <summary>If items is null return an empty set, if an item is null remove it from the list</summary>
-  [return: NotNull]
+  [return: System.Diagnostics.CodeAnalysis.NotNull]
   public static IEnumerable<T> NotNull<T>(this IEnumerable<T> items)
     => items?.Where(i => !i.NullOrDefault()) ?? Array.Empty<T>();
 
@@ -33,7 +38,15 @@ public static class EnumerableExtensions {
     return source.OrderBy(_ => rnd.Next());
   }
 
+  public static TimeSpan Sum<TSource>(this IEnumerable<TSource> source, Func<TSource, TimeSpan> func) => new(source.Sum(item => func(item).Ticks));
+
+  public static ByteSize Sum<TSource>(this IEnumerable<TSource> source, Func<TSource, ByteSize> func) =>
+    source.Aggregate(new ByteSize(0), (current, r) => current.Add(func(r)));
+
   public static bool None<T>(this IEnumerable<T> items) => items?.Any() != true;
+
+  /// <summary>A shorthand for `Select(r => ...).ToArray()` because I use it so much</summary>
+  public static TR[] ToArray<T, TR>(this IEnumerable<T> items, Func<T, TR> func) => items?.Select(func).ToArray();
 
   public static IEnumerable<T> SelectMany<T>(this IEnumerable<IEnumerable<T>> items) => items.SelectMany(i => i);
 
@@ -46,6 +59,8 @@ public static class EnumerableExtensions {
     }
   }
 
+  public static bool ContainsAny<T>(this IEnumerable<T> items, params T[] contains) => items.Any(contains.Contains);
+
   public static async Task<(IReadOnlyCollection<T> included, IReadOnlyCollection<T> excluded)> Split<T>(this IAsyncEnumerable<T> items, Func<T, bool> where) {
     var included = new List<T>();
     var excluded = new List<T>();
@@ -57,6 +72,7 @@ public static class EnumerableExtensions {
     return (included, excluded);
   }
 
+  /// <summary>Returns two collections - the first is all items that satisfy the given condition, and the second is the rest</summary>
   public static (IReadOnlyCollection<T> included, IReadOnlyCollection<T> excluded) Split<T>(this IEnumerable<T> items, Func<T, bool> where) {
     var included = new List<T>();
     var excluded = new List<T>();
@@ -72,17 +88,29 @@ public static class EnumerableExtensions {
   public static IEnumerable<IReadOnlyCollection<T>> BatchFixed<T>(this IReadOnlyCollection<T> items, int maxBatches) =>
     items.Batch(items.Count / maxBatches);
 
-  /// <summary>Batches items into batchsize or maxBatches batches, whatever has the least batches</summary>
-  public static IEnumerable<IReadOnlyCollection<T>> Batch<T>(this IReadOnlyCollection<T> items, int batchSize, int maxBatches) =>
-    items.Batch(Math.Max(items.Count / maxBatches, batchSize));
+  /// <summary>Batches items into batchSize or maxBatches batches, whatever has the least batches</summary>
+  static int GetBatchSize<T>([NoEnumeration] this IEnumerable<T> items, int batchSize, int? maxBatches = null) {
+    var countRes = items.CollectionCount();
+    if (countRes == null) return batchSize;
+    var count = countRes.Value;
+    var size = (int)Math.Ceiling(count / Math.Ceiling(count / (double)batchSize)); // rather than simply using the given size, make even sized batches
+    return maxBatches == null ? size : Math.Max((int)Math.Ceiling(count / (double)maxBatches), size);
+  }
 
-  public static IEnumerable<IReadOnlyCollection<T>> Batch<T>(this IEnumerable<T> items, int batchSize) {
-    var b = new List<T>(batchSize);
+  public static int? CollectionCount<T>([NoEnumeration] this IEnumerable<T> items) => items switch {
+    IReadOnlyCollection<T> c => c.Count,
+    ICollection<T> c => c.Count,
+    _ => null
+  };
+
+  public static IEnumerable<IReadOnlyCollection<T>> Batch<T>(this IEnumerable<T> items, int batchSize, int? maxBatches = null) {
+    var size = items.GetBatchSize(batchSize, maxBatches);
+    var b = new List<T>(size);
     foreach (var item in items) {
       b.Add(item);
-      if (b.Count != batchSize) continue;
+      if (b.Count != size) continue;
       yield return b;
-      b = new(batchSize);
+      b = new(size);
     }
     if (b.Count > 0)
       yield return b;
@@ -99,6 +127,9 @@ public static class EnumerableExtensions {
       previous = e.Current;
     }
   }
+
+  /// <summary>Like take, but if num is null returns the source as is</summary>
+  public static IEnumerable<T> TakeOrAll<T>(this IEnumerable<T> source, int? num) => !num.HasValue ? source : source.Take(num.Value);
 
   public static IEnumerable<IGrouping<TKey, TSource>> ChunkBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector) =>
     source.ChunkBy(keySelector, EqualityComparer<TKey>.Default);
@@ -133,9 +164,9 @@ public static class EnumerableExtensions {
       Key = key;
       this.enumerator = enumerator;
       this.predicate = predicate;
-      head = new ChunkItem(enumerator.Current);
+      head = new(enumerator.Current);
       tail = head;
-      m_Lock = new object();
+      m_Lock = new();
     }
 
     // Indicates that all chunk elements have been copied to the list of ChunkItems, 
@@ -185,7 +216,7 @@ public static class EnumerableExtensions {
         predicate = null;
       }
       else {
-        tail.Next = new ChunkItem(enumerator.Current);
+        tail.Next = new(enumerator.Current);
       }
 
       // tail will be null if we are at the end of the chunk elements

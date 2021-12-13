@@ -1,6 +1,6 @@
 ﻿using System.Data;
 using Mutuo.Etl.Db;
-using YtReader.SimpleCollect;
+using YtReader.Collect;
 using YtReader.Store;
 
 // ReSharper disable InconsistentNaming
@@ -23,16 +23,18 @@ public record ChannelUpdatePlan {
 }
 
 public static class YtCollectDb {
-  public static Task<IReadOnlyCollection<string>> MissingUsers(this YtCollectDbCtx ctx) =>
-    ctx.Db.Query<string>("missing users", @$"
+  public static Task<IReadOnlyCollection<string>> MissingUsers(this YtCollectDbCtx ctx, int? limit = null) {
+    limit ??= ctx.YtCfg.MaxMissingUsers;
+    return ctx.Db.Query<string>("missing users", @$"
 select distinct author_channel_id
 from comment t
 join video_latest v on v.video_id = t.video_id
 where
  platform = 'YouTube'
  and not exists(select * from user where user_id = author_channel_id)
-{ctx.YtCfg.MaxMissingUsers.Dot(i => $"limit {i}")}
+{limit.Dot(i => $"limit {i}")}
 ");
+  }
 
   public static async Task<ChannelUpdatePlan[]> DiscoverChannelsViaRecs(this YtCollectDbCtx ctx) {
     var toAdd = await ctx.Db.Query<(string channel_id, string channel_title, string source)>("channels to classify",

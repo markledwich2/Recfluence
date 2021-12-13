@@ -1,5 +1,6 @@
 ﻿using Mutuo.Etl.Db;
 using Octokit;
+using YtReader.Data;
 using static System.Text.RegularExpressions.RegexOptions;
 
 // ReSharper disable InconsistentNaming

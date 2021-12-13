@@ -4,8 +4,8 @@ using Mutuo.Etl.Blob;
 using Mutuo.Etl.Db;
 using Mutuo.Etl.Pipe;
 using Serilog.Core;
+using YtReader.Collect;
 using YtReader.Db;
-using YtReader.SimpleCollect;
 using YtReader.Store;
 using static Mutuo.Etl.Pipe.PipeArg;
 using static YtReader.Yt.ChannelUpdateType;
@@ -42,7 +42,7 @@ public class YtCollector {
     options ??= new();
 
     await Task.WhenAll(
-      options.Parts.ShouldRunAny(PUser) ? ProcessAllMissingUserChannels(log, cancel) : Task.CompletedTask,
+      options.Parts.ShouldRunAny(PUser) ? ProcessAllMissingUserChannels(options, log, cancel) : Task.CompletedTask,
       options.Parts.ShouldRunAny(PChannel, PChannelVideos, PDiscover)
         ? ProcessAllChannels(log, options, cancel)
         : Task.CompletedTask
@@ -65,10 +65,10 @@ public class YtCollector {
     return false;
   }
 
-  async Task ProcessAllMissingUserChannels(ILogger log, CancellationToken cancel = default) {
+  async Task ProcessAllMissingUserChannels(CollectOptions options, ILogger log, CancellationToken cancel = default) {
     var sw = Stopwatch.StartNew();
     using var db = await Db(log);
-    var missing = await db.MissingUsers();
+    var missing = await db.MissingUsers(options.Limit);
     var total = await missing.Pipe(PipeCtx,
         b => CollectUserChannels(b, Inject<ILogger>(), Inject<CancellationToken>()), log: log, cancel: cancel)
       .Then(r => r.Sum(i => i.OutState));

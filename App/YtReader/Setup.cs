@@ -23,6 +23,7 @@ using Serilog.Events;
 using SysExtensions.Configuration;
 using SysExtensions.IO;
 using SysExtensions.Reflection;
+using YtReader.Data;
 using YtReader.Db;
 using YtReader.Search;
 using YtReader.Store;

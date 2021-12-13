@@ -4,17 +4,17 @@ using static System.Array;
 using static YtReader.Store.DiscoverSourceType;
 using ChanById = SysExtensions.Collections.IKeyedCollection<string, YtReader.Store.Channel>;
 
-namespace YtReader.SimpleCollect;
+namespace YtReader.Collect;
 
 [AttributeUsage(AttributeTargets.Field)]
-public class CollectPartAttribute : Attribute {
+public class RunPartAttribute : Attribute {
   /// <summary>When true, the part will only run if included explicitly</summary>
   public bool Explicit { get; init; }
 }
 
 public enum StandardCollectPart {
   Channel,
-  [CollectPart(Explicit = true)] DiscoverHome,
+  [RunPart(Explicit = true)] DiscoverHome,
   ChannelVideo,
   Extra
 }

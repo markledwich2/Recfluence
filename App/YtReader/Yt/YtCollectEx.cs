@@ -2,7 +2,7 @@
 using System.Runtime.Serialization;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Troschuetz.Random;
-using YtReader.SimpleCollect;
+using YtReader.Collect;
 using YtReader.Store;
 using static YtReader.Yt.ExtraPart;
 
@@ -83,7 +83,7 @@ public enum CollectPart {
   [EnumMember(Value = "channel")] PChannel,
   [EnumMember(Value = "extra")]   PChannelVideos,
   [EnumMember(Value = "user")]    PUser,
-  [EnumMember(Value = "discover")] [CollectPart(Explicit = true)]
+  [EnumMember(Value = "discover")] [RunPart(Explicit = true)]
   PDiscover
 }
 

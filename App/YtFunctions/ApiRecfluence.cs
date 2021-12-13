@@ -12,6 +12,7 @@ using SysExtensions.Serialization;
 using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
+using YtReader.Data;
 using YtReader.Search;
 using YtReader.Store;
 using YtReader.Web;

@@ -2,7 +2,7 @@
 using System.IO;
 using System.IO.Compression;
 
-namespace Mutuo.Etl.Blob;
+namespace Mutuo.Etl.Blob; 
 
 public class OptimiseCfg {
   public long TargetBytes     { get; set; } = (long)200.Megabytes().Bytes;
@@ -11,8 +11,18 @@ public class OptimiseCfg {
 }
 
 public record OptimiseBatch {
-  public StoreFileMd[] Files { get; set; }
-  public SPath         Dest  { get; set; }
+  public OptimiseBatch() { }
+
+  public OptimiseBatch(SPath destFile, StoreFileMd[] files) {
+    DestFile = destFile;
+    Files = files;
+  }
+
+  public SPath         DestFile { get; init; }
+  public StoreFileMd[] Files    { get; init; }
+
+  /// <summary>number of files un-optimized</summary>
+  public int SourceFileCount => (Files?.Length ?? 0).Max(1);
 }
 
 public static class JsonlStoreExtensions {
@@ -26,13 +36,6 @@ public static class JsonlStoreExtensions {
                  .Select(StoreFileMd.FromFileItem).ToArray())
                .Select(dummy => (IReadOnlyCollection<StoreFileMd>)dummy))
       yield return b;
-  }
-
-  public static async IAsyncEnumerable<IReadOnlyCollection<StoreFileMd>> Files(this ISimpleFileStore store, SPath path, bool allDirectories = false) {
-    await foreach (var p in store.List(path, allDirectories))
-      yield return p
-        .Where(p => !p.Path.Name.StartsWith("_") && p.Path.Name.EndsWith(Extension))
-        .Select(StoreFileMd.FromFileItem).ToArray();
   }
 
   public static SPath FilePath(SPath path, string ts, string version = null) =>
@@ -77,19 +80,16 @@ public static class JsonlStoreExtensions {
     var (byDir, duration) = await ToOptimiseByDir(store, rootPath, ts).WithDuration();
     log?.Debug("Optimise {Path} - read {Files} files across {Partitions} partitions in {Duration}",
       rootPath, byDir.Sum(p => p.Count()), byDir.Length, duration.HumanizeShort());
-    return byDir.SelectMany(p => OptimisePlan(p.Key, p, cfg, log)).ToArray();
+    return byDir.SelectMany(p => OptimisePlan(p, p.Key, cfg)).ToArray();
   }
 
-  public static IReadOnlyCollection<OptimiseBatch> OptimisePlan(SPath destPath, IEnumerable<StoreFileMd> files, OptimiseCfg cfg, ILogger log) {
+  public static IReadOnlyCollection<OptimiseBatch> OptimisePlan(this IEnumerable<StoreFileMd> files, SPath destPath, OptimiseCfg cfg) {
     var toProcess = files.OrderBy(f => f.Ts).ToQueue();
 
-    log.Debug("Optimise {Path} - Processing {Files} files in partition {Partition}",
-      destPath, toProcess.Count, destPath);
+    var batch = new List<StoreFileMd>();
+    var optimisePlan = new List<OptimiseBatch>();
 
-    var currentBatch = new List<StoreFileMd>();
-    var optimisePlan = new List<StoreFileMd[]>();
-
-    if (toProcess.None()) return new OptimiseBatch[] { };
+    if (toProcess.None()) return Array.Empty<OptimiseBatch>();
 
     while (toProcess.Any()) {
       var file = toProcess.Dequeue();
@@ -98,13 +98,13 @@ public static class JsonlStoreExtensions {
       if (nextBytes > cfg.TargetBytes && nextIsFurther) // if adding this file will make it too big, optimise the current batch as is
         PlanCurrentBatch();
 
-      currentBatch.Add(file);
-      if (toProcess.None() || currentBatch.Sum(f => f.Bytes) > cfg.TargetBytes) // join if big enough, or this is the last batch
+      batch.Add(file);
+      if (toProcess.None() || batch.Sum(f => f.Bytes) > cfg.TargetBytes) // join if big enough, or this is the last batch
         PlanCurrentBatch();
     }
 
     (long nextBytes, bool nextIsFurther) BatchSize(StoreFileMd file) {
-      var bytes = currentBatch.Sum(f => f.Bytes);
+      var bytes = batch.Sum(f => f.Bytes);
       var nextBytes = bytes + file.Bytes;
       var nextIsFurther = nextBytes - cfg.TargetBytes > cfg.TargetBytes - bytes;
       if (!nextBytes.HasValue) throw new InvalidOperationException($"Optimisation requires the file bytes are know. Missing on file {file.Path}");
@@ -112,51 +112,59 @@ public static class JsonlStoreExtensions {
     }
 
     void PlanCurrentBatch() {
-      if (currentBatch.Count > 1) // only plan a batch if there is more than one file Vin it
-        optimisePlan.Add(currentBatch.ToArray());
-      currentBatch.Clear();
+      OptimiseBatch batchPlan = batch.Count switch {
+        1 => new(batch.First().Path, Array.Empty<StoreFileMd>()), // leave file as is
+        > 1 => new(FilePath(destPath, batch.Last().Ts), batch.ToArray()),
+        _ => null
+      };
+      if (batchPlan != null)
+        optimisePlan.Add(batchPlan);
+      batch.Clear();
     }
 
-    return optimisePlan.Select(p => new OptimiseBatch { Dest = destPath, Files = p }).ToArray();
+    return optimisePlan;
   }
 
   /// <summary>Join ts (timestamp) contiguous files together until they are > MaxBytes</summary>
   public static async Task<(long optimisedIn, long optimisedOut)> Optimise(this ISimpleFileStore store, SPath destPath, IEnumerable<StoreFileMd> files,
     OptimiseCfg cfg, ILogger log) {
-    var plan = OptimisePlan(destPath, files, cfg, log);
+    var plan = OptimisePlan(files, destPath, cfg);
+    var (filesIn, filesOut) = (plan.Sum(p => p.SourceFileCount), plan.Count);
     if (plan.None()) {
       log.Debug("Optimise {Path} - already optimal", destPath);
     }
     else {
-      log.Debug("Optimise {Path} - starting to execute optimisation plan", destPath);
+      log?.Debug("Optimise {Path} - starting optimization of {FilesIn} to {FilesOut} files", destPath, filesIn, filesOut);
       await Optimise(store, cfg, plan, log);
     }
-    return (plan.Sum(p => p.Files.Length), plan.Count);
+    return (filesIn, filesOut);
   }
 
   public static async Task Optimise(this ISimpleFileStore store, OptimiseCfg cfg, IReadOnlyCollection<OptimiseBatch> plan, ILogger log) =>
     await plan.Select((b, i) => (b, i)).BlockDo(async b => {
       var (batch, i) = b;
-      var optimiseRes = await JoinFiles(store, batch.Files, batch.Dest, cfg.ParallelFiles, log).WithDuration();
-      log.Debug("Optimise {Path} - optimised file {OptimisedFile} from {FilesIn} in {Duration}. batch {Batch}/{Total}",
-        batch.Dest, optimiseRes.Result, batch.Files.Length, optimiseRes.Duration.HumanizeShort(), i, plan.Count);
+      if (batch.Files.Any()) {
+        var dur = await JoinFiles(store, batch, cfg.ParallelFiles, log).WithDuration();
+        log.Debug("Optimise {Path} - optimised file {OptimisedFile} from {FilesIn} in {Duration}. batch {Batch}/{Total}",
+          batch.DestFile, batch.DestFile, batch.Files.Length, dur.HumanizeShort(), i, plan.Count);
+      }
     }, cfg.ParallelBatches);
 
-  static async Task<SPath> JoinFiles(ISimpleFileStore store, IReadOnlyCollection<StoreFileMd> toOptimise, SPath destPath, int parallel,
-    ILogger log) {
-    var optimisedFileName = FilePath(destPath, toOptimise.Last().Ts);
-    var localTmpDir = Path.GetTempPath().AsFPath().Combine("Mutuo.Etl", "JoinFiles", ShortGuid.Create(8));
+  static async Task JoinFiles(ISimpleFileStore store, OptimiseBatch batch, int parallel, ILogger log) {
+    if (batch.Files.Length <= 1) return;
 
+    var localTmpDir = Path.GetTempPath().AsFPath().Combine("Recfluence", "JoinFiles", ShortGuid.Create(8));
     localTmpDir.EnsureDirectoryExists();
 
-    var inFiles = await toOptimise.BlockDo(async s => {
+    var destDir = batch.DestFile.Parent;
+    var inFiles = await batch.Files.BlockDo(async s => {
       var inPath = localTmpDir.Combine($"{ShortGuid.Create(6)}.{s.Path.Name}"); // flatten dir structure locally. ensure unique with GUID
       var dur = await store.LoadToFile(s.Path, inPath, log).WithDuration();
-      log.Debug("Optimise {Path} - loaded file {SourceFile} for optimisation in {Duration}", destPath, s.Path, dur.HumanizeShort());
+      log.Debug("Optimise {Path} - loaded file {SourceFile} for optimisation in {Duration}", destDir, s.Path, dur.HumanizeShort());
       return inPath;
     }, parallel).ToListAsync();
 
-    var outFile = localTmpDir.Combine($"out.{optimisedFileName.Name}");
+    var outFile = localTmpDir.Combine($"out.{batch.DestFile.Name}");
 
     using (var fileStream = outFile.Open(FileMode.Create)) {
       using var zipWriter = new GZipStream(fileStream, CompressionLevel.Optimal, leaveOpen: false);
@@ -166,22 +174,18 @@ public static class JsonlStoreExtensions {
       }
     }
 
-    log.Debug("Optimise {Path} - joined {SourceFiles} source files. About to upload", destPath, inFiles.Count);
-    await store.Save(optimisedFileName, outFile);
-    log.Debug("Optimise {Path} - saved optimised file {OptimisedFile}", destPath, optimisedFileName);
+    log.Debug("Optimise {Path} - joined {SourceFiles} source files. About to upload", destDir, inFiles.Count);
+    await store.Save(batch.DestFile, outFile);
+    log.Debug("Optimise {Path} - saved optimised file {OptimisedFile}", destDir, batch.DestFile);
 
-    // when in-place, this is dirty if we fail now. There is no transaction capability in cloud storage, so downstream process must handle duplicates
-    // successfully staged files, delete from land. Incremental using TS will work without delete, but it's more efficient to delete process landed files.
-    await toOptimise.BlockDo(async f => { await store.Delete(f.Path); }, parallel)
-      .WithWrappedException(_ => "Failed to delete optimised files. Duplicate records need to be handled downstream");
-    log.Debug("Optimise {Path} - deleted {Files} that were optimised into {OptimisedFile}", destPath, toOptimise.Count, optimisedFileName);
-
+    await batch.Files.BlockDo<StoreFileMd>(f => store.Delete(f.Path), parallel)
+      .WithWrappedException(e => "Failed to delete optimised files. Duplicate records need to be handled downstream");
+    log.Debug("Optimise {Path} - deleted {Files} that were optimised into {OptimisedFile}", destDir, batch.Files, batch.DestFile);
     localTmpDir.Delete(recursive: true); // delete local tmp files
-    return optimisedFileName;
   }
 
   static async Task<IGrouping<string, StoreFileMd>[]> ToOptimiseByDir(ISimpleFileStore store, SPath landPath, string ts) =>
-    (await store.Files(landPath, allDirectories: true).SelectManyList())
+    (await store.JsonStoreFiles(landPath, allDirectories: true).SelectManyList())
     .Where(f => ts == null || string.CompareOrdinal(f.Ts, ts) > 0)
     .GroupBy(f => f.Path.Parent.ToString())
     .ToArray();

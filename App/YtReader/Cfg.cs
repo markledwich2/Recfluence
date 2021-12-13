@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using Serilog.Events;
 using SysExtensions.Configuration;
 using SysExtensions.Security;
+using YtReader.Data;
 using YtReader.Db;
 
 namespace YtReader;
@@ -206,9 +207,12 @@ public record YtCollectCfg : ICommonCollectCfg {
 }
 
 public class StorageCfg {
-  [Required] public string Container            { get; set; } = "data";
-  [Required] public string PremiumDataStorageCs { get; set; }
+  [Required] public string Container        { get; set; } = "data";
+  [Required] public string PublicContainer  { get; set; } = "public";
+  [Required] public string PrivateContainer { get; set; } = "private";
+
   [Required] public string DataStorageCs        { get; set; }
+  public            string PremiumDataStorageCs { get; set; }
 
   [Required] public string BackupCs { get; set; }
 }

@@ -11,6 +11,8 @@ namespace SysExtensions.Text;
 public static class StringExtensions {
   static readonly SHA256 _hash = SHA256.Create();
 
+  public static SPath AsSPath(this string s) => new(s);
+  
   public static Stream AsStream(this string content) => new MemoryStream(Encoding.UTF8.GetBytes(content));
 
   public static TextReader AsTextStream(this string content) => new StreamReader(new MemoryStream(Encoding.UTF8.GetBytes(content)));

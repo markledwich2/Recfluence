@@ -11,24 +11,6 @@ public class YtBackup {
 
   public YtBackup(BlobStores stores) => Stores = stores;
 
-  public async Task Backup(ILogger log) {
-    var destPath = SPath.Relative("db2", DateTime.UtcNow.FileSafeTimestamp());
-    log.Information("Backup {Path} - started", destPath);
-
-    var source = (AzureBlobFileStore)Stores.Store(DataStoreType.DbStage);
-    var dest = (AzureBlobFileStore)Stores.Store(DataStoreType.Backup);
-    if (dest == null) {
-      log.Information("not running backup. Normal for pre-release");
-      return;
-    }
-
-    var sourceContainer = source.LegacyContainer();
-    var desContainer = dest.LegacyContainer();
-    var sourceBlob = sourceContainer.GetDirectoryReference(source.BasePathSansContainer());
-    var destBlob = desContainer.GetDirectoryReference(dest.BasePathSansContainer().Add(destPath));
-    await CopyBlobs(destPath, sourceBlob, destBlob, log);
-  }
-
   public static async Task CopyBlobs(string opName, CloudBlobDirectory sourceBlob, CloudBlobDirectory destBlob, ILogger log) {
     var destUrl = destBlob.Uri;
     var sw = Stopwatch.StartNew();
