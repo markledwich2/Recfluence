@@ -61,7 +61,8 @@ public class TaskGraph {
     var attribute = m.Method.GetCustomAttribute<GraphTaskAttribute>();
     if (attribute != null)
       dependsOn = dependsOn.Concat(attribute.Deps).ToArray();
-    return new(attribute?.Name ?? m.Method.Name, dependsOn, runTask);
+    var status = attribute?.Status ?? GraphTaskStatus.Available;
+    return new(attribute?.Name ?? m.Method.Name, dependsOn, runTask) { Status = status };
   }
 
   public bool AllComplete => _graph.Nodes.All(v => v.Status.IsComplete());
@@ -96,8 +97,15 @@ public class TaskGraph {
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
 public sealed class GraphTaskAttribute : Attribute {
   public GraphTaskAttribute(params string[] deps) => Deps = deps;
-  public string[] Deps { get; }
-  public string   Name { get; set; }
+
+  public GraphTaskAttribute(GraphTaskStatus status, params string[] deps) {
+    Status = status;
+    Deps = deps;
+  }
+
+  public string[]        Deps   { get; init; }
+  public string          Name   { get; init; }
+  public GraphTaskStatus Status { get; init; }
 }
 
 public static class TaskGraphEx {

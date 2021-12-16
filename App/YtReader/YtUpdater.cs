@@ -6,6 +6,7 @@ using YtReader.Data;
 using YtReader.Search;
 using YtReader.Store;
 using YtReader.Yt;
+using static Mutuo.Etl.Pipe.GraphTaskStatus;
 
 // ReSharper disable InconsistentNaming
 
@@ -56,7 +57,7 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
   Task Dataform(bool fullLoad, string[] tables, bool includeDeps, ILogger logger, CancellationToken cancel) =>
     YtDataform.Update(logger, fullLoad, tables, includeDeps, cancel);
 
-  [GraphTask(nameof(Dataform))]
+  [GraphTask(Ignored, nameof(Dataform))] // ignored by default because I shut down search to save money
   Task Search(SearchMode mode, string[] optionsSearchIndexes, (string index, string condition)[] conditions, ILogger logger, CancellationToken cancel) =>
     _search.SyncToElastic(logger, mode, optionsSearchIndexes, conditions, cancel);
 
@@ -67,10 +68,7 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
   [GraphTask(nameof(Dataform))]
   Task Index(string[] tables, string[] tags, ILogger logger, CancellationToken cancel) =>
     _index.Run(tables, tags, logger, cancel);
-
-  [GraphTask(nameof(Dataform))]
-  Task DataScripts(ILogger logger, CancellationToken cancel, DataScriptOptions options) =>
-    _dataScripts.Run(logger, cancel, options);
+  
 
   [Pipe]
   public async Task Update(UpdateOptions options = null, CancellationToken cancel = default) {
@@ -87,8 +85,7 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
       (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
       (l, c) => Result(options.Results, l, c),
       (l, c) => Index(options.Indexes, options.Tags, l, c),
-      (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c),
-      (l, c) => DataScripts(l, c, options.DataScript)
+      (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c)
     );
 
     var actions = options.Actions;
@@ -96,11 +93,8 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
       var missing = actions.Where(a => actionMethods[a] == null).ToArray();
       if (missing.Any())
         throw new InvalidOperationException($"no such action(s) ({missing.Join("|")}), available: {actionMethods.All.Join("|", a => a.Name)}");
-
-      foreach (var m in actionMethods.All.Where(m => !actions.Contains(m.Name)))
-        m.Status = GraphTaskStatus.Ignored;
+      foreach (var m in actionMethods.All) m.Status = actions.Contains(m.Name) ? Available : Ignored;
     }
-
 
     var res = await actionMethods.Run(Cfg.Parallel, log, cancel);
     var errors = res.Where(r => r.Error).ToArray();
