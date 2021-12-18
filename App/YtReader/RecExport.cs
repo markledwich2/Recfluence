@@ -15,88 +15,91 @@ namespace YtReader;
 
 [Command("rec-export", Description = "Process recommendation exports")]
 public record RecExportCmd(ILogger Log, BlobStores Stores, YtWeb Yt) : ICommand {
-  public async ValueTask ExecuteAsync(IConsole console) => await RecExport.Process(Stores.Store(DataStoreType.Private), Yt, Log);
+  public async ValueTask ExecuteAsync(IConsole console) => await RecExport.ProcessRecExports(Stores.Store(DataStoreType.Private), Yt, Log);
 }
 
 public static class RecExport {
-  public static async Task Process(ISimpleFileStore store, YtWeb ytWeb, ILogger log) {
-    var blobs = await store.List("rec_exports").SelectManyList();
-    //blobs = blobs.Where(b => b.Path == "rec_exports/Traffic source 2019-07-01_2019-08-01 David Pakman Show.zip").ToList();
+  static readonly Regex FileInfoRegex = new("^Traffic source (?'from'\\d+-\\d+-\\d+)_(?'to'\\d+-\\d+-\\d+) (?'channel'[^.]+)", RegexOptions.Compiled);
 
-    var fileInfoRegex = new Regex("^Traffic source (?'from'\\d+-\\d+-\\d+)_(?'to'\\d+-\\d+-\\d+) (?'channel'[^.]+)", RegexOptions.Compiled);
+  record ExportFileInfo(string Channel, DateTime From, DateTime To, DateTime? Modified);
 
-    var appendStore = new JsonlStore<TrafficSourceRow>(store, "rec_exports_processed", r => r.FileUpdated.FileSafeTimestamp(), log);
+  static ExportFileInfo GetExportFileInfo(this FileListItem f) {
+    var m = FileInfoRegex.Match(f.Path.Name);
+    if (m.Groups.Count < 3)
+      throw new InvalidOperationException($"unable to parse export info from file name '{f.Path.Name}'");
+    return new(m.Groups["channel"].Value, m.Groups["from"].Value.ParseDate(), m.Groups["to"].Value.ParseDate(), f.Modified?.UtcDateTime);
+  }
 
-    var md = await appendStore.LatestFile();
+  enum SourceExportType { Rec, Cat }
+
+  public static async Task ProcessRecExports(ISimpleFileStore store, YtWeb ytWeb, ILogger log) {
+    await using var sink = new JsonlSink<TrafficSourceRow>(store, "rec_exports_processed", r => r.FileUpdated.FileSafeTimestamp(), new(), log);
+
+    var md = await sink.LatestFile();
     var latestModified = md?.Ts.ParseFileSafeTimestamp();
 
-    var newBlobs = latestModified != null
-      ? blobs.Where(b => b.Modified > latestModified).ToList()
-      : blobs;
+    var blobs = await store.List("rec_exports").SelectManyList();
+    var newBlobs = latestModified != null ? blobs.Where(b => b.Modified > latestModified).ToList() : blobs;
 
     log.Information("Processing {NewExports}/{AllExports} exports", newBlobs.Count, blobs.Count);
 
-    foreach (var b in newBlobs) {
+    string firstVideoId = null;
+
+    var allRows = newBlobs.BlockDo(async b => {
       log.Information("Processing {Path}", b.Path);
-
-      var m = fileInfoRegex.Match(b.Path.Name);
-      if (m.Groups.Count < 3)
-        throw new InvalidOperationException($"unable to parse export info from file name '{b.Path.Name}'");
-      var exportInfo = new {
-        Channel = m.Groups["channel"].Value,
-        From = m.Groups["from"].Value.ParseDate(),
-        To = m.Groups["to"].Value.ParseDate()
-      };
-
-      var stream = await store.Load(b.Path);
-      var zip = new ZipArchive(stream);
-      using var csvStream = new StreamReader(
-        zip.GetEntry("Table data.csv")?.Open() ?? throw new InvalidOperationException("expected export to have 'Table data.csv'"),
-        Encoding.UTF8);
-      using var csvReader = new CsvReader(csvStream, CsvExtensions.DefaultConfig);
-
-      var innerTube = await ytWeb.Channel(log, exportInfo.Channel).Then(r => r.InnerTubeCfg);
-
-      var records = csvReader.GetRecords<TrafficSourceExportRow>().ToList();
-      var rows = (await records.BlockMapList(ToTrafficSourceRow, parallel: 4,
-          progressUpdate: p => log.Debug("Processing traffic sources for {Path}: {Rows}/{TotalRows}", b.Path, p.Completed, records.Count)))
-        .NotNull().ToList();
-
-      await appendStore.Append(rows, log);
+      using var csvReader = await GetExportTableCsv(store, b);
+      var exportInfo = b.GetExportFileInfo();
+      var rows = csvReader.GetRecords<TrafficSourceRecExportRow>()
+        .Select(row => {
+          var source = row.Source.Split(".");
+          var sourceType = source.Length != 2 || source[0] != "YT_RELATED" ? SourceExportType.Cat : SourceExportType.Rec;
+          var videoId = sourceType == SourceExportType.Rec ? source[1] : null;
+          firstVideoId ??= videoId;
+          return (row, videoId, exportInfo);
+        });
       log.Information("Completed processing traffic source exports for {Path}", b.Path);
+      return rows.ToArray();
+    }, parallel: 4).SelectMany();
 
-      async Task<TrafficSourceRow> ToTrafficSourceRow(TrafficSourceExportRow row) {
-        var source = row.Source.Split(".");
-        if (source.Length != 2 || source[0] != "YT_RELATED")
-          return null; // total at the top or otherwise. not interested
-        var videoId = source[1];
-        var fromVideo = await ytWeb.GetExtra(log, innerTube, videoId, new[] { ExtraPart.EExtra }, maxComments: 0).Then(r => r.Extra);
+    var innerTube = await ytWeb.InnerTubeFromVideoPage(firstVideoId, log);
 
-        return new() {
-          ToChannelTitle = exportInfo.Channel,
-          From = exportInfo.From,
-          To = exportInfo.To,
-          Impressions = row.Impressions,
-          Source = row.Source,
-          AvgViewDuration = row.AvgViewDuration,
-          Views = row.Views,
-          SourceType = row.SourceType,
-          FromChannelId = fromVideo?.ChannelId,
-          FromChannelTitle = fromVideo?.ChannelTitle,
-          FromVideoId = fromVideo?.VideoId,
-          FromVideoTitle = fromVideo?.Title,
-          ImpressionClickThrough = row.ImpressionClickThrough,
-          WatchTimeHrsTotal = row.WatchTimeHrsTotal,
-          FileUpdated = b.Modified?.UtcDateTime ?? DateTime.MinValue
-        };
-      }
-    }
+    await allRows.BlockDo(async r => {
+      var (row, videoId, exportInfo) = r;
+      var fromVideo = videoId == null ? null : await ytWeb.GetExtra(log, innerTube, videoId, new[] { ExtraPart.EExtra }, maxComments: 0).Then(e => e.Extra);
+      await sink.Append(new TrafficSourceRow {
+        ToChannelTitle = exportInfo.Channel,
+        From = exportInfo.From,
+        To = exportInfo.To,
+        Impressions = row.Impressions,
+        Source = row.Source,
+        AvgViewDuration = row.AvgViewDuration,
+        Views = row.Views,
+        SourceType = row.SourceType,
+        FromChannelId = fromVideo?.ChannelId,
+        FromChannelTitle = fromVideo?.ChannelTitle,
+        FromVideoId = fromVideo?.VideoId,
+        FromVideoTitle = fromVideo?.Title,
+        ImpressionClickThrough = row.ImpressionClickThrough,
+        WatchTimeHrsTotal = row.WatchTimeHrsTotal,
+        FileUpdated = exportInfo.Modified ?? DateTime.MinValue
+      });
+    }, parallel: 8);
 
     log.Information("Completed processing traffic source exports");
   }
+
+  static async Task<CsvReader> GetExportTableCsv(ISimpleFileStore store, FileListItem b) {
+    var stream = await store.Load(b.Path);
+    var zip = new ZipArchive(stream);
+    using var csvStream = new StreamReader(
+      zip.GetEntry("Table data.csv")?.Open() ?? throw new InvalidOperationException("expected export to have 'Table data.csv'"),
+      Encoding.UTF8);
+    var csvReader = new CsvReader(csvStream, CsvExtensions.DefaultConfig);
+    return csvReader;
+  }
 }
 
-public record TrafficSourceRow : TrafficSourceExportRow {
+public record TrafficSourceRow : TrafficSourceRecExportRow {
   public string   FromVideoId      { get; init; }
   public string   FromChannelId    { get; init; }
   public string   FromChannelTitle { get; init; }
@@ -106,7 +109,7 @@ public record TrafficSourceRow : TrafficSourceExportRow {
   public DateTime FileUpdated      { get; init; }
 }
 
-public record TrafficSourceExportRow {
+public record TrafficSourceRecExportRow {
   [Name("Traffic source")] public string Source         { get; init; }
   [Name("Source type")]    public string SourceType     { get; init; }
   [Name("Source title")]   public string FromVideoTitle { get; init; }

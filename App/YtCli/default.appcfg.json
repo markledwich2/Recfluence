@@ -75,9 +75,6 @@
       }
     ]
   },
-  "elastic": {
-    "cloudId": "Recfluence:d2VzdHVzMi5henVyZS5lbGFzdGljLWNsb3VkLmNvbTo5MjQzJDg5OTljNTUxYjkyYjRmYjA5YTRkZjYwMmVjYTQ3ZmJjJGJmOTFlMzE2YzNkZTQyOWE4Mzk3MDlhZjI0NTRlYzg0"
-  },
   "dataScripts": {
     "stale": "2021-03-26T04:39:34Z"
   },

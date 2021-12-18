@@ -57,7 +57,7 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
   Task Dataform(bool fullLoad, string[] tables, bool includeDeps, ILogger logger, CancellationToken cancel) =>
     YtDataform.Update(logger, fullLoad, tables, includeDeps, cancel);
 
-  [GraphTask(Ignored, nameof(Dataform))] // ignored by default because I shut down search to save money
+  [GraphTask(nameof(Dataform))] // ignored by default because I shut down search to save money
   Task Search(SearchMode mode, string[] optionsSearchIndexes, (string index, string condition)[] conditions, ILogger logger, CancellationToken cancel) =>
     _search.SyncToElastic(logger, mode, optionsSearchIndexes, conditions, cancel);
 
@@ -108,9 +108,14 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
 public static class YtUpdaterEx {
   public static bool ShouldRunAny<T>(this T[] parts, params T[] toRun) where T : struct, Enum => toRun.Any(parts.ShouldRun);
 
-  public static bool ShouldRun<T>(this T[] parts, T part) where T : struct, Enum {
+  public static RunPartAttribute RunPart<T>(this T part) where T : struct, Enum {
     var name = Enum.GetName(part) ?? part.ToString();
-    var ignore = part.GetType().GetField(name)?.GetCustomAttribute<RunPartAttribute>()?.Explicit;
+    return part.GetType().GetField(name)?.GetCustomAttribute<RunPartAttribute>();
+  }
+
+  public static bool ShouldRun<T>(this T[] parts, T part) where T : struct, Enum {
+    var attribute = part.RunPart();
+    var ignore = attribute?.Explicit;
     return ignore == true ? parts?.Contains(part) == true : parts?.Contains(part) != false;
   }
 }

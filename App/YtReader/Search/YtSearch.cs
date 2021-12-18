@@ -11,7 +11,9 @@ using Polly;
 using Polly.Retry;
 using Semver;
 using Snowflake.Data.Client;
+using YtReader.Collect;
 using YtReader.Db;
+using static System.StringComparison;
 using static YtReader.Search.IndexType;
 using static YtReader.Search.SearchMode;
 using Policy = Polly.Policy;
@@ -39,8 +41,12 @@ public class YtSearch {
   [Pipe]
   public async Task SyncToElastic(ILogger log, SearchMode mode = Incremental, string[] indexes = null,
     (string index, string condition)[] conditions = null, CancellationToken cancel = default) {
-    string[] Conditions(IndexType index) => conditions?.Where(c => c.index == index.BaseName()).Select(c => c.condition).ToArray() ?? new string[] { };
-    bool ShouldRun(IndexType index) => indexes == null || indexes.Any(i => string.Equals(i, index.BaseName(), StringComparison.OrdinalIgnoreCase));
+    string[] Conditions(IndexType index) => conditions?.Where(c => c.index == index.BaseName()).Select(c => c.condition).ToArray() ?? Array.Empty<string>();
+
+    bool ShouldRun(IndexType index) => indexes switch {
+      null => index.RunPart()?.Explicit is null or false,
+      _ => indexes.Any(i => string.Equals(i, index.BaseName(), OrdinalIgnoreCase))
+    };
 
     async Task Sync<TDb, TEs>(IndexType type, string sql, Func<TDb, TEs> map, string incrementalCondition = null, params string[] extraConditions)
       where TDb : class where TEs : class, IHasUpdated {
@@ -241,7 +247,7 @@ order by updated"; // always order by updated so that if sync fails, we can resu
 }
 
 public static class EsExtensions {
-  public static ElasticClient Client(this ElasticCfg cfg, string defaultIndex) => new ElasticClient(new ConnectionSettings(
+  public static ElasticClient Client(this ElasticCfg cfg, string defaultIndex) => new(new ConnectionSettings(
       cfg.CloudId,
       new BasicAuthenticationCredentials(cfg.Creds.Name, cfg.Creds.Secret))
     .DefaultIndex(defaultIndex));
@@ -274,8 +280,10 @@ public static class EsExtensions {
 }
 
 public enum IndexType {
-  [EnumMember(Value = "video")]         Video,
-  [EnumMember(Value = "caption")]       Caption,
+  [EnumMember(Value = "video")] [RunPart(Explicit = true)]
+  Video,
+  [EnumMember(Value = "caption")] [RunPart(Explicit = true)]
+  Caption,
   [EnumMember(Value = "channel")]       Channel,
   [EnumMember(Value = "channel_title")] ChannelTitle
 }

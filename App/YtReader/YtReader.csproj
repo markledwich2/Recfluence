@@ -10,13 +10,13 @@
         <PackageReference Include="AngleSharp.Css" Version="0.16.2"/>
         <PackageReference Include="AngleSharp.Io" Version="0.16.0"/>
         <PackageReference Include="AngleSharp.Js" Version="0.15.0"/>
-        <PackageReference Include="AWSSDK.TranscribeService" Version="3.7.9.17"/>
+        <PackageReference Include="AWSSDK.TranscribeService" Version="3.7.9.19"/>
         <PackageReference Include="Azure.Storage.Blobs" Version="12.10.0"/>
         <PackageReference Include="Azure.Storage.Files.Shares" Version="12.8.0"/>
         <PackageReference Include="CliFx" Version="2.0.6"/>
         <PackageReference Include="CsvHelper" Version="27.2.1"/>
         <PackageReference Include="Dapper" Version="2.0.123"/>
-        <PackageReference Include="Elasticsearch.Net" Version="7.15.2"/>
+        <PackageReference Include="Elasticsearch.Net" Version="7.16.0"/>
         <PackageReference Include="Flurl" Version="3.0.2"/>
         <PackageReference Include="Flurl.Http" Version="3.2.0"/>
         <PackageReference Include="Google.Apis.Drive.v3" Version="1.55.0.2502"/>
@@ -27,7 +27,7 @@
         <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="6.0.0"/>
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0"/>
         <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0"/>
-        <PackageReference Include="NEST" Version="7.15.2"/>
+        <PackageReference Include="NEST" Version="7.16.0"/>
         <PackageReference Include="Nito.AsyncEx" Version="5.1.2"/>
         <PackageReference Include="Nito.AsyncEx.Tasks" Version="5.1.2"/>
         <PackageReference Include="Octokit" Version="0.50.0"/>
@@ -42,7 +42,7 @@
         <PackageReference Include="Serilog.Sinks.Trace" Version="3.0.0"/>
         <PackageReference Include="Serilog.Sinks.Debug" Version="2.0.0"/>
         <PackageReference Include="Snowflake.Data" Version="2.0.8"/>
-        <PackageReference Include="System.Linq.Async" Version="5.0.0"/>
+        <PackageReference Include="System.Linq.Async" Version="5.1.0"/>
         <PackageReference Include="Troschuetz.Random" Version="5.1.0"/>
         <PackageReference Include="UriBuilder.Fluent" Version="1.5.2"/>
     </ItemGroup>
