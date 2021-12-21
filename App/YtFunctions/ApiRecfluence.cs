@@ -17,7 +17,6 @@ using SysExtensions.Text;
 using SysExtensions.Threading;
 using YtReader;
 using YtReader.Data;
-using YtReader.Search;
 using YtReader.Store;
 using YtReader.Web;
 using static System.Net.HttpStatusCode;
@@ -31,7 +30,7 @@ public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, Elastic
   static readonly JsonSerializerSettings JPlain = new() { Formatting = Formatting.None };
   static readonly JsonSerializerSettings JDefault = JsonlExtensions.DefaultSettingsForJs();
 
-  [Function("video")]
+  /*[Function("video")]
   public Task<HttpResponseData> Video([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "video/{videoId}")] HttpRequestData req, string videoId) => R(
     async () => {
       if (videoId.NullOrEmpty()) return req.TextResponse("video id not provided", NotFound);
@@ -62,7 +61,7 @@ public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, Elastic
 
     var captions = res.Hits.Select(h => h.Source).ToArray();
     return req.JsonResponse(captions, OK, JPlain);
-  });
+  });*/
 
   [Function("search")]
   public Task<HttpResponseData> LogSearch([HttpTrigger(AuthorizationLevel.Anonymous, "put")] HttpRequestData req) => R(async () => {
@@ -110,7 +109,7 @@ public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, Elastic
   }));
 
   [Function("es")]
-  public Task<HttpResponseData> EsWget([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "es/{**path}")] HttpRequestData req,
+  public Task<HttpResponseData> EsWget([HttpTrigger(AuthorizationLevel.Anonymous, "post", "put", "get", Route = "es/{**path}")] HttpRequestData req,
     string path) => R(async () => {
     if (path.IsNullOrWhiteSpace()) return req.TextResponse("need to include path", BadRequest);
     var url = new Url(EsCfg.Url).AppendPathSegment(path);
