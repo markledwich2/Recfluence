@@ -161,7 +161,7 @@ const Mandatory = () => <span data-tip="required" aria-label="required">*</span>
 
 export interface ChannelOption extends Option { channel: BasicChannel }
 
-const channelIdRe = new RegExp(`^(?:[\w]{24}|BitChute\|[\w]+|https://rumble\.com/(?:user|c)/[\w-]+)$`).compile()
+const channelIdRe = new RegExp(`^(?:[\w]{24}|BitChute\|[\w]+|https://rumble\.com/(?:user|c)/[\w-]+)$`)
 
 export const isChannelId = (s: string) => channelIdRe.test(s)
 

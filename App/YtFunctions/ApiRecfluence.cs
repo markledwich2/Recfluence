@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
+using Flurl;
+using Flurl.Http;
 using Humanizer;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -21,7 +25,7 @@ using static YtFunctions.HttpResponseEx;
 
 namespace YtFunctions;
 
-public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, ElasticClient Es, StorageCfg StoreCfg) {
+public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, ElasticClient Es, StorageCfg StoreCfg, ElasticCfg EsCfg) {
   /// <summary>Use the Json.net defaults because we want to keep original name casings so that we aren't re-casing the db in
   ///   different formats</summary>
   static readonly JsonSerializerSettings JPlain = new() { Formatting = Formatting.None };
@@ -97,5 +101,36 @@ public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, Elastic
     var json = reviews.SerializeToJToken(JsonlExtensions.DefaultSettingsForJs())
       .ToCamelCaseJToken().ToString(Formatting.None);
     return req.JsonResponse(json);
+  });
+
+// Pass the handler to httpclient(from you are calling api)
+
+  readonly IFlurlClient Flurl = new FlurlClient(new HttpClient(new HttpClientHandler {
+    ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+  }));
+
+  [Function("es")]
+  public Task<HttpResponseData> EsWget([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "es/{**path}")] HttpRequestData req,
+    string path) => R(async () => {
+    if (path.IsNullOrWhiteSpace()) return req.TextResponse("need to include path", BadRequest);
+    var url = new Url(EsCfg.Url).AppendPathSegment(path);
+    var esReq = Flurl.Request(url).AllowAnyHttpStatus().WithBasicAuth(EsCfg.PublicCreds);
+    foreach (var (k, v) in req.Headers.SelectMany(g => g.Value.Select(v => (k: g.Key, v))).Where(h => h.k.ToLowerInvariant() != "host"))
+      esReq.Headers.Add(k, v);
+    var body = new StringContent(await req.ReadAsStringAsync() ?? "");
+    var verb = req.Method switch {
+      "GET" => HttpMethod.Get,
+      "POST" => HttpMethod.Post,
+      _ => throw new($"method {req.Method} not implemented")
+    };
+    var curl = await esReq.FormatCurl(verb, () => body);
+    var res = await esReq.SendAsync(verb, body);
+    if (res.StatusCode != 200) {
+      var msg = await res.GetStringAsync();
+      Log.Warning("{Curl} returned ({Status}) : {Message}", curl, res.StatusCode, msg);
+      return req.TextResponse(msg, (HttpStatusCode)res.StatusCode);
+    }
+    var json = await res.GetStringAsync();
+    return req.JsonResponse(json, (HttpStatusCode)res.StatusCode);
   });
 }

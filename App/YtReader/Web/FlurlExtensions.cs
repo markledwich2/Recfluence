@@ -7,6 +7,7 @@ using Flurl.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Polly;
+using SysExtensions.Security;
 using static SysExtensions.Net.HttpExtensions;
 
 namespace YtReader.Web;
@@ -89,4 +90,6 @@ public static class FlurlExtensions {
           desc, r.Result?.StatusCode.ToString() ?? r.Exception?.Message ?? "Unknown error", i, retries, curl)
         , log).ExecuteAsync(() => request.AllowAnyHttpStatus().SendAsync(verb ?? HttpMethod.Get, content, cancel, completionOption));
   }
+
+  public static T WithBasicAuth<T>(this T req, NameSecret s) where T : IHttpSettingsContainer => req.WithBasicAuth(s.Name, s.Secret);
 }

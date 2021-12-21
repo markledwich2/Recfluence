@@ -132,7 +132,13 @@
         "cloudId": {
           "type": "string"
         },
+        "url": {
+          "type": "string"
+        },
         "creds": {
+          "type": "string"
+        },
+        "publicCreds": {
           "type": "string"
         },
         "indexPrefix": {
@@ -427,10 +433,16 @@
         "container": {
           "type": "string"
         },
-        "premiumDataStorageCs": {
+        "publicContainer": {
+          "type": "string"
+        },
+        "privateContainer": {
           "type": "string"
         },
         "dataStorageCs": {
+          "type": "string"
+        },
+        "premiumDataStorageCs": {
           "type": "string"
         },
         "backupCs": {
@@ -553,9 +565,6 @@
         "alwaysUseProxy": {
           "type": "boolean"
         },
-        "headless": {
-          "type": "boolean"
-        },
         "discoverChannels": {
           "type": "integer"
         },
@@ -566,6 +575,9 @@
           "type": "integer"
         },
         "captionParallel": {
+          "type": "integer"
+        },
+        "webParallel": {
           "type": "integer"
         },
         "minChannelSubs": {
@@ -587,9 +599,6 @@
           "type": "integer"
         },
         "maxExtraErrorsInChannel": {
-          "type": "integer"
-        },
-        "webParallel": {
           "type": "integer"
         },
         "maxChannelComments": {

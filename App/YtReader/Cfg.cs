@@ -87,8 +87,10 @@ public record AwsCfg {
 public class ElasticCfg {
   public string CloudId { get; set; } =
     "recfluence:ZWFzdHVzMi5henVyZS5lbGFzdGljLWNsb3VkLmNvbTo5MjQzJDI1MGIyMDQ1MmRmMDQzNGQ4MDBjNjFiYmI1NDlhMjQ4JDU0OGQzODFhMDE5NDQ5NmE5Y2FiMDVjM2NiZmYzZWZh";
-  public NameSecret Creds       { get; set; }
-  public string     IndexPrefix { get; set; }
+  [Required] public string     Url         { get; set; } = "https://recfluence.es.eastus2.azure.elastic-cloud.com:9243";
+  [Required] public NameSecret Creds       { get; set; }
+  [Required] public NameSecret PublicCreds { get; set; }
+  public            string     IndexPrefix { get; set; }
 }
 
 public class SyncDbCfg {

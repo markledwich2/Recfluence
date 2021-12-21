@@ -110,7 +110,6 @@ from video_latest l
     }
 
     var sql = CreateSql(selectSql, mode, lastUpdate, conditions, incrementalCondition);
-
     using var conn = await OpenConnection(log);
     var rows = Query<TDb>(sql, conn).Select(map);
     var (docs, dur) = await BatchToEs(newIndex ?? existingIndex, log, rows, EsExtensions.EsPolicy(log, Cfg.Retries), cancel).WithDuration();
