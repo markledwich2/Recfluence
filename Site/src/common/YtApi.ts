@@ -49,9 +49,7 @@ export async function getChannels(cfg: EsCfg, ids: string[]): Promise<BasicChann
   return bChannels.concat(tChannels)
 }
 
-export const esHeaders = (cfg: EsCfg) => ({
-  "Authorization": `Basic ${base64.encode(cfg.creds)}`
-})
+export const esHeaders = (cfg: EsCfg) => ({}) // no headers. the function proyxy now ads auth
 
 export async function esDoc(cfg: EsCfg, index: string, id: string) {
   {

@@ -18,7 +18,6 @@ export function esCfgFromEnv(): EsCfg {
   const prefix = process.env.BRANCH_ENV ? `${process.env.BRANCH_ENV}-` : ''
   return {
     url: process.env.ES_URL,
-    creds: process.env.ES_CREDS,
     prefix: process.env.ES_PREFIX,
     indexes: {
       caption: `${prefix}caption-2`,
@@ -31,7 +30,6 @@ export function esCfgFromEnv(): EsCfg {
 
 export interface EsCfg {
   url: string
-  creds: string
   prefix: string
   indexes: EsIndexes
 }

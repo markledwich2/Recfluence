@@ -11,7 +11,6 @@ declare namespace NodeJS {
         AUTH0_DOMAIN: string
         AUTH0_CLIENTID: string
         ES_URL: string
-        ES_CREDS: string
         BRANCH_ENV: string
     }
 }
