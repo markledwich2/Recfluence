@@ -161,13 +161,12 @@ const Mandatory = () => <span data-tip="required" aria-label="required">*</span>
 
 export interface ChannelOption extends Option { channel: BasicChannel }
 
-const channelIdRe = new RegExp(`^(?:[\w]{24}|BitChute\|[\w]+|https://rumble\.com/(?:user|c)/[\w-]+)$`)
-
-export const isChannelId = (s: string) => channelIdRe.test(s)
+export const isChannelId = (s: string) => new RegExp(`^([\\w-]{24}|BitChute\\|[\\w]+|https://rumble\\.com/(?:user|c)/[\\w-]+)$`, 'mg').test(s)
 
 export const loadChannelOptions = async (esCfg: EsCfg, s: string): Promise<ChannelOption[]> => {
   if (s == null) return []
-  const searchRes = await channelSearch(esCfg, `${isChannelId(s) ? 'channel_id' : 'channel_title'}:${s}`)
+  const isChan = isChannelId(s)
+  const searchRes = await channelSearch(esCfg, `${isChan ? 'channel_id' : 'channel_title'}:${s}`)
   return searchRes.map(c => ({ value: c.channelId, label: c.channelTitle, channel: c }))
 }
 
