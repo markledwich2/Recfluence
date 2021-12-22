@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -19,6 +20,7 @@ using YtReader;
 using YtReader.Data;
 using YtReader.Store;
 using YtReader.Web;
+using static System.Net.Http.HttpMethod;
 using static System.Net.HttpStatusCode;
 using static YtFunctions.HttpResponseEx;
 
@@ -109,20 +111,26 @@ public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, Elastic
   }));
 
   [Function("es")]
-  public Task<HttpResponseData> EsWget([HttpTrigger(AuthorizationLevel.Anonymous, "post", "put", "get", Route = "es/{**path}")] HttpRequestData req,
+  public Task<HttpResponseData> EsRequest([HttpTrigger(AuthorizationLevel.Anonymous, "post", "put", "get", Route = "es/{**path}")] HttpRequestData req,
     string path) => R(async () => {
     if (path.IsNullOrWhiteSpace()) return req.TextResponse("need to include path", BadRequest);
+
     var url = new Url(EsCfg.Url).AppendPathSegment(path);
+    url.Query = req.Url.Query;  
     var esReq = Flurl.Request(url).AllowAnyHttpStatus().WithBasicAuth(EsCfg.PublicCreds);
     foreach (var (k, v) in req.Headers.SelectMany(g => g.Value.Select(v => (k: g.Key, v))).Where(h => h.k.ToLowerInvariant() != "host"))
       esReq.Headers.Add(k, v);
-    var body = new StringContent(await req.ReadAsStringAsync() ?? "");
+
+    var body = await req.ReadAsStringAsync().Then(s => s == null ? null : new StringContent(s));
     var verb = req.Method switch {
-      "GET" => HttpMethod.Get,
-      "POST" => HttpMethod.Post,
+      "PUT" => Put,
+      "GET" => Get,
+      "POST" => Post,
       _ => throw new($"method {req.Method} not implemented")
     };
+    
     var curl = await esReq.FormatCurl(verb, () => body);
+    var sw = Stopwatch.StartNew();
     var res = await esReq.SendAsync(verb, body);
     if (res.StatusCode != 200) {
       var msg = await res.GetStringAsync();
@@ -130,6 +138,7 @@ public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, Elastic
       return req.TextResponse(msg, (HttpStatusCode)res.StatusCode);
     }
     var json = await res.GetStringAsync();
+    Log.Debug("es succeeded in {Dur}\n{Curl}", sw.Elapsed.HumanizeShort(), curl);
     return req.JsonResponse(json, (HttpStatusCode)res.StatusCode);
   });
 }

@@ -12,6 +12,8 @@ public static class StringExtensions {
   static readonly SHA256 _hash = SHA256.Create();
 
   public static SPath AsSPath(this string s) => new(s);
+
+  public static string AppendIfNeeded(this string s, string suffix) => s.EndsWith(suffix) ? s : s + suffix;
   
   public static Stream AsStream(this string content) => new MemoryStream(Encoding.UTF8.GetBytes(content));
 
