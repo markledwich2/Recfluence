@@ -61,7 +61,8 @@ public class YtSearch {
       }
 
       if (ShouldRun(type))
-        await CoreSync<TDb, TEs>(log, sql, mode, Map, Conditions(type).Concat(extraConditions).ToArray(), incrementalCondition, cancel);
+        await CoreSync<TDb, TEs>(log, sql, mode, Map, Conditions(type).Concat(extraConditions).ToArray(), incrementalCondition, cancel)
+          .WithOnError(e => log.Warning(e, "{Scope} - error syncing {Index}: {Error}", nameof(YtSearch), type, e.Message));
     }
 
     await Sync<dynamic, EsChannel>(Channel, @"select * from channel_latest", MapChannel, incrementalCondition: null, "source='recfluence'");
