@@ -89,7 +89,7 @@ public class YtStore {
   public JsonlSink<VideoCaption> Caption() => CreateStore<VideoCaption>("captions");
   public JsonlSink<VideoComment> Comment() => CreateStore<VideoComment>("comments");
   public JsonlSink<UserSearchWithUpdated> Search() => CreateStore<UserSearchWithUpdated>("searches");
-  public JsonlSink<UserChannelReview> ChannelReview() => CreateStore<UserChannelReview>("channel_reviews");
+  public JsonlStore<UserChannelReview> ChannelReview() => new(Store, "channel_reviews", r => r?.Updated.FileSafeTimestamp(), Log, getPartition: r => r.Email);
 
   public CollectStores CollectStores() => new(this);
 

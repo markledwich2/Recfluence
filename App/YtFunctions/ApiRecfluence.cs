@@ -74,6 +74,8 @@ public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, Elastic
     return req.CreateResponse(OK);
   });
 
+  readonly JsonlStore<UserChannelReview> ChannelReviewStore = Store.ChannelReview();
+  
   [Function("channel_review")]
   public Task<HttpResponseData> ChannelReview([HttpTrigger(AuthorizationLevel.Anonymous, "put")] HttpRequestData req) => R(async () => {
     var review = req.Body.ToObject<UserChannelReview>(JDefault);
@@ -81,13 +83,13 @@ public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, Elastic
       return req.TextResponse("email must be provided", BadRequest);
     review.Updated = DateTime.UtcNow;
 
-    await using var channelStore = Store.ChannelReview();
-    await channelStore.Append(review);
+
+    await ChannelReviewStore.Append(review);
     // if we have lots of small files, clean them up
-    var files = await channelStore.Files(review.Email).SelectManyList();
+    var files = await ChannelReviewStore.Files(review.Email).SelectManyList();
     var optimiseCfg = Wh.Optimise;
     if (files.Count(f => f.Bytes?.Bytes() < (optimiseCfg.TargetBytes * 0.9).Bytes()) > 10)
-      await channelStore.Optimise(optimiseCfg, review.Email, log: Log);
+      await ChannelReviewStore.Optimise(optimiseCfg, review.Email, log: Log);
     return req.CreateResponse(OK);
   });
 
@@ -97,8 +99,7 @@ public record ApiRecfluence(YtStore Store, WarehouseCfg Wh, ILogger Log, Elastic
   public Task<HttpResponseData> ChannelsReviewed([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req) => R(async () => {
     var email = req.Url.QueryObject<EmailQuery>()?.Email;
     if (email == null) return req.TextResponse("email must be provided", Unauthorized);
-    await using var channelStore = Store.ChannelReview();
-    var reviews = await channelStore.Items(email).SelectManyList();
+    var reviews = await ChannelReviewStore.Items(email).SelectManyList();
     var json = reviews.SerializeToJToken(JsonlExtensions.DefaultSettingsForJs())
       .ToCamelCaseJToken().ToString(Formatting.None);
     return req.JsonResponse(json);
