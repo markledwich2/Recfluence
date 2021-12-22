@@ -369,13 +369,13 @@ public class YtCollector {
   IEnumerable<string> VideoToUpdateRecs(ChannelUpdatePlan plan, List<YtVideoItem> vids) {
     var c = plan.Channel;
     var vidsDesc = vids.OrderByDescending(v => v.UploadDate).ToList();
-    var inThisWeeksRecUpdate = ExpiredOrInTodaysCycle(plan.Channel.ChannelId, plan.LastRecUpdate, cycleDays: 7);
+    //var inThisWeeksRecUpdate = ExpiredOrInTodaysCycle(plan.Channel.ChannelId, plan.LastRecUpdate, cycleDays: 7);
     var toUpdate = new List<YtVideoItem>();
     if (plan.LastRecUpdate == null) {
       Log.Debug("Collect - {Channel} - first rec update, collecting max", c.ChannelTitle);
       toUpdate.AddRange(vidsDesc.Take(RCfg.RefreshRecsMax));
     }
-    else if (inThisWeeksRecUpdate) {
+    else {
       Log.Debug("Collect - {Channel} - performing weekly recs update", c.ChannelTitle);
       toUpdate.AddRange(vidsDesc.Where(v => v.UploadDate?.YoungerThan(RCfg.RefreshRecsWithin) == true)
         .Take(RCfg.RefreshRecsMax));
@@ -383,9 +383,6 @@ public class YtCollector {
       if (deficit > 0)
         toUpdate.AddRange(vidsDesc.Where(v => toUpdate.All(u => u.Id != v.Id))
           .Take(deficit)); // if we don't have new videos, refresh the min amount by adding videos 
-    }
-    else {
-      Log.Debug("Collect - {Channel} - skipping rec update because it's not this channels day", c.ChannelTitle);
     }
     return toUpdate.Select(v => v.Id);
   }
