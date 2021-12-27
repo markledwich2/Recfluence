@@ -54,8 +54,8 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
     _stage.StageUpdate(logger, fullLoad, tables);
 
   [GraphTask(nameof(Stage))]
-  Task Dataform(bool fullLoad, string[] tables, bool includeDeps, ILogger logger, CancellationToken cancel) =>
-    YtDataform.Update(logger, fullLoad, tables, includeDeps, cancel);
+  Task Dataform(bool fullLoad, string[] tables, string[] actions, bool includeDeps, ILogger logger, CancellationToken cancel) =>
+    YtDataform.Update(logger, fullLoad, tables, actions, includeDeps, cancel);
 
   [GraphTask(nameof(Dataform))] // ignored by default because I shut down search to save money
   Task Search(SearchMode mode, string[] optionsSearchIndexes, (string index, string condition)[] conditions, int? limit, ILogger logger,
@@ -86,7 +86,7 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
       (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, options.Collect.Limit, l, c),
       (l, c) => Result(options.Results, l, c),
       (l, c) => Index(options.Indexes, options.Tags, l, c),
-      (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c)
+      (l, c) => Dataform(fullLoad, options.WarehouseTables, options.Actions, options.DataformDeps, l, c)
     );
 
     var actions = options.Actions;

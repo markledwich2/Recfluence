@@ -28,14 +28,17 @@ public class YtDataform {
     SeqCfg = seqCfg;
   }
 
-  public async Task Update(ILogger log, bool fullLoad, string[] tables, bool includeDeps, CancellationToken cancel) {
+  public async Task Update(ILogger log, bool fullLoad = false, string[] tables = null, string[] actions = null, bool includeDeps = false,
+    CancellationToken cancel = default) {
     var sfCfg = SfCfg.JsonClone();
     sfCfg.Db = sfCfg.DbName(); // serialize the environment specific db name
 
     var args = new[] {
       fullLoad ? " --full-refresh " : null,
       includeDeps ? "--include-deps" : null,
-      tables?.Any() == true ? $"{tables.Join(" ", t => $"--actions {t.ToUpperInvariant()}")}" : "--tags standard"
+      tables?.Any() == true
+        ? $"{tables.Join(" ", t => $"--actions {t.ToUpperInvariant()}")}"
+        : (actions ?? new[] { "standard" }).Join(" ", a => $"-- tags {a}")
     }.NotNull().ToArray();
 
     var env = new (string name, string value)[] {

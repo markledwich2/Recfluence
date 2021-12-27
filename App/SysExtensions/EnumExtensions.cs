@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.Serialization;
 using SysExtensions.Reflection;
+using SysExtensions.Text;
 
 //using Mutuo.SystemExtensions.Collections;
 
@@ -67,6 +68,9 @@ public static class EnumExtensions {
     found = enumCache.TryGetValue(s, out enumValue);
     return (found, enumValue);
   }
+
+  public static T[] ParseEnums<T>(this string s, char delim = '|') where T : Enum =>
+    s?.UnJoin(delim).Where(p => p.TryParseEnum<T>(out _)).Select(p => p.ParseEnum<T>()).ToArray();
 
   public static IEnumerable<T> Values<T>() where T : IConvertible => Enum.GetValues(typeof(T)).Cast<T>();
 

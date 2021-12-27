@@ -26,7 +26,6 @@ using YtReader.Db;
 using YtReader.Search;
 using YtReader.Store;
 using YtReader.Yt;
-using static YtCli.UpdateCmd;
 
 namespace YtCli;
 
@@ -164,12 +163,12 @@ Available actions:  Collect|BitChuteCollect|RumbleCollect|Stage|Dataform|Search|
       Collect = new() {
         Limit = Limit,
         LimitChannels = Channels?.UnJoin('|'),
-        Parts = ParseEnums<CollectPart>(Parts),
-        ExtraParts = ParseEnums<ExtraPart>(ExtraParts),
+        Parts = Parts.ParseEnums<CollectPart>(),
+        ExtraParts = ExtraParts.ParseEnums<ExtraPart>(),
         CollectMode = CollectMode
       },
       Videos = Videos?.UnJoin('|'),
-      StandardParts = ParseEnums<StandardCollectPart>(Parts),
+      StandardParts = Parts.ParseEnums<StandardCollectPart>(),
       WarehouseTables = WarehouseTables?.UnJoin('|'),
       StageTables = StageTables?.UnJoin('|'),
       Results = Results?.UnJoin('|'),
@@ -192,8 +191,7 @@ Available actions:  Collect|BitChuteCollect|RumbleCollect|Stage|Dataform|Search|
     await Updater.Update(options, cancel);
   }
 
-  public static T[] ParseEnums<T>(string s) where T : Enum =>
-    s?.UnJoin('|').Where(p => p.TryParseEnum<T>(out _)).Select(p => p.ParseEnum<T>()).ToArray();
+
 }
 
 [Command("collect-list", Description = "Refresh video/channel information for a given list")]
@@ -243,12 +241,12 @@ VideoChannelNamed: name of an sql statement in CollectListSql.cs
   protected override async ValueTask ExecuteLocal(IConsole console) {
     var opts = new CollectListOptions {
       CollectFrom = (Mode, Value),
-      Parts = ParseEnums<CollectListPart>(Parts),
-      ExtraParts = ParseEnums<ExtraPart>(ExtraParts),
+      Parts = Parts.ParseEnums<CollectListPart>(),
+      ExtraParts = ExtraParts.ParseEnums<ExtraPart>(),
       LimitChannels = Channels?.UnJoin('|'),
       StaleAgo = StaleHrs?.Hours() ?? 2.Days(),
       Args = Args.Dot(JObject.Parse),
-      Platforms = ParseEnums<Platform>(Platforms),
+      Platforms = Platforms.ParseEnums<Platform>(),
       Limit = Limit,
       From = From?.TryParseDateExact("yyyy-MM-dd", DateTimeStyles.AssumeUniversal)?.ToUniversalTime()
     };

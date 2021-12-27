@@ -293,6 +293,7 @@ public static class Setup {
     R<CollectList>();
     R<FlurlProxyClient>();
     R<DataformDescriptions>();
+    R<RecExport>();
 
     b.Register(_ => pipeAppCtx);
     R<PipeCtx>().WithKeyedParam(DataStoreType.Pipe, Typ.Of<ISimpleFileStore>()).As<IPipeCtx>();
