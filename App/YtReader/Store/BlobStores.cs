@@ -93,7 +93,7 @@ public class YtStore {
 
   public CollectStores CollectStores() => new(this);
 
-  JsonlSink<T> CreateStore<T>(string name) where T : IHasUpdated {
+  JsonlSink<T> CreateStore<T>(string name) where T : class, IHasUpdated {
     var store = new JsonlSink<T>(Store, name, c => c?.Updated.FileSafeTimestamp() ?? throw new("Can't get timestamp because record is null"), new(), Log);
     return store;
   }

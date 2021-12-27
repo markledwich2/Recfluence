@@ -58,8 +58,9 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
     YtDataform.Update(logger, fullLoad, tables, includeDeps, cancel);
 
   [GraphTask(nameof(Dataform))] // ignored by default because I shut down search to save money
-  Task Search(SearchMode mode, string[] optionsSearchIndexes, (string index, string condition)[] conditions, ILogger logger, CancellationToken cancel) =>
-    _search.SyncToElastic(logger, mode, optionsSearchIndexes, conditions, cancel);
+  Task Search(SearchMode mode, string[] optionsSearchIndexes, (string index, string condition)[] conditions, int? limit, ILogger logger,
+    CancellationToken cancel) =>
+    _search.SyncToElastic(logger, mode, optionsSearchIndexes, conditions, limit, cancel);
 
   [GraphTask(nameof(Dataform))]
   Task Result(string[] results, ILogger logger, CancellationToken cancel) =>
@@ -82,7 +83,7 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
     var actionMethods = TaskGraph.FromMethods(
       (l, c) => Collect(options.Collect, l, c),
       (l, c) => Stage(fullLoad, options.StageTables, l),
-      (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, l, c),
+      (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, options.Collect.Limit, l, c),
       (l, c) => Result(options.Results, l, c),
       (l, c) => Index(options.Indexes, options.Tags, l, c),
       (l, c) => Dataform(fullLoad, options.WarehouseTables, options.DataformDeps, l, c)

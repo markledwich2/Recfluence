@@ -40,7 +40,7 @@ public record RawJsonlStore(ISimpleFileStore Store, SPath Path, ILogger Log, str
 }
 
 /// <summary>Read/write to storage for an append-only immutable collection of items sored as jsonl</summary>
-public record JsonlStore<T> : RawJsonlStore {
+public record JsonlStore<T> : RawJsonlStore where T : class {
   readonly Func<T, string> GetPartition;
   readonly Func<T, string> GetTs;
 

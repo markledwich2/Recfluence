@@ -40,7 +40,7 @@ public class YtSearch {
 
   [Pipe]
   public async Task SyncToElastic(ILogger log, SearchMode mode = Incremental, string[] indexes = null,
-    (string index, string condition)[] conditions = null, CancellationToken cancel = default) {
+    (string index, string condition)[] conditions = null, int? limit = null, CancellationToken cancel = default) {
     string[] Conditions(IndexType index) => conditions?.Where(c => c.index == index.BaseName()).Select(c => c.condition).ToArray() ?? Array.Empty<string>();
 
     bool ShouldRun(IndexType index) => indexes switch {
@@ -61,7 +61,7 @@ public class YtSearch {
       }
 
       if (ShouldRun(type))
-        await CoreSync<TDb, TEs>(log, sql, mode, Map, Conditions(type).Concat(extraConditions).ToArray(), incrementalCondition, cancel)
+        await CoreSync<TDb, TEs>(log, sql, mode, Map, Conditions(type).Concat(extraConditions).ToArray(), incrementalCondition, limit, cancel)
           .WithOnError(e => log.Warning(e, "{Scope} - error syncing {Index}: {Error}", nameof(YtSearch), type, e.Message));
     }
 
@@ -92,8 +92,7 @@ from video_latest l
   }
 
   async Task CoreSync<TDb, TEs>(ILogger log, string selectSql, SearchMode mode, Func<TDb, TEs> map, string[] conditions = null,
-    string incrementalCondition = null,
-    CancellationToken cancel = default)
+    string incrementalCondition = null, int? limit = null, CancellationToken cancel = default)
     where TEs : class, IHasUpdated where TDb : class {
     var alias = Es.GetIndexFor<TEs>() ?? throw new InvalidOperationException("The ElasticClient must have default indexes created for types used");
     var existingIndex = (await Es.GetIndicesPointingToAliasAsync(alias)).FirstOrDefault();
@@ -110,7 +109,7 @@ from video_latest l
       log.Information("Search - Created new ElasticSearch Index {Index} ({Alias})", newIndex, alias);
     }
 
-    var sql = CreateSql(selectSql, mode, lastUpdate, conditions, incrementalCondition);
+    var sql = CreateSql(selectSql, mode, lastUpdate, conditions, incrementalCondition, limit);
     using var conn = await OpenConnection(log);
     var rows = Query<TDb>(sql, conn).Select(map);
     var (docs, dur) = await BatchToEs(newIndex ?? existingIndex, log, rows, EsExtensions.EsPolicy(log, Cfg.Retries), cancel).WithDuration();
@@ -139,13 +138,13 @@ from video_latest l
     error_type = v.ERROR_TYPE,
     likes = v.LIKES,
     lr = v.LR,
-    tags = v.TAGS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(v.TAGS),
+    tags = v.TAGS == null ? new string[] { } : ((string)v.TAGS).ToObject<string[]>(),
     updated = v.UPDATED,
     upload_date = v.UPLOAD_DATE,
     video_id = v.VIDEO_ID,
     video_title = v.VIDEO_TITLE,
     views = v.VIEWS,
-    keywords = v.KEYWORDS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(v.KEYWORDS),
+    keywords = v.KEYWORDS == null ? new string[] { } : ((string)v.KEYWORDS).ToObject<string[]>(),
     duration_secs = v.DURATION_SECS
   };
 
@@ -175,7 +174,7 @@ from video_latest l
     reviews_human = c.REVIEWS_HUMAN,
     status_msg = c.STATUS_MSG,
     subs = c.SUBS,
-    tags = c.TAGS == null ? new string[] { } : JsonExtensions.ToObject<string[]>(c.TAGS),
+    tags = c.TAGS == null ? new string[] { } : ((string)c.TAGS).ToObject<string[]>(),
     to_date = c.TO_DATE,
     updated = c.UPDATED,
   };
@@ -204,7 +203,7 @@ from video_latest l
   }
 
   (string sql, object param) CreateSql(string selectSql, SearchMode mode, DateTime? lastUpdate
-    , string[] conditions = null, string incrementalCondition = null) {
+    , string[] conditions = null, string incrementalCondition = null, int? limit = null) {
     conditions ??= new string[] { };
 
     var param = lastUpdate == null || mode != Incremental ? null : new { max_updated = lastUpdate };
@@ -213,17 +212,18 @@ from video_latest l
     var sqlWhere = conditions.IsEmpty() ? "" : $" where {conditions.NotNull().Join(" and ")}";
     var sql = $@"with q as ({selectSql})
 select * from q{sqlWhere}
-order by updated"; // always order by updated so that if sync fails, we can resume where we left of safely.
+order by updated {limit.Dot(l => $"limit {l}")}
+"; // always order by updated so that if sync fails, we can resume where we left of safely.
     return (sql, param);
   }
 
-  async Task<int> BatchToEs<T>(string indexName, ILogger log, IEnumerable<T> enumerable, AsyncRetryPolicy<BulkResponse> esPolicy, CancellationToken cancel)
-    where T : class => (await enumerable
-    .Batch(Cfg.BatchSize).WithIndex()
-    .BlockMapList(b => BatchToEs(indexName, b.item, b.index, esPolicy, log),
+  async Task<int> BatchToEs<T>(string indexName, ILogger log, IAsyncEnumerable<T> rows, AsyncRetryPolicy<BulkResponse> esPolicy, CancellationToken cancel)
+    where T : class => await rows
+    .Batch(Cfg.BatchSize)
+    .BlockDo(async (b, i) => await BatchToEs(indexName, b, i, esPolicy, log),
       Cfg.Parallel, // 2 parallel, we don't get much improvements because its just one server/hard disk on the other end
       Cfg.Parallel,
-      cancel: cancel)).Sum();
+      cancel).SumAsync();
 
   async Task<int> BatchToEs<T>(string indexName, IReadOnlyCollection<T> items, int i, AsyncRetryPolicy<BulkResponse> esPolicy, ILogger log) where T : class {
     var res = await esPolicy.ExecuteAsync(() => Es.IndexManyAsync(items, indexName));
@@ -242,8 +242,8 @@ order by updated"; // always order by updated so that if sync fails, we can resu
     return items.Count;
   }
 
-  IEnumerable<T> Query<T>((string sql, object param) sql, ILoggedConnection<IDbConnection> conn) where T : class =>
-    conn.QueryBlocking<T>(nameof(SyncToElastic), sql.sql, sql.param, buffered: false);
+  IAsyncEnumerable<T> Query<T>((string sql, object param) sql, ILoggedConnection<IDbConnection> conn) where T : class =>
+    conn.QueryAsync<T>(nameof(SyncToElastic), sql.sql, sql.param).ConsumeViaJsonl();
 }
 
 public static class EsExtensions {

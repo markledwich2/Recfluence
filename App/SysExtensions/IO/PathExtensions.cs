@@ -37,6 +37,8 @@ public static class PathExtensions {
     return mem.ToArray();
   }
 
+  public static SystemIO.StreamWriter CreateText(this FPath path) => SystemIO.File.CreateText(path.FullPath);
+
   public static SystemIO.StreamReader OpenText(this FPath path) => SystemIO.File.OpenText(path.FullPath);
 
   public static SystemIO.FileStream Open(this FPath path, SystemIO.FileMode mode,

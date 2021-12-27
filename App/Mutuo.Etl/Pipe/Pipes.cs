@@ -305,7 +305,7 @@ public static class Pipes {
     await ctx.Store.Save($"{id.InRowsPath()}.jsonl.gz", s, log);
   }
 
-  public static async Task<IReadOnlyCollection<T>> LoadInRows<T>(this IPipeCtx ctx, PipeRunId id) {
+  public static async Task<IReadOnlyCollection<T>> LoadInRows<T>(this IPipeCtx ctx, PipeRunId id) where T : class {
     using var stateStream = await ctx.Store.Load($"{id.InRowsPath()}.jsonl.gz");
     return stateStream.LoadJsonlGz<T>();
   }

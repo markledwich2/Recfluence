@@ -20,7 +20,7 @@ public interface IJsonSink : IAsyncDisposable {
   SPath Path    { get; }
 }
 
-public record JsonlSink<T> : RawJsonlStore, IJsonSink {
+public record JsonlSink<T> : RawJsonlStore, IJsonSink where T : class {
   readonly Func<T, string> GetTs;
   readonly JsonSinkOptions Options;
 
