@@ -38,7 +38,7 @@ public class YtDataform {
       includeDeps ? "--include-deps" : null,
       tables?.Any() == true
         ? $"{tables.Join(" ", t => $"--actions {t.ToUpperInvariant()}")}"
-        : (actions ?? new[] { "standard" }).Join(" ", a => $"-- tags {a}")
+        : (actions ?? new[] { "standard" }).Join(" ", a => $"--tags {a}")
     }.NotNull().ToArray();
 
     var env = new (string name, string value)[] {
