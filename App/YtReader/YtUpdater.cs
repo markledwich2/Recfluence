@@ -50,8 +50,8 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
     YtCollect.Collect(logger, options, cancel);
 
   [GraphTask(nameof(Collect))]
-  Task Stage(bool fullLoad, string[] tables, ILogger logger) =>
-    _stage.StageUpdate(logger, fullLoad, tables);
+  Task Stage(bool fullLoad, string[] tables, string[] tags, ILogger logger) =>
+    _stage.StageUpdate(logger, fullLoad, tables, tags);
 
   [GraphTask(nameof(Stage))]
   Task Dataform(bool fullLoad, string[] tables, string[] actions, bool includeDeps, ILogger logger, CancellationToken cancel) =>
@@ -82,7 +82,7 @@ public record YtUpdater(YtUpdaterCfg Cfg, ILogger Log, YtCollector YtCollect, St
     var fullLoad = options.FullLoad;
     var actionMethods = TaskGraph.FromMethods(
       (l, c) => Collect(options.Collect, l, c),
-      (l, c) => Stage(fullLoad, options.StageTables, l),
+      (l, c) => Stage(fullLoad, options.StageTables, options.Tags, l),
       (l, c) => Search(options.SearchMode, options.SearchIndexes, options.SearchConditions, options.Collect.Limit, l, c),
       (l, c) => Result(options.Results, l, c),
       (l, c) => Index(options.Indexes, options.Tags, l, c),

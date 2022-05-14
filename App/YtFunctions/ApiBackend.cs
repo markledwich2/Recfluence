@@ -20,7 +20,7 @@ public record ApiBackend(SemVersion Version, IPipeCtx Ctx, ILogger Log, Containe
   [Function("Version")]
   public HttpResponseData GetVersion([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequestData req) => req.TextResponse(Version.ToString());
 
-  [Function("Update_Timer")] public Task Update_Timer([TimerTrigger("0 0 0 * * SUN,WED")] TimerInfo timer) => F(RunUpdate);
+  [Function("Update_Timer")] public Task Update_Timer([TimerTrigger("0 0 0 * * SAT")] TimerInfo timer) => F(RunUpdate);
 
   [Function("Update")]
   public Task<HttpResponseData> Update([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequestData req) => R(async () => {

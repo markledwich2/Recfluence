@@ -82,7 +82,8 @@ public enum ChannelUpdateType {
 public enum CollectPart {
   [EnumMember(Value = "channel")] PChannel,
   [EnumMember(Value = "extra")]   PChannelVideos,
-  [EnumMember(Value = "user")]    PUser,
+  [EnumMember(Value = "user")] [RunPart(Explicit = true)]
+  PUser,
   [EnumMember(Value = "discover")] [RunPart(Explicit = true)]
   PDiscover
 }

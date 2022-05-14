@@ -667,10 +667,12 @@ public enum ScrapeSource {
 }
 
 public enum ExtraPart {
-  [EnumMember(Value = "extra")]   EExtra,
-  [EnumMember(Value = "rec")]     ERec,
-  [EnumMember(Value = "comment")] EComment,
-  [EnumMember(Value = "caption")] ECaption,
+  [EnumMember(Value = "extra")] EExtra,
+  [EnumMember(Value = "rec")]   ERec,
+  [EnumMember(Value = "comment")] [RunPart(Explicit = true)]
+  EComment,
+  [EnumMember(Value = "caption")] [RunPart(Explicit = true)]
+  ECaption,
   /// <summary> If specified will perform transcription ourselves if needed </summary>
   [EnumMember(Value = "transcribe")] [RunPart(Explicit = true)]
   ETranscribe

@@ -34,10 +34,11 @@ public record Stage(BlobStores Stores, SnowflakeConnectionProvider Conn, Warehou
     if (Cfg.Mode == WarehouseMode.ProdReadIfDev && !RootCfg.IsProd())
       throw new("Won't write to stage from a development environment when warehouse in readonly mode");
     var sw = Stopwatch.StartNew();
+    if (tableNames == null && tags == null) tags = Standard.InArray();
     var tables = Table.All
       .Where(t => tableNames?.Contains(t.Table, OrdinalIgnoreCase) == true
-        || tags?.Any(s => t.Tags?.Contains(s, OrdinalIgnoreCase) == true) == true
-        || tableNames.None() && tags.None()).ToArray();
+        || tags?.Any(s => t.Tags?.Contains(s, OrdinalIgnoreCase) == true) == true)
+      .ToArray();
     await tables.BlockDo(async t => { await UpdateTable(t, fullLoad, log.ForContext("table", t.Table)); }, Cfg.LoadTablesParallel);
     log.Information("StageUpdate - {Tables} updated in {Duration}", tables.Join("|", t => t.Table), sw.Elapsed.HumanizeShort());
   }
@@ -124,8 +125,8 @@ public record Stage(BlobStores Stores, SnowflakeConnectionProvider Conn, Warehou
       new("recs", "rec_stage") { Tags = new[] { Standard } },
       new("video_extra", "video_extra_stage") { Tags = new[] { Standard } },
       new("searches", "search_stage"),
-      new("captions", "caption_stage") { Tags = new[] { Standard } },
-      new("comments", "comment_stage") { Tags = new[] { Standard } },
+      new("captions", "caption_stage"), // not in standard update to save costs
+      new("comments", "comment_stage"), // not in standard update to save costs
       new("rec_exports_processed", "rec_export_stage") { StoreType = DataStoreType.Private, TsCol = nameof(TrafficSourceRow.FileUpdated) },
       new("link_meta", "link_meta_stage")
     };
