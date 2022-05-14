@@ -113,7 +113,7 @@ One limitation of the original analysis was that some late night shows -- with h
 ## Data
 ### Download
 
-[Download](https://pyt-data.azureedge.net/data/results/recfluence_shared_data.zip) the latest data used for the diagrams. The full raw video and recommendations data can be provided on request - either as files or database access (at cost).
+[Download](https://ytapp.blob.core.windows.net/public/results/recfluence_shared_data.zip) the latest data used for the diagrams. The full raw video and recommendations data can be provided on request - either as files or database access (at cost).
 
 ### Calculations and considerations
 All source & calculations are available to review and use for your own purposes.
@@ -199,11 +199,10 @@ When a channel/category is selected/highlighted it shows the flows through it
 
 
 
-
-
 ## Updates
 **25 Nov 2019**: Now hosted at [recfluence.net](https://www.recfluence.net). Large new analysis and classification of channels.
 
-**14 Jan 2019**: New channels and some updates. The network diagram looks quite different at first, but that's mostly cosmetic. The rotation and location of them are somewhat different but it clusters similarly. To see the older version matching the published article use [this link](https://pyt.azureedge.net?v=2018-12-28)
+**14 Jan 2019**: New channels and some updates. The network diagram looks quite different at first, but that's mostly cosmetic. The rotation and location of them are somewhat different but it clusters similarly.
+
 
  
