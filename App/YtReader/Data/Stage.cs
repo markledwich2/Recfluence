@@ -119,7 +119,7 @@ public record Stage(BlobStores Stores, SnowflakeConnectionProvider Conn, Warehou
   public static class Table {
     public static readonly StageTableCfg[] All = {
       new("channels", "channel_stage") { Tags = new[] { Standard } },
-      new("users", "user_stage") { Tags = new[] { Standard } },
+      new("users", "user_stage"),
       new("channel_reviews", "channel_review_stage"),
       new("videos", "video_stage") { Tags = new[] { Standard } },
       new("recs", "rec_stage") { Tags = new[] { Standard } },

@@ -32,8 +32,8 @@ public class YtIndexResults {
         VideoRemovedCaption,
         ChannelStatsById,
         ChannelStatsByPeriod,
-        TopVideos(20_000),
-        TopChannelVideos(50)
+        TopVideos(5_000),
+        TopChannelVideos(20)
       }
       .Select(t => t with { Name = t.Name.Underscore() }) // we are building this for javascript land. So snake case everything
       .Where(t => names?.Contains(t.Name) != false && tags?.Intersect(t.Tags.NotNull()).Any() != false).ToArray();
