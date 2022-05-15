@@ -4,11 +4,18 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using YtReader.Db;
 using IndexExpression = System.Linq.Expressions.Expression<System.Func<YtReader.Store.WorkCfg>>;
+using static YtReader.Store.Tag;
 
 namespace YtReader.Store;
 
 record WorkCfg(string Name, IndexCol[] Cols, string Sql, ByteSize? Size = null, string Version = null,
   NullValueHandling NullHandling = NullValueHandling.Include, string[] Tags = null);
+
+public static class Tag {
+  public static string Standard   = "standard";
+  public static string Narrative  = "narrative";
+  public static string UserScrape = "us";
+}
 
 public class YtIndexResults {
   public static string                      IndexVersion = "v2";
@@ -21,6 +28,7 @@ public class YtIndexResults {
   }
 
   public async Task Run(string[] names, string[] tags, ILogger log, CancellationToken cancel = default) {
+    tags ??= new[] { Standard };
     var toRun = new[] {
         Narrative2Channels,
         Narrative2Videos,
@@ -36,7 +44,7 @@ public class YtIndexResults {
         TopChannelVideos(20)
       }
       .Select(t => t with { Name = t.Name.Underscore() }) // we are building this for javascript land. So snake case everything
-      .Where(t => names?.Contains(t.Name) != false && tags?.Intersect(t.Tags.NotNull()).Any() != false).ToArray();
+      .Where(t => names?.Contains(t.Name) != false && tags.Intersect(t.Tags.NotNull()).Any()).ToArray();
 
     var (res, indexDuration) = await toRun.BlockMapList(async t => {
       var work = await IndexWork(log, t);
@@ -82,12 +90,12 @@ public class YtIndexResults {
   }
 
   /// <summary>Top videos for all channels for a given time period</summary>
-  WorkCfg TopVideos(int topPerPeriod) => new(nameof(TopVideos), PeriodCols, TopVideoResSql(topPerPeriod, PeriodCols));
+  WorkCfg TopVideos(int topPerPeriod) => new(nameof(TopVideos), PeriodCols, TopVideoResSql(topPerPeriod, PeriodCols), Tags: new[] { Standard });
 
   /// <summary>Top videos from a channel & time period</summary>
   WorkCfg TopChannelVideos(int topPerChannel) {
     var cols = new[] { Col("channel_id") }.Concat(PeriodCols).ToArray();
-    return new(nameof(TopChannelVideos), cols, TopVideoResSql(topPerChannel, cols), 300.Kilobytes());
+    return new(nameof(TopChannelVideos), cols, TopVideoResSql(topPerChannel, cols), 300.Kilobytes(), Tags: new[] { Standard });
   }
 
   string TopVideoResSql(int rank, IndexCol[] cols) {
@@ -112,12 +120,12 @@ order by {indexColString}, rank";
   }
 
   /// <summary>Aggregate stats for a channel at a given time period</summary>
-  WorkCfg ChannelStatsByPeriod => new(nameof(ChannelStatsByPeriod), PeriodCols, ChannelStatsSql(PeriodCols), 100.Kilobytes());
+  WorkCfg ChannelStatsByPeriod => new(nameof(ChannelStatsByPeriod), PeriodCols, ChannelStatsSql(PeriodCols), 100.Kilobytes(), Tags: new[] { Standard });
 
   static readonly IndexCol[] ByChannelCols = { Col("channel_id") };
 
   /// <summary>Aggregate stats for a channel given a channel</summary>
-  WorkCfg ChannelStatsById => new(nameof(ChannelStatsById), ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes());
+  WorkCfg ChannelStatsById => new(nameof(ChannelStatsById), ByChannelCols, ChannelStatsSql(ByChannelCols), 50.Kilobytes(), Tags: new[] { Standard });
 
   static string ChannelStatsSql(IndexCol[] orderCols) =>
     $@"with by_channel as (
@@ -142,7 +150,7 @@ select e.*
 from video_error e
 join channel_accepted c on e.channel_id = c.channel_id
 where e.platform = 'YouTube'
-order by last_seen", 200.Kilobytes());
+order by last_seen", 200.Kilobytes(), Tags: new[] { Standard });
 
   WorkCfg VideoRemovedCaption = new(nameof(VideoRemovedCaption), new[] { Col("video_id") }, @"
 select e.video_id, s.caption, s.offset_seconds
@@ -151,7 +159,7 @@ join caption s on e.video_id = s.video_id
 join video_latest v on v.video_id = s.video_id
 join channel_accepted c on c.channel_id = v.channel_id  
 where v.platform = 'YouTube'
-order by video_id, offset_seconds", 100.Kilobytes());
+order by video_id, offset_seconds", 100.Kilobytes(), Tags: null); // not in standard update to save costs
 
   #endregion
 
@@ -181,7 +189,7 @@ s as (
            left join channel_latest cl on n.channel_id=cl.channel_id
 )
 select * from s order by {NarrativeChannelsCols.DbNames().Join(",")}",
-    Tags: new[] { "narrative2" }, Version: Narrative2Version);
+    Tags: new[] { Narrative }, Version: Narrative2Version);
 
   static readonly IndexCol[] NarrativeVideoCols = { Col("narrative", distinct: true), Col("upload_date", minMax: true) };
 
@@ -223,7 +231,7 @@ order by {NarrativeVideoCols.DbNames().Join(",")}, video_views desc",
     200.Kilobytes(), // bigish because some charts need to load alot of these
     Narrative2Version,
     NullValueHandling.Ignore,
-    new[] { "narrative2" });
+    new[] { Narrative });
 
   static readonly IndexCol[] Narrative2CaptionCols = { Col("narrative"), Col("upload_date") };
 
@@ -234,7 +242,7 @@ left join video_latest v on v.video_id = n.video_id
 order by {Narrative2CaptionCols.DbNames().Join(",")}",
     50.Kilobytes(), // small because the UI loads these on demand
     Narrative2Version,
-    Tags: new[] { "narrative2" });
+    Tags: new[] { Narrative });
 
   #endregion
 
@@ -295,7 +303,7 @@ with video_date_accounts as (
 )
 select *
 from sets
-order by {UsRecCols.DbNames().Join(",")}", 100.Kilobytes(), Tags: new[] { "us" });
+order by {UsRecCols.DbNames().Join(",")}", 100.Kilobytes(), Tags: new[] { Tag.UserScrape });
 
   static readonly IndexCol[] VideoSeenCols = { Col("part"), Col("account", distinct: true) };
 
@@ -322,8 +330,8 @@ select *
 from s1
 order by {VideoSeenCols.DbNames().Join(",")}, percentile desc";
 
-  WorkCfg UsWatch = new(nameof(UsWatch), VideoSeenCols, GetVideoSeen("us_watch"), 100.Kilobytes(), Tags: new[] { "us" });
-  WorkCfg UsFeed  = new(nameof(UsFeed), VideoSeenCols, GetVideoSeen("us_feed", titleInSeen: true), 100.Kilobytes(), Tags: new[] { "us" });
+  WorkCfg UsWatch = new(nameof(UsWatch), VideoSeenCols, GetVideoSeen("us_watch"), 100.Kilobytes(), Tags: new[] { Tag.UserScrape });
+  WorkCfg UsFeed  = new(nameof(UsFeed), VideoSeenCols, GetVideoSeen("us_feed", titleInSeen: true), 100.Kilobytes(), Tags: new[] { Tag.UserScrape });
 
   #endregion
 }

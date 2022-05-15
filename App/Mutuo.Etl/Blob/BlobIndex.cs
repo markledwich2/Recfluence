@@ -120,7 +120,7 @@ public record BlobIndex(ISimpleFileStore Store) {
       yield return (memStream, JCopy(first), JCopy(last));
     }
 
-    JObject JCopy(JObject j) => j.JCloneProps(cols.Where(c => c.InIndex).Select(c => c.Name).ToArray());
+    JObject JCopy(JObject j) => j?.JCloneProps(cols.Where(c => c.InIndex).Select(c => c.Name).ToArray());
   }
 
   static void RecordColMeta(JObject r, (BlobIndexColMeta Meta, IndexCol Col)[] cols) {
