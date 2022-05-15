@@ -351,9 +351,10 @@ public class YtCollector {
         videoPlans.SetPart(missingExtra, EExtra);
 
         // captions for all new videos from the vids list. missing captions have already been planned for existing videos.
-        videoPlans.SetPart(
-          videoItems.Where(v => channelPlan.LastCaptionUpdate == null || v.UploadDate > channelPlan.LastCaptionUpdate).Select(v => v.Id),
-          ECaption);
+        if (parts.ShouldRun(ECaption))
+          videoPlans.SetPart(
+            videoItems.Where(v => channelPlan.LastCaptionUpdate == null || v.UploadDate > channelPlan.LastCaptionUpdate).Select(v => v.Id),
+            ECaption);
 
         // take a random sample of comments for new videos since last comment record (NOTE: this is in addition to missing comments have separately been planned)
         if (parts.ShouldRun(EComment))
