@@ -9,7 +9,7 @@
         <PackageReference Include="JetBrains.Annotations" Version="2021.3.0"/>
         <PackageReference Include="MedallionShell" Version="1.6.2"/>
         <PackageReference Include="Microsoft.Net.Http.Headers" Version="2.2.8"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.1"/>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.2"/>
         <PackageReference Include="Nito.AsyncEx.Tasks" Version="5.1.2"/>
         <PackageReference Include="Polly" Version="7.2.2"/>
         <PackageReference Include="Semver" Version="2.0.6"/>
