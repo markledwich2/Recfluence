@@ -46,7 +46,7 @@
     "gatsby-plugin-react-helmet": "^3.3.3",
     "gatsby-plugin-styled-components": "^3.3.3",
     "gatsby-plugin-typescript": "^2.4.4",
-    "gatsby-transformer-remark": "^2.8.14",
+    "gatsby-transformer-remark": "^5.25.1",
     "jest": "^26.0.1",
     "ts-jest": "^26.1.0",
     "typescript": "^3.9.5"
