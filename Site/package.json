@@ -37,7 +37,7 @@
     "@appbaseio/reactivesearch": "^3.10.1",
     "@auth0/auth0-spa-js": "^1.9.0",
     "@types/base-64": "^0.1.3",
-    "gatsby": "^2.23.1",
+    "gatsby": "^5.5.0",
     "gatsby-cli": "^2.12.44",
     "gatsby-link": "^2.4.5",
     "gatsby-plugin-create-client-paths": "^2.3.3",
